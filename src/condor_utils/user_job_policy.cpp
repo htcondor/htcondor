@@ -233,7 +233,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 			}
 
 			/* Should I hold on exit? */
-			jad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, jad, on_exit_hold);
+			jad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold);
 			if (on_exit_hold == 1)
 			{
 				/* make a result classad explaining this and return it */
@@ -250,7 +250,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 			}
 
 			/* Should I remove on exit? */
-			jad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, jad, on_exit_remove);
+			jad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove);
 			if (on_exit_remove == 1)
 			{
 				/* make a result classad explaining this and return it */
@@ -1026,12 +1026,12 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		!subcode_expr.IsEmpty())
 	{
 		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, subcode_expr.Value());
-		m_ad->EvalInteger(ATTR_SCRATCH_EXPRESSION, m_ad, reason_subcode);
+		m_ad->LookupInteger(ATTR_SCRATCH_EXPRESSION, reason_subcode);
 		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
 	}
 	else if( !subcode_expr_attr.empty() )
 	{
-		m_ad->EvalInteger(subcode_expr_attr.c_str(), m_ad, reason_subcode);
+		m_ad->LookupInteger(subcode_expr_attr.c_str(), reason_subcode);
 	}
 
 	MyString reason_expr;
@@ -1040,12 +1040,12 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		!reason_expr.IsEmpty())
 	{
 		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, reason_expr.Value());
-		m_ad->EvalString(ATTR_SCRATCH_EXPRESSION, m_ad, reason);
+		m_ad->LookupString(ATTR_SCRATCH_EXPRESSION, reason);
 		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
 	}
 	else if( !reason_expr_attr.empty() )
 	{
-		m_ad->EvalString(reason_expr_attr.c_str(), m_ad, reason);
+		m_ad->LookupString(reason_expr_attr.c_str(), reason);
 	}
 #endif
 

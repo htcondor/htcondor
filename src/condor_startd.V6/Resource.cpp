@@ -1744,10 +1744,8 @@ Resource::claimWorklifeExpired()
 		int ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupExpr("CLAIM_WORKLIFE") ||
-		   !r_classad->EvalInteger(
+		if(!r_classad->LookupInteger(
 				  "CLAIM_WORKLIFE",
-		          NULL,
 		          ClaimWorklife)) {
 			ClaimWorklife = -1;
 		}

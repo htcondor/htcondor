@@ -2071,7 +2071,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		 	// Make sure that the expression evaluated and we 
 		 	// got a positive integer. Otherwise we'll have to kick out
 		 	//
-		if ( ! jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime ) ) {
+		if ( ! jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime ) ) {
 			error.formatstr( "Invalid deferred execution time for Job %d.%d.",
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
@@ -2116,8 +2116,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 				// So if the deferralTime is less than the currenTime,
 				// but within this window, we'll still run the job
 				//
-			if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL &&
-				 jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow ) ) {
+			if ( jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow ) ) {
 				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral window of "
 				                      "%d seconds\n", 
 							this->jic->jobCluster(),

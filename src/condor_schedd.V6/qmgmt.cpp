@@ -5167,12 +5167,12 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			int max_xfer_input_mb = -1;
 			param_integer("MAX_TRANSFER_INPUT_MB",max_xfer_input_mb,true,-1,false,INT_MIN,INT_MAX,procad);
 			filesize_t job_max_xfer_input_mb = 0;
-			if( procad && procad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,job_max_xfer_input_mb) ) {
+			if( procad && procad->LookupInteger(ATTR_MAX_TRANSFER_INPUT_MB,job_max_xfer_input_mb) ) {
 				max_xfer_input_mb = job_max_xfer_input_mb;
 			}
 			if( max_xfer_input_mb >= 0 ) {
 				filesize_t xfer_input_size_mb = 0;
-				if( procad && procad->EvalInteger(ATTR_TRANSFER_INPUT_SIZE_MB,NULL,xfer_input_size_mb) ) {
+				if( procad && procad->LookupInteger(ATTR_TRANSFER_INPUT_SIZE_MB,xfer_input_size_mb) ) {
 					if( xfer_input_size_mb > max_xfer_input_mb ) {
 						std::string hold_reason;
 						formatstr(hold_reason,"%s (%d) is greater than %s (%d) at submit time",

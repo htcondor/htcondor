@@ -593,7 +593,7 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 	if ( ! is_simple_double) {
 		// ok not a simple double, try evaluating it as a classad expression.
 		ClassAd ad;
-		if (ad.AssignExpr(tag,res_value) && ad.EvalFloat(tag, NULL, num)) {
+		if (ad.AssignExpr(tag,res_value) && ad.LookupFloat(tag, num)) {
 			// it was an expression that evaluated to a double, so it's a simple double after all
 			is_simple_double = true;
 		} else {

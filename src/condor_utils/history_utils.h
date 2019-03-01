@@ -51,21 +51,21 @@ displayJobShort(ClassAd* ad)
     cmd   = NULL;
     args  = NULL;
 
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
+		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
 			utime = 0;
 		}
 	}
 
-        if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
-                !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)             ||
-                !ad->EvalInteger (ATTR_Q_DATE, NULL, date)              ||
-                !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	||
-                !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
-                !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
-                !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
-                !ad->EvalString  (ATTR_OWNER, NULL, &owner)             ||
-                !ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
+        if (!ad->LookupInteger (ATTR_CLUSTER_ID, cluster)           ||
+                !ad->LookupInteger (ATTR_PROC_ID, proc)             ||
+                !ad->LookupInteger (ATTR_Q_DATE, date)              ||
+                !ad->LookupInteger (ATTR_COMPLETION_DATE, CompDate)	||
+                !ad->LookupInteger (ATTR_JOB_STATUS, status)        ||
+                !ad->LookupInteger (ATTR_JOB_PRIO, prio)            ||
+                !ad->LookupInteger (ATTR_IMAGE_SIZE, image_size)    ||
+                !ad->LookupString  (ATTR_OWNER, &owner)             ||
+                !ad->LookupString  (ATTR_JOB_CMD, &cmd) )
         {
                 printf (" --- ???? --- \n");
 				free(owner);
@@ -75,12 +75,12 @@ displayJobShort(ClassAd* ad)
         
 	// print memory usage unless it's unavailable, then print image size
 	// note that MemoryUsage is megabytes, but image_size is kilobytes.
-	if (!ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
+	if (!ad->LookupInteger(ATTR_MEMORY_USAGE, memory_usage)) {
 		memory_usage = (image_size+1023)/1024;
 	}
 
         shorten (owner, 14);
-        if (ad->EvalString ("Args", NULL, &args)) {
+        if (ad->LookupString ("Args", &args)) {
             int cmd_len = (int)strlen(cmd);
             int extra_len = 14 - cmd_len;
             if (extra_len > 0) {

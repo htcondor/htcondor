@@ -1735,7 +1735,7 @@ negotiationTime ()
                 ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
                 // Do this after all attributes are filled in
                 float v = 0;
-                if (!ad->EvalFloat(ATTR_SORT_EXPR, NULL, v)) {
+                if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
                     v = FLT_MAX;
                     string e;
                     ad->LookupString(ATTR_SORT_EXPR_STRING, e);
@@ -6150,7 +6150,7 @@ reeval(ClassAd *ad)
 	char    buffer[255];
 	
 	cur_matches = 0;
-	ad->EvalInteger("CurMatches", NULL, cur_matches);
+	ad->LookupInteger("CurMatches", cur_matches);
 
 	MyString adID = MachineAdID(ad);
 	stashedAds->lookup( adID, oldAdEntry);

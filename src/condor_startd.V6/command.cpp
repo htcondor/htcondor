@@ -1712,7 +1712,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-			EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) {
+			LookupString( ATTR_USER, RemoteOwner ) == 0 ) {
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );

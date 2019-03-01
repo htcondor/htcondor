@@ -358,7 +358,7 @@ VanillaProc::StartJob()
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
-		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
+		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
 			char buf[16];
 			sprintf(buf, "%d", getpid());
@@ -385,7 +385,7 @@ VanillaProc::StartJob()
 	{
         // Have Condor manage a chroot
        std::string requested_chroot_name;
-       JobAd->EvalString("RequestedChroot", NULL, requested_chroot_name);
+       JobAd->LookupString("RequestedChroot", requested_chroot_name);
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());

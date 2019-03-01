@@ -16410,13 +16410,13 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// First get the DeferralTime
 			//
 		int deferralTime = 0;
-		jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime );
+		jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
 			//
 		int deferralWindow = 0;
 		if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL ) {
-			jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow );
+			jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow );
 		}
 			//
 			// Now if the current time is greater than the

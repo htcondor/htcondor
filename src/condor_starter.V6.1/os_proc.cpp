@@ -363,7 +363,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			return 0;
 		}
 			// evaluate
-		if( JobAd->EvalInteger( "Renice", NULL, nice_inc ) ) {
+		if( JobAd->LookupInteger( "Renice", nice_inc ) ) {
 			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
 					 ptmp, nice_inc );
 		} else {

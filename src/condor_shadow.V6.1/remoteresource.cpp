@@ -1595,7 +1595,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	if (jobAd->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value)) {
+	if (jobAd->LookupInteger(ATTR_MEMORY_USAGE, int64_value)) {
 		memory_usage_mb = int64_value;
 	}
 
@@ -2308,10 +2308,10 @@ RemoteResource::initFileTransfer()
 		// The job may override the system defaults for max transfer I/O
 	int ad_max_upload_mb = -1;
 	int ad_max_download_mb = -1;
-	if( jobAd->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,ad_max_upload_mb) ) {
+	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_INPUT_MB,ad_max_upload_mb) ) {
 		max_upload_mb = ad_max_upload_mb;
 	}
-	if( jobAd->EvalInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,NULL,ad_max_download_mb) ) {
+	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,ad_max_download_mb) ) {
 		max_download_mb = ad_max_download_mb;
 	}
 
