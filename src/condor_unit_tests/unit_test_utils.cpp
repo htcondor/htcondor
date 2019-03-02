@@ -255,11 +255,11 @@ bool user_policy_ad_checker(ClassAd* ad,
 {
 	int val1, val2, val3, val4, val5;
 	int mask = 0;
-	if ( ! ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1))    { mask |= 0x01; val1 = 0; }
-	if ( ! ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2))  { mask |= 0x02; val2 = 0; }
-	if ( ! ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3)) { mask |= 0x04; val3 = 0; }
-	if ( ! ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4))     { mask |= 0x08; val4 = 0; }
-	if ( ! ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5))   { mask |= 0x10; val5 = 1; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1))    { mask |= 0x01; val1 = 0; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2))  { mask |= 0x02; val2 = 0; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_RELEASE_CHECK, val3)) { mask |= 0x04; val3 = 0; }
+	if ( ! ad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, val4))     { mask |= 0x08; val4 = 0; }
+	if ( ! ad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, val5))   { mask |= 0x10; val5 = 1; }
 
 	bool found = (mask == (absent_mask & 0x1F));
 	
@@ -282,7 +282,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 {
 	int val=0;
 	int mask = 0;
-	if ( ! ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val)) { mask |= 0x01; val = 0; }
+	if ( ! ad->LookupBool(ATTR_TIMER_REMOVE_CHECK, val)) { mask |= 0x01; val = 0; }
 	bool found = mask == (absent_mask & 1);
 	
 	return found && ((val != 0) == timer_remove) &&
