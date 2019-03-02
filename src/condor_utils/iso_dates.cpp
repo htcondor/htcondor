@@ -154,7 +154,7 @@ void iso8601_to_time(
 			begins_with_time = false;
 
 		const char *current;
-		char workspace[6];
+		char workspace[8];
 
 		current = iso_time;
 		/* ----- Parse the date ----- */
@@ -185,6 +185,14 @@ void iso8601_to_time(
 
 		if (get_next_bit(&current, 2, workspace)) {
 			time->tm_sec = atoi(workspace);
+		
+			// if there is a fractional seconds part, skip over it
+			// so we don't miss seeing the timezone information
+			// TODO: actually parse the fractional seconds
+			if (*current == '.') {
+				++current;
+				while (isdigit(*current)) ++current;
+			}
 		}
 
 		if (is_utc != NULL) {

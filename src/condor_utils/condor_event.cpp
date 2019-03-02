@@ -38,6 +38,14 @@
 #include "condor_debug.h"
 //--------------------------------------------------------
 
+#ifdef WIN32
+ #if ! defined timegm
+  // timegm is the Linux name for the gm version of mktime, on Windows it is called _mkgmtime
+  #define timegm _mkgmtime
+  auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
+ #endif
+#endif
+
 // define this to turn off seeking in the event reader methods
 #define DONT_EVER_SEEK 1
 
@@ -239,20 +247,10 @@ instantiateEvent (ULogEventNumber event)
 
 ULogEvent::ULogEvent(void)
 {
-	struct tm *tm;
-
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
 
 	(void) time ((time_t *)&eventclock);
-	tm = localtime ((time_t *)&eventclock);
-	eventTime = *tm;
-
-#ifdef ULOG_MICROSECONDS
-	::gettimeofday(&eventTimeval, 0);
-	tm = localtime(&eventTimeval.tv_sec);
-	eventTime = *tm;
-#endif
 }
 
 
@@ -302,25 +300,62 @@ const char* ULogEvent::eventName(void) const
 int
 ULogEvent::readHeader (FILE *file)
 {
-	int retval;
+	struct tm dt;
+	bool is_utc;
+	char datebuf[10 + 1 + 21 + 3]; // longest date is YYYY-MM-DD  = 4+3+3 = 10
+	                               // longest time is HH:MM:SS.uuuuuu+hh:mm = 7*3 = 21
+	datebuf[2] = 0; // make sure that there is no / position 2
+	int retval = fscanf(file, " (%d.%d.%d) %10s %23s ", &cluster, &proc, &subproc, datebuf, &datebuf[11]);
+	if (retval != 5) {
+		// try a full iso8601 date-time before we give up
+		retval = fscanf(file, " (%d.%d.%d) %10sT%23s ", &cluster, &proc, &subproc, datebuf, &datebuf[11]);
+		if (retval != 5) {
+			return 0;
+		}
+	}
+	// now parse datebuf and timebuf into event time
+	is_utc = false;
 
-	// read from file
-	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ",
-					 &cluster, &proc, &subproc,
-					 &(eventTime.tm_mon), &(eventTime.tm_mday),
-					 &(eventTime.tm_hour), &(eventTime.tm_min),
-					 &(eventTime.tm_sec));
-	// check if all fields were successfully read
-	if (retval != 8)
-	{
+	// if we read a / in position 2 of the datebuf, then this must be
+	// a date of the form MM/DD, which is not iso8601. we use the old
+	// (broken) parsing algorithm to parse it
+	if (datebuf[2] == '/') {
+		// this will set -1 into all fields of dt that are not set by time parsing code
+		iso8601_to_time(&datebuf[11], &dt, &is_utc);
+		dt.tm_mon = atoi(datebuf);
+		if (dt.tm_mon <= 0) { // this detects completely garbage dates because atoi returns 0 if there are no numbers to parse
+			return 0;
+		}
+		dt.tm_mon -= 1; // recall that tm_mon+1 was written to log
+		dt.tm_mday = atoi(datebuf + 3);
+	} else {
+		// date must be in the form of YYYY-MM-DD and Time must begin at position 11
+		// so we can turn this into a full iso8601 datetime by stuffing a T inbetween
+		datebuf[10] = 'T';
+		// this will set -1 into all fields of dt that are not set by date/time parsing code
+		iso8601_to_time(datebuf, &dt, &is_utc);
+	}
+	// check for a bogus date stamp
+	if (dt.tm_mon < 0 || dt.tm_mon > 11 || dt.tm_mday < 0 || dt.tm_mday > 32 || dt.tm_hour < 0 || dt.tm_hour > 24) {
 		return 0;
 	}
+	// force mktime or gmtime to figure out daylight savings time
+	dt.tm_isdst = -1;
 
-	// recall that tm_mon+1 was written to log; decrement to compensate
-	eventTime.tm_mon--;
-		// Need to set eventclock here, otherwise eventclock and
-		// eventTime will not match!!  (See gittrac #5468.)
-	eventclock = mktime( &eventTime );
+	// use the year of the current timestamp when we dont get an iso8601 date
+	// This is wrong, but consistent with pre 8.8.2 behavior see #6936
+	if (dt.tm_year < 0) {
+		dt.tm_year = localtime(&eventclock)->tm_year;
+		// TODO: adjust the year as necessary so we don't get timestamps in the future
+	}
+
+	// Need to set eventclock here, otherwise eventclock and
+	// eventTime will not match!!  (See gittrac #5468.)
+	if (is_utc) {
+		eventclock = timegm(&dt);
+	} else {
+		eventclock = mktime(&dt);
+	}
 
 	return 1;
 }
@@ -330,24 +365,14 @@ bool ULogEvent::formatHeader( std::string &out )
 {
 	int       retval;
 
-	// write header
-#ifdef ULOG_MICROSECONDS
+	const struct tm * lt = localtime(&eventclock);
 	retval = formatstr_cat(out,
-					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d.%06d ",
-					  eventNumber,
-					  cluster, proc, subproc,
-					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
-					  GetEventTime().tm_hour, GetEventTime().tm_min,
-					  GetEventTime().tm_sec, (int)eventTimeval.tv_usec);
-#else
-	retval = formatstr_cat(out,
-					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
-					  eventNumber,
-					  cluster, proc, subproc,
-					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
-					  GetEventTime().tm_hour, GetEventTime().tm_min,
-					  GetEventTime().tm_sec);
-#endif
+		"%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
+		eventNumber,
+		cluster, proc, subproc,
+		lt->tm_mon + 1, lt->tm_mday,
+		lt->tm_hour, lt->tm_min,
+		lt->tm_sec);
 
 	// check if all fields were sucessfully written
 	return retval >= 0;
@@ -572,6 +597,8 @@ ULogEvent::toClassAd(void)
 		break;
 	}
 
+	struct tm eventTime;
+	localtime_r(&eventclock, &eventTime);
 	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
@@ -620,11 +647,14 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	}
 	char* timestr = NULL;
 	if( ad->LookupString("EventTime", &timestr) ) {
-		bool f = FALSE;
-		iso8601_to_time(timestr, &eventTime, &f);
-			// Need to set eventclock here, otherwise eventclock and
-			// eventTime will not match!!  (See gittrac #5468.)
-		eventclock = mktime( &eventTime );
+		bool is_utc = false;
+		struct tm eventTime;
+		iso8601_to_time(timestr, &eventTime, &is_utc);
+		if (is_utc) {
+			eventclock = timegm(&eventTime);
+		} else {
+			eventclock = mktime(&eventTime);
+		}
 		free(timestr);
 	}
 	ad->LookupInteger("Cluster", cluster);
