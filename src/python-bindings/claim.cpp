@@ -1,4 +1,3 @@
-
 // Note - python_bindings_common.h must be included before condor_common to avoid
 // re-definition warnings.
 #include "python_bindings_common.h"
@@ -48,6 +47,9 @@ struct Claim
 
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
+			// To quote the Python docs: "If you have an argument whose value
+			// must be in a particular range or must satisfy other conditions,
+			// PyExc_ValueError is appropriate."
             THROW_EX(ValueError, "No contact string in ClassAd");
         }
     }
@@ -64,7 +66,15 @@ struct Claim
             classad::ClassAdParser parser;
             std::string constraint_str = constraint_extract();
             classad::ExprTree *expr_tmp = NULL;
-            if (!parser.ParseExpression(constraint_str, expr_tmp)) {THROW_EX(ValueError, "Failed to parse request requirements expression");}
+            if (!parser.ParseExpression(constraint_str, expr_tmp)) {
+            	// FIXME:
+            	// static PyObject * PyExc_ParseError =
+            	//    PyErr_NewException(...);
+            	// should probably come from the constraint object,
+            	// actually.
+            	// THROW_EX(ParseError, "Failed to parse request requirements expression");
+            	THROW_EX(RuntimeError, "Failed to parse request requirements expression");
+            }
             constraint.reset(expr_tmp);
         }
         else
@@ -85,9 +95,15 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.requestClaim(CLAIM_COD, &ad, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Failed to request claim from startd.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Failed to request claim from startd.");
+        }
 
-        if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {THROW_EX(RuntimeError, "Startd did not return a ClaimId.");}
+        if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd did not return a ClaimId.");
+        }
     }
 
 
@@ -104,7 +120,10 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.releaseClaim(vacate_type, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to release claim.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to release claim.");
+        }
 
         m_claim = "";
     }
@@ -129,7 +148,10 @@ struct Claim
             condor::ModuleLock ml;
             irval = startd.activateClaim(&ad, &reply, 20);
         }
-        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to activate claim.");}
+        if (irval != OK) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to activate claim.");
+        }
     }
 
 
@@ -146,7 +168,10 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.deactivateClaim(vacate_type, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to deactivate claim.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to deactivate claim.");
+        }
     }
 
 
@@ -163,7 +188,10 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.suspendClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to suspend claim.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to suspend claim.");
+        }
     }
 
 
@@ -180,7 +208,10 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.renewLeaseForClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to renew claim.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to renew claim.");
+        }
     }
 
 
@@ -197,7 +228,10 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.resumeClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Sartd failed to resume claim.");}
+        if (!rval) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Sartd failed to resume claim.");
+        }
     }
 
 
@@ -224,7 +258,10 @@ struct Claim
             condor::ModuleLock ml;
             irval = startd.delegateX509Proxy(proxy_file.c_str(), 0, NULL);
         }
-        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to delegate GSI proxy.");}
+        if (irval != OK) {
+        	// FIXME: ..?
+        	THROW_EX(IOError, "Startd failed to delegate GSI proxy.");
+        }
     }
 
 
@@ -253,7 +290,7 @@ export_claim()
     boost::python::docstring_options doc_options;
     doc_options.disable_cpp_signatures();
 #endif
-    
+
     boost::python::class_<Claim>("Claim", "A client class for Claims in HTCondor")
         .def(boost::python::init<>())
         .def(boost::python::init<boost::python::object>(":param ad: An ad describing the Claim (optionally) and a Startd location."))
@@ -287,4 +324,3 @@ export_claim()
         .def("__str__", &Claim::toString)
         ;
 }
-

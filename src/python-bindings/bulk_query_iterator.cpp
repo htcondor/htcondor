@@ -27,7 +27,7 @@ public:
         }
         if (!py_hasattr(input, "__iter__"))
         {
-            THROW_EX(ValueError, "Unable to iterate over query object.")
+            THROW_EX(TypeError, "Unable to iterate over query object.")
         }
         boost::python::object iterable = input.attr("__iter__")();
 
@@ -53,7 +53,7 @@ public:
                 }
                 else
                 {
-                    THROW_EX(ValueError, "Unable to iterate through input.");
+                    THROW_EX(TypeError, "Unable to iterate through input.");
                 }
             }
             catch (const boost::python::error_already_set&)
@@ -116,12 +116,14 @@ public:
 
         if (m_selector.timed_out())
         {
-            THROW_EX(RuntimeError, "Timeout when waiting for remote host");
+			// FIXME: Should this be TimeoutError in Python 3?
+            THROW_EX(IOError, "Timeout when waiting for remote host");
         }
 
         if (m_selector.failed())
         {
-            THROW_EX(RuntimeError, "select() failed.");
+        	// FIXME: if m_selector has an errno and/or errstr, set it here.
+            THROW_EX(OSError, "select() failed.");
         }
 
         boost::python::object queryit;
@@ -146,6 +148,7 @@ public:
             return queryit;
         }
         if (!m_count) {THROW_EX(StopIteration, "All ads are processed");}
+        // FIXME: ...?
         THROW_EX(RuntimeError, "Logic error in poll implementation.");
         return queryit;
     }
