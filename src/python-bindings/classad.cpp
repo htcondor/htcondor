@@ -153,7 +153,7 @@ private:
     const classad::ClassAd *m_orig;
     classad::ExprTree &m_expr;
     const classad::ClassAd *m_new;
-    
+
 };
 
 boost::python::object
@@ -240,8 +240,7 @@ convert_value_to_python(const classad::Value &value)
         break;
     }
     default:
-        PyErr_SetString(PyExc_TypeError, "Unknown ClassAd value type.");
-        boost::python::throw_error_already_set();
+    	THROW_EX(ValueError, "Unknown ClassAd value type.");
     }
     return result;
 }
@@ -259,8 +258,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
 
     if (!m_expr)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
-        boost::python::throw_error_already_set();
+    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::Value value;
     const classad::ClassAd *origParent = m_expr->GetParentScope();
@@ -271,7 +269,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
         if (!evalresult)
         {
-            THROW_EX(TypeError, "Unable to evaluate expression");
+            THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
         }
     }
     else
@@ -281,7 +279,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
         if (!evalresult)
         {
-            THROW_EX(TypeError, "Unable to evaluate expression");
+            THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
         }
     }
     return convert_value_to_python(value);
@@ -339,8 +337,8 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         classad::Value value;
         if (!m_expr->Evaluate(state, value))
         {
-            if (!PyErr_Occurred()) {PyErr_SetString(PyExc_RuntimeError, "Unable to evaluate expression");}
-            boost::python::throw_error_already_set();
+        	if( PyErr_Occurred() ) { boost::python::throw_error_already_set(); }
+        	THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
         }
         classad::ExprList *listExpr = NULL;
         if (value.IsStringValue())
@@ -354,7 +352,7 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         }
         else
         {
-            THROW_EX(TypeError, "ClassAd expression is unsubscriptable.");
+            THROW_EX(ValueError, "ClassAd expression is unsubscriptable.");
         }
         return boost::python::object();
     }
@@ -396,7 +394,7 @@ ExprTreeHolder::__bool__()
         classad::Value::ValueType val = value_extract();
         if (val == classad::Value::ERROR_VALUE)
         {
-            THROW_EX(RuntimeError, "Unable to evaluate expression.")
+            THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression.")
         }
         else if (val == classad::Value::UNDEFINED_VALUE)
         {
@@ -410,8 +408,7 @@ std::string ExprTreeHolder::toRepr() const
 {
     if (!m_expr)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
-        boost::python::throw_error_already_set();
+    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::ClassAdUnParser up;
     std::string ad_str;
@@ -424,8 +421,7 @@ std::string ExprTreeHolder::toString() const
 {
     if (!m_expr)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
-        boost::python::throw_error_already_set();
+    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::PrettyPrint pp;
     std::string ad_str;
@@ -438,8 +434,7 @@ classad::ExprTree *ExprTreeHolder::get() const
 {
     if (!m_expr)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
-        boost::python::throw_error_already_set();
+    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
     }
     return m_expr->Copy();
 }
