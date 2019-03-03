@@ -33,8 +33,7 @@ ExprTreeHolder::ExprTreeHolder(const std::string &str)
     classad::ExprTree *expr = NULL;
     if (!parser.ParseExpression(str, expr))
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
-        boost::python::throw_error_already_set();
+        THROW_EX(ClassAdParseError, "Unable to parse string into a ClassAd.");
     }
     m_expr = expr;
     m_refcount.reset(m_expr);
@@ -78,7 +77,7 @@ long long ExprTreeHolder::toLong() const
     if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
     if (!evalresult)
     {
-        THROW_EX(TypeError, "Unable to evaluate expression");
+        THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
     }
     long long retInt;
     std::string retStr;
@@ -113,9 +112,9 @@ double ExprTreeHolder::toDouble() const
     }
     if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
     if (!evalresult)
-    {   
+    {
         THROW_EX(TypeError, "Unable to evaluate expression");
-    }   
+    }
     double retDouble;
     std::string retStr;
     if (val.IsNumber(retDouble)) {return retDouble;}
@@ -523,7 +522,9 @@ void ClassAdWrapper::update(boost::python::object source)
     {
         return this->update(source.attr("items")());
     }
-    if (!PyObject_HasAttrString(source.ptr(), "__iter__")) THROW_EX(ValueError, "Must provide a dictionary-like object to update()");
+    if (!PyObject_HasAttrString(source.ptr(), "__iter__")) {
+        THROW_EX(TypeError, "Must provide a dictionary-like object to update()");
+    }
 
     boost::python::object iter = source.attr("__iter__")();
     while (true) {
@@ -1032,8 +1033,7 @@ ClassAdWrapper::ClassAdWrapper(const std::string &str)
     classad::ClassAd *result = parser.ParseClassAd(str);
     if (!result)
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
-        boost::python::throw_error_already_set();
+        THROW_EX(ClassAdParseError, "Unable to parse string into a ClassAd.");
     }
     CopyFrom(*result);
     delete result;

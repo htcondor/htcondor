@@ -1,3 +1,4 @@
+
 // Note - python_bindings_common.h must be included before condor_common to avoid
 // re-definition warnings.
 #include "python_bindings_common.h"
@@ -72,8 +73,7 @@ struct Claim
             	//    PyErr_NewException(...);
             	// should probably come from the constraint object,
             	// actually.
-            	// THROW_EX(ParseError, "Failed to parse request requirements expression");
-            	THROW_EX(RuntimeError, "Failed to parse request requirements expression");
+            	THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
             }
             constraint.reset(expr_tmp);
         }

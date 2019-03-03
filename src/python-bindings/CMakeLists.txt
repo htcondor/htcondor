@@ -236,7 +236,7 @@ else()
     else()
       message(FATAL_ERROR "Can't determine HTCondor version!")
     endif()
-    condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+    condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp )
     target_link_libraries( pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
     set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
     set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
@@ -333,7 +333,7 @@ else()
       endif()
       set_target_properties( _pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}_wheel" )
       set_target_properties( _pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
-      
+
       # next, build the classad module *not* linked against libpython
       add_library( _classad_module SHARED _classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
       add_dependencies( _classad_module pypi_classad_dir )
