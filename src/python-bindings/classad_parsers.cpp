@@ -15,8 +15,7 @@ ClassAdWrapper *parseString(const std::string &str)
     classad::ClassAd *result = parser.ParseClassAd(str);
     if (!result)
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
-        boost::python::throw_error_already_set();
+        THROW_EX(ClassAdParseError, "Unable to parse string into a ClassAd.");
     }
     ClassAdWrapper * wrapper_result = new ClassAdWrapper();
     wrapper_result->CopyFrom(*result);
@@ -32,8 +31,7 @@ ClassAdWrapper *parseFile(FILE *stream)
     classad::ClassAd *result = parser.ParseClassAd(stream);
     if (!result)
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse input stream into a ClassAd.");
-        boost::python::throw_error_already_set();
+        THROW_EX(ClassAdParseError, "Unable to parse input stream into a ClassAd.");
     }
     ClassAdWrapper * wrapper_result = new ClassAdWrapper();
     wrapper_result->CopyFrom(*result);
@@ -80,6 +78,7 @@ ClassAdWrapper *parseOld(boost::python::object input)
 
         if (!wrapper->InsertViaCache(name, szValue))
         {
+            // FIXME: ..?
             THROW_EX(ValueError, line_str.c_str());
         }
     }
@@ -102,7 +101,9 @@ bool isOldAd(boost::python::object source)
         }
         return false;
     }
-    if (!py_hasattr(source, "tell") || !py_hasattr(source, "read") || !py_hasattr(source, "seek")) {THROW_EX(ValueError, "Unable to determine if input is old or new classad");}
+    if (!py_hasattr(source, "tell") || !py_hasattr(source, "read") || !py_hasattr(source, "seek")) {
+        THROW_EX(ClassAdParseError, "Unable to determine if input is old or new classad");
+    }
     size_t end_ptr;
     try
     {
@@ -154,9 +155,11 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
                 PyObject *next_obj_ptr = input.ptr()->ob_type->tp_iternext(input.ptr());
                 if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All input ads processed");}
                 next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
-                if (PyErr_Occurred()) throw boost::python::error_already_set();
+                if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
             }
-            else {THROW_EX(ValueError, "Unable to iterate through ads.");}
+            else {
+                THROW_EX(TypeError, "Unable to iterate through ads.");
+            }
         }
         catch (const boost::python::error_already_set&)
         {
@@ -184,12 +187,14 @@ boost::python::object parseNext(boost::python::object source, ParserType type)
     if (source.ptr() && source.ptr()->ob_type && source.ptr()->ob_type->tp_iternext)
     {
         PyObject *next_obj_ptr = source.ptr()->ob_type->tp_iternext(source.ptr());
-        if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All input ads processed");}
+        if (next_obj_ptr == NULL) {
+            THROW_EX(StopIteration, "All input ads processed");
+        }
         boost::python::object next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
-        if (PyErr_Occurred()) throw boost::python::error_already_set();
+        if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
         return next_obj;
     }
-    THROW_EX(ValueError, "Unable to iterate through ads.");
+    THROW_EX(TypeError, "Unable to iterate through ads.");
     return boost::python::object();
 }
 
@@ -241,7 +246,7 @@ OldClassAdIterator::next()
                 PyObject *next_obj_ptr = m_source.ptr()->ob_type->tp_iternext(m_source.ptr());
                 if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All input ads processed");}
                 next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
-		if (PyErr_Occurred()) throw boost::python::error_already_set();
+                if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
             }
         }
         catch (const boost::python::error_already_set&)
@@ -320,6 +325,7 @@ OldClassAdIterator::next()
         std::string szValue = line_str.substr(vpos);
         if (!m_ad->InsertViaCache(name, szValue))
         {
+            // FIXME: ..?
             THROW_EX(ValueError, line_str.c_str());
         }
     }
@@ -349,7 +355,7 @@ ClassAdFileIterator::ClassAdFileIterator(FILE *source)
 boost::shared_ptr<ClassAdWrapper>
 ClassAdFileIterator::next()
 {
-    if (m_done) THROW_EX(StopIteration, "All ads processed");
+    if (m_done) { THROW_EX(StopIteration, "All ads processed"); }
 
     boost::shared_ptr<ClassAdWrapper> result(new ClassAdWrapper());
     if (!m_parser->ParseClassAd(m_source, *result))
@@ -361,7 +367,7 @@ ClassAdFileIterator::next()
         }
         else
         {
-            THROW_EX(ValueError, "Unable to parse input stream into a ClassAd.");
+            THROW_EX(ClassAdParseError, "Unable to parse input stream into a ClassAd.");
         }
     }
     return result;
@@ -374,7 +380,7 @@ ClassAdStringIterator::ClassAdStringIterator(const std::string & source)
 boost::shared_ptr<ClassAdWrapper>
 ClassAdStringIterator::next()
 {
-    if (m_off < 0) THROW_EX(StopIteration, "All ads processed");
+    if (m_off < 0) { THROW_EX(StopIteration, "All ads processed"); }
 
     boost::shared_ptr<ClassAdWrapper> result(new ClassAdWrapper());
     if (!m_parser->ParseClassAd(m_source, *result, m_off))
@@ -386,7 +392,7 @@ ClassAdStringIterator::next()
         }
         else
         {
-            THROW_EX(ValueError, "Unable to parse input stream into a ClassAd.");
+            THROW_EX(ClassAdParseError, "Unable to parse input stream into a ClassAd.");
         }
     }
     return result;
@@ -430,7 +436,7 @@ obj_iternext(PyObject *self)
         try
         {
             boost::python::object obj(boost::python::borrowed(self));
-            if (!py_hasattr(obj, NEXT_FN)) THROW_EX(TypeError, "instance has no " NEXT_FN "() method");
+            if (!py_hasattr(obj, NEXT_FN)) { THROW_EX(TypeError, "instance has no " NEXT_FN "() method"); }
             boost::python::object result = obj.attr(NEXT_FN)();
             return boost::python::incref(result.ptr());
         }
