@@ -519,7 +519,7 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
+bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
@@ -565,7 +565,7 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	return false;
 }
 
-bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
+bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	classad::Value result;
 	bool boolVal;

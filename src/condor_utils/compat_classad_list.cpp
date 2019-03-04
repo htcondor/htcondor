@@ -268,7 +268,7 @@ int ClassAdListDoesNotDeleteAds::CountMatches(classad::ExprTree* constraint)
 
 	Rewind();
 	while( (ad = Next()) ) {
-		if ( EvalBool(ad, constraint) ) {
+		if ( EvalExprBool(ad, constraint) ) {
 			matchCount++;
         }
 	}

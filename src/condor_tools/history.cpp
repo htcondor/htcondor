@@ -1180,7 +1180,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
@@ -1312,12 +1312,12 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 	++adCount;
 
-	if (sinceExpr && EvalBool(&ad, sinceExpr)) {
+	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
 		return;
 	}
 
-	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}

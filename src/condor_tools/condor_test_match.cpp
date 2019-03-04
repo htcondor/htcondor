@@ -288,7 +288,7 @@ MatchTest::matchExpr(ExprTree *claimed)
 		if( m_matched_machines.lookup(machinead,junk) == 0 ) {
 			continue; // already matched this machine
 		}
-		if( EvalBool(machinead, claimed) ) {
+		if( EvalExprBool(machinead, claimed) ) {
 			m_matched_machines.insert(machinead,true);
 		}
 	}
@@ -465,7 +465,7 @@ MatchTest::read_classad_file(const char *filename, ExprTree *constraint_expr, bo
         classad = new ClassAd;
         InsertFromFile(file, *classad, "\n", is_eof, is_error, is_empty);
         if (!is_error && !is_empty) {
-            if( !constraint_expr || EvalBool(classad, constraint_expr) )
+            if( !constraint_expr || EvalExprBool(classad, constraint_expr) )
             {
 				if( ! (this->*work_func)(classad) ) {
 					break;

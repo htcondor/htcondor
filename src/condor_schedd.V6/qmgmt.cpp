@@ -501,7 +501,7 @@ bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
 		classad::ExprTree * expr = NULL;
 		ParseClassAdRvalExpr("JobsIdle < 4", expr);
 		if (expr) {
-			bool rv = EvalBool(&iad, expr);
+			bool rv = EvalExprBool(&iad, expr);
 			delete expr;
 			if (rv) return true;
 		}
@@ -3389,7 +3389,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		if (job->IsCluster() && ! (flags & SetAttribute_PostSubmitClusterChange))
 			continue;
 
-		if (EvalBool(ad, constraint.Expr())) {
+		if (EvalExprBool(ad, constraint.Expr())) {
 			match_count += 1;
 			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
@@ -6459,7 +6459,7 @@ GetJobByConstraint(const char *constraint)
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-			EvalBool(ad, constraint)) {
+			EvalExprBool(ad, constraint)) {
 				return ad;
 		}
 	}
@@ -6490,7 +6490,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			(!constraint || !constraint[0] || EvalExprBool(ad, constraint))) {
 			return ad;
 		}
 	}
@@ -6509,7 +6509,7 @@ GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
 
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && // skip the header ad
-			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			(!constraint || !constraint[0] || EvalExprBool(ad, constraint))) {
 			return ad;
 		}
 	}
@@ -6538,7 +6538,7 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 			continue;
 		}
 
-		if ( !constraint || !constraint[0] || EvalBool(ad, constraint)) {
+		if ( !constraint || !constraint[0] || EvalExprBool(ad, constraint)) {
 			return ad;
 		}
 	}

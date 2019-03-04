@@ -185,7 +185,7 @@ void Rooster::poll()
 
 			// in case the unhibernate expression is time-sensitive,
 			// re-evaluate it now to make sure it still passes
-		if( !EvalBool(startd_ad,requirements) ) {
+		if( !EvalExprBool(startd_ad,requirements) ) {
 			dprintf(D_ALWAYS,
 					"Skipping %s: ROOSTER_UNHIBERNATE is no longer true.\n",
 					name.Value());

@@ -332,14 +332,14 @@ static void PrintModularAds(
 
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
-			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+			if (constraintExpr && ! EvalExprBool(&prioAds[id], constraintExpr))
 				continue;
 			print_mask.display(out, &prioAds[id]);
 		}
 	} else {
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
-			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+			if (constraintExpr && ! EvalExprBool(&prioAds[id], constraintExpr))
 				continue;
 			fprintf(out, "\n");
 			fPrintAd(out, prioAds[id]);

@@ -1348,7 +1348,7 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 	startdAds.Open();
 	while(ClassAd* ad = startdAds.Next()) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 
@@ -3451,7 +3451,7 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 

@@ -7410,7 +7410,7 @@ Scheduler::negotiate(int command, Stream* s)
 		{
 			if ( neg_constraint ) {
 				JobQueueJob* job_ad = GetJobAd( prec->id );
-				if ( job_ad == NULL || EvalBool( job_ad, neg_constraint ) == false ) {
+				if ( job_ad == NULL || EvalExprBool( job_ad, neg_constraint ) == false ) {
 					skipped_auto_cluster = auto_cluster_id;
 					continue;
 				}
