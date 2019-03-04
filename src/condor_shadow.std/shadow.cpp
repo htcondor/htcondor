@@ -774,7 +774,7 @@ bool periodic_policy(void)
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
 	
-	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	result->LookupBool(ATTR_USER_POLICY_ERROR, val);
 	if (val == 1)
 	{
 		dprintf(D_ALWAYS, "There was an error in the periodic policy\n");
@@ -782,7 +782,7 @@ bool periodic_policy(void)
 		return false;
 	}
 
-	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	result->LookupBool(ATTR_TAKE_ACTION, val);
 	if (val == 1)
 	{
 		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
@@ -841,7 +841,7 @@ void static_policy(void)
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
 	
-	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	result->LookupBool(ATTR_USER_POLICY_ERROR, val);
 	if (val == 1)
 	{
 		dprintf(D_ALWAYS, "There was an error in the static policy\n");
@@ -849,7 +849,7 @@ void static_policy(void)
 		return;
 	}
 
-	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	result->LookupBool(ATTR_TAKE_ACTION, val);
 	if (val == 1)
 	{
 		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
