@@ -125,8 +125,8 @@ static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
 
 	float rank1 = 0;
 	float rank2 = 0;
-	rank_ad->EvalFloat(ATTR_RANK,ad1,rank1);
-	rank_ad->EvalFloat(ATTR_RANK,ad2,rank2);
+	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
+	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
 
 	return rank1 > rank2;
 }

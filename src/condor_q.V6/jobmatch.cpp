@@ -813,7 +813,7 @@ bool doJobRunAnalysis (
 				? ATTR_START_LOCAL_UNIVERSE 
 				: ATTR_START_SCHEDULER_UNIVERSE;
 			int can_start = 0;
-			if ( ! scheddAd->EvalBool(requirements_attr, request, can_start)) {
+			if ( ! EvalBool(requirements_attr, scheddAd, request, can_start)) {
 				match_result.formatstr_cat("This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
 			} else {
 				if (can_start) { ac.both_match++; } else { ac.fOffConstraint++; }

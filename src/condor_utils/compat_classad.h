@@ -124,6 +124,84 @@ void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, 
  */
 void ChainCollapse(classad::ClassAd &ad);
 
+/** Lookup and evaluate an attribute in the ClassAd whose type is not known
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value Where we the copy value
+ *  @return 1 on success, 0 if the attribute doesn't exist
+ */
+int EvalAttr (const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value);
+
+/** Lookup and evaluate an attribute in the ClassAd that is a string
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value Where we copy the string. We allocate space ala strdup().
+ *    The caller is responsible for freeing.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not a string.
+ */
+int EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value);
+/** MyString version of EvalString()
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value A MyString where we the copy the string. We ensure there is enough space.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not a string.
+ */
+int EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value);
+
+/** std::string version of EvalString()
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value A std::string where we the copy the string.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not a string.
+ */
+int EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, std::string & value);
+
+/** Lookup and evaluate an attribute in the ClassAd that is an integer
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value Where we the copy the value.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not an integer
+ */
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long long &value);
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, int& value);
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long & value);
+
+/** Lookup and evaluate an attribute in the ClassAd that is a float
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value Where we the copy the value. Danger: we just use strcpy.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not a float.
+ */
+int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, double &value);
+int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, float &value);
+
+/** Lookup and evaluate an attribute in the ClassAd that is a boolean
+ *  @param name The name of the attribute
+ *  @param my The ClassAd containing the named attribute
+ *  @param target A ClassAd to resolve TARGET or other references
+ *  @param value Where we a 1 (if the value is non-zero) or a 1.
+ *    This parameter is only modified on success.
+ *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
+ *  but is not a number.
+ */
+int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value);
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -260,98 +338,6 @@ class ClassAd : public classad::ClassAd
 		 */
 
 	int LookupBool(const char *name, bool &value) const;
-
-		/** Lookup and evaluate an attribute in the ClassAd whose type is not known
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we the copy value
-		 *  @return 1 on success, 0 if the attribute doesn't exist
-		 */
-	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
-
-        /** Same as EvalString, but ensures we have enough space for value first.
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we the copy the string. We ensure there is enough space. 
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a string.
-         */
-    int EvalString (const char *name, classad::ClassAd *target, char **value);
-        /** MyString version of EvalString()
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value A MyString where we the copy the string. We ensure there is enough space. 
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a string.
-         */
-    int EvalString (const char *name, classad::ClassAd *target, MyString & value);
-
-        /** std::string version of EvalString()
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value A std::string where we the copy the string.
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a string.
-         */
-    int EvalString (const char *name, classad::ClassAd *target, std::string & value);
-
-		/** Lookup and evaluate an attribute in the ClassAd that is an integer
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we the copy the value.
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not an integer
-		 */
-	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
-	int EvalInteger (const char *name, classad::ClassAd *target, int& value) {
-		long long ival = 0;
-		int result = EvalInteger(name, target, ival);
-		if ( result ) {
-			value = (int)ival;
-		}
-		return result;
-	}
-	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
-		long long ival = 0;
-		int result = EvalInteger(name, target, ival);
-		if ( result ) {
-			value = (long)ival;
-		}
-		return result;
-	}
-
-		/** Lookup and evaluate an attribute in the ClassAd that is a float
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we the copy the value. Danger: we just use strcpy.
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a float.
-		 */
-
-	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
-	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
-		double dval = 0.0;
-		int result = EvalFloat(name, target, dval);
-		if ( result ) {
-			value = dval;
-		}
-		return result;
-	}
-
-		/** Lookup and evaluate an attribute in the ClassAd that is a boolean
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we a 1 (if the value is non-zero) or a 1. 
-		 *    This parameter is only modified on success.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a number.
-		 */
-	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
 
 	static void Reconfig();
 	static bool m_initConfig;

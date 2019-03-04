@@ -1987,21 +1987,21 @@ LookupBool( const char *name, bool &value ) const
 	return EvaluateAttrBoolEquiv(name, value);
 }
 
-int ClassAd::
-EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
+int
+EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
 {
 	int rc = 0;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, value ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, value ) ) {
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
@@ -2016,16 +2016,15 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 /*
  * Ensure that we allocate the value, so we have sufficient space
  */
-int ClassAd::
-EvalString (const char *name, classad::ClassAd *target, char **value)
+int
+EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value)
 {
-    
 	string strVal;
     bool foundAttr = false;
 	int rc = 0;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrString( name, strVal ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
             if(*value != NULL) {
@@ -2038,11 +2037,11 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
+	getTheMatchAd( my, target );
 
-    if( this->Lookup(name) ) {
+    if( my->Lookup(name) ) {
 
-        if( this->EvaluateAttrString( name, strVal ) ) {
+        if( my->EvaluateAttrString( name, strVal ) ) {
             foundAttr = true;
         }		
     } else if( target->Lookup(name) ) {
@@ -2064,45 +2063,45 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	return rc;
 }
 
-int ClassAd::
-EvalString(const char *name, classad::ClassAd *target, MyString & value)
+int
+EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value)
 {
     char * pvalue = NULL;
     //this one makes sure length is good
-    int ret = EvalString(name, target, &pvalue); 
+    int ret = EvalString(name, my, target, &pvalue);
     if(ret == 0) { return ret; }
     value = pvalue;
     free(pvalue);
     return ret;
 }
 
-int ClassAd::
-EvalString(const char *name, classad::ClassAd *target, std::string & value)
+int
+EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, std::string & value)
 {
     char * pvalue = NULL;
     //this one makes sure length is good
-    int ret = EvalString(name, target, &pvalue); 
+    int ret = EvalString(name, my, target, &pvalue);
     if(ret == 0) { return ret; }
     value = pvalue;
     free(pvalue);
     return ret;
 }
 
-int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, long long &value)
+int
+EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrNumber( name, value ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
 			rc = 1;
 		}
 	}
 	else 
 	{
-	  getTheMatchAd( this, target );
-	  if( this->Lookup( name ) ) {
-		  if( this->EvaluateAttrNumber( name, value ) ) {
+	  getTheMatchAd( my, target );
+	  if( my->Lookup( name ) ) {
+		  if( my->EvaluateAttrNumber( name, value ) ) {
 			  rc = 1;
 		  }
 	  } else if( target->Lookup( name ) ) {
@@ -2116,21 +2115,39 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	return rc;
 }
 
-int ClassAd::
-EvalFloat (const char *name, classad::ClassAd *target, double &value)
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, int& value) {
+	long long ival = 0;
+	int result = EvalInteger(name, my, target, ival);
+	if ( result ) {
+		value = (int)ival;
+	}
+	return result;
+}
+
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long & value) {
+	long long ival = 0;
+	int result = EvalInteger(name, my, target, ival);
+	if ( result ) {
+		value = (long)ival;
+	}
+	return result;
+}
+
+int
+EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, double &value)
 {
 	int rc = 0;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrNumber( name, value ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
 			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrNumber( name, value ) ) {
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
@@ -2142,23 +2159,32 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	return rc;
 }
 
-int ClassAd::
-EvalBool  (const char *name, classad::ClassAd *target, int &value)
+int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, float &value) {
+	double dval = 0.0;
+	int result = EvalFloat(name, my, target, dval);
+	if ( result ) {
+		value = dval;
+	}
+	return result;
+}
+
+int
+EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
 	bool boolVal;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrBoolEquiv( name, boolVal ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrBoolEquiv( name, boolVal ) ) {
 			value = boolVal ? 1 : 0;
 			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrBoolEquiv( name, boolVal ) ) {
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttrBoolEquiv( name, boolVal ) ) {
 			value = boolVal ? 1 : 0;
 			rc = 1;
 		}

@@ -202,9 +202,9 @@ int swap_claim_and_activation(Resource * rip, ClassAd & opts, Stream* stream)
 	int rval = NOT_OK;
 	Resource* rip_dest = NULL;
 	std::string idd;
-	if (opts.EvalString("DestinationSlotName", rip->r_cur->ad(), idd)) {
+	if (EvalString("DestinationSlotName", &opts, rip->r_cur->ad(), idd)) {
 		rip_dest = resmgr->get_by_name(idd.c_str());
-	} else if (opts.EvalString("DestinationClaimId", rip->r_cur->ad(), idd)) {
+	} else if (EvalString("DestinationClaimId", &opts, rip->r_cur->ad(), idd)) {
 		rip_dest = resmgr->get_by_cur_id(idd.c_str());
 	}
 
@@ -1842,7 +1842,7 @@ activate_claim( Resource* rip, Stream* stream )
     }
 
 	rip->r_reqexp->restore();
-	if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
+	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = 0;
 	}

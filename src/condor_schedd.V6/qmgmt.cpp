@@ -5765,7 +5765,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 
 					MyString result;
-					isok = tmpJobAd.EvalString(INTERNAL_DD_EXPR, startd_ad, result);
+					isok = EvalString(INTERNAL_DD_EXPR, &tmpJobAd, startd_ad, result);
 					if( ! isok ) {
 						attribute_not_found = true;
 						break;
@@ -5990,7 +5990,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// as DiskProvisionedDisk, MemoryProvisioned, etc.  note that we 
 				// evaluate rather than lookup the value so we collapse expressions
 				// into literal values at this point.
-				if (ad->EvalAttr(resname, startd_ad, val)) {
+				if (EvalAttr(resname, ad, startd_ad, val)) {
 					classad::Value::ValueType vt = val.GetType();
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
@@ -6004,7 +6004,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// evaluate RequestDisk, RequestMemory and convert to literal 
 				// values in the expanded job ad.
 				attr = "Request"; attr += res;
-				if (ad->EvalAttr(attr.c_str(), startd_ad, val)) {
+				if (EvalAttr(attr.c_str(), ad, startd_ad, val)) {
 					classad::Value::ValueType vt = val.GetType();
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
@@ -7550,7 +7550,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
 			{
 				float new_startd_rank = 0;
-				if( my_match_ad->EvalFloat(ATTR_RANK, ad, new_startd_rank) )
+				if( EvalFloat(ATTR_RANK, my_match_ad, ad, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
 						continue;

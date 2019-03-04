@@ -4678,7 +4678,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 				float newStartdRank;
 				float oldStartdRank = 0.0;
-				if(! offer->EvalFloat(ATTR_RANK, &request, newStartdRank)) {
+				if(! EvalFloat(ATTR_RANK, offer, &request, newStartdRank)) {
 					newStartdRank = 0.0;
 				}
 				offer->LookupFloat(ATTR_CURRENT_RANK, oldStartdRank);
@@ -5030,7 +5030,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		while( (cached_bestSoFar = MatchList->pop_candidate(candidateDslotClaims)) ) {
 			if (evaluate_limits_with_match) {
 				std::string limits;
-				if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
+				if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, cached_bestSoFar, limits)) {
 					if (rejectForConcurrencyLimits(limits)) {
 						continue;
 					}
@@ -5335,7 +5335,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 		if (evaluate_limits_with_match) {
 			std::string limits;
-			if (request.EvalString(ATTR_CONCURRENCY_LIMITS, candidate, limits) && rejectForConcurrencyLimits(limits)) {
+			if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, candidate, limits) && rejectForConcurrencyLimits(limits)) {
 				continue;
 			}
 		}
@@ -5578,7 +5578,7 @@ calculateRanks(ClassAd &request,
 
 	// calculate the request's rank of the candidate
 	double tmp;
-	if(!request.EvalFloat(ATTR_RANK, candidate, tmp)) {
+	if(!EvalFloat(ATTR_RANK, &request, candidate, tmp)) {
 		tmp = 0.0;
 	}
 	candidateRankValue = tmp;
@@ -5759,7 +5759,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// the Schedd, they must be stashed before PERMISSION_AND_AD
 		// is sent.
 	MyString limits;
-	if (request.EvalString(ATTR_CONCURRENCY_LIMITS, offer, limits)) {
+	if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, offer, limits)) {
 		limits.lower_case();
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
@@ -6869,7 +6869,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 
 	double newRank; // The startd rank of the potential job
 
-	if (!machine->EvalFloat(ATTR_RANK, job, newRank)) {
+	if (!EvalFloat(ATTR_RANK, machine, job, newRank)) {
 		newRank = 0.0;
 	}
 
@@ -7119,7 +7119,7 @@ static int jobsInSlot(ClassAd &request, ClassAd &offer, int match_cost) {
 	int requestCpus = 1;
 	if (match_cost < 1) match_cost = 1;
 	
-	request.EvalInteger(ATTR_REQUEST_CPUS, &offer, requestCpus);
+	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
 
 	return ceil((double)match_cost / (double)requestCpus);
 }

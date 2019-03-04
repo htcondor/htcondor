@@ -8664,7 +8664,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 		// should not be allowed to start if the schedd's 
 		// requirements failed to evaluate for some reason
 		//
-		if ( scheddAd.EvalBool( universeExp, job, requirements ) ) {
+		if ( EvalBool( universeExp, &scheddAd, job, requirements ) ) {
 			requirementsMet = (bool)requirements;
 			if ( ! requirements ) {
 				dprintf( D_FULLDEBUG, "%s evaluated to false for job %d.%d. "
@@ -8695,7 +8695,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	//
 	if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
 			// Treat undefined/error as FALSE for job requirements, too.
-		if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
+		if ( EvalBool(ATTR_REQUIREMENTS, job, &scheddAd, requirements) ) {
 			requirementsMet = (bool)requirements;
 			if ( !requirements ) {
 				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
@@ -9515,7 +9515,7 @@ Scheduler::setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad ) {
 	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job_ad->LookupInteger(ATTR_PROC_ID, proc);
 
-	job_ad->EvalInteger(ATTR_NEXT_JOB_START_DELAY,machine_ad,delay);
+	EvalInteger(ATTR_NEXT_JOB_START_DELAY,job_ad,machine_ad,delay);
 	if( MaxNextJobDelay && delay > MaxNextJobDelay ) {
 		dprintf(D_ALWAYS,
 				"Job %d.%d has %s = %d, which is greater than "
@@ -14334,7 +14334,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
-		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
+		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
 	}

@@ -184,7 +184,7 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	} else {
 		merged_ad = new ClassAd( *s_ad );
 	}
-	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
+	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
 		requirements = 0;
 		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
 		classad::PrettyPrint pp;

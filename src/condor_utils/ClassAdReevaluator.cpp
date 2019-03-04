@@ -73,7 +73,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 			free(ntmp);
 			ntmp = NULL;
 
-			if (!ad->EvalString(stmp.Value(), context, &ntmp)) {
+			if (!EvalString(stmp.Value(), ad, context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
 						stmp.Value());
@@ -98,7 +98,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 		} else if ( ad->LookupInteger(atmp, itmp) ) {
 
-			if (!ad->EvalInteger(stmp.Value(), context, itmp)) {
+			if (!EvalInteger(stmp.Value(), ad, context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
 						stmp.Value());
@@ -120,7 +120,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 		} else if ( ad->LookupFloat(atmp, ftmp) ) {
 
-			if (!ad->EvalFloat(stmp.Value(), context, ftmp)) {
+			if (!EvalFloat(stmp.Value(), ad, context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
 						stmp.Value());
@@ -142,7 +142,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 		} else if ( ad->LookupBool(atmp, itmp) ) {
 
-			if (!ad->EvalBool(stmp.Value(), context, itmp)) {
+			if (!EvalBool(stmp.Value(), ad, context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
 						stmp.Value());

@@ -7376,7 +7376,7 @@ static bool test_scoping_my() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 1;
-	int retVal = classad1.EvalInteger("A", &classad2, actual);
+	int retVal = EvalInteger("A", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "A");
@@ -7406,7 +7406,7 @@ static bool test_scoping_my_dup() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 4;
-	int retVal = classad1.EvalInteger("G", &classad2, actual);
+	int retVal = EvalInteger("G", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "G");
@@ -7435,7 +7435,7 @@ static bool test_scoping_target() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 3;
-	int retVal = classad1.EvalInteger("D", &classad2, actual);
+	int retVal = EvalInteger("D", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "D");
@@ -7465,7 +7465,7 @@ static bool test_scoping_target_dup() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 2;
-	int retVal = classad1.EvalInteger("B", &classad2, actual);
+	int retVal = EvalInteger("B", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "B");
@@ -7495,7 +7495,7 @@ static bool test_scoping_both() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 5;
-	int retVal = classad1.EvalInteger("J", &classad2, actual);
+	int retVal = EvalInteger("J", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "J");
@@ -7524,7 +7524,7 @@ static bool test_scoping_my_miss() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1;
-	int retVal = classad1.EvalInteger("C", &classad2, actual);
+	int retVal = EvalInteger("C", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "C");
@@ -7551,7 +7551,7 @@ static bool test_scoping_target_miss() {
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1;
-	int retVal = classad1.EvalInteger("H", &classad2, actual);
+	int retVal = EvalInteger("H", &classad1, &classad2, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string1);
 	emit_param("Attribute", "H");

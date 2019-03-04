@@ -902,7 +902,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 		// find the first one that matches our requirements
 	for( i = 0; i < nresources; i++ ) {
-		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
 			requirements = 0;
 		}

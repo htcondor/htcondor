@@ -473,7 +473,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 		// Now verify COLLECTOR_REQUIREMENTS
 	int collector_req_result = 0;
-	if( !m_collector_requirements->EvalBool(COLLECTOR_REQUIREMENTS,clientAd,collector_req_result) ) {
+	if( !EvalBool(COLLECTOR_REQUIREMENTS,m_collector_requirements,clientAd,collector_req_result) ) {
 		dprintf(D_ALWAYS,"WARNING: %s did not evaluate to a boolean result.\n",COLLECTOR_REQUIREMENTS);
 		collector_req_result = 0;
 	}

@@ -105,7 +105,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         double cv = 0;
-        if (!resource.EvalFloat(ca.c_str(), &job, cv) || (cv < 0)) {
+        if (!EvalFloat(ca.c_str(), &resource, &job, cv) || (cv < 0)) {
             string name;
             resource.LookupString(ATTR_NAME, name);
             dprintf(D_ALWAYS, "WARNING: consumption policy for %s on resource %s failed to evaluate to a non-negative numeric value\n", ca.c_str(), name.c_str());

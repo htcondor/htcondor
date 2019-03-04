@@ -2103,7 +2103,7 @@ string_is_long_param(
 
 		if( !rhs.AssignExpr( name, string ) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
-		} else if( !rhs.EvalInteger(name,target,result) ) {
+		} else if( !EvalInteger(name,&rhs,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;
@@ -2297,7 +2297,7 @@ bool string_is_double_param(
 		if ( ! rhs.AssignExpr( name, string )) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
 		}
-		else if ( ! rhs.EvalFloat(name,target,result) ) {
+		else if ( ! EvalFloat(name,&rhs,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;
@@ -2456,7 +2456,7 @@ bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= 
 		if ( ! name) { name = "CondorBool"; }
 
 		if( rhs.AssignExpr( name, string ) &&
-			rhs.EvalBool(name,target,int_value) )
+			EvalBool(name,&rhs,target,int_value) )
 		{
 			result = (int_value != 0);
 			valid = true;
@@ -3570,7 +3570,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 	classad::ExprTree *expr_raw = parser.ParseExpression(buf);
 
 	std::string result;
-	if( rhs.Insert( "_condor_bool", expr_raw) && rhs.EvalString("_condor_bool", target, result) ) {
+	if( rhs.Insert( "_condor_bool", expr_raw) && EvalString("_condor_bool", &rhs, target, result) ) {
 		buf = result;
 		return true;
 	}

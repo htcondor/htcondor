@@ -147,7 +147,7 @@ AllocationNode::display( void )
 bool satisfies(ClassAd* job, ClassAd* candidate) {
 	// Make sure the job requirements are satisfied with this resource.
     int satisfied_req = 1;
-	if (!job || job->EvalBool(ATTR_REQUIREMENTS, candidate, satisfied_req) == 0) { 
+	if (!job || EvalBool(ATTR_REQUIREMENTS, job, candidate, satisfied_req) == 0) {
 		// If it's undefined, treat it as false.
 		satisfied_req = 0;
 	}
@@ -328,7 +328,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	while ((machine = this->Next())) {
 			// If RANK undefined, default value is small
 		float rank = 0.0;
-		rankAd->EvalFloat(ATTR_RANK, machine, rank);
+		EvalFloat(ATTR_RANK, rankAd, machine, rank);
 
 			// and stick this machine and its rank in our array...
 		array[index].machineAd = machine;

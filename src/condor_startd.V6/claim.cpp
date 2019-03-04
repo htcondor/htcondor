@@ -753,7 +753,7 @@ Claim::loadRequestInfo()
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
 	char* limits = NULL;
-	c_jobad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
+	EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, &limits);
 	if (limits) {
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;
@@ -796,8 +796,8 @@ Claim::beginActivation( double now )
 
 	c_pledged_machine_max_vacate_time = 0;
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
-		if( !c_rip->r_classad->EvalInteger(
-			ATTR_MACHINE_MAX_VACATE_TIME,
+		if( !EvalInteger(
+			ATTR_MACHINE_MAX_VACATE_TIME, c_rip->r_classad,
 			c_jobad,
 			c_pledged_machine_max_vacate_time))
 		{
