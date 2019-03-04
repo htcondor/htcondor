@@ -2019,72 +2019,54 @@ EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, clas
 int
 EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value)
 {
-	string strVal;
-    bool foundAttr = false;
-	int rc = 0;
-
-	if( target == my || target == NULL ) {
-		if( my->EvaluateAttrString( name, strVal ) ) {
-
-            *value = (char *)malloc(strlen(strVal.c_str()) + 1);
-            if(*value != NULL) {
-                strcpy( *value, strVal.c_str( ) );
-                rc = 1;
-            } else {
-                rc = 0;
-            }
+	std::string str_val;
+	int rc = EvalString(name, my, target, str_val);
+	if( rc != 0 ) {
+		*value = strdup(str_val.c_str());
+		if(*value == NULL) {
+			rc = 0;
 		}
-		return rc;
 	}
-
-	getTheMatchAd( my, target );
-
-    if( my->Lookup(name) ) {
-
-        if( my->EvaluateAttrString( name, strVal ) ) {
-            foundAttr = true;
-        }		
-    } else if( target->Lookup(name) ) {
-        if( target->EvaluateAttrString( name, strVal ) ) {
-            foundAttr = true;
-        }		
-    }
-
-    if(foundAttr)
-    {
-        *value = (char *)malloc(strlen(strVal.c_str()) + 1);
-        if(*value != NULL) {
-            strcpy( *value, strVal.c_str( ) );
-            rc = 1;
-        }
-    }
-
-	releaseTheMatchAd();
 	return rc;
 }
 
 int
 EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value)
 {
-    char * pvalue = NULL;
-    //this one makes sure length is good
-    int ret = EvalString(name, my, target, &pvalue);
-    if(ret == 0) { return ret; }
-    value = pvalue;
-    free(pvalue);
-    return ret;
+	std::string str_val;
+	int rc = EvalString(name, my, target, str_val);
+	if( rc != 0 ) {
+		value = str_val;
+	}
+	return rc;
 }
 
 int
 EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, std::string & value)
 {
-    char * pvalue = NULL;
-    //this one makes sure length is good
-    int ret = EvalString(name, my, target, &pvalue);
-    if(ret == 0) { return ret; }
-    value = pvalue;
-    free(pvalue);
-    return ret;
+	int rc = 0;
+
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrString( name, value ) ) {
+			rc = 1;
+		}
+	}
+	else
+	{
+	  getTheMatchAd( my, target );
+	  if( my->Lookup( name ) ) {
+		  if( my->EvaluateAttrString( name, value ) ) {
+			  rc = 1;
+		  }
+	  } else if( target->Lookup( name ) ) {
+		  if( target->EvaluateAttrString( name, value ) ) {
+			  rc = 1;
+		  }
+	  }
+	  releaseTheMatchAd();
+	}
+
+	return rc;
 }
 
 int
