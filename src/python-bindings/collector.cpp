@@ -13,6 +13,7 @@
 #include "classad_wrapper.h"
 
 #include "module_lock.h"
+#include "htcondor.h"
 
 using namespace boost::python;
 
@@ -58,16 +59,15 @@ AdTypes convert_to_ad_type(daemon_t d_type)
         break;
     case DT_GENERIC:
         ad_type = GENERIC_AD;
-		break;
+        break;
     case DT_HAD:
         ad_type = HAD_AD;
-		break;
+        break;
     case DT_CREDD:
         ad_type = CREDD_AD;
         break;
     default:
-        PyErr_SetString(PyExc_ValueError, "Unknown daemon type.");
-        throw_error_already_set();
+        THROW_EX(ValueError, "Unknown daemon type.");
     }
     return ad_type;
 }
@@ -184,8 +184,7 @@ struct Collector {
         if (py_len(result) >= 1) {
             return result[0];
         }
-        PyErr_SetString(PyExc_ValueError, "Unable to find daemon.");
-        throw_error_already_set();
+        THROW_EX(HTCondorLocateError, "Unable to find daemon.");
         return object();
     }
 
@@ -198,8 +197,7 @@ struct Collector {
             if (py_len(result) >= 1) {
                 return result[0];
             }
-            PyErr_SetString(PyExc_ValueError, "Unable to find daemon.");
-            throw_error_already_set();
+            THROW_EX(HTCondorLocateError, "Unable to find daemon.");
         }
 
         Daemon my_daemon( d_type, 0, 0 );
@@ -207,20 +205,20 @@ struct Collector {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         if (my_daemon.locate())
         {
-			/***  Note: calls to Daemon::locate() cannot invoke daemonAd() anymore.
+            /***  Note: calls to Daemon::locate() cannot invoke daemonAd() anymore.
              *** classad::ClassAd *daemonAd;
              *** if ((daemonAd = my_daemon.daemonAd()))
              *** {
              ***   wrapper->CopyFrom(*daemonAd);
              *** }
              *** else
-			 ***/
+             ***/
             {
                 std::string addr = my_daemon.addr();
                 if (!my_daemon.addr() || !wrapper->InsertAttr(ATTR_MY_ADDRESS, addr))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to locate daemon address.");
-                    throw_error_already_set();
+                    // FIXME: ..?  and these subsequent internal errors...
+                    THROW_EX(RuntimeError, "Unable to locate daemon address.");
                 }
                 std::string name = my_daemon.name() ? my_daemon.name() : "Unknown";
                 if (!wrapper->InsertAttr(ATTR_NAME, name))
@@ -262,8 +260,7 @@ struct Collector {
         }
         else
         {
-            PyErr_SetString(PyExc_RuntimeError, "Unable to locate local daemon");
-            boost::python::throw_error_already_set();
+            THROW_EX(HTCondorLocateError, "Unable to locate local daemon");
         }
         return boost::python::object(wrapper);
     }
@@ -296,8 +293,7 @@ struct Collector {
         while (m_collectors->next(collector))
         {
             if(!collector->locate()) {
-                PyErr_SetString(PyExc_ValueError, "Unable to locate collector.");
-                throw_error_already_set();
+                THROW_EX(HTCondorLocateError, "Unable to locate collector.");
             }
             int list_len = py_len(ads);
             sock.reset();
@@ -328,8 +324,9 @@ struct Collector {
                 }
                 }
                 if (result != 2) {
-                    PyErr_SetString(PyExc_ValueError, "Failed to advertise to collector");
-                    throw_error_already_set();
+                    // FIXME: This is a different kind of IOError, and
+                    // more legitimately an IOError.
+                    THROW_EX(IOError, "Failed to advertise to collector");
                 }
             }
             sock->encode();
@@ -399,24 +396,26 @@ private:
         case Q_OK:
             break;
         case Q_INVALID_CATEGORY:
+            // FIXME: Never do this...
             PyErr_SetString(PyExc_RuntimeError, "Category not supported by query type.");
             boost::python::throw_error_already_set();
         case Q_MEMORY_ERROR:
             PyErr_SetString(PyExc_MemoryError, "Memory allocation error.");
             boost::python::throw_error_already_set();
         case Q_PARSE_ERROR:
-            PyErr_SetString(PyExc_SyntaxError, "Query constraints could not be parsed.");
-            boost::python::throw_error_already_set();
+            THROW_EX(ClassAdParseError, "Query constraints could not be parsed.");
         case Q_COMMUNICATION_ERROR:
             PyErr_SetString(PyExc_IOError, "Failed communication with collector.");
             boost::python::throw_error_already_set();
         case Q_INVALID_QUERY:
+            // FIXME: Never do this...
             PyErr_SetString(PyExc_RuntimeError, "Invalid query.");
             boost::python::throw_error_already_set();
         case Q_NO_COLLECTOR_HOST:
-            PyErr_SetString(PyExc_RuntimeError, "Unable to determine collector host.");
+            THROW_EX(HTCondorLocateError, "Unable to determine collector host.");
             boost::python::throw_error_already_set();
         default:
+            // FIXME: Never do this...
             PyErr_SetString(PyExc_RuntimeError, "Unknown error from collector query.");
             boost::python::throw_error_already_set();
         }

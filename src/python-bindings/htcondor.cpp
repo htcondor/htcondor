@@ -4,7 +4,12 @@
 #include "old_boost.h"
 #include "export_headers.h"
 
+#include "htcondor.h"
+#include "exception_utils.h"
+
 using namespace boost::python;
+
+PyObject * PyExc_HTCondorLocateError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -32,4 +37,8 @@ BOOST_PYTHON_MODULE(htcondor)
     export_query_iterator();
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
+
+    // Allows us to THROW_EX(HTCondorLocateError...);
+    PyExc_HTCondorLocateError = CreateExceptionInModule(
+        "htcondor.LocateError", "LocateError", PyExc_IOError );
 }

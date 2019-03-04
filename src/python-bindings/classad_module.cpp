@@ -11,9 +11,9 @@ BOOST_PYTHON_MODULE(classad)
 
 	// Allows us to THROW_EX(ClassAdParseError...);
 	PyExc_ClassAdParseError = CreateExceptionInModule(
-		"classad.ParseError", "ParseError", PyExc_RuntimeError );
+		"classad.ParseError", "ParseError", PyExc_ValueError );
 
 	// Allows us to THROW_EX(ClassAdEvaluationError...);
 	PyExc_ClassAdEvaluationError = CreateExceptionInModule(
-		"classad.EvaluationError", "EvaluationError", PyExc_RuntimeError );
+		"classad.EvaluationError", "EvaluationError", PyExc_ValueError );
 }
