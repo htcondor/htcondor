@@ -9,7 +9,7 @@
 
 #include "old_boost.h"
 #include "query_iterator.h"
-
+#include "htcondor.h"
 
 struct BulkQueryIterator
 {
@@ -116,14 +116,13 @@ public:
 
         if (m_selector.timed_out())
         {
-			// FIXME: Should this be TimeoutError in Python 3?
-            THROW_EX(IOError, "Timeout when waiting for remote host");
+            THROW_EX(HTCondorIOError, "Timeout when waiting for remote host");
         }
 
         if (m_selector.failed())
         {
-        	// FIXME: if m_selector has an errno and/or errstr, set it here.
-            THROW_EX(OSError, "select() failed.");
+            // FIXME: if m_selector has an errno and/or errstr, set it here.
+            THROW_EX(HTCondorInternalError, "select() failed.");
         }
 
         boost::python::object queryit;
@@ -148,8 +147,7 @@ public:
             return queryit;
         }
         if (!m_count) {THROW_EX(StopIteration, "All ads are processed");}
-        // FIXME: ...?
-        THROW_EX(RuntimeError, "Logic error in poll implementation.");
+        THROW_EX(AssertionError, "Logic error in poll implementation.");
         return queryit;
     }
 

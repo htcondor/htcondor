@@ -9,7 +9,14 @@
 
 using namespace boost::python;
 
+PyObject * PyExc_HTCondorException = NULL;
+
+PyObject * PyExc_HTCondorEnumError = NULL;
+PyObject * PyExc_HTCondorInternalError = NULL;
+PyObject * PyExc_HTCondorIOError = NULL;
 PyObject * PyExc_HTCondorLocateError = NULL;
+PyObject * PyExc_HTCondorReplyError = NULL;
+PyObject * PyExc_HTCondorValueError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -38,7 +45,22 @@ BOOST_PYTHON_MODULE(htcondor)
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
 
-    // Allows us to THROW_EX(HTCondorLocateError...);
+    PyExc_HTCondorException = CreateExceptionInModule(
+        "htcondor.HTCondorException", "HTCondorException", PyExc_Exception );
+
+    PyExc_HTCondorEnumError = CreateExceptionInModule(
+        "htcondor.HTCondorEnumError", "HTCondorEnumError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorInternalError = CreateExceptionInModule(
+        "htcondor.HTCondorInternalError", "HTCondorInternalError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorIOError = CreateExceptionInModule(
+        "htcondor.HTCondorIOError", "HTCondorIOError",
+        PyExc_HTCondorException );
     PyExc_HTCondorLocateError = CreateExceptionInModule(
-        "htcondor.LocateError", "LocateError", PyExc_IOError );
+        "htcondor.HTCondorLocateError", "HTCondorLocateError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorValueError = CreateExceptionInModule(
+        "htcondor.HTCondorValueError", "HTCondorValueError",
+        PyExc_HTCondorException );
 }

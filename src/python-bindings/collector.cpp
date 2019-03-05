@@ -67,7 +67,7 @@ AdTypes convert_to_ad_type(daemon_t d_type)
         ad_type = CREDD_AD;
         break;
     default:
-        THROW_EX(ValueError, "Unknown daemon type.");
+        THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }
     return ad_type;
 }
@@ -133,7 +133,8 @@ struct Collector {
         }
         if (!m_collectors)
         {
-            THROW_EX(ValueError, "No collector specified");
+            // All of the above code paths set m_collectors.
+            THROW_EX(HTCondorInternalError, "No collector specified");
         }
     }
 
@@ -217,44 +218,37 @@ struct Collector {
                 std::string addr = my_daemon.addr();
                 if (!my_daemon.addr() || !wrapper->InsertAttr(ATTR_MY_ADDRESS, addr))
                 {
-                    // FIXME: ..?  and these subsequent internal errors...
-                    THROW_EX(RuntimeError, "Unable to locate daemon address.");
+                    THROW_EX(HTCondorInternalError, "Unable to locate daemon address.");
                 }
                 std::string name = my_daemon.name() ? my_daemon.name() : "Unknown";
                 if (!wrapper->InsertAttr(ATTR_NAME, name))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to insert daemon name.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorInternalError, "Unable to insert daemon name.");
                 }
                 std::string hostname = my_daemon.fullHostname() ? my_daemon.fullHostname() : "Unknown";
                 if (!wrapper->InsertAttr(ATTR_MACHINE, hostname))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to insert daemon hostname.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorInternalError, "Unable to insert daemon hostname.");
                 }
                 std::string version = my_daemon.version() ? my_daemon.version() : "";
                 if (!wrapper->InsertAttr(ATTR_VERSION, version))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to insert daemon version.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorInternalError, "Unable to insert daemon version.");
                 }
                 const char * my_type = AdTypeToString(convert_to_ad_type(d_type));
                 if (!my_type)
                 {
-                    PyErr_SetString(PyExc_ValueError, "Unable to determined daemon type.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorEnumError, "Unable to determined daemon type.");
                 }
                 std::string my_type_str = my_type;
                 if (!wrapper->InsertAttr(ATTR_MY_TYPE, my_type_str))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to insert daemon type.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorInternalError, "Unable to insert daemon type.");
                 }
                 std::string cversion = CondorVersion(); std::string platform = CondorPlatform();
                 if (!wrapper->InsertAttr(ATTR_VERSION, cversion) || !wrapper->InsertAttr(ATTR_PLATFORM, platform))
                 {
-                    PyErr_SetString(PyExc_RuntimeError, "Unable to insert HTCondor version.");
-                    throw_error_already_set();
+                    THROW_EX(HTCondorInternalError, "Unable to insert HTCondor version.");
                 }
             }
         }
@@ -276,13 +270,13 @@ struct Collector {
         int command = getCollectorCommandNum(command_str.c_str());
         if (command == -1)
         {
-            PyErr_SetString(PyExc_ValueError, ("Invalid command " + command_str).c_str());
-            throw_error_already_set();
+            THROW_EX(HTCondorEnumError, ("Invalid command " + command_str).c_str());
         }
 
         if (command == UPDATE_STARTD_AD_WITH_ACK)
         {
-            PyErr_SetString(PyExc_NotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
+            // FIXME: This error is reserved for abstract methods.
+            THROW_EX(NotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
         }
 
         int list_len = py_len(ads);
@@ -324,9 +318,7 @@ struct Collector {
                 }
                 }
                 if (result != 2) {
-                    // FIXME: This is a different kind of IOError, and
-                    // more legitimately an IOError.
-                    THROW_EX(IOError, "Failed to advertise to collector");
+                    THROW_EX(HTCondorIOError, "Failed to advertise to collector");
                 }
             }
             sock->encode();
@@ -395,29 +387,24 @@ private:
         {
         case Q_OK:
             break;
-        case Q_INVALID_CATEGORY:
-            // FIXME: Never do this...
-            PyErr_SetString(PyExc_RuntimeError, "Category not supported by query type.");
-            boost::python::throw_error_already_set();
-        case Q_MEMORY_ERROR:
-            PyErr_SetString(PyExc_MemoryError, "Memory allocation error.");
-            boost::python::throw_error_already_set();
-        case Q_PARSE_ERROR:
-            THROW_EX(ClassAdParseError, "Query constraints could not be parsed.");
+
+        // We think that these can't happen.
+        // case Q_INVALID_CATEGORY:
+            // THROW_EX(FIXME, "Category not supported by query type.");
+        // case Q_MEMORY_ERROR:
+            // THROW_EX(MemoryError, "Memory allocation error.");
+        // case Q_PARSE_ERROR:
+            // THROW_EX(ClassAdParseError, "Query constraints could not be parsed.");
+
         case Q_COMMUNICATION_ERROR:
-            PyErr_SetString(PyExc_IOError, "Failed communication with collector.");
-            boost::python::throw_error_already_set();
+            THROW_EX(HTCondorIOError, "Failed communication with collector.");
         case Q_INVALID_QUERY:
-            // FIXME: Never do this...
-            PyErr_SetString(PyExc_RuntimeError, "Invalid query.");
-            boost::python::throw_error_already_set();
+            THROW_EX(HTCondorEnumError, "Invalid query.");
         case Q_NO_COLLECTOR_HOST:
             THROW_EX(HTCondorLocateError, "Unable to determine collector host.");
-            boost::python::throw_error_already_set();
+
         default:
-            // FIXME: Never do this...
-            PyErr_SetString(PyExc_RuntimeError, "Unknown error from collector query.");
-            boost::python::throw_error_already_set();
+            THROW_EX(HTCondorInternalError, "Unknown error from collector query.");
         }
 
         list retval;

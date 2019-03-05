@@ -87,15 +87,15 @@ long long ExprTreeHolder::toLong() const
         char *endptr;
         long long val = strtoll(retStr.c_str(), &endptr, 10);
         if (errno == ERANGE) {
-            if (val == LLONG_MIN) {THROW_EX(ValueError, "Underflow when converting to integer.");}
-            else {THROW_EX(ValueError, "Overflow when converting to integer.");}
+            if (val == LLONG_MIN) {THROW_EX(ClassAdValueError, "Underflow when converting to integer.");}
+            else {THROW_EX(ClassAdValueError, "Overflow when converting to integer.");}
         }
         if (endptr != (retStr.c_str() + retStr.size())) {
-            THROW_EX(ValueError, "Unable to convert string to integer.");
+            THROW_EX(ClassAdValueError, "Unable to convert string to integer.");
         }
         return val;
     }
-    THROW_EX(ValueError, "Unable to convert expression to numeric type.");
+    THROW_EX(ClassAdValueError, "Unable to convert expression to numeric type.");
     return 0;  // Should never get here
 }
 
@@ -113,7 +113,7 @@ double ExprTreeHolder::toDouble() const
     if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
     if (!evalresult)
     {
-        THROW_EX(TypeError, "Unable to evaluate expression");
+        THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
     }
     double retDouble;
     std::string retStr;
@@ -124,15 +124,15 @@ double ExprTreeHolder::toDouble() const
         double val = strtod(retStr.c_str(), &endptr);
         if (errno == ERANGE) {
             // Any small value will indicate underflow.
-            if (fabs(val) < 1.0) {THROW_EX(ValueError, "Underflow when converting to integer.");}
-            else {THROW_EX(ValueError, "Overflow when converting to integer.");}
+            if (fabs(val) < 1.0) { THROW_EX(ClassAdValueError, "Underflow when converting to integer.");}
+            else { THROW_EX(ClassAdValueError, "Overflow when converting to integer.");}
         }
         if (endptr != (retStr.c_str() + retStr.size())) {
-            THROW_EX(ValueError, "Unable to convert string to integer.");
+            THROW_EX(ClassAdValueError, "Unable to convert string to integer.");
         }
         return val;
     }
-    THROW_EX(ValueError, "Unable to convert expression to numeric type.");
+    THROW_EX(ClassAdValueError, "Unable to convert expression to numeric type.");
     return 0;  // Should never get here
 }
 
@@ -240,7 +240,7 @@ convert_value_to_python(const classad::Value &value)
         break;
     }
     default:
-    	THROW_EX(ValueError, "Unknown ClassAd value type.");
+        THROW_EX(ClassAdEnumError, "Unknown ClassAd value type.");
     }
     return result;
 }
@@ -258,7 +258,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
 
     if (!m_expr)
     {
-    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
+        THROW_EX(ClassAdValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::Value value;
     const classad::ClassAd *origParent = m_expr->GetParentScope();
@@ -337,8 +337,8 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         classad::Value value;
         if (!m_expr->Evaluate(state, value))
         {
-        	if( PyErr_Occurred() ) { boost::python::throw_error_already_set(); }
-        	THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
+            if( PyErr_Occurred() ) { boost::python::throw_error_already_set(); }
+            THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
         }
         classad::ExprList *listExpr = NULL;
         if (value.IsStringValue())
@@ -352,7 +352,7 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         }
         else
         {
-            THROW_EX(ValueError, "ClassAd expression is unsubscriptable.");
+            THROW_EX(ClassAdValueError, "ClassAd expression is unsubscriptable.");
         }
         return boost::python::object();
     }
@@ -408,7 +408,7 @@ std::string ExprTreeHolder::toRepr() const
 {
     if (!m_expr)
     {
-    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
+        THROW_EX(ClassAdValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::ClassAdUnParser up;
     std::string ad_str;
@@ -421,7 +421,7 @@ std::string ExprTreeHolder::toString() const
 {
     if (!m_expr)
     {
-    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
+        THROW_EX(ClassAdValueError, "Cannot operate on an invalid ExprTree");
     }
     classad::PrettyPrint pp;
     std::string ad_str;
@@ -434,7 +434,7 @@ classad::ExprTree *ExprTreeHolder::get() const
 {
     if (!m_expr)
     {
-    	THROW_EX(ValueError, "Cannot operate on an invalid ExprTree");
+        THROW_EX(ClassAdValueError, "Cannot operate on an invalid ExprTree");
     }
     return m_expr->Copy();
 }
@@ -545,7 +545,7 @@ boost::python::object ClassAdWrapper::Flatten(boost::python::object input) const
     classad::Value val;
     if (!static_cast<const classad::ClassAd*>(this)->Flatten(expr.get(), val, output))
     {
-        THROW_EX(ValueError, "Unable to flatten expression.");
+        THROW_EX(ClassAdValueError, "Unable to flatten expression.");
     }
     if (!output)
     {
@@ -564,7 +564,7 @@ boost::python::list ClassAdWrapper::externalRefs(boost::python::object input) co
     classad::References refs;
     if (!static_cast<const classad::ClassAd*>(this)->GetExternalReferences(expr.get(), refs, true))
     {
-        THROW_EX(ValueError, "Unable to determine external references.");
+        THROW_EX(ClassAdValueError, "Unable to determine external references.");
     }
     boost::python::list results;
     for (classad::References::const_iterator it = refs.begin(); it != refs.end(); it++) { results.append(*it); }
@@ -578,7 +578,7 @@ boost::python::list ClassAdWrapper::internalRefs(boost::python::object input) co
     classad::References refs;
     if (!static_cast<const classad::ClassAd*>(this)->GetInternalReferences(expr.get(), refs, true))
     {
-        THROW_EX(ValueError, "Unable to determine external references.");
+        THROW_EX(ClassAdValueError, "Unable to determine external references.");
     }
     boost::python::list results;
     for (classad::References::const_iterator it = refs.begin(); it != refs.end(); it++) { results.append(*it); }
@@ -649,7 +649,7 @@ literal(boost::python::object value)
         if (!success)
         {
             delete expr;
-            THROW_EX(ValueError, "Unable to convert expression to literal")
+            THROW_EX(ClassAdValueError, "Unable to convert expression to literal")
         }
         classad::ExprTree *orig_expr = expr;
         bool should_delete = !value.IsClassAdValue() && !value.IsListValue();
@@ -657,7 +657,7 @@ literal(boost::python::object value)
         if (should_delete) { delete orig_expr; }
         if (!expr)
         {
-            THROW_EX(ValueError, "Unable to convert expression to literal")
+            THROW_EX(ClassAdValueError, "Unable to convert expression to literal")
         }
         ExprTreeHolder holder(expr, true);
         return holder;
@@ -779,7 +779,7 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
-        THROW_EX(ValueError, "Unable to convert python function result to ClassAd value");
+        THROW_EX(ClassAdValueError, "Unable to convert python function result to ClassAd value");
     }
 }
 
@@ -833,8 +833,10 @@ convert_python_to_exprtree(boost::python::object value)
             classad_value.SetUndefinedValue();
             return classad::Literal::MakeLiteral(classad_value);
         }
-        PyErr_SetString(PyExc_ValueError, "Unknown ClassAd Value type.");
-        boost::python::throw_error_already_set();
+        // FIXME: is ValueType strongly-typed enough that this an internal
+        // error (because we gave the user back one that's not valid) or
+        // is it some sort of enum that could confuse Boost?
+        THROW_EX(ClassAdInternalError, "Unknown ClassAd Value type.");
     }
     if (PyBool_Check(value.ptr()))
     {
@@ -923,8 +925,12 @@ convert_python_to_exprtree(boost::python::object value)
     {
         PyErr_Clear();
     }
-    PyErr_SetString(PyExc_TypeError, "Unknown ClassAd value type.");
-    boost::python::throw_error_already_set();
+    // FIXME: When it's safe to change exception strings, change this so
+    // it's not just the case of value that distinguishes it from the
+    // internal error above (especially if we change that to a ValueError
+    // as well).  Something like "Don't know which ClassAd type to convert
+    // this to."
+    THROW_EX(ClassAdValueError, "Unknown ClassAd value type.");
     return NULL;
 }
 
@@ -1016,8 +1022,7 @@ ClassAdWrapper::ClassAdWrapper(const boost::python::dict dict)
         ExprTree *val = convert_python_to_exprtree(dict[keys[idx]]);
         if (!Insert(key, val))
         {
-            PyErr_SetString(PyExc_ValueError, ("Unable to insert value into classad for key " + key).c_str());
-            boost::python::throw_error_already_set();
+            THROW_EX(ClassAdValueError, ("Unable to insert value into classad for key " + key).c_str());
         }
     }
 }

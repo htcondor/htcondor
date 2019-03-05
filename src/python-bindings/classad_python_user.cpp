@@ -152,7 +152,7 @@ python_invoke_internal (boost::python::object                        pyFunc,
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
-        THROW_EX(ValueError, "Unable to convert python function result to ClassAd value");
+        THROW_EX(ClassAdValueError, "Unable to convert python function result to ClassAd value");
     }
     return true;
 }

@@ -35,8 +35,7 @@ void RegisterLibrary(const std::string &libraryName)
 {
     if (!classad::FunctionCall::RegisterSharedLibraryFunctions(libraryName.c_str()))
     {
-        // FIXME: Should this be an OSError?
-        THROW_EX(RuntimeError, "Failed to load shared library.");
+        THROW_EX(OSError, "Failed to load shared library.");
     }
 }
 
@@ -87,6 +86,7 @@ void *convert_to_FILEptr(PyObject* obj) {
     int flags = fcntl(fd, F_GETFL);
     if (flags == -1)
     {
+        // FIXME
         THROW_ERRNO(IOError);
     }
 #endif

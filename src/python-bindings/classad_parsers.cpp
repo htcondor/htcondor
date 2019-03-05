@@ -79,7 +79,7 @@ ClassAdWrapper *parseOld(boost::python::object input)
         if (!wrapper->InsertViaCache(name, szValue))
         {
             // FIXME: ..?
-            THROW_EX(ValueError, line_str.c_str());
+            THROW_EX(ClassAdParseError, line_str.c_str());
         }
     }
     return wrapper;
@@ -114,7 +114,7 @@ bool isOldAd(boost::python::object source)
         if (PyErr_ExceptionMatches(PyExc_IOError))
         {
             PyErr_Clear();
-            THROW_EX(ValueError, "Stream cannot rewind; must explicitly chose either old or new ClassAd parser.  Auto-detection not available.");
+            THROW_EX(ClassAdValueError, "Stream cannot rewind; must explicitly chose either old or new ClassAd parser.  Auto-detection not available.");
         }
         throw;
     }
@@ -211,7 +211,7 @@ OldClassAdIterator::OldClassAdIterator(boost::python::object source)
 boost::shared_ptr<ClassAdWrapper>
 OldClassAdIterator::next()
 {
-    if (m_done) THROW_EX(StopIteration, "All ads processed");
+    if (m_done) { THROW_EX(StopIteration, "All ads processed"); }
 
     bool reset_ptr = py_hasattr(m_source, "tell");
     size_t end_ptr = 0;
@@ -326,7 +326,7 @@ OldClassAdIterator::next()
         if (!m_ad->InsertViaCache(name, szValue))
         {
             // FIXME: ..?
-            THROW_EX(ValueError, line_str.c_str());
+            THROW_EX(ClassAdParseError, line_str.c_str());
         }
     }
 }

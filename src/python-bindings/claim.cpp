@@ -68,11 +68,6 @@ struct Claim
             std::string constraint_str = constraint_extract();
             classad::ExprTree *expr_tmp = NULL;
             if (!parser.ParseExpression(constraint_str, expr_tmp)) {
-            	// FIXME:
-            	// static PyObject * PyExc_ParseError =
-            	//    PyErr_NewException(...);
-            	// should probably come from the constraint object,
-            	// actually.
             	THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
             }
             constraint.reset(expr_tmp);
