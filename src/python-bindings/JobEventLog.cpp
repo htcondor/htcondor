@@ -365,7 +365,8 @@ JobEvent::Py_Repr() {
 std::string
 JobEvent::Py_Str() {
 	std::string buffer;
-	if(! event->formatEvent( buffer )) {
+	// TODO: where do we get event formatting options?
+	if(! event->formatEvent( buffer, 0 )) {
 		buffer = Py_Repr();
 	}
 	return buffer;
