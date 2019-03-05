@@ -922,7 +922,7 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 		event.setCriticalError( false );
 		event.setHoldReasonCode( hold_reason_code );
 		event.setHoldReasonSubCode( hold_reason_subcode );
-		ad = event.toClassAd();
+		ad = event.toClassAd(true);
 		ASSERT( ad );
 		int rv = REMOTE_CONDOR_ulog( ad );
 		delete ad;

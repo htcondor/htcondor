@@ -876,7 +876,7 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	event.setCriticalError( true );
 	event.setHoldReasonCode( hold_reason_code );
 	event.setHoldReasonSubCode( hold_reason_subcode );
-	ad = event.toClassAd();
+	ad = event.toClassAd(true);
 	ASSERT(ad);
 	int retval = REMOTE_CONDOR_ulog( ad );
 	delete ad;
