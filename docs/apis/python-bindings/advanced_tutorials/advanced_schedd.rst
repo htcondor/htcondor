@@ -13,7 +13,7 @@ of functionality:
 Job and History Querying
 ------------------------
 
-In :doc:`htcondor_intro`, we covered the :meth:`~htcondor.Schedd.xquery` method
+In :doc:`../intro_tutorials/htcondor`, we covered the :meth:`~htcondor.Schedd.xquery` method
 and its two most important keywords:
 
 *  ``requirements``: Filters the jobs the schedd should return.
@@ -139,7 +139,7 @@ projection list; the third is the maximum number of jobs to return.
 Advanced Job Submission
 -----------------------
 
-In :doc:`htcondor_intro`, we introduced the :class:`~htcondor.Submit` object.  :class:`~htcondor.Submit`
+In :doc:`../intro_tutorials/htcondor`, we introduced the :class:`~htcondor.Submit` object.  :class:`~htcondor.Submit`
 allows jobs to be created using the *submit file* language.  This is the well-documented, familiar
 means for submitting jobs via ``condor_submit``.  This is the preferred mechansim for submitting
 jobs from Python.
