@@ -2,3 +2,6 @@
 # if no =x.x.x, uses latest stable release on pypi
 
 htcondor
+
+sphinx
+sphinx_rtd_theme
