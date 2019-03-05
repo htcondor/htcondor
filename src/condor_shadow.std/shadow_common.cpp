@@ -117,7 +117,7 @@ extern "C" bool JobPreCkptServerScheddNameChange();
 int
 terminate_is_pending(void)
 {
-	int val = 0;
+	bool val = false;
 
 	if (JobAd->LookupBool(ATTR_TERMINATION_PENDING, val)) {
 		return val?TRUE:FALSE;

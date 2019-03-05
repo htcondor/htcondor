@@ -97,7 +97,7 @@ extern "C" void
 initializeUserLog ()
 {
 	std::string logfilename,dagmanLogName;
-	int use_xml;
+	bool use_xml;
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
 		logfiles.push_back(logfilename.c_str());
