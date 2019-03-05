@@ -7474,8 +7474,8 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 }
 
 ClassAd *
-FileTransferEvent::toClassAd() {
-	ClassAd * ad = ULogEvent::toClassAd();
+FileTransferEvent::toClassAd(bool event_time_utc) {
+	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
 	if(! ad) { return NULL; }
 
 	if(! ad->InsertAttr( "Type", (int)type )) {

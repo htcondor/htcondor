@@ -2226,7 +2226,7 @@ class FileTransferEvent : public ULogEvent {
 		virtual int readEvent( FILE * f, bool & got_sync_line );
 		virtual bool formatBody( std::string & out );
 
-		virtual ClassAd * toClassAd();
+		virtual ClassAd * toClassAd(bool event_time_utc);
 		virtual void initFromClassAd( ClassAd * ad );
 
 		enum FileTransferEventType {
