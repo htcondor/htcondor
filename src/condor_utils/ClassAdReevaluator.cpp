@@ -32,6 +32,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 	ExprTree *etmp;
 	int itmp;
 	float ftmp;
+	bool btmp;
 	
 	if (!ad->LookupString("REEVALUATE_ATTRIBUTES", &ptmp)) {
 		dprintf(D_FULLDEBUG,
@@ -140,9 +141,9 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 					"classad_reevaluate: Updated %s to %f\n",
 					atmp, ftmp);
 
-		} else if ( ad->LookupBool(atmp, itmp) ) {
+		} else if ( ad->LookupBool(atmp, btmp) ) {
 
-			if (!EvalBool(stmp.Value(), ad, context, itmp)) {
+			if (!EvalBool(stmp.Value(), ad, context, btmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
 						stmp.Value());
@@ -150,7 +151,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 				goto FAIL;
 			}
 
-			if (!ad->Assign(atmp, (itmp ? true : false))) {
+			if (!ad->Assign(atmp, btmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to assign new value %d to %s\n",
 						itmp, atmp);
@@ -159,8 +160,8 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 			}
 
 			dprintf(D_FULLDEBUG,
-					"classad_reevaluate: Updated %s to %d\n",
-					atmp, itmp);
+					"classad_reevaluate: Updated %s to %s\n",
+					atmp, btmp ? "true" : "false");
 
 		} else {
 			dprintf(D_ALWAYS,

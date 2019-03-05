@@ -420,7 +420,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
 		job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
 	}
-	int suspend_job_at_exec = 0;
+	bool suspend_job_at_exec = false;
 	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
 	if( suspend_job_at_exec ) {
 		dprintf( D_FULLDEBUG, "OsProc::StartJob(): "

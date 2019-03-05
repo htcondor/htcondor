@@ -327,7 +327,7 @@ render_slot_id (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 	static char outstr[10];
 	outstr[0] = 0;
 	//bool from_name = false;
-	int is_dynamic = false;
+	bool is_dynamic = false;
 	if (/*from_name || */(ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
 		std::string name;
 		if (ad->LookupString(ATTR_NAME, name) && (0 == name.find("slot"))) {

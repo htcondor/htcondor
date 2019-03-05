@@ -351,7 +351,7 @@ private:
 	bool		c_startd_sends_alives; // set by param with override by schedd via an attribute in the job.
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
-	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
+	bool		c_has_job_ad;	// Do we have a job ad for the COD claim?
 
 	ClaimState	c_state;		// the state of this claim
 	ClaimState	c_last_state;	// the state when a release was requested

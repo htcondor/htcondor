@@ -1971,17 +1971,6 @@ LookupFloat( const char *name, double &value ) const
 }
 
 int ClassAd::
-LookupBool( const char *name, int &value ) const
-{
-	bool bval;
-	bool rc = EvaluateAttrBoolEquiv(name, bval);
-	if ( rc ) {
-		value = bval;
-	}
-	return rc;
-}
-
-int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
 	return EvaluateAttrBoolEquiv(name, value);
@@ -2151,14 +2140,12 @@ int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target,
 }
 
 int
-EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value)
+EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value)
 {
 	int rc = 0;
-	bool boolVal;
 
 	if( target == my || target == NULL ) {
-		if( my->EvaluateAttrBoolEquiv( name, boolVal ) ) {
-			value = boolVal ? 1 : 0;
+		if( my->EvaluateAttrBoolEquiv( name, value ) ) {
 			rc = 1;
 		}
 		return rc;
@@ -2166,19 +2153,26 @@ EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, int 
 
 	getTheMatchAd( my, target );
 	if( my->Lookup( name ) ) {
-		if( my->EvaluateAttrBoolEquiv( name, boolVal ) ) {
-			value = boolVal ? 1 : 0;
+		if( my->EvaluateAttrBoolEquiv( name, value ) ) {
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrBoolEquiv( name, boolVal ) ) {
-			value = boolVal ? 1 : 0;
+		if( target->EvaluateAttrBoolEquiv( name, value ) ) {
 			rc = 1;
 		}
 	}
 
 	releaseTheMatchAd();
 	return rc;
+}
+
+int EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value) {
+	bool bval = false;
+	int result = EvalBool(name, my, target, bval);
+	if ( result ) {
+		value = bval;
+	}
+	return result;
 }
 
 bool

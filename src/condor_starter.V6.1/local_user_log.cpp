@@ -361,11 +361,7 @@ LocalUserLog::logTerminate( ClassAd* ad )
 		//
 	int int_value = 0;
 	bool exited_by_signal = false;
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-        if( int_value ) {
-            exited_by_signal = true;
-        } 
-    } else {
+	if( ! ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
 		EXCEPT( "in LocalUserLog::logTerminate() "
 				"ERROR: ClassAd does not define %s!",
 				ATTR_ON_EXIT_BY_SIGNAL );
@@ -465,11 +461,7 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
 		//
 	int int_value = 0;
 	bool exited_by_signal = false;
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-        if( int_value ) {
-            exited_by_signal = true;
-        } 
-    } else {
+	if( ! ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
 		EXCEPT( "in LocalUserLog::logTerminate() "
 				"ERROR: ClassAd does not define %s!",
 				ATTR_ON_EXIT_BY_SIGNAL );

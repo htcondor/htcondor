@@ -648,7 +648,7 @@ RemoteResource::killStarter( bool graceful )
 				 graceful ? "graceful" : "fast", addr );
 	}
 
-	int wantReleaseClaim = 0;
+	bool wantReleaseClaim = false;
 	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
 	if (wantReleaseClaim) {
 		ClassAd replyAd;
@@ -1173,11 +1173,9 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
 
-	int tmp_int;
-	if( ad->LookupBool(ATTR_HAS_RECONNECT, tmp_int) ) {
+	if( ad->LookupBool(ATTR_HAS_RECONNECT, supports_reconnect) ) {
 			// Whatever the starter defines in its own classad
 			// overrides whatever we might think...
-		supports_reconnect = tmp_int;
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_HAS_RECONNECT, 
 				 supports_reconnect ? "TRUE" : "FALSE" );
 	} else {
@@ -1350,6 +1348,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	int int_value;
 	int64_t int64_value;
 	MyString string_value;
+	bool bool_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 	hadContact();
@@ -1486,9 +1485,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_EXCEPTION_TYPE, string_value.Value());
 	}
 
-	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-		exited_by_signal = (bool)int_value;
-		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, (bool)exited_by_signal);
+	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
+		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal);
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
@@ -1505,8 +1503,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_EXIT_REASON, string_value.Value());
 	}
 
-	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, int_value) ) {
-		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
+	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, bool_value) ) {
+		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
 
 		// The starter sends this attribute whether or not we are spooling

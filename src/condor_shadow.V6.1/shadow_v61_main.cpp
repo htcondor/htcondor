@@ -237,7 +237,7 @@ initShadow( ClassAd* ad )
 	dprintf( D_ALWAYS, "Initializing a %s shadow for job %d.%d\n", 
 			 CondorUniverseName(universe), cluster, proc );
 
-	int wantPS = 0;
+	bool wantPS = false;
 	ad->LookupBool("WantParallelScheduling", wantPS);
 	if (wantPS) {
 		universe = CONDOR_UNIVERSE_PARALLEL;
@@ -282,7 +282,7 @@ void startShadow( ClassAd *ad )
 
 	initShadow( ad );
 
-	int wantClaiming = 0;
+	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
 	if( is_reconnect ) {

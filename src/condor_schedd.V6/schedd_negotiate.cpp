@@ -245,7 +245,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	ASSERT( match_ad );
 	ASSERT( job_ad );
 
-	int is_partitionable = 0;
+	bool is_partitionable = false;
 	match_ad->LookupBool(ATTR_SLOT_PARTITIONABLE,is_partitionable);
 	if (!is_partitionable) {
 		return true;

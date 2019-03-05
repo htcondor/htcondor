@@ -2373,7 +2373,7 @@ CStarter::SpawnJob( void )
 	{
 		case CONDOR_UNIVERSE_LOCAL:
 		case CONDOR_UNIVERSE_VANILLA: {
-			int wantDocker = 0;
+			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
 
 			if( wantDocker ) {
@@ -2389,9 +2389,9 @@ CStarter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			int is_master = FALSE;
+			bool is_master = false;
 			if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
-				is_master = FALSE;
+				is_master = false;
 			}
 			if ( is_master ) {
 				dprintf ( D_FULLDEBUG, "Starting a MPIMasterProc\n" );
@@ -2669,7 +2669,7 @@ CStarter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	if( jobUniverse == CONDOR_UNIVERSE_VM ) {
 		wantCheckpoint = 1;
 	} else if( jobUniverse == CONDOR_UNIVERSE_VANILLA ) {

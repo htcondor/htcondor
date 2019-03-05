@@ -176,17 +176,14 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 		// a bunch of info out of the ClassAd to finish our task...
 
 	int int_value;
+	bool bool_value;
 	bool exited_by_signal = false;
 	int exit_value = -1;
 
 		// first grab everything from the ad we must have for this to
 		// work at all...
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-		if( int_value ) {
-			exited_by_signal = true;
-		} else {
-			exited_by_signal = false;
-		}
+	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, bool_value) ) {
+		exited_by_signal = bool_value;
 	} else {
 		dprintf( D_ALWAYS, "ERROR in printExitString: %s not found in ad\n",
 				 ATTR_ON_EXIT_BY_SIGNAL );

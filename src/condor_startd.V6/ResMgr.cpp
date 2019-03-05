@@ -881,7 +881,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if( ! resources ) {
 		return NULL;
 	}
-	int requirements;
+	bool requirements;
 	int i;
 
 		/*
@@ -904,7 +904,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	for( i = 0; i < nresources; i++ ) {
 		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
-			requirements = 0;
+			requirements = false;
 		}
 		if( requirements ) {
 			return resources[i];
@@ -1323,7 +1323,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
 
-		int universeOnline = 0;
+		bool universeOnline = false;
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName );

@@ -658,7 +658,7 @@ void GCEJob::doEvaluateState()
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
 				if ( !m_instanceId.empty() && condorState != REMOVED
-					 && wantResubmit == 0 && doResubmit == 0 ) {
+					 && wantResubmit == false && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
 				}
@@ -669,7 +669,7 @@ void GCEJob::doEvaluateState()
 				}
 
 				if ( wantResubmit ) {
-					wantResubmit = 0;
+					wantResubmit = false;
 					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
@@ -705,7 +705,7 @@ void GCEJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 					// Set ad attributes so the schedd finds a new match.
-					int dummy;
+					bool dummy;
 					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 						jobAd->Assign( ATTR_JOB_MATCHED, false );
 						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );

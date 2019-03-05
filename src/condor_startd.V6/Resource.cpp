@@ -1656,7 +1656,7 @@ Resource::wants_pckpt( void )
 	switch( r_cur->universe() ) {
 		case CONDOR_UNIVERSE_VANILLA: {
 			ClassAd * jobAd = r_cur->ad();
-			int wantCheckpoint = 0;
+			bool wantCheckpoint = false;
 			jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 			if( ! wantCheckpoint ) { return FALSE; }
 			} break;
@@ -1669,12 +1669,12 @@ Resource::wants_pckpt( void )
 			return FALSE;
 	}
 
-	int want_pckpt;
+	bool want_pckpt;
 	if( EvalBool( "PERIODIC_CHECKPOINT", r_classad,
 				r_cur->ad(),
 				want_pckpt ) == 0) { 
 		// Default to no, if not defined.
-		want_pckpt = 0;
+		want_pckpt = false;
 	}
 
 	return want_pckpt;
@@ -3003,7 +3003,7 @@ Resource::acceptClaimRequest()
 bool
 Resource::willingToRun(ClassAd* request_ad)
 {
-	int slot_requirements = 1, req_requirements = 1;
+	bool slot_requirements = true, req_requirements = true;
 
 		// First, verify that the slot and job meet each other's
 		// requirements at all.
@@ -3012,7 +3012,7 @@ Resource::willingToRun(ClassAd* request_ad)
 		if (EvalBool(ATTR_REQUIREMENTS, r_classad,
 								request_ad, slot_requirements) == 0) {
 				// Since we have the request ad, treat UNDEFINED as FALSE.
-			slot_requirements = 0;
+			slot_requirements = false;
 		}
 
 			// Since we have a request ad, we can also check its requirements.
@@ -3020,11 +3020,11 @@ Resource::willingToRun(ClassAd* request_ad)
 		bool no_starter = false;
 		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
 		if (!tmp_starter) {
-			req_requirements = 0;
+			req_requirements = false;
 		}
 		else {
 			delete(tmp_starter);
-			req_requirements = 1;
+			req_requirements = true;
 		}
 
 			// The following dprintfs are only done if request_ad !=
@@ -3070,7 +3070,7 @@ Resource::willingToRun(ClassAd* request_ad)
 			// be undefined (and irrelevant for our decision here).
 		if (r_classad->LookupBool(ATTR_START, slot_requirements) == 0) {
 				// Without a request classad, treat UNDEFINED as TRUE.
-			slot_requirements = 1;
+			slot_requirements = true;
 		}
 	}
 

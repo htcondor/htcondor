@@ -200,6 +200,7 @@ int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target,
  *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
  *  but is not a number.
  */
+int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value);
 int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value);
 
 class ClassAd : public classad::ClassAd
@@ -318,14 +319,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int LookupFloat(const char *name, float &value) const;
 	int LookupFloat(const char *name, double &value) const;
-
-		/** Lookup (don't evaluate) an attribute that can be considered a boolean
-		 *  @param name The attribute
-		 *  @param value 0 if the attribute is 0, 1 otherwise
-		 *  @return true if the attribute exists and is a boolean/integer, false otherwise
-		 */
-
-	int LookupBool(const char *name, int &value) const;
 
 		/** Lookup (don't evaluate) an attribute that can be considered a boolean
 		 *  @param name The attribute

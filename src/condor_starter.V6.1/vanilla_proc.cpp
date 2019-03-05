@@ -1385,7 +1385,7 @@ bool VanillaProc::Ckpt() {
 
 	if( isSoftKilling ) { return false; }
 
-	int wantCheckpointSignal = 0;
+	bool wantCheckpointSignal = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpointSignal );
 	if( wantCheckpointSignal && ! isCheckpointing ) {
 		int periodicCheckpointSignal = findCheckpointSig( JobAd );
@@ -1404,7 +1404,7 @@ bool VanillaProc::Ckpt() {
 }
 
 int VanillaProc::outputOpenFlags() {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
@@ -1416,7 +1416,7 @@ int VanillaProc::outputOpenFlags() {
 }
 
 int VanillaProc::streamingOpenFlags( bool isOutput ) {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );

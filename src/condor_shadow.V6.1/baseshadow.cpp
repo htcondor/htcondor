@@ -228,7 +228,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// If we need to claim the startd before activating the claim
-	int wantClaiming = 0;
+	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 	if (wantClaiming) {
 		MyString startdSinful;
@@ -807,7 +807,7 @@ BaseShadow::emailRemoveEvent( const char* reason )
 void BaseShadow::initUserLog()
 {
 	std::string logfilename,dagmanLogFile;
-	int  use_xml;
+	bool use_xml;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open

@@ -748,7 +748,7 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
-	int		jobMatched = false;
+	bool	jobMatched = false;
 	std::string owner;
 	std::string user;
 	std::string slotname;

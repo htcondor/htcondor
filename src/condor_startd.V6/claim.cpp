@@ -76,7 +76,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
-	, c_has_job_ad(0)
+	, c_has_job_ad(false)
 	, c_state(CLAIM_IDLE)
 	, c_last_state(CLAIM_UNCLAIMED)
 	, c_pending_cmd(-1)
@@ -828,7 +828,7 @@ Claim::beginActivation( double now )
 	}
 	c_universe = univ;
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	switch( univ ) {
 		case CONDOR_UNIVERSE_VANILLA:
 			c_jobad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
@@ -1304,7 +1304,7 @@ Claim::alive( bool alive_from_schedd )
 bool
 Claim::hasJobAd() {
 	bool has_it = false;
-	if (c_has_job_ad != 0) {
+	if (c_has_job_ad) {
 		has_it = true;
 	}
 #if HAVE_JOB_HOOKS
@@ -2080,7 +2080,7 @@ Claim::resetClaim( void )
 		free( c_cod_keyword );
 		c_cod_keyword = NULL;
 	}
-	c_has_job_ad = 0;
+	c_has_job_ad = false;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;

@@ -67,7 +67,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
 	char buf[4096]; /* old classads needs to go away */
-	int on_exit_hold = 0, on_exit_remove = 0;
+	bool on_exit_hold = false, on_exit_remove = false;
 	int cdate = 0;
 	int adkind;
 	
@@ -234,7 +234,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 
 			/* Should I hold on exit? */
 			jad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold);
-			if (on_exit_hold == 1)
+			if (on_exit_hold)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -251,7 +251,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 
 			/* Should I remove on exit? */
 			jad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove);
-			if (on_exit_remove == 1)
+			if (on_exit_remove)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -617,7 +617,7 @@ UserPolicy::AnalyzePolicy( int mode )
 		return retval;
 	}
 #else
-	int on_exit_hold, on_exit_remove;
+	bool on_exit_hold, on_exit_remove;
 	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
 	if( ! ad.EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
 		m_fire_source = FS_JobAttribute;
@@ -864,7 +864,7 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & /*ad*/, const char * attr
 	ASSERT(attrname);
 
 	// Evaluate the specified expression in the job ad
-	int result;
+	bool result;
 	m_fire_expr = attrname;
 	if(!m_ad->EvalBool(attrname, m_ad, result)) {
         //check to see if the attribute actually exists, or if it's really

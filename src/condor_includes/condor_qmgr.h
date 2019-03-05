@@ -268,7 +268,7 @@ int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
-int GetAttributeBool(int cluster, int proc, const char *attr, int *value);
+int GetAttributeBool(int cluster, int proc, const char *attr, bool *value);
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success. Allocates new copy of the string.
 */

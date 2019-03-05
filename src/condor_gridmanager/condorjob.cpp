@@ -605,7 +605,7 @@ void CondorJob::doEvaluateState()
 							"rematch job because of MAX_JOBS_SUBMITTED\n",
 							procID.cluster, procID.proc);
 						// Set ad attributes so the schedd finds a new match.
-						int dummy;
+						bool dummy;
 						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 							jobAd->Assign( ATTR_JOB_MATCHED, false );
 							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
