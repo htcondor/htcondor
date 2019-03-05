@@ -3473,7 +3473,7 @@ DedicatedScheduler::publishRequestAd( void )
 		// Finally, we need to tell it how many "jobs" we want to
 		// negotiate.  These are really how many resource requests
 		// we've got. 
-	ad.Assign( ATTR_IDLE_JOBS, resource_requests.size() ); 
+	ad.Assign( ATTR_IDLE_JOBS, (long long)resource_requests.size() );
 	
 		// TODO: Eventually, we could try to publish this info as
 		// well, so condor_status -sub and friends could tell people

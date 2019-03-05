@@ -2601,7 +2601,7 @@ Resource::publish_private( ClassAd *ad )
 
 	if (get_feature() == PARTITIONABLE_SLOT) {
 		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
-		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 	}
 }
 
@@ -3684,7 +3684,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 void
 Resource::publishDynamicChildSummaries(ClassAd *cap) {
 
-	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 
 		// If not set, turn off the whole thing
 	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {
