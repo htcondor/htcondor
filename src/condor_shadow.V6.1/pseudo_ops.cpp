@@ -602,7 +602,7 @@ pseudo_phase( char *phase )
 	eventtext += phase;
 	event.setInfoText( eventtext.Value() );
 
-	ead = event.toClassAd();
+	ead = event.toClassAd(true);
 	ASSERT(ead);
 
 	// write the event

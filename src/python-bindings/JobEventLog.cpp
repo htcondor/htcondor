@@ -188,7 +188,7 @@ JobEvent::proc() const {
 int
 JobEvent::Py_Len() {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -219,7 +219,7 @@ JobEvent::Py_IterItems() {
 boost::python::list
 JobEvent::Py_Keys() {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -237,7 +237,7 @@ JobEvent::Py_Keys() {
 boost::python::list
 JobEvent::Py_Values() {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -262,7 +262,7 @@ JobEvent::Py_Values() {
 boost::python::list
 JobEvent::Py_Items() {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -287,7 +287,7 @@ JobEvent::Py_Items() {
 bool
 JobEvent::Py_Contains( const std::string & k ) {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -307,7 +307,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(JobEventPyGetOverloads, Py_Get, 1, 2)
 boost::python::object
 JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
@@ -331,7 +331,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 boost::python::object
 JobEvent::Py_GetItem( const std::string & k ) {
 	if( ad == NULL ) {
-		ad = event->toClassAd();
+		ad = event->toClassAd(false);
 		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
