@@ -253,7 +253,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool remove_check,
 							int absent_mask /*=0*/)
 {
-	int val1, val2, val3, val4, val5;
+	bool val1, val2, val3, val4, val5;
 	int mask = 0;
 	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1))    { mask |= 0x01; val1 = 0; }
 	if ( ! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2))  { mask |= 0x02; val2 = 0; }
@@ -264,11 +264,11 @@ bool user_policy_ad_checker(ClassAd* ad,
 	bool found = (mask == (absent_mask & 0x1F));
 	
 	return found &&
-			((val1 != 0) == periodic_hold) &&
-			((val2 != 0) == periodic_remove) &&
-			((val3 != 0) == periodic_release) &&
-			((val4 != 0) == hold_check) &&
-			((val5 != 0) == remove_check);
+			(val1 == periodic_hold) &&
+			(val2 == periodic_remove) &&
+			(val3 == periodic_release) &&
+			(val4 == hold_check) &&
+			(val5 == remove_check);
 }
 
 bool user_policy_ad_checker(ClassAd* ad,
@@ -280,12 +280,12 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool remove_check,
 							int absent_mask /*=0*/)
 {
-	int val=0;
+	bool val = false;
 	int mask = 0;
-	if ( ! ad->LookupBool(ATTR_TIMER_REMOVE_CHECK, val)) { mask |= 0x01; val = 0; }
+	if ( ! ad->LookupBool(ATTR_TIMER_REMOVE_CHECK, val)) { mask |= 0x01; val = false; }
 	bool found = mask == (absent_mask & 1);
 	
-	return found && ((val != 0) == timer_remove) &&
+	return found && (val == timer_remove) &&
 		user_policy_ad_checker(ad, 
 							   periodic_hold,
 							   periodic_remove,

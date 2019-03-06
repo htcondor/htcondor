@@ -587,7 +587,8 @@ static bool test_copy_constructor_actuals() {
 	compat_classad::ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	compat_classad::ClassAd* classadCopy = new ClassAd(*classad);
-	int actual1 = -1, actual2 = -1;
+	int actual1 = -1;
+	bool actual2 = false;
 	std::string actual3;
 	classadCopy->LookupInteger("A", actual1);
 	classadCopy->LookupBool("B", actual2);
@@ -596,13 +597,13 @@ static bool test_copy_constructor_actuals() {
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
 	emit_param("A", "1");
-	emit_param("B", "1");
+	emit_param("B", "true");
 	emit_param("C", "String");
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
-	emit_param("B", "%d", actual2);
+	emit_param("B", "%s", actual2?"true":"false");
 	emit_param("C", "%s", actual3.c_str());
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
+	if(actual1 != 1 || actual2 != true || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadCopy;
 		FAIL;
 	}
@@ -639,7 +640,8 @@ static bool test_assignment_actuals() {
 	initAdFromString(classad_string, *classad);
 	compat_classad::ClassAd* classadAssign = new ClassAd;
 	*classadAssign = *classad;
-	int actual1 = -1, actual2 = -1;
+	int actual1 = -1;
+	bool actual2 = false;
 	std::string actual3;
 	classadAssign->LookupInteger("A", actual1);
 	classadAssign->LookupBool("B", actual2);
@@ -648,13 +650,13 @@ static bool test_assignment_actuals() {
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
 	emit_param("A", "1");
-	emit_param("B", "1");
+	emit_param("B", "true");
 	emit_param("C", "String");
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
-	emit_param("B", "%d", actual2);
+	emit_param("B", "%s", actual2?"true":"false");
 	emit_param("C", "%s", actual3.c_str());
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
+	if(actual1 != 1 || actual2 != true || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
 	}
@@ -673,7 +675,8 @@ static bool test_assignment_actuals_before() {
 	compat_classad::ClassAd* classadAssign = new ClassAd;
 	initAdFromString(classad_string2, *classadAssign);
 	*classadAssign = *classad;
-	int actual1 = -1, actual2 = -1;
+	int actual1 = -1;
+	bool actual2 = false;
 	std::string actual3;
 	classadAssign->LookupInteger("A", actual1);
 	classadAssign->LookupBool("B", actual2);
@@ -682,13 +685,13 @@ static bool test_assignment_actuals_before() {
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
 	emit_param("A", "1");
-	emit_param("B", "1");
+	emit_param("B", "true");
 	emit_param("C", "String");
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
-	emit_param("B", "%d", actual2);
+	emit_param("B", "%s", actual2?"true":"false");
 	emit_param("C", "%s", actual3.c_str());
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
+	if(actual1 != 1 || actual2 != true || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
 	}
@@ -829,17 +832,17 @@ static bool test_lookup_bool_true() {
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "DoesMatch";
-	int actual = -1;
+	bool actual = false;
 	classad.LookupBool(attribute_name, actual);
-	int expect = 1;
+	bool expect = true;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", attribute_name);
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -853,17 +856,17 @@ static bool test_lookup_bool_false() {
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "DoesntMatch";
-	int actual = -1;
+	bool actual = true;
 	classad.LookupBool(attribute_name, actual);
-	int expect = 0;
+	bool expect = false;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", attribute_name);
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3003,16 +3006,16 @@ static bool test_int_error() {
 							"B=isError(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3200,17 +3203,17 @@ static bool test_real_error() {
 							"B=isError(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1;
+	bool actual = false;
 	classad.LookupBool("B", actual);
-	int expect = 1;
+	bool expect = true;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3416,17 +3419,17 @@ static bool test_if_then_else_invalid1() {
 		"\"small\")\n\t\tB=isError(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3441,17 +3444,17 @@ static bool test_if_then_else_invalid2() {
 		"\n\t\tB=isError(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3466,17 +3469,17 @@ static bool test_if_then_else_too_few() {
 		"B=isError(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3491,17 +3494,17 @@ static bool test_if_then_else_undefined() {
 		"\n\t\tB=isUndefined(A)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "B");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("INT", "%d", expect);
+	emit_param("BOOL", "%s", expect?"true":"false");
 	emit_output_actual_header();
-	emit_param("INT", "%d", actual);
+	emit_param("BOOL", "%s", actual?"true":"false");
 	if(actual != expect) {
 		FAIL;
 	}
@@ -3706,19 +3709,19 @@ static bool test_string_list_size_error_end() {
 		"true))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%d", actual?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%d", expect?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3733,19 +3736,19 @@ static bool test_string_list_size_error_beginning() {
 		"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3862,19 +3865,19 @@ static bool test_string_list_sum_error_end() {
 	const char* classad_string = "\tA1=isError(stringlistsum(\"1;2;3\",true))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3888,19 +3891,19 @@ static bool test_string_list_sum_error_beginning() {
 	const char* classad_string = "\tA1=isError(stringlistsum(true,\"1;2;3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -3915,19 +3918,19 @@ static bool test_string_list_sum_error_all() {
 		"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4019,19 +4022,19 @@ static bool test_string_list_min_undefined() {
 	const char* classad_string = "\tA1=isUndefined(stringlistmin(\"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4045,19 +4048,19 @@ static bool test_string_list_min_error_end() {
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;2;3\",true))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4071,19 +4074,19 @@ static bool test_string_list_min_error_beginning() {
 	const char* classad_string = "\tA1=isError(stringlistmin(true,\"1;2;3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4098,19 +4101,19 @@ static bool test_string_list_min_error_all() {
 		"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4124,19 +4127,19 @@ static bool test_string_list_min_error_middle() {
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;A;3\",\";\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4228,19 +4231,19 @@ static bool test_string_list_max_undefined() {
 	const char* classad_string = "\tA1=isUndefined(stringlistmax(\"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4254,19 +4257,19 @@ static bool test_string_list_max_error_end() {
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;2;3\",true))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4280,19 +4283,19 @@ static bool test_string_list_max_error_beginning() {
 	const char* classad_string = "\tA1=isError(stringlistmax(true,\"1;2;3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4307,19 +4310,19 @@ static bool test_string_list_max_error_all() {
 		"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4333,19 +4336,19 @@ static bool test_string_list_max_error_middle() {
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;A;3\",\";\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4462,19 +4465,19 @@ static bool test_string_list_avg_error_end() {
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;2;3\",true))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4488,19 +4491,19 @@ static bool test_string_list_avg_error_beginning() {
 	const char* classad_string = "\tA1=isError(stringlistavg(true,\"1;2;3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4515,19 +4518,19 @@ static bool test_string_list_avg_error_all() {
 		"\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4541,19 +4544,19 @@ static bool test_string_list_avg_error_middle() {
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;A;3\",\";\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4567,19 +4570,19 @@ static bool test_string_list_member() {
 		" green\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -4594,19 +4597,19 @@ static bool test_string_list_member_case() {
 		"GREEN\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5181,7 +5184,7 @@ static bool test_is_string_simple() {
 	const char* classad_string = "\tA1=isString(\"abc\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1;
+	bool actual = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5204,7 +5207,7 @@ static bool test_is_string_concat() {
 	const char* classad_string = "\tA1=isString(strcat(\"-3\",\"3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1;
+	bool actual = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5227,22 +5230,21 @@ static bool test_is_undefined_true() {
 	const char* classad_string = "\tA1=isUndefined(BD)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
-		FAIL;
-	}
+		FAIL;	}
 	PASS;
 }
 
@@ -5253,19 +5255,19 @@ static bool test_is_undefined_false() {
 	const char* classad_string = "\tBC=10\n\t\tA1=isUndefined(BC)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5279,19 +5281,19 @@ static bool test_is_error_random() {
 	const char* classad_string = "\tA1=isError(random(\"-3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5305,19 +5307,19 @@ static bool test_is_error_int() {
 	const char* classad_string = "\tA1=isError(int(\"this is not an int\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5331,19 +5333,19 @@ static bool test_is_error_real() {
 	const char* classad_string = "\tA1=isError(real(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5357,19 +5359,19 @@ static bool test_is_error_floor() {
 	const char* classad_string = "\tA1=isError(floor(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5382,19 +5384,19 @@ static bool test_is_integer_false_negative() {
 	const char* classad_string = "\tA1=isInteger(-3.4 )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5407,19 +5409,19 @@ static bool test_is_integer_false_positive() {
 	const char* classad_string = "\tA1=isInteger(3.4 )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5432,19 +5434,19 @@ static bool test_is_integer_false_quotes() {
 	const char* classad_string = "\tA1=isInteger(\"-3\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5457,19 +5459,19 @@ static bool test_is_integer_true_negative() {
 	const char* classad_string = "\tA1=isInteger(-3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5483,19 +5485,19 @@ static bool test_is_integer_true_int() {
 	const char* classad_string = "\tA1=isInteger( int(3.4) )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5509,19 +5511,19 @@ static bool test_is_integer_true_int_quotes() {
 	const char* classad_string = "\tA1=isInteger(int(\"-3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5534,19 +5536,19 @@ static bool test_is_integer_true_positive() {
 	const char* classad_string = "\tA1=isInteger(3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5559,19 +5561,19 @@ static bool test_is_real_false_negative_int() {
 	const char* classad_string = "\tA1=isReal(-3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5585,19 +5587,19 @@ static bool test_is_real_false_negative_int_quotes() {
 	const char* classad_string = "\tA1=isReal(\"-3\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5610,19 +5612,19 @@ static bool test_is_real_false_positive_int() {
 	const char* classad_string = "\tA1=isReal(3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5635,19 +5637,19 @@ static bool test_is_real_true_negative() {
 	const char* classad_string = "\tA1=isReal(-3.4 )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5660,19 +5662,19 @@ static bool test_is_real_true_positive() {
 	const char* classad_string = "\tA1=isReal( 3.4 )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5686,19 +5688,19 @@ static bool test_is_real_true_real() {
 	const char* classad_string = "\tA1=isReal( real(3) )";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5712,19 +5714,19 @@ static bool test_is_real_true_real_quotes() {
 	const char* classad_string = "\tA1=isReal(real(\"-3\"))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5738,19 +5740,19 @@ static bool test_is_real_error() {
 	const char* classad_string = "\tBC8=isReal(3,1)\n\t\tA1=isError(BC8)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5764,19 +5766,19 @@ static bool test_is_boolean() {
 	const char* classad_string = "\tA1=isBoolean(isReal(-3.4 ))";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval(tfstr(expect));
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5920,19 +5922,19 @@ static bool test_substr_error_index() {
 							"A1=isError(I5)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -5947,19 +5949,19 @@ static bool test_substr_error_string() {
 							"A1=isUndefined(I6)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6092,19 +6094,19 @@ static bool test_formattime_error() {
 		"A1=isError(I5)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6379,19 +6381,19 @@ static bool test_regexp_match_wildcard() {
 		"thisisamatchlist\", \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6406,19 +6408,19 @@ static bool test_regexp_match_repeat() {
 		"\"aaaaaaaaaabbbmmmmmNNNNNN\", \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6432,19 +6434,19 @@ static bool test_regexp_no_match() {
 		" \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6459,19 +6461,19 @@ static bool test_regexp_no_match_case() {
 		"thisisamatchlist\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6486,19 +6488,19 @@ static bool test_regexp_error_pattern() {
 		"\n\t\tA1=isError(W1)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6513,19 +6515,19 @@ static bool test_regexp_error_target() {
 		"A1=isError(W1)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6540,19 +6542,19 @@ static bool test_regexp_error_option() {
 		"\", 20)\n\t\tA1=isError(W3)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6622,19 +6624,19 @@ static bool test_regexps_error_pattern() {
 		"A1=isError(X2)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6649,19 +6651,19 @@ static bool test_regexps_error_target() {
 		"one is \\1 two is \\2\",\"i\")\n\t\tA1=isError(X3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6676,19 +6678,19 @@ static bool test_regexps_error_option() {
 		"thisisamatchlist\", \"one is \\1 two is \\2\",20)\n\t\tA1=isError(X5)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6703,19 +6705,19 @@ static bool test_regexps_error_return() {
 		"thisisamatchlist\", 20 ,\"i\")\n\t\tA1=isError(X4)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6838,19 +6840,19 @@ static bool test_stringlist_regexp_member_match_default() {
 		"red, blue, green\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6865,19 +6867,19 @@ static bool test_stringlist_regexp_member_match_non_default() {
 		"red; blue; green\",\"; \")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6892,19 +6894,19 @@ static bool test_stringlist_regexp_member_match_case() {
 		"\"thisisamatchlist\", \" ,\", \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6919,19 +6921,19 @@ static bool test_stringlist_regexp_member_match_repeat() {
 		"\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6946,19 +6948,19 @@ static bool test_stringlist_regexp_member_no_match_multiple() {
 		"blue, green\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -6973,19 +6975,19 @@ static bool test_stringlist_regexp_member_no_match() {
 		"\"thisisalist\", \" ,\", \"i\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7000,19 +7002,19 @@ static bool test_stringlist_regexp_member_no_match_case() {
 		"\"thisisamatchlist\")";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7028,19 +7030,19 @@ static bool test_stringlist_regexp_member_error_pattern() {
 		"A1=isError(W1)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7055,19 +7057,19 @@ static bool test_stringlist_regexp_member_error_target() {
 		"20, \"i\")\n\t\tA1=isError(W2)"; 
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7082,19 +7084,19 @@ static bool test_stringlist_regexp_member_error_delim() {
 		"\"thisisamatchlist\", 20)\n\t\tA1=isError(W3)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7109,19 +7111,19 @@ static bool test_stringlist_regexp_member_error_option() {
 		"\"thisisamatchlist\", \" ,\", 20)\n\t\tA1=isError(W7)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7245,19 +7247,19 @@ static bool test_operators_short_or() {
 	const char* classad_string = "\tA1 = TRUE || ERROR";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7270,19 +7272,19 @@ static bool test_operators_no_short_or() {
 	const char* classad_string = "\tA1 = isError(FALSE || ERROR)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7295,19 +7297,19 @@ static bool test_operators_short_and() {
 	const char* classad_string = "\tA1 = FALSE && ERROR";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 0;
+	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7321,19 +7323,19 @@ static bool test_operators_short_and_error() {
 	const char* classad_string = "\tA1 = isError(\"foo\" && ERROR)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7346,19 +7348,19 @@ static bool test_operators_no_short_and() {
 	const char* classad_string = "\tA1 = isError(TRUE && ERROR)";
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
@@ -7787,19 +7789,19 @@ static bool test_size_undefined() {
 	emit_param("size", "%d", strlen(classad_string));
 	compat_classad::ClassAd classad;
 	initAdFromString(classad_string, classad);
-	int actual = -1, expect = 1;
+	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
-	emit_param("INT", "");
+	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("INT Value", "%d", expect);
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("INT Value", "%d", actual);
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
