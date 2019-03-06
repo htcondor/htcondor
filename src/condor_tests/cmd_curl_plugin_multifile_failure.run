@@ -36,7 +36,7 @@ def HttpServerErrorUrlHandler(request):
 def main():
     test_params = {
         "ENABLE_MULTIFILE_TRANSFER_PLUGINS":    "true",
-        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
+        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/curl_plugin",
         "STARTER_LOG_NAME_APPEND":              "false"
     }
 
