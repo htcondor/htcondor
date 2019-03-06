@@ -26,14 +26,14 @@ public:
 #ifdef LOG_READER_USE_INOTIFY
         if ((m_fd = inotify_init()) == -1)
         {
-            THROW_EX(IOError, "Failed to create inotify instance.");
+            THROW_EX(HTCondorIOError, "Failed to create inotify instance.");
         }
         fcntl(m_fd, F_SETFD, FD_CLOEXEC);
         fcntl(m_fd, F_SETFL, O_NONBLOCK);
 
         if (inotify_add_watch(m_fd, fname.c_str(), IN_MODIFY | IN_ATTRIB | IN_DELETE_SELF) == -1)
         {
-            THROW_EX(IOError, "Failed to add inotify watch.");
+            THROW_EX(HTCondorIOError, "Failed to add inotify watch.");
         }
 #else
         if (fname.c_str()) {}
@@ -55,7 +55,7 @@ public:
         {
             if (errno)
             {
-                THROW_EX(IOError, "Failure when reading the inotify event buffer.");
+                THROW_EX(HTCondorIOError, "Failure when reading the inotify event buffer.");
             }
             do
             {

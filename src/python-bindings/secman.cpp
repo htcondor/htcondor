@@ -20,6 +20,7 @@
 #include "daemon.h"
 
 #include "old_boost.h"
+#include "htcondor.h"
 
 using namespace boost::python;
 
@@ -49,7 +50,7 @@ int getCommand(object command)
     {
         return extract_int();
     }
-    THROW_EX(ValueError, "Unable to determine DaemonCore command value")
+    THROW_EX(HTCondorEnumError, "Unable to determine DaemonCore command value")
     return 0;
 }
 
@@ -76,7 +77,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
             ClassAdWrapper& ad = ad_extract();
             if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
             {
-                THROW_EX(ValueError, "Daemon address not specified.");
+                THROW_EX(HTCondorValueError, "Daemon address not specified.");
             }
         }
         else
@@ -86,7 +87,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         Daemon daemon(DT_ANY, addr.c_str(), NULL);
         if (!daemon.locate())
         {
-            THROW_EX(RuntimeError, "Unable to find daemon.");
+            THROW_EX(HTCondorLocateError, "Unable to find daemon.");
         }
 
         CondorError errstack;
@@ -97,18 +98,18 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (!(sock = (ReliSock*) daemon.makeConnectedSocket( Stream::reli_sock, 0, 0, &errstack )))
         {
             ml.release();
-            THROW_EX(RuntimeError, "Unable to connect to daemon.");
+            THROW_EX(HTCondorIOError, "Unable to connect to daemon.");
         }
         if (!(daemon.startSubCommand(DC_SEC_QUERY, num, sock, 0, &errstack)))
         {
             ml.release();
-            THROW_EX(RuntimeError, "Unable to send security query to daemon.");
+            THROW_EX(HTCondorIOError, "Unable to send security query to daemon.");
         }
         sock->decode();
         if (!getClassAd(sock, *authz_ad.get()) || !sock->end_of_message())
         {
             ml.release();
-            THROW_EX(RuntimeError, "Failed to get security session information from remote daemon.");
+            THROW_EX(HTCondorIOError, "Failed to get security session information from remote daemon.");
         }
         // Replace addr with the sinful string that ReliSock has associated with the socket,
         // since this is what the SecMan object will do, and we need to do the same thing
@@ -136,7 +137,8 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // IMPORTANT: this hashtable returns 0 on success!
         if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
         {
-            THROW_EX(RuntimeError, "No valid entry in command map hash table!");
+            // FIXME: ..?
+            THROW_EX(HTCondorValueError, "No valid entry in command map hash table!");
         }
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
         std::string origTag = SecMan::getTag();
@@ -145,7 +147,8 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
-            THROW_EX(RuntimeError, "No valid entry in session map hash table!");
+            // FIXME: ..?
+            THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
         }
         if (m_tag_set) {SecMan::setTag(origTag);}
         policy = k->policy();

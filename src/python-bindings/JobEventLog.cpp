@@ -28,13 +28,14 @@
 #include "wait_for_user_log.h"
 #include "classad_wrapper.h"
 #include "JobEventLog.h"
+#include "htcondor.h"
 
 #include <time.h>
 
 JobEventLog::JobEventLog( const std::string & filename ) :
   deadline( 0 ), wful( filename ) {
 	if(! wful.isInitialized()) {
-		THROW_EX( IOError, "JobEventLog not initialized.  Check the debug log, looking for ReadUserLog or FileModifiedTrigger.  (Or call htcondor.enable_debug() and try again.)" );
+		THROW_EX( HTCondorIOError, "JobEventLog not initialized.  Check the debug log, looking for ReadUserLog or FileModifiedTrigger.  (Or call htcondor.enable_debug() and try again.)" );
 	}
 }
 
@@ -50,7 +51,7 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 		if( deadlineExtractor.check() ) {
 			jel->deadline = time(NULL) + deadlineExtractor();
 		} else {
-			THROW_EX( RuntimeError, "deadline must be an integer" );
+			THROW_EX( TypeError, "deadline must be an integer" );
 		}
 	}
 	return self;
@@ -139,19 +140,19 @@ JobEventLog::next() {
 		break;
 
 		case ULOG_RD_ERROR:
-			THROW_EX( IOError, "ULOG_RD_ERROR" );
+			THROW_EX( HTCondorIOError, "ULOG_RD_ERROR" );
 		break;
 
 		case ULOG_MISSED_EVENT:
-			THROW_EX( RuntimeError, "ULOG_MISSED_EVENT" );
+			THROW_EX( HTCondorIOError, "ULOG_MISSED_EVENT" );
 		break;
 
 		case ULOG_UNK_ERROR:
-			THROW_EX( RuntimeError, "ULOG_UNK_ERROR" );
+			THROW_EX( HTCondorIOError, "ULOG_UNK_ERROR" );
 		break;
 
 		default:
-			THROW_EX( RuntimeError, "WaitForUserLog::readEvent() returned an unknown outcome." );
+			THROW_EX( HTCondorInternalError, "WaitForUserLog::readEvent() returned an unknown outcome." );
 		break;
 	}
 }
@@ -190,7 +191,7 @@ JobEvent::Py_Len() {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -221,7 +222,7 @@ JobEvent::Py_Keys() {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -239,7 +240,7 @@ JobEvent::Py_Values() {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -252,7 +253,7 @@ JobEvent::Py_Values() {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	}
 
@@ -264,7 +265,7 @@ JobEvent::Py_Items() {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -277,7 +278,7 @@ JobEvent::Py_Items() {
 			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	}
 
@@ -289,7 +290,7 @@ JobEvent::Py_Contains( const std::string & k ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -309,7 +310,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -321,7 +322,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {
 		return d;
@@ -333,7 +334,7 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd();
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -345,7 +346,7 @@ JobEvent::Py_GetItem( const std::string & k ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {
 		THROW_EX( KeyError, k.c_str() );

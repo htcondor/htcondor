@@ -18,6 +18,7 @@
 #include "exprtree_wrapper.h"
 #include "log_reader.h"
 
+#include "htcondor.h"
 #include "inotify_sentry.h"
 
 LogReader::LogReader(const std::string &fname)

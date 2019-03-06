@@ -20,6 +20,7 @@
 #include "old_boost.h"
 #include "module_lock.h"
 #include "classad_wrapper.h"
+#include "htcondor.h"
 
 /*
  * Object representing a claim on a remote startd.
@@ -39,7 +40,7 @@ struct Startd
         ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
-            THROW_EX(ValueError, "No contact string in ClassAd");
+            THROW_EX(HTCondorValueError, "No contact string in ClassAd");
         }
     }
 
@@ -73,7 +74,10 @@ struct Startd
 
         DCStartd startd(m_addr.c_str());
         bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), start_expr.c_str(), request_id);
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
+        if (!rval) {
+            // FIXME: Do we need a class for "either IO or Reply error?"
+            THROW_EX(HTCondorReplyError, "Startd failed to begin draining jobs.");
+        }
         return request_id;
     }
 
@@ -94,7 +98,10 @@ struct Startd
 
         DCStartd startd(m_addr.c_str());
         bool rval = startd.cancelDrainJobs( request_id );
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to cancel draining jobs.");}
+        if (!rval) {
+            // FIXME: see q above
+            THROW_EX(HTCondorReplyError, "Startd failed to cancel draining jobs.");
+        }
     }
 
 private:
