@@ -883,9 +883,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_LAST_CHECKPOINT_PLATFORM  "LastCheckpointPlatform"
 #define ATTR_IS_VALID_CHECKPOINT_PLATFORM  "IsValidCheckpointPlatform"
 
-#define ATTR_CHECKPOINT_EXIT_CODE  "CheckpointExitCode"
-#define ATTR_CHECKPOINT_EXIT_SIGNAL  "CheckpointExitSignal"
-#define ATTR_CHECKPOINT_EXIT_BY_SIGNAL  "CheckpointExitBySignal"
+#define ATTR_CHECKPOINT_EXIT_CODE  "SuccessCheckpointExitCode"
+#define ATTR_CHECKPOINT_EXIT_SIGNAL  "SuccessCheckpointExitSignal"
+#define ATTR_CHECKPOINT_EXIT_BY_SIGNAL  "SuccessCheckpointExitBySignal"
 
 #define ATTR_WITHIN_RESOURCE_LIMITS  "WithinResourceLimits"
 

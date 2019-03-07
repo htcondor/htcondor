@@ -477,7 +477,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		// setInfoText truncates name to 128 bytes
 		event.setInfoText( name );
 
-		ad = event.toClassAd();
+		ad = event.toClassAd(true);
 		ASSERT(ad);
 
 		result = REMOTE_CONDOR_ulog( ad );
