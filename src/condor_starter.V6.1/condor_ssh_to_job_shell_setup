@@ -43,6 +43,8 @@ else
   then
 	CONDOR_CONFIG=/dev/null
 	export CONDOR_CONFIG
+	
+	cd $_CONDOR_SCRATCH_DIR
 	exec /usr/bin/condor_docker_enter
   fi
   # start a shell for the user
