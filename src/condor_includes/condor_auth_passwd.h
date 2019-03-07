@@ -232,13 +232,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			Note that in protocol v2, the symmetric keys are derived
 			from both the compile-time seed and a fixed text.
 		*/
-	bool setup_shared_keys(struct sk_buf *sk, const std::string &init_token);
+	bool setup_shared_keys(struct sk_buf *sk, const char *client_id, const std::string &init_token);
 
 		/** The "seed" consists of the two keys used to hmac the
 			shared key.  Each byte in the seed keys is specified in
 			this function.  
 		*/
-	void setup_seed(unsigned char *ka, unsigned char *kb);
+	static void setup_seed(unsigned char *ka, unsigned char *kb);
 
 		/** This is just a wrapper for the openssl HMAC function. */
 	void hmac(unsigned char *sk, int sk_len,

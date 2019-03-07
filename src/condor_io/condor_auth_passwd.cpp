@@ -207,16 +207,17 @@ Condor_Auth_Passwd::fetchLogin()
 	// If we are a client of the password v2 protocol, we may have a derived password.
 	std::string derived_keyfilename;
 	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWORD_DERIVED_KEYFILE")) {
+		dprintf(D_SECURITY, "PW: Will use derived keys found in %s.\n", derived_keyfilename.c_str());
 		FILE *keyfile_fp = fopen(derived_keyfilename.c_str(), "r");
 		if (!keyfile_fp) {
-			dprintf(D_ALWAYS, "Failed to open derived key file %s (%s, errno=%d).",
+			dprintf(D_ALWAYS, "Failed to open derived key file %s (%s, errno=%d).\n",
 				derived_keyfilename.c_str(), strerror(errno), errno);
 			return NULL;
 		}
 		classad::ClassAdParser parser;
-		classad::ClassAd *ad = parser.ParseClassAd(keyfile_fp, true);
+		std::unique_ptr<classad::ClassAd> ad(parser.ParseClassAd(keyfile_fp, true));
 		fclose(keyfile_fp);
-		if (!ad) {
+		if (!ad.get()) {
 			return NULL;
 		}
 		std::string username;
@@ -228,21 +229,18 @@ Condor_Auth_Passwd::fetchLogin()
 			!ad->EvaluateAttrString("K", k_encoded) ||
 			!ad->EvaluateAttrString("K_prime", k_prime_encoded))
 		{
-			dprintf(D_ALWAYS, "Missing keys from derived key file");
-			delete ad;
+			dprintf(D_ALWAYS, "Missing keys from derived key file\n");
 			return NULL;
 		}
-		delete ad;
-		ad = NULL;
 
 		m_k_len = 0;
 		free(m_k); m_k = NULL;
 		int k_len, k_prime_len;
-		condor_base64_decode(k_encoded.c_str(), &m_k, &k_len);
+		condor_base64_decode(k_encoded.c_str(), &m_k, &k_len, false);
 		m_k_len = k_len;
 		m_k_prime_len = 0;
 		free(m_k_prime); m_k_prime = NULL;
-		condor_base64_decode(k_prime_encoded.c_str(), &m_k_prime, &k_prime_len);
+		condor_base64_decode(k_prime_encoded.c_str(), &m_k_prime, &k_prime_len, false);
 		m_k_prime_len = k_prime_len;
 
 		if (!m_k || !m_k_prime) {
@@ -382,11 +380,12 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
-Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
+Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const char *client_id, const std::string &init_text)
 {
 	if ( sk->shared_key == NULL ) {
 		return false;
 	}
+	auto client_id_len = strlen(client_id);
 
 		// These were generated randomly at coding time (see
 		// setup_seed).  They are used as hash keys to create the two
@@ -394,7 +393,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 		// respectively).  We derive these ka and kb by hmacing the
 		// shared key with these two seed keys.
 		//
-    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : init_text.size());
+    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : (init_text.size() + client_id_len));
     unsigned char *seed_ka = (unsigned char *)malloc(key_size);
     unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
@@ -421,7 +420,10 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
 		// Copy the text seed into the key.
 	if (m_version == 2) {
-		memcpy(seed_ka + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, client_id, client_id_len);
+		memcpy(seed_ka + AUTH_PW_KEY_LEN + client_id_len, init_text.c_str(), init_text.size());
+		memcpy(seed_kb + AUTH_PW_KEY_LEN, client_id, client_id_len);
+		memcpy(seed_kb + AUTH_PW_KEY_LEN + client_id_len, init_text.c_str(), init_text.size());
 	}
 
     sk->len = strlen(sk->shared_key);
@@ -1037,9 +1039,16 @@ Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 	classad::ClassAd & ad,
 	CondorError *err)
 {
-	size_t key_size = AUTH_PW_KEY_LEN + token.size();
+	size_t key_size = AUTH_PW_KEY_LEN + id.size() + token.size();
 	std::vector<unsigned char> seed_ka; seed_ka.reserve(key_size);
 	std::vector<unsigned char> seed_kb; seed_kb.reserve(key_size);
+
+		// Fill in the data for the seed keys.
+	setup_seed(&seed_ka[0], &seed_kb[0]);
+	memcpy(&seed_ka[AUTH_PW_KEY_LEN], id.c_str(), id.size());
+	memcpy(&seed_kb[AUTH_PW_KEY_LEN], id.c_str(), id.size());
+	memcpy(&seed_ka[AUTH_PW_KEY_LEN + id.size()], token.c_str(), token.size());
+	memcpy(&seed_kb[AUTH_PW_KEY_LEN + id.size()], token.c_str(), token.size());
 
 		// These are the keys K and K' referred to in the AKEP2
 		// description.
@@ -1058,7 +1067,7 @@ Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 	std::vector<unsigned char> shared_key; shared_key.reserve(master_password_len);
 	memcpy(&shared_key[0], master_password, master_password_len);
 
-	if (hkdf(&shared_key[0], shared_key.size(), &seed_ka[0], key_size,
+	if (hkdf(&shared_key[0], master_password_len, &seed_ka[0], key_size,
 		(const unsigned char *)"master ka", 9,
 		&ka[0],
 		key_strength_bytes_v2()))
@@ -1075,9 +1084,12 @@ Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 		return false;
 	}
 
-	if (!ad.InsertAttr("K", reinterpret_cast<const char *>(&ka[0]), key_strength_bytes_v2()) ||
-		!ad.InsertAttr("Kb", reinterpret_cast<const char *>(&kb[0]), key_strength_bytes_v2()) ||
-		!ad.InsertAttr("Username", id) ||
+	std::unique_ptr<char> K_encoded(condor_base64_encode(&ka[0], key_strength_bytes_v2(), false));
+	std::unique_ptr<char> K_prime_encoded(condor_base64_encode(&kb[0], key_strength_bytes_v2(), false));
+
+	if (!ad.InsertAttr("K", K_encoded.get()) ||
+		!ad.InsertAttr("K_prime", K_prime_encoded.get()) ||
+		!ad.InsertAttr(ATTR_SEC_USER, id) ||
 		!ad.InsertAttr("Token", token) )
 	{
 		if (err) err->push("PASSWD", 1, "Unable to create key ClassAd");
@@ -1224,14 +1236,16 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 			// If we have a pre-derived key, use that.
 			if (m_k && m_k_prime) {
+				dprintf(D_SECURITY, "PW: Client using pre-derived key of length %lu.\n", m_k_len);
 				m_sk.ka = m_k; m_k = NULL;
 				m_sk.ka_len = m_k_len; m_k_len = 0;
 				m_sk.kb = m_k_prime; m_k_prime = NULL;
 				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
 			} else {
+				dprintf(D_SECURITY, "PW: Client using pool password.\n");
 				m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
-				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
+				if(!setup_shared_keys(&m_sk, m_t_client.a, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
 				}
 			}
@@ -1364,8 +1378,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 	if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
-		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
+			// In version 2, we always want to forcibly fetch the pool password.
+			// However, the client ID might not actuall be condor_pool@whatever;
+			// hence, in this case we just use the server name twice (which is
+			// mandated to be the pool username).
+		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_server.b);
+		if(!setup_shared_keys(&m_sk, m_t_client.a, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");
@@ -2024,7 +2042,7 @@ int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(send_a_len)
 		|| !mySock_->code(send_a)
-		|| !(m_version == 1 || !mySock_->code(init_token))
+		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(send_b_len)
 		|| !(send_b_len == mySock_->put_bytes(send_b, send_b_len))
 		|| !(mySock_->end_of_message())) {
@@ -2056,7 +2074,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a) 
-		|| !(m_version == 1 || !mySock_->code(init_token))
+		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(ra_len)
 		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
