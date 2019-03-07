@@ -1,7 +1,7 @@
       
 
-bosco\_uninstall
-================
+*bosco\_uninstall*
+==================
 
 uninstall a Bosco installation
 

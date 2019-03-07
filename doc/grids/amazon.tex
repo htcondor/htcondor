@@ -85,8 +85,8 @@ If using an X.509 proxy, specify the proxy in both places.
 
 The exception to both of these cases applies when submitting EC2 jobs
 to an HTCondor running in an EC2 instance.  If that instance has been
-configured with sufficient privileges, you may specify ``FROM INSTANCE''
-(without the quotes) for either \SubmitCmdNI{ec2\_access\_key\_id} or
+configured with sufficient privileges, you may specify \Expr{FROM INSTANCE}
+for either \SubmitCmdNI{ec2\_access\_key\_id} or
 \SubmitCmdNI{ec2\_secret\_access\_key}, and HTCondor will use the
 instance's credentials.  (AWS grants an EC2 instance access to temporary
 credentials, renewed over the instance's lifetime, based on the instance's

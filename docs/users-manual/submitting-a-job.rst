@@ -799,7 +799,7 @@ unnumbered Appendix on page \ `Machine ClassAd
 Attributes <../classad-attributes/machine-classad-attributes.html>`__.
 
 Rank Expression Examples
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 When considering the match between a job and a machine, rank is used to
 choose a match from among all machines that satisfy the job’s
@@ -1000,7 +1000,7 @@ the submitting machine. This specification is done within the job’s
 submit description file.
 
 Specifying If and When to Transfer Files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''
 
 To enable the file transfer mechanism, place two commands in the job’s
 submit description file: **should\_transfer\_files** and
@@ -1098,7 +1098,7 @@ would produce undefined file access semantics. Therefore, this
 combination is prohibited by *condor\_submit*.
 
 Specifying What Files to Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files before the job is run on a remote machine.
@@ -1222,7 +1222,7 @@ Note that only the base name is used in the naming and placement of the
 file specified with ``d1/o3``.
 
 File Paths for File Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 The file transfer mechanism specifies file names and/or paths on both
 the file system of the submit machine and on the file system of the
@@ -1457,7 +1457,7 @@ the examples:
         Queue
 
 Public Input Files
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 There are some cases where HTCondor’s file transfer mechanism is
 inefficient. For jobs that need to run a large number of times, the
@@ -1495,7 +1495,7 @@ available and world-readable, so this feature should not be used for any
 sensitive data.
 
 Behavior for Error Cases
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 This section describes HTCondor’s behavior for some error cases in
 dealing with the transfer of files.
@@ -1530,7 +1530,7 @@ dealing with the transfer of files.
        because the system is out of disk space.
 
 File Transfer Using a URL
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 Instead of file transfer that goes only between the submit machine and
 the execute machine, HTCondor has the ability to transfer files from a
@@ -1580,7 +1580,7 @@ is specified by further adding a submit command of the form:
     transfer_output_files = file1, file2
 
 Requirements and Rank for File Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''
 
 The ``requirements`` expression for a job must depend on the
 should\_transfer\_files command. The job must specify the correct logic
@@ -1763,7 +1763,7 @@ the architecture and operating systems of the machines in a pool, run
 *condor\_status*.
 
 Vanilla Universe Example for Execution on Differing Architectures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 A more complex example of a heterogeneous submission occurs when a job
 may be executed on many different architectures to gain full use of a
@@ -1851,7 +1851,7 @@ executable is missing when it happens to match the job with a resource
 that requires the missing binary.
 
 Standard Universe Example for Execution on Differing Architectures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Jobs submitted to the standard universe may produce checkpoints. A
 checkpoint can then be used to start up and continue execution of a
@@ -1928,7 +1928,7 @@ The complete submit description file for this example:
       Queue
 
 Vanilla Universe Example for Execution on Differing Operating Systems
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The addition of several related OpSys attributes assists in selection of
 specific operating systems and versions in heterogeneous pools.

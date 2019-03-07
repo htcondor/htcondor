@@ -1,7 +1,7 @@
       
 
-condor\_who
-===========
+*condor\_who*
+=============
 
 Display information about owners of jobs and jobs running on an execute
 machine

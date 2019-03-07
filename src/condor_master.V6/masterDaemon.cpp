@@ -799,12 +799,22 @@ int daemon::RealStart( )
 				for( int i = 0; i < configArgs.Count(); ++i ) {
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
-						foundLocalName = true; break;
+						foundLocalName = true;
+						if( i + 1 < configArgs.Count() ) {
+							daemon_sock_buf = configArgs.GetArg(i + 1);
+							daemon_sock_buf.lower_case();
+							daemon_sock = daemon_sock_buf.c_str();
+						}
+						break;
 					}
 				}
 				if(! foundLocalName) {
 					args.AppendArg( "-local-name" );
 					args.AppendArg( name_in_config_file );
+
+					// Don't set daemon_sock here, since we'll catch it
+					// below if we haven't, and that avoids duplicating
+					// the code.
 				}
 			}
 
@@ -916,6 +926,15 @@ int daemon::RealStart( )
 	if( daemon_sock ) {
 		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
 			daemon_sock);
+	} else {
+		// We checked for local names already, use the config name here.
+		if( isDC ) {
+			daemon_sock_buf = name_in_config_file;
+			daemon_sock_buf.lower_case();
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str() );
+			daemon_sock = daemon_sock_buf.c_str();
+			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
+		}
 	}
 	if( command_port > 1 ) {
 		dprintf (D_FULLDEBUG, "Starting daemon on TCP port %d\n", command_port);

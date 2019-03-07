@@ -78,7 +78,7 @@ directories:
     directory containing source for some interfaces.
 
 Preparation
-~~~~~~~~~~~
+'''''''''''
 
 Before installation, you need to make a few important decisions about
 the basic layout of your pool. These decisions answer the following
@@ -404,7 +404,7 @@ be shared?
     question 6 above for details on this.
 
 Unix Installation from a repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''
 
 Installing HTCondor from repositories preferred for systems that you
 administer. If you do not have administrative access, use the tarball
@@ -416,7 +416,7 @@ Debian and Ubuntu LTS. Visit the installation documentation at
 `https://research.cs.wisc.edu/htcondor/instructions/ <https://research.cs.wisc.edu/htcondor/instructions/>`__
 
 Unix Installation from a Tarball
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 **Note that installation from a tarball is no longer the preferred
 method for installing HTCondor on Unix systems. Installation via RPM or
@@ -545,7 +545,7 @@ page \ `condor\_configure <../man-pages/condor_configure.html>`__ for
 details.
 
 Starting HTCondor Under Unix After Installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 Now that HTCondor has been installed on the machine(s), there are a few
 things to check before starting up HTCondor.
@@ -706,7 +706,7 @@ Local System account. Running the HTCondor services as any other account
 (such as a domain user) is not supported and could be problematic.
 
 Installation Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 -  HTCondor for Windows is supported for Windows Vista or a more recent
    version.
@@ -718,7 +718,7 @@ Installation Requirements
 -  HTCondor for Windows uses the Visual C++ 2012 C runtime library.
 
 Preparing to Install HTCondor under Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''
 
 Before installing the Windows version of HTCondor, there are two major
 decisions to make about the basic layout of the pool.
@@ -761,7 +761,7 @@ section \ `3.2.3 <#x30-1610003.2.3>`__. If unsure, read on.
    space.
 
 Installation Procedure Using the MSI Program
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''
 
 Installation of HTCondor must be done by a user with administrator
 privileges. After installation, the HTCondor services will be run under
@@ -948,7 +948,7 @@ and choosing options within the following steps.
     required file services are available.
 
 Unattended Installation Procedure Using the Included Setup Program
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 This section details how to run the HTCondor for Windows installer in an
 unattended batch mode. This mode is one that occurs completely from the
@@ -1087,7 +1087,7 @@ Microsoft’s website at
 `http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`__.
 
 Manual Installation HTCondor on Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''
 
 If you are to install HTCondor on many different machines, you may wish
 to use some other mechanism to install HTCondor on additional machines
@@ -1162,7 +1162,7 @@ using the provided GUI-based setup program:
     in these directories are subject to removal.
 
 Starting HTCondor Under Windows After Installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''
 
 After the installation of HTCondor is completed, the HTCondor service
 must be started. If you used the GUI-based setup program to install
@@ -1201,7 +1201,7 @@ and the HTCondor bin directory should be in your path, so you can issue
 the normal HTCondor commands, such as *condor\_q* and *condor\_status*.
 
 HTCondor is Running Under Windows ... Now What?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 Once HTCondor services are running, try submitting test jobs. Example 2
 within section \ `Submitting a

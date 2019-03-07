@@ -1,7 +1,7 @@
       
 
-condor\_compile
-===============
+*condor\_compile*
+=================
 
 create a relinked executable for use as a standard universe job
 

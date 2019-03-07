@@ -502,7 +502,7 @@ VanillaProc::StartJob()
 	}
 
 	// mount_under_scratch only works with rootly powers
-	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap()) {
+	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
 		const char* working_dir = Starter->GetWorkingDir();
 
 		if (IsDirectory(working_dir)) {
@@ -1132,7 +1132,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
 
-		if (usage < (0.9 * m_memory_limit)) {
+		if (usage < m_memory_limit) {
 			long long oomData = 0xdeadbeef;
 			int efd = -1;
 			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );

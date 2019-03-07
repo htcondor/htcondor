@@ -1,7 +1,7 @@
       
 
-condor\_checkpoint
-==================
+*condor\_checkpoint*
+====================
 
 send a checkpoint command to jobs running on specified hosts
 

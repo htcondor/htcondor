@@ -551,8 +551,8 @@ bool userlog_to_classads(const char *filename,
 	//   the classad attributes of the previous event
 	// So I need to do a diff to get only the interesting ones
 
-	ClassAd *eventClassAd=event->toClassAd();
-	ClassAd *prevEventClassAd=emap[jobid]->toClassAd();
+	ClassAd *eventClassAd=event->toClassAd(false);
+	ClassAd *prevEventClassAd=emap[jobid]->toClassAd(false);
 	ClassAd *jobClassAd = cmap[jobid];
 
 	// delete attributes from the previous event

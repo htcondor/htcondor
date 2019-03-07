@@ -1,3 +1,24 @@
+condor (8.9.0-1) unstable; urgency=medium
+
+  * Absent any configuration, HTCondor denies authorization to all users
+  * All HTCondor daemons under a condor_master share a security session
+  * Scheduler Universe jobs are prioritized by job priority
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 27 Feb 2019 17:05:36 -0600
+
+condor (8.8.1-1) stable; urgency=medium
+
+  * Fixed excessive CPU consumption with GPU monitoring
+  * GPU monitoring is off by default; enable with "use feature: GPUsMonitor"
+  * HTCondor now works with the new CUDA version 10 libraries
+  * Fixed a bug where sometimes jobs would not start on a Windows execute node
+  * Fixed a bug that could cause DAGman to go into an infinite loop on exit
+  * The JobRouter doesn't forward the USER attribute between two UID Domains
+  * Made Collector.locateAll() more efficient in the Python bindings
+  * Improved efficiency of the negotiation code in the condor_schedd
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Feb 2019 15:44:41 -0600
+
 condor (8.8.0-1) stable; urgency=medium
 
   * Automatically add AWS resources to your pool using HTCondor Annex

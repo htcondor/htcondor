@@ -485,6 +485,16 @@ JICShadow::transferOutput( bool &transient_failure )
 			// on eviction.
 		bool final_transfer = !spool_on_evict || (requested_exit == false);	
 
+			// For the final transfer, we obey the output file remaps.
+		if (final_transfer) {
+			if ( !filetrans->InitDownloadFilenameRemaps(job_ad) ) {
+				dprintf( D_ALWAYS, "Failed to setup output file remaps.\n" );
+				m_did_transfer = false;
+				return false;
+			}
+		}
+
+
 			// The shadow may block on disk I/O for long periods of
 			// time, so set a big timeout on the starter's side of the
 			// file transfer socket.
@@ -922,7 +932,7 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 		event.setCriticalError( false );
 		event.setHoldReasonCode( hold_reason_code );
 		event.setHoldReasonSubCode( hold_reason_subcode );
-		ad = event.toClassAd();
+		ad = event.toClassAd(true);
 		ASSERT( ad );
 		int rv = REMOTE_CONDOR_ulog( ad );
 		delete ad;
@@ -2078,7 +2088,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	}
 
 	MyString spooled_files;
-	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}

@@ -1,7 +1,7 @@
       
 
-condor\_status
-==============
+*condor\_status*
+================
 
 Display status of the HTCondor pool
 

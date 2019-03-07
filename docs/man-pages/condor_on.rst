@@ -1,7 +1,7 @@
       
 
-condor\_on
-==========
+*condor\_on*
+============
 
 Start up HTCondor daemons
 

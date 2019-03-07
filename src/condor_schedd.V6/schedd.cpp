@@ -93,6 +93,7 @@
 #endif
 #include <algorithm>
 #include "pccc.h"
+#include "shared_port_endpoint.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -9705,10 +9706,12 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   files, etc), and PRIV_CONDOR (for writing to log files).
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName(name);
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  is_dc, is_dc, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
-									  NULL, create_process_opts);
+									  NULL, create_process_opts,
+									  NULL, NULL, daemon_sock.c_str());
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
@@ -17008,6 +17011,7 @@ Scheduler::launch_local_startd() {
 		return false;
 	}
 
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "local_universe_startd" );
 	m_local_startd_pid = daemonCore->Create_Process(	path.c_str(),
 										args,
 										PRIV_ROOT,
@@ -17022,7 +17026,10 @@ Scheduler::launch_local_startd() {
 										NULL, 
 										0,    /* niceness */
 									  	NULL,
-										create_process_opts);
+										create_process_opts,
+										NULL,
+										NULL,
+										daemon_sock.c_str() );
 
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
 	return TRUE;

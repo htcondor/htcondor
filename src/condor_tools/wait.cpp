@@ -28,6 +28,7 @@
 #include "read_user_log.h"
 #include "file_modified_trigger.h"
 #include "wait_for_user_log.h"
+#include "match_prefix.h"
 
 #include <set>
 /*
@@ -64,6 +65,11 @@ static void usage( char *cmd )
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
 	fprintf(stderr,"    -status           Show job start and terminate info\n");
 	fprintf(stderr,"    -echo             Echo log events relevant to [job-number]\n");
+//	fprintf(stderr,"    -echo[:<fmt>]     Echo log events relevant to [job-number]\n");
+//	fprintf(stderr,"       optional <fmt> is one or more log format options:\n");
+//	fprintf(stderr,"         ISO_DATE     date in Year-Month-Day form\n");
+//	fprintf(stderr,"         UTC          time as UTC time\n");
+//	fprintf(stderr,"         XML         use XML log format\n");
 	fprintf(stderr,"    -num <number>     Wait for this many jobs to end\n");
 	fprintf(stderr,"                       (default is all jobs)\n");
 	fprintf(stderr,"    -wait <seconds>   Wait no more than this time\n");
@@ -106,6 +112,8 @@ int main( int argc, char *argv[] )
 	int print_status = false;
 	int echo_events = false;
 	int dont_wait = false; // set to true when the wait is 0 - read all events then exit.
+	int format_opts = 0;
+	const char * pcolon;
 
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
@@ -128,8 +136,11 @@ int main( int argc, char *argv[] )
 			} else {
 				print_status = true;
 			}
-		} else if(!strcmp(argv[i],"-echo")) {
+		} else if(is_dash_arg_colon_prefix(argv[i],"echo", &pcolon, -1)) {
 			echo_events = true;
+			if (pcolon) {
+				format_opts = ULogEvent::parse_opts(pcolon + 1, format_opts);
+			}
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {
@@ -200,6 +211,12 @@ int main( int argc, char *argv[] )
 	int submitted = 0, aborted = 0, completed = 0;
 	std::set<std::string> table;
 
+	// in case we want to echo in XML format
+	classad::ClassAdXMLUnParser xmlunp;
+	if (format_opts & ULogEvent::formatOpt::XML) {
+		xmlunp.SetCompactSpacing(false);
+	}
+
 	WaitForUserLog wful( log_file_name );
 	if(! wful.isInitialized()) {
 		fprintf( stderr, "Couldn't open %s: %s\n", log_file_name, strerror(errno) );
@@ -226,8 +243,17 @@ int main( int argc, char *argv[] )
 			if( jobnum_matches( event, cluster, process, subproc ) ) {
 				if (echo_events) {
 					std::string event_str;
-					event->formatEvent( event_str );
-					printf( "%s...\n", event_str.c_str() );
+					if (format_opts & ULogEvent::formatOpt::XML) {
+						ClassAd* ad = event->toClassAd((format_opts & ULogEvent::formatOpt::UTC) != 0);
+						if (ad) {
+							xmlunp.Unparse(event_str, ad);
+							printf("%s", event_str.c_str());
+							delete ad;
+						}
+					} else {
+						event->formatEvent(event_str, format_opts);
+						printf("%s...\n", event_str.c_str());
+					}
 				}
 
 				if(event->eventNumber==ULOG_SUBMIT) {

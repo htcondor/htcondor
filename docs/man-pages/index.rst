@@ -1,10 +1,10 @@
 Command Reference Manual (man pages)
-====================================
+------------------------------------
 
 .. toctree::
    :maxdepth: 2
    :glob:
-
+   
    bosco_cluster
    bosco_findplatform
    bosco_install
@@ -23,8 +23,8 @@ Command Reference Manual (man pages)
    condor_config_val
    condor_continue
    condor_convert_history
-   condor_dagman_metrics_reporter
    condor_dagman
+   condor_dagman_metrics_reporter
    condor_drain
    condor_fetchlog
    condor_findhost
@@ -58,7 +58,6 @@ Command Reference Manual (man pages)
    condor_router_rm
    condor_run
    condor_set_shutdown
-   condor_shadow-exit-codes
    condor_sos
    condor_sshtojob
    condor_stats
@@ -76,11 +75,10 @@ Command Reference Manual (man pages)
    condor_urlfetch
    condor_userlog
    condor_userprio
-   condor_vacate_job
    condor_vacate
+   condor_vacate_job
    condor_version
    condor_wait
    condor_who
    giddalloc
-   procdctl
-      
+   procdctl      

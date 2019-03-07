@@ -1,7 +1,7 @@
       
 
-bosco\_start
-============
+*bosco\_start*
+==============
 
 start up the Personal HTCondor installation specific to Bosco
 

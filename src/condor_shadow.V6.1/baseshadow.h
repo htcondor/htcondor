@@ -387,8 +387,7 @@ class BaseShadow : public Service
 			method to supply this information. */
 	virtual int exitCode( void ) = 0;
 
-		// make UserLog static so it can be accessed by EXCEPTION handler
-	static WriteUserLog uLog;
+	WriteUserLog uLog;
 
 	void evalPeriodicUserPolicy( void );
 

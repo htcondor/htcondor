@@ -1,7 +1,7 @@
       
 
-bosco\_cluster
-==============
+*bosco\_cluster*
+================
 
 Manage and configure the clusters to be accessed.
 

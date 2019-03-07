@@ -1,7 +1,7 @@
       
 
-condor\_userprio
-================
+*condor\_userprio*
+==================
 
 Manage user priorities
 

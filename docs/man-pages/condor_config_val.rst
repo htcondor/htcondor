@@ -1,7 +1,7 @@
       
 
-condor\_config\_val
-===================
+*condor\_config\_val*
+=====================
 
 Query or set a given HTCondor configuration variable
 

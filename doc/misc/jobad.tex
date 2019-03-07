@@ -858,16 +858,21 @@ This is the same as the configuration setting
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
 the job event log instead of the system event log.
 
-%%% ClassAd attribute: JobDescription
-\index{ClassAd job attribute!JobDescription}
-\index{JobDescription!job ClassAd attribute}
-\label{JobDescription-job-attribute}
-\item[\AdAttr{JobDescription}:]  A string that may be defined for
-a job by setting \SubmitCmd{description} in the submit description file.
-When set, tools which display the executable such as \Condor{q}
-will instead use this string.
-For interactive jobs that do not have a submit description file,
-this string will default to \Expr{"Interactive job"}.
+%%% ClassAd attribute: JobCurrentFinishTransferInputDate
+\index{ClassAd job attribute!JobCurrentFinishTransferInputDate}
+\index{JobCurrentFinishTransferInputDate!job ClassAd attribute}
+\label{JobCurrentFinishTransferInptDate-job-attribute}
+\item[\AdAttr{JobCurrentFinishTransferInputDate}:]  Time at which the job most
+recently finished transferring its input sandbox.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
+
+%%% ClassAd attribute: JobCurrentFinishTransferOutputDate
+\index{ClassAd job attribute!JobCurrentFinishTransferOutputDate}
+\index{JobCurrentFinishTransferOutputDate!job ClassAd attribute}
+\label{JobCurrentFinishTransferOutputDate-job-attribute}
+\item[\AdAttr{JobCurrentFinishTransferOutputDate}:]  Time at which the job most
+recently finished transferring its output sandbox.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 %%% ClassAd attribute: JobCurrentStartDate
 \index{ClassAd job attribute!JobCurrentStartDate}
@@ -875,7 +880,7 @@ this string will default to \Expr{"Interactive job"}.
 \label{JobCurrentStartDate-job-attribute}
 \item[\AdAttr{JobCurrentStartDate}:]  Time at which the job most recently began
 running.  Measured in the
-number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).  
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 %%% ClassAd attribute: JobCurrentStartExecutingDate
 \index{ClassAd job attribute!JobCurrentStartExecutingDate}
@@ -883,6 +888,14 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \label{JobCurrentStartExecutingDate-job-attribute}
 \item[\AdAttr{JobCurrentStartExecutingDate}:]  Time at which the job most recently finished
 transferring its input sandbox and began executing.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
+
+%%% ClassAd attribute: JobCurrentStartTransferInputDate
+\index{ClassAd job attribute!JobCurrentStartTransferInputDate}
+\index{JobCurrentStartTransferInputDate!job ClassAd attribute}
+\label{JobCurrentStartTransferInputDate-job-attribute}
+\item[\AdAttr{JobCurrentStartTransferInputDate}:]  Time at which the job most
+recently began transferring its input sandbox.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 %%% ClassAd attribute: JobCurrentStartTransferOutputDate
@@ -893,6 +906,16 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 executing and began transferring its output sandbox.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
+%%% ClassAd attribute: JobDescription
+\index{ClassAd job attribute!JobDescription}
+\index{JobDescription!job ClassAd attribute}
+\label{JobDescription-job-attribute}
+\item[\AdAttr{JobDescription}:]  A string that may be defined for
+a job by setting \SubmitCmd{description} in the submit description file.
+When set, tools which display the executable such as \Condor{q}
+will instead use this string.
+For interactive jobs that do not have a submit description file,
+this string will default to \Expr{"Interactive job"}.
 
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
@@ -1989,6 +2012,31 @@ If \Expr{False}, then the job's input is taken from a file on the
 remote machine (pre-staged), and 
 the name of the file is given by the job attribute \Attr{In}.
 
+%%% ClassAd attribute: TransferInFinished
+\index{ClassAd job attribute!TransferInFinished}
+\index{TransferInFinished!job ClassAd attribute}
+\item[\AdAttr{TransferInFinished}]:
+When the job finished the most recent recent transfer of its input sandbox,
+measured in seconds from the epoch.
+(00:00:00 UTC Jan 1, 1970).
+
+%%% ClassAd attribute: TransferInQueued
+\index{ClassAd job attribute!TransferInQueued}
+\index{TransferInQueued!job ClassAd attribute}
+\item[\AdAttr{TransferInQueued}]:
+If the job's most recent transfer of its input sandbox was queued, this
+attribute says when, measured in seconds from the epoch
+(00:00:00 UTC Jan 1, 1970).
+
+%%% ClassAd attribute: TransferInStarted
+\index{ClassAd job attribute!TransferInStarted}
+\index{TransferInStarted!job ClassAd attribute}
+\item[\AdAttr{TransferInStarted}]:
+When the job actually started to transfer files, the most recent time it
+transferred its input sandbox, measured in seconds from the epoch.  This
+will be \emph{later than} \AdAttr{TransferInQueued} (if set).
+(00:00:00 UTC Jan 1, 1970).
+
 %%% ClassAd attribute: TransferInputSizeMB
 \index{ClassAd job attribute!TransferInputSizeMB}
 \index{TransferInputSizeMB!job ClassAd attribute}
@@ -2012,6 +2060,31 @@ by job attribute \Attr{Out}.
 If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
+
+%%% ClassAd attribute: TransferOutFinished
+\index{ClassAd job attribute!TransferOutFinished}
+\index{TransferOutFinished!job ClassAd attribute}
+\item[\AdAttr{TransferOutFinished}]:
+When the job finished the most recent recent transfer of its output sandbox,
+measured in seconds from the epoch.
+(00:00:00 UTC Jan 1, 1970).
+
+%%% ClassAd attribute: TransferOutQueued
+\index{ClassAd job attribute!TransferOutQueued}
+\index{TransferOutQueued!job ClassAd attribute}
+\item[\AdAttr{TransferOutQueued}]:
+If the job's most recent transfer of its output sandbox was queued, this
+attribute says when, measured in seconds from the epoch
+(00:00:00 UTC Jan 1, 1970).
+
+%%% ClassAd attribute: TransferOutStarted
+\index{ClassAd job attribute!TransferOutStarted}
+\index{TransferOutStarted!job ClassAd attribute}
+\item[\AdAttr{TransferOutStarted}]:
+When the job actually started to transfer files, the most recent time it
+transferred its output sandbox, measured in seconds from the epoch.  This
+will be \emph{later than} \AdAttr{TransferOutQueued} (if set).
+(00:00:00 UTC Jan 1, 1970).
 
 %%% ClassAd attribute: TransferringInput
 \index{ClassAd job attribute!TransferringInput}

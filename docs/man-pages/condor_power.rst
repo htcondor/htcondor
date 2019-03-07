@@ -1,7 +1,7 @@
       
 
-condor\_power
-=============
+*condor\_power*
+===============
 
 send packet intended to wake a machine from a low power state
 

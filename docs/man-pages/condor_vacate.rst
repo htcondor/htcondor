@@ -1,7 +1,7 @@
       
 
-condor\_vacate
-==============
+*condor\_vacate*
+================
 
 Vacate jobs that are running on the specified hosts
 

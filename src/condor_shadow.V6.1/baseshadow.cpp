@@ -36,7 +36,6 @@
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
-WriteUserLog BaseShadow::uLog;
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
@@ -77,6 +76,7 @@ BaseShadow::BaseShadow() {
 }
 
 BaseShadow::~BaseShadow() {
+	myshadow_ptr = NULL;
 	if (jobAd) FreeJobAd(jobAd);
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
@@ -983,12 +983,11 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.total_remote_rusage = run_remote_rusage;
 	
 		/*
-		  we want to log the events from the perspective of the user
-		  job, so if the shadow *sent* the bytes, then that means the
-		  user job *received* the bytes
+		  Both the job ad and the terminated event record bytes
+		  transferred from the perspective of the job, not the shadow.
 		*/
-		jobAd->LookupFloat(ATTR_BYTES_SENT, event.recvd_bytes);
-		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.sent_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.recvd_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_SENT, event.sent_bytes);
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
@@ -1209,36 +1208,36 @@ BaseShadow::checkSwap( void )
 void
 BaseShadow::log_except(const char *msg)
 {
+	if(!msg) msg = "";
+
+	if ( BaseShadow::myshadow_ptr == NULL ) {
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg);
+		return;
+	}
+
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	bool exception_already_logged = false;
 
-	if(!msg) msg = "";
 	snprintf(event.message, sizeof(event.message), "%s", msg);
 	event.message[sizeof(event.message)-1] = '\0';
 
-	if ( BaseShadow::myshadow_ptr ) {
-		BaseShadow *shadow = BaseShadow::myshadow_ptr;
+	BaseShadow *shadow = BaseShadow::myshadow_ptr;
 
-		// we want to log the events from the perspective of the
-		// user job, so if the shadow *sent* the bytes, then that
-		// means the user job *received* the bytes
-		event.recvd_bytes = shadow->bytesSent();
-		event.sent_bytes = shadow->bytesReceived();
-		exception_already_logged = shadow->exception_already_logged;
+	// we want to log the events from the perspective of the
+	// user job, so if the shadow *sent* the bytes, then that
+	// means the user job *received* the bytes
+	event.recvd_bytes = shadow->bytesSent();
+	event.sent_bytes = shadow->bytesReceived();
+	exception_already_logged = shadow->exception_already_logged;
 
-		if (shadow->began_execution) {
-			event.began_execution = TRUE;
-		}
-
-	} else {
-		event.recvd_bytes = 0.0;
-		event.sent_bytes = 0.0;
+	if (shadow->began_execution) {
+		event.began_execution = TRUE;
 	}
 
-	if (!exception_already_logged && !uLog.writeEventNoFsync (&event,NULL))
+	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,NULL))
 	{
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
+		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);
 	}
 }
 

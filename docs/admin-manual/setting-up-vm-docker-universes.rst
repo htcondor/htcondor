@@ -68,7 +68,7 @@ options would look like this:
     VM_GAHP_LOG = $(LOG)/VMGahpLog
 
 VMware-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 To use VMware, identify the location of the *Perl* executable on the
 execute machine. In most cases, the default value should suffice:
@@ -127,7 +127,7 @@ To work around this problem:
    components.
 
 Xen-Specific and KVM-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''
 
 Once the configuration options have been set, restart the
 *condor\_startd* daemon on that host. For example:
@@ -162,7 +162,7 @@ versions, depending on features provided by the underlying tool
 *libvirt*.
 
 When a vm Universe Job Fails to Start
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''
 
 If a vm universe job should fail to launch, HTCondor will attempt to
 distinguish between a problem with the user’s job description, and a

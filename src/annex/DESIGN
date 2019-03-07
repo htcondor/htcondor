@@ -6,7 +6,7 @@ CloudWatch Events rule that triggers every five minutes, and was created
 by PutRule().  The target (PutTargets()) calls the lease function with a
 constant argument set at annex creation (the name of the annex, the name
 of the configuration bucket, and when the lease expires).  The
-latter-most may be updates during the lease's lifetime.  The
+latter-most may be updated during the lease's lifetime.  The
 function (created during the initial setup; see below) checks if the
 lease has expired, and if it has, does the following: deletes the
 corresponding configuration tarball from the S3 bucket; finds instances

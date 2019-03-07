@@ -1,7 +1,7 @@
       
 
-condor\_version
-===============
+*condor\_version*
+=================
 
 print HTCondor version and platform information
 

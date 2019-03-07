@@ -34,14 +34,35 @@ def cleanup_pre_contents(data):
 
 # Cleans up the markup of a table
 def cleanup_table(data):
+    # First, determine how many columns this table has.
+    num_columns = 0
+    for index, token in enumerate(data):
+        if token.name == "tr":
+            this_row_columns = len(list(token.children))
+            if this_row_columns > num_columns:
+                num_columns = this_row_columns
+    # Now determine which elements we want to remove from the table.
+    # Do not remove them now, that causes the iterator to miss elements.
+    # Instead flag them for removal later.
+    tokens_to_remove = []
     for index, token in enumerate(data):
         if type(token) is bs4.element.Tag:
-            #print("\n\ntoken = " + str(token))
-            # Remove all the <tr class="hline">...</tr> tags
+            # Flag all the <tr class="hline">...</tr> tags
             if token.name == "tr" and "class" in token.attrs.keys():
-                data.remove(token)
-            #for child in token.children:
-            #    print("child = " + str(child))
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            # Flag all the <colgroup> tags
+            elif token.name == "colgroup":
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            # Flag all rows with an incorrect number of columns.
+            # Looks like this is what's causing pandoc to trip up.
+            elif len(list(token.children)) != num_columns:
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+    # Now, finally, remove all the bad elements.
+    for index, token in enumerate(tokens_to_remove):
+        data.remove(token)
     return data
 
 # Updates a link URL and also adds in the correct title
@@ -57,7 +78,50 @@ def update_link(data):
         print("Link " + str(data) + " is external, ignoring")
     return updated_link
 
+# Generate an HTML link we'll use later to import the index.
+# We have no way of converting these directly to Sphinx index roles.
+# By generating a link instead, we can use a regex to convert them to roles later.
+def create_index_entry(index_tag):
+    # Open the old index markup, parse it into a soup object
+    with open("old-index.html", "r") as old_index_file:
+        old_index_data = old_index_file.read()
+    old_index_file.close()
+    index_soup = bs4.BeautifulSoup(old_index_data, features="lxml")
 
+    # Now we need to extract the index name (+ possibly parent name) from this markup.
+    # Scan the old markup for the id value of the tag that got passed in.
+    item_name = ""
+    parent_name = ""
+    a_tags = index_soup.find_all("a")
+    for a_tag in a_tags:
+        if "href" in a_tag.attrs.keys():
+            if index_tag['id'] in a_tag['href']:
+                item_name = a_tag.parent.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                # If this record is a subitem, we want to find the name of the parent item.
+                if "class" in a_tag.parent.attrs.keys():
+                    if a_tag.parent['class'][0] == "index-subitem":
+                        # Iterate backwards through siblings until we find it.
+                        for previous_sibling in a_tag.parent.previous_siblings:
+                            if type(previous_sibling) == bs4.element.Tag:
+                                if "class" in previous_sibling.attrs.keys():
+                                    if previous_sibling['class'][0] == "index-item":
+                                        parent_name = previous_sibling.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                                        break
+                break
+
+    # Finish cleaning up the index name + parent name, and set them as the link href
+    if item_name:
+        if item_name[-1:] == ",":
+            item_name = item_name[:-1]
+        if parent_name:
+            if parent_name[-1:] == ",":
+                parent_name = parent_name[:-1]
+            index_tag['href'] = "index://" + item_name + ";" + parent_name
+        else:
+            index_tag['href'] = "index://" + item_name
+    #print("id = " + str(index_tag['id'] + "; item_name = " + item_name + "; parent_name = " + parent_name))
+    
+    return index_tag
 
 def main():
 
@@ -195,6 +259,10 @@ def main():
                 new_tag.contents = tag.contents
         tag.replace_with(new_tag)
 
+    # Soup is confused. Reload.
+    html_dump = str(soup)
+    soup = bs4.BeautifulSoup(html_dump, features="lxml")
+
     # Convert all <div class="verbatim">...</div> tags to <pre>...</pre>
     pre_tags = soup.find_all("div", attrs={"class": "verbatim"})
     print("Found " + str(len(pre_tags)) + " verbatim divs")
@@ -252,15 +320,14 @@ def main():
     # .... not worth it. We only have ~10 images in strange formats. Do it manually.
 
     # Is there anything we can do to automate the index items?
-    # .... maybe by looking at the <a id="...">...</a> tags generated from the \Macro tags?
+    # The following code generates <a> tags that contain the index text
+    # That should be enough for us to write an RST-scrubber to generate the actual directives.
     index_tags = soup.find_all("a")
     print("Found " + str(len(index_tags)) + " a tags which may or may not be index items")
     for tag in index_tags:
         if "id" in tag.attrs.keys():
-            new_tag = soup.new_tag("div")
-            new_tag.string = "INDEX GOES HERE"
+            new_tag = create_index_entry(tag)
             tag.replace_with(new_tag)
-            
 
 
     # Does outputting pretty HTML matter? 

@@ -11,23 +11,14 @@ bool has_sysadmin_cap() {
 #else
 
 #include "condor_common.h"
+#include <sys/prctl.h>
 #include <linux/capability.h>
 
-extern "C" int capget(void *, void *);
-
-	// This is a linux system that has capabilities, so even if you have uid 0,
-	// you may not have permissions to do what you think.
+// This is a linux system that has capabilities, so even if you have uid 0,
+// you may not have permissions to do what you think.
 bool has_sysadmin_cap() {
 
-	int result = 0;
-	struct __user_cap_header_struct header;
-	struct __user_cap_data_struct data[2];
-	header.version = _LINUX_CAPABILITY_VERSION_3;
-	header.pid = getpid();
-
-	result = capget(&header, &data);
-
-	return result != 0;
+	return prctl(PR_CAPBSET_READ, CAP_SYS_ADMIN);
 }
 
 #endif

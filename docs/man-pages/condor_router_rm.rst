@@ -1,7 +1,7 @@
       
 
-condor\_router\_rm
-==================
+*condor\_router\_rm*
+====================
 
 Remove jobs being managed by the HTCondor Job Router
 

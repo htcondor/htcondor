@@ -1,7 +1,7 @@
       
 
-condor\_reconfig
-================
+*condor\_reconfig*
+==================
 
 Reconfigure HTCondor daemons
 

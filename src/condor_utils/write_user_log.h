@@ -29,7 +29,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#define XML_USERLOG_DEFAULT 0
+#define USERLOG_FORMAT_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -112,15 +112,15 @@ class WriteUserLog
     */
     WriteUserLog(const char *owner, const char *domain,
 				 const std::vector<const char*>& file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
     WriteUserLog(const char *owner, const char *domain,
 				 const char* file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
     
     WriteUserLog(const char *owner, const char *file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
     WriteUserLog(const char *owner, const std::vector<const char *>& file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
     ///
     virtual ~WriteUserLog();
     
@@ -180,7 +180,7 @@ class WriteUserLog
 	*/
 	bool Configure( bool force = true );
 
-	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
+	void setUseXML(bool new_use_xml);
 
 	/** Enable / disable writing of user or global logs
 	 */
@@ -329,7 +329,8 @@ class WriteUserLog
 				   int & fd );
 
 
-	bool doWriteEvent( int fd, ULogEvent *event, bool do_use_xml );
+	// options are flags from the ULogEvent::formatOpt enum
+	bool doWriteEvent( int fd, ULogEvent *event, int format_options );
 	void GenerateGlobalId( MyString &id );
 
 	bool checkGlobalLogRotation(void);
@@ -354,11 +355,11 @@ class WriteUserLog
 		WriteUserLog::log_file& log,
 		bool is_global_event,
 		bool is_header_event,
-		bool use_xml,
+		int format_opts,
 		ClassAd *ad);
 	void writeJobAdInfoEvent(char const *attrsToWrite,
 		WriteUserLog::log_file& log, ULogEvent *event, ClassAd *param_jobad,
-		bool is_global_event, bool use_xml );
+		bool is_global_event, int format_opts );
 
 	std::vector<log_file*> logs;
     log_file_cache_map_t* log_file_cache;
@@ -372,7 +373,7 @@ class WriteUserLog
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  int        m_global_fd;
     /** The global log file lock     */  FileLockBase *m_global_lock;
-	/** Whether we use XML or not    */  bool       m_global_use_xml;
+	/** ULogEvent::formatOpt flags   */  int        m_global_format_opts; // formerly m_global_use_xml
 	/** The log file uniq ID base    */  char     * m_global_id_base;
 	/** The current sequence number  */  int        m_global_sequence;
 	/** Count event log events?      */  bool       m_global_count_events;
@@ -387,7 +388,7 @@ class WriteUserLog
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
     /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
-	/** Whether we use XML or not    */  bool       m_use_xml;
+	/** ULogEvent::formatOpt flags   */  int        m_format_opts; // formerly m_use_xml
 
 #if !defined(WIN32)
 	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;

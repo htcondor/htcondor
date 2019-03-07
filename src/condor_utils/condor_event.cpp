@@ -38,6 +38,15 @@
 #include "condor_debug.h"
 //--------------------------------------------------------
 
+#ifdef WIN32
+ #if ! defined timegm
+  // timegm is the Linux name for the gm version of mktime, on Windows it is called _mkgmtime
+  #define timegm _mkgmtime
+  auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
+  auto __inline gmtime_r(const time_t*time, struct tm*result) { return gmtime_s(result, time); }
+ #endif
+#endif
+
 // define this to turn off seeking in the event reader methods
 #define DONT_EVER_SEEK 1
 
@@ -239,20 +248,10 @@ instantiateEvent (ULogEventNumber event)
 
 ULogEvent::ULogEvent(void)
 {
-	struct tm *tm;
-
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
 
 	(void) time ((time_t *)&eventclock);
-	tm = localtime ((time_t *)&eventclock);
-	eventTime = *tm;
-
-#ifdef ULOG_MICROSECONDS
-	::gettimeofday(&eventTimeval, 0);
-	tm = localtime(&eventTimeval.tv_sec);
-	eventTime = *tm;
-#endif
 }
 
 
@@ -270,10 +269,39 @@ int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
 	return (readHeader (file) && readEvent (file, got_sync_line));
 }
 
-
-bool ULogEvent::formatEvent( std::string &out )
+/*static*/ int ULogEvent::parse_opts(const char * fmt, int default_opts)
 {
-	return formatHeader( out ) && formatBody( out );
+	int opts = default_opts;
+
+	if (fmt) {
+		StringTokenIterator it(fmt);
+		for (const char * opt = it.first(); opt != NULL; opt = it.next()) {
+			bool bang = *opt == '!'; if (bang) ++opt;
+		#define DOOPT(tag,flag) if (YourStringNoCase(tag) == opt) { if (bang) { opts &= ~(flag); } else { opts |= (flag); } }
+			DOOPT("XML", formatOpt::XML)
+			DOOPT("ISO_DATE", formatOpt::ISO_DATE)
+			DOOPT("UTC", formatOpt::UTC)
+			DOOPT("SUB_SECOND", formatOpt::USEC)
+		#undef DOOPT
+			if (YourStringNoCase("LEGACY") == opt) {
+				if (bang) {
+					// if !LEGACY turn on a reasonable non-legacy default
+					opts |= formatOpt::ISO_DATE;
+				} else {
+					// turn off the non-legacy options
+					opts &= ~(formatOpt::ISO_DATE | formatOpt::UTC | formatOpt::UTC);
+				}
+			}
+		}
+	}
+
+	return opts;
+}
+
+
+bool ULogEvent::formatEvent( std::string &out, int options )
+{
+	return formatHeader( out, options ) && formatBody( out );
 }
 
 const char * getULogEventNumberName(ULogEventNumber number)
@@ -302,52 +330,96 @@ const char* ULogEvent::eventName(void) const
 int
 ULogEvent::readHeader (FILE *file)
 {
-	int retval;
+	struct tm dt;
+	bool is_utc;
+	char datebuf[10 + 1 + 21 + 3]; // longest date is YYYY-MM-DD  = 4+3+3 = 10
+	                               // longest time is HH:MM:SS.uuuuuu+hh:mm = 7*3 = 21
+	datebuf[2] = 0; // make sure that there is no / position 2
+	int retval = fscanf(file, " (%d.%d.%d) %10s %23s ", &cluster, &proc, &subproc, datebuf, &datebuf[11]);
+	if (retval != 5) {
+		// try a full iso8601 date-time before we give up
+		retval = fscanf(file, " (%d.%d.%d) %10sT%23s ", &cluster, &proc, &subproc, datebuf, &datebuf[11]);
+		if (retval != 5) {
+			return 0;
+		}
+	}
+	// now parse datebuf and timebuf into event time
+	is_utc = false;
 
-	// read from file
-	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ",
-					 &cluster, &proc, &subproc,
-					 &(eventTime.tm_mon), &(eventTime.tm_mday),
-					 &(eventTime.tm_hour), &(eventTime.tm_min),
-					 &(eventTime.tm_sec));
-	// check if all fields were successfully read
-	if (retval != 8)
-	{
+	// if we read a / in position 2 of the datebuf, then this must be
+	// a date of the form MM/DD, which is not iso8601. we use the old
+	// (broken) parsing algorithm to parse it
+	if (datebuf[2] == '/') {
+		// this will set -1 into all fields of dt that are not set by time parsing code
+		iso8601_to_time(&datebuf[11], &dt, &is_utc);
+		dt.tm_mon = atoi(datebuf);
+		if (dt.tm_mon <= 0) { // this detects completely garbage dates because atoi returns 0 if there are no numbers to parse
+			return 0;
+		}
+		dt.tm_mon -= 1; // recall that tm_mon+1 was written to log
+		dt.tm_mday = atoi(datebuf + 3);
+	} else {
+		// date must be in the form of YYYY-MM-DD and Time must begin at position 11
+		// so we can turn this into a full iso8601 datetime by stuffing a T inbetween
+		datebuf[10] = 'T';
+		// this will set -1 into all fields of dt that are not set by date/time parsing code
+		iso8601_to_time(datebuf, &dt, &is_utc);
+	}
+	// check for a bogus date stamp
+	if (dt.tm_mon < 0 || dt.tm_mon > 11 || dt.tm_mday < 0 || dt.tm_mday > 32 || dt.tm_hour < 0 || dt.tm_hour > 24) {
 		return 0;
 	}
+	// force mktime or gmtime to figure out daylight savings time
+	dt.tm_isdst = -1;
 
-	// recall that tm_mon+1 was written to log; decrement to compensate
-	eventTime.tm_mon--;
-		// Need to set eventclock here, otherwise eventclock and
-		// eventTime will not match!!  (See gittrac #5468.)
-	eventclock = mktime( &eventTime );
+	// use the year of the current timestamp when we dont get an iso8601 date
+	// This is wrong, but consistent with pre 8.8.2 behavior see #6936
+	if (dt.tm_year < 0) {
+		dt.tm_year = localtime(&eventclock)->tm_year;
+		// TODO: adjust the year as necessary so we don't get timestamps in the future
+	}
+
+	// Need to set eventclock here, otherwise eventclock and
+	// eventTime will not match!!  (See gittrac #5468.)
+	if (is_utc) {
+		eventclock = timegm(&dt);
+	} else {
+		eventclock = mktime(&dt);
+	}
 
 	return 1;
 }
 
 
-bool ULogEvent::formatHeader( std::string &out )
+bool ULogEvent::formatHeader( std::string &out, int options )
 {
-	int       retval;
+	// print event number and job id.
+	int retval = formatstr_cat(out, "%03d (%03d.%03d.%03d) ", eventNumber, cluster, proc, subproc);
+	if (retval < 0)
+		return false;
 
-	// write header
-#ifdef ULOG_MICROSECONDS
-	retval = formatstr_cat(out,
-					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d.%06d ",
-					  eventNumber,
-					  cluster, proc, subproc,
-					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
-					  GetEventTime().tm_hour, GetEventTime().tm_min,
-					  GetEventTime().tm_sec, (int)eventTimeval.tv_usec);
-#else
-	retval = formatstr_cat(out,
-					  "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
-					  eventNumber,
-					  cluster, proc, subproc,
-					  GetEventTime().tm_mon+1, GetEventTime().tm_mday,
-					  GetEventTime().tm_hour, GetEventTime().tm_min,
-					  GetEventTime().tm_sec);
-#endif
+	// print date and time
+	const struct tm * lt;
+	if (options & formatOpt::UTC) {
+		lt = gmtime(&eventclock);
+	} else {
+		lt = localtime(&eventclock);
+	}
+	if (options & formatOpt::ISO_DATE) {
+		formatstr_cat(out, "%04d-%02d-%02d %02d:%02d:%02d",
+			lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday,
+			lt->tm_hour, lt->tm_min,
+			lt->tm_sec);
+
+	} else {
+		retval = formatstr_cat(out,
+			"%02d/%02d %02d:%02d:%02d",
+			lt->tm_mon + 1, lt->tm_mday,
+			lt->tm_hour, lt->tm_min,
+			lt->tm_sec);
+	}
+	if (options & formatOpt::UTC) out += "Z";
+	out += " ";
 
 	// check if all fields were sucessfully written
 	return retval >= 0;
@@ -449,7 +521,7 @@ char * ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, bool chom
 
 
 ClassAd*
-ULogEvent::toClassAd(void)
+ULogEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = new ClassAd;
 
@@ -572,8 +644,14 @@ ULogEvent::toClassAd(void)
 		break;
 	}
 
+	struct tm eventTime;
+	if (event_time_utc) {
+		gmtime_r(&eventclock, &eventTime);
+	} else {
+		localtime_r(&eventclock, &eventTime);
+	}
 	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
-										 ISO8601_DateAndTime, FALSE);
+										 ISO8601_DateAndTime, event_time_utc);
 	if( eventTimeStr ) {
 		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
 			delete myad;
@@ -620,11 +698,14 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	}
 	char* timestr = NULL;
 	if( ad->LookupString("EventTime", &timestr) ) {
-		bool f = FALSE;
-		iso8601_to_time(timestr, &eventTime, &f);
-			// Need to set eventclock here, otherwise eventclock and
-			// eventTime will not match!!  (See gittrac #5468.)
-		eventclock = mktime( &eventTime );
+		bool is_utc = false;
+		struct tm eventTime;
+		iso8601_to_time(timestr, &eventTime, &is_utc);
+		if (is_utc) {
+			eventclock = timegm(&eventTime);
+		} else {
+			eventclock = mktime(&eventTime);
+		}
 		free(timestr);
 	}
 	ad->LookupInteger("Cluster", cluster);
@@ -1034,9 +1115,9 @@ FutureEvent::readEvent (FILE * file, bool & got_sync_line)
 }
 
 ClassAd*
-FutureEvent::toClassAd(void)
+FutureEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	myad->Assign("EventHead", head.c_str());
@@ -1272,9 +1353,9 @@ SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-SubmitEvent::toClassAd(void)
+SubmitEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( submitHost && submitHost[0] ) {
@@ -1456,9 +1537,9 @@ int GlobusSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GlobusSubmitEvent::toClassAd(void)
+GlobusSubmitEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
@@ -1589,9 +1670,9 @@ GlobusSubmitFailedEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GlobusSubmitFailedEvent::toClassAd(void)
+GlobusSubmitFailedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( reason && reason[0] ) {
@@ -1689,9 +1770,9 @@ GlobusResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GlobusResourceUpEvent::toClassAd(void)
+GlobusResourceUpEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
@@ -1790,9 +1871,9 @@ GlobusResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GlobusResourceDownEvent::toClassAd(void)
+GlobusResourceDownEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
@@ -1867,9 +1948,9 @@ GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GenericEvent::toClassAd(void)
+GenericEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( info[0] ) {
@@ -2080,9 +2161,9 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-RemoteErrorEvent::toClassAd(void)
+RemoteErrorEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if(*daemon_name) {
@@ -2263,9 +2344,9 @@ ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-ExecuteEvent::toClassAd(void)
+ExecuteEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( executeHost && executeHost[0] ) {
@@ -2363,9 +2444,9 @@ ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-ExecutableErrorEvent::toClassAd(void)
+ExecutableErrorEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( errType >= 0 ) {
@@ -2467,9 +2548,9 @@ CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-CheckpointedEvent::toClassAd(void)
+CheckpointedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	char* rs = rusageToStr(run_local_rusage);
@@ -2847,9 +2928,9 @@ JobEvictedEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-JobEvictedEvent::toClassAd(void)
+JobEvictedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( !myad->InsertAttr("Checkpointed", checkpointed ? true : false) ) {
@@ -3068,9 +3149,9 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobAbortedEvent::toClassAd(void)
+JobAbortedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( reason ) {
@@ -3490,9 +3571,9 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobTerminatedEvent::toClassAd(void)
+JobTerminatedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (pusageAd) {
@@ -3747,9 +3828,9 @@ JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobImageSizeEvent::toClassAd(void)
+JobImageSizeEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( image_size_kb >= 0 ) {
@@ -3855,10 +3936,10 @@ ShadowExceptionEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-ShadowExceptionEvent::toClassAd(void)
+ShadowExceptionEvent::toClassAd(bool event_time_utc)
 {
 	bool     success = true;
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( myad ) {
 		if( !myad->InsertAttr("Message", message) ) {
 			success = false;
@@ -3938,9 +4019,9 @@ JobSuspendedEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-JobSuspendedEvent::toClassAd(void)
+JobSuspendedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( !myad->InsertAttr("NumberOfPIDs", num_pids) ) {
@@ -3995,9 +4076,9 @@ JobUnsuspendedEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-JobUnsuspendedEvent::toClassAd(void)
+JobUnsuspendedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	return myad;
@@ -4172,9 +4253,9 @@ JobHeldEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-JobHeldEvent::toClassAd(void)
+JobHeldEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	const char* hold_reason = getReason();
@@ -4317,9 +4398,9 @@ JobReleasedEvent::formatBody( std::string &out )
 }
 
 ClassAd*
-JobReleasedEvent::toClassAd(void)
+JobReleasedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	const char* release_reason = getReason();
@@ -4515,9 +4596,9 @@ NodeExecuteEvent::readEvent (FILE *file, bool & /*got_sync_line*/)
 }
 
 ClassAd*
-NodeExecuteEvent::toClassAd(void)
+NodeExecuteEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( executeHost ) {
@@ -4591,9 +4672,9 @@ NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
 }
 
 ClassAd*
-NodeTerminatedEvent::toClassAd(void)
+NodeTerminatedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (pusageAd) {
@@ -4875,9 +4956,9 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 }
 
 ClassAd*
-PostScriptTerminatedEvent::toClassAd(void)
+PostScriptTerminatedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
@@ -5142,7 +5223,7 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 
 
 ClassAd*
-JobDisconnectedEvent::toClassAd( void )
+JobDisconnectedEvent::toClassAd(bool event_time_utc)
 {
 	if( ! disconnect_reason ) {
 		EXCEPT( "JobDisconnectedEvent::toClassAd() called without"
@@ -5162,7 +5243,7 @@ JobDisconnectedEvent::toClassAd( void )
 	}
 
 
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) {
 		return NULL;
 	}
@@ -5381,7 +5462,7 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 
 
 ClassAd*
-JobReconnectedEvent::toClassAd( void )
+JobReconnectedEvent::toClassAd(bool event_time_utc)
 {
 	if( ! startd_addr ) {
 		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
@@ -5396,7 +5477,7 @@ JobReconnectedEvent::toClassAd( void )
 				"starter_addr" );
 	}
 
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) {
 		return NULL;
 	}
@@ -5585,7 +5666,7 @@ JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 
 
 ClassAd*
-JobReconnectFailedEvent::toClassAd( void )
+JobReconnectFailedEvent::toClassAd(bool event_time_utc)
 {
 	if( ! reason ) {
 		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
@@ -5596,7 +5677,7 @@ JobReconnectFailedEvent::toClassAd( void )
 				"startd_name" );
 	}
 
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) {
 		return NULL;
 	}
@@ -5717,9 +5798,9 @@ GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GridResourceUpEvent::toClassAd(void)
+GridResourceUpEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
@@ -5818,9 +5899,9 @@ GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GridResourceDownEvent::toClassAd(void)
+GridResourceDownEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
@@ -5941,9 +6022,9 @@ GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-GridSubmitEvent::toClassAd(void)
+GridSubmitEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
@@ -6069,9 +6150,9 @@ JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobAdInformationEvent::toClassAd(void)
+JobAdInformationEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	MergeClassAds(myad,jobad,false);
@@ -6211,9 +6292,9 @@ int JobStatusUnknownEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobStatusUnknownEvent::toClassAd(void)
+JobStatusUnknownEvent::toClassAd(bool event_time_utc)
 {
-	return ULogEvent::toClassAd();
+	return ULogEvent::toClassAd(event_time_utc);
 }
 
 void
@@ -6262,9 +6343,9 @@ int JobStatusKnownEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobStatusKnownEvent::toClassAd(void)
+JobStatusKnownEvent::toClassAd(bool event_time_utc)
 {
-	return ULogEvent::toClassAd();
+	return ULogEvent::toClassAd(event_time_utc);
 }
 
 void
@@ -6316,9 +6397,9 @@ JobStageInEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobStageInEvent::toClassAd(void)
+JobStageInEvent::toClassAd(bool event_time_utc)
 {
-	return ULogEvent::toClassAd();
+	return ULogEvent::toClassAd(event_time_utc);
 }
 
 void
@@ -6369,9 +6450,9 @@ JobStageOutEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-JobStageOutEvent::toClassAd(void)
+JobStageOutEvent::toClassAd(bool event_time_utc)
 {
-	return ULogEvent::toClassAd();
+	return ULogEvent::toClassAd(event_time_utc);
 }
 
 void JobStageOutEvent::initFromClassAd(ClassAd* ad)
@@ -6473,9 +6554,9 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-AttributeUpdate::toClassAd(void)
+AttributeUpdate::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (name) {
@@ -6635,9 +6716,9 @@ PreSkipEvent::formatBody( std::string &out )
 	return true;
 }
 
-ClassAd* PreSkipEvent::toClassAd(void)
+ClassAd* PreSkipEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( skipEventLogNotes && skipEventLogNotes[0] ) {
@@ -6828,9 +6909,9 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactorySubmitEvent::toClassAd(void)
+FactorySubmitEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if( submitHost && submitHost[0] ) {
@@ -6991,9 +7072,9 @@ FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactoryRemoveEvent::toClassAd(void)
+FactoryRemoveEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (notes) {
@@ -7136,9 +7217,9 @@ FactoryPausedEvent::formatBody( std::string &out )
 
 
 ClassAd*
-FactoryPausedEvent::toClassAd(void)
+FactoryPausedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (reason) {
@@ -7238,9 +7319,9 @@ FactoryResumedEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactoryResumedEvent::toClassAd(void)
+FactoryResumedEvent::toClassAd(bool event_time_utc)
 {
-	ClassAd* myad = ULogEvent::toClassAd();
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
 	if (reason) {
@@ -7393,8 +7474,8 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 }
 
 ClassAd *
-FileTransferEvent::toClassAd() {
-	ClassAd * ad = ULogEvent::toClassAd();
+FileTransferEvent::toClassAd(bool event_time_utc) {
+	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
 	if(! ad) { return NULL; }
 
 	if(! ad->InsertAttr( "Type", (int)type )) {

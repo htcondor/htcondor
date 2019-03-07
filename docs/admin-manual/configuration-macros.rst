@@ -7534,7 +7534,7 @@ note that configuration settings of a running *condor\_dagman* job are
 not changed by doing a *condor\_reconfig*.
 
 General
-~~~~~~~
+'''''''
 
  ``DAGMAN_CONFIG_FILE``
     The path and name of the configuration file to be used by
@@ -7591,7 +7591,7 @@ General
     files. (Introduced in version 8.6.1.)
 
 Throttling
-~~~~~~~~~~
+''''''''''
 
  ``DAGMAN_MAX_JOBS_IDLE``
     An integer value that controls the maximum number of idle procs
@@ -7635,7 +7635,7 @@ Throttling
     option.
 
 Priority, node semantics
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
  ``DAGMAN_DEFAULT_PRIORITY``
     An integer value defining the minimum priority of node jobs running
@@ -7666,7 +7666,7 @@ Priority, node semantics
     changed back to ``False`` in version 8.5.4.)
 
 Node job submission/removal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''
 
  ``DAGMAN_USER_LOG_SCAN_INTERVAL``
     An integer value representing the number of seconds that
@@ -7795,7 +7795,7 @@ Node job submission/removal
     setting.**
 
 Rescue/retry
-~~~~~~~~~~~~
+''''''''''''
 
  ``DAGMAN_AUTO_RESCUE``
     A boolean value that controls whether *condor\_dagman* automatically
@@ -7848,7 +7848,7 @@ Rescue/retry
     never change this setting.**
 
 Log files
-~~~~~~~~~
+'''''''''
 
  ``DAGMAN_DEFAULT_NODE_LOG``
     The default name of a file to be used as a job event log by all node
@@ -7999,7 +7999,7 @@ Log files
     submit description files. The default value is ``True``.
 
 Debug output
-~~~~~~~~~~~~
+''''''''''''
 
  ``DAGMAN_DEBUG``
     This variable is described in section \ `3.5.2 <#x33-1890003.5.2>`__
@@ -8053,7 +8053,7 @@ Debug output
     to 0 (unlimited size).
 
 HTCondor attributes
-~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''
 
  ``DAGMAN_COPY_TO_SPOOL``
     A boolean value that when ``True`` copies the *condor\_dagman*
@@ -8093,7 +8093,7 @@ HTCondor attributes
           ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 
 Metrics
-~~~~~~~
+'''''''
 
  ``DAGMAN_PEGASUS_REPORT_METRICS``
     The path to the *condor\_dagman\_metrics\_reporter* executable,
@@ -9865,7 +9865,9 @@ has.
     ``localhost`` to be the appropriate host name or IP address within
     this default string:
 
-      gstat --all --mpifile --gmond\_ip=localhost --gmond\_port=8649
+    ::
+
+          gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 
  ``GANGLIA_SEND_DATA_FOR_ALL_HOSTS``
     A boolean value that when ``True`` causes data to be sent to Ganglia

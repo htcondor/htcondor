@@ -33,6 +33,10 @@
 
 using namespace boost::python;
 
+#ifndef ATTR_REQUEST_GPUS
+#  define ATTR_REQUEST_GPUS "RequestGPUs"
+#endif
+
 #define DO_ACTION(action_name) \
     reason_str = extract<std::string>(reason); \
     { \
@@ -150,7 +154,7 @@ make_spool(classad::ClassAd& ad)
 }
 
 std::unique_ptr<ExprTree>
-make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
+make_requirements(const ClassAd &jobAd, ExprTree *reqs, ShouldTransferFiles_t stf)
 {
     // Copied ideas from condor_submit.  Pretty lame.
     classad::ClassAdUnParser printer;
@@ -180,9 +184,24 @@ make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
         ADD_REQUIREMENT(HAS_FILE_TRANSFER, "(TARGET." ATTR_HAS_FILE_TRANSFER " || (TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN"))");
         break;
     }
-    ADD_REQUIREMENT(REQUEST_DISK, "TARGET.Disk >= " ATTR_REQUEST_DISK);
-    ADD_REQUIREMENT(REQUEST_MEMORY, "TARGET.Memory >= " ATTR_REQUEST_MEMORY);
-    return result;
+
+	if (jobAd.Lookup(ATTR_REQUEST_DISK)) {
+		ADD_REQUIREMENT(REQUEST_DISK, "TARGET.Disk >= " ATTR_REQUEST_DISK);
+	}
+    
+	if (jobAd.Lookup(ATTR_REQUEST_MEMORY)) {
+		ADD_REQUIREMENT(REQUEST_MEMORY, "TARGET.Memory >= " ATTR_REQUEST_MEMORY);
+	}
+
+	if (jobAd.Lookup(ATTR_REQUEST_CPUS)) {
+		ADD_REQUIREMENT(REQUEST_CPUS, "TARGET.Cpus >= " ATTR_REQUEST_CPUS);
+	}
+
+	if (jobAd.Lookup(ATTR_REQUEST_GPUS)) {
+		ADD_REQUIREMENT(REQUEST_GPUS, "TARGET.Gpus >= " ATTR_REQUEST_GPUS);
+	}
+    
+	return result;
 }
 
 bool
@@ -1559,7 +1578,7 @@ struct Schedd {
         }
 
         ExprTree *old_reqs = cluster_ad.Lookup(ATTR_REQUIREMENTS);
-        ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+        ExprTree *new_reqs = make_requirements(cluster_ad, old_reqs, should).release();
         cluster_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
 
         if (spool)
@@ -1604,7 +1623,7 @@ struct Schedd {
                 else if (should_str == "NO") {should = STF_NO;}
             }
 
-            ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+            ExprTree *new_reqs = make_requirements(proc_ad, old_reqs, should).release();
             proc_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
         }
 
@@ -3085,6 +3104,7 @@ void export_schedd()
         .value("GroupBy", CondorQ::fetch_GroupBy)
         .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
         .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
+        .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
         ;
 
     enum_<BlockingMode>("BlockingMode")
@@ -3122,7 +3142,7 @@ void export_schedd()
             ":param action: Action to perform; must be from enum JobAction.\n"
             ":param job_spec: Job specification; can either be a list of job IDs or a string specifying a constraint to match jobs.\n"
             ":return: Number of jobs changed.")
-        .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd.\n"
+        .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
             ":param ad: ClassAd describing job cluster.\n"
             ":param count: Number of jobs to submit to cluster.\n"
             ":param spool: Set to true to spool files separately.\n"
@@ -3132,7 +3152,7 @@ void export_schedd()
 #else
             ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #endif
-        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd.\n"
+        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
              ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
              ":param proc_ads: A list of 2-tuples.  The tuples have the format (proc_ad, count).  This will result in 'count' jobs being submitted, inheriting from the proc_ad and cluster_ad.\n"
              ":param spool: Set to true to spool files separately.\n"

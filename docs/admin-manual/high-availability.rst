@@ -98,7 +98,7 @@ Macros <../admin-manual/configuration-macros.html>`__, in the section on
 configuration variables used to set timing and polling intervals.
 
 Working with Remote Job Submission
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''
 
 Remote job submission requires identification of the job queue,
 submitting with a command similar to:
@@ -138,7 +138,7 @@ High Availability of the Central Manager
 ----------------------------------------
 
 Interaction with Flocking
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 The HTCondor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking. The
@@ -160,7 +160,7 @@ to pools with high availability mechanisms enabled.
    *condor\_schedd*.
 
 Introduction
-~~~~~~~~~~~~
+''''''''''''
 
 The *condor\_negotiator* and *condor\_collector* daemons are the heart
 of the HTCondor matchmaking system. The availability of these daemons is
@@ -245,7 +245,7 @@ file transfer and then exit. Do not place ``TRANSFERER`` into
 invoke or watch over.
 
 Configuration
-~~~~~~~~~~~~~
+'''''''''''''
 
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
@@ -313,7 +313,7 @@ following operations:
    ``DC_DAEMON_LIST`` in the configuration file.
 
 Sample Configuration
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 This section provides sample configurations for high availability.
 

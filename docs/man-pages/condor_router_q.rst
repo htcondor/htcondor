@@ -1,7 +1,7 @@
       
 
-condor\_router\_q
-=================
+*condor\_router\_q*
+===================
 
 Display information about routed jobs in the queue
 

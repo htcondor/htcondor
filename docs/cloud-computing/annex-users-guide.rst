@@ -64,7 +64,7 @@ of the following lines. (Lines which end in a ‘\\’ continue on the
 following line; be sure to copy both lines. Don’t copy the ‘\\’ itself.)
 
 What You’ll Need to Know
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 To create a HTCondor annex with on-demand instances, you’ll need to know
 two things:
@@ -103,7 +103,7 @@ Contact the Linux machine’s administrator if *condor\_annex* reports a
 problem with this step.
 
 Instance Types
-~~~~~~~~~~~~~~
+''''''''''''''
 
 | Each instance type provides a different number (and/or type) of CPU
 cores, amount of RAM, local storage, and the like. We recommend starting
@@ -114,7 +114,7 @@ the complete list of instance types at the following URL:
 flag.
 
 Leases
-~~~~~~
+''''''
 
 By default, *condor\_annex* arranges for your annex’s instances to be
 terminated after 0.83 hours (50 minutes) have passed. Once it’s in
@@ -136,7 +136,7 @@ if you’d like “MyFirstAnnex” to expire eight hours from now:
     Lease updated. 
 
 Idle Time
-~~~~~~~~~
+'''''''''
 
 By default, *condor\_annex* will configure your annex’s instances to
 terminate themselves after being idle for 0.25 hours (fifteen minutes).
@@ -149,7 +149,7 @@ for a definition), so it won’t get tricked by jobs with long quiescent
 periods.
 
 Multiple Annexes
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 You may have up to fifty (or fewer, depending what else you’re doing
 with your AWS account) differently-named annexes running at the same
@@ -213,7 +213,7 @@ pool:
     pending i-06928b26786dc7e6e 
 
 Multiple Annexes
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 The following command reports on all annex instance which have joined
 the pool, regardless of which annex they’re from:
@@ -310,7 +310,7 @@ terminating *condor\_annex* instances.
     Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal 
 
 Multiple Annexes
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 The following command turns off all annex instances in your pool,
 regardless of which annex they’re from:
@@ -369,7 +369,7 @@ Determining an appropriate bidding strategy is outside the purview of
 this manual.
 
 Using AWS Spot Fleet
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 *condor\_annex* supports Spot instances via an AWS technology called
 “Spot Fleet”. Normally, when you request instances, you request a
@@ -434,7 +434,7 @@ You may use other options as normal, excepting those which begin with
 instances.
 
 Custom HTCondor Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 When you specify a custom configuration, you specify the full path to a
 configuration directory which will be copied to the instance. The
@@ -449,7 +449,7 @@ configuration file; it is named so as to sort first and make it easier
 to over-ride with whatever configuration you see fit.
 
 AWS Instance User Data
-~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''
 
 HTCondor doesn’t interfere with this in any way, so if you’d like to set
 an instance’s user data, you may do so. However, as of v8.7.2, the
@@ -468,7 +468,7 @@ accomodate your resource request. This usually corresponds one-to-one
 with instance types, but this is not required.
 
 Expert Mode
-~~~~~~~~~~~
+'''''''''''
 
 The man page (in section `12 <Condorannex.html#x99-68500012>`__) lists
 the “expert mode” options.

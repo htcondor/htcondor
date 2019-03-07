@@ -2042,8 +2042,8 @@ configuration macros.
 where there is a conflict.
 This implies that if a specific user is both denied and granted authorization,
 the conflict is resolved by denying access.
-\item{2. }If macros are omitted, the default behavior is to grant
-authorization for every user.
+\item{2. }If macros are omitted, the default behavior is to deny
+authorization for all users.
 \end{description}
 
 In addition, there are some hard-coded authorization rules that
@@ -2593,7 +2593,7 @@ ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 view the pool.  Only NCSA machines and the machine raven.cs.wisc.edu can join
 the pool.
 Note: the machine raven.cs.wisc.edu has the read access it needs through the
-wild card setting in \MacroNI{ALLOW\_READ}).
+wild card setting in \MacroNI{ALLOW\_READ}.
 This example also shows
 how to use the continuation character, \verb@\@, to continue a long list of 
 machines onto multiple lines, making it more readable.
