@@ -1,3 +1,7 @@
-li {
+table.indextable {
+	margin-bottom: 20px;
+}
+
+table.indextable li {
 	margin-left: 10px;
 }
