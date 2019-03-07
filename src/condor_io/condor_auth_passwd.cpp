@@ -40,23 +40,6 @@
 #include "condor_auth_passwd.h"
 
 
-// Approach taken from https://stackoverflow.com/questions/3022552; code
-// is licensed under the MIT license.
-static uint64_t internal_htonll(uint64_t value)
-{
-	// The answer is 42
-	static const int num = 42;
-
-	// Check the endianness
-	if (*reinterpret_cast<const char*>(&num) == num) {
-		const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
-		const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
-		return (static_cast<uint64_t>(low_part) << 32) | high_part;
-	} else {
-		return value;
-	}
-}
-
 
 // HKDF_Extract and HKDF_Expand functions taken from OpenSSL 1.1.0 implementation.
 // Licensed under the OpenSSL license.
@@ -151,8 +134,7 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     m_k(NULL),
     m_k_prime(NULL),
     m_k_len(0),
-    m_k_prime_len(0),
-    m_keyfile_timestamp(0)
+    m_k_prime_len(0)
 {
 }
 
@@ -238,11 +220,11 @@ Condor_Auth_Passwd::fetchLogin()
 			return NULL;
 		}
 		std::string username;
-		long long timestamp;
+		std::string token;
 		std::string k_encoded;
 		std::string k_prime_encoded;
 		if (!ad->EvaluateAttrString(ATTR_SEC_USER, username) ||
-			!ad->EvaluateAttrInt(ATTR_SERVER_TIME, timestamp) ||
+			!ad->EvaluateAttrString("Token", token) ||
 			!ad->EvaluateAttrString("K", k_encoded) ||
 			!ad->EvaluateAttrString("K_prime", k_prime_encoded))
 		{
@@ -266,7 +248,7 @@ Condor_Auth_Passwd::fetchLogin()
 		if (!m_k || !m_k_prime) {
 			return NULL;
 		}
-		m_keyfile_timestamp = timestamp;
+		m_keyfile_token = token;
 		return strdup(username.c_str());
 	}
 
@@ -400,7 +382,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
-Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
+Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
 	if ( sk->shared_key == NULL ) {
 		return false;
@@ -412,9 +394,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
 		// respectively).  We derive these ka and kb by hmacing the
 		// shared key with these two seed keys.
 		//
-		// If the init_time is non-zero, then we include the timestamp
-		// in network-order
-    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : sizeof(init_time));
+    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : init_text.size());
     unsigned char *seed_ka = (unsigned char *)malloc(key_size);
     unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
@@ -439,10 +419,9 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
 		// Fill in the data for the seed keys.
     setup_seed(seed_ka, seed_kb);
 
-		// Copy the time seed into the key.
+		// Copy the text seed into the key.
 	if (m_version == 2) {
-		uint64_t network_encode = internal_htonll(init_time);
-		memcpy(seed_ka + AUTH_PW_KEY_LEN, reinterpret_cast<char *>(&network_encode), sizeof(network_encode));
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
 	}
 
     sk->len = strlen(sk->shared_key);
@@ -457,11 +436,11 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
 			 seed_kb, key_size,
 			 kb, &kb_len );
 	} else {
-		if (!hkdf((unsigned char *)sk->shared_key, sk->len,
+		if (hkdf((unsigned char *)sk->shared_key, sk->len,
 			seed_ka, key_size,
 			(const unsigned char *)"master ka", 9,
 			ka, AUTH_PW_KEY_STRENGTH) ||
-		!hkdf((unsigned char *)sk->shared_key, sk->len,
+		hkdf((unsigned char *)sk->shared_key, sk->len,
 			seed_kb, key_size,
 			(const unsigned char *)"master kb", 9,
 			kb, AUTH_PW_KEY_STRENGTH))
@@ -1040,8 +1019,9 @@ fail:
 	unsigned char *ret;
 	size_t prk_len;
 
-	if (!HKDF_Extract(EVP_sha256(), salt, salt_len, sk, sk_len, prk, &prk_len))
+	if (!HKDF_Extract(EVP_sha256(), salt, salt_len, sk, sk_len, prk, &prk_len)) {
 		return -1;
+	}
 
 	ret = HKDF_Expand(EVP_sha256(), prk, prk_len, info, info_len, result, result_len);
 	OPENSSL_cleanse(prk, sizeof(prk));
@@ -1049,6 +1029,63 @@ fail:
 	return ret ? 0 : -1;
 #endif
 }
+
+
+bool
+Condor_Auth_Passwd::generate_derived_key(const std::string & id,
+	const std::string &token,
+	classad::ClassAd & ad,
+	CondorError *err)
+{
+	size_t key_size = AUTH_PW_KEY_LEN + token.size();
+	std::vector<unsigned char> seed_ka; seed_ka.reserve(key_size);
+	std::vector<unsigned char> seed_kb; seed_kb.reserve(key_size);
+
+		// These are the keys K and K' referred to in the AKEP2
+		// description.
+	std::vector<unsigned char> ka; ka.reserve(key_strength_bytes_v2());
+	std::vector<unsigned char> kb; kb.reserve(key_strength_bytes_v2());
+
+		// TODO: Load up master key.
+	std::string example_username(POOL_PASSWORD_USERNAME);
+	example_username += "@";
+	char *master_password = fetchPassword(example_username.c_str(), example_username.c_str());
+	if (master_password == nullptr) {
+		err->push("PASSWD", 1, "No master pool password setup in SEC_PASSWORD_FILE");
+		return false;
+	}
+	size_t master_password_len = strlen(master_password);
+	std::vector<unsigned char> shared_key; shared_key.reserve(master_password_len);
+	memcpy(&shared_key[0], master_password, master_password_len);
+
+	if (hkdf(&shared_key[0], shared_key.size(), &seed_ka[0], key_size,
+		(const unsigned char *)"master ka", 9,
+		&ka[0],
+		key_strength_bytes_v2()))
+	{
+		if (err) err->push("PASSWD", 1, "Failed to derive key K");
+		return false;
+	}
+	if (hkdf(&shared_key[0], master_password_len, &seed_kb[0], key_size,
+		(const unsigned char *)"master kb", 9,
+		&kb[0],
+		key_strength_bytes_v2()))
+	{
+		if (err) err->push("PASSWD", 1, "Failed to derive key K'");
+		return false;
+	}
+
+	if (!ad.InsertAttr("K", reinterpret_cast<const char *>(&ka[0]), key_strength_bytes_v2()) ||
+		!ad.InsertAttr("Kb", reinterpret_cast<const char *>(&kb[0]), key_strength_bytes_v2()) ||
+		!ad.InsertAttr("Username", id) ||
+		!ad.InsertAttr("Token", token) )
+	{
+		if (err) err->push("PASSWD", 1, "Unable to create key ClassAd");
+		return false;
+	}
+	return true;
+}
+
 
 void
 Condor_Auth_Passwd::init_sk(struct sk_buf *sk) 
@@ -1085,7 +1122,6 @@ void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
 	t->a           = NULL;
-	t->a_time      = 0;
 	t->b           = NULL;
 	t->ra          = NULL;
 	t->rb          = NULL;
@@ -1147,7 +1183,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// learns my name.
 		dprintf(D_SECURITY, "PW: getting name.\n");
 		m_t_client.a = fetchLogin();
-		m_t_client.a_time = m_keyfile_timestamp;
+		m_t_client.a_token = m_keyfile_token;
 
 			// We complete the entire protocol even if there's an
 			// error, but there's no point trying to actually do any
@@ -1195,7 +1231,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			} else {
 				m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
-				if(!setup_shared_keys(&m_sk, m_t_client.a_time)) {
+				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
 				}
 			}
@@ -1329,7 +1365,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
 		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk, m_t_client.a_time)) {
+		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");
@@ -1984,11 +2020,11 @@ int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 			client_status, send_a_len, send_a, send_b_len);
 
 	mySock_->encode();
-	uint64_t init_time = t_client->a_time;
+	std::string &init_token = t_client->a_token;
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(send_a_len)
 		|| !mySock_->code(send_a)
-		|| !(m_version == 1 || !mySock_->code(init_time))
+		|| !(m_version == 1 || !mySock_->code(init_token))
 		|| !mySock_->code(send_b_len)
 		|| !(send_b_len == mySock_->put_bytes(send_b, send_b_len))
 		|| !(mySock_->end_of_message())) {
@@ -2007,7 +2043,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	int a_len         = 0;
 	unsigned char *ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
 	int ra_len        = 0;
-	uint64_t init_time;
+	std::string init_token;
 
 	if(!ra) {
 		dprintf(D_SECURITY, "Malloc error 6.\n");
@@ -2020,7 +2056,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a) 
-		|| !(m_version == 1 || !mySock_->code(init_time))
+		|| !(m_version == 1 || !mySock_->code(init_token))
 		|| !mySock_->code(ra_len)
 		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
@@ -2044,7 +2080,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if(client_status == AUTH_PW_A_OK && *server_status == AUTH_PW_A_OK) {
 		t_client->a = a;
 		t_client->ra = ra;
-		t_client->a_time = init_time;
+		t_client->a_token = init_token;
 		return client_status;
 	}
  server_receive_one_abort:
@@ -2089,7 +2125,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 			  sk->kb, sk->kb_len,
 			  key, &key_len );
 	} else {
-		if (!hkdf( t_buf->rb, AUTH_PW_KEY_LEN,
+		if (hkdf( t_buf->rb, AUTH_PW_KEY_LEN,
 			(const unsigned char *)"session key", 11,
 			(const unsigned char *)"htcondor", 8,
 			key, key_strength_bytes()))
@@ -2111,12 +2147,12 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 
 int
-Condor_Auth_Passwd::key_strength_bytes()
+Condor_Auth_Passwd::key_strength_bytes() const
 {
 	if (m_version == 1) {
 		return EVP_MAX_MD_SIZE;
 	} else {
-		return AUTH_PW_KEY_STRENGTH;
+		return key_strength_bytes_v2();
 	}
 }
 

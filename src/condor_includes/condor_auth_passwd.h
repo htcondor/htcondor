@@ -21,6 +21,9 @@
 #ifndef CONDOR_AUTH_PASSWD
 #define CONDOR_AUTH_PASSWD
 
+// Where HAVE_EXT_OPENSSL is defined.
+#include "config.h"
+
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
@@ -37,6 +40,8 @@
 #define AUTH_PW_ERROR          -1
 #define AUTH_PW_A_OK           0
 #define AUTH_PW_ABORT          1
+
+class CondorError;
 
 /** A class to implement the AKEP2 protocol for password-based authentication.
  
@@ -123,6 +128,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	*/    
     int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
+	/** Generate a derived key ClassAd */
+    static bool generate_derived_key(const std::string &id, const std::string &token,
+	classad::ClassAd &ad, CondorError *err);
 
  private:
 
@@ -142,7 +150,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/// This structure stores the message referred to as T in the book.
 	struct msg_t_buf {
 		char *a;              // The name of the client.
-		time_t a_time;        // When the password for A was generated
+		std::string a_token;  // The text used to derive the keys from the master.
 		char *b;              // The name of the server.
 		unsigned char *ra;    // The random string produced by the client.
 		unsigned char *rb;    // The random string produced by the server.
@@ -174,7 +182,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/** Lookup a shared key based on the correspondent's
 			information.  
 		*/
-	char* fetchPassword(const char* nameA,
+	static char* fetchPassword(const char* nameA,
 	                    const char* nameB);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
@@ -212,9 +220,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			output, even when the key is known.
 
 			Note that in protocol v2, the symmetric keys are derived
-			from both the compile-time seed and the handshake timestamp.
+			from both the compile-time seed and a fixed text.
 		*/
-	bool setup_shared_keys(struct sk_buf *sk, uint64_t init_time);
+	bool setup_shared_keys(struct sk_buf *sk, const std::string &init_token);
 
 		/** The "seed" consists of the two keys used to hmac the
 			shared key.  Each byte in the seed keys is specified in
@@ -228,7 +236,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			  unsigned char *result, unsigned int *result_len);
 
 		/** Simple wrapper around the OpenSSL HKDF function. */
-	int hkdf(const unsigned char *sk, size_t sk_len,
+	static int hkdf(const unsigned char *sk, size_t sk_len,
 		const unsigned char *salt, size_t salt_len,
 		const unsigned char *label, size_t label_len,
 		unsigned char *result, size_t result_len);
@@ -279,7 +287,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	bool set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk);
 
 		/** Desired key strength for symmetric keys. */
-	int key_strength_bytes();
+	int key_strength_bytes() const;
+	static int key_strength_bytes_v2() {return AUTH_PW_KEY_STRENGTH;}
 
 		// state machine drivers
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
@@ -308,7 +317,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	unsigned char *m_k_prime;
 	size_t m_k_len;
 	size_t m_k_prime_len;
-	time_t m_keyfile_timestamp;
+	std::string m_keyfile_token;
 
 	CondorAuthPasswordState m_state;
 };

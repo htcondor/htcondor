@@ -22,6 +22,8 @@ condor_glob( CedarHdrs CedarSrcs "${CeadarRmvSrcs}" )
 
 set( CEDAR_UTIL_SRCS "${CedarHdrs};${CedarSrcs}" PARENT_SCOPE )
 
+condor_exe(condor_create_keyfile "generate_keyfile.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+
 if (NOT WINDOWS)
 	condor_exe_test(cedar_test.exe "cedar.t.unix.cpp" "${CONDOR_TOOL_LIBS}")
 endif()
