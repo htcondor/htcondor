@@ -1071,7 +1071,7 @@ Resource::newCODClaim( int lease_duration )
 void
 Resource::leave_preempting_state( void )
 {
-	int tmp;
+	bool tmp;
 
 	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
 	delete r_cur;
@@ -1557,7 +1557,7 @@ Resource::wants_hold( void )
 int
 Resource::wants_vacate( void )
 {
-	int want_vacate = 0;
+	bool want_vacate = false;
 	bool unknown = true;
 
 	if( ! claimIsActive() ) {
@@ -1615,14 +1615,14 @@ Resource::wants_vacate( void )
 		dprintf( D_ALWAYS, "State change: WANT_VACATE is %s\n",
 				 want_vacate ? "TRUE" : "FALSE" );
 	}
-	return want_vacate;
+	return (int)want_vacate;
 }
 
 
 int
 Resource::wants_suspend( void )
 {
-	int want_suspend;
+	bool want_suspend;
 	bool unknown = true;
 	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( EvalBool("WANT_SUSPEND_VANILLA", r_classad,
@@ -1646,7 +1646,7 @@ Resource::wants_suspend( void )
 			want_suspend = false;
 		}
 	}
-	return want_suspend;
+	return (int)want_suspend;
 }
 
 
@@ -1838,7 +1838,7 @@ Resource::retirementExpired()
 	if( isDraining() && r_state->state() == claimed_state && r_state->activity() == idle_act ) {
 		retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
 	} else if( isDraining() && retirement_remaining > 0 ) {
-		int jobMatches = false;
+		bool jobMatches = false;
 		ClassAd * machineAd = r_classad;
 		ClassAd * jobAd = r_cur->ad();
 		if( machineAd != NULL && jobAd != NULL ) {
@@ -1957,7 +1957,8 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (EvalBool(expr_name, r_classad, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
+	bool btmp;
+	if( (EvalBool(expr_name, r_classad, r_cur ? r_cur->ad() : NULL , btmp) ) == 0 ) {
 		
 		char *p = param(expr_name);
 
@@ -1983,7 +1984,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 	}
 		// EvalBool returned success, we can just return the value
-	return tmp;
+	return (int)btmp;
 }
 
 
@@ -3458,7 +3459,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// over-partitioning. The acceptability of the dynamic
 			// slot and job will be checked later, in the normal
 			// course of accepting the claim.
-		int mach_requirements = 1;
+		bool mach_requirements = true;
 		do {
 			rip->r_reqexp->restore();
 			if (EvalBool( ATTR_REQUIREMENTS, mach_classad, req_classad, mach_requirements) == 0) {
@@ -3466,12 +3467,12 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					"STARTD Requirements expression no longer evaluates to a boolean %s MODIFY_REQUEST_EXPR_ edits\n",
 					unmodified_req_classad ? "with" : "w/o"
 					);
-				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+				mach_requirements = false;  // If we can't eval it as a bool, treat it as false
 			}
 				// If the pslot cannot support this request, ABORT iff there is not
 				// an unmodified_req_classad backup copy we can try on the next iteration of
 				// the while loop
-			if (mach_requirements == 0) {
+			if (mach_requirements == false) {
 				if (IsDebugVerbose(D_MATCH)) {
 					dprintf(D_MATCH | D_FULLDEBUG,
 						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
@@ -3494,7 +3495,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					return NULL;
 				}
 			}
-		} while (mach_requirements == 0);
+		} while (mach_requirements == false);
 
 			// No longer need this, make sure to free the memory.
 		if (unmodified_req_classad) {

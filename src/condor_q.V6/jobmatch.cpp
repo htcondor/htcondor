@@ -812,7 +812,7 @@ bool doJobRunAnalysis (
 			char const *requirements_attr = (universe == CONDOR_UNIVERSE_LOCAL)
 				? ATTR_START_LOCAL_UNIVERSE 
 				: ATTR_START_SCHEDULER_UNIVERSE;
-			int can_start = 0;
+			bool can_start = false;
 			if ( ! EvalBool(requirements_attr, scheddAd, request, can_start)) {
 				match_result.formatstr_cat("This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
 			} else {

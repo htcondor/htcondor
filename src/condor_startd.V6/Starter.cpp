@@ -176,7 +176,7 @@ Starter::~Starter()
 bool
 Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
-	int requirements = 0;
+	bool requirements = false;
 	ClassAd* merged_ad;
 	if( mach_ad ) {
 		merged_ad = new ClassAd( *mach_ad );
@@ -185,7 +185,7 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 		merged_ad = new ClassAd( *s_ad );
 	}
 	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
-		requirements = 0;
+		requirements = false;
 		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
 		classad::PrettyPrint pp;
 		std::string szbuff;
@@ -196,7 +196,7 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 		
 	}
 	delete( merged_ad );
-	return (bool)requirements;
+	return requirements;
 }
 
 

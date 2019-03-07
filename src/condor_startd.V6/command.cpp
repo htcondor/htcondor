@@ -1763,7 +1763,7 @@ int
 activate_claim( Resource* rip, Stream* stream ) 
 {
 		// Formerly known as "startjob"
-	int mach_requirements = 1;
+	bool mach_requirements = true;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 	ReliSock rsock_1, rsock_2;
 #ifndef WIN32
@@ -1844,7 +1844,7 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->r_reqexp->restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
-		mach_requirements = 0;
+		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
 		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );

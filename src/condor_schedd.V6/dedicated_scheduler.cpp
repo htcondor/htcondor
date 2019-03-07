@@ -146,10 +146,10 @@ AllocationNode::display( void )
 
 bool satisfies(ClassAd* job, ClassAd* candidate) {
 	// Make sure the job requirements are satisfied with this resource.
-    int satisfied_req = 1;
+    bool satisfied_req = true;
 	if (!job || EvalBool(ATTR_REQUIREMENTS, job, candidate, satisfied_req) == 0) {
 		// If it's undefined, treat it as false.
-		satisfied_req = 0;
+		satisfied_req = false;
 	}
     // if reqs weren't satisfied, it's an immediate failure
     if (!satisfied_req) return false;

@@ -8657,16 +8657,14 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	// will we allow a job to start.
 	//
 	bool requirementsMet = true;
-	int requirements = 1;
 	if ( scheddAd.LookupExpr( universeExp ) != NULL ) {
 		//
 		// We have this inner block here because the job
 		// should not be allowed to start if the schedd's 
 		// requirements failed to evaluate for some reason
 		//
-		if ( EvalBool( universeExp, &scheddAd, job, requirements ) ) {
-			requirementsMet = (bool)requirements;
-			if ( ! requirements ) {
+		if ( EvalBool( universeExp, &scheddAd, job, requirementsMet ) ) {
+			if ( ! requirementsMet ) {
 				dprintf( D_FULLDEBUG, "%s evaluated to false for job %d.%d. "
 									"Unable to start job.\n",
 									universeExp, id.cluster, id.proc );
@@ -8695,9 +8693,8 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	//
 	if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
 			// Treat undefined/error as FALSE for job requirements, too.
-		if ( EvalBool(ATTR_REQUIREMENTS, job, &scheddAd, requirements) ) {
-			requirementsMet = (bool)requirements;
-			if ( !requirements ) {
+		if ( EvalBool(ATTR_REQUIREMENTS, job, &scheddAd, requirementsMet) ) {
+			if ( !requirementsMet ) {
 				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
 							"evaluated to false. Unable to start job\n",
 							ATTR_REQUIREMENTS, id.cluster, id.proc );

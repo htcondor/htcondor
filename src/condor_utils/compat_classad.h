@@ -201,7 +201,6 @@ int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target,
  *  but is not a number.
  */
 int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value);
-int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value);
 
 class ClassAd : public classad::ClassAd
 {

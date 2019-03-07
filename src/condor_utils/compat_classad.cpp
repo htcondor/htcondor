@@ -2166,15 +2166,6 @@ EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool
 	return rc;
 }
 
-int EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, int &value) {
-	bool bval = false;
-	int result = EvalBool(name, my, target, bval);
-	if ( result ) {
-		value = bval;
-	}
-	return result;
-}
-
 bool
 initAdFromString( char const *str, classad::ClassAd &ad )
 {

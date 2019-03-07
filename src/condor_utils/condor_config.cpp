@@ -2448,7 +2448,6 @@ bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= 
 		// For efficiency, we first tried to read the value as a
 		// simple literal.  Since that didn't work, now try parsing it
 		// as an expression.
-		int int_value = result;
 		ClassAd rhs;
 		if( me ) {
 			rhs = *me;
@@ -2456,9 +2455,8 @@ bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= 
 		if ( ! name) { name = "CondorBool"; }
 
 		if( rhs.AssignExpr( name, string ) &&
-			EvalBool(name,&rhs,target,int_value) )
+			EvalBool(name,&rhs,target,result) )
 		{
-			result = (int_value != 0);
 			valid = true;
 		}
 	}
