@@ -67,7 +67,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
 	char buf[4096]; /* old classads needs to go away */
-	int on_exit_hold = 0, on_exit_remove = 0;
+	bool on_exit_hold = false, on_exit_remove = false;
 	int cdate = 0;
 	int adkind;
 	
@@ -233,8 +233,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 			}
 
 			/* Should I hold on exit? */
-			jad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, jad, on_exit_hold);
-			if (on_exit_hold == 1)
+			jad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold);
+			if (on_exit_hold)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -250,8 +250,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 			}
 
 			/* Should I remove on exit? */
-			jad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, jad, on_exit_remove);
-			if (on_exit_remove == 1)
+			jad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove);
+			if (on_exit_remove)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -617,7 +617,7 @@ UserPolicy::AnalyzePolicy( int mode )
 		return retval;
 	}
 #else
-	int on_exit_hold, on_exit_remove;
+	bool on_exit_hold, on_exit_remove;
 	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
 	if( ! ad.EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
 		m_fire_source = FS_JobAttribute;
@@ -864,7 +864,7 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & /*ad*/, const char * attr
 	ASSERT(attrname);
 
 	// Evaluate the specified expression in the job ad
-	int result;
+	bool result;
 	m_fire_expr = attrname;
 	if(!m_ad->EvalBool(attrname, m_ad, result)) {
         //check to see if the attribute actually exists, or if it's really
@@ -1026,12 +1026,12 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		!subcode_expr.IsEmpty())
 	{
 		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, subcode_expr.Value());
-		m_ad->EvalInteger(ATTR_SCRATCH_EXPRESSION, m_ad, reason_subcode);
+		m_ad->LookupInteger(ATTR_SCRATCH_EXPRESSION, reason_subcode);
 		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
 	}
 	else if( !subcode_expr_attr.empty() )
 	{
-		m_ad->EvalInteger(subcode_expr_attr.c_str(), m_ad, reason_subcode);
+		m_ad->LookupInteger(subcode_expr_attr.c_str(), reason_subcode);
 	}
 
 	MyString reason_expr;
@@ -1040,12 +1040,12 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		!reason_expr.IsEmpty())
 	{
 		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, reason_expr.Value());
-		m_ad->EvalString(ATTR_SCRATCH_EXPRESSION, m_ad, reason);
+		m_ad->LookupString(ATTR_SCRATCH_EXPRESSION, reason);
 		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
 	}
 	else if( !reason_expr_attr.empty() )
 	{
-		m_ad->EvalString(reason_expr_attr.c_str(), m_ad, reason);
+		m_ad->LookupString(reason_expr_attr.c_str(), reason);
 	}
 #endif
 

@@ -6905,17 +6905,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 #if 0 // not used right now..
 	// if there is an Attrs ad, copy from it into this ad.
 	if (from_ad) {
-
-		const char * key;
-		ExprTree * rhs;
-		from_ad->ResetExpr();
-		while( from_ad->NextExpr(key, rhs) ) {
-			ExprTree * tree = rhs->Copy();
-			if ( ! tree || ! baseJob.Insert(key, tree, false)) {
-				// error message here?
-				abort_code = 1;
-				break;
-			}
+		if ( baseJob.Update(*from_ad) == false ) {
+			abort_code = 1;
 		}
 	}
 #endif

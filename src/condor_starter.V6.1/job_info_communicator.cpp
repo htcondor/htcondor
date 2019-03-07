@@ -801,8 +801,8 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 void
 JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 {
-	int value;
-	if (!job_ad->EvalBool(ATTR_WANT_STARTER_EXECUTION_VISA, NULL, value) ||
+	bool value;
+	if (!job_ad->LookupBool(ATTR_WANT_STARTER_EXECUTION_VISA, value) ||
 	    !value)
 	{
 		return;

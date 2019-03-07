@@ -175,7 +175,6 @@ requestScheddUpdate( BaseJob *job, bool notify )
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
 
-	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
 		 job->jobAd->dirtyBegin() == job->jobAd->dirtyEnd() ) {
@@ -752,7 +751,7 @@ doContactSchedd()
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			BaseJob *old_job;
-			int job_is_matched = 1;		// default to true if not in ClassAd
+			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );

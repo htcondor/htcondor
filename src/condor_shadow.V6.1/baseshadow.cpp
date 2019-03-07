@@ -228,7 +228,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// If we need to claim the startd before activating the claim
-	int wantClaiming = 0;
+	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 	if (wantClaiming) {
 		MyString startdSinful;
@@ -806,7 +806,7 @@ BaseShadow::emailRemoveEvent( const char* reason )
 void BaseShadow::initUserLog()
 {
 	std::string logfilename,dagmanLogFile;
-	int  use_xml;
+	bool use_xml;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
@@ -902,7 +902,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
 			classad::Value value;
 			attr = res + "Provisioned";	 // provisioned value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
@@ -910,7 +910,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			attr = "Request"; attr += res;   	// requested value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value)&& (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value)&& (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr.c_str(), plit);
@@ -918,7 +918,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
 			attr = res + "Usage"; // usage value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr.c_str(), plit);

@@ -1348,7 +1348,7 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 	startdAds.Open();
 	while(ClassAd* ad = startdAds.Next()) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 
@@ -1735,7 +1735,7 @@ negotiationTime ()
                 ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
                 // Do this after all attributes are filled in
                 float v = 0;
-                if (!ad->EvalFloat(ATTR_SORT_EXPR, NULL, v)) {
+                if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
                     v = FLT_MAX;
                     string e;
                     ad->LookupString(ATTR_SORT_EXPR_STRING, e);
@@ -3303,7 +3303,7 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 	ExprTree *shutdownfast_expr = NULL;	
 	const time_t now = time(NULL);
 	time_t myCurrentTime = now;
-	int shutdown;
+	bool shutdown;
 
 	/* 
 		Trim out any startd ads that have a DaemonShutdown attribute that evaluates
@@ -3343,10 +3343,10 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 			// Now that CurrentTime is set into the future, evaluate
 			// if the Shutdown expression(s)
 			if (shutdown_expr) {
-				ad->EvalBool(ATTR_DAEMON_SHUTDOWN, NULL, shutdown);
+				ad->LookupBool(ATTR_DAEMON_SHUTDOWN, shutdown);
 			}
 			if (shutdownfast_expr) {
-				ad->EvalBool(ATTR_DAEMON_SHUTDOWN_FAST, NULL, shutdown);
+				ad->LookupBool(ATTR_DAEMON_SHUTDOWN_FAST, shutdown);
 			}
 
 			// Put CurrentTime back to how we found it, ie = time()
@@ -3451,7 +3451,7 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 
@@ -3477,7 +3477,8 @@ obtainAdsFromCollector (
 	QueryResult result;
 	ClassAd *ad, *oldAd;
 	MapEntry *oldAdEntry;
-	int newSequence, oldSequence, reevaluate_ad;
+	int newSequence, oldSequence;
+	bool reevaluate_ad;
 	char    *remoteHost = NULL;
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
@@ -4678,7 +4679,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 				float newStartdRank;
 				float oldStartdRank = 0.0;
-				if(! offer->EvalFloat(ATTR_RANK, &request, newStartdRank)) {
+				if(! EvalFloat(ATTR_RANK, offer, &request, newStartdRank)) {
 					newStartdRank = 0.0;
 				}
 				offer->LookupFloat(ATTR_CURRENT_RANK, oldStartdRank);
@@ -4746,7 +4747,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
             // could be shuffled to the back.  It might even be possible to allow a slot-specific
             // policy choice for this behavior.
         } else {
-    		int reevaluate_ad = false;
+    		bool reevaluate_ad = false;
     		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
     		if (reevaluate_ad) {
     			reeval(offer);
@@ -5030,7 +5031,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		while( (cached_bestSoFar = MatchList->pop_candidate(candidateDslotClaims)) ) {
 			if (evaluate_limits_with_match) {
 				std::string limits;
-				if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
+				if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, cached_bestSoFar, limits)) {
 					if (rejectForConcurrencyLimits(limits)) {
 						continue;
 					}
@@ -5335,7 +5336,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 		if (evaluate_limits_with_match) {
 			std::string limits;
-			if (request.EvalString(ATTR_CONCURRENCY_LIMITS, candidate, limits) && rejectForConcurrencyLimits(limits)) {
+			if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, candidate, limits) && rejectForConcurrencyLimits(limits)) {
 				continue;
 			}
 		}
@@ -5578,7 +5579,7 @@ calculateRanks(ClassAd &request,
 
 	// calculate the request's rank of the candidate
 	double tmp;
-	if(!request.EvalFloat(ATTR_RANK, candidate, tmp)) {
+	if(!EvalFloat(ATTR_RANK, &request, candidate, tmp)) {
 		tmp = 0.0;
 	}
 	candidateRankValue = tmp;
@@ -5657,7 +5658,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char remoteOwner[256];
     MyString startdName;
 	bool send_failed;
-	int want_claiming = -1;
+	bool claiming_set = false;
+	bool want_claiming = true;
 	ExprTree *savedRequirements;
 	int length;
 	char *tmp;
@@ -5666,20 +5668,20 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
-	int offline = false;
-	offer->EvalBool(ATTR_OFFLINE,NULL,offline);
+	bool offline = false;
+	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
-		want_claiming = 0;
+		want_claiming = false;
 		RegisterAttemptedOfflineMatch( &request, offer );
 	}
 	else {
 			// see if offer supports claiming or not
-		offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+		claiming_set = offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
 	}
 
 	// if offer says nothing, see if request says something
-	if ( want_claiming == -1 ) {
-		request.LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	if ( ! claiming_set ) {
+		claiming_set = request.LookupBool(ATTR_WANT_CLAIMING,want_claiming);
 	}
 
 	// these should too, but may not
@@ -5759,7 +5761,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// the Schedd, they must be stashed before PERMISSION_AND_AD
 		// is sent.
 	MyString limits;
-	if (request.EvalString(ATTR_CONCURRENCY_LIMITS, offer, limits)) {
+	if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, offer, limits)) {
 		limits.lower_case();
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
@@ -6150,7 +6152,7 @@ reeval(ClassAd *ad)
 	char    buffer[255];
 	
 	cur_matches = 0;
-	ad->EvalInteger("CurMatches", NULL, cur_matches);
+	ad->LookupInteger("CurMatches", cur_matches);
 
 	MyString adID = MachineAdID(ad);
 	stashedAds->lookup( adID, oldAdEntry);
@@ -6869,7 +6871,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 
 	double newRank; // The startd rank of the potential job
 
-	if (!machine->EvalFloat(ATTR_RANK, job, newRank)) {
+	if (!EvalFloat(ATTR_RANK, machine, job, newRank)) {
 		newRank = 0.0;
 	}
 
@@ -7119,7 +7121,7 @@ static int jobsInSlot(ClassAd &request, ClassAd &offer, int match_cost) {
 	int requestCpus = 1;
 	if (match_cost < 1) match_cost = 1;
 	
-	request.EvalInteger(ATTR_REQUEST_CPUS, &offer, requestCpus);
+	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
 
 	return ceil((double)match_cost / (double)requestCpus);
 }

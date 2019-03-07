@@ -766,7 +766,7 @@ Wrapup( )
 bool periodic_policy(void)
 {
 	ClassAd *result;
-	int val;
+	bool val;
 	int action;
 	char buf[4096];
 	char buf2[4096];
@@ -774,16 +774,16 @@ bool periodic_policy(void)
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
 	
-	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
-	if (val == 1)
+	result->LookupBool(ATTR_USER_POLICY_ERROR, val);
+	if (val)
 	{
 		dprintf(D_ALWAYS, "There was an error in the periodic policy\n");
 		delete result;
 		return false;
 	}
 
-	result->EvalBool(ATTR_TAKE_ACTION, result, val);
-	if (val == 1)
+	result->LookupBool(ATTR_TAKE_ACTION, val);
+	if (val)
 	{
 		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
@@ -833,7 +833,7 @@ bool periodic_policy(void)
 void static_policy(void)
 {
 	ClassAd *result;
-	int val;
+	bool val;
 	int action;
 	char buf[4096];
 	char buf2[4096];
@@ -841,16 +841,16 @@ void static_policy(void)
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
 	
-	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
-	if (val == 1)
+	result->LookupBool(ATTR_USER_POLICY_ERROR, val);
+	if (val)
 	{
 		dprintf(D_ALWAYS, "There was an error in the static policy\n");
 		delete result;
 		return;
 	}
 
-	result->EvalBool(ATTR_TAKE_ACTION, result, val);
-	if (val == 1)
+	result->LookupBool(ATTR_TAKE_ACTION, val);
+	if (val)
 	{
 		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
@@ -1098,7 +1098,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		// core filenames.
 		if (Proc->status == COMPLETED) {
 			int exit_code, exit_signal, exit_by_signal;
-			int pending;
+			bool pending;
 
 			// update the time.
 			CommittedTime = 0;

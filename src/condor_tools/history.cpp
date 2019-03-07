@@ -585,8 +585,8 @@ static bool
 render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	double utime;
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
+		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
 			utime = 0;
 		}
 	}
@@ -676,8 +676,8 @@ static bool
 render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int clusterId, procId;
-	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
-	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
+	if( ! ad->LookupInteger(ATTR_CLUSTER_ID,clusterId)) clusterId = 0;
+	if( ! ad->LookupInteger(ATTR_PROC_ID,procId)) procId = 0;
 	formatstr(val, "%4d.%-3d", clusterId, procId);
 	return true;
 }
@@ -685,12 +685,12 @@ render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 static bool
 render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
 		return false;
 
 	char * args;
-	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
-		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
+	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
+		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
 		val += " ";
 		val += args;
 		free(args);
@@ -1180,7 +1180,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
@@ -1312,12 +1312,12 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 	++adCount;
 
-	if (sinceExpr && EvalBool(&ad, sinceExpr)) {
+	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
 		return;
 	}
 
-	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}

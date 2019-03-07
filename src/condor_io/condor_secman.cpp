@@ -3254,16 +3254,13 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
 
 	session_info += "[";
-	exp_policy.ResetExpr();
-	const char *name;
-	ExprTree *elem;
-	while( exp_policy.NextExpr(name, elem) ) {
+	for ( auto itr = exp_policy.begin(); itr != exp_policy.end(); itr++ ) {
 			// In the following, we attempt to avoid any spaces in the
 			// result string.  However, no code should depend on this.
-		session_info += name;
+		session_info += itr->first;
 		session_info += "=";
 
-        const char *line = ExprTreeToString(elem);
+        const char *line = ExprTreeToString(itr->second);
 
 			// none of the ClassAd values should ever contain ';'
 			// that makes things easier in ImportSecSessionInfo()

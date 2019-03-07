@@ -177,7 +177,7 @@ Starter::~Starter()
 bool
 Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
-	int requirements = 0;
+	bool requirements = false;
 	ClassAd* merged_ad;
 	if( mach_ad ) {
 		merged_ad = new ClassAd( *mach_ad );
@@ -185,8 +185,8 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	} else {
 		merged_ad = new ClassAd( *s_ad );
 	}
-	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
-		requirements = 0;
+	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
+		requirements = false;
 		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
 		classad::PrettyPrint pp;
 		std::string szbuff;
@@ -197,21 +197,21 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 		
 	}
 	delete( merged_ad );
-	return (bool)requirements;
+	return requirements;
 }
 
 
 bool
 Starter::provides( const char* ability )
 {
-	int has_it = 0;
+	bool has_it = false;
 	if( ! s_ad ) {
 		return false;
 	}
-	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
-		has_it = 0;
+	if( ! s_ad->LookupBool(ability, has_it) ) {
+		has_it = false;
 	}
-	return (bool)has_it;
+	return has_it;
 }
 
 
@@ -264,8 +264,9 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
-	s_ad->ResetExpr();
-	while( s_ad->NextExpr(lhstr, tree) ) {
+	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		pCopy=0;
 	
 		if (ignored_attr_list) {

@@ -146,10 +146,10 @@ AllocationNode::display( void )
 
 bool satisfies(ClassAd* job, ClassAd* candidate) {
 	// Make sure the job requirements are satisfied with this resource.
-    int satisfied_req = 1;
-	if (!job || job->EvalBool(ATTR_REQUIREMENTS, candidate, satisfied_req) == 0) { 
+    bool satisfied_req = true;
+	if (!job || EvalBool(ATTR_REQUIREMENTS, job, candidate, satisfied_req) == 0) {
 		// If it's undefined, treat it as false.
-		satisfied_req = 0;
+		satisfied_req = false;
 	}
     // if reqs weren't satisfied, it's an immediate failure
     if (!satisfied_req) return false;
@@ -328,7 +328,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	while ((machine = this->Next())) {
 			// If RANK undefined, default value is small
 		float rank = 0.0;
-		rankAd->EvalFloat(ATTR_RANK, machine, rank);
+		EvalFloat(ATTR_RANK, rankAd, machine, rank);
 
 			// and stick this machine and its rank in our array...
 		array[index].machineAd = machine;
@@ -1734,22 +1734,20 @@ DedicatedScheduler::sortResources( void )
 
 		// Carry any negotiator match attrs over from the existing match ad. 
 		// Otherwise these will be lost and dollar-dollar expansion will fail.
-		mrec->my_match_ad->ResetName();
-		char const *c_name;
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		while( (c_name=mrec->my_match_ad->NextNameOriginal()) ) {
-			if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *oexpr = mrec->my_match_ad->LookupExpr(c_name);
+		for ( auto itr = mrec->my_match_ad->begin(); itr != mrec->my_match_ad->end(); itr++ ) {
+			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *oexpr = itr->second;
 				if( !oexpr ) {
 					continue;
 				}
-				ExprTree *nexpr = res->LookupExpr(c_name);
+				ExprTree *nexpr = res->LookupExpr(itr->first.c_str());
 				if (!nexpr) {
 					const char *oexprStr = ExprTreeToString(oexpr);
-					res->AssignExpr(c_name, oexprStr);
+					res->AssignExpr(itr->first.c_str(), oexprStr);
 
 					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
-						resname.c_str(), c_name, oexprStr);
+					         resname.c_str(), itr->first.c_str(), oexprStr);
 				}
 			}
 		}
@@ -3203,12 +3201,10 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 	bool negotiator_attr_found = false;
 	negotiator_attr_cache_t::iterator cit = negotiator_attr_cache.find(partitionable_slot_name);
 
-	match_ad->ResetName();
-	char const *c_name;
 	size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-	while( (c_name=match_ad->NextNameOriginal()) ) {
-		if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-			ExprTree *expr = match_ad->LookupExpr(c_name);
+	for ( auto itr = match_ad->begin(); itr != match_ad->end(); itr++ ) {
+		if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+			ExprTree *expr = itr->second;
 			if( !expr ) {
 				continue;
 			}
@@ -3219,10 +3215,10 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 			}
 			std::string exprs(ExprTreeToString(expr));
 			if (cit != negotiator_attr_cache.end()) {
-				cit->second[std::string(c_name)] = exprs;
+				cit->second[itr->first] = exprs;
 			} else {
 				negotiator_attr_cache_entry_t nmap;
-				nmap.insert(negotiator_attr_cache_entry_t::value_type(std::string(c_name),exprs));
+				nmap.insert(negotiator_attr_cache_entry_t::value_type(itr->first,exprs));
 				negotiator_attr_cache.insert(negotiator_attr_cache_t::value_type(partitionable_slot_name, nmap));
 			}
 		}
@@ -3477,7 +3473,7 @@ DedicatedScheduler::publishRequestAd( void )
 		// Finally, we need to tell it how many "jobs" we want to
 		// negotiate.  These are really how many resource requests
 		// we've got. 
-	ad.Assign( ATTR_IDLE_JOBS, resource_requests.size() ); 
+	ad.Assign( ATTR_IDLE_JOBS, (long long)resource_requests.size() );
 	
 		// TODO: Eventually, we could try to publish this info as
 		// well, so condor_status -sub and friends could tell people

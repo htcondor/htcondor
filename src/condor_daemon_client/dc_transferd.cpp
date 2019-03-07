@@ -392,8 +392,9 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 				// translate the job ad by replacing the 
 				// saved SUBMIT_ attributes so the download goes into the
 				// correct place.
-				jad.ResetExpr();
-				while( jad.NextExpr(lhstr, tree) ) {
+				for( auto itr = jad.begin(); itr != jad.end(); itr++ ) {
+					lhstr = itr->first.c_str();
+					tree = itr->second;
 					if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 							// this attr name starts with SUBMIT_
 							// compute new lhs (strip off the SUBMIT_)

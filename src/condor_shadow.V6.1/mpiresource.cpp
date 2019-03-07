@@ -72,7 +72,7 @@ MpiResource::resourceExit( int reason, int status )
 				event.returnValue = exit_value;
 			}
 			
-			int had_core = 0;
+			bool had_core = false;
 			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 			if( had_core ) {
 				event.setCoreFile( shadow->getCoreName() );

@@ -701,15 +701,14 @@ ParallelShadow::handleJobRemoval( int sig ) {
 void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
-	ExprTree *tree = NULL;
 	char node[9];
 	const char *lhstr, *rhstr;
 
 	snprintf( node, 9, "%d", nodenum );
 
-	ad->ResetExpr();
-	while( ad->NextExpr(lhstr, tree) ) {
-		rhstr = ExprTreeToString(tree);
+	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		rhstr = ExprTreeToString(itr->second);
 		if( !lhstr || !rhstr ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;

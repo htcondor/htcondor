@@ -2810,7 +2810,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		return 0;
 	}
 
-	int noop = 0;
+	bool noop = false;
 	job->LookupBool(ATTR_JOB_NOOP, noop);
 	if (noop && status != COMPLETED) {
 		int cluster = 0;
@@ -2963,7 +2963,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
 
-		int sendToDS = 0;
+		bool sendToDS = false;
 		job->LookupBool("WantParallelScheduling", sendToDS);
 		if( (sendToDS || universe == CONDOR_UNIVERSE_MPI ||
 			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
@@ -3109,13 +3109,9 @@ service_this_universe(int universe, ClassAd* job)
 	   Note: EvalBool returns 0 if evaluation is undefined or error, and
 	   return 1 otherwise....
 	*/
-	int want_matching;
-	if ( job->EvalBool(ATTR_WANT_MATCHING,NULL,want_matching) == 1 ) {
-		if ( want_matching ) {
-			return true;
-		} else {
-			return false;
-		}
+	bool want_matching;
+	if ( job->LookupBool(ATTR_WANT_MATCHING,want_matching) == 1 ) {
+		return want_matching;
 	}
 
 	/* If we made it to here, the WantMatching was not defined.  So
@@ -3162,7 +3158,7 @@ service_this_universe(int universe, ClassAd* job)
 			break;
 		default:
 
-			int sendToDS = 0;
+			bool sendToDS = false;
 			job->LookupBool("WantParallelScheduling", sendToDS);
 			if (sendToDS) {
 				return false;
@@ -4061,9 +4057,9 @@ jobIsFinished( int cluster, int proc, void* )
 	MyString iwd;
 	MyString owner;
 	bool is_nfs;
-	int want_flush = 0;
+	bool want_flush = false;
 
-	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
+	job_ad->LookupBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, want_flush );
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
 		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
 		 want_flush &&
@@ -4208,7 +4204,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	MyString owner;
 	MyString domain;
 	MyString iwd;
-	int use_xml;
+	bool use_xml;
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
@@ -4221,7 +4217,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 
 	WriteUserLog* ULog=new WriteUserLog();
 	ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
-		ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
+		ATTR_ULOG_USE_XML, &use_xml) && use_xml);
 	ULog->setCreatorName( Name );
 
     if (m_userlog_file_cache_max > 0) {
@@ -7415,7 +7411,7 @@ Scheduler::negotiate(int command, Stream* s)
 		{
 			if ( neg_constraint ) {
 				JobQueueJob* job_ad = GetJobAd( prec->id );
-				if ( job_ad == NULL || EvalBool( job_ad, neg_constraint ) == false ) {
+				if ( job_ad == NULL || EvalExprBool( job_ad, neg_constraint ) == false ) {
 					skipped_auto_cluster = auto_cluster_id;
 					continue;
 				}
@@ -7713,25 +7709,23 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 			// Carry Negotiator Match expressions over from the
 			// match record.
-		match->my_match_ad->ResetName();
-		char const *c_name;
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		while( (c_name=match->my_match_ad->NextNameOriginal()) ) {
-			if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(c_name);
+		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
+			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first.c_str());
 				if ( expr ) {
 					continue;
 				}
-				expr = match->my_match_ad->LookupExpr(c_name);
+				expr = itr->second;
 				if( !expr ) {
 					continue;
 				}
 				const char *new_value = NULL;
 				new_value = ExprTreeToString(expr);
 				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(c_name,new_value);
+				msg->leftover_startd_ad()->AssignExpr(itr->first.c_str(),new_value);
  				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
-                                	slot_name, c_name, new_value);
+				         slot_name, itr->first.c_str(), new_value);
 			}
 		}
 
@@ -8299,7 +8293,7 @@ Scheduler::CheckForClaimSwap(match_rec *mrec)
 	if ( !mrec->m_paired_mrec ) {
 		return false;
 	}
-	int job_xfer_output = FALSE;
+	bool job_xfer_output = false;
 	GetAttributeBool( mrec->cluster, mrec->proc,
 					  ATTR_JOB_TRANSFERRING_OUTPUT,
 					  &job_xfer_output );
@@ -8664,16 +8658,14 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	// will we allow a job to start.
 	//
 	bool requirementsMet = true;
-	int requirements = 1;
 	if ( scheddAd.LookupExpr( universeExp ) != NULL ) {
 		//
 		// We have this inner block here because the job
 		// should not be allowed to start if the schedd's 
 		// requirements failed to evaluate for some reason
 		//
-		if ( scheddAd.EvalBool( universeExp, job, requirements ) ) {
-			requirementsMet = (bool)requirements;
-			if ( ! requirements ) {
+		if ( EvalBool( universeExp, &scheddAd, job, requirementsMet ) ) {
+			if ( ! requirementsMet ) {
 				dprintf( D_FULLDEBUG, "%s evaluated to false for job %d.%d. "
 									"Unable to start job.\n",
 									universeExp, id.cluster, id.proc );
@@ -8702,9 +8694,8 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	//
 	if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
 			// Treat undefined/error as FALSE for job requirements, too.
-		if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
-			requirementsMet = (bool)requirements;
-			if ( !requirements ) {
+		if ( EvalBool(ATTR_REQUIREMENTS, job, &scheddAd, requirementsMet) ) {
+			if ( !requirementsMet ) {
 				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
 							"evaluated to false. Unable to start job\n",
 							ATTR_REQUIREMENTS, id.cluster, id.proc );
@@ -9503,8 +9494,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		// if this is a shadow for an MPI job, we need to tell the
 		// dedicated scheduler we finally spawned it so it can update
 		// some of its own data structures, too.
-	int sendToDS = 0;
-	GetAttributeInt(job_id->cluster, job_id->proc, "WantParallelScheduling", &sendToDS);
+	bool sendToDS = false;
+	GetAttributeBool(job_id->cluster, job_id->proc, "WantParallelScheduling", &sendToDS);
 
 	if( (sendToDS || universe == CONDOR_UNIVERSE_MPI ) ||
 	    (universe == CONDOR_UNIVERSE_PARALLEL) ){
@@ -9522,7 +9513,7 @@ Scheduler::setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad ) {
 	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job_ad->LookupInteger(ATTR_PROC_ID, proc);
 
-	job_ad->EvalInteger(ATTR_NEXT_JOB_START_DELAY,machine_ad,delay);
+	EvalInteger(ATTR_NEXT_JOB_START_DELAY,job_ad,machine_ad,delay);
 	if( MaxNextJobDelay && delay > MaxNextJobDelay ) {
 		dprintf(D_ALWAYS,
 				"Job %d.%d has %s = %d, which is greater than "
@@ -10419,7 +10410,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// This will result in meta-scheduler like DAGMan not bother trying to restash
 	// a credential every time they run condor_submit.
 	{
-		int have_stored_credential = FALSE;
+		bool have_stored_credential = false;
 		GetAttributeBool(job_id->cluster, job_id->proc,
 						   ATTR_JOB_SEND_CREDENTIAL, &have_stored_credential);
 		if (have_stored_credential) {
@@ -14343,7 +14334,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
-		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
+		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
 	}
@@ -16415,13 +16406,13 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// First get the DeferralTime
 			//
 		int deferralTime = 0;
-		jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime );
+		jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
 			//
 		int deferralWindow = 0;
 		if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL ) {
-			jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow );
+			jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow );
 		}
 			//
 			// Now if the current time is greater than the
@@ -16571,15 +16562,15 @@ void
 WriteCompletionVisa(ClassAd* ad)
 {
 	priv_state prev_priv_state;
-	int value;
+	bool value;
 	MyString iwd;
 
 	ASSERT(ad);
 
-	if (!ad->EvalBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, NULL, value) ||
+	if (!ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
 	    !value)
 	{
-		if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) ||
+		if (!ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
 		    !value)
 		{
 			return;

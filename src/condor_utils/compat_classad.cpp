@@ -1203,9 +1203,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-	ResetName();
-    ResetExpr();
-
 	DisableDirtyTracking();
 }
 
@@ -1217,10 +1214,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 	}
 
 	CopyFrom( ad );
-
-	ResetName();
-    ResetExpr();
-
 }
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
@@ -1231,10 +1224,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 	}
 
 	CopyFrom( ad );
-
-	ResetName();
-    ResetExpr();
-
 }
 
 ClassAd::~ClassAd()
@@ -1949,160 +1938,59 @@ LookupString( const char *name, std::string &value ) const
 int ClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	int		tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupInteger( const char *name, long &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	long	tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupInteger( const char *name, long long &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	long long	tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
-	double  doubleVal;
-	long long intVal;
-	int     haveFloat;
-
-	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
-		haveFloat = TRUE;
-		value = (float) doubleVal;
-	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
-		haveFloat = TRUE;
-		value = (float)intVal;
-	} else {
-		haveFloat = FALSE;
+	double dval;
+	bool rc = EvaluateAttrNumber(name, dval);
+	if ( rc ) {
+		value = dval;
 	}
-	return haveFloat;
+	return rc;
 }
 
 int ClassAd::
 LookupFloat( const char *name, double &value ) const
 {
-	double  doubleVal;
-	long long intVal;
-	int     haveFloat;
-
-	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
-		haveFloat = TRUE;
-		value = doubleVal;
-	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
-		haveFloat = TRUE;
-		value = (double)intVal;
-	} else {
-		haveFloat = FALSE;
-	}
-	return haveFloat;
-}
-
-int ClassAd::
-LookupBool( const char *name, int &value ) const
-{
-	long long intVal;
-	bool  boolVal;
-	int haveBool;
-	string sName;
-
-	sName = string(name);
-
-	if (EvaluateAttrBool(name, boolVal)) {
-		haveBool = true;
-		value = boolVal ? 1 : 0;
-	} else if (EvaluateAttrInt(name, intVal)) {
-		haveBool = true;
-		value = (intVal != 0) ? 1 : 0;
-	} else {
-		haveBool = false;
-	}
-	return haveBool;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
-	long long intVal;
-	bool  boolVal;
-	int haveBool;
-	string sName;
-
-	sName = string(name);
-
-	if (EvaluateAttrBool(name, boolVal)) {
-		haveBool = true;
-		value = boolVal ? true : false;
-	} else if (EvaluateAttrInt(name, intVal)) {
-		haveBool = true;
-		value = (intVal != 0) ? true : false;
-	} else {
-		haveBool = false;
-	}
-	return haveBool;
+	return EvaluateAttrBoolEquiv(name, value);
 }
 
-int ClassAd::
-EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
+int
+EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
 {
 	int rc = 0;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, value ) ) {
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, value ) ) {
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
@@ -2117,252 +2005,160 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 /*
  * Ensure that we allocate the value, so we have sufficient space
  */
-int ClassAd::
-EvalString (const char *name, classad::ClassAd *target, char **value)
+int
+EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value)
 {
-    
-	string strVal;
-    bool foundAttr = false;
-	int rc = 0;
-
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrString( name, strVal ) ) {
-
-            *value = (char *)malloc(strlen(strVal.c_str()) + 1);
-            if(*value != NULL) {
-                strcpy( *value, strVal.c_str( ) );
-                rc = 1;
-            } else {
-                rc = 0;
-            }
+	std::string str_val;
+	int rc = EvalString(name, my, target, str_val);
+	if( rc != 0 ) {
+		*value = strdup(str_val.c_str());
+		if(*value == NULL) {
+			rc = 0;
 		}
-		return rc;
 	}
-
-	getTheMatchAd( this, target );
-
-    if( this->Lookup(name) ) {
-
-        if( this->EvaluateAttrString( name, strVal ) ) {
-            foundAttr = true;
-        }		
-    } else if( target->Lookup(name) ) {
-        if( this->EvaluateAttrString( name, strVal ) ) {
-            foundAttr = true;
-        }		
-    }
-
-    if(foundAttr)
-    {
-        *value = (char *)malloc(strlen(strVal.c_str()) + 1);
-        if(*value != NULL) {
-            strcpy( *value, strVal.c_str( ) );
-            rc = 1;
-        }
-    }
-
-	releaseTheMatchAd();
 	return rc;
 }
 
-int ClassAd::
-EvalString(const char *name, classad::ClassAd *target, MyString & value)
+int
+EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value)
 {
-    char * pvalue = NULL;
-    //this one makes sure length is good
-    int ret = EvalString(name, target, &pvalue); 
-    if(ret == 0) { return ret; }
-    value = pvalue;
-    free(pvalue);
-    return ret;
+	std::string str_val;
+	int rc = EvalString(name, my, target, str_val);
+	if( rc != 0 ) {
+		value = str_val;
+	}
+	return rc;
 }
 
-int ClassAd::
-EvalString(const char *name, classad::ClassAd *target, std::string & value)
-{
-    char * pvalue = NULL;
-    //this one makes sure length is good
-    int ret = EvalString(name, target, &pvalue); 
-    if(ret == 0) { return ret; }
-    value = pvalue;
-    free(pvalue);
-    return ret;
-}
-
-int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, long long &value)
+int
+EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, std::string & value)
 {
 	int rc = 0;
-	classad::Value val;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) { 
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrString( name, value ) ) {
 			rc = 1;
 		}
 	}
-	else 
+	else
 	{
-	  getTheMatchAd( this, target );
-	  if( this->Lookup( name ) ) {
-		  if( this->EvaluateAttr( name, val ) ) {
+	  getTheMatchAd( my, target );
+	  if( my->Lookup( name ) ) {
+		  if( my->EvaluateAttrString( name, value ) ) {
 			  rc = 1;
 		  }
 	  } else if( target->Lookup( name ) ) {
-		  if( target->EvaluateAttr( name, val ) ) {
+		  if( target->EvaluateAttrString( name, value ) ) {
 			  rc = 1;
 		  }
 	  }
 	  releaseTheMatchAd();
 	}
-	
-	
-	// we have a "val" now cast if needed.
-	if ( 1 == rc ) 
-	{
-	  double doubleVal;
-	  long long intVal;
-	  bool boolVal;
 
-	  if( val.IsRealValue( doubleVal ) ) {
-	    value = ( long long )doubleVal;
-	  }
-	  else if( val.IsIntegerValue( intVal ) ) {
-	    value = intVal;
-	  }
-	  else if( val.IsBooleanValue( boolVal ) ) {
-	    value = ( long long )boolVal;
-	  }
-	  else 
-	  { 
-	    // if we got here there is an issue with evaluation.
-	    rc = 0;
-	  }
-			
-	}
-	
 	return rc;
 }
 
-int ClassAd::
-EvalFloat (const char *name, classad::ClassAd *target, double &value)
+int
+EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
-	classad::Value val;
-	double doubleVal;
-	long long intVal;
-	bool boolVal;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
+		}
+	}
+	else 
+	{
+	  getTheMatchAd( my, target );
+	  if( my->Lookup( name ) ) {
+		  if( my->EvaluateAttrNumber( name, value ) ) {
+			  rc = 1;
+		  }
+	  } else if( target->Lookup( name ) ) {
+		  if( target->EvaluateAttrNumber( name, value ) ) {
+			  rc = 1;
+		  }
+	  }
+	  releaseTheMatchAd();
+	}
+
+	return rc;
+}
+
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, int& value) {
+	long long ival = 0;
+	int result = EvalInteger(name, my, target, ival);
+	if ( result ) {
+		value = (int)ival;
+	}
+	return result;
+}
+
+int EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, long & value) {
+	long long ival = 0;
+	int result = EvalInteger(name, my, target, ival);
+	if ( result ) {
+		value = (long)ival;
+	}
+	return result;
+}
+
+int
+EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, double &value)
+{
+	int rc = 0;
+
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+		if( target->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 	}
 	releaseTheMatchAd();
 	return rc;
 }
 
-#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
+int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, float &value) {
+	double dval = 0.0;
+	int result = EvalFloat(name, my, target, dval);
+	if ( result ) {
+		value = dval;
+	}
+	return result;
+}
 
-int ClassAd::
-EvalBool  (const char *name, classad::ClassAd *target, int &value)
+int
+EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value)
 {
 	int rc = 0;
-	classad::Value val;
-	double doubleVal;
-	long long intVal;
-	bool boolVal;
 
-	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			} else if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+	if( target == my || target == NULL ) {
+		if( my->EvaluateAttrBoolEquiv( name, value ) ) {
+			rc = 1;
 		}
 		return rc;
 	}
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+	getTheMatchAd( my, target );
+	if( my->Lookup( name ) ) {
+		if( my->EvaluateAttrBoolEquiv( name, value ) ) {
+			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+		if( target->EvaluateAttrBoolEquiv( name, value ) ) {
+			rc = 1;
 		}
 	}
 
@@ -2688,46 +2484,6 @@ GetTargetTypeName( const classad::ClassAd &ad )
 	return targetTypeStr.c_str( );
 }
 
-void ClassAd::
-ResetExpr()
-{
-	m_exprItrState = ItrUninitialized;
-}
-
-void ClassAd::
-ResetName()
-{
-	m_nameItrState = ItrUninitialized;
-}
-
-const char *ClassAd::
-NextNameOriginal()
-{
-	const char *name = NULL;
-	classad::ClassAd *chained_ad = GetChainedParentAd();
-
-	if( m_nameItrState == ItrUninitialized ) {
-		m_nameItr = begin();
-		m_nameItrState = ItrInThisAd;
-	}
-
-	// After iterating through all the names in this ad,
-	// get all the names in our chained ad as well.
-	if ( chained_ad && m_nameItrState != ItrInChain && m_nameItr == end() ) {
-		m_nameItr = chained_ad->begin();
-		m_nameItrState = ItrInChain;
-	}
-	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
-		 ( m_nameItrState==ItrInChain && chained_ad == NULL ) ||
-		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
-		return NULL;
-	}
-	name = m_nameItr->first.c_str();
-	m_nameItr++;
-	return name;
-}
-
-
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
 // the only invalid character is a '\n'.
@@ -2782,32 +2538,6 @@ IsValidAttrName(const char *name) {
 		name++;
 	}
 
-	return true;
-}
-
-bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
-{
-	classad::ClassAd *chained_ad = GetChainedParentAd();
-
-	if( m_exprItrState == ItrUninitialized ) {
-		m_exprItr = begin();
-		m_exprItrState = ItrInThisAd;
-	}
-
-	// After iterating through all the attributes in this ad,
-	// get all the attributes in our chained ad as well.
-	if ( chained_ad && m_exprItrState != ItrInChain && m_exprItr == end() ) {
-		m_exprItr = chained_ad->begin();
-		m_exprItrState = ItrInChain;
-	}
-	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
-		 ( m_exprItrState==ItrInChain && chained_ad == NULL ) ||
-		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
-		return false;
-	}
-	name = m_exprItr->first.c_str();
-	value = m_exprItr->second;
-	m_exprItr++;
 	return true;
 }
 

@@ -746,8 +746,8 @@ mayUserForceRm( )
 
 	free(tmp);
 
-	int is_okay = 0;
-	if(tmpAd.EvalBool(TESTNAME, 0, is_okay)) {
+	bool is_okay = false;
+	if(tmpAd.LookupBool(TESTNAME, is_okay)) {
 		return is_okay;
 	} else {
 		// Something went wrong.  May be undefined because

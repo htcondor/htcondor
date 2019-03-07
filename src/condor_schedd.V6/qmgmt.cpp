@@ -501,7 +501,7 @@ bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
 		classad::ExprTree * expr = NULL;
 		ParseClassAdRvalExpr("JobsIdle < 4", expr);
 		if (expr) {
-			bool rv = EvalBool(&iad, expr);
+			bool rv = EvalExprBool(&iad, expr);
 			delete expr;
 			if (rv) return true;
 		}
@@ -878,7 +878,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		// CRUFT
 		// Starting in 6.7.11, ATTR_JOB_MANAGED changed from a boolean
 		// to a string.
-	int ntmp;
+	bool ntmp;
 	if( startup && job_ad->LookupBool(ATTR_JOB_MANAGED, ntmp) ) {
 		if(ntmp) {
 			job_ad->Assign(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
@@ -1420,7 +1420,7 @@ JobQueueCluster::~JobQueueCluster()
 bool JobQueueJob::IsNoopJob()
 {
 	if ( ! has_noop_attr) return false;
-	int noop = 0;
+	bool noop = false;
 	if ( ! this->LookupBool(ATTR_JOB_NOOP, noop)) { has_noop_attr = false; }
 	else { has_noop_attr = true; }
 	return has_noop_attr && noop;
@@ -3000,8 +3000,9 @@ int NewProcFromAd (ClassAd * job, int ProcId, JobQueueJob * ClusterAd, SetAttrib
 	const char *attr;
 	std::string buffer;
 
-	job->ResetExpr();
-	while( job->NextExpr(attr, tree) ) {
+	for ( auto itr = job->begin(); itr != job->end(); itr++ ) {
+		attr = itr->first.c_str();
+		tree = itr->second;
 		if ( ! attr || ! tree) {
 			dprintf(D_ALWAYS, "ERROR: Null attribute name or value for job %d.%d\n", ClusterId, ProcId );
 			return -1;
@@ -3083,11 +3084,11 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 		// should we leave the job in the queue?
-	int leave_job_in_q = 0;
+	bool leave_job_in_q = false;
 	{
 		ClassAd completeAd(*ad);
 		JobQueue->AddAttrsFromTransaction(key,completeAd);
-		completeAd.EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+		completeAd.LookupBool(ATTR_JOB_LEAVE_IN_QUEUE,leave_job_in_q);
 		if ( leave_job_in_q ) {
 			return DESTROYPROC_SUCCESS_DELAY;
 		}
@@ -3266,8 +3267,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 				}
 
 					// should we leave the job in the queue?
-				int leave_job_in_q = 0;
-				ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+				bool leave_job_in_q = false;
+				ad->LookupBool(ATTR_JOB_LEAVE_IN_QUEUE,leave_job_in_q);
 				if ( leave_job_in_q ) {
 						// leave it in the queue.... move on to the next one
 					continue;
@@ -3388,7 +3389,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		if (job->IsCluster() && ! (flags & SetAttribute_PostSubmitClusterChange))
 			continue;
 
-		if (EvalBool(ad, constraint.Expr())) {
+		if (EvalExprBool(ad, constraint.Expr())) {
 			match_count += 1;
 			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
@@ -4462,7 +4463,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 int
 DestroyMyProxyPassword( int cluster_id, int proc_id )
 {
-	int val = 0;
+	bool val = false;
 	if (GetAttributeBool(cluster_id, proc_id,
 						 ATTR_MYPROXY_PASSWORD_EXISTS, &val) < 0 ||
 		!val) {
@@ -5166,12 +5167,12 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			int max_xfer_input_mb = -1;
 			param_integer("MAX_TRANSFER_INPUT_MB",max_xfer_input_mb,true,-1,false,INT_MIN,INT_MAX,procad);
 			filesize_t job_max_xfer_input_mb = 0;
-			if( procad && procad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,job_max_xfer_input_mb) ) {
+			if( procad && procad->LookupInteger(ATTR_MAX_TRANSFER_INPUT_MB,job_max_xfer_input_mb) ) {
 				max_xfer_input_mb = job_max_xfer_input_mb;
 			}
 			if( max_xfer_input_mb >= 0 ) {
 				filesize_t xfer_input_size_mb = 0;
-				if( procad && procad->EvalInteger(ATTR_TRANSFER_INPUT_SIZE_MB,NULL,xfer_input_size_mb) ) {
+				if( procad && procad->LookupInteger(ATTR_TRANSFER_INPUT_SIZE_MB,xfer_input_size_mb) ) {
 					if( xfer_input_size_mb > max_xfer_input_mb ) {
 						std::string hold_reason;
 						formatstr(hold_reason,"%s (%d) is greater than %s (%d) at submit time",
@@ -5324,9 +5325,8 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	return -1;
 }
 
-
 int
-GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
+GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, bool *val)
 {
 	ClassAd	*ad;
 	JobQueueKeyBuf key;
@@ -5618,18 +5618,16 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		StringList AttrsToExpand;
 		const char * curr_attr_to_expand;
 		AttrsToExpand.append(ATTR_JOB_CMD);
-		ad->ResetName();
-		const char *attr_name = ad->NextNameOriginal();
-		for ( ; attr_name; attr_name = ad->NextNameOriginal() ) {
-			if ( strncasecmp(attr_name,"MATCH_",6) == 0 ) {
+		for ( auto itr = expanded_ad->begin(); itr != expanded_ad->end(); itr++ ) {
+			if ( strncasecmp(itr->first.c_str(),"MATCH_",6) == 0 ) {
 					// We do not want to expand MATCH_XXX attributes,
 					// because these are used to store the result of
 					// previous expansions, which could potentially
 					// contain literal $$(...) in the replacement text.
 				continue;
 			}
-			if ( strcasecmp(attr_name,ATTR_JOB_CMD) ) { 
-				AttrsToExpand.append(attr_name);
+			if ( strcasecmp(itr->first.c_str(),ATTR_JOB_CMD) ) {
+				AttrsToExpand.append(itr->first.c_str());
 			}
 		}
 
@@ -5766,7 +5764,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 
 					MyString result;
-					isok = tmpJobAd.EvalString(INTERNAL_DD_EXPR, startd_ad, result);
+					isok = EvalString(INTERNAL_DD_EXPR, &tmpJobAd, startd_ad, result);
 					if( ! isok ) {
 						attribute_not_found = true;
 						break;
@@ -5946,22 +5944,20 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// Copy NegotiatorMatchExprXXX attributes from startd ad
 				// to the job ad.  These attributes were inserted by the
 				// negotiator.
-			startd_ad->ResetName();
-			char const *c_name;
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-			while( (c_name=startd_ad->NextNameOriginal()) ) {
-				if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = startd_ad->LookupExpr(c_name);
+			for ( auto itr = startd_ad->begin(); itr != startd_ad->end(); itr++ ) {
+				if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+					ExprTree *expr = itr->second;
 					if( !expr ) {
 						continue;
 					}
 					const char *new_value = NULL;
 					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
-					expanded_ad->AssignExpr(c_name,new_value);
+					expanded_ad->AssignExpr(itr->first.c_str(),new_value);
 
 					MyString match_exp_name = MATCH_EXP;
-					match_exp_name += c_name;
+					match_exp_name += itr->first;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
@@ -5993,7 +5989,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// as DiskProvisionedDisk, MemoryProvisioned, etc.  note that we 
 				// evaluate rather than lookup the value so we collapse expressions
 				// into literal values at this point.
-				if (ad->EvalAttr(resname, startd_ad, val)) {
+				if (EvalAttr(resname, ad, startd_ad, val)) {
 					classad::Value::ValueType vt = val.GetType();
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
@@ -6007,7 +6003,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// evaluate RequestDisk, RequestMemory and convert to literal 
 				// values in the expanded job ad.
 				attr = "Request"; attr += res;
-				if (ad->EvalAttr(attr.c_str(), startd_ad, val)) {
+				if (EvalAttr(attr.c_str(), ad, startd_ad, val)) {
 					classad::Value::ValueType vt = val.GetType();
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
@@ -6501,7 +6497,7 @@ GetJobByConstraint(const char *constraint)
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-			EvalBool(ad, constraint)) {
+			EvalExprBool(ad, constraint)) {
 				return ad;
 		}
 	}
@@ -6532,7 +6528,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			(!constraint || !constraint[0] || EvalExprBool(ad, constraint))) {
 			return ad;
 		}
 	}
@@ -6551,7 +6547,7 @@ GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
 
 	while(JobQueue->Iterate(key,ad)) {
 		if ( key.cluster > 0 && // skip the header ad
-			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			(!constraint || !constraint[0] || EvalExprBool(ad, constraint))) {
 			return ad;
 		}
 	}
@@ -6580,7 +6576,7 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 			continue;
 		}
 
-		if ( !constraint || !constraint[0] || EvalBool(ad, constraint)) {
+		if ( !constraint || !constraint[0] || EvalExprBool(ad, constraint)) {
 			return ad;
 		}
 	}
@@ -7592,7 +7588,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
 			{
 				float new_startd_rank = 0;
-				if( my_match_ad->EvalFloat(ATTR_RANK, ad, new_startd_rank) )
+				if( EvalFloat(ATTR_RANK, my_match_ad, ad, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
 						continue;

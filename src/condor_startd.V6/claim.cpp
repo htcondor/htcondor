@@ -76,7 +76,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
-	, c_has_job_ad(0)
+	, c_has_job_ad(false)
 	, c_state(CLAIM_IDLE)
 	, c_last_state(CLAIM_UNCLAIMED)
 	, c_pending_cmd(-1)
@@ -753,7 +753,7 @@ Claim::loadRequestInfo()
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
 	char* limits = NULL;
-	c_jobad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
+	EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, &limits);
 	if (limits) {
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;
@@ -796,8 +796,8 @@ Claim::beginActivation( double now )
 
 	c_pledged_machine_max_vacate_time = 0;
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
-		if( !c_rip->r_classad->EvalInteger(
-			ATTR_MACHINE_MAX_VACATE_TIME,
+		if( !EvalInteger(
+			ATTR_MACHINE_MAX_VACATE_TIME, c_rip->r_classad,
 			c_jobad,
 			c_pledged_machine_max_vacate_time))
 		{
@@ -828,7 +828,7 @@ Claim::beginActivation( double now )
 	}
 	c_universe = univ;
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	switch( univ ) {
 		case CONDOR_UNIVERSE_VANILLA:
 			c_jobad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
@@ -1304,7 +1304,7 @@ Claim::alive( bool alive_from_schedd )
 bool
 Claim::hasJobAd() {
 	bool has_it = false;
-	if (c_has_job_ad != 0) {
+	if (c_has_job_ad) {
 		has_it = true;
 	}
 #if HAVE_JOB_HOOKS
@@ -1881,7 +1881,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 	}
 
 	req->LookupString( ATTR_JOB_KEYWORD, &c_cod_keyword );
-	req->EvalBool( ATTR_HAS_JOB_AD, NULL, c_has_job_ad );
+	req->LookupBool( ATTR_HAS_JOB_AD, c_has_job_ad );
 
 	if( c_cod_keyword || c_has_job_ad ) {
 		return true;
@@ -2080,7 +2080,7 @@ Claim::resetClaim( void )
 		free( c_cod_keyword );
 		c_cod_keyword = NULL;
 	}
-	c_has_job_ad = 0;
+	c_has_job_ad = false;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;
@@ -2541,10 +2541,11 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 {
 	ASSERT( c_jobad );
 
-	update_ad.ResetExpr();
 	const char *name;
 	ExprTree *expr;
-	while( update_ad.NextExpr(name, expr) ) {
+	for ( auto itr = update_ad.begin(); itr != update_ad.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||

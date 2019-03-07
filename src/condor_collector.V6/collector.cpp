@@ -728,7 +728,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
-			if (cad->EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+			if (EvalString(ATTR_PROJECTION, cad, curr_ad, projection) && ! projection.empty()) {
 				StringTokenIterator list(projection);
 				const std::string * attr;
 				while ((attr = list.next_string())) { proj.insert(*attr); }

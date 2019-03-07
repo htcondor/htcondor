@@ -104,9 +104,9 @@ class BaseJob : public Service
 	bool deleteFromGridmanager;
 	bool deleteFromSchedd;
 
-	int wantResubmit;
+	bool wantResubmit;
 	int doResubmit;
-	int wantRematch;
+	bool wantRematch;
 
 	bool resourceDown;
 	bool resourceStateKnown;

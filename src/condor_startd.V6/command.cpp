@@ -202,9 +202,9 @@ int swap_claim_and_activation(Resource * rip, ClassAd & opts, Stream* stream)
 	int rval = NOT_OK;
 	Resource* rip_dest = NULL;
 	std::string idd;
-	if (opts.EvalString("DestinationSlotName", rip->r_cur->ad(), idd)) {
+	if (EvalString("DestinationSlotName", &opts, rip->r_cur->ad(), idd)) {
 		rip_dest = resmgr->get_by_name(idd.c_str());
-	} else if (opts.EvalString("DestinationClaimId", rip->r_cur->ad(), idd)) {
+	} else if (EvalString("DestinationClaimId", &opts, rip->r_cur->ad(), idd)) {
 		rip_dest = resmgr->get_by_cur_id(idd.c_str());
 	}
 
@@ -1712,7 +1712,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-			EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) {
+			LookupString( ATTR_USER, RemoteOwner ) == 0 ) {
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );
@@ -1763,7 +1763,7 @@ int
 activate_claim( Resource* rip, Stream* stream ) 
 {
 		// Formerly known as "startjob"
-	int mach_requirements = 1;
+	bool mach_requirements = true;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 	ReliSock rsock_1, rsock_2;
 #ifndef WIN32
@@ -1842,9 +1842,9 @@ activate_claim( Resource* rip, Stream* stream )
     }
 
 	rip->r_reqexp->restore();
-	if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
+	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
-		mach_requirements = 0;
+		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
 		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );

@@ -163,7 +163,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 
 		// calculate the request's rank of the offer
-		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+		if(!EvalFloat(ATTR_RANK,&request,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;

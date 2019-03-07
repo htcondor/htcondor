@@ -1071,7 +1071,7 @@ Resource::newCODClaim( int lease_duration )
 void
 Resource::leave_preempting_state( void )
 {
-	int tmp;
+	bool tmp;
 
 	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
 	delete r_cur;
@@ -1123,7 +1123,7 @@ Resource::leave_preempting_state( void )
 	bool allow_it = false;
 	if( r_pre && r_pre->requestStream() ) {
 		allow_it = true;
-		if( (r_classad->EvalBool("START", r_pre->ad(), tmp))
+		if( (EvalBool("START", r_classad, r_pre->ad(), tmp))
 			&& !tmp ) {
 				// Only if it's defined and false do we consider the
 				// machine busy.  We have a job ad, so local
@@ -1516,7 +1516,7 @@ Resource::hold_job( bool soft )
 	MyString hold_reason;
 	int hold_subcode = 0;
 
-	r_classad->EvalString("WANT_HOLD_REASON",r_cur->ad(),hold_reason);
+	EvalString("WANT_HOLD_REASON", r_classad, r_cur->ad(), hold_reason);
 	if( hold_reason.IsEmpty() ) {
 		ExprTree *want_hold_expr;
 		MyString want_hold_str;
@@ -1532,7 +1532,7 @@ Resource::hold_job( bool soft )
 		hold_reason += ")";
 	}
 
-	r_classad->EvalInteger("WANT_HOLD_SUBCODE",r_cur->ad(),hold_subcode);
+	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
 	r_cur->starterHoldJob(hold_reason.Value(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
 }
@@ -1557,7 +1557,7 @@ Resource::wants_hold( void )
 int
 Resource::wants_vacate( void )
 {
-	int want_vacate = 0;
+	bool want_vacate = false;
 	bool unknown = true;
 
 	if( ! claimIsActive() ) {
@@ -1574,7 +1574,7 @@ Resource::wants_vacate( void )
 	}
 
 	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
+		if( EvalBool("WANT_VACATE_VANILLA", r_classad,
 								r_cur->ad(),
 								want_vacate ) ) {
 			dprintf( D_ALWAYS, "State change: WANT_VACATE_VANILLA is %s\n",
@@ -1583,7 +1583,7 @@ Resource::wants_vacate( void )
 		}
 	}
 	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		if( r_classad->EvalBool("WANT_VACATE_VM",
+		if( EvalBool("WANT_VACATE_VM", r_classad,
 								r_cur->ad(),
 								want_vacate ) ) {
 			dprintf( D_ALWAYS, "State change: WANT_VACATE_VM is %s\n",
@@ -1592,7 +1592,7 @@ Resource::wants_vacate( void )
 		}
 	}
 	if( unknown ) {
-		if( r_classad->EvalBool( "WANT_VACATE",
+		if( EvalBool( "WANT_VACATE", r_classad,
 								 r_cur->ad(),
 								 want_vacate ) == 0) {
 
@@ -1615,38 +1615,38 @@ Resource::wants_vacate( void )
 		dprintf( D_ALWAYS, "State change: WANT_VACATE is %s\n",
 				 want_vacate ? "TRUE" : "FALSE" );
 	}
-	return want_vacate;
+	return (int)want_vacate;
 }
 
 
 int
 Resource::wants_suspend( void )
 {
-	int want_suspend;
+	bool want_suspend;
 	bool unknown = true;
 	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( r_classad->EvalBool("WANT_SUSPEND_VANILLA",
+		if( EvalBool("WANT_SUSPEND_VANILLA", r_classad,
 								r_cur->ad(),
 								want_suspend) ) {
 			unknown = false;
 		}
 	}
 	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		if( r_classad->EvalBool("WANT_SUSPEND_VM",
+		if( EvalBool("WANT_SUSPEND_VM", r_classad,
 								r_cur->ad(),
 								want_suspend) ) {
 			unknown = false;
 		}
 	}
 	if( unknown ) {
-		if( r_classad->EvalBool( "WANT_SUSPEND",
+		if( EvalBool( "WANT_SUSPEND", r_classad,
 								   r_cur->ad(),
 								   want_suspend ) == 0) {
 				// UNDEFINED means FALSE for WANT_SUSPEND
 			want_suspend = false;
 		}
 	}
-	return want_suspend;
+	return (int)want_suspend;
 }
 
 
@@ -1656,7 +1656,7 @@ Resource::wants_pckpt( void )
 	switch( r_cur->universe() ) {
 		case CONDOR_UNIVERSE_VANILLA: {
 			ClassAd * jobAd = r_cur->ad();
-			int wantCheckpoint = 0;
+			bool wantCheckpoint = false;
 			jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 			if( ! wantCheckpoint ) { return FALSE; }
 			} break;
@@ -1669,12 +1669,12 @@ Resource::wants_pckpt( void )
 			return FALSE;
 	}
 
-	int want_pckpt;
-	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
+	bool want_pckpt;
+	if( EvalBool( "PERIODIC_CHECKPOINT", r_classad,
 				r_cur->ad(),
 				want_pckpt ) == 0) { 
 		// Default to no, if not defined.
-		want_pckpt = 0;
+		want_pckpt = false;
 	}
 
 	return want_pckpt;
@@ -1744,10 +1744,8 @@ Resource::claimWorklifeExpired()
 		int ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupExpr("CLAIM_WORKLIFE") ||
-		   !r_classad->EvalInteger(
+		if(!r_classad->LookupInteger(
 				  "CLAIM_WORKLIFE",
-		          NULL,
 		          ClaimWorklife)) {
 			ClaimWorklife = -1;
 		}
@@ -1772,8 +1770,8 @@ Resource::evalRetirementRemaining()
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		//look up the maximum retirement time specified by the startd
 		if(!r_classad->LookupExpr(ATTR_MAX_JOB_RETIREMENT_TIME) ||
-		   !r_classad->EvalInteger(
-		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		   !EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME, r_classad,
 		          r_cur->ad(),
 		          MaxJobRetirementTime)) {
 			MaxJobRetirementTime = 0;
@@ -1788,8 +1786,8 @@ Resource::evalRetirementRemaining()
 		}
 		//look up the maximum retirement time specified by the job
 		if(r_cur->ad()->LookupExpr(ATTR_MAX_JOB_RETIREMENT_TIME) &&
-		   r_cur->ad()->EvalInteger(
-		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		   EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME, r_cur->ad(),
 		          r_classad,
 		          JobMaxJobRetirementTime)) {
 			if(JobMaxJobRetirementTime < MaxJobRetirementTime) {
@@ -1840,12 +1838,12 @@ Resource::retirementExpired()
 	if( isDraining() && r_state->state() == claimed_state && r_state->activity() == idle_act ) {
 		retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
 	} else if( isDraining() && retirement_remaining > 0 ) {
-		int jobMatches = false;
+		bool jobMatches = false;
 		ClassAd * machineAd = r_classad;
 		ClassAd * jobAd = r_cur->ad();
 		if( machineAd != NULL && jobAd != NULL ) {
 			// Assumes EvalBool() doesn't modify its output argument on failure.
-			machineAd->EvalBool( ATTR_START, jobAd, jobMatches );
+			EvalBool( ATTR_START, machineAd, jobAd, jobMatches );
 		}
 
 		if( jobMatches || wasAcceptedWhileDraining() ) {
@@ -1887,8 +1885,8 @@ Resource::evalMaxVacateTime()
 
 		//look up the maximum vacate time specified by the job
 		if(r_cur->ad()->LookupExpr(ATTR_JOB_MAX_VACATE_TIME)) {
-			if( !r_cur->ad()->EvalInteger(
-					ATTR_JOB_MAX_VACATE_TIME,
+			if( !EvalInteger(
+					ATTR_JOB_MAX_VACATE_TIME, r_cur->ad(),
 					r_classad,
 					JobMaxVacateTime) )
 			{
@@ -1897,8 +1895,8 @@ Resource::evalMaxVacateTime()
 		}
 		else if( r_cur->ad()->LookupExpr(ATTR_KILL_SIG_TIMEOUT) ) {
 				// the old way of doing things prior to JobMaxVacateTime
-			if( !r_cur->ad()->EvalInteger(
-					ATTR_KILL_SIG_TIMEOUT,
+			if( !EvalInteger(
+					ATTR_KILL_SIG_TIMEOUT, r_cur->ad(),
 					r_classad,
 					JobMaxVacateTime) )
 			{
@@ -1959,7 +1957,8 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
+	bool btmp;
+	if( (EvalBool(expr_name, r_classad, r_cur ? r_cur->ad() : NULL , btmp) ) == 0 ) {
 		
 		char *p = param(expr_name);
 
@@ -1985,7 +1984,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 	}
 		// EvalBool returned success, we can just return the value
-	return tmp;
+	return (int)btmp;
 }
 
 
@@ -1999,7 +1998,7 @@ Resource::evaluateHibernate( MyString &state_str ) const
 		ad = r_cur->ad();
 	}
 
-	if ( r_classad->EvalString( "HIBERNATE", ad, state_str ) ) {
+	if ( EvalString( "HIBERNATE", r_classad, ad, state_str ) ) {
 		return true;
 	}
 	return false;
@@ -2603,7 +2602,7 @@ Resource::publish_private( ClassAd *ad )
 
 	if (get_feature() == PARTITIONABLE_SLOT) {
 		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
-		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 	}
 }
 
@@ -3005,16 +3004,16 @@ Resource::acceptClaimRequest()
 bool
 Resource::willingToRun(ClassAd* request_ad)
 {
-	int slot_requirements = 1, req_requirements = 1;
+	bool slot_requirements = true, req_requirements = true;
 
 		// First, verify that the slot and job meet each other's
 		// requirements at all.
 	if (request_ad) {
 		r_reqexp->restore();
-		if (r_classad->EvalBool(ATTR_REQUIREMENTS,
+		if (EvalBool(ATTR_REQUIREMENTS, r_classad,
 								request_ad, slot_requirements) == 0) {
 				// Since we have the request ad, treat UNDEFINED as FALSE.
-			slot_requirements = 0;
+			slot_requirements = false;
 		}
 
 			// Since we have a request ad, we can also check its requirements.
@@ -3022,11 +3021,11 @@ Resource::willingToRun(ClassAd* request_ad)
 		bool no_starter = false;
 		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
 		if (!tmp_starter) {
-			req_requirements = 0;
+			req_requirements = false;
 		}
 		else {
 			delete(tmp_starter);
-			req_requirements = 1;
+			req_requirements = true;
 		}
 
 			// The following dprintfs are only done if request_ad !=
@@ -3070,9 +3069,9 @@ Resource::willingToRun(ClassAd* request_ad)
 			// the full-blown ATTR_REQUIREMENTS since that includes
 			// the valid checkpoint platform clause, which will always
 			// be undefined (and irrelevant for our decision here).
-		if (r_classad->EvalBool(ATTR_START, NULL, slot_requirements) == 0) {
+		if (r_classad->LookupBool(ATTR_START, slot_requirements) == 0) {
 				// Without a request classad, treat UNDEFINED as TRUE.
-			slot_requirements = 1;
+			slot_requirements = true;
 		}
 	}
 
@@ -3210,7 +3209,7 @@ Resource::evalNextFetchWorkDelay(void)
 	if (r_cur) {
 		job_ad = r_cur->ad();
 	}
-	if (r_classad->EvalInteger(ATTR_FETCH_WORK_DELAY, job_ad, value) == 0) {
+	if (EvalInteger(ATTR_FETCH_WORK_DELAY, r_classad, job_ad, value) == 0) {
 			// If undefined, default to 5 minutes (300 seconds).
 		if (!warned_undefined) {
 			dprintf(D_FULLDEBUG,
@@ -3345,7 +3344,7 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 	float rank;
 
-	if( r_classad->EvalFloat( ATTR_RANK, req_classad, rank ) == 0 ) {
+	if( EvalFloat( ATTR_RANK, r_classad, req_classad, rank ) == 0 ) {
 		ExprTree *rank_expr = r_classad->LookupExpr("RANK");
 		dprintf( D_ALWAYS, "Error evaluating machine rank expression: %s\n", ExprTreeToString(rank_expr));
 		dprintf( D_ALWAYS, "Setting RANK to 0.0\n");
@@ -3460,20 +3459,20 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// over-partitioning. The acceptability of the dynamic
 			// slot and job will be checked later, in the normal
 			// course of accepting the claim.
-		int mach_requirements = 1;
+		bool mach_requirements = true;
 		do {
 			rip->r_reqexp->restore();
-			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+			if (EvalBool( ATTR_REQUIREMENTS, mach_classad, req_classad, mach_requirements) == 0) {
 				dprintf(D_ALWAYS,
 					"STARTD Requirements expression no longer evaluates to a boolean %s MODIFY_REQUEST_EXPR_ edits\n",
 					unmodified_req_classad ? "with" : "w/o"
 					);
-				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+				mach_requirements = false;  // If we can't eval it as a bool, treat it as false
 			}
 				// If the pslot cannot support this request, ABORT iff there is not
 				// an unmodified_req_classad backup copy we can try on the next iteration of
 				// the while loop
-			if (mach_requirements == 0) {
+			if (mach_requirements == false) {
 				if (IsDebugVerbose(D_MATCH)) {
 					dprintf(D_MATCH | D_FULLDEBUG,
 						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
@@ -3496,7 +3495,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					return NULL;
 				}
 			}
-		} while (mach_requirements == 0);
+		} while (mach_requirements == false);
 
 			// No longer need this, make sure to free the memory.
 		if (unmodified_req_classad) {
@@ -3532,8 +3531,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how many CPUs are being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_CPUS;
-            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, cpus ) ) {
-                if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, cpus ) ) {
+                if( !EvalInteger( ATTR_REQUEST_CPUS, req_classad, mach_classad, cpus ) ) {
                     cpus = 1; // reasonable default, for sure
                 }
             }
@@ -3542,8 +3541,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_MEMORY;
-            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, memory ) ) {
-                if( !req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, memory ) ) {
+                if( !EvalInteger( ATTR_REQUEST_MEMORY, req_classad, mach_classad, memory ) ) {
                         // some memory size must be available else we cannot
                         // match, plus a job ad without ATTR_MEMORY is sketchy
                     rip->dprintf( D_ALWAYS,
@@ -3556,8 +3555,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_DISK;
-            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, disk ) ) {
-                if( !req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, disk ) ) {
+                if( !EvalInteger( ATTR_REQUEST_DISK, req_classad, mach_classad, disk ) ) {
                         // some disk size must be available else we cannot
                         // match, plus a job ad without ATTR_DISK is sketchy
                     rip->dprintf( D_FULLDEBUG,
@@ -3575,8 +3574,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
 			bool set_swap = true;
 
-            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, swap ) ) {
-                if( !req_classad->EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, mach_classad, swap ) ) {
+            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, swap ) ) {
+                if( !EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, req_classad, mach_classad, swap ) ) {
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
@@ -3599,7 +3598,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 string reqname;
                 formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
                 int reqval = 0;
-                if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+                if (!EvalInteger(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0;
                 string attr;
                 formatstr(attr, " %s=%d", j->first.c_str(), reqval);
                 type += attr;
@@ -3686,7 +3685,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 void
 Resource::publishDynamicChildSummaries(ClassAd *cap) {
 
-	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 
 		// If not set, turn off the whole thing
 	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {

@@ -605,7 +605,7 @@ void CondorJob::doEvaluateState()
 							"rematch job because of MAX_JOBS_SUBMITTED\n",
 							procID.cluster, procID.proc);
 						// Set ad attributes so the schedd finds a new match.
-						int dummy;
+						bool dummy;
 						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 							jobAd->Assign( ATTR_JOB_MATCHED, false );
 							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -1400,7 +1400,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	int now = time(NULL);
 	std::string expr;
 	ClassAd *submit_ad;
-	ExprTree *next_expr;
 	int tmp_int;
 
 		// Base the submit ad on our own job ad
@@ -1552,19 +1551,25 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Otherwise, the remote schedd will erroneously think it has
 		// already rewritten file paths in the ad to refer to its own
 		// SPOOL directory.
-	const char *next_name;
-	submit_ad->ResetName();
-	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 ||
-		       strncasecmp( next_name, "SUBMIT_", 7 ) == 0 ) &&
-			 strlen( next_name ) > 7 ) {
+	auto itr = submit_ad->begin();
+	while ( itr != submit_ad->end() ) {
+		// This convoluted setup is an attempt to avoid invalidating
+		// the iterator when deleting the attribute.
+		if ( ( strncasecmp( itr->first.c_str(), "REMOTE_", 7 ) == 0 ||
+		       strncasecmp( itr->first.c_str(), "SUBMIT_", 7 ) == 0 ) &&
+		     itr->first.size() > 7 ) {
 
-			submit_ad->Delete( next_name );
+			std::string name = itr->first;
+			itr++;
+			submit_ad->Delete( name );
+		} else {
+			itr++;
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	const char *next_name;
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1600,7 +1605,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}

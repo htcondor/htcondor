@@ -559,9 +559,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// and we haven't set TRANSFER_EXECTUABLE to false, send it along.
 		// If we didn't set TRANSFER_EXECUTABLE, default to true 
 
-		int xferExec;
+		bool xferExec;
 		if(!Ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
-			xferExec=1;
+			xferExec=true;
 		}
 
 		if ( xferExec && !InputFiles->file_contains(ExecFile) &&
@@ -591,7 +591,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		upload_changed_files = true;
 	}
 	// and now check stdout/err
-	int streaming = 0;
+	bool streaming = false;
 	JobStdoutFile = "";
 	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf)) == 1 ) {
 		JobStdoutFile = buf;
@@ -611,7 +611,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 		// re-initialize this flag so we don't use stale info from
 		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
-	streaming = 0;
+	streaming = false;
 	JobStderrFile = "";
 	if( Ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf)) == 1 ) {
 		JobStderrFile = buf;

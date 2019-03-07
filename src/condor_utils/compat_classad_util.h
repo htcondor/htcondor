@@ -63,9 +63,9 @@ classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad
 // note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
 classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
 
-bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
+bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint);
 
-bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
+bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
 
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 

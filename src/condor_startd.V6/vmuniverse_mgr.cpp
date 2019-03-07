@@ -315,11 +315,12 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 	}
 
 	// we will publish all information provided by vmgahp server
-	m_vmgahp_info.ResetExpr();
 
 	ExprTree* expr = NULL;
 	const char *attr_name = NULL;
-	while(m_vmgahp_info.NextExpr(attr_name, expr)) {
+	for( auto itr = m_vmgahp_info.begin(); itr != m_vmgahp_info.end(); itr++ ) {
+		attr_name = itr->first.c_str();
+		expr = itr->second;
 		// we need to adjust available vm memory
 		if( strcasecmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();

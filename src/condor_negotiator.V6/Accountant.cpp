@@ -1845,7 +1845,7 @@ float Accountant::GetSlotWeight(ClassAd *candidate)
 		return SlotWeight;
 	}
 
-	if(candidate->EvalFloat(SlotWeightAttr, NULL, SlotWeight) == 0 || SlotWeight<0) {
+	if(candidate->LookupFloat(SlotWeightAttr, SlotWeight) == 0 || SlotWeight<0) {
 		MyString candidateName;
 		candidate->LookupString(ATTR_NAME, candidateName);
 		dprintf(D_FULLDEBUG, "Can't get SlotWeight for '%s'; using 1.0\n", 

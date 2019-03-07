@@ -358,12 +358,12 @@ static bool test_init_empty() {
 	emit_output_actual_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 #ifdef USE_NON_MUTATING_USERPOLICY
-	int val1, val2, val3, val4, val5;
-	if ( ! ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1) &&
-		! ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2) &&
-		! ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3) &&
-		! ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
-		! ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5))
+	bool val1, val2, val3, val4, val5;
+	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1) &&
+		! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2) &&
+		! ad->LookupBool(ATTR_PERIODIC_RELEASE_CHECK, val3) &&
+		! ad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, val4) &&
+		! ad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, val5))
 	{
 		CLEANUP;
 		PASS;

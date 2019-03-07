@@ -110,10 +110,10 @@ BaseJob::BaseJob( ClassAd *classad )
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
 
-	wantRematch = 0;
+	wantRematch = false;
 	doResubmit = 0;		// set if gridmanager wants to resubmit job
-	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
+	wantResubmit = false;	// set if user wants to resubmit job via RESUBMIT_CHECK
+	jobAd->LookupBool(ATTR_GLOBUS_RESUBMIT_CHECK,wantResubmit);
 
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
@@ -1147,8 +1147,9 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 	event.total_recvd_bytes = 0;
 
 	int int_val;
-	if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
-		if( int_val ) {
+	bool bool_val;
+	if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, bool_val) ) {
+		if( bool_val ) {
 			if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
 				event.signalNumber = int_val;
 				event.normal = false;

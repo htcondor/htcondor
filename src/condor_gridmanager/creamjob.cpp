@@ -185,7 +185,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 
-	int bool_value;
+	bool bool_value;
 	char buff[4096];
 	std::string buff2;
 	std::string iwd;
@@ -385,9 +385,9 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_output;
 			localOutput = strdup( buff2.c_str() );
 
-			bool_value = 0;
+			bool_value = false;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
-			streamOutput = (bool_value != 0);
+			streamOutput = bool_value;
 			stageOutput = !streamOutput;
 		}
 	}
@@ -406,9 +406,9 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_error;
 			localError = strdup( buff2.c_str() );
 
-			bool_value = 0;
+			bool_value = false;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
-			streamError = (bool_value != 0);
+			streamError = bool_value;
 			stageError = !streamError;
 		}
 	}
@@ -1124,7 +1124,7 @@ void CreamJob::doEvaluateState()
 				   remoteState == CREAM_JOB_STATE_ABORTED ||
 				   remoteState == CREAM_JOB_STATE_DONE_FAILED ) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				if(remoteJobId == NULL) {
 					dprintf(D_FULLDEBUG,
@@ -1148,10 +1148,10 @@ void CreamJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to CREAM because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -1197,7 +1197,7 @@ void CreamJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );

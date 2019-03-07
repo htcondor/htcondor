@@ -125,8 +125,8 @@ static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
 
 	float rank1 = 0;
 	float rank2 = 0;
-	rank_ad->EvalFloat(ATTR_RANK,ad1,rank1);
-	rank_ad->EvalFloat(ATTR_RANK,ad2,rank2);
+	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
+	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
 
 	return rank1 > rank2;
 }
@@ -185,7 +185,7 @@ void Rooster::poll()
 
 			// in case the unhibernate expression is time-sensitive,
 			// re-evaluate it now to make sure it still passes
-		if( !EvalBool(startd_ad,requirements) ) {
+		if( !EvalExprBool(startd_ad,requirements) ) {
 			dprintf(D_ALWAYS,
 					"Skipping %s: ROOSTER_UNHIBERNATE is no longer true.\n",
 					name.Value());

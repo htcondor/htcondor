@@ -555,8 +555,8 @@ static bool checkOffer(
 	}
 	ac.both_match++;
 
-	int offline = 0;
-	if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		ac.fOffline++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname);
 	}
@@ -748,7 +748,7 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
-	int		jobMatched = false;
+	bool	jobMatched = false;
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -812,8 +812,8 @@ bool doJobRunAnalysis (
 			char const *requirements_attr = (universe == CONDOR_UNIVERSE_LOCAL)
 				? ATTR_START_LOCAL_UNIVERSE 
 				: ATTR_START_SCHEDULER_UNIVERSE;
-			int can_start = 0;
-			if ( ! scheddAd->EvalBool(requirements_attr, request, can_start)) {
+			bool can_start = false;
+			if ( ! EvalBool(requirements_attr, scheddAd, request, can_start)) {
 				match_result.formatstr_cat("This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
 			} else {
 				if (can_start) { ac.both_match++; } else { ac.fOffConstraint++; }
@@ -922,8 +922,8 @@ bool doJobRunAnalysis (
 		}
 		ac.both_match++;
 
-		int offline = 0;
-		if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+		bool offline = false;
+		if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 			ac.fOffline++;
 			if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname.c_str(), verb_width);
 			continue;
@@ -1405,8 +1405,8 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	std::string slotname = "";
 	slot->LookupString(ATTR_NAME , slotname);
 
-	int offline = 0;
-	if (slot->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (slot->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		sprintf(return_buff, "%-24.24s  is offline\n", slotname.c_str());
 		return return_buff;
 	}

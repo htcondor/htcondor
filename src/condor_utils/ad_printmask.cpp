@@ -196,7 +196,7 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 		case INT_CUSTOM_FMT:
 			{
 				int intValue;
-				if (al->EvalInteger(attr, target, intValue)) {
+				if (EvalInteger(attr, al, target, intValue)) {
 					colval = (fmt->df)(intValue , al, *fmt);
 				}
 			}
@@ -205,14 +205,14 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 		case FLT_CUSTOM_FMT:
 			{
 				double realValue;
-				if (al->EvalFloat(attr, target, realValue)) {
+				if (EvalFloat(attr, al, target, realValue)) {
 					colval = (fmt->ff)(realValue , al, *fmt);
 				}
 			}
 			break;
 
 		case STR_CUSTOM_FMT:
-			if (al->EvalString(attr, target, &value_from_classad)) {
+			if (EvalString(attr, al, target, &value_from_classad)) {
 				colval = (fmt->sf)(value_from_classad, al, *fmt);
 				free(value_from_classad);
 			}
@@ -731,7 +731,7 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 			// UNPARSE when the attr is not an expression and doesn't evaluate to a string...
 			if (fmt->fmtKind == CustomFormatFn::PRINTF_FMT && (fmt_type == PFT_STRING) && ! attr_is_expr) {
 				char * value_from_classad = NULL;
-				if (al->EvalString(attr, target, &value_from_classad)) {
+				if (EvalString(attr, al, target, &value_from_classad)) {
 					pval->SetStringValue(value_from_classad);
 					free(value_from_classad);
 					value_from_classad = NULL;

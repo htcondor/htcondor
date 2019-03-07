@@ -629,7 +629,7 @@ void BoincJob::doEvaluateState()
 			if ( ( remoteJobName != NULL ||
 				   remoteState == BOINC_JOB_STATUS_ERROR ) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				if(remoteJobName == NULL) {
 					dprintf(D_FULLDEBUG,
@@ -649,10 +649,10 @@ void BoincJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to BOINC because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -686,7 +686,7 @@ void BoincJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );

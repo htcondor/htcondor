@@ -1162,9 +1162,9 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->env_v1or2 = Strdup( p->env_v1or2 );
 	s->iwd = Strdup( p->iwd );
 
-	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
-		s->ckpt_wanted = TRUE;
-	}
+	bool val = true;
+	JobAd->LookupBool(ATTR_WANT_CHECKPOINT, val);
+	s->ckpt_wanted = val ? TRUE : FALSE;
 
 	CkptWanted = s->ckpt_wanted;
 

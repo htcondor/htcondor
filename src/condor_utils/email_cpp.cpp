@@ -327,10 +327,10 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
 
-	int had_core = FALSE;
+	bool had_core = false;
 	if( ! ad->LookupBool(ATTR_JOB_CORE_DUMPED, had_core) ) {
 		if( exit_reason == JOB_COREDUMPED ) {
-			had_core = TRUE;
+			had_core = true;
 		}
 	}
 
@@ -499,7 +499,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 	}
 
 	int ad_cluster = 0, ad_proc = 0;
-	int exit_by_signal = FALSE;
+	bool exit_by_signal = false;
 	int code = -1, status = -1;
 	int exitCode = 0, successExitCode = 0;
 

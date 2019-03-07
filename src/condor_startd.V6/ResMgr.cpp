@@ -881,7 +881,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if( ! resources ) {
 		return NULL;
 	}
-	int requirements;
+	bool requirements;
 	int i;
 
 		/*
@@ -902,9 +902,9 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 		// find the first one that matches our requirements
 	for( i = 0; i < nresources; i++ ) {
-		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
-			requirements = 0;
+			requirements = false;
 		}
 		if( requirements ) {
 			return resources[i];
@@ -1288,10 +1288,11 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// of the machine.
 	//
 
-	cap->ResetExpr();
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
-	while( cap->NextExpr( attr, expr ) ) {
+	for ( auto itr = cap->begin(); itr != cap->end(); itr++ ) {
+		attr = itr->first.c_str();
+		expr = itr->second;
 		//
 		// Copy the whole ad over, excepting special or computed attributes.
 		//
@@ -1322,7 +1323,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
 
-		int universeOnline = 0;
+		bool universeOnline = false;
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName );

@@ -1870,7 +1870,7 @@ render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 static bool
 render_cpu_time (double & cputime, ClassAd *ad, Formatter &)
 {
-	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
 		return false;
 
 	cputime = job_time(cputime, ad);
@@ -1885,10 +1885,10 @@ render_memory_usage(double & mem_used_mb, ClassAd *ad, Formatter &)
 	long long memory_usage;
 	// print memory usage unless it's unavailable, then print image size
 	// note that memory usage is megabytes but imagesize is kilobytes.
-	if (ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
+	if (ad->LookupInteger(ATTR_MEMORY_USAGE, memory_usage)) {
 		mem_used_mb = memory_usage;
 		max_mem_used = MAX(max_mem_used, mem_used_mb);
-	} else if (ad->EvalInteger(ATTR_IMAGE_SIZE, NULL, image_size)) {
+	} else if (ad->LookupInteger(ATTR_IMAGE_SIZE, image_size)) {
 		mem_used_mb = image_size / 1024.0;
 		max_mem_used = MAX(max_mem_used, mem_used_mb);
 	} else {
@@ -1945,12 +1945,12 @@ format_readable_bytes(const classad::Value &val, Formatter &)
 static bool
 render_job_description(std::string & out, ClassAd *ad, Formatter &)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, out))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, out))
 		return false;
 
 	std::string description;
-	if ( ! ad->EvalString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, NULL, description)) {
-		ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	if ( ! ad->LookupString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, description)) {
+		ad->LookupString(ATTR_JOB_DESCRIPTION, description);
 	}
 	if ( ! description.empty()) {
 		formatstr(out, "(%s)", description.c_str());
@@ -2019,7 +2019,7 @@ render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 		said suspension is also second class. */
 	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
 		int last_susp_time;
-		if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
+		if (!ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME,last_susp_time))
 		{
 			last_susp_time = 0;
 		}
@@ -2034,12 +2034,12 @@ render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 	}
 
 		// adjust status field to indicate file transfer status
-	int transferring_input = false;
-	int transferring_output = false;
-	int transfer_queued = false;
-	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
-	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
-	ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
+	bool transferring_input = false;
+	bool transferring_output = false;
+	bool transfer_queued = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT,transferring_input);
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,transferring_output);
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,transfer_queued);
 	if( transferring_input ) {
 		put_result[0] = '<';
 		put_result[1] = transfer_queued ? 'q' : ' ';
@@ -2083,7 +2083,7 @@ static bool
 render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 {
 	double bytes_sent;
-	if ( ! ad->EvalFloat(ATTR_BYTES_SENT, NULL, bytes_sent))
+	if ( ! ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent))
 		return false;
 
 	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
@@ -2106,7 +2106,7 @@ render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 static bool
 render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
 		return false;
 
 	int ckpt_time = 0;
@@ -2126,31 +2126,31 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 	misc.clear();
 
 	int univ = 0;
-	if ( ! ad->EvalInteger(ATTR_JOB_UNIVERSE,NULL,univ))
+	if ( ! ad->LookupInteger(ATTR_JOB_UNIVERSE,univ))
 		return false;
 
 	if (univ==CONDOR_UNIVERSE_STANDARD) {
 
 		double seek_count=0;
 		int buffer_size=0, block_size=0;
-		ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
-		ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
-		ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
+		ad->LookupFloat(ATTR_FILE_SEEK_COUNT,seek_count);
+		ad->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
+		ad->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
 
 		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
 	} else {
 
 		int ix = 0;
-		int bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL, bb);
+		bool bb = false;
+		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
 		ix += bb?1:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
 		ix += bb?2:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
 		ix += bb?4:0;
 
 		if (ix) {
@@ -2424,7 +2424,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	const bool fshow_host_port = false;
 	const size_t width = 1+6+1+8+1+18+1;
 
-	if ( ! ad->EvalString(ATTR_GRID_RESOURCE, NULL, str))
+	if ( ! ad->LookupString(ATTR_GRID_RESOURCE, str))
 		return false;
 
 	// GridResource is a string with the format 
@@ -2486,7 +2486,7 @@ render_gridJobId(std::string & jid, ClassAd *ad, Formatter & /*fmt*/ )
 	std::string str;
 	std::string host;
 
-	if ( ! ad->EvalString(ATTR_GRID_JOB_ID, NULL, str))
+	if ( ! ad->LookupString(ATTR_GRID_JOB_ID, str))
 		return false;
 
 	std::string grid_type = "globus";

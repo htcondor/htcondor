@@ -32,6 +32,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 	ExprTree *etmp;
 	int itmp;
 	float ftmp;
+	bool btmp;
 	
 	if (!ad->LookupString("REEVALUATE_ATTRIBUTES", &ptmp)) {
 		dprintf(D_FULLDEBUG,
@@ -73,7 +74,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 			free(ntmp);
 			ntmp = NULL;
 
-			if (!ad->EvalString(stmp.Value(), context, &ntmp)) {
+			if (!EvalString(stmp.Value(), ad, context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
 						stmp.Value());
@@ -98,7 +99,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 		} else if ( ad->LookupInteger(atmp, itmp) ) {
 
-			if (!ad->EvalInteger(stmp.Value(), context, itmp)) {
+			if (!EvalInteger(stmp.Value(), ad, context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
 						stmp.Value());
@@ -120,7 +121,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 		} else if ( ad->LookupFloat(atmp, ftmp) ) {
 
-			if (!ad->EvalFloat(stmp.Value(), context, ftmp)) {
+			if (!EvalFloat(stmp.Value(), ad, context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
 						stmp.Value());
@@ -140,9 +141,9 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 					"classad_reevaluate: Updated %s to %f\n",
 					atmp, ftmp);
 
-		} else if ( ad->LookupBool(atmp, itmp) ) {
+		} else if ( ad->LookupBool(atmp, btmp) ) {
 
-			if (!ad->EvalBool(stmp.Value(), context, itmp)) {
+			if (!EvalBool(stmp.Value(), ad, context, btmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
 						stmp.Value());
@@ -150,7 +151,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 				goto FAIL;
 			}
 
-			if (!ad->Assign(atmp, (itmp ? true : false))) {
+			if (!ad->Assign(atmp, btmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to assign new value %d to %s\n",
 						itmp, atmp);
@@ -159,8 +160,8 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 			}
 
 			dprintf(D_FULLDEBUG,
-					"classad_reevaluate: Updated %s to %d\n",
-					atmp, itmp);
+					"classad_reevaluate: Updated %s to %s\n",
+					atmp, btmp ? "true" : "false");
 
 		} else {
 			dprintf(D_ALWAYS,
