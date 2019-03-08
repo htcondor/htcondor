@@ -2659,6 +2659,15 @@ MyString credd_has_tokens(MyString m) {
 	unique_names.create_union(token_names, true);
 	unique_names.qsort();
 
+	// stick the list of unique names into the job ad.  we will need it later when
+	// the starter asks for its list of creds from the shadow.
+	char* commalist = unique_names.print_to_string();  // up to us to free()
+	MyString quotedlist;
+	quotedlist.formatstr("\"%s\"", commalist);
+	free(commalist);
+	submit_hash.set_arg_variable("+OAuthServicesNeeded", quotedlist.Value());
+	dprintf(D_SECURITY, "OAUTH: recording OAuthServicesNeeded as %s.\n", quotedlist.Value());
+
 
 	// PHASE 2
 	//
