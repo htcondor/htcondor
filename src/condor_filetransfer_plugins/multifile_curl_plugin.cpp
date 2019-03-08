@@ -599,7 +599,7 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "SupportedMethods = \"dav,davs\"\n"
+                "SupportedMethods = \"http,https,dav,davs\"\n"
             );
             return 0;
         }

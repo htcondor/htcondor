@@ -1212,8 +1212,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_kflops
 %_libexecdir/condor/condor_mips
 %_libexecdir/condor/data_plugin
-%_libexecdir/condor/curl_plugin
-%_libexecdir/condor/multifile_curl_plugin
+%_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_glexec_wrapper
 %_libexecdir/condor/glexec_starter_setup.sh
