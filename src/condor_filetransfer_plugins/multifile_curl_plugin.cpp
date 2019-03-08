@@ -78,7 +78,7 @@ GetToken(const std::string & cred_name, std::string & token) {
 	}
 	for (std::string line; std::getline(istr, line); ) {
 		auto iter = line.begin();
-		while (std::isspace(*iter)) {iter++;}
+		while (isspace(*iter)) {iter++;}
 		if (*iter == '#') continue;
 		rapidjson::Document doc;
 		if (doc.Parse(line.c_str()).HasParseError()) {
