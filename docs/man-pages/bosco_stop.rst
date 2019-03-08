@@ -4,6 +4,8 @@
 =============
 
 Shut down HTCondor daemons in a Bosco installation.
+:index:`Bosco commands<single: Bosco commands; bosco_stop>`
+:index:`bosco_stop command<single: bosco_stop command>`
 
 Synopsis
 --------

@@ -4,6 +4,7 @@
 =============
 
 Shutdown HTCondor daemons
+:index:`HTCondor commands<single: HTCondor commands; condor_off>`\ :index:`condor_off command<single: condor_off command>`
 
 Synopsis
 --------

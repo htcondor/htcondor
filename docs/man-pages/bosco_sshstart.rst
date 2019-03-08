@@ -3,6 +3,9 @@
 *bosco\_ssh\_start*
 ===================
 
+:index:`Bosco commands<single: Bosco commands; bosco_ssh_start>`
+:index:`bosco_ssh_start command<single: bosco_ssh_start command>`
+
 Synopsis
 --------
 

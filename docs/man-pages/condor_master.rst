@@ -4,6 +4,8 @@
 ================
 
 The master HTCondor Daemon
+:index:`HTCondor commands<single: HTCondor commands; condor_master>`
+:index:`condor_master daemon<single: condor_master daemon>`
 
 Synopsis
 --------
@@ -27,20 +29,21 @@ Additionally, on Linux platforms, if you start the *condor\_master* as
 root, it will tune (but never decrease) certain kernel parameters
 important to HTCondor’s performance.
 
-The ``DAEMON_LIST`` configuration macro is used by the *condor\_master*
-to provide a per-machine list of daemons that should be started and kept
-running. For daemons that are specified in the ``DC_DAEMON_LIST``
-configuration macro, the *condor\_master* daemon will spawn them
-automatically appending a *-f* argument. For those listed in
-``DAEMON_LIST``, but not in ``DC_DAEMON_LIST``, there will be no *-f*
-argument.
+The ``DAEMON_LIST`` :index:`DAEMON_LIST<single: DAEMON_LIST>` configuration macro is
+used by the *condor\_master* to provide a per-machine list of daemons
+that should be started and kept running. For daemons that are specified
+in the ``DC_DAEMON_LIST`` configuration macro, the *condor\_master*
+daemon will spawn them automatically appending a *-f* argument. For
+those listed in ``DAEMON_LIST``, but not in ``DC_DAEMON_LIST``, there
+will be no *-f* argument.
 
 Options
 -------
 
  **-n **\ *name*
     Provides an alternate name for the *condor\_master* to override that
-    given by the ``MASTER_NAME`` configuration variable.
+    given by the ``MASTER_NAME`` :index:`MASTER_NAME<single: MASTER_NAME>`
+    configuration variable.
 
 Author
 ------

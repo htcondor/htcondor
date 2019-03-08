@@ -4,6 +4,7 @@
 ======================
 
 create an ssh session to a running job
+:index:`HTCondor commands<single: HTCondor commands; condor_ssh_to_job>`\ :index:`condor_ssh_to_job command<single: condor_ssh_to_job command>`
 
 Synopsis
 --------
@@ -105,19 +106,21 @@ used by the *condor\_starter* to set up *sshd*.
 
 For jobs in the grid universe which use EC2 resources, a request that
 HTCondor have the EC2 service create a new key pair for the job by
-specifying **ec2\_keypair\_file** causes *condor\_ssh\_to\_job* to
-attempt to connect to the corresponding instance via *ssh*. This
-attempts invokes *ssh* directly, bypassing the HTCondor networking
-layer. It supplies *ssh* with the public DNS name of the instance and
-the name of the file with the new key pair’s private key. For the
-connection to succeed, the instance must have started an *ssh* server,
-and its security group(s) must allow connections on port 22.
-Conventionally, images will allow logins using the key pair on a single
-specific account. Because *ssh* defaults to logging in as the current
-user, the **-l <username>** option or its equivalent for other versions
-of *ssh* will be needed as part of the *remote-command* argument.
-Although the **-X** option does not apply to EC2 jobs, adding **-X** or
-**-Y** to the *remote-command* argument can duplicate the effect.
+specifying
+**ec2\_keypair\_file**\ :index:`submit commands<single: submit commands; ec2_keypair_file>`
+causes *condor\_ssh\_to\_job* to attempt to connect to the corresponding
+instance via *ssh*. This attempts invokes *ssh* directly, bypassing the
+HTCondor networking layer. It supplies *ssh* with the public DNS name of
+the instance and the name of the file with the new key pair’s private
+key. For the connection to succeed, the instance must have started an
+*ssh* server, and its security group(s) must allow connections on port
+22. Conventionally, images will allow logins using the key pair on a
+single specific account. Because *ssh* defaults to logging in as the
+current user, the **-l <username>** option or its equivalent for other
+versions of *ssh* will be needed as part of the *remote-command*
+argument. Although the **-X** option does not apply to EC2 jobs, adding
+**-X** or **-Y** to the *remote-command* argument can duplicate the
+effect.
 
 Options
 -------

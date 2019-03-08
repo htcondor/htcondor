@@ -3,6 +3,8 @@
 Chirp
 =====
 
+:index:`API<single: API; Chirp>` :index:`Chirp API<single: Chirp API>`
+
 Chirp is a wire protocol and API that supports communication between a
 running job and a Chirp server. The HTCondor system provides a Chirp
 server running in the *condor\_starter* that allows a job to

@@ -5,6 +5,7 @@
 
 find machine(s) in the pool that can be used with minimal impact on
 currently running HTCondor jobs and best meet any specified constraints
+:index:`HTCondor commands<single: HTCondor commands; condor_findhost>`\ :index:`condor_findhost command<single: condor_findhost command>`
 
 Synopsis
 --------

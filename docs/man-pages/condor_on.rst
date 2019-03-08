@@ -4,6 +4,7 @@
 ============
 
 Start up HTCondor daemons
+:index:`HTCondor commands<single: HTCondor commands; condor_on>`\ :index:`condor_on command<single: condor_on command>`
 
 Synopsis
 --------

@@ -3,6 +3,9 @@
 The HTCondorView Client Contrib Module
 ======================================
 
+:index:`HTCondorView<single: HTCondorView; Client>`
+:index:`contrib module<single: contrib module; HTCondorView client>`
+
 The HTCondorView Client contrib module is used to automatically generate
 World Wide Web pages to display usage statistics of an HTCondor pool.
 Included in the module is a shell script which invokes the
@@ -32,6 +35,9 @@ interface is needed.
 
 Step-by-Step Installation of the HTCondorView Client
 ----------------------------------------------------
+
+:index:`installation<single: installation; HTCondorView Client>`
+:index:`HTCondorView<single: HTCondorView; Client installation>`
 
 #. Make certain that the HTCondorView Server is configured. Section
     `Setting Up for Special
@@ -103,6 +109,7 @@ Step-by-Step Installation of the HTCondorView Client
                ./make_stats setup
 
    Open the file ``index.html`` to verify that things look good.
+   :index:`HTCondorView<single: HTCondorView; use of>` :index:`crontab program<single: crontab program>`
 
 #. Add the *make\_stats* program to *cron*. Running *make\_stats* in
    step 6 created a ``cronentries`` file. This ``cronentries`` file is

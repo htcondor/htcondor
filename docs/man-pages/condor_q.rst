@@ -4,6 +4,8 @@
 ===========
 
 Display information about jobs in queue
+:index:`HTCondor commands<single: HTCondor commands; condor_q>`
+:index:`condor_q command<single: condor_q command>`
 
 Synopsis
 --------
@@ -322,16 +324,16 @@ why certain jobs are not running by performing an analysis on a per
 machine basis for each machine in the pool. The reasons can vary among
 failed constraints, insufficient priority, resource owner preferences
 and prevention of preemption by the ``PREEMPTION_REQUIREMENTS``
-expression. If the analyze option **-verbose** is specified along with
-the **-analyze** option, the reason for failure is displayed on a per
-machine basis. **-better-analyze** differs from **-analyze** in that it
-will do matchmaking analysis on jobs even if they are currently running,
-or if the reason they are not running is not due to matchmaking.
-**-better-analyze** also produces more thorough analysis of complex
-Requirements and shows the values of relevant job ClassAd attributes.
-When only a single machine is being analyzed via **-machine** or
-**-mconstraint**, the values of relevant attributes of the machine
-ClassAd are also displayed.
+:index:`PREEMPTION_REQUIREMENTS<single: PREEMPTION_REQUIREMENTS>` expression. If the analyze option
+**-verbose** is specified along with the **-analyze** option, the reason
+for failure is displayed on a per machine basis. **-better-analyze**
+differs from **-analyze** in that it will do matchmaking analysis on
+jobs even if they are currently running, or if the reason they are not
+running is not due to matchmaking. **-better-analyze** also produces
+more thorough analysis of complex Requirements and shows the values of
+relevant job ClassAd attributes. When only a single machine is being
+analyzed via **-machine** or **-mconstraint**, the values of relevant
+attributes of the machine ClassAd are also displayed.
 
 Restrictions
 ------------

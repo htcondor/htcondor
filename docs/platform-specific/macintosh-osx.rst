@@ -3,6 +3,8 @@
 Macintosh OS X
 ==============
 
+` <index://Macintosh OS X;platform-specific information>`__
+
 This section provides information specific to the Macintosh OS X port of
 HTCondor. The Macintosh port of HTCondor is more accurately a port of
 HTCondor to Darwin, the BSD core of OS X. HTCondor uses the Carbon

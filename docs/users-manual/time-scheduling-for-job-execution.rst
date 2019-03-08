@@ -3,6 +3,9 @@
 Time Scheduling for Job Execution
 =================================
 
+:index:`scheduling jobs<single: scheduling jobs; to execute at a specific time>`
+:index:`job execution<single: job execution; at a specific time>`
+
 Jobs may be scheduled to begin execution at a specified time in the
 future with HTCondor’s job deferral functionality. All specifications
 are in a job’s submit description file. Job deferral functionality is
@@ -11,6 +14,9 @@ CronTab scheduling.
 
 Job Deferral
 ------------
+
+:index:`job deferral time<single: job deferral time>`
+:index:`deferral time<single: deferral time; of a job>`
 
 Job deferral allows the specification of the exact date and time at
 which a job is to begin executing. HTCondor attempts to match the job to
@@ -21,6 +27,9 @@ execution time.
 
 Deferred Execution Time
 '''''''''''''''''''''''
+
+:index:`deferral time<single: deferral time; of a job>`
+:index:`ClassAd job attribute<single: ClassAd job attribute; DeferralTime>`
 
 A job’s deferral time is the exact time that HTCondor should attempt to
 execute the job. The deferral time attribute is defined as an expression
@@ -48,10 +57,14 @@ the deferral time arrives, HTCondor begins execution for the job, but
 immediately suspends it.
 
 The deferral time is specified in the job’s submit description file with
-the command **deferral\_time**.
+the command
+**deferral\_time**\ :index:`submit commands<single: submit commands; deferral_time>`.
 
 Deferral Window
 '''''''''''''''
+
+:index:`ClassAd job attribute<single: ClassAd job attribute; DeferralWindow>`
+:index:`submit commands<single: submit commands; deferral_window>`
 
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
@@ -70,22 +83,29 @@ job is evicted from the execution machine and is put on hold in the job
 queue.
 
 The deferral window is specified in the job’s submit description file
-with the command **deferral\_window**.
+with the command
+**deferral\_window**\ :index:`submit commands<single: submit commands; deferral_window>`.
 
 Preparation Time
 ''''''''''''''''
+
+:index:`ClassAd job attribute<single: ClassAd job attribute; DeferralPrepTime>`
 
 When a job defines a deferral time far in the future and then is matched
 to an execution machine, potential computation cycles are lost because
 the deferred job has claimed the machine, but is not actually executing.
 Other jobs could execute during the interval when the job waits for its
-deferral time. To make use of the wasted time, a job defines a
-**deferral\_prep\_time** with an integer expression that evaluates to a
-number of seconds. At this number of seconds before the deferral time,
-the job may be matched with a machine.
+deferral time. To make use of the wasted time,
+:index:`submit commands<single: submit commands; deferral_prep_time>`\ a job defines a
+**deferral\_prep\_time**\ :index:`submit commands<single: submit commands; deferral_prep_time>`
+with an integer expression that evaluates to a number of seconds. At
+this number of seconds before the deferral time, the job may be matched
+with a machine.
 
 Usage Examples
 ''''''''''''''
+
+:index:`submit commands<single: submit commands; deferral_time>`
 
 Here are examples of how the job deferral time, deferral window, and the
 preparation time may be used.
@@ -133,9 +153,10 @@ remain in the deferral window:
        deferral_window = 120
 
 In this example, a job is scheduled to execute far in the future, on
-January 1st, 2010 at 12:00 pm. The **deferral\_prep\_time** attribute
-delays the job from being matched until 60 seconds before the job is to
-begin execution.
+January 1st, 2010 at 12:00 pm. The
+**deferral\_prep\_time**\ :index:`submit commands<single: submit commands; deferral_prep_time>`
+attribute delays the job from being matched until 60 seconds before the
+job is to begin execution.
 
 ::
 
@@ -162,20 +183,26 @@ There are some limitations to HTCondor’s job deferral feature.
 CronTab Scheduling
 ------------------
 
+:index:`CronTab job scheduling<single: CronTab job scheduling>`
+:index:`job scheduling<single: job scheduling; periodic>`
+:index:`scheduling jobs<single: scheduling jobs; to execute periodically>`
+
 HTCondor’s CronTab scheduling functionality allows jobs to be scheduled
 to execute periodically. A job’s execution schedule is defined by
 commands within the submit description file. The notation is much like
 that used by the Unix *cron* daemon. As such, HTCondor developers are
-fond of referring to CronTab scheduling as Crondor. The scheduling of
-jobs using HTCondor’s CronTab feature calculates and utilizes the
-``DeferralTime`` ClassAd attribute.
+fond of referring to CronTab :index:`Crondor<single: Crondor>`\ scheduling as
+Crondor. The scheduling of jobs using HTCondor’s CronTab feature
+calculates and utilizes the ``DeferralTime`` ClassAd attribute.
 
 Also, unlike the Unix *cron* daemon, HTCondor never runs more than one
 instance of a job at the same time.
 
 The capability for repetitive or periodic execution of the job is
-enabled by specifying an **on\_exit\_remove** command for the job, such
-that the job does not leave the queue until desired.
+enabled by specifying an
+**on\_exit\_remove**\ :index:`submit commands<single: submit commands; on_exit_remove>`
+command for the job, such that the job does not leave the queue until
+desired.
 
 Semantics for CronTab Specification
 '''''''''''''''''''''''''''''''''''
@@ -189,6 +216,11 @@ values for these commands. At least one of these must be defined in
 order for HTCondor to calculate a ``DeferralTime`` for the job. Once one
 CronTab value is defined, the default for all the others uses all the
 values in the allowed values ranges.
+:index:`submit commands<single: submit commands; cron_minute>`
+:index:`submit commands<single: submit commands; cron_hour>`
+:index:`submit commands<single: submit commands; cron_day_of_month>`
+:index:`submit commands<single: submit commands; cron_month>`
+:index:`submit commands<single: submit commands; cron_day_of_week>`
 
 --------------
 
@@ -276,11 +308,14 @@ operator, ranges, lists, and steps (strides) within ranges.
 Preparation Time and Execution Window
 '''''''''''''''''''''''''''''''''''''
 
-The **cron\_prep\_time** command is analogous to the deferral time’s
-**deferral\_prep\_time** command. It specifies the number of seconds
-before the deferral time that the job is to be matched and sent to the
-execution machine. This permits HTCondor to make necessary preparations
-before the deferral time occurs.
+The
+**cron\_prep\_time**\ :index:`submit commands<single: submit commands; cron_prep_time>`
+command is analogous to the deferral time’s
+**deferral\_prep\_time**\ :index:`submit commands<single: submit commands; deferral_prep_time>`
+command. It specifies the number of seconds before the deferral time
+that the job is to be matched and sent to the execution machine. This
+permits HTCondor to make necessary preparations before the deferral time
+occurs.
 
 Consider the submit description file example that includes
 
@@ -301,9 +336,10 @@ the job once it is 9:55am.
 
 As the CronTab scheduling calculates and uses deferral time, jobs may
 also make use of the deferral window. The submit command
-**cron\_window** is analogous to the submit command
-**deferral\_window**. Consider the submit description file example that
-includes
+**cron\_window**\ :index:`submit commands<single: submit commands; cron_window>` is
+analogous to the submit command
+**deferral\_window**\ :index:`submit commands<single: submit commands; deferral_window>`.
+Consider the submit description file example that includes
 
 ::
 
@@ -351,9 +387,10 @@ be matched and sent now.
 
 Jobs using the CronTab functionality are not automatically re-queued by
 HTCondor after their execution is complete. The submit description file
-for a job must specify an appropriate **on\_exit\_remove** command to
-ensure that a job remains in the queue. This job maintains its original
-``ClusterId`` and ``ProcId``.
+for a job must specify an appropriate
+**on\_exit\_remove**\ :index:`submit commands<single: submit commands; on_exit_remove>`
+command to ensure that a job remains in the queue. This job maintains
+its original ``ClusterId`` and ``ProcId``.
 
 Usage Examples
 ''''''''''''''
@@ -407,10 +444,10 @@ deferral times, because the mechanism is based upon deferral times.
 -  It is impossible to schedule vanilla and standard universe jobs at
    intervals that are smaller than the interval at which HTCondor
    evaluates jobs. This interval is determined by the configuration
-   variable ``SCHEDD_INTERVAL`` . As a vanilla or standard universe job
-   completes execution and is placed back into the job queue, it may not
-   be placed in the idle state in time. This problem does not afflict
-   local universe jobs.
+   variable ``SCHEDD_INTERVAL`` :index:`SCHEDD_INTERVAL<single: SCHEDD_INTERVAL>`. As a
+   vanilla or standard universe job completes execution and is placed
+   back into the job queue, it may not be placed in the idle state in
+   time. This problem does not afflict local universe jobs.
 -  HTCondor cannot guarantee that a job will be matched in order to make
    its scheduled deferral time. A job must be matched with an execution
    machine just as any other HTCondor job; if HTCondor is unable to find

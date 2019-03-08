@@ -3,15 +3,20 @@
 Submitting a Job
 ================
 
+:index:`job<single: job; submitting>`
+
 A job is submitted for execution to HTCondor using the *condor\_submit*
-command. *condor\_submit* takes as an argument the name of a file called
-a submit description file. This file contains commands and keywords to
-direct the queuing of jobs. In the submit description file, HTCondor
-finds everything it needs to know about the job. Items such as the name
-of the executable to run, the initial working directory, and
-command-line arguments to the program all go into the submit description
-file. *condor\_submit* creates a job ClassAd based upon the information,
-and HTCondor works toward running the job.
+command.
+:index:`HTCondor commands<single: HTCondor commands; condor_submit>`\ *condor\_submit* takes
+as an argument the name of a file called a submit description file.
+:index:`submit description file<single: submit description file>`\ :index:`file<single: file; submit description>`
+This file contains commands and keywords to direct the queuing of jobs.
+In the submit description file, HTCondor finds everything it needs to
+know about the job. Items such as the name of the executable to run, the
+initial working directory, and command-line arguments to the program all
+go into the submit description file. *condor\_submit* creates a job
+ClassAd based upon the information, and HTCondor works toward running
+the job. :index:`submit description file<single: submit description file; contents of>`
 
 The contents of a submit description file have been designed to save
 time for HTCondor users. It is easy to submit multiple runs of a program
@@ -46,6 +51,7 @@ Sample submit description files
 In addition to the examples of submit description files given here,
 there are more in the *condor\_submit* manual page (see
  `condor\_submit <../man-pages/condor_submit.html>`__).
+:index:`submit description file<single: submit description file; examples>`
 
  Example 1
 
@@ -61,13 +67,15 @@ architecture and operating system as the machine where *condor\_submit*
 is run to submit the job.
 
 Standard input for this job will come from the file ``inputfile``, as
-specified by the **input** command, and standard output for this job
-will go to the file ``outputfile``, as specified by the **output**
-command. HTCondor expects to find ``inputfile`` in the current working
-directory when this job is submitted, and the system will take care of
-getting the input file to where it needs to be when the job is executed,
-as well as bringing back the output results (to the current working
-directory) after job execution.
+specified by the **input**\ :index:`submit commands<single: submit commands; input>`
+command, and standard output for this job will go to the file
+``outputfile``, as specified by the
+**output**\ :index:`submit commands<single: submit commands; output>` command. HTCondor
+expects to find ``inputfile`` in the current working directory when this
+job is submitted, and the system will take care of getting the input
+file to where it needs to be when the job is executed, as well as
+bringing back the output results (to the current working directory)
+after job execution.
 
 A log file, ``myexe.log``, will also be produced that contains events
 the job had during its lifetime inside of HTCondor. When the job
@@ -93,11 +101,13 @@ jobs.
  Example 2
 
 Example 2 queues up one copy of the program *foo* (which had been
-created by *condor\_compile*) for execution by HTCondor. No **input**,
-**output**, or **error** commands are given in the submit description
-file, so ``stdin``, ``stdout``, and ``stderr`` will all refer to
-``/dev/null``. The program may produce output by explicitly opening a
-file and writing to it.
+created by *condor\_compile*) for execution by HTCondor. No
+**input**\ :index:`submit commands<single: submit commands; input>`,
+**output**\ :index:`submit commands<single: submit commands; output>`, or
+**error**\ :index:`submit commands<single: submit commands; error>` commands are given in
+the submit description file, so ``stdin``, ``stdout``, and ``stderr``
+will all refer to ``/dev/null``. The program may produce output by
+explicitly opening a file and writing to it.
 
 ::
 
@@ -117,18 +127,20 @@ file and writing to it.
 
 Example 3 queues two copies of the program *mathematica*. The first copy
 will run in directory ``run_1``, and the second will run in directory
-``run_2`` due to the **initialdir** command. For each copy, ``stdin``
-will be ``test.data``, ``stdout`` will be ``loop.out``, and ``stderr``
-will be ``loop.error``. Each run will read input and write output files
-within its own directory. Placing data files in separate directories is
-a convenient way to organize data when a large group of HTCondor jobs is
-to run. The example file shows program submission of *mathematica* as a
-vanilla universe job. The vanilla universe is most often the right
-choice of universe when the source and/or object code is not available.
+``run_2`` due to the
+**initialdir**\ :index:`submit commands<single: submit commands; initialdir>` command. For
+each copy, ``stdin`` will be ``test.data``, ``stdout`` will be
+``loop.out``, and ``stderr`` will be ``loop.error``. Each run will read
+input and write output files within its own directory. Placing data
+files in separate directories is a convenient way to organize data when
+a large group of HTCondor jobs is to run. The example file shows program
+submission of *mathematica* as a vanilla universe job. The vanilla
+universe is most often the right choice of universe when the source
+and/or object code is not available.
 
-The **request\_memory** command is included to ensure that the
-*mathematica* jobs match with and then execute on pool machines that
-provide at least 1 GByte of memory.
+The **request\_memory**\ :index:`submit commands<single: submit commands; request_memory>`
+command is included to ensure that the *mathematica* jobs match with and
+then execute on pool machines that provide at least 1 GByte of memory.
 
 ::
 
@@ -155,21 +167,22 @@ provide at least 1 GByte of memory.
 
  Example 4
 
-The submit description file for Example 4 queues 150 runs of program
-*foo* which has been compiled and linked for Linux running on a 32-bit
-Intel processor. This job requires HTCondor to run the program on
-machines which have greater than 32 MiB of physical memory, and the
-**rank** command expresses a preference to run each instance of the
-program on machines with more than 64 MiB. It also advises HTCondor that
-this standard universe job will use up to 28000 KiB of memory when
-running. Each of the 150 runs of the program is given its own process
-number, starting with process number 0. So, files ``stdin``, ``stdout``,
-and ``stderr`` will refer to ``in.0``, ``out.0``, and ``err.0`` for the
-first run of the program, ``in.1``, ``out.1``, and ``err.1`` for the
-second run of the program, and so forth. A log file containing entries
-about when and where HTCondor runs, checkpoints, and migrates processes
-for all the 150 queued programs will be written into the single file
-``foo.log``.
+The submit description file for Example 4 queues 150
+:index:`running multiple programs<single: running multiple programs>`\ runs of program *foo*
+which has been compiled and linked for Linux running on a 32-bit Intel
+processor. This job requires HTCondor to run the program on machines
+which have greater than 32 MiB of physical memory, and the
+**rank**\ :index:`submit commands<single: submit commands; rank>` command expresses a
+preference to run each instance of the program on machines with more
+than 64 MiB. It also advises HTCondor that this standard universe job
+will use up to 28000 KiB of memory when running. Each of the 150 runs of
+the program is given its own process number, starting with process
+number 0. So, files ``stdin``, ``stdout``, and ``stderr`` will refer to
+``in.0``, ``out.0``, and ``err.0`` for the first run of the program,
+``in.1``, ``out.1``, and ``err.1`` for the second run of the program,
+and so forth. A log file containing entries about when and where
+HTCondor runs, checkpoints, and migrates processes for all the 150
+queued programs will be written into the single file ``foo.log``.
 
 ::
 
@@ -194,12 +207,15 @@ for all the 150 queued programs will be written into the single file
      
       queue 150
 
+:index:`submit description file<single: submit description file; examples>`
+
 Using the Power and Flexibility of the Queue Command
 ----------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
-information to the **queue** submit command. This flexibility eliminates
-the need for a job wrapper or Perl script for many submissions.
+information to the **queue**\ :index:`submit commands<single: submit commands; queue>`
+submit command. This flexibility eliminates the need for a job wrapper
+or Perl script for many submissions.
 
 The form of the **queue** command defines variables and expands values,
 identifying a set of jobs. Square brackets identify an optional item.
@@ -315,6 +331,9 @@ specified is given a value from the list of items. For this example the
 Variables in the Submit Description File
 ----------------------------------------
 
+:index:`submit description file<single: submit description file; automatic variables>`
+:index:`automatic variables<single: automatic variables; in submit description file>`
+
 There are automatic variables for use within the submit description
 file.
 
@@ -374,6 +393,8 @@ This example queues six jobs.
 Including Submit Commands Defined Elsewhere
 -------------------------------------------
 
+:index:`submit description file<single: submit description file; including commands from elsewhere>`
+
 Externally defined submit commands can be incorporated into the submit
 description file using the syntax
 
@@ -425,6 +446,9 @@ is incorporated into the submit description file.
 
 Using Conditionals in the Submit Description File
 -------------------------------------------------
+
+` <index://IF/ELSE syntax;submit commands>`__
+` <index://IF/ELSE submit commands syntax>`__
 
 Conditional if/else semantics are available in a limited form. The
 syntax:
@@ -569,6 +593,8 @@ then the command line arguments of the submitted job become
 Function Macros in the Submit Description File
 ----------------------------------------------
 
+:index:`submit description file<single: submit description file; function macros>`
+
 A set of predefined functions increase flexibility. Both submit
 description files and configuration files are read using the same
 parser, so these functions may be used in both submit description files
@@ -644,19 +670,21 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
  ``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
-    A random choice of one of the parameters in the list of parameters
-    is made. For example, if one of the integers 0-8 (inclusive) should
-    be randomly chosen:
+    ` <index://$RANDOM_CHOICE() function macro>`__ A random choice
+    of one of the parameters in the list of parameters is made. For
+    example, if one of the integers 0-8 (inclusive) should be randomly
+    chosen:
 
     ::
 
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
-    A random integer within the range min and max, inclusive, is
-    selected. The optional step parameter controls the stride within the
-    range, and it defaults to the value 1. For example, to randomly
-    chose an even integer in the range 0-8 (inclusive):
+    ` <index://in configuration;$RANDOM_INTEGER()>`__ A random integer
+    within the range min and max, inclusive, is selected. The optional
+    step parameter controls the stride within the range, and it defaults
+    to the value 1. For example, to randomly chose an even integer in
+    the range 0-8 (inclusive):
 
     ::
 
@@ -727,10 +755,11 @@ leading to files defined for **input** of ``X.000``, ``X.010``,
 
  Example 3
 
-This example uses both the file globbing of the **queue** command and a
-macro function to specify a job input file that is within a subdirectory
-on the submit host, but will be placed into a single, flat directory on
-the execute host.
+This example uses both the file globbing of the
+**queue**\ :index:`submit commands<single: submit commands; queue>` command and a macro
+function to specify a job input file that is within a subdirectory on
+the submit host, but will be placed into a single, flat directory on the
+execute host.
 
 ::
 
@@ -754,8 +783,11 @@ About Requirements and Rank
 ---------------------------
 
 The ``requirements`` and ``rank`` commands in the submit description
-file are powerful and flexible. Using them effectively requires care,
-and this section presents those details.
+file are powerful and flexible.
+:index:`submit commands<single: submit commands; requirements>`\ :index:`requirements attribute<single: requirements attribute>`
+:index:`rank attribute<single: rank attribute>`\ :index:`ClassAd attribute<single: ClassAd attribute; requirements>`
+:index:`ClassAd attribute<single: ClassAd attribute; rank>`\ Using them effectively requires
+care, and this section presents those details.
 
 Both ``requirements`` and ``rank`` need to be specified as valid
 HTCondor ClassAd expressions, however, default values are set by the
@@ -778,18 +810,21 @@ Note that the comparison operators (<, >, <=, >=, and ==) compare
 strings case insensitively. The special comparison operators =?= and =!=
 compare strings case sensitively.
 
-A **requirements** or **rank** command in the submit description file
-may utilize attributes that appear in a machine or a job ClassAd. Within
-the submit description file (for a job) the prefix MY. (on a ClassAd
-attribute name) causes a reference to the job ClassAd attribute, and the
-prefix TARGET. causes a reference to a potential machine or matched
-machine ClassAd attribute.
+A **requirements**\ :index:`submit commands<single: submit commands; requirements>` or
+**rank**\ :index:`submit commands<single: submit commands; rank>` command in the submit
+description file may utilize attributes that appear in a machine or a
+job ClassAd. Within the submit description file (for a job) the prefix
+MY. (on a ClassAd attribute name) causes a reference to the job ClassAd
+attribute, and the prefix TARGET. causes a reference to a potential
+machine or matched machine ClassAd attribute.
 
-The *condor\_status* command displays statistics about machines within
-the pool. The **-l** option displays the machine ClassAd attributes for
-all machines in the HTCondor pool. The job ClassAds, if there are jobs
-in the queue, can be seen with the *condor\_q -l* command. This shows
-all the defined attributes for current jobs in the queue.
+The *condor\_status* command displays
+:index:`HTCondor commands<single: HTCondor commands; condor_status>`\ statistics about
+machines within the pool. The **-l** option displays the machine ClassAd
+attributes for all machines in the HTCondor pool. The job ClassAds, if
+there are jobs in the queue, can be seen with the *condor\_q -l*
+command. This shows all the defined attributes for current jobs in the
+queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
 unnumbered Appendix on page \ `Job ClassAd
@@ -800,6 +835,10 @@ Attributes <../classad-attributes/machine-classad-attributes.html>`__.
 
 Rank Expression Examples
 ''''''''''''''''''''''''
+
+:index:`rank attribute<single: rank attribute; examples>`
+:index:`ClassAd attribute<single: ClassAd attribute; rank examples>`
+:index:`submit commands<single: submit commands; rank>`
 
 When considering the match between a job and a machine, rank is used to
 choose a match from among all machines that satisfy the job’s
@@ -914,6 +953,9 @@ these machines are ranked higher than others.
 Submitting Jobs Using a Shared File System
 ------------------------------------------
 
+:index:`job<single: job; submission using a shared file system>`
+:index:`shared file system<single: shared file system; submission of jobs>`
+
 If vanilla, java, or parallel universe jobs are submitted without using
 the File Transfer mechanism, HTCondor must use a shared file system to
 access input and output files. In this case, the job must be able to
@@ -988,6 +1030,11 @@ the machine from which it was submitted.
 Submitting Jobs Without a Shared File System: HTCondor’s File Transfer Mechanism
 --------------------------------------------------------------------------------
 
+:index:`job<single: job; submission without a shared file system>`
+:index:`shared file system<single: shared file system; submission of jobs without one>`
+:index:`file transfer mechanism<single: file transfer mechanism>`
+:index:`transferring files<single: transferring files>`
+
 HTCondor works well without a shared file system. The HTCondor file
 transfer mechanism permits the user to select which files are
 transferred and under which circumstances. HTCondor can transfer any
@@ -1003,26 +1050,31 @@ Specifying If and When to Transfer Files
 ''''''''''''''''''''''''''''''''''''''''
 
 To enable the file transfer mechanism, place two commands in the job’s
-submit description file: **should\_transfer\_files** and
-**when\_to\_transfer\_output**. By default, they will be:
+submit description file:
+**should\_transfer\_files**\ :index:`submit commands<single: submit commands; should_transfer_files>`
+and
+**when\_to\_transfer\_output**\ :index:`submit commands<single: submit commands; when_to_transfer_output>`.
+By default, they will be:
 
 ::
 
       should_transfer_files = IF_NEEDED 
       when_to_transfer_output = ON_EXIT
 
-Setting the **should\_transfer\_files** command explicitly enables or
-disables the file transfer mechanism. The command takes on one of three
-possible values:
+Setting the
+**should\_transfer\_files**\ :index:`submit commands<single: submit commands; should_transfer_files>`
+command explicitly enables or disables the file transfer mechanism. The
+command takes on one of three possible values:
 
 #. YES: HTCondor transfers both the executable and the file defined by
-   the **input** command from the machine where the job is submitted to
-   the remote machine where the job is to be executed. The file defined
-   by the **output** command as well as any files created by the
-   execution of the job are transferred back to the machine where the
-   job was submitted. When they are transferred and the directory
-   location of the files is determined by the command
-   **when\_to\_transfer\_output**.
+   the **input**\ :index:`submit commands<single: submit commands; input>` command from
+   the machine where the job is submitted to the remote machine where
+   the job is to be executed. The file defined by the
+   **output**\ :index:`submit commands<single: submit commands; output>` command as well
+   as any files created by the execution of the job are transferred back
+   to the machine where the job was submitted. When they are transferred
+   and the directory location of the files is determined by the command
+   **when\_to\_transfer\_output**\ :index:`submit commands<single: submit commands; when_to_transfer_output>`.
 #. IF\_NEEDED: HTCondor transfers files if the job is matched with and
    to be executed on a machine in a different ``FileSystemDomain`` than
    the one the submit machine belongs to, the same as if
@@ -1035,20 +1087,21 @@ The **when\_to\_transfer\_output** command tells HTCondor when output
 files are to be transferred back to the submit machine. The command
 takes on one of two possible values:
 
-#. ON\_EXIT: HTCondor transfers the file defined by the **output**
-   command, as well as any other files in the remote scratch directory
-   created by the job, back to the submit machine only when the job
-   exits on its own.
+#. ON\_EXIT: HTCondor transfers the file defined by the
+   **output**\ :index:`submit commands<single: submit commands; output>` command, as well
+   as any other files in the remote scratch directory created by the
+   job, back to the submit machine only when the job exits on its own.
 #. ON\_EXIT\_OR\_EVICT: HTCondor behaves the same as described for the
    value ON\_EXIT when the job exits on its own. However, if, and each
    time the job is evicted from a machine, files are transferred back at
    eviction time. The files that are transferred back at eviction time
    may include intermediate files that are not part of the final output
-   of the job. When **transfer\_output\_files** is specified, its list
-   governs which are transferred back at eviction time. Before the job
-   starts running again, all of the files that were stored when the job
-   was last evicted are copied to the job’s new remote scratch
-   directory.
+   of the job. When
+   **transfer\_output\_files**\ :index:`submit commands<single: submit commands; transfer_output_files>`
+   is specified, its list governs which are transferred back at eviction
+   time. Before the job starts running again, all of the files that were
+   stored when the job was last evicted are copied to the job’s new
+   remote scratch directory.
 
    The purpose of saving files at eviction time is to allow the job to
    resume from where it left off. This is similar to using the
@@ -1103,17 +1156,21 @@ Specifying What Files to Transfer
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files before the job is run on a remote machine.
 
-#. the executable, as defined with the **executable** command
-#. the input, as defined with the **input** command
+#. the executable, as defined with the
+   **executable**\ :index:`submit commands<single: submit commands; executable>` command
+#. the input, as defined with the
+   **input**\ :index:`submit commands<single: submit commands; input>` command
 #. any jar files, for the **java** universe, as defined with the
-   **jar\_files** command
+   **jar\_files**\ :index:`submit commands<single: submit commands; jar_files>` command
 
 If the job requires other input files, the submit description file
-should utilize the **transfer\_input\_files** command. This
-comma-separated list specifies any other files or directories that
-HTCondor is to transfer to the remote scratch directory, to set up the
-execution environment for the job before it is run. These files are
-placed in the same directory as the job’s executable. For example:
+should utilize the
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`
+command. This comma-separated list specifies any other files or
+directories that HTCondor is to transfer to the remote scratch
+directory, to set up the execution environment for the job before it is
+run. These files are placed in the same directory as the job’s
+executable. For example:
 
 ::
 
@@ -1140,29 +1197,31 @@ after the job exits.
 
 A path given for **output** and **error** commands represents a path on
 the submit machine. If no path is specified, the directory specified
-with **initialdir** is used, and if that is not specified, the directory
-from which the job was submitted is used. At the time the job is
-submitted, zero-length files are created on the submit machine, at the
-given path for the files defined by the **output** and **error**
-commands. This permits job submission failure, if these files cannot be
-written by HTCondor.
+with **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` is
+used, and if that is not specified, the directory from which the job was
+submitted is used. At the time the job is submitted, zero-length files
+are created on the submit machine, at the given path for the files
+defined by the **output** and **error** commands. This permits job
+submission failure, if these files cannot be written by HTCondor.
 
 To restrict the output files or permit entire directory contents to be
-transferred, specify the exact list with **transfer\_output\_files**.
+transferred, specify the exact list with
+**transfer\_output\_files**\ :index:`submit commands<single: submit commands; transfer_output_files>`.
 Delimit the list of file names, directory names, or paths with commas.
 When this list is defined, and any of the files or directories do not
 exist as the job exits, HTCondor considers this an error, and places the
-job on hold. Setting **transfer\_output\_files** to the empty string
-("") means no files are to be transferred. When this list is defined,
-automatic detection of output files created by the job is disabled.
-Paths specified in this list refer to locations on the execute machine.
-The naming and placement of files and directories relies on the term
-base name. By example, the path ``a/b/c`` has the base name ``c``. It is
-the file name or directory name with all directories leading up to that
-name stripped off. On the submit machine, the transferred files or
-directories are named using only the base name. Therefore, each output
-file or directory must have a different name, even if they originate
-from different paths.
+job on hold. Setting
+**transfer\_output\_files**\ :index:`submit commands<single: submit commands; transfer_output_files>`
+to the empty string ("") means no files are to be transferred. When this
+list is defined, automatic detection of output files created by the job
+is disabled. Paths specified in this list refer to locations on the
+execute machine. The naming and placement of files and directories
+relies on the term base name. By example, the path ``a/b/c`` has the
+base name ``c``. It is the file name or directory name with all
+directories leading up to that name stripped off. On the submit machine,
+the transferred files or directories are named using only the base name.
+Therefore, each output file or directory must have a different name,
+even if they originate from different paths.
 
 For **grid** universe jobs other than than HTCondor-C grid jobs, files
 to be transferred (other than standard output and standard error) must
@@ -1229,37 +1288,45 @@ the file system of the submit machine and on the file system of the
 execute machine. Care must be taken to know which machine, submit or
 execute, is utilizing the file name and/or path.
 
-Files in the **transfer\_input\_files** command are specified as they
-are accessed on the submit machine. The job, as it executes, accesses
-files as they are found on the execute machine.
+Files in the
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`
+command are specified as they are accessed on the submit machine. The
+job, as it executes, accesses files as they are found on the execute
+machine.
 
 There are three ways to specify files and paths for
-**transfer\_input\_files**:
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`:
 
 #. Relative to the current working directory as the job is submitted, if
-   the submit command **initialdir** is not specified.
+   the submit command
+   **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` is not
+   specified.
 #. Relative to the initial directory, if the submit command
-   **initialdir** is specified.
+   **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` is
+   specified.
 #. Absolute.
 
 Before executing the program, HTCondor copies the executable, an input
-file as specified by the submit command **input**, along with any input
-files specified by **transfer\_input\_files**. All these files are
-placed into a remote scratch directory on the execute machine, in which
-the program runs. Therefore, the executing program must access input
-files relative to its working directory. Because all files and
-directories listed for transfer are placed into a single, flat
-directory, inputs must be uniquely named to avoid collision when
-transferred. A collision causes the last file in the list to overwrite
-the earlier one.
+file as specified by the submit command
+**input**\ :index:`submit commands<single: submit commands; input>`, along with any input
+files specified by
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`.
+All these files are placed into a remote scratch directory on the
+execute machine, in which the program runs. Therefore, the executing
+program must access input files relative to its working directory.
+Because all files and directories listed for transfer are placed into a
+single, flat directory, inputs must be uniquely named to avoid collision
+when transferred. A collision causes the last file in the list to
+overwrite the earlier one.
 
 Both relative and absolute paths may be used in
-**transfer\_output\_files**. Relative paths are relative to the job’s
-remote scratch directory on the execute machine. When the files and
-directories are copied back to the submit machine, they are placed in
-the job’s initial working directory as the base name of the original
-path. An alternate name or path may be specified by using
-**transfer\_output\_remaps**.
+**transfer\_output\_files**\ :index:`submit commands<single: submit commands; transfer_output_files>`.
+Relative paths are relative to the job’s remote scratch directory on the
+execute machine. When the files and directories are copied back to the
+submit machine, they are placed in the job’s initial working directory
+as the base name of the original path. An alternate name or path may be
+specified by using
+**transfer\_output\_remaps**\ :index:`submit commands<single: submit commands; transfer_output_remaps>`.
 
 A job may create files outside the remote scratch directory but within
 the file system of the execute machine, in a directory such as ``/tmp``,
@@ -1292,9 +1359,9 @@ the examples:
     This first example explicitly transfers input files. These input
     files to be transferred are specified relative to the directory
     where the job is submitted. An output file specified in the
-    **arguments** command, ``out1``, is created when the job is
-    executed. It will be transferred back into the directory
-    ``/scratch/test``.
+    **arguments**\ :index:`submit commands<single: submit commands; arguments>` command,
+    ``out1``, is created when the job is executed. It will be
+    transferred back into the directory ``/scratch/test``.
 
     ::
 
@@ -1340,15 +1407,21 @@ the examples:
 
  Example 3
     This third example illustrates the use of the submit command
-    **initialdir**, and its effect on the paths used for the various
-    files. The expected location of the executable is not affected by
-    the **initialdir** command. All other files (specified by **input**,
-    **output**, **error**, **transfer\_input\_files**, as well as files
-    modified or created by the job and automatically transferred back)
-    are located relative to the specified **initialdir**. Therefore, the
-    output file, ``out1``, will be placed in the files directory. Note
-    that the ``logs2`` directory exists to make this example work
-    correctly.
+    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>`, and its
+    effect on the paths used for the various files. The expected
+    location of the executable is not affected by the
+    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` command.
+    All other files (specified by
+    **input**\ :index:`submit commands<single: submit commands; input>`,
+    **output**\ :index:`submit commands<single: submit commands; output>`,
+    **error**\ :index:`submit commands<single: submit commands; error>`,
+    **transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`,
+    as well as files modified or created by the job and automatically
+    transferred back) are located relative to the specified
+    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>`.
+    Therefore, the output file, ``out1``, will be placed in the files
+    directory. Note that the ``logs2`` directory exists to make this
+    example work correctly.
 
     ::
 
@@ -1371,9 +1444,12 @@ the examples:
 
  Example 4 – Illustrates an Error
     This example illustrates a job that will fail. The files specified
-    using the **transfer\_input\_files** command work correctly (see
-    Example 1). However, relative paths to files in the **arguments**
-    command cause the executing program to fail. The file system on the
+    using the
+    **transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`
+    command work correctly (see Example 1). However, relative paths to
+    files in the
+    **arguments**\ :index:`submit commands<single: submit commands; arguments>` command
+    cause the executing program to fail. The file system on the
     submission side may utilize relative paths to files, however those
     files are placed into the single, flat, remote scratch directory on
     the execute machine.
@@ -1472,9 +1548,9 @@ dramatically improve performance. Public input files are not available
 by default, and need to be explicitly enabled by a system administrator.
 
 To specify files that use this feature, the submit file should include a
-**public\_input\_files** command. This comma-separated list specifies
-files which HTCondor will transfer using the HTTP mechanism. For
-example:
+**public\_input\_files**\ :index:`submit commands<single: submit commands; public_input_files>`
+command. This comma-separated list specifies files which HTCondor will
+transfer using the HTTP mechanism. For example:
 
 ::
 
@@ -1483,10 +1559,13 @@ example:
       transfer_input_files = file1,file2 
       public_input_files = public_data1,public_data2
 
-Similar to the regular **transfer\_input\_files**, the files specified
-in **public\_input\_files** can be relative to the submit directory, or
-absolute paths. You can also specify an **initialDir**, and
-*condor\_submit* will look for files relative to that directory. The
+Similar to the regular
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`,
+the files specified in
+**public\_input\_files**\ :index:`submit commands<single: submit commands; public_input_files>`
+can be relative to the submit directory, or absolute paths. You can also
+specify an **initialDir**\ :index:`submit commands<single: submit commands; initialDir>`,
+and *condor\_submit* will look for files relative to that directory. The
 files must be world-readable on the file system (files with permissions
 set to 0644, directories with permissions set to 0755).
 
@@ -1507,8 +1586,9 @@ dealing with the transfer of files.
  Error Creating Zero-Length Files on Submit Machine
     As a job is submitted, HTCondor creates zero-length files as
     placeholders on the submit machine for the files defined by
-    **output** and **error**. If these files cannot be created, then job
-    submission fails.
+    **output**\ :index:`submit commands<single: submit commands; output>` and
+    **error**\ :index:`submit commands<single: submit commands; error>`. If these files
+    cannot be created, then job submission fails.
 
     This job submission failure avoids having the job run to completion,
     only to be unable to transfer the job’s output due to permission
@@ -1532,6 +1612,10 @@ dealing with the transfer of files.
 File Transfer Using a URL
 '''''''''''''''''''''''''
 
+:index:`file transfer mechanism<single: file transfer mechanism; input file specified by URL>`
+` <index://output file(s) specified by URL;file transfer mechanism>`__
+:index:`URL file transfer<single: URL file transfer>`
+
 Instead of file transfer that goes only between the submit machine and
 the execute machine, HTCondor has the ability to transfer files from a
 location specified by a URL for a job’s input file, or from the execute
@@ -1543,10 +1627,13 @@ Environments <../admin-manual/setting-up-special-environments.html>`__.
 The transfer of an input file is restricted to vanilla and vm universe
 jobs only. HTCondor’s file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
-**should\_transfer\_files** and **when\_to\_transfer\_output**. In
-addition, the URL for any files specified with a URL are given in the
-**transfer\_input\_files** command. An example portion of the submit
-description file for a job that has a single file specified with a URL:
+**should\_transfer\_files**\ :index:`submit commands<single: submit commands; should_transfer_files>`
+and
+**when\_to\_transfer\_output**\ :index:`submit commands<single: submit commands; when_to_transfer_output>`.
+In addition, the URL for any files specified with a URL are given in the
+**transfer\_input\_files**\ :index:`submit commands<single: submit commands; transfer_input_files>`
+command. An example portion of the submit description file for a job
+that has a single file specified with a URL:
 
 ::
 
@@ -1560,8 +1647,10 @@ For the transfer of the entire contents of the output sandbox, which are
 all files that the job creates or modifies, HTCondor’s file transfer
 mechanism must be enabled. In this sample portion of the submit
 description file, the first two commands explicitly enable file
-transfer, and the added **output\_destination** command provides both
-the protocol to be used and the destination of the transfer.
+transfer, and the added
+**output\_destination**\ :index:`submit commands<single: submit commands; output_destination>`
+command provides both the protocol to be used and the destination of the
+transfer.
 
 ::
 
@@ -1581,6 +1670,8 @@ is specified by further adding a submit command of the form:
 
 Requirements and Rank for File Transfer
 '''''''''''''''''''''''''''''''''''''''
+
+:index:`submit commands<single: submit commands; requirements>`
 
 The ``requirements`` expression for a job must depend on the
 should\_transfer\_files command. The job must specify the correct logic
@@ -1632,6 +1723,8 @@ space to hold all these files:
 
       && (Disk >= DiskUsage)
 
+:index:`submit commands<single: submit commands; rank>`
+
 If should\_transfer\_files = IF\_NEEDED and the job prefers to run on a
 machine in the local file system domain over transferring files, but is
 still willing to allow the job to run remotely and transfer files, the
@@ -1663,6 +1756,9 @@ example:
 Environment Variables
 ---------------------
 
+:index:`environment variables<single: environment variables>`
+:index:`execution environment<single: execution environment>`
+
 The environment under which a job executes often contains information
 that is potentially useful to the job. HTCondor allows a user to both
 set and reference environment variables for a job or job cluster.
@@ -1674,14 +1770,16 @@ section \ `condor\_submit <../man-pages/condor_submit.html>`__ for more
 details about this command.
 
 The submitter’s entire environment can be copied into the job ClassAd
-for the job at job submission. The **getenv** command within the submit
-description file does this, as described at
+for the job at job submission. The
+**getenv**\ :index:`submit commands<single: submit commands; getenv>` command within the
+submit description file does this, as described at
 section \ `condor\_submit <../man-pages/condor_submit.html>`__.
 
-If the environment is set with the **environment** command and
-**getenv** is also set to true, values specified with **environment**
-override values in the submitter’s environment, regardless of the order
-of the **environment** and **getenv** commands.
+If the environment is set with the
+**environment**\ :index:`submit commands<single: submit commands; environment>` command
+and **getenv** is also set to true, values specified with
+**environment** override values in the submitter’s environment,
+regardless of the order of the **environment** and **getenv** commands.
 
 Commands within the submit description file may reference the
 environment variables of the submitter as a job is submitted. Submit
@@ -1691,47 +1789,68 @@ the value of an environment variable.
 HTCondor sets several additional environment variables for each
 executing job that may be useful for the job to reference.
 
--  ``_CONDOR_SCRATCH_DIR`` gives the directory where the job may place
-   temporary data files. This directory is unique for every job that is
-   run, and its contents are deleted by HTCondor when the job stops
-   running on a machine, no matter how the job completes.
--  ``_CONDOR_SLOT`` gives the name of the slot (for SMP machines), on
-   which the job is run. On machines with only a single slot, the value
-   of this variable will be 1, just like the ``SlotID`` attribute in the
-   machine’s ClassAd. This setting is available in all universes. See
+-  ``_CONDOR_SCRATCH_DIR``\ :index:`_CONDOR_SCRATCH_DIR environment variable<single: _CONDOR_SCRATCH_DIR environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_SCRATCH_DIR>`
+   gives the directory where the job may place temporary data files.
+   This directory is unique for every job that is run, and its contents
+   are deleted by HTCondor when the job stops running on a machine, no
+   matter how the job completes.
+-  ``_CONDOR_SLOT``
+   :index:`_CONDOR_SLOT environment variable<single: _CONDOR_SLOT environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_SLOT>`
+   gives the name of the slot (for SMP machines), on which the job is
+   run. On machines with only a single slot, the value of this variable
+   will be 1, just like the ``SlotID`` attribute in the machine’s
+   ClassAd. This setting is available in all universes. See
    section \ `Policy Configuration for Execute Hosts and for Submit
    Hosts <../admin-manual/policy-configuration.html>`__ for more details
    about SMP machines and their configuration.
--  ``X509_USER_PROXY`` gives the full path to the X.509 user proxy file
-   if one is associated with the job. Typically, a user will specify
-   **x509userproxy** in the submit description file. This setting is
-   currently available in the local, java, and vanilla universes.
--  ``_CONDOR_JOB_AD`` is the path to a file in the job’s scratch
-   directory which contains the job ad for the currently running job.
-   The job ad is current as of the start of the job, but is not updated
-   during the running of the job. The job may read attributes and their
-   values out of this file as it runs, but any changes will not be acted
-   on in any way by HTCondor. The format is the same as the output of
-   the *condor\_q* **-l** command. This environment variable may be
-   particularly useful in a USER\_JOB\_WRAPPER.
--  ``_CONDOR_MACHINE_AD`` is the path to a file in the job’s scratch
-   directory which contains the machine ad for the slot the currently
-   running job is using. The machine ad is current as of the start of
-   the job, but is not updated during the running of the job. The format
-   is the same as the output of the *condor\_status* **-l** command.
--  ``_CONDOR_JOB_IWD`` is the path to the initial working directory the
-   job was born with.
--  ``_CONDOR_WRAPPER_ERROR_FILE`` is only set when the administrator has
-   installed a USER\_JOB\_WRAPPER. If this file exists, HTCondor assumes
-   that the job wrapper has failed and copies the contents of the file
-   to the StarterLog for the administrator to debug the problem.
--  ``CONDOR_IDS`` overrides the value of configuration variable
-   ``CONDOR_IDS``, when set in the environment.
--  ``CONDOR_ID`` is set for scheduler universe jobs to be the same as
-   the ``ClusterId`` attribute.
+-  ``X509_USER_PROXY``
+   :index:`X509_USER_PROXY environment variable<single: X509_USER_PROXY environment variable>`\ :index:`environment variables<single: environment variables; X509_USER_PROXY>`
+   gives the full path to the X.509 user proxy file if one is associated
+   with the job. Typically, a user will specify
+   **x509userproxy**\ :index:`submit commands<single: submit commands; x509userproxy>` in
+   the submit description file. This setting is currently available in
+   the local, java, and vanilla universes.
+-  ``_CONDOR_JOB_AD``
+   :index:`_CONDOR_JOB_AD environment variable<single: _CONDOR_JOB_AD environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_JOB_AD>`
+   is the path to a file in the job’s scratch directory which contains
+   the job ad for the currently running job. The job ad is current as of
+   the start of the job, but is not updated during the running of the
+   job. The job may read attributes and their values out of this file as
+   it runs, but any changes will not be acted on in any way by HTCondor.
+   The format is the same as the output of the *condor\_q* **-l**
+   command. This environment variable may be particularly useful in a
+   USER\_JOB\_WRAPPER.
+-  ``_CONDOR_MACHINE_AD``
+   :index:`_CONDOR_MACHINE_AD environment variable<single: _CONDOR_MACHINE_AD environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_MACHINE_AD>`
+   is the path to a file in the job’s scratch directory which contains
+   the machine ad for the slot the currently running job is using. The
+   machine ad is current as of the start of the job, but is not updated
+   during the running of the job. The format is the same as the output
+   of the *condor\_status* **-l** command.
+-  ``_CONDOR_JOB_IWD``
+   :index:`_CONDOR_JOB_IWD environment variable<single: _CONDOR_JOB_IWD environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_JOB_IWD>`
+   is the path to the initial working directory the job was born with.
+-  ``_CONDOR_WRAPPER_ERROR_FILE``
+   :index:`_CONDOR_WRAPPER_ERROR_FILE environment variable<single: _CONDOR_WRAPPER_ERROR_FILE environment variable>`\ :index:`environment variables<single: environment variables; _CONDOR_WRAPPER_ERROR_FILE>`
+   is only set when the administrator has installed a
+   USER\_JOB\_WRAPPER. If this file exists, HTCondor assumes that the
+   job wrapper has failed and copies the contents of the file to the
+   StarterLog for the administrator to debug the problem.
+-  ``CONDOR_IDS``
+   :index:`CONDOR_IDS environment variable<single: CONDOR_IDS environment variable>`\ :index:`environment variables<single: environment variables; CONDOR_IDS>`
+   overrides the value of configuration variable ``CONDOR_IDS``, when
+   set in the environment.
+-  ``CONDOR_ID``
+   :index:`CONDOR_ID environment variable<single: CONDOR_ID environment variable>`\ :index:`environment variables<single: environment variables; CONDOR_ID>`
+   is set for scheduler universe jobs to be the same as the
+   ``ClusterId`` attribute.
 
 Heterogeneous Submit: Execution on Differing Architectures
 ----------------------------------------------------------
+
+:index:`job<single: job; heterogeneous submit>`
+:index:`running a job<single: running a job; on a different architecture>`
+:index:`heterogeneous pool<single: heterogeneous pool; submitting a job to>`
 
 If executables are available for the different platforms of machines in
 the HTCondor pool, HTCondor can be allowed the choice of a larger number
@@ -1992,6 +2111,8 @@ Here is a more compact way to specify a RedHat 6 platform.
 Jobs That Require GPUs
 ----------------------
 
+:index:`GPUs<single: GPUs; requesting GPUs for a job>`
+
 A job that needs GPUs to run identifies the number of GPUs needed in the
 submit description file by adding the submit command
 
@@ -2008,7 +2129,8 @@ the job. For example, a job that needs 1 GPU uses
 
 Because there are different capabilities among GPUs, the job might need
 to further qualify which GPU of available ones is required. Do this by
-specifying or adding a clause to an existing **Requirements** submit
+specifying or adding a clause to an existing
+**Requirements**\ :index:`submit commands<single: submit commands; Requirements>` submit
 command. As an example, assume that the job needs a speed and capacity
 of a CUDA GPU that meets or exceeds the value 1.2. In the submit
 description file, place
@@ -2025,6 +2147,8 @@ and for Submit Hosts <../admin-manual/policy-configuration.html>`__.
 
 Interactive Jobs
 ----------------
+
+:index:`job<single: job; interactive>` :index:`interactive jobs<single: interactive jobs>`
 
 An interactive job is a Condor job that is provisioned and scheduled
 like any other vanilla universe Condor job onto an execute machine
@@ -2060,19 +2184,21 @@ A submit description file may be specified for this interactive job.
 Within this submit description file, a specification of these 5 commands
 will be either ignored or altered:
 
-#. **executable**
-#. **transfer\_executable**
-#. **arguments**
-#. **universe**. The interactive job is a vanilla universe job.
-#. **queue** **<n>**. In this case the value of **<n>** is ignored;
-   exactly one interactive job is queued.
+#. **executable**\ :index:`submit commands<single: submit commands; executable>`
+#. **transfer\_executable**\ :index:`submit commands<single: submit commands; transfer_executable>`
+#. **arguments**\ :index:`submit commands<single: submit commands; arguments>`
+#. **universe**\ :index:`submit commands<single: submit commands; universe>`. The
+   interactive job is a vanilla universe job.
+#. **queue**\ :index:`submit commands<single: submit commands; queue>` **<n>**. In this
+   case the value of **<n>** is ignored; exactly one interactive job is
+   queued.
 
 The submit description file may specify anything else needed for the
 interactive job, such as files to transfer.
 
 If no submit description file is specified for the job, a default one is
 utilized as identified by the value of the configuration variable
-``INTERACTIVE_SUBMIT_FILE`` .
+``INTERACTIVE_SUBMIT_FILE`` :index:`INTERACTIVE_SUBMIT_FILE<single: INTERACTIVE_SUBMIT_FILE>`.
 
 Here are examples of situations where interactive jobs may be of
 benefit.

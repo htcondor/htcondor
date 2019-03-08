@@ -24,8 +24,9 @@ is not able to run the job (due to a lack of currently available
 machines), the job flocks to another pool. A second advantage to using
 flocking is that the user (who submits the job) does not need to be
 concerned with any aspects of the job. The user’s submit description
-file (and the job’s **universe**) are independent of the flocking
-mechanism.
+file (and the job’s
+**universe**\ :index:`submit commands<single: submit commands; universe>`) are independent
+of the flocking mechanism.
 
 Other forms of grid computing are enabled by using the **grid**
 **universe** and further specified with the **grid\_type**. For any
@@ -51,7 +52,7 @@ resources. A **grid** **universe** job, with a **grid\_type** of **gt2**
 or **gt5** calls on Globus software to execute the job on a remote
 resource. Like HTCondor-C jobs, a network partition does not affect the
 execution of the job. The remote resource must have Globus software
-running.
+running. :index:`glidein<single: glidein>` :index:`grid computing<single: grid computing; glidein>`
 
 HTCondor permits the temporary addition of a Globus-controlled resource
 to a local pool. This is called glidein. Globus software is utilized to
@@ -62,6 +63,8 @@ a job.
 
 Starting with HTCondor Version 6.7.0, the **grid** universe replaces the
 **globus** universe. Further specification of a **grid** universe job is
-done within the **grid\_resource** command in a submit description file.
+done within the
+**grid\_resource**\ :index:`submit commands<single: submit commands; grid_resource>`
+command in a submit description file.
 
       

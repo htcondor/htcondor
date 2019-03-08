@@ -3,6 +3,8 @@
 Connecting HTCondor Pools with Flocking
 =======================================
 
+:index:`flocking<single: flocking>` :index:`HTCondor<single: HTCondor; flocking>`
+
 Flocking is HTCondor’s way of allowing jobs that cannot immediately run
 within the pool of machines where the job was submitted to instead run
 on a different HTCondor pool. If a machine within HTCondor pool A can
@@ -21,14 +23,16 @@ the issues.
 Flocking Configuration
 ----------------------
 
+:index:`configuration<single: configuration; for flocking>`
+
 The simplest flocking configuration sets a few configuration variables.
 If jobs from machine A are to flock to pool B, then in machine A’s
 configuration, set the following configuration variables:
 
- ``FLOCK_TO``
+ ``FLOCK_TO`` :index:`FLOCK_TO<single: FLOCK_TO>`
     is a comma separated list of the central manager machines of the
     pools that jobs from machine A may flock to.
- ``FLOCK_COLLECTOR_HOSTS``
+ ``FLOCK_COLLECTOR_HOSTS`` :index:`FLOCK_COLLECTOR_HOSTS<single: FLOCK_COLLECTOR_HOSTS>`
     is the list of *condor\_collector* daemons within the pools that
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
@@ -38,7 +42,7 @@ configuration, set the following configuration variables:
           FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO) 
           
 
- ``FLOCK_NEGOTIATOR_HOSTS``
+ ``FLOCK_NEGOTIATOR_HOSTS`` :index:`FLOCK_NEGOTIATOR_HOSTS<single: FLOCK_NEGOTIATOR_HOSTS>`
     is the list of *condor\_negotiator* daemons within the pools that
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
@@ -49,6 +53,7 @@ configuration, set the following configuration variables:
           
 
  ``HOSTALLOW_NEGOTIATOR_SCHEDD``
+:index:`HOSTALLOW_NEGOTIATOR_SCHEDD<single: HOSTALLOW_NEGOTIATOR_SCHEDD>`
     provides an access level and authorization list for the
     *condor\_schedd* daemon to allow negotiation (for security reasons)
     with the machines within the pools that jobs from machine A may
@@ -73,9 +78,10 @@ The configuration macros that must be set in pool B are ones that
 authorize jobs from machine A to flock to pool B.
 
 The configuration variables are more easily set by introducing a list of
-machines where the jobs may flock from. ``FLOCK_FROM`` is a comma
-separated list of machines, and it is used in the default configuration
-setting of the security macros that do authorization:
+machines where the jobs may flock from. ``FLOCK_FROM``
+:index:`FLOCK_FROM<single: FLOCK_FROM>` is a comma separated list of machines, and it
+is used in the default configuration setting of the security macros that
+do authorization:
 
 ::
 

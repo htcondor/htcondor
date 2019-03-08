@@ -3,6 +3,9 @@
 Power Management
 ================
 
+:index:`power management<single: power management>` :index:`green computing<single: green computing>`
+:index:`offline machine<single: offline machine>`
+
 HTCondor supports placing machines in low power states. A machine in the
 low power state is identified as being offline. Power setting decisions
 are based upon HTCondor configuration.
@@ -13,18 +16,22 @@ when there are known periods of low activity within the pool.
 Entering a Low Power State
 --------------------------
 
+:index:`power management<single: power management; entering a low power state>`
+
 By default, HTCondor does not do power management. When desired, the
 ability to place a machine into a low power state is accomplished
 through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
 A slot’s readiness to hibernate is determined by the evaluating the
-``HIBERNATE`` configuration variable (see section \ `Configuration
+``HIBERNATE`` :index:`HIBERNATE<single: HIBERNATE>` configuration variable (see
+section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__) within the
 context of the slot. Readiness is evaluated at fixed intervals, as
-determined by the ``HIBERNATE_CHECK_INTERVAL`` configuration variable. A
+determined by the ``HIBERNATE_CHECK_INTERVAL``
+:index:`HIBERNATE_CHECK_INTERVAL<single: HIBERNATE_CHECK_INTERVAL>` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
 value. There is a trade off between the extra time not at a low power
@@ -88,10 +95,13 @@ magnitude value is chosen.
 Returning From a Low Power State
 --------------------------------
 
+:index:`power management<single: power management; leaving a low power state>`
+
 The HTCondor command line tool *condor\_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
 *condor\_power* manual page on
 page \ `condor\_power <../man-pages/condor_power.html>`__.
+:index:`condor_rooster daemon<single: condor_rooster daemon>`
 
 To automatically call *condor\_power* under specific conditions,
 *condor\_rooster* may be used. The configuration options for
@@ -104,17 +114,20 @@ Keeping a ClassAd for a Hibernating Machine
 A pool’s *condor\_collector* daemon can be configured to keep a
 persistent ClassAd entry for each machine, once it has entered
 hibernation. This is required by *condor\_rooster* so that it can
-evaluate the ``UNHIBERNATE`` expression of the offline machines.
+evaluate the ``UNHIBERNATE`` :index:`UNHIBERNATE<single: UNHIBERNATE>` expression of
+the offline machines.
 
-To do this, define a log file using the ``OFFLINE_LOG`` configuration
-variable. See section \ `Configuration
+To do this, define a log file using the ``OFFLINE_LOG``
+:index:`OFFLINE_LOG<single: OFFLINE_LOG>` configuration variable. See
+section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for the
 definition. An optional expiration time for each ClassAd can be
-specified with ``OFFLINE_EXPIRE_ADS_AFTER`` . The timing begins from the
-time the hibernating machine’s ClassAd enters the *condor\_collector*
-daemon. See section \ `Configuration
+specified with ``OFFLINE_EXPIRE_ADS_AFTER``
+:index:`OFFLINE_EXPIRE_ADS_AFTER<single: OFFLINE_EXPIRE_ADS_AFTER>`. The timing begins from the time
+the hibernating machine’s ClassAd enters the *condor\_collector* daemon.
+See section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for the
@@ -122,6 +135,8 @@ definition.
 
 Linux Platform Details
 ----------------------
+
+:index:`power management<single: power management; Linux platform details>`
 
 Depending on the Linux distribution and version, there are three methods
 for controlling a machine’s power state. The methods:
@@ -157,6 +172,8 @@ configuration.
 
 Windows Platform Details
 ------------------------
+
+:index:`power management<single: power management; Windows platform troubleshooting>`
 
 If after a suitable amount of time, a Windows machine has not entered
 the expected power state, then HTCondor is having difficulty exercising
@@ -195,5 +212,7 @@ required, the *Power Options* control panel application offers the full
 extent of the machine’s power management abilities. Windows 2000 and XP
 lack the *powercfg* program, so all configuration must be done via the
 *Power Options* control panel application.
+:index:`green computing<single: green computing>` :index:`power management<single: power management>`
+:index:`administrators manual<single: administrators manual>`
 
       

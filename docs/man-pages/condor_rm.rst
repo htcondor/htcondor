@@ -4,6 +4,7 @@
 ============
 
 remove jobs from the HTCondor queue
+:index:`HTCondor commands<single: HTCondor commands; condor_rm>`\ :index:`condor_rm command<single: condor_rm command>`
 
 Synopsis
 --------

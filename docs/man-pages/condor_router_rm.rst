@@ -4,6 +4,7 @@
 ====================
 
 Remove jobs being managed by the HTCondor Job Router
+:index:`HTCondor commands<single: HTCondor commands; condor_router_rm>`\ :index:`condor_router_rm command<single: condor_router_rm command>`
 
 Synopsis
 --------
