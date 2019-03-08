@@ -35,11 +35,12 @@
 		bool TransferSuccess;
 		
 		double ConnectionTimeSeconds;
+		int LibcurlReturnCode;
 		time_t TransferEndTime;
 		time_t TransferStartTime;
 		
 		long TransferFileBytes;
-		long TransferReturnCode;
+		long TransferHTTPStatusCode;
 		long TransferTotalBytes;
 		long TransferTries;
 		

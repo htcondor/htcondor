@@ -237,7 +237,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             
             stats->TransferTotalBytes += ( long ) bytes_downloaded;
             stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
-            stats->TransferReturnCode = return_code;
+            stats->TransferHTTPStatusCode = return_code;
 
             // Make sure to check the return code here as well as rval!
             // HTTP error codes like 401, 500 are considered successful by 
@@ -337,7 +337,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
         
         stats->TransferTotalBytes += ( long ) bytes_uploaded;
         stats->ConnectionTimeSeconds += transfer_total_time - transfer_connection_time;
-        stats->TransferReturnCode = return_code;
+        stats->TransferHTTPStatusCode = return_code;
 
         if( rval == CURLE_OK ) {
             stats->TransferSuccess = true;    

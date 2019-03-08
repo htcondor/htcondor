@@ -23,6 +23,7 @@ ShouldRetryTransfer(int rval) {
         case CURLE_COULDNT_CONNECT:
         case CURLE_PARTIAL_FILE:
         case CURLE_READ_ERROR:
+        case CURLE_WRITE_ERROR:
         case CURLE_OPERATION_TIMEDOUT:
         case CURLE_SEND_ERROR:
         case CURLE_RECV_ERROR:
@@ -221,7 +222,8 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
 
     _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
     _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
-    _this_file_stats->TransferReturnCode = return_code;
+    _this_file_stats->TransferHTTPStatusCode = return_code;
+    _this_file_stats->LibcurlReturnCode = rval;
 
     if( rval == CURLE_OK ) {
         _this_file_stats->TransferSuccess = true;
