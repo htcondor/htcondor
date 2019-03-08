@@ -3,6 +3,8 @@
 The Command Line Interface
 ==========================
 
+:index:`API<single: API; Command line>`
+
 While the usual HTCondor command line tools are often not thought of as
 an API, they are frequently the best choice for a programmatic interface
 to the system. They are the most complete, tested and debugged way to

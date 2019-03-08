@@ -3,6 +3,9 @@
 DaemonCore
 ==========
 
+:index:`daemoncore<single: daemoncore>`
+:index:`HTCondor<single: HTCondor; shared functionality in daemons>`
+
 This section is a brief description of DaemonCore. DaemonCore is a
 library that is shared among most of the HTCondor daemons which provides
 common functionality. Currently, the following daemons use DaemonCore:
@@ -41,6 +44,8 @@ that can be used to start up each daemon.
 
 DaemonCore and Unix signals
 ---------------------------
+
+:index:`daemoncore<single: daemoncore; Unix signals>`
 
 One of the most visible features that DaemonCore provides for
 administrators is that all daemons which use it behave the same way on
@@ -86,6 +91,9 @@ configuration files and what they do.
 
 DaemonCore and Command-line Arguments
 -------------------------------------
+
+:index:`daemoncore<single: daemoncore; command line arguments>`
+:index:`HTCondor daemon<single: HTCondor daemon; command line arguments>`
 
 The second visible feature that DaemonCore provides to administrators is
 a common set of command-line arguments that all daemons understand.
@@ -140,14 +148,14 @@ These arguments and what they do are described below:
     process. The daemon started with this optional argument waits until
     the daemon it is attempting to kill has exited.
  -l directory
-    Overrides the value of ``LOG`` as specified in the configuration
-    files. Primarily, this option is used with the *condor\_kbdd* when
-    it needs to run as the individual user logged into the machine,
-    instead of running as root. Regular users would not normally have
-    permission to write files into HTCondor’s log directory. Using this
-    option, they can override the value of ``LOG`` and have the
-    *condor\_kbdd* write its log file into a directory that the user has
-    permission to write to.
+    Overrides the value of ``LOG`` :index:`LOG<single: LOG>` as specified in
+    the configuration files. Primarily, this option is used with the
+    *condor\_kbdd* when it needs to run as the individual user logged
+    into the machine, instead of running as root. Regular users would
+    not normally have permission to write files into HTCondor’s log
+    directory. Using this option, they can override the value of ``LOG``
+    and have the *condor\_kbdd* write its log file into a directory that
+    the user has permission to write to.
  -local-name name
     Specify a local name for this instance of the daemon. This local
     name will be used to look up configuration parameters.
@@ -183,5 +191,7 @@ These arguments and what they do are described below:
     option.
  -v
     Causes the daemon to print out version information and exit.
+
+:index:`daemoncore<single: daemoncore>`
 
       

@@ -4,6 +4,7 @@
 =======================
 
 Set a program to execute upon *condor\_master* shut down
+:index:`HTCondor commands<single: HTCondor commands; condor_set_shutdown>`\ :index:`condor_set_shutdown command<single: condor_set_shutdown command>`
 
 Synopsis
 --------

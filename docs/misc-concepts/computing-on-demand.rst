@@ -3,6 +3,10 @@
 Computing On Demand (COD)
 =========================
 
+` <index://COD (Computing on Demand)>`__
+` <index://Computing on Demand (see COD)>`__
+:index:`COD<single: COD; introduction>`
+
 Computing On Demand (COD) extends HTCondor’s high throughput computing
 abilities to include a method for running short-term jobs on
 instantly-available resources.
@@ -52,6 +56,8 @@ applications to seamlessly interact with the HTCondor batch system.
 Overview of How COD Works
 -------------------------
 
+:index:`COD<single: COD; overview>`
+
 The resources of an HTCondor pool (nodes) run jobs. When a high-priority
 COD job appears at a node, the lower-priority (currently running) batch
 job is suspended. The COD job runs immediately, while the batch job
@@ -65,6 +71,8 @@ the claims are suspended, allowing batch jobs to run.
 Authorizing Users to Create and Manage COD Claims
 -------------------------------------------------
 
+:index:`COD<single: COD; authorizing users>`
+
 Claims on nodes are assigned to users. A user with a claim on a resource
 can then suspend and resume a COD job at will. This gives the user a
 great deal of power on the claimed resource, even if it is owned by
@@ -72,9 +80,9 @@ another user. Because of this, it is essential that users allowed to
 claim COD resources can be trusted not to abuse this power. Users are
 authorized to have access to the privilege of creating and using a COD
 claim on a machine. This privilege is granted when the HTCondor
-administrator places a given user name in the ``VALID_COD_USERS`` list
-in the HTCondor configuration for the machine (usually in a local
-configuration file).
+administrator places a given user name in the ``VALID_COD_USERS``
+:index:`VALID_COD_USERS<single: VALID_COD_USERS>` list in the HTCondor configuration for
+the machine (usually in a local configuration file).
 
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
@@ -86,6 +94,8 @@ be claimed) and issuing the command locally.
 
 Defining a COD Application
 --------------------------
+
+:index:`COD<single: COD; defining an application>`
 
 To run an application on a claimed COD resource, an authorized user
 defines characteristics of the application. Examples of characteristics
@@ -120,132 +130,155 @@ using the *condor\_cod* tool.
 COD Application Attributes
 ''''''''''''''''''''''''''
 
+:index:`COD<single: COD; attributes>` :index:`Required attributes<single: Required attributes>`
+
 Attributes for a COD application are either required or optional. The
 following attributes are required:
+:index:`COD<single: COD; required attributes>`
 
  ``Cmd``
-    This attribute defines the full path to the executable program to be
-    run as a COD application. Since HTCondor does not currently provide
-    any mechanism to transfer files on behalf of COD applications, this
-    path should be a valid path on the machine where the application
-    will be run. It is a string attribute, and must therefore be
-    enclosed in quotation marks ("). There is no default.
+    This attribute :index:`Cmd<single: Cmd>`\ defines the full path to the
+    executable program to be run as a COD application. Since HTCondor
+    does not currently provide any mechanism to transfer files on behalf
+    of COD applications, this path should be a valid path on the machine
+    where the application will be run. It is a string attribute, and
+    must therefore be enclosed in quotation marks ("). There is no
+    default.
  ``Owner``
-    If the *condor\_startd* daemon is executing as root on the resource
-    where a COD application will run, the user must also define
-    ``Owner`` to specify what user name the application will run as. On
-    Windows, the *condor\_startd* daemon always runs as an Administrator
-    service, which is equivalent to running as root on Unix platforms.
-    If the user specifies any COD application attributes with the
-    *condor\_cod* *activate* command-line tool, the ``Owner`` attribute
-    will be defined as the user name that ran *condor\_cod* *activate*.
-    However, if the user defines all attributes of their COD application
-    in the HTCondor configuration files, and does not define any
-    attributes with the *condor\_cod* *activate* command-line tool,
-    there is no default, and ``Owner`` must be specified in the
-    configuration file. ``Owner`` must contain a valid user name on the
-    given COD resource. It is a string attribute, and must therefore be
-    enclosed in quotation marks (").
+    If the *condor\_startd* daemon is executing as root on
+    :index:`Owner<single: Owner>`\ the resource where a COD application will run,
+    the user must also define ``Owner`` to specify what user name the
+    application will run as. On Windows, the *condor\_startd* daemon
+    always runs as an Administrator service, which is equivalent to
+    running as root on Unix platforms. If the user specifies any COD
+    application attributes with the *condor\_cod* *activate*
+    command-line tool, the ``Owner`` attribute will be defined as the
+    user name that ran *condor\_cod* *activate*. However, if the user
+    defines all attributes of their COD application in the HTCondor
+    configuration files, and does not define any attributes with the
+    *condor\_cod* *activate* command-line tool, there is no default, and
+    ``Owner`` must be specified in the configuration file. ``Owner``
+    must contain a valid user name on the given COD resource. It is a
+    string attribute, and must therefore be enclosed in quotation marks
+    (").
  ``RequestCpus``
-    Required when running on a *condor\_startd* that uses partitionable
-    slots. It specifies the number of CPU cores from the partitionable
-    slot allocated for this job.
+    Required when running on a *condor\_startd*
+    :index:`RequestCpus<single: RequestCpus>`\ that uses partitionable slots. It
+    specifies the number of CPU cores from the partitionable slot
+    allocated for this job.
  ``RequestDisk``
-    Required when running on a *condor\_startd* that uses partitionable
-    slots. It specifies the disk space, in Megabytes, from the
-    partitionable slot allocated for this job.
+    Required when running on a *condor\_startd*
+    :index:`RequestDisk<single: RequestDisk>`\ that uses partitionable slots. It
+    specifies the disk space, in Megabytes, from the partitionable slot
+    allocated for this job.
  ``RequestMemory``
-    Required when running on a *condor\_startd* that uses partitionable
-    slots. It specifies the memory, in Megabytes, from the partitionable
-    slot allocated for this job.
+    Required when running on a *condor\_startd*
+    :index:`RequestMemory<single: RequestMemory>`\ that uses partitionable slots. It
+    specifies the memory, in Megabytes, from the partitionable slot
+    allocated for this job.
+
+:index:`COD<single: COD; optional attributes>`
+:index:`Optional attributes<single: Optional attributes>`
 
 The following list of attributes are optional:
 
  ``JobUniverse``
-    This attribute defines what HTCondor job universe to use for the
-    given COD application. The only tested universes are vanilla and
-    java. This attribute must be an integer, with vanilla using the
-    value 5, and java using the value 10.
+    This attribute defines what HTCondor job
+    :index:`JobUniverse<single: JobUniverse>`\ universe to use for the given COD
+    application. The only tested universes are vanilla and java. This
+    attribute must be an integer, with vanilla using the value 5, and
+    java using the value 10.
  ``IWD``
-    IWD is an acronym for Initial Working Directory. It defines the full
-    path to the directory where a given COD application are to be run.
-    Unless the application changes its current working directory, any
-    relative path names used by the application will be relative to the
-    IWD. If any other attributes that define file names (for example,
-    ``In``, ``Out``, and so on) do not contain a full path, the ``IWD``
-    will automatically be pre-pended to those file names. It is a string
-    attribute, and must therefore be enclosed in quotation marks ("). If
-    the ``IWD`` is not specified, the temporary execution sandbox
-    created by the *condor\_starter* will be used as the initial working
-    directory.
+    IWD is an acronym for Initial Working Directory.
+    :index:`IWD<single: IWD>`\ It defines the full path to the directory where
+    a given COD application are to be run. Unless the application
+    changes its current working directory, any relative path names used
+    by the application will be relative to the IWD. If any other
+    attributes that define file names (for example, ``In``, ``Out``, and
+    so on) do not contain a full path, the ``IWD`` will automatically be
+    pre-pended to those file names. It is a string attribute, and must
+    therefore be enclosed in quotation marks ("). If the ``IWD`` is not
+    specified, the temporary execution sandbox created by the
+    *condor\_starter* will be used as the initial working directory.
  ``In``
-    This string defines the path to the file on the COD resource that
-    should be used as standard input (``stdin``) for the COD
-    application. This file (and all parent directories) must be readable
-    by whatever user the COD application will run as. If not specified,
-    the default is ``/dev/null``. It is a string attribute, and must
-    therefore be enclosed in quotation marks (").
+    This string defines the path to the file on the
+    :index:`In<single: In>`\ COD resource that should be used as standard
+    input (``stdin``) for the COD application. This file (and all parent
+    directories) must be readable by whatever user the COD application
+    will run as. If not specified, the default is ``/dev/null``. It is a
+    string attribute, and must therefore be enclosed in quotation marks
+    (").
  ``Out``
-    This string defines the path to the file on the COD resource that
-    should be used as standard output (``stdout``) for the COD
-    application. This file must be writable (and all parent directories
-    readable) by whatever user the COD application will run as. If not
-    specified, the default is ``/dev/null``. It is a string attribute,
-    and must therefore be enclosed in quotation marks (").
- ``Err``
-    This string defines the path to the file on the COD resource that
-    should be used as standard error (``stderr``) for the COD
-    application. This file must be writable (and all parent directories
-    readable) by whatever user the COD application will run as. If not
-    specified, the default is ``/dev/null``. It is a string attribute,
-    and must therefore be enclosed in quotation marks (").
- ``Env``
-    This string defines environment variables to set for a given COD
-    application. Each environment variable has the form NAME=value.
-    Multiple variables are delimited with a semicolon. An example:
-    Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
-    attribute, and must therefore be enclosed in quotation marks (").
- ``Args``
-    This string attribute defines the list of arguments to be supplied
-    to the program on the command-line. The arguments are delimited
-    (separated) by space characters. There is no default. If the
-    ``JobUniverse`` corresponds to the Java universe, the first argument
-    must be the name of the class containing ``main``. It is a string
-    attribute, and must therefore be enclosed in quotation marks (").
- ``JarFiles``
-    This string attribute is only used if ``JobUniverse`` is 10 (the
-    Java universe). If a given COD application is a Java program,
-    specify the JAR files that the program requires with this attribute.
-    There is no default. It is a string attribute, and must therefore be
-    enclosed in quotation marks ("). Multiple file names may be
-    delimited with either commas or white space characters, and
-    therefore, file names can not contain spaces.
- ``KillSig``
-    This attribute specifies what signal should be sent whenever the
-    HTCondor system needs to gracefully shutdown the COD application. It
-    can either be specified as a string containing the signal name (for
-    example KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The
-    default is to use SIGTERM.
- ``StarterUserLog``
-    This string specifies a file name for a log file that the
-    *condor\_starter* daemon can write with entries for relevant events
-    in the life of a given COD application. It is similar to the job
-    event log file specified for regular HTCondor jobs with the **Log**
-    command in a submit description file. However, certain attributes
-    that are placed in a job event log do not make sense in the COD
-    environment, and are therefore omitted. The default is not to write
-    this log file. It is a string attribute, and must therefore be
+    This string defines the path to the file on the
+    :index:`Out<single: Out>`\ COD resource that should be used as standard
+    output (``stdout``) for the COD application. This file must be
+    writable (and all parent directories readable) by whatever user the
+    COD application will run as. If not specified, the default is
+    ``/dev/null``. It is a string attribute, and must therefore be
     enclosed in quotation marks (").
+ ``Err``
+    This string defines the path to the file on the
+    :index:`Err<single: Err>`\ COD resource that should be used as standard
+    error (``stderr``) for the COD application. This file must be
+    writable (and all parent directories readable) by whatever user the
+    COD application will run as. If not specified, the default is
+    ``/dev/null``. It is a string attribute, and must therefore be
+    enclosed in quotation marks (").
+ ``Env``
+    This string defines environment variables to :index:`Env<single: Env>`\ set
+    for a given COD application. Each environment variable has the form
+    NAME=value. Multiple variables are delimited with a semicolon. An
+    example: Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a
+    string attribute, and must therefore be enclosed in quotation marks
+    (").
+ ``Args``
+    This string attribute defines the list of
+    :index:`Args<single: Args>`\ arguments to be supplied to the program on the
+    command-line. The arguments are delimited (separated) by space
+    characters. There is no default. If the ``JobUniverse`` corresponds
+    to the Java universe, the first argument must be the name of the
+    class containing ``main``. It is a string attribute, and must
+    therefore be enclosed in quotation marks (").
+ ``JarFiles``
+    This string attribute is only used if
+    :index:`JarFiles<single: JarFiles>`\ ``JobUniverse`` is 10 (the Java universe).
+    If a given COD application is a Java program, specify the JAR files
+    that the program requires with this attribute. There is no default.
+    It is a string attribute, and must therefore be enclosed in
+    quotation marks ("). Multiple file names may be delimited with
+    either commas or white space characters, and therefore, file names
+    can not contain spaces.
+ ``KillSig``
+    This attribute specifies what signal should be
+    :index:`KillSig<single: KillSig>`\ sent whenever the HTCondor system needs to
+    gracefully shutdown the COD application. It can either be specified
+    as a string containing the signal name (for example
+    KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The default is
+    to use SIGTERM.
+ ``StarterUserLog``
+    This string specifies a file name for a
+    :index:`StarterUserLog<single: StarterUserLog>`\ log file that the *condor\_starter*
+    daemon can write with entries for relevant events in the life of a
+    given COD application. It is similar to the job event log file
+    specified for regular HTCondor jobs with the
+    **Log**\ :index:`submit commands<single: submit commands; Log>` command in a submit
+    description file. However, certain attributes that are placed in a
+    job event log do not make sense in the COD environment, and are
+    therefore omitted. The default is not to write this log file. It is
+    a string attribute, and must therefore be enclosed in quotation
+    marks (").
  ``StarterUserLogUseXML``
-    If the ``StarterUserLog`` attribute is defined, the default format
-    is a human-readable format. However, HTCondor can write out this log
-    in an XML representation, instead. To enable the XML format for this
-    job event log, the ``StarterUserLogUseXML`` boolean is set to TRUE.
-    The default if not specified is FALSE.
+    If the ``StarterUserLog``
+    :index:`StarterUserLogUseXML<single: StarterUserLogUseXML>`\ attribute is defined, the
+    default format is a human-readable format. However, HTCondor can
+    write out this log in an XML representation, instead. To enable the
+    XML format for this job event log, the ``StarterUserLogUseXML``
+    boolean is set to TRUE. The default if not specified is FALSE.
 
 If any attribute that specifies a path (``Cmd``, ``In``,
 ``Out``,\ ``Err``, ``StarterUserLog``) is not a full path name, HTCondor
-automatically prepends the value of ``IWD``.
+automatically prepends the value of ``IWD``. :index:`Job ID<single: Job ID>`
+:index:`Job ID<single: Job ID>`
 
 The final set of attributes define an identification for a COD
 application. The job ID is made up of both the ``ClusterId`` and
@@ -277,15 +310,16 @@ In this case, it is the user’s responsibility to ensure uniqueness, if
 so desired.
 
  ``ClusterId``
-    This integer defines the cluster identifier for a COD job. The
-    default value is 1. The ``ClusterId`` can also be defined with the
-    *condor\_cod* *activate* command-line tool using the **-cluster**
-    option.
+    This integer defines the :index:`ClusterId<single: ClusterId>`\ cluster
+    identifier for a COD job. The default value is 1. The ``ClusterId``
+    can also be defined with the
+    :index:`COD<single: COD; condor_cod activate command>`\ *condor\_cod*
+    *activate* command-line tool using the **-cluster** option.
  ``ProcId``
-    This integer defines the process identifier (within a cluster) for a
-    COD job. The default value is 0. The ``ProcId`` can also be defined
-    with the *condor\_cod* *activate* command-line tool using the
-    **-cluster** option.
+    This integer defines the :index:`ProcID<single: ProcID>`\ process identifier
+    (within a cluster) for a COD job. The default value is 0. The
+    ``ProcId`` can also be defined with the *condor\_cod* *activate*
+    command-line tool using the **-cluster** option.
 
 Note that the ``ClusterId`` and ``ProcId`` identifiers can also be
 specified as command-line arguments to the *condor\_cod* *activate* when
@@ -295,6 +329,8 @@ section \ `4.3.4 <#x50-4290004.3.4>`__ below for details on using
 
 Defining Attributes in the HTCondor Configuration Files
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`COD<single: COD; defining attributes by configuration>`
 
 To define COD attributes in the HTCondor configuration file for a given
 application, the user selects a keyword to uniquely name ClassAd
@@ -336,6 +372,8 @@ define ``Owner`` to be the user that the COD application should run as.
 Defining Attributes with the *condor\_cod* Tool
 '''''''''''''''''''''''''''''''''''''''''''''''
 
+:index:`COD<single: COD; condor_cod tool>`
+
 COD users may define attributes dynamically (at the time they spawn a
 COD application). In this case, the user writes the ClassAd attributes
 into a file, and the file name is passed to the *condor\_cod* *activate*
@@ -362,6 +400,8 @@ will fail to launch the application.
 
 Managing COD Resource Claims
 ----------------------------
+
+:index:`COD<single: COD; managing claims>`
 
 Separate commands are provided by HTCondor to manage COD claims on batch
 resources. Once created, each COD claim has a unique identifying string,
@@ -421,6 +461,8 @@ The following sections describe each option in greater detail.
 
 Request
 '''''''
+
+:index:`COD<single: COD; condor_cod_request command>`
 
 A user must be granted authorization to create COD claims on a specific
 machine. In addition, when the user uses these COD claims, the
@@ -537,6 +579,8 @@ specified number of seconds unless the lease is renewed with
 Activate
 ''''''''
 
+:index:`COD<single: COD; condor_cod_activate command>`
+
 Once a user has created a valid COD claim and has the claim ID, the next
 step is to spawn a COD job using the claim. The way to do this is to
 activate the claim, using the *condor\_cod\_activate* command. Once a
@@ -608,6 +652,8 @@ is not required for COD. If not specified, the job ID defaults to 1.0.
 Suspend
 '''''''
 
+:index:`COD<single: COD; condor_cod_suspend command>`
+
 Once a COD application has been activated with *condor\_cod\_activate*
 and is running on a COD resource, it may be temporarily suspended using
 *condor\_cod\_suspend*. In this case, the claim state becomes Suspended.
@@ -634,6 +680,8 @@ spawned on the given COD claim in the first place.
 Renew
 '''''
 
+:index:`COD<single: COD; condor_cod_renew command>`
+
 This command tells the *condor\_startd* to renew the lease on the COD
 claim for the amount of lease time specified when the claim was created.
 See section \ `4.3.4 <#x50-4280004.3.4>`__ for more information on using
@@ -651,6 +699,8 @@ If the user attempts to renew a COD job that no longer exists,
 
 Resume
 ''''''
+
+:index:`COD<single: COD; condor_cod_resume command>`
 
 Once a COD application has been suspended with *condor\_cod\_suspend*,
 it can be resumed using *condor\_cod\_resume*. In this case, the claim
@@ -670,6 +720,8 @@ If the user attempts to resume a COD job that is not suspended,
 
 Deactivate
 ''''''''''
+
+:index:`COD<single: COD; condor_cod_deactivate command>`
 
 If a given COD application does not exit on its own and needs to be
 removed manually, invoke the *condor\_cod\_deactivate* command to kill
@@ -713,6 +765,8 @@ an error message.
 Release
 '''''''
 
+:index:`COD<single: COD; condor_cod_release command>`
+
 If users no longer wish to use a given COD claim, they can release the
 claim with the *condor\_cod\_release* command. If there is a COD job
 running on the claim, the job will first be shut down (as if
@@ -735,6 +789,8 @@ specified in the ``KillSig`` attribute for the job (SIGTERM by default).
 
 Delegate proxy
 ''''''''''''''
+
+:index:`COD<single: COD; condor_cod_delegate_proxy command>`
 
 In some cases, a user will want to delegate a copy of their user
 credentials (in the form of an x509 proxy) to the machine where one of
@@ -764,6 +820,8 @@ only happen after the existing COD claim has been deactivated.
 Limitations of COD Support in HTCondor
 --------------------------------------
 
+:index:`COD<single: COD; limitations>`
+
 HTCondor’s support for COD has a few limitations:
 
 -  Applications and data must be pre-staged at a given machine.
@@ -777,5 +835,7 @@ HTCondor’s support for COD has a few limitations:
    application to take advantage of COD. The HTCondor Team is not in the
    business of developing applications, we only provide mechanisms to
    execute them.
+
+` <index://COD (Computing on Demand)>`__
 
       

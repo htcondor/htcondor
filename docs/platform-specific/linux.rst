@@ -3,6 +3,8 @@
 Linux
 =====
 
+` <index://Linux;platform-specific information>`__
+
 This section provides information specific to the Linux port of
 HTCondor. Linux is a difficult platform to support. It changes
 frequently, and HTCondor has some extremely system-dependent code, such
@@ -34,6 +36,8 @@ available versions of Red Hat Linux on x86 architecture machines.
 
 Linux Address Space Randomization
 ---------------------------------
+
+` <index://address space randomization;platform-specific information>`__
 
 Modern versions of Red Hat and Fedora do address space randomization,
 which randomizes the memory layout of a process to reduce the

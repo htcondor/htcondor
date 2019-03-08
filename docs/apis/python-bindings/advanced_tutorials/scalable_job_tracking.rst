@@ -18,7 +18,7 @@ In this module, we outline the important design considerations behind each
 approach and walk through examples.
 
 Poll-based Tracking
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 Poll-based tracking involves periodically querying the schedd(s) for jobs of interest.
 We have covered the technical aspects of querying the Schedd in prior tutorials.
@@ -51,52 +51,55 @@ Disadvantages:
 
 
 Event-based Tracking
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
-Each job in the Schedd can specify the ``UserLog`` attribute; the Schedd will atomically append a
-machine-parseable event to the specified file for every state transition the job goes through.
-By keeping track of the events in the logs, we can build an in-memory representation of the job
-queue state.
+Each job in the Schedd can specify the ``UserLog`` attribute; the Schedd will
+atomically append a machine-parseable event to the specified file for every
+state transition the job goes through.  By keeping track of the events in the
+logs, we can build an in-memory representation of the job queue state.
 
 Advantages:
-   *  No interaction with the ``condor_schedd`` process is needed to read the event logs; the job
-      tracking effectively places no burden on the Schedd.
-   *  In most cases, the Schedd writes to the log synchronously after the event occurs.  Hence, the
-      latency of receiving an update can be sub-second.
-   *  The job tracking scales as a function of the event rate, not the total number of jobs.
+   *  No interaction with the ``condor_schedd`` process is needed to read the
+      event logs; the job tracking effectively places no burden on the Schedd.
+   *  In most cases, HTCondor writes to the log synchronously after the event
+      occurs.  Hence, the latency of receiving an update can be sub-second.
+   *  The job tracking scales as a function of the event rate, not the total
+      number of jobs.
    *  Each job state is seen, even after the job has left the queue.
 
 Disadvantages:
-   *  Only the local ``condor_schedd`` can be tracked; there is no mechanism to receive the event
-      log remotely.
-   *  Log files must be processed from the beginning, with no rotations or truncations possible.
-      Large files can take a large amount of CPU time to process.
-   *  If every job writes to a separate log file, the job tracking software may have to keep an
-      enormous number of open file descriptors.  If every job writes to the same log file, the
-      log file may grow to many gigabytes.
-   *  If the job tracking software misses an event (or an unknown bug causes the ``condor_schedd``
-      to fail to write the event), then the job tracker may believe a job incorrectly is stuck
-      in the wrong state.
+   *  Only the local ``condor_schedd`` can be tracked; there is no mechanism
+      to receive the event log remotely.
+   *  Log files must be processed from the beginning.  Large files can take a
+      large amount of CPU time to process.
+   *  If each job writes to a separate log file, the job tracking software
+      may have to keep an enormous number of open file descriptors.  If each
+      job writes to the same log file, the log file may grow to many gigabytes.
+   *  If the job tracking software misses an event (or an unknown bug causes
+      HTCondor to fail to write the event), then the job tracker may believe
+      a job incorrectly is stuck in the wrong state.
 
-At a technical level, event tracking is implemented with the :func:`~htcondor.read_events` function::
+At a technical level, an event log file is represented by an instance of the
+:class:`~htcondor.JobEventLog` class, which is an iterator returning instances
+of the :class:`~htcondor.JobEvent` class.  The following demonstrates the
+usage of both::
 
-   >>> fp = open("/tmp/job_one.log")
-   >>> events = htcondor.read_events(fp)
-   >>> for event in events:
-   ...     print event
+   import sys
+   import htcondor
+   from htcondor import JobEventType
 
-The return value of :func:`~htcondor.read_events` is an :class:`~htcondor.EventIterator` object,
-which yields a :class:`~classad.ClassAd`-based description of the job event.
+   jel = htcondor.JobEventLog("job.log")
+   for event in jel.events(stop_after=60):
+       if event.type is JobEventType.EXECUTE:
+           break
+   else:
+       print("Job did not start within sixty seconds, aborting.")
+       sys.exit(-1)
 
-If the job tracker is embedded inside a larger application framework, it may be worth noting
-that:
-
-   *  The :class:`~htcondor.EventIterator` can be set to non-blocking mode; if no event is available,
-      it will return ``None`` instead of throwing a ``StopException``.
-   *  The :class:`~htcondor.EventIterator` can return an ``inotify``-based file descriptor.  This
-      file descriptor can be used with :func:`select.select()` to determine which log file has a
-      new event ready to be read.
-
-In particular, when using the ``inotify``-based polling, one can be informed of newly-available
-events within milliseconds of them being written to the file.
-
+   # This (the default) waits forever for the next event.
+   for event in jel.events(stop_after=None):
+       if event.type is JobEventType.JOB_TERMINATED:
+           # All events have the type, cluster, proc, and timestamp attributes.
+           # JOB_TERMINATED events have the ReturnValue key; other event types
+           # will have other keys.
+           print("Job {0}.{1} terminated with return value {2}".format(event.cluster, event.proc, event["ReturnValue"]))

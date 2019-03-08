@@ -4,6 +4,7 @@
 ================
 
 meta scheduler of the jobs submitted as the nodes of a DAG or DAGs
+:index:`HTCondor commands<single: HTCondor commands; condor_dagman>`\ :index:`condor_dagman command<single: condor_dagman command>`
 
 Synopsis
 --------
@@ -91,7 +92,8 @@ Options
     once the number of idle procs falls below the specified limit.
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
-    variable ``DAGMAN_MAX_JOBS_IDLE`` (see  `Configuration
+    variable ``DAGMAN_MAX_JOBS_IDLE``
+    :index:`DAGMAN_MAX_JOBS_IDLE<single: DAGMAN_MAX_JOBS_IDLE>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
@@ -107,16 +109,17 @@ Options
     cluster counts as one job, no matter how many individual procs are
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
-    configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED`` (see
-     `Configuration
+    configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
+    :index:`DAGMAN_MAX_JOBS_SUBMITTED<single: DAGMAN_MAX_JOBS_SUBMITTED>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 0 (unlimited).
  **-maxpre **\ *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
-    the configuration variable ``DAGMAN_MAX_PRE_SCRIPTS`` (see
-     `Configuration
+    the configuration variable
+    ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS<single: DAGMAN_MAX_PRE_SCRIPTS>`
+    (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-maxpost **\ *NumberOfPostScripts*
@@ -124,7 +127,7 @@ Options
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    (see  `Configuration
+    :index:`DAGMAN_MAX_POST_SCRIPTS<single: DAGMAN_MAX_POST_SCRIPTS>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-noeventchecks**
@@ -200,23 +203,23 @@ Options
  **-suppress\_notification**
     Causes jobs submitted by *condor\_dagman* to not send email
     notification for events. The same effect can be achieved by setting
-    the configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION`` to
-    ``True``. This command line option is independent of the
-    **-notification** command line option, which controls notification
-    for the *condor\_dagman* job itself. This flag is generally
-    superfluous, as ``DAGMAN_SUPPRESS_NOTIFICATION`` defaults to
-    ``True``.
+    the configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
+    :index:`DAGMAN_SUPPRESS_NOTIFICATION<single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``True``. This
+    command line option is independent of the **-notification** command
+    line option, which controls notification for the *condor\_dagman*
+    job itself. This flag is generally superfluous, as
+    ``DAGMAN_SUPPRESS_NOTIFICATION`` defaults to ``True``.
  **-dont\_suppress\_notification**
     Causes jobs submitted by *condor\_dagman* to defer to content within
     the submit description file when deciding to send email notification
     for events. The same effect can be achieved by setting the
-    configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION`` to
-    ``False``. This command line flag is independent of the
-    **-notification** command line option, which controls notification
-    for the *condor\_dagman* job itself. If both
-    **-dont\_suppress\_notification** and **-suppress\_notification**
-    are specified within the same command line, the last argument is
-    used.
+    configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
+    :index:`DAGMAN_SUPPRESS_NOTIFICATION<single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``False``. This
+    command line flag is independent of the **-notification** command
+    line option, which controls notification for the *condor\_dagman*
+    job itself. If both **-dont\_suppress\_notification** and
+    **-suppress\_notification** are specified within the same command
+    line, the last argument is used.
  **-dagman **\ *DagmanExecutable*
     (This argument is included only to be passed to
     *condor\_submit\_dag* if lazy submit file generation is used for

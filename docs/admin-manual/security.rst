@@ -3,6 +3,8 @@
 Security
 ========
 
+:index:`security<single: security; in HTCondor>`
+
 Security in HTCondor is a broad issue, with many aspects to consider.
 Because HTCondor’s main purpose is to allow users to run arbitrary code
 on large numbers of computers, it is important to try to limit who can
@@ -52,8 +54,9 @@ and described:
     data sent for internal communication, as well as user data, such as
     files and executables. Encryption operates on network transmissions:
     unencrypted data is stored on disk by default. However, see the
-    ``ENCRYPT_EXECUTE_DIRECTORY`` setting for how to encrypt job data on
-    the disk of an execute node.
+    ``ENCRYPT_EXECUTE_DIRECTORY``
+    :index:`ENCRYPT_EXECUTE_DIRECTORY<single: ENCRYPT_EXECUTE_DIRECTORY>` setting for how to encrypt
+    job data on the disk of an execute node.
  Integrity
     The man-in-the-middle attack tampers with data without the awareness
     of either side of the communication. HTCondor’s integrity check
@@ -112,6 +115,8 @@ integrity features.
 
 Access Level Descriptions
 '''''''''''''''''''''''''
+
+:index:`security<single: security; access levels>`
 
 Authorization is granted based on specified access levels. This list
 describes each access level, and provides examples of their usage. The
@@ -294,9 +299,9 @@ SCHEDD:
     claim. Therefore, if one desires to only authorize specific execute
     machines to run jobs, one must either limit which machines are
     allowed to advertise themselves to the pool (most common) or
-    configure the *condor\_schedd*\ ’s ``ALLOW_CLIENT`` setting to only
-    allow connections from the *condor\_schedd* to the trusted execute
-    machines.
+    configure the *condor\_schedd*\ ’s ``ALLOW_CLIENT``
+    :index:`ALLOW_CLIENT<single: ALLOW_CLIENT>` setting to only allow connections from
+    the *condor\_schedd* to the trusted execute machines.
 
 MASTER: All commands are registered with ``ADMINISTRATOR`` access:
 
@@ -511,8 +516,12 @@ lists all implemented encryption methods.
 Authentication
 --------------
 
+:index:`authentication<single: authentication>` :index:`security<single: security; authentication>`
+
 The client side of any communication uses one of two macros to specify
 whether authentication is to occur:
+:index:`SEC_DEFAULT_AUTHENTICATION<single: SEC_DEFAULT_AUTHENTICATION>`
+:index:`SEC_CLIENT_AUTHENTICATION<single: SEC_CLIENT_AUTHENTICATION>`
 
 ::
 
@@ -521,7 +530,17 @@ whether authentication is to occur:
 
 For the daemon side, there are a larger number of macros to specify
 whether authentication is to take place, based upon the necessary access
-level:
+level: :index:`SEC_DEFAULT_AUTHENTICATION<single: SEC_DEFAULT_AUTHENTICATION>`
+:index:`SEC_READ_AUTHENTICATION<single: SEC_READ_AUTHENTICATION>`
+:index:`SEC_WRITE_AUTHENTICATION<single: SEC_WRITE_AUTHENTICATION>`
+:index:`SEC_ADMINISTRATOR_AUTHENTICATION<single: SEC_ADMINISTRATOR_AUTHENTICATION>`
+:index:`SEC_CONFIG_AUTHENTICATION<single: SEC_CONFIG_AUTHENTICATION>`
+:index:`SEC_OWNER_AUTHENTICATION<single: SEC_OWNER_AUTHENTICATION>`
+:index:`SEC_DAEMON_AUTHENTICATION<single: SEC_DAEMON_AUTHENTICATION>`
+:index:`SEC_NEGOTIATOR_AUTHENTICATION<single: SEC_NEGOTIATOR_AUTHENTICATION>`
+:index:`SEC_ADVERTISE_MASTER_AUTHENTICATION<single: SEC_ADVERTISE_MASTER_AUTHENTICATION>`
+:index:`SEC_ADVERTISE_STARTD_AUTHENTICATION<single: SEC_ADVERTISE_STARTD_AUTHENTICATION>`
+:index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION<single: SEC_ADVERTISE_SCHEDD_AUTHENTICATION>`
 
 ::
 
@@ -561,7 +580,8 @@ definition.
 If authentication is to be done, then the communicating parties must
 negotiate a mutually acceptable method of authentication to be used. A
 list of acceptable methods may be provided by the client, using the
-macros
+macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS<single: SEC_DEFAULT_AUTHENTICATION_METHODS>`
+:index:`SEC_CLIENT_AUTHENTICATION_METHODS<single: SEC_CLIENT_AUTHENTICATION_METHODS>`
 
 ::
 
@@ -569,7 +589,17 @@ macros
         SEC_CLIENT_AUTHENTICATION_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
-macros
+macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS<single: SEC_DEFAULT_AUTHENTICATION_METHODS>`
+:index:`SEC_READ_AUTHENTICATION_METHODS<single: SEC_READ_AUTHENTICATION_METHODS>`
+:index:`SEC_WRITE_AUTHENTICATION_METHODS<single: SEC_WRITE_AUTHENTICATION_METHODS>`
+:index:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS<single: SEC_ADMINISTRATOR_AUTHENTICATION_METHODS>`
+:index:`SEC_DAEMON_AUTHENTICATION_METHODS<single: SEC_DAEMON_AUTHENTICATION_METHODS>`
+:index:`SEC_CONFIG_AUTHENTICATION_METHODS<single: SEC_CONFIG_AUTHENTICATION_METHODS>`
+:index:`SEC_OWNER_AUTHENTICATION_METHODS<single: SEC_OWNER_AUTHENTICATION_METHODS>`
+:index:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS<single: SEC_NEGOTIATOR_AUTHENTICATION_METHODS>`
+:index:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS<single: SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS>`
+:index:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS<single: SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS>`
+:index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS<single: SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS>`
 
 ::
 
@@ -656,6 +686,8 @@ machine is NTSSPI, KERBEROS, GSI.
 GSI Authentication
 ''''''''''''''''''
 
+:index:`authentication<single: authentication; GSI>`
+
 The GSI (Grid Security Infrastructure) protocol provides an avenue for
 HTCondor to do PKI-based (Public Key Infrastructure) authentication
 using X.509 certificates. The basics of GSI are well-documented
@@ -673,9 +705,9 @@ checks that the certificate is valid, and B checks to see that the CA
 that signed A’s certificate is one that B trusts.
 
 For the GSI authentication protocol, an X.509 certificate is required.
-Files with predetermined names hold a certificate, a key, and
-optionally, a proxy. A separate directory has one or more files that
-become the list of trusted CAs.
+:index:`certificate<single: certificate; X.509>`\ Files with predetermined names hold a
+certificate, a key, and optionally, a proxy. A separate directory has
+one or more files that become the list of trusted CAs.
 
 Allowing HTCondor to do this GSI authentication requires knowledge of
 the locations of the client A’s certificate and the daemon B’s list of
@@ -689,22 +721,24 @@ locations.
 
  GSI certificate locations for HTCondor daemons
     For an HTCondor daemon, the certificate may be a single host
-    certificate, and all HTCondor daemons on the same machine may share
-    the same certificate. In some cases, the certificate can also be
-    copied to other machines, where local copies are necessary. This may
-    occur only in cases where a single host certificate can match
-    multiple host names, something that is beyond the scope of this
-    manual. The certificates must be protected by access rights to
-    files, since the password file is not encrypted.
+    certificate, :index:`host certificate<single: host certificate>`\ and all HTCondor
+    daemons on the same machine may share the same certificate. In some
+    cases, the certificate can also be copied to other machines, where
+    local copies are necessary. This may occur only in cases where a
+    single host certificate can match multiple host names, something
+    that is beyond the scope of this manual. The certificates must be
+    protected by access rights to files, since the password file is not
+    encrypted.
 
     The specification of the location of the necessary files through
     configuration uses the following precedence.
 
-    #. Configuration variable ``GSI_DAEMON_DIRECTORY`` gives the
-       complete path name to the directory that contains the
-       certificate, key, and directory with trusted CAs. HTCondor uses
-       this directory as follows in its construction of the following
-       configuration variables:
+    #. Configuration variable ``GSI_DAEMON_DIRECTORY``
+       :index:`GSI_DAEMON_DIRECTORY<single: GSI_DAEMON_DIRECTORY>` gives the complete path name
+       to the directory that contains the certificate, key, and
+       directory with trusted CAs. HTCondor uses this directory as
+       follows in its construction of the following configuration
+       variables:
 
        ::
 
@@ -719,20 +753,21 @@ locations.
        variables that specify the complete path and file name of the
        certificate with
 
-           ``GSI_DAEMON_CERT``
+           ``GSI_DAEMON_CERT`` :index:`GSI_DAEMON_CERT<single: GSI_DAEMON_CERT>`
 
        the key with
 
-           ``GSI_DAEMON_KEY``
+           ``GSI_DAEMON_KEY`` :index:`GSI_DAEMON_KEY<single: GSI_DAEMON_KEY>`
 
        a proxy with
 
-           ``GSI_DAEMON_PROXY``
+           ``GSI_DAEMON_PROXY`` :index:`GSI_DAEMON_PROXY<single: GSI_DAEMON_PROXY>`
 
        the complete path to the directory containing the list of trusted
        CAs with
 
            ``GSI_DAEMON_TRUSTED_CA_DIR``
+           :index:`GSI_DAEMON_TRUSTED_CA_DIR<single: GSI_DAEMON_TRUSTED_CA_DIR>`
 
     #. The default location assumed is ``/etc/grid-security``. Note that
        this implemented by setting the value of
@@ -746,6 +781,8 @@ locations.
     ::
 
         GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
+
+    :index:`authentication<single: authentication; unified map file>`
 
     HTCondor will also need a way to map an X.509 distinguished name to
     an HTCondor user id. There are two ways to accomplish this mapping.
@@ -772,16 +809,17 @@ locations.
         OU=Computer Sciences Department/CN=Alice Smith" asmith
 
     HTCondor finds the map file in one of three ways. If the
-    configuration variable ``GRIDMAP`` is defined, it gives the full
-    path name to the map file. When not defined, HTCondor looks for the
-    map file in
+    configuration variable ``GRIDMAP`` :index:`GRIDMAP<single: GRIDMAP>` is
+    defined, it gives the full path name to the map file. When not
+    defined, HTCondor looks for the map file in
 
     ::
 
         $(GSI_DAEMON_DIRECTORY)/grid-mapfile
 
-    If ``GSI_DAEMON_DIRECTORY`` is not defined, then the third place
-    HTCondor looks for the map file is given by
+    If ``GSI_DAEMON_DIRECTORY`` :index:`GSI_DAEMON_DIRECTORY<single: GSI_DAEMON_DIRECTORY>` is
+    not defined, then the third place HTCondor looks for the map file is
+    given by
 
     ::
 
@@ -885,6 +923,8 @@ locations.
 SSL Authentication
 ''''''''''''''''''
 
+:index:`authentication<single: authentication; SSL>`
+
 SSL authentication is similar to GSI authentication, but without GSI’s
 delegation (proxy) capabilities. SSL utilizes X.509 certificates.
 
@@ -904,30 +944,39 @@ defined by settings in the configuration files. The contents of the
 files are identical in format and interpretation to those used by other
 systems which use SSL, such as Apache httpd.
 
-The configuration variables ``AUTH_SSL_CLIENT_CERTFILE`` and
-``AUTH_SSL_SERVER_CERTFILE`` specify the file location for the
-certificate file for the initiator and recipient of connections,
+The configuration variables ``AUTH_SSL_CLIENT_CERTFILE``
+:index:`AUTH_SSL_CLIENT_CERTFILE<single: AUTH_SSL_CLIENT_CERTFILE>` and ``AUTH_SSL_SERVER_CERTFILE``
+:index:`AUTH_SSL_SERVER_CERTFILE<single: AUTH_SSL_SERVER_CERTFILE>` specify the file location for
+the certificate file for the initiator and recipient of connections,
 respectively. Similarly, the configuration variables
-``AUTH_SSL_CLIENT_KEYFILE`` and ``AUTH_SSL_SERVER_KEYFILE`` specify the
-locations for keys.
+``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE<single: AUTH_SSL_CLIENT_KEYFILE>` and
+``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE<single: AUTH_SSL_SERVER_KEYFILE>`
+specify the locations for keys.
 
-The configuration variables ``AUTH_SSL_SERVER_CAFILE`` and
-``AUTH_SSL_CLIENT_CAFILE`` each specify a path and file name, providing
-the location of a file containing one or more certificates issued by
-trusted certificate authorities. Similarly, ``AUTH_SSL_SERVER_CADIR``
-and ``AUTH_SSL_CLIENT_CADIR`` each specify a directory with one or more
-files, each which may contain a single CA certificate. The directories
-must be prepared using the OpenSSL ``c_rehash`` utility.
+The configuration variables ``AUTH_SSL_SERVER_CAFILE``
+:index:`AUTH_SSL_SERVER_CAFILE<single: AUTH_SSL_SERVER_CAFILE>` and ``AUTH_SSL_CLIENT_CAFILE``
+:index:`AUTH_SSL_CLIENT_CAFILE<single: AUTH_SSL_CLIENT_CAFILE>` each specify a path and file name,
+providing the location of a file containing one or more certificates
+issued by trusted certificate authorities. Similarly,
+``AUTH_SSL_SERVER_CADIR`` :index:`AUTH_SSL_SERVER_CADIR<single: AUTH_SSL_SERVER_CADIR>` and
+``AUTH_SSL_CLIENT_CADIR`` :index:`AUTH_SSL_CLIENT_CADIR<single: AUTH_SSL_CLIENT_CADIR>` each
+specify a directory with one or more files, each which may contain a
+single CA certificate. The directories must be prepared using the
+OpenSSL ``c_rehash`` utility.
 
 Kerberos Authentication
 '''''''''''''''''''''''
+
+:index:`authentication<single: authentication; Kerberos>`
+:index:`Kerberos authentication<single: Kerberos authentication>`
 
 If Kerberos is used for authentication, then a mapping from a Kerberos
 domain (called a realm) to an HTCondor UID domain is necessary. There
 are two ways to accomplish this mapping. For a first way to specify the
 mapping, see section \ `3.8.4 <#x36-2850003.8.4>`__ to use HTCondor’s
 unified map file. A second way to specify the mapping defines the
-configuration variable ``KERBEROS_MAP_FILE`` to define a path to an
+configuration variable ``KERBEROS_MAP_FILE``
+:index:`KERBEROS_MAP_FILE<single: KERBEROS_MAP_FILE>` to define a path to an
 administrator-maintained Kerberos-specific map file. The configuration
 syntax is
 
@@ -952,11 +1001,13 @@ If a ``KERBEROS_MAP_FILE`` configuration variable is defined and set,
 then all permitted realms must be explicitly mapped. If no map file is
 specified, then HTCondor assumes that the Kerberos realm is the same as
 the HTCondor UID domain.
+:index:`authentication<single: authentication; Kerberos principal>`
 
-The configuration variable ``KERBEROS_SERVER_PRINCIPAL`` defines the
-name of a Kerberos principal. If ``KERBEROS_SERVER_PRINCIPAL`` is not
-defined, then the default value used is host. A principal specifies a
-unique name to which a set of credentials may be assigned.
+The configuration variable ``KERBEROS_SERVER_PRINCIPAL``
+:index:`KERBEROS_SERVER_PRINCIPAL<single: KERBEROS_SERVER_PRINCIPAL>` defines the name of a Kerberos
+principal. If ``KERBEROS_SERVER_PRINCIPAL`` is not defined, then the
+default value used is host. A principal specifies a unique name to which
+a set of credentials may be assigned.
 
 HTCondor takes the specified (or default) principal and appends a slash
 character, the host name, an ’@’ (at sign character), and the Kerberos
@@ -1003,10 +1054,11 @@ shared secret in this context is referred to as the pool password.
 Before a daemon can use password authentication, the pool password must
 be stored on the daemon’s local machine. On Unix, the password will be
 placed in a file defined by the configuration variable
-``SEC_PASSWORD_FILE`` . This file will be accessible only by the UID
-that HTCondor is started as. On Windows, the same secure password store
-that is used for user passwords will be used for the pool password (see
-section `8.2.3 <MicrosoftWindows.html#x76-5760008.2.3>`__).
+``SEC_PASSWORD_FILE`` :index:`SEC_PASSWORD_FILE<single: SEC_PASSWORD_FILE>`. This file will
+be accessible only by the UID that HTCondor is started as. On Windows,
+the same secure password store that is used for user passwords will be
+used for the pool password (see section
+`8.2.3 <MicrosoftWindows.html#x76-5760008.2.3>`__).
 
 Under Unix, the password file can be generated by using the following
 command to write directly to the password file:
@@ -1078,6 +1130,7 @@ condor@mydomain are also allowed access. This is done so local
 authentication can be done using another method such as FS.
 
  Example Security Configuration Using Pool Password
+    :index:`security<single: security; sample configuration using pool password>`
     The following example configuration uses pool password
     authentication and network message integrity checking for all
     communication between HTCondor daemons.
@@ -1097,6 +1150,8 @@ authentication can be done using another method such as FS.
         ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
 
  Example Using Pool Password for *condor\_startd* Advertisement
+    :index:`security<single: security; sample configuration using pool password for startd advertisement>`
+
     One problem with the pool password method of authentication is that
     it involves a single, shared secret. This does not scale well with
     the addition of remote users who flock to the local pool. However,
@@ -1120,6 +1175,8 @@ authentication can be done using another method such as FS.
 File System Authentication
 ''''''''''''''''''''''''''
 
+:index:`authentication<single: authentication; using a file system>`
+
 This form of authentication utilizes the ownership of a file in the
 identity verification of a client. A daemon authenticating a client
 requires the client to write a file in a specific location (``/tmp``).
@@ -1131,15 +1188,19 @@ appropriate for clients and daemons that are on the same computer.
 File System Remote Authentication
 '''''''''''''''''''''''''''''''''
 
+:index:`authentication<single: authentication; using a remote file system>`
+
 Like file system authentication, this form of authentication utilizes
 the ownership of a file in the identity verification of a client. In
 this case, a daemon authenticating a client requires the client to write
 a file in a specific location, but the location is not restricted to
 ``/tmp``. The location of the file is specified by the configuration
-variable ``FS_REMOTE_DIR`` .
+variable ``FS_REMOTE_DIR`` :index:`FS_REMOTE_DIR<single: FS_REMOTE_DIR>`.
 
 Windows Authentication
 ''''''''''''''''''''''
+
+:index:`authentication<single: authentication; Windows>`
 
 This authentication is done only among Windows machines using a
 proprietary method. The Windows security interface SSPI is used to
@@ -1171,17 +1232,22 @@ Anonymous Authentication
 Anonymous authentication causes authentication to be skipped entirely.
 As such, it does not authenticate. It is included in HTCondor and in the
 list of authentication methods for testing purposes only.
+:index:`authentication<single: authentication>`
 
 The Unified Map File for Authentication
 ---------------------------------------
 
+:index:`security<single: security; unified map file>`
+:index:`authentication<single: authentication; unified map file>`
+
 HTCondor’s unified map file allows the mappings from authenticated names
 to an HTCondor canonical user name to be specified as a single list
 within a single file. The location of the unified map file is defined by
-the configuration variable ``CERTIFICATE_MAPFILE`` ; it specifies the
-path and file name of the unified map file. Each mapping is on its own
-line of the unified map file. Each line contains 3 fields, separated by
-white space (space or tab characters):
+the configuration variable ``CERTIFICATE_MAPFILE``
+:index:`CERTIFICATE_MAPFILE<single: CERTIFICATE_MAPFILE>`; it specifies the path and file name
+of the unified map file. Each mapping is on its own line of the unified
+map file. Each line contains 3 fields, separated by white space (space
+or tab characters):
 
 #. The name of the authentication method to which the mapping applies.
 #. A name or a regular expression representing the authenticated name to
@@ -1213,7 +1279,8 @@ defined to use the first mapping that matches.
 
 For HTCondor version 8.5.8 and later, the authenticated name field will
 be interpreted as a regular expression or as a simple string based on
-the value of the ``CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS`` configuration
+the value of the ``CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS``
+:index:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS<single: CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS>` configuration
 variable. If this configuration varible is true, then the authenticated
 name field is a regular expression only when it begins and ends with the
 / character. If this configuration variable is false, or on HTCondor
@@ -1241,16 +1308,18 @@ the following mappings, with some additional logic noted below:
     PASSWORD (.*) \1
 
 For GSI (or SSL), the special name ``GSS_ASSIST_GRIDMAP`` instructs
-HTCondor to use the GSI grid map file (configured with ``GRIDMAP`` as
-shown in section \ `3.8.3 <#x36-2750003.8.3>`__) to do the mapping. If
-no mapping can be found for GSI (with or without the use of
+HTCondor to use the GSI grid map file (configured with ``GRIDMAP``
+:index:`GRIDMAP<single: GRIDMAP>` as shown in
+section \ `3.8.3 <#x36-2750003.8.3>`__) to do the mapping. If no mapping
+can be found for GSI (with or without the use of
 ``GSS_ASSIST_GRIDMAP``), the user is mapped to gsi@unmapped.
 
-For Kerberos, if ``KERBEROS_MAP_FILE`` is specified, the domain portion
-of the name is obtained by mapping the Kerberos realm to the value
-specified in the map file, rather than just using the realm verbatim as
-the domain portion of the condor user name. See
-section \ `3.8.3 <#x36-2770003.8.3>`__ for details.
+For Kerberos, if ``KERBEROS_MAP_FILE`` :index:`KERBEROS_MAP_FILE<single: KERBEROS_MAP_FILE>`
+is specified, the domain portion of the name is obtained by mapping the
+Kerberos realm to the value specified in the map file, rather than just
+using the realm verbatim as the domain portion of the condor user name.
+See section \ `3.8.3 <#x36-2770003.8.3>`__ for details.
+:index:`unauthenticated<single: unauthenticated>` :index:`unmapped<single: unmapped>`
 
 If authentication did not happen or failed and was not required, then
 the user is given the name unauthenticated@unmapped.
@@ -1267,11 +1336,15 @@ their authenticity.
 Encryption
 ----------
 
+:index:`security<single: security; encryption>`
+
 Encryption provides privacy support between two communicating parties.
 Through configuration macros, both the client and the daemon can specify
 whether encryption is required for further communication.
 
 The client uses one of two macros to enable or disable encryption:
+:index:`SEC_DEFAULT_ENCRYPTION<single: SEC_DEFAULT_ENCRYPTION>`
+:index:`SEC_CLIENT_ENCRYPTION<single: SEC_CLIENT_ENCRYPTION>`
 
 ::
 
@@ -1279,6 +1352,15 @@ The client uses one of two macros to enable or disable encryption:
         SEC_CLIENT_ENCRYPTION
 
 For the daemon, there are seven macros to enable or disable encryption:
+:index:`SEC_DEFAULT_ENCRYPTION<single: SEC_DEFAULT_ENCRYPTION>` :index:`SEC_READ_ENCRYPTION<single: SEC_READ_ENCRYPTION>`
+:index:`SEC_WRITE_ENCRYPTION<single: SEC_WRITE_ENCRYPTION>`
+:index:`SEC_ADMINISTRATOR_ENCRYPTION<single: SEC_ADMINISTRATOR_ENCRYPTION>`
+:index:`SEC_DAEMON_ENCRYPTION<single: SEC_DAEMON_ENCRYPTION>`
+:index:`SEC_CONFIG_ENCRYPTION<single: SEC_CONFIG_ENCRYPTION>` :index:`SEC_OWNER_ENCRYPTION<single: SEC_OWNER_ENCRYPTION>`
+:index:`SEC_NEGOTIATOR_ENCRYPTION<single: SEC_NEGOTIATOR_ENCRYPTION>`
+:index:`SEC_ADVERTISE_MASTER_ENCRYPTION<single: SEC_ADVERTISE_MASTER_ENCRYPTION>`
+:index:`SEC_ADVERTISE_STARTD_ENCRYPTION<single: SEC_ADVERTISE_STARTD_ENCRYPTION>`
+:index:`SEC_ADVERTISE_SCHEDD_ENCRYPTION<single: SEC_ADVERTISE_SCHEDD_ENCRYPTION>`
 
 ::
 
@@ -1316,7 +1398,8 @@ precedence over any default given.
 If encryption is to be done, then the communicating parties must find
 (negotiate) a mutually acceptable method of encryption to be used. A
 list of acceptable methods may be provided by the client, using the
-macros
+macros :index:`SEC_DEFAULT_CRYPTO_METHODS<single: SEC_DEFAULT_CRYPTO_METHODS>`
+:index:`SEC_CLIENT_CRYPTO_METHODS<single: SEC_CLIENT_CRYPTO_METHODS>`
 
 ::
 
@@ -1324,7 +1407,17 @@ macros
         SEC_CLIENT_CRYPTO_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
-macros
+macros :index:`SEC_DEFAULT_CRYPTO_METHODS<single: SEC_DEFAULT_CRYPTO_METHODS>`
+:index:`SEC_READ_CRYPTO_METHODS<single: SEC_READ_CRYPTO_METHODS>`
+:index:`SEC_WRITE_CRYPTO_METHODS<single: SEC_WRITE_CRYPTO_METHODS>`
+:index:`SEC_ADMINISTRATOR_CRYPTO_METHODS<single: SEC_ADMINISTRATOR_CRYPTO_METHODS>`
+:index:`SEC_DAEMON_CRYPTO_METHODS<single: SEC_DAEMON_CRYPTO_METHODS>`
+:index:`SEC_CONFIG_CRYPTO_METHODS<single: SEC_CONFIG_CRYPTO_METHODS>`
+:index:`SEC_OWNER_CRYPTO_METHODS<single: SEC_OWNER_CRYPTO_METHODS>`
+:index:`SEC_NEGOTIATOR_CRYPTO_METHODS<single: SEC_NEGOTIATOR_CRYPTO_METHODS>`
+:index:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS<single: SEC_ADVERTISE_MASTER_CRYPTO_METHODS>`
+:index:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS<single: SEC_ADVERTISE_STARTD_CRYPTO_METHODS>`
+:index:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS<single: SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS>`
 
 ::
 
@@ -1353,6 +1446,8 @@ list indicates the highest preference. Possible values are
 Integrity
 ---------
 
+:index:`security<single: security; integrity>`
+
 An integrity check assures that the messages between communicating
 parties have not been tampered with. Any change, such as addition,
 modification, or deletion can be detected. Through configuration macros,
@@ -1364,7 +1459,8 @@ files that are transferred by HTCondor via the File Transfer Mechanism
 described in section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__.
 
 The client uses one of two macros to enable or disable an integrity
-check:
+check: :index:`SEC_DEFAULT_INTEGRITY<single: SEC_DEFAULT_INTEGRITY>`
+:index:`SEC_CLIENT_INTEGRITY<single: SEC_CLIENT_INTEGRITY>`
 
 ::
 
@@ -1372,7 +1468,15 @@ check:
         SEC_CLIENT_INTEGRITY
 
 For the daemon, there are seven macros to enable or disable an integrity
-check:
+check: :index:`SEC_DEFAULT_INTEGRITY<single: SEC_DEFAULT_INTEGRITY>`
+:index:`SEC_READ_INTEGRITY<single: SEC_READ_INTEGRITY>` :index:`SEC_WRITE_INTEGRITY<single: SEC_WRITE_INTEGRITY>`
+:index:`SEC_ADMINISTRATOR_INTEGRITY<single: SEC_ADMINISTRATOR_INTEGRITY>`
+:index:`SEC_DAEMON_INTEGRITY<single: SEC_DAEMON_INTEGRITY>` :index:`SEC_CONFIG_INTEGRITY<single: SEC_CONFIG_INTEGRITY>`
+:index:`SEC_OWNER_INTEGRITY<single: SEC_OWNER_INTEGRITY>`
+:index:`SEC_NEGOTIATOR_INTEGRITY<single: SEC_NEGOTIATOR_INTEGRITY>`
+:index:`SEC_ADVERTISE_MASTER_INTEGRITY<single: SEC_ADVERTISE_MASTER_INTEGRITY>`
+:index:`SEC_ADVERTISE_STARTD_INTEGRITY<single: SEC_ADVERTISE_STARTD_INTEGRITY>`
+:index:`SEC_ADVERTISE_SCHEDD_INTEGRITY<single: SEC_ADVERTISE_SCHEDD_INTEGRITY>`
 
 ::
 
@@ -1416,6 +1520,10 @@ acceptable.
 Authorization
 -------------
 
+:index:`security<single: security; authorization>`
+:index:`authorization<single: authorization; for security>`
+:index:`security<single: security; based on user authorization>`
+
 Authorization protects resource usage by granting or denying access
 requests made to the resources. It defines who is allowed to do what.
 
@@ -1438,7 +1546,14 @@ daemon is executed.
 These configuration macros define a set of users that will be allowed to
 (or denied from) carrying out various HTCondor commands. Each access
 level may have its own list of authorized users. A complete list of the
-authorization macros:
+authorization macros: :index:`ALLOW_READ<single: ALLOW_READ>`
+:index:`ALLOW_WRITE<single: ALLOW_WRITE>` :index:`ALLOW_ADMINISTRATOR<single: ALLOW_ADMINISTRATOR>`
+:index:`ALLOW_CONFIG<single: ALLOW_CONFIG>` :index:`ALLOW_DAEMON<single: ALLOW_DAEMON>`
+:index:`ALLOW_OWNER<single: ALLOW_OWNER>` :index:`ALLOW_NEGOTIATOR<single: ALLOW_NEGOTIATOR>`
+:index:`DENY_READ<single: DENY_READ>` :index:`DENY_WRITE<single: DENY_WRITE>`
+:index:`DENY_ADMINISTRATOR<single: DENY_ADMINISTRATOR>` :index:`DENY_CONFIG<single: DENY_CONFIG>`
+:index:`DENY_DAEMON<single: DENY_DAEMON>` :index:`DENY_OWNER<single: DENY_OWNER>`
+:index:`DENY_NEGOTIATOR<single: DENY_NEGOTIATOR>`
 
 ::
 
@@ -1460,7 +1575,12 @@ authorization macros:
 In addition, the following are used to control authorization of specific
 types of HTCondor daemons when advertising themselves to the pool. If
 unspecified, these default to the broader ``ALLOW_DAEMON`` and
-``DENY_DAEMON`` settings.
+``DENY_DAEMON`` settings. :index:`ALLOW_ADVERTISE_MASTER<single: ALLOW_ADVERTISE_MASTER>`
+:index:`ALLOW_ADVERTISE_STARTD<single: ALLOW_ADVERTISE_STARTD>`
+:index:`ALLOW_ADVERTISE_SCHEDD<single: ALLOW_ADVERTISE_SCHEDD>`
+:index:`DENY_ADVERTISE_MASTER<single: DENY_ADVERTISE_MASTER>`
+:index:`DENY_ADVERTISE_STARTD<single: DENY_ADVERTISE_STARTD>`
+:index:`DENY_ADVERTISE_SCHEDD<single: DENY_ADVERTISE_SCHEDD>`
 
 ::
 
@@ -1477,7 +1597,8 @@ the FS and CLAIMTOBE authentication methods are not symmetric. The
 client is authenticated by the server, but the server is not
 authenticated by the client. When the server is not authenticated to the
 client, only the network address of the host may be authorized and not
-the specific identity of the server.
+the specific identity of the server. :index:`ALLOW_CLIENT<single: ALLOW_CLIENT>`
+:index:`DENY_CLIENT<single: DENY_CLIENT>`
 
 ::
 
@@ -1593,7 +1714,7 @@ mask is
 
 User joesmith within the cs.wisc.edu domain is given write authorization
 when originating from machines that match their leftmost 17 bits of the
-IP address.
+IP address. :index:`authorization<single: authorization; of Unix netgroups>`
 
 For Unix platforms where netgroups are implemented, a netgroup may
 specify a set of fully qualified users by using an extension to the
@@ -1606,15 +1727,15 @@ This flexible set of configuration macros could be used to define
 conflicting authorization. Therefore, the following protocol defines the
 precedence of the configuration macros.
 
-    1. ``DENY_*`` macros take precedence over ``ALLOW_* macros`` where
-    there is a conflict. This implies that if a specific user is both
-    denied and granted authorization, the conflict is resolved by
-    denying access.
+    1. ``DENY_*`` macros take precedence over ``ALLOW_* macros``
+    ` <index://ALLOW_* macros>`__ where there is a conflict. This
+    implies that if a specific user is both denied and granted
+    authorization, the conflict is resolved by denying access.
     2. If macros are omitted, the default behavior is to grant
     authorization for every user.
 
 In addition, there are some hard-coded authorization rules that cannot
-be modified by configuration.
+be modified by configuration. :index:`unauthenticated<single: unauthenticated>`
 
 #. Connections with a name matching \*@unmapped are not allowed to do
    any job management commands (e.g. submitting, removing, or modifying
@@ -1633,7 +1754,8 @@ be modified by configuration.
    collector or that the *condor\_schedd*\ ’s ``ALLOW_CLIENT`` setting
    prevent it from allowing connections to *condor\_startd*\ s that it
    does not trust to run jobs.
-#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is true,
+#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+   :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION<single: SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION>` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
    the *condor\_schedd* and ``DAEMON`` access to the *condor\_shadow*.
 
@@ -1699,11 +1821,12 @@ denied the request. The line in the log file contains the words
 PERMISSION DENIED.
 
 To get HTCondor to generate a similar explanation of why requests are
-accepted, add ``D_SECURITY`` to the daemon’s debug options (and restart
-or reconfig the daemon). The line in the log file for these cases will
-contain the words PERMISSION GRANTED. If you do not want to see a full
-explanation but just want to see when requests are made, add
-``D_COMMAND`` to the daemon’s debug options.
+accepted, add ``D_SECURITY`` :index:`D_SECURITY<single: D_SECURITY>` to the daemon’s
+debug options (and restart or reconfig the daemon). The line in the log
+file for these cases will contain the words PERMISSION GRANTED. If you
+do not want to see a full explanation but just want to see when requests
+are made, add ``D_COMMAND`` :index:`D_COMMAND<single: D_COMMAND>` to the daemon’s
+debug options.
 
 If the authorization policy makes use of host or domain names, then be
 aware that HTCondor depends on DNS to map IP addresses to names. The
@@ -1715,6 +1838,8 @@ the explanations of why requests are granted or denied.
 
 Security Sessions
 -----------------
+
+:index:`security<single: security; sessions>` :index:`sessions<single: sessions>`
 
 To set up and configure secure communications in HTCondor,
 authentication, encryption, and integrity checks can be used. However,
@@ -1782,6 +1907,8 @@ the configuration file, but this is not recommended.
 
 Host-Based Security in HTCondor
 -------------------------------
+
+` <index://host-based;security>`__
 
 This section describes the mechanisms for setting up HTCondor’s
 host-based security. This is now an outdated form of implementing
@@ -1943,6 +2070,8 @@ within the configuration.
 Examples of Security Configuration
 ----------------------------------
 
+:index:`security<single: security; configuration examples>`
+
 Here is a sample security configuration:
 
 ::
@@ -2076,6 +2205,8 @@ this.
 Changing the Security Configuration
 -----------------------------------
 
+:index:`security<single: security; changing the configuration>`
+
 A new security feature introduced in HTCondor version 6.3.2 enables more
 fine-grained control over the configuration settings that can be
 modified remotely with the *condor\_config\_val* command. The manual
@@ -2121,6 +2252,10 @@ publish information. Granting access to modify settings used to control
 the behavior of HTCondor is not secure. The goal is to ensure no one can
 use the power to change configuration attributes to compromise the
 security of your HTCondor pool.
+` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__
+:index:`SETTABLE_ATTRS_CONFIG<single: SETTABLE_ATTRS_CONFIG>` :index:`SETTABLE_ATTRS_WRITE<single: SETTABLE_ATTRS_WRITE>`
+:index:`SETTABLE_ATTRS_OWNER<single: SETTABLE_ATTRS_OWNER>`
+:index:`SETTABLE_ATTRS_ADMINISTRATOR<single: SETTABLE_ATTRS_ADMINISTRATOR>`
 
 The control lists are defined by configuration settings that contain
 ``SETTABLE_ATTRS`` in their name. The name of the control lists have the
@@ -2144,7 +2279,8 @@ See
 section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
 on page \ `567 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
 for a list. If there is no daemon-specific value for a given daemon,
-HTCondor will look for ``SETTABLE_ATTRS_<PERMISSION-LEVEL>`` .
+HTCondor will look for ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
+` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__.
 
 Each control list is defined by a comma-separated list of attribute
 names which should be allowed to be modified. The lists can contain wild
@@ -2181,8 +2317,8 @@ Some examples of valid definitions of control lists with explanations:
    setting would allow any process running on a given host, including an
    HTCondor job, to modify the ``HasDataSet`` variable for that host.
    ``HasDataSet`` is not used by HTCondor, it is an invented attribute
-   included in the ``STARTD_ATTRS`` setting in order for this example to
-   make sense.
+   included in the ``STARTD_ATTRS`` :index:`STARTD_ATTRS<single: STARTD_ATTRS>` setting
+   in order for this example to make sense.
 
 Using HTCondor w/ Firewalls, Private Networks, and NATs
 -------------------------------------------------------
@@ -2194,18 +2330,20 @@ which explains network communication in HTCondor.
 User Accounts in HTCondor on Unix Platforms
 -------------------------------------------
 
+:index:`UIDs in HTCondor<single: UIDs in HTCondor>`
+
 On a Unix system, UIDs (User IDentification numbers) form part of an
 operating system’s tools for maintaining access control. Each executing
 program has a UID, a unique identifier of a user executing the program.
-This is also called the real UID. A common situation has one user
-executing the program owned by another user. Many system commands work
-this way, with a user (corresponding to a person) executing a program
-belonging to (owned by) root. Since the program may require privileges
-that root has which the user does not have, a special bit in the
-program’s protection specification (a setuid bit) allows the program to
-run with the UID of the program’s owner, instead of the user that
-executes the program. This UID of the program’s owner is called an
-effective UID.
+This is also called the real UID. :index:`UID<single: UID; real>`\ A common
+situation has one user executing the program owned by another user. Many
+system commands work this way, with a user (corresponding to a person)
+executing a program belonging to (owned by) root. Since the program may
+require privileges that root has which the user does not have, a special
+bit in the program’s protection specification (a setuid bit) allows the
+program to run with the UID of the program’s owner, instead of the user
+that executes the program. This UID of the program’s owner is called an
+effective UID. :index:`UID<single: UID; effective>`
 
 HTCondor works most smoothly when its daemons run as root. The daemons
 then have the ability to switch their effective UIDs at will. When the
@@ -2219,14 +2357,14 @@ files.
 If there is no condor user and group on the system, an administrator can
 specify which UID and GID the HTCondor daemons should use when they do
 not need root privileges in two ways: either with the ``CONDOR_IDS``
-environment variable or the ``CONDOR_IDS`` configuration variable. In
-either case, the value should be the UID integer, followed by a period,
-followed by the GID integer. For example, if an HTCondor administrator
-does not want to create a condor user, and instead wants their HTCondor
-daemons to run as the daemon user (a common non-root user for system
-daemons to execute as), the daemon user’s UID was 2, and group daemon
-had a GID of 2, the corresponding setting in the HTCondor configuration
-file would be ``CONDOR_IDS = 2.2``.
+environment variable or the ``CONDOR_IDS`` :index:`CONDOR_IDS<single: CONDOR_IDS>`
+configuration variable. In either case, the value should be the UID
+integer, followed by a period, followed by the GID integer. For example,
+if an HTCondor administrator does not want to create a condor user, and
+instead wants their HTCondor daemons to run as the daemon user (a common
+non-root user for system daemons to execute as), the daemon user’s UID
+was 2, and group daemon had a GID of 2, the corresponding setting in the
+HTCondor configuration file would be ``CONDOR_IDS = 2.2``.
 
 On a machine where a job is submitted, the *condor\_schedd* daemon
 changes its effective UID to root such that it has the capability to
@@ -2241,11 +2379,12 @@ the job were running locally, without HTCondor.
 
 On the machine where the job executes, the job runs either as the
 submitting user or as user nobody, to help ensure that the job cannot
-access local resources or do harm. If the ``UID_DOMAIN`` matches, and
-the user exists as the same UID in password files on both the submitting
-machine and on the execute machine, the job will run as the submitting
-user. If the user does not exist in the execute machine’s password file
-and ``SOFT_UID_DOMAIN`` is True, then the job will run under the
+access local resources or do harm. If the ``UID_DOMAIN``
+:index:`UID_DOMAIN<single: UID_DOMAIN>` matches, and the user exists as the same UID
+in password files on both the submitting machine and on the execute
+machine, the job will run as the submitting user. If the user does not
+exist in the execute machine’s password file and ``SOFT_UID_DOMAIN``
+:index:`SOFT_UID_DOMAIN<single: SOFT_UID_DOMAIN>` is True, then the job will run under the
 submitting user’s UID anyway (as defined in the submitting machine’s
 password file). If ``SOFT_UID_DOMAIN`` is False, and ``UID_DOMAIN``
 matches, and the user is not in the execute machine’s password file,
@@ -2275,17 +2414,18 @@ classified for each daemon:
     users. By running as root, the HTCondor daemons run with a different
     UID than the HTCondor job. The user’s job is started as either the
     UID of the user who submitted it, or as user nobody, depending on
-    the ``UID_DOMAIN`` settings. Therefore, the HTCondor job cannot do
-    anything to the HTCondor daemons. Without starting the daemons as
-    root, all processes started by HTCondor, including the user’s job,
-    run with the same UID. Only root can switch UIDs. Therefore, a
-    user’s job could kill the *condor\_startd* and *condor\_starter*. By
-    doing so, the user’s job avoids getting suspended or vacated. This
-    is nice for the job, as it obtains unlimited access to the machine,
-    but it is awful for the machine owner or administrator. If there is
-    trust of the users submitting jobs to HTCondor, this might not be a
-    concern. However, to ensure that the policy chosen is enforced by
-    HTCondor, the *condor\_startd* should be started as root.
+    the ``UID_DOMAIN`` :index:`UID_DOMAIN<single: UID_DOMAIN>` settings. Therefore,
+    the HTCondor job cannot do anything to the HTCondor daemons. Without
+    starting the daemons as root, all processes started by HTCondor,
+    including the user’s job, run with the same UID. Only root can
+    switch UIDs. Therefore, a user’s job could kill the *condor\_startd*
+    and *condor\_starter*. By doing so, the user’s job avoids getting
+    suspended or vacated. This is nice for the job, as it obtains
+    unlimited access to the machine, but it is awful for the machine
+    owner or administrator. If there is trust of the users submitting
+    jobs to HTCondor, this might not be a concern. However, to ensure
+    that the policy chosen is enforced by HTCondor, the *condor\_startd*
+    should be started as root.
 
     In addition, some system information cannot be obtained without root
     access on some platforms. As a result, when running without root
@@ -2380,6 +2520,11 @@ jobs.
 Who Jobs Run As
 '''''''''''''''
 
+:index:`user nobody<single: user nobody; potential security risk with jobs>`
+:index:`UID<single: UID; potential risk running jobs as user nobody>`
+:index:`security<single: security; running jobs as user nobody>`
+:index:`RunAsOwner<single: RunAsOwner>` :index:`job<single: job; who the job runs as>`
+
 Under Unix, HTCondor runs jobs as one of
 
 -  the user called nobody
@@ -2387,8 +2532,9 @@ Under Unix, HTCondor runs jobs as one of
    Running jobs as the nobody user is the least preferable. HTCondor
    uses user nobody if the value of the ``UID_DOMAIN`` configuration
    variable of the submitting and executing machines are different, or
-   if configuration variable ``STARTER_ALLOW_RUNAS_OWNER`` is ``False``,
-   or if the job ClassAd contains ``RunAsOwner=False``.
+   if configuration variable ``STARTER_ALLOW_RUNAS_OWNER``
+   :index:`STARTER_ALLOW_RUNAS_OWNER<single: STARTER_ALLOW_RUNAS_OWNER>` is ``False``, or if the job
+   ClassAd contains ``RunAsOwner=False``.
 
    When HTCondor cleans up after executing a vanilla universe job, it
    does the best that it can by deleting all of the processes started by
@@ -2422,8 +2568,9 @@ Under Unix, HTCondor runs jobs as one of
    compute slots, create two users that are intended only to be used by
    HTCondor. As an example, call them cndrusr1 and cndrusr2.
    Configuration identifies these users with the ``SLOT<N>_USER``
-   configuration variable, where ``<N>`` is replaced with the slot
-   number. Here is configuration for this example:
+   ` <index://SLOT<N>_USER>`__ configuration variable, where ``<N>`` is
+   replaced with the slot number. Here is configuration for this
+   example:
 
    ::
 
@@ -2433,8 +2580,9 @@ Under Unix, HTCondor runs jobs as one of
    Also tell HTCondor that these accounts are intended only to be used
    by HTCondor, so HTCondor can kill all the processes belonging to
    these users upon job completion. The configuration variable
-   ``DEDICATED_EXECUTE_ACCOUNT_REGEXP`` is introduced and set to a
-   regular expression that matches the account names just created:
+   ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
+   :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP<single: DEDICATED_EXECUTE_ACCOUNT_REGEXP>` is introduced and set
+   to a regular expression that matches the account names just created:
 
    ::
 
@@ -2452,13 +2600,15 @@ Under Unix, HTCondor runs jobs as one of
    submitted the job.
 
    #. In the configuration, the value of variable
-      ``STARTER_ALLOW_RUNAS_OWNER`` must be ``True`` on the machine that
-      will run the job. Its default value is ``True`` on Unix platforms
-      and ``False`` on Windows platforms.
+      ``STARTER_ALLOW_RUNAS_OWNER``
+      :index:`STARTER_ALLOW_RUNAS_OWNER<single: STARTER_ALLOW_RUNAS_OWNER>` must be ``True`` on the
+      machine that will run the job. Its default value is ``True`` on
+      Unix platforms and ``False`` on Windows platforms.
    #. The job’s ClassAd must have attribute ``RunAsOwner`` set to
       ``True``. This can be set up for all users by adding an attribute
-      to configuration variable ``SUBMIT_ATTRS`` . If this were the only
-      attribute to be added to all job ClassAds, it would be set up with
+      to configuration variable ``SUBMIT_ATTRS``
+      :index:`SUBMIT_ATTRS<single: SUBMIT_ATTRS>`. If this were the only attribute to be
+      added to all job ClassAds, it would be set up with
 
       ::
 
@@ -2511,21 +2661,25 @@ Notes:
 Working Directories for Jobs
 ''''''''''''''''''''''''''''
 
+:index:`cwd<single: cwd; of jobs>`
+:index:`current working directory<single: current working directory>`
+
 Every executing process has a notion of its current working directory.
 This is the directory that acts as the base for all file system access.
 There are two current working directories for any HTCondor job: one
 where the job is submitted and a second where the job executes. When a
 user submits a job, the submit-side current working directory is the
 same as for the user when the *condor\_submit* command is issued. The
-**initialdir** submit command may change this, thereby allowing
-different jobs to have different working directories. This is useful
-when submitting large numbers of jobs. This submit-side current working
-directory remains unchanged for the entire life of a job. The
-submit-side current working directory is also the working directory of
-the *condor\_shadow* daemon. This is particularly relevant for standard
-universe jobs, since file system access for the job goes through the
-*condor\_shadow* daemon, and therefore all accesses behave as if they
-were executing without HTCondor.
+**initialdir**\ :index:`submit commands<single: submit commands; initialdir>` submit
+command may change this, thereby allowing different jobs to have
+different working directories. This is useful when submitting large
+numbers of jobs. This submit-side current working directory remains
+unchanged for the entire life of a job. The submit-side current working
+directory is also the working directory of the *condor\_shadow* daemon.
+This is particularly relevant for standard universe jobs, since file
+system access for the job goes through the *condor\_shadow* daemon, and
+therefore all accesses behave as if they were executing without
+HTCondor.
 
 There is also an execute-side current working directory. For standard
 universe jobs, it is set to the ``execute`` subdirectory of HTCondor’s
@@ -2540,5 +2694,7 @@ submit machine, and the *condor\_shadow* daemon is informed. The
 *condor\_shadow* daemon sends e-mail to the job owner announcing the
 core file, and provides a pointer to where the core file resides in the
 submit-side current working directory.
+:index:`UIDs in HTCondor<single: UIDs in HTCondor>`
+:index:`security<single: security; in HTCondor>`
 
       

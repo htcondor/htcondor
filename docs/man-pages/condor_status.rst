@@ -4,6 +4,7 @@
 ================
 
 Display status of the HTCondor pool
+:index:`HTCondor commands<single: HTCondor commands; condor_status>`\ :index:`condor_status command<single: condor_status command>`
 
 Synopsis
 --------

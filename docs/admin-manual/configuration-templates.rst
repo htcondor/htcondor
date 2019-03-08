@@ -3,6 +3,9 @@
 Configuration Templates
 =======================
 
+` <index://configuration-templates;HTCondor>`__
+` <index://configuration: templates>`__
+
 Achieving certain behaviors in an HTCondor pool often requires setting
 the values of a number of configuration macros in concert with each
 other. We have added configuration templates as a way to do this more
@@ -24,6 +27,9 @@ document does not contain such information because the
 
 Configuration Templates: Using Predefined Sets of Configuration
 ---------------------------------------------------------------
+
+:index:`configuration<single: configuration; USE syntax>`
+:index:`USE configuration syntax<single: USE configuration syntax>`
 
 Predefined sets of configuration can be identified and incorporated into
 the configuration using the syntax
@@ -88,7 +94,8 @@ incorporates.
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` must also be defined.
+       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG<single: SETTABLE_ATTRS_CONFIG>`
+       must also be defined.
 
     -  ``Remote_Config``
 
@@ -96,7 +103,8 @@ incorporates.
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` must also be defined.
+       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG<single: SETTABLE_ATTRS_CONFIG>`
+       must also be defined.
 
     -  ``VMware``
 

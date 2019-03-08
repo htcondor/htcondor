@@ -3,6 +3,8 @@
 Contributions and Acknowledgments
 =================================
 
+:index:`HTCondor<single: HTCondor; contributions>`
+
 The quality of the HTCondor project is enhanced by the contributions of
 external organizations. We gratefully acknowledge the following
 contributions.
@@ -45,6 +47,8 @@ wording:
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
    EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+:index:`HTCondor<single: HTCondor; acknowledgments>`
 
 The HTCondor project wishes to acknowledge the following:
 

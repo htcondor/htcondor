@@ -4,6 +4,8 @@
 ==================
 
 uninstall a Bosco installation
+:index:`Bosco commands<single: Bosco commands; bosco_uninstall>`
+:index:`bosco_uninstall command<single: bosco_uninstall command>`
 
 Synopsis
 --------

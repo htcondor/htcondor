@@ -72,7 +72,8 @@ Bugs Fixed:
    ``PostJobPrio2``. `(Ticket
    #6800). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6800>`__
 -  Fixed a bug where the negotiator would erroneously preempt some
-   dynamic slots when ``ALLOW_PSLOT_PREEMPTION`` is set. `(Ticket
+   dynamic slots when ``ALLOW_PSLOT_PREEMPTION``
+   :index:`ALLOW_PSLOT_PREEMPTION<single: ALLOW_PSLOT_PREEMPTION>` is set. `(Ticket
    #6793). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6793>`__
 -  Updated the systemd unit file to start HTCondor daemons after NFS and
    the automounter was available. `(Ticket

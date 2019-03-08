@@ -20,7 +20,6 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('exts'))
 sys.path.append(os.path.abspath('extensions'))
-sys.path.append(os.path.abspath('../bindings/python'))
 
 # -- General configuration ------------------------------------------------
 
@@ -258,3 +257,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+def setup(app):
+    app.add_stylesheet('css/htcondor-manual.css')

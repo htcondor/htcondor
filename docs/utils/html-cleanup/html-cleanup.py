@@ -93,10 +93,17 @@ def create_index_entry(index_tag):
     item_name = ""
     parent_name = ""
     a_tags = index_soup.find_all("a")
+    #print("Looking for id = " + str(index_tag['id']))
     for a_tag in a_tags:
         if "href" in a_tag.attrs.keys():
             if index_tag['id'] in a_tag['href']:
-                item_name = a_tag.parent.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                #print("\nid = " + index_tag['id'] + ", a_tag.parent = " + repr(a_tag.parent))
+                #print("\na_tag.parent.contents = " + repr(a_tag.parent.contents))
+                #print("type(a_tag.parent.contents[0]) = " + str(type(a_tag.parent.contents[0])))
+                if type(a_tag.parent.contents[0]) is bs4.element.NavigableString:
+                    item_name = a_tag.parent.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                elif type(a_tag.parent.contents[0]) is bs4.element.Tag:
+                    item_name = a_tag.parent.contents[0].contents[0].strip().encode('ascii', 'ignore').decode('ascii')
                 # If this record is a subitem, we want to find the name of the parent item.
                 if "class" in a_tag.parent.attrs.keys():
                     if a_tag.parent['class'][0] == "index-subitem":
@@ -119,8 +126,8 @@ def create_index_entry(index_tag):
             index_tag['href'] = "index://" + item_name + ";" + parent_name
         else:
             index_tag['href'] = "index://" + item_name
-    #print("id = " + str(index_tag['id'] + "; item_name = " + item_name + "; parent_name = " + parent_name))
-    
+    print("id = " + str(index_tag['id']) + ", index_tag = " + str(index_tag))
+
     return index_tag
 
 def main():

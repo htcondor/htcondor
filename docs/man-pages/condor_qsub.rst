@@ -4,6 +4,7 @@
 ==============
 
 Queue jobs that use PBS/SGE-style submission
+:index:`HTCondor commands<single: HTCondor commands; condor_qsub>`\ :index:`condor_qsub command<single: condor_qsub command>`
 
 Synopsis
 --------
@@ -93,18 +94,21 @@ Options
  **-cwd**
     (Directory option) Specifies the initial directory in which the job
     will run to be the current directory from which the job was
-    submitted. This sets **initialdir** for *condor\_submit*.
+    submitted. This sets
+    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` for
+    *condor\_submit*.
  **-d **\ *path* or **-wd **\ *path*
     (Directory option) Specifies the initial directory in which the job
-    will run to be *path*. This sets **initialdir** for
+    will run to be *path*. This sets
+    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` for
     *condor\_submit*.
  **-e **\ *filename*
-    (File option) Specifies the *condor\_submit* command **error**, the
-    file where ``stderr`` is written. If not specified, set to the
-    default name of ``  <commandfile>.e<ClusterId>``, where
-    ``<commandfile>`` is the *condor\_qsub* argument, and
-    ``  <ClusterId>`` is the job attribute ``ClusterId`` assigned for
-    the job.
+    (File option) Specifies the *condor\_submit* command
+    **error**\ :index:`submit commands<single: submit commands; error>`, the file where
+    ``stderr`` is written. If not specified, set to the default name of
+    ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
+    *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
+    ``ClusterId`` assigned for the job.
  **—f **\ *qsub\_file*
     (Specific option) Parse *qsub\_file* to search for and set
     additional *condor\_submit* commands. Within the file, commands will
@@ -130,8 +134,9 @@ Options
     will only be released after all individual jobs of the first job
     have completed.
  **-i **\ *[hostname:]filename*
-    (File option) Specifies the *condor\_submit* command **input**, the
-    file from which ``stdin`` is read.
+    (File option) Specifies the *condor\_submit* command
+    **input**\ :index:`submit commands<single: submit commands; input>`, the file from
+    which ``stdin`` is read.
  **-j **\ *characters*
     (File option) Acceptable characters for this option are ``e``,
     ``o``, and ``n``. The only sequence that is relevant is ``eo``; it
@@ -193,16 +198,18 @@ Options
     (Notification option) Sets the destination address for HTCondor
     e-mail.
  **-o **\ *filename*
-    (File option) Specifies the *condor\_submit* command **output**, the
-    file where ``stdout`` is written. If not specified, set to the
-    default name of ``  <commandfile>.o<ClusterId>``, where
-    ``<commandfile>`` is the *condor\_qsub* argument, and
-    ``  <ClusterId>`` is the job attribute ``ClusterId`` assigned for
-    the job.
+    (File option) Specifies the *condor\_submit* command
+    **output**\ :index:`submit commands<single: submit commands; output>`, the file where
+    ``stdout`` is written. If not specified, set to the default name of
+    ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
+    *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
+    ``ClusterId`` assigned for the job.
  **-p **\ *integer*
-    (Status option) Sets the **priority** submit command for the job,
-    with 0 being the default. Jobs with higher numerical priority will
-    run before jobs with lower numerical priority.
+    (Status option) Sets the
+    **priority**\ :index:`submit commands<single: submit commands; priority>` submit
+    command for the job, with 0 being the default. Jobs with higher
+    numerical priority will run before jobs with lower numerical
+    priority.
  **—print**
     (Specific option) Send to ``stdout`` the contents of the HTCondor
     submit description file that *condor\_qsub* generates.
@@ -233,9 +240,10 @@ Options
     Never submits the job, even if no errors are encountered.
  **-v **\ *variable list*
     (Environmental option) Used to set the submit command
-    **environment** for the job. *variable list* is as that defined for
-    the submit command. Note that the syntax needed is specialized to
-    deal with quote marks and white space characters.
+    **environment**\ :index:`submit commands<single: submit commands; environment>` for
+    the job. *variable list* is as that defined for the submit command.
+    Note that the syntax needed is specialized to deal with quote marks
+    and white space characters.
  **-V**
     (Environmental option) Sets ``getenv = True`` in the submit
     description file.

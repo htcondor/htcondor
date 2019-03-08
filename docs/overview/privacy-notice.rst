@@ -20,8 +20,9 @@ not collect or report any personal information about individual users.
 
 We hope that you will contribute to the development of HTCondor through
 this reporting feature. However, you are free to disable it at any time
-by changing the configuration variables ``CONDOR_DEVELOPERS`` and
-``CONDOR_DEVELOPERS_COLLECTOR`` , both described in section
+by changing the configuration variables ``CONDOR_DEVELOPERS``
+:index:`CONDOR_DEVELOPERS<single: CONDOR_DEVELOPERS>` and ``CONDOR_DEVELOPERS_COLLECTOR``
+:index:`CONDOR_DEVELOPERS_COLLECTOR<single: CONDOR_DEVELOPERS_COLLECTOR>`, both described in section
 `Configuration Macros <../admin-manual/configuration-macros.html>`__ of
 this manual.
 

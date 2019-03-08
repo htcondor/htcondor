@@ -3,6 +3,8 @@
 Docker Universe Applications
 ============================
 
+:index:`docker universe<single: docker universe>` :index:`universe<single: universe; docker>`
+
 A docker universe job instantiates a Docker container from a Docker
 image, and HTCondor manages the running of that container as an HTCondor
 job, on an execute machine. This running container can then be managed
@@ -17,9 +19,10 @@ Docker support is advertised if available and if it has the correct
 settings.
 
 The image from which the container is instantiated is defined by
-specifying a Docker image with the submit command **docker\_image**.
-This image must be pre-staged on a docker hub that the execute machine
-can access.
+specifying a Docker image with the submit command
+**docker\_image**\ :index:`submit commands<single: submit commands; docker_image>`. This
+image must be pre-staged on a docker hub that the execute machine can
+access.
 
 After submission, the job is treated much the same way as a vanilla
 universe job. Details of file transfer are the same as applied to the
@@ -65,8 +68,9 @@ Therefore, the submit description file should contain the submit command
 With this command, all input and output files will be transferred as
 required to and from the scratch directory mounted as a Docker volume.
 
-If no **executable** is specified in the submit description file, it is
-presumed that the Docker container has a default command to run.
+If no **executable**\ :index:`submit commands<single: submit commands; executable>` is
+specified in the submit description file, it is presumed that the Docker
+container has a default command to run.
 
 When the job completes, is held, evicted, or is otherwise removed from
 the machine, the container will be removed.
@@ -90,5 +94,6 @@ job:
 
 A debian container is the HTCondor job, and it runs the */bin/cat*
 program on the ``/etc/hosts`` file before exiting.
+:index:`docker universe<single: docker universe>`
 
       

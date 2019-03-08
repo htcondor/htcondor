@@ -3,6 +3,8 @@
 Networking (includes sections on Port Usage and CCB)
 ====================================================
 
+:index:`network<single: network>`
+
 This section on network communication in HTCondor discusses which
 network ports are used, how HTCondor behaves on machines with multiple
 network interfaces and IP addresses, and how to facilitate functionality
@@ -27,8 +29,13 @@ below.
 Port Usage in HTCondor
 ----------------------
 
+:index:`port usage<single: port usage>`
+
 IPv4 Port Specification
 '''''''''''''''''''''''
+
+:index:`IPv4 port specification<single: IPv4 port specification>`
+:index:`port usage<single: port usage; IPv4 port specification>`
 
 The general form for IPv4 port specification is
 
@@ -49,7 +56,7 @@ specification:
     daemon, or a space separated list, if the daemon is registered with
     more than one CCB server. Each contact information is specified in
     the form of IP:port#ID. Note that spaces between list items will be
-    URL encoded by %20.
+    URL encoded by  .
  ``PrivNet``
     Provides the name of the daemon’s private network. This value is
     specified in the configuration with ``PRIVATE_NETWORK_NAME``.
@@ -91,9 +98,9 @@ port (the default was 9614). However, beginning with version 6.7.5, the
 publishes its own ClassAd to the *condor\_collector* which includes the
 dynamically assigned port the *condor\_negotiator* is listening on. All
 HTCondor tools and daemons that need to communicate with the
-*condor\_negotiator* will either use the ``NEGOTIATOR_ADDRESS_FILE`` or
-will query the *condor\_collector* for the *condor\_negotiator*\ ’s
-ClassAd.
+*condor\_negotiator* will either use the ``NEGOTIATOR_ADDRESS_FILE``
+:index:`NEGOTIATOR_ADDRESS_FILE<single: NEGOTIATOR_ADDRESS_FILE>` or will query the
+*condor\_collector* for the *condor\_negotiator*\ ’s ClassAd.
 
 Sites that configure any checkpoint servers will introduce other fixed
 ports into their network. Each *condor\_ckpt\_server* will listen to 4
@@ -102,6 +109,8 @@ configure alternative values for any of these ports.
 
 Using a Non Standard, Fixed Port for the *condor\_collector*
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`port usage<single: port usage; nonstandard ports for central managers>`
 
 By default, HTCondor uses port 9618 for the *condor\_collector* daemon.
 To use a different port number for this daemon, the configuration
@@ -143,18 +152,20 @@ On single machine pools, it is permitted to configure the
 out by the operating system. This prevents port conflicts with other
 services on the same machine. However, a dynamically assigned port is
 only to be used on single machine HTCondor pools, and only if the
-``COLLECTOR_ADDRESS_FILE`` configuration variable has also been defined.
-This mechanism allows all of the HTCondor daemons and tools running on
-the same machine to find the port upon which the *condor\_collector*
-daemon is listening, even when this port is not defined in the
-configuration file and is not known in advance.
+``COLLECTOR_ADDRESS_FILE`` :index:`COLLECTOR_ADDRESS_FILE<single: COLLECTOR_ADDRESS_FILE>`
+configuration variable has also been defined. This mechanism allows all
+of the HTCondor daemons and tools running on the same machine to find
+the port upon which the *condor\_collector* daemon is listening, even
+when this port is not defined in the configuration file and is not known
+in advance.
 
 To enable the *condor\_collector* daemon to use a dynamically assigned
-port, the port number is set to 0 in the ``COLLECTOR_HOST`` variable.
-The ``COLLECTOR_ADDRESS_FILE`` configuration variable must also be
-defined, as it provides a known file where the IP address and port
-information will be stored. All HTCondor clients know to look at the
-information stored in this file. For example:
+port, the port number is set to 0 in the ``COLLECTOR_HOST``
+:index:`COLLECTOR_HOST<single: COLLECTOR_HOST>` variable. The ``COLLECTOR_ADDRESS_FILE``
+configuration variable must also be defined, as it provides a known file
+where the IP address and port information will be stored. All HTCondor
+clients know to look at the information stored in this file. For
+example:
 
 ::
 
@@ -174,6 +185,8 @@ Macros <../admin-manual/configuration-macros.html>`__.
 Restricting Port Usage to Operate with Firewalls
 ''''''''''''''''''''''''''''''''''''''''''''''''
 
+:index:`port usage<single: port usage; firewalls>`
+
 If an HTCondor pool is completely behind a firewall, then no special
 consideration or port usage is needed. However, if there is a firewall
 between the machines within an HTCondor pool, then configuration
@@ -190,12 +203,12 @@ single port. See section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for more
 information.
 
-The configuration variables ``HIGHPORT`` and ``LOWPORT`` facilitate
-setting a restricted range of ports that HTCondor will use. This may be
-useful when some machines are behind a firewall. The configuration
-macros ``HIGHPORT`` and ``LOWPORT`` will restrict dynamic ports to the
-range specified. The configuration variables are fully defined in
-section \ `Configuration
+The configuration variables ``HIGHPORT`` :index:`HIGHPORT<single: HIGHPORT>` and
+``LOWPORT`` :index:`LOWPORT<single: LOWPORT>` facilitate setting a restricted range
+of ports that HTCondor will use. This may be useful when some machines
+are behind a firewall. The configuration macros ``HIGHPORT`` and
+``LOWPORT`` will restrict dynamic ports to the range specified. The
+configuration variables are fully defined in section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__. All of these
 ports must be greater than 0 and less than 65,536. Note that both
 ``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor version
@@ -208,8 +221,10 @@ cannot work.
 
 The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
-variables ``IN_HIGHPORT`` , ``IN_LOWPORT`` , ``OUT_HIGHPORT`` , and
-``OUT_LOWPORT`` . See section \ `Configuration
+variables ``IN_HIGHPORT`` :index:`IN_HIGHPORT<single: IN_HIGHPORT>`, ``IN_LOWPORT``
+:index:`IN_LOWPORT<single: IN_LOWPORT>`, ``OUT_HIGHPORT`` :index:`OUT_HIGHPORT<single: OUT_HIGHPORT>`,
+and ``OUT_LOWPORT`` :index:`OUT_LOWPORT<single: OUT_LOWPORT>`. See
+section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for complete
 definitions of these configuration variables. A range of ports lower
 than 1024 for daemons running as root is appropriate for incoming ports,
@@ -240,10 +255,11 @@ of physical CPUs in that machine.
 
 Submit machines (those machines running a *condor\_schedd* daemon)
 require ``  5 + (5 * MAX_JOBS_RUNNING``) ports. The configuration
-variable ``MAX_JOBS_RUNNING`` limits (on a per-machine basis, if
-desired) the maximum number of jobs. Without this configuration macro,
-the maximum number of jobs that could be simultaneously executing at one
-time is a function of the number of reachable execute machines.
+variable ``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING<single: MAX_JOBS_RUNNING>` limits (on
+a per-machine basis, if desired) the maximum number of jobs. Without
+this configuration macro, the maximum number of jobs that could be
+simultaneously executing at one time is a function of the number of
+reachable execute machines.
 
 Also be aware that ``HIGHPORT`` and ``LOWPORT`` only impact dynamic port
 selection used by the HTCondor system, and they do not impact port
@@ -276,15 +292,21 @@ are likely to appear repeatedly in log files.
 Multiple Collectors
 '''''''''''''''''''
 
+:index:`port usage<single: port usage; multiple collectors>`
+
 This section has not yet been written
 
 Port Conflicts
 ''''''''''''''
 
+:index:`port usage<single: port usage; conflicts>`
+
 This section has not yet been written
 
 Reducing Port Usage with the *condor\_shared\_port* Daemon
 ----------------------------------------------------------
+
+:index:`condor_shared_port daemon<single: condor_shared_port daemon>`
 
 The *condor\_shared\_port* is an optional daemon responsible for
 creating a TCP listener port shared by all of the HTCondor daemons.
@@ -341,11 +363,11 @@ setting the configuration variable
       USE_SHARED_PORT = True
 
 the *condor\_shared\_port* daemon is treated specially. ``SHARED_PORT``
-is automatically added to ``DAEMON_LIST`` . A command such as
-*condor\_off*, which shuts down all daemons except for the
-*condor\_master*, will also leave the *condor\_shared\_port* running.
-This prevents the *condor\_master* from getting into a state where it
-can no longer receive commands.
+:index:`SHARED_PORT<single: SHARED_PORT>` is automatically added to ``DAEMON_LIST``
+:index:`DAEMON_LIST<single: DAEMON_LIST>`. A command such as *condor\_off*, which shuts
+down all daemons except for the *condor\_master*, will also leave the
+*condor\_shared\_port* running. This prevents the *condor\_master* from
+getting into a state where it can no longer receive commands.
 
 Also when ``  USE_SHARED_PORT = True``, the *condor\_collector* needs to
 be configured to use a shared port, so that connections to the shared
@@ -389,15 +411,19 @@ will not be able to run.
 Configuring HTCondor for Machines With Multiple Network Interfaces
 ------------------------------------------------------------------
 
+:index:`multiple network interfaces<single: multiple network interfaces>`
+:index:`network interfaces<single: network interfaces; multiple>` :index:`NICs<single: NICs>`
+
 HTCondor can run on machines with multiple network interfaces. Starting
 with HTCondor version 6.7.13 (and therefore all HTCondor 6.8 and more
 recent versions), new functionality is available that allows even better
 support for multi-homed machines, using the configuration variable
-``BIND_ALL_INTERFACES`` . A multi-homed machine is one that has more
-than one NIC (Network Interface Card). Further improvements to this new
-functionality will remove the need for any special configuration in the
-common case. For now, care must still be given to machines with multiple
-NICs, even when using this new configuration variable.
+``BIND_ALL_INTERFACES`` :index:`BIND_ALL_INTERFACES<single: BIND_ALL_INTERFACES>`. A
+multi-homed machine is one that has more than one NIC (Network Interface
+Card). Further improvements to this new functionality will remove the
+need for any special configuration in the common case. For now, care
+must still be given to machines with multiple NICs, even when using this
+new configuration variable.
 
 Using BIND\_ALL\_INTERFACES
 '''''''''''''''''''''''''''
@@ -475,11 +501,13 @@ limitations.
     to it.
 
     By default, HTCondor advertises the most public IP address available
-    on the machine. The ``NETWORK_INTERFACE`` configuration variable can
-    be used to specify the public IP address HTCondor should advertise,
-    and ``PRIVATE_NETWORK_INTERFACE`` , along with
-    ``PRIVATE_NETWORK_NAME`` can be used to specify the private IP
-    address to advertise.
+    on the machine. The ``NETWORK_INTERFACE``
+    :index:`NETWORK_INTERFACE<single: NETWORK_INTERFACE>` configuration variable can be used
+    to specify the public IP address HTCondor should advertise, and
+    ``PRIVATE_NETWORK_INTERFACE``
+    :index:`PRIVATE_NETWORK_INTERFACE<single: PRIVATE_NETWORK_INTERFACE>`, along with
+    ``PRIVATE_NETWORK_NAME`` :index:`PRIVATE_NETWORK_NAME<single: PRIVATE_NETWORK_NAME>` can be
+    used to specify the private IP address to advertise.
 
 Sites that make heavy use of private networks and multi-homed machines
 should consider if using the HTCondor Connection Broker, CCB, is right
@@ -526,9 +554,9 @@ In the central manager’s local configuration file:
 If the central manager and farm machines are all NT, then only vanilla
 universe will work now. However, if this is set up for Unix, then at
 this point, standard universe jobs should be able to function in the
-pool. But, if ``UID_DOMAIN`` is not configured to be homogeneous across
-the farm machines, the standard universe jobs will run as nobody on the
-farm machines.
+pool. But, if ``UID_DOMAIN`` :index:`UID_DOMAIN<single: UID_DOMAIN>` is not configured
+to be homogeneous across the farm machines, the standard universe jobs
+will run as nobody on the farm machines.
 
 In order to get vanilla jobs and file server load balancing for standard
 universe jobs working (under Unix), do some more work both in the
@@ -537,11 +565,12 @@ First, you need a file server (which could also be the central manager)
 to serve files to all of the farm machines. This could be NFS or AFS,
 and it does not really matter to HTCondor. The mount point of the
 directories you wish your users to use must be the same across all of
-the farm machines. Now, configure ``UID_DOMAIN`` and
-``FILESYSTEM_DOMAIN`` to be homogeneous across the farm machines and the
-central manager. Inform HTCondor that an NFS or AFS file system exists
-and that is done in this manner. In the global (to the farm)
-configuration file:
+the farm machines. Now, configure ``UID_DOMAIN``
+:index:`UID_DOMAIN<single: UID_DOMAIN>` and ``FILESYSTEM_DOMAIN``
+:index:`FILESYSTEM_DOMAIN<single: FILESYSTEM_DOMAIN>` to be homogeneous across the farm
+machines and the central manager. Inform HTCondor that an NFS or AFS
+file system exists and that is done in this manner. In the global (to
+the farm) configuration file:
 
 ::
 
@@ -555,8 +584,8 @@ configuration file:
 Now, if the cluster is set up so that it is possible for a machine name
 to never have a domain name (for example, there is machine name but no
 fully qualified domain name in ``/etc/hosts``), configure
-``DEFAULT_DOMAIN_NAME`` to be the domain that is to be added on to the
-end of the host name.
+``DEFAULT_DOMAIN_NAME`` :index:`DEFAULT_DOMAIN_NAME<single: DEFAULT_DOMAIN_NAME>` to be the
+domain that is to be added on to the end of the host name.
 
 A Client Machine with Multiple Interfaces
 '''''''''''''''''''''''''''''''''''''''''
@@ -579,13 +608,16 @@ items must be correct to get things to work:
 #. The different interfaces have different host names associated with
    them.
 #. In the global configuration file, set configuration variable
-   ``CKPT_SERVER_HOST`` to the host name that corresponds with the IP
-   address desired for the pool. Configuration variable
-   ``NETWORK_INTERFACE`` must still be specified in the local
-   configuration file for the checkpoint server.
+   ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST<single: CKPT_SERVER_HOST>` to the host name
+   that corresponds with the IP address desired for the pool.
+   Configuration variable
+   ``NETWORK_INTERFACE``\ :index:`NETWORK_INTERFACE<single: NETWORK_INTERFACE>` must still be
+   specified in the local configuration file for the checkpoint server.
 
 HTCondor Connection Brokering (CCB)
 -----------------------------------
+
+` <index://CCB (HTCondor Connection Brokering)>`__
 
 HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
 components to communicate with each other when one side is in a private
@@ -612,12 +644,12 @@ node.
 
 To effect this CCB solution, the execute node’s *condor\_startd* within
 the private network registers itself with the CCB server by setting the
-configuration variable ``CCB_ADDRESS`` . The submit node’s
-*condor\_schedd* communicates with the CCB server, requesting that the
-execute node’s *condor\_startd* open the TCP connection. The CCB server
-forwards this request to the execute node’s *condor\_startd*, which
-opens the TCP connection. Once the connection is open, bi-directional
-communication is enabled.
+configuration variable ``CCB_ADDRESS`` :index:`CCB_ADDRESS<single: CCB_ADDRESS>`. The
+submit node’s *condor\_schedd* communicates with the CCB server,
+requesting that the execute node’s *condor\_startd* open the TCP
+connection. The CCB server forwards this request to the execute node’s
+*condor\_startd*, which opens the TCP connection. Once the connection is
+open, bi-directional communication is enabled.
 
 If the location of the execute and submit nodes is reversed with respect
 to the private network, the same idea applies: the submit node within
@@ -670,17 +702,18 @@ communicating with this pool.
 Under Unix, and with large HTCondor pools, it is also necessary to give
 the *condor\_collector* acting as the CCB server a large enough limit of
 file descriptors. This may be accomplished with the configuration
-variable ``MAX_FILE_DESCRIPTORS`` or an equivalent. Each HTCondor
-process configured to use CCB with ``CCB_ADDRESS`` requires one
-persistent TCP connection to the CCB server. A typical execute node
+variable ``MAX_FILE_DESCRIPTORS`` :index:`MAX_FILE_DESCRIPTORS<single: MAX_FILE_DESCRIPTORS>` or
+an equivalent. Each HTCondor process configured to use CCB with
+``CCB_ADDRESS`` requires one persistent TCP connection to the CCB
+server. A typical execute node requires one connection for the
+*condor\_master*, one for the *condor\_startd*, and one for each running
+job, as represented by a *condor\_starter*. A typical submit machine
 requires one connection for the *condor\_master*, one for the
-*condor\_startd*, and one for each running job, as represented by a
-*condor\_starter*. A typical submit machine requires one connection for
-the *condor\_master*, one for the *condor\_schedd*, and one for each
-running job, as represented by a *condor\_shadow*. If there will be no
-administrative commands required to be sent to the *condor\_master* from
-outside of the private network, then CCB may be disabled in the
-*condor\_master* by assigning ``MASTER.CCB_ADDRESS`` to nothing:
+*condor\_schedd*, and one for each running job, as represented by a
+*condor\_shadow*. If there will be no administrative commands required
+to be sent to the *condor\_master* from outside of the private network,
+then CCB may be disabled in the *condor\_master* by assigning
+``MASTER.CCB_ADDRESS`` to nothing:
 
 ::
 
@@ -701,13 +734,14 @@ Security and CCB
 ''''''''''''''''
 
 The CCB server authorizes all daemons that register themselves with it
-(using ``CCB_ADDRESS`` ) at the DAEMON authorization level (these are
-playing the role of process A in the above description). It authorizes
-all connection requests (from process B) at the READ authorization
-level. As usual, whether process B authorizes process A to do whatever
-it is trying to do is up to the security policy for process B; from the
-HTCondor security model’s point of view, it is as if process A connected
-to process B, even though at the network layer, the reverse is true.
+(using ``CCB_ADDRESS`` :index:`CCB_ADDRESS<single: CCB_ADDRESS>`) at the DAEMON
+authorization level (these are playing the role of process A in the
+above description). It authorizes all connection requests (from process
+B) at the READ authorization level. As usual, whether process B
+authorizes process A to do whatever it is trying to do is up to the
+security policy for process B; from the HTCondor security model’s point
+of view, it is as if process A connected to process B, even though at
+the network layer, the reverse is true.
 
 Troubleshooting CCB
 '''''''''''''''''''
@@ -744,6 +778,10 @@ without much trouble.
 Using TCP to Send Updates to the *condor\_collector*
 ----------------------------------------------------
 
+:index:`TCP<single: TCP>` :index:`TCP<single: TCP; sending updates>`
+:index:`UDP<single: UDP>` :index:`UDP<single: UDP; lost datagrams>`
+:index:`condor_collector<single: condor_collector>`
+
 TCP sockets are reliable, connection-based sockets that guarantee the
 delivery of any data sent. However, TCP sockets are fairly expensive to
 establish, and there is more network overhead involved in sending and
@@ -763,16 +801,17 @@ forwarding updates to any *condor\_collector* daemons specified in
 ``CONDOR_VIEW_HOST``, where UDP is used. These configuration variables
 control the protocol used:
 
- ``UPDATE_COLLECTOR_WITH_TCP``
+ ``UPDATE_COLLECTOR_WITH_TCP`` :index:`UPDATE_COLLECTOR_WITH_TCP<single: UPDATE_COLLECTOR_WITH_TCP>`
     When set to ``False``, the HTCondor daemons will use UDP to update
     the *condor\_collector*, instead of the default TCP. Defaults to
     ``True``.
  ``UPDATE_VIEW_COLLECTOR_WITH_TCP``
+:index:`UPDATE_VIEW_COLLECTOR_WITH_TCP<single: UPDATE_VIEW_COLLECTOR_WITH_TCP>`
     When set to ``True``, the HTCondor collector will use TCP to forward
     updates to *condor\_collector* daemons specified by
     ``CONDOR_VIEW_HOST``, instead of the default UDP. Defaults to
     ``False``.
- ``TCP_UPDATE_COLLECTORS``
+ ``TCP_UPDATE_COLLECTORS`` :index:`TCP_UPDATE_COLLECTORS<single: TCP_UPDATE_COLLECTORS>`
     A list of *condor\_collector* daemons which will be updated with TCP
     instead of UDP, when ``UPDATE_COLLECTOR_WITH_TCP`` or
     ``UPDATE_VIEW_COLLECTOR_WITH_TCP`` is set to ``False``.
@@ -803,22 +842,27 @@ the *condor\_collector* log file. The string
 Running HTCondor on an IPv6 Network Stack
 -----------------------------------------
 
+:index:`IPv6<single: IPv6>`
+
 HTCondor supports using IPv4, IPv6, or both.
 
-To require IPv4, you may set ``ENABLE_IPV4`` to true; if the machine
-does not have an interface with an IPv4 address, HTCondor will not
-start. Likewise, to require IPv6, you may set ``ENABLE_IPV6`` to true.
+To require IPv4, you may set ``ENABLE_IPV4`` :index:`ENABLE_IPV4<single: ENABLE_IPV4>`
+to true; if the machine does not have an interface with an IPv4 address,
+HTCondor will not start. Likewise, to require IPv6, you may set
+``ENABLE_IPV6`` :index:`ENABLE_IPV6<single: ENABLE_IPV6>` to true.
 
-If you set ``ENABLE_IPV4`` to false, HTCondor will not use IPv4, even if
-it is available; likewise for ``ENABLE_IPV6`` and IPv6.
+If you set ``ENABLE_IPV4`` :index:`ENABLE_IPV4<single: ENABLE_IPV4>` to false, HTCondor
+will not use IPv4, even if it is available; likewise for ``ENABLE_IPV6``
+:index:`ENABLE_IPV6<single: ENABLE_IPV6>` and IPv6.
 
-The default setting for ``ENABLE_IPV4`` and ``ENABLE_IPV6`` is ``auto``.
-If HTCondor does not find an interface with an address of the
-corresponding protocol, that protocol will not be used. Additionally, if
-only one of the protocols has a private or public address, the other
-protocol will be disabled. For instance, a machine with a private IPv4
-address and a loopback IPv6 address will only use IPv4; there’s no point
-trying to contact some other machine via IPv6 over a loopback interface.
+The default setting for ``ENABLE_IPV4`` :index:`ENABLE_IPV4<single: ENABLE_IPV4>` and
+``ENABLE_IPV6`` :index:`ENABLE_IPV6<single: ENABLE_IPV6>` is ``auto``. If HTCondor does
+not find an interface with an address of the corresponding protocol,
+that protocol will not be used. Additionally, if only one of the
+protocols has a private or public address, the other protocol will be
+disabled. For instance, a machine with a private IPv4 address and a
+loopback IPv6 address will only use IPv4; there’s no point trying to
+contact some other machine via IPv6 over a loopback interface.
 
 If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed
 mode. In mixed mode, HTCondor daemons have at least one IPv4 address and
@@ -828,10 +872,11 @@ them; if both are, they will prefer the first address listed by that
 daemon.
 
 A daemon may be listening on one, some, or all of its machine’s
-addresses. (See ``NETWORK_INTERFACE`` .) Daemons may presently list at
-most two addresses, one IPv6 and one IPv4. Each address is the “most
-public” address of its protocol; by default, the IPv6 address is listed
-first. HTCondor selects the “most public” address heuristically.
+addresses. (See ``NETWORK_INTERFACE`` :index:`NETWORK_INTERFACE<single: NETWORK_INTERFACE>`.)
+Daemons may presently list at most two addresses, one IPv6 and one IPv4.
+Each address is the “most public” address of its protocol; by default,
+the IPv6 address is listed first. HTCondor selects the “most public”
+address heuristically.
 
 Nonetheless, there are two cases in which HTCondor may not use an IPv6
 address when one is available:
@@ -842,11 +887,11 @@ address when one is available:
    look up.
 
 You may force HTCondor to prefer IPv4 in all three of these situations
-by setting the macro ``PREFER_IPV4`` to true; this is the default. With
-``PREFER_IPV4`` set, HTCondor daemons will list their “most public” IPv4
-address first; prefer the IPv4 address when choosing from another’s
-daemon list; and prefer the IPv4 address when looking up a host name in
-DNS.
+by setting the macro ``PREFER_IPV4`` :index:`PREFER_IPV4<single: PREFER_IPV4>` to true;
+this is the default. With ``PREFER_IPV4`` :index:`PREFER_IPV4<single: PREFER_IPV4>`
+set, HTCondor daemons will list their “most public” IPv4 address first;
+prefer the IPv4 address when choosing from another’s daemon list; and
+prefer the IPv4 address when looking up a host name in DNS.
 
 In practice, both an HTCondor pool’s central manager and any submit
 machines within a mixed mode pool must have both IPv4 and IPv6 addresses
@@ -890,9 +935,9 @@ brackets. For instance:
 IPv6 without DNS
 ''''''''''''''''
 
-When using the configuration variable ``NO_DNS`` , IPv6 addresses are
-turned into host names by taking the IPv6 address, changing colons to
-dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
+When using the configuration variable ``NO_DNS`` :index:`NO_DNS<single: NO_DNS>`,
+IPv6 addresses are turned into host names by taking the IPv6 address,
+changing colons to dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 
 ::
 
@@ -909,5 +954,7 @@ assuming
 ::
 
     DEFAULT_DOMAIN_NAME=example.com
+
+:index:`IPv6<single: IPv6>`
 
       

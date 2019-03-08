@@ -4,6 +4,7 @@
 ===============
 
 Windows-only no-fail deletion of directories
+:index:`HTCondor commands<single: HTCondor commands; condor_rmdir>`\ :index:`condor_rmdir command<single: condor_rmdir command>`
 
 Synopsis
 --------

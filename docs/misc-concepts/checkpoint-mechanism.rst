@@ -3,6 +3,8 @@
 HTCondor’s Checkpoint Mechanism
 ===============================
 
+:index:`checkpoint<single: checkpoint>`
+
 A checkpoint is a snapshot of the current state of a program, taken in
 such a way that the program can be restarted from that state at a later
 time. Taking checkpoints gives the HTCondor scheduler the freedom to
@@ -30,7 +32,7 @@ Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
 page \ `Running a Job: the Steps To
 Take <../users-manual/running-a-job-steps.html>`__ for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
-services.
+services. :index:`checkpoint<single: checkpoint; implementation>`
 
 The taking of process checkpoints is implemented in the HTCondor system
 call library as a signal handler. When HTCondor sends a checkpoint
@@ -51,16 +53,17 @@ execution machine is found of the same architecture and operating
 system, the process is restored on this new machine using the
 checkpoint, and computation resumes from where it left off. Jobs that
 can not take checkpoints are preempted and restarted from the beginning.
+:index:`checkpoint<single: checkpoint; periodic>`
 
 HTCondor’s taking of periodic checkpoints provides fault tolerance.
-Pools may be configured with the ``PERIODIC_CHECKPOINT`` variable, which
-controls when and how often jobs which can take and use checkpoints do
-so periodically. Examples of when are never, and every three hours. When
-the time to take a periodic checkpoint occurs, the job suspends
-processing, takes the checkpoint, and immediately continues from where
-it left off. There is also a *condor\_ckpt* command which allows the
-user to request that an HTCondor job immediately take a periodic
-checkpoint.
+Pools may be configured with the ``PERIODIC_CHECKPOINT``
+:index:`PERIODIC_CHECKPOINT<single: PERIODIC_CHECKPOINT>` variable, which controls when and how
+often jobs which can take and use checkpoints do so periodically.
+Examples of when are never, and every three hours. When the time to take
+a periodic checkpoint occurs, the job suspends processing, takes the
+checkpoint, and immediately continues from where it left off. There is
+also a *condor\_ckpt* command which allows the user to request that an
+HTCondor job immediately take a periodic checkpoint.
 
 In all cases, HTCondor jobs continue execution from the most recent
 complete checkpoint. If service is interrupted while a checkpoint is
@@ -77,6 +80,7 @@ When the network connection is closed, the checkpoint will be taken.
 The HTCondor checkpoint feature can also be used for any Unix process
 outside of the HTCondor batch environment. Standalone checkpoints are
 described in section \ `4.2.1 <#x49-4160004.2.1>`__.
+:index:`checkpoint<single: checkpoint; compression>`
 
 HTCondor can produce and use compressed checkpoints. Configuration
 variables (detailed in section \ `Configuration
@@ -98,6 +102,8 @@ checkpoints).
 
 Standalone Checkpoint Mechanism
 -------------------------------
+
+:index:`checkpoint<single: checkpoint; stand alone>`
 
 Using the HTCondor checkpoint library without the remote system call
 functionality and outside of the HTCondor system is known as the
@@ -211,6 +217,8 @@ function \_condor\_warning\_config().
 
 Checkpoint Library Interface
 ----------------------------
+
+:index:`checkpoint<single: checkpoint; library interface>`
 
 A program need not be rewritten to take advantage of checkpoints.
 However, the checkpoint library provides several C entry points that

@@ -4,6 +4,7 @@
 =================
 
 release held jobs in the HTCondor queue
+:index:`HTCondor commands<single: HTCondor commands; condor_release>`\ :index:`condor_release command<single: condor_release command>`
 
 Synopsis
 --------

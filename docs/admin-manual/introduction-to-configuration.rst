@@ -3,6 +3,9 @@
 Introduction to Configuration
 =============================
 
+` <index://configuration-intro;HTCondor>`__
+` <index://configuration: introduction>`__
+
 This section of the manual contains general information about HTCondor
 configuration, relating to all parts of the HTCondor system. If you’re
 setting up an HTCondor pool, you should read this section before you
@@ -57,6 +60,8 @@ Example:
 Ordered Evaluation to Set the Configuration
 -------------------------------------------
 
+:index:`configuration file<single: configuration file; evaluation order>`
+
 Multiple files, as well as a program’s environment variables, determine
 the configuration. The order in which attributes are defined is
 important, as later definitions override earlier definitions. The order
@@ -74,11 +79,13 @@ is:
    files have historically been known as local configuration files);
 #. if HTCondor daemons are not running as root on Unix platforms, the
    file ``$(HOME)/.condor/user_config`` if it exists, or the file
-   defined by configuration variable ``USER_CONFIG_FILE`` ;
+   defined by configuration variable ``USER_CONFIG_FILE``
+   :index:`USER_CONFIG_FILE<single: USER_CONFIG_FILE>`;
 
    if HTCondor daemons are not running as Local System on Windows
    platforms, the file %USERPROFILE\\.condor\\user\_config if it exists,
-   or the file defined by configuration variable ``USER_CONFIG_FILE`` ;
+   or the file defined by configuration variable ``USER_CONFIG_FILE``
+   :index:`USER_CONFIG_FILE<single: USER_CONFIG_FILE>`;
 
 #. specific environment variables whose names are prefixed with
    ``_CONDOR_`` (note that these environment variables directly define
@@ -120,14 +127,16 @@ of the same variable, and since the last definition of a variable sets
 the value, the parse order of these local configuration files is fully
 specified here. In order:
 
-#. The value of configuration variable ``LOCAL_CONFIG_DIR`` lists one or
-   more directories which contain configuration files. The list is
-   parsed from left to right. The leftmost (first) in the list is parsed
-   first. Within each directory, a lexicographical ordering by file name
-   determines the ordering of file consideration.
-#. The value of configuration variable ``LOCAL_CONFIG_FILE`` lists one
-   or more configuration files. These listed files are parsed from left
-   to right. The leftmost (first) in the list is parsed first.
+#. The value of configuration variable ``LOCAL_CONFIG_DIR``
+   :index:`LOCAL_CONFIG_DIR<single: LOCAL_CONFIG_DIR>` lists one or more directories which
+   contain configuration files. The list is parsed from left to right.
+   The leftmost (first) in the list is parsed first. Within each
+   directory, a lexicographical ordering by file name determines the
+   ordering of file consideration.
+#. The value of configuration variable ``LOCAL_CONFIG_FILE``
+   :index:`LOCAL_CONFIG_FILE<single: LOCAL_CONFIG_FILE>` lists one or more configuration
+   files. These listed files are parsed from left to right. The leftmost
+   (first) in the list is parsed first.
 #. If one of these steps changes the value (right hand side) of
    ``LOCAL_CONFIG_DIR``, then ``LOCAL_CONFIG_DIR`` is processed for a
    second time, using the changed list of directories.
@@ -140,6 +149,9 @@ needed information.
 
 Configuration File Macros
 -------------------------
+
+:index:`macro<single: macro; in configuration file>`
+:index:`configuration file<single: configuration file; macro definitions>`
 
 Macro definitions are of the form:
 
@@ -472,7 +484,8 @@ configuration macros. The vertical bar character (\|) as the last
 character defining a file name provides the syntax necessary to tell
 HTCondor to run a program. This syntax may only be used in the
 definition of the ``CONDOR_CONFIG`` environment variable, or the
-``LOCAL_CONFIG_FILE`` configuration variable.
+``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE<single: LOCAL_CONFIG_FILE>` configuration
+variable.
 
 The command line for the program is formed by the characters preceding
 the vertical bar character. The standard output of the program is parsed
@@ -494,11 +507,15 @@ program produces the configuration macros. Space characters would
 otherwise separate the list of files. This syntax does not permit
 distinguishing one from the other, so only one may be specified.
 
-(Note that the ``include command`` syntax (see below) is now the
-preferred way to execute a program to generate configuration macros.)
+(Note that the ``include command`` :index:`include command<single: include command>`
+syntax (see below) is now the preferred way to execute a program to
+generate configuration macros.)
 
 Including Configuration from Elsewhere
 --------------------------------------
+
+:index:`configuration<single: configuration; INCLUDE syntax>`
+:index:`INCLUDE configuration syntax<single: INCLUDE configuration syntax>`
 
 Externally defined configuration can be incorporated using the following
 syntax:
@@ -606,6 +623,9 @@ Here is an example using the new ifexist and into options:
 Reporting Errors and Warnings
 -----------------------------
 
+:index:`configuration<single: configuration; Error and warning syntax>`
+:index:`Error and warning configuration syntax<single: Error and warning configuration syntax>`
+
 As of version 8.5.7, warning and error messages can be included in
 HTCondor configuration files.
 
@@ -635,6 +655,9 @@ Here’s an example of using an error message in a configuration file
 
 Conditionals in Configuration
 -----------------------------
+
+` <index://IF/ELSE syntax;configuration>`__
+` <index://IF/ELSE configuration syntax>`__
 
 Conditional if/else semantics are available in a limited form. The
 syntax:
@@ -740,6 +763,8 @@ is the same as syntax
 Function Macros in Configuration
 --------------------------------
 
+:index:`configuration<single: configuration; function macros>`
+
 A set of predefined functions increase flexibility. Both submit
 description files and configuration files are read using the same
 parser, so these functions may be used in both submit description files
@@ -815,19 +840,21 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
  ``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
-    A random choice of one of the parameters in the list of parameters
-    is made. For example, if one of the integers 0-8 (inclusive) should
-    be randomly chosen:
+    ` <index://$RANDOM_CHOICE() function macro>`__ A random choice
+    of one of the parameters in the list of parameters is made. For
+    example, if one of the integers 0-8 (inclusive) should be randomly
+    chosen:
 
     ::
 
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
-    A random integer within the range min and max, inclusive, is
-    selected. The optional step parameter controls the stride within the
-    range, and it defaults to the value 1. For example, to randomly
-    chose an even integer in the range 0-8 (inclusive):
+    ` <index://in configuration;$RANDOM_INTEGER()>`__ A random integer
+    within the range min and max, inclusive, is selected. The optional
+    step parameter controls the stride within the range, and it defaults
+    to the value 1. For example, to randomly chose an even integer in
+    the range 0-8 (inclusive):
 
     ::
 
@@ -868,6 +895,8 @@ configurations.
 Macros That Will Require a Restart When Changed
 -----------------------------------------------
 
+:index:`configuration change requiring a restart of HTCondor<single: configuration change requiring a restart of HTCondor>`
+
 When any of the following listed configuration variables are changed,
 HTCondor must be restarted. Reconfiguration using *condor\_reconfig*
 will not be enough.
@@ -890,6 +919,9 @@ will not be enough.
 Pre-Defined Macros
 ------------------
 
+` <index://pre-defined macros;configuration>`__
+` <index://pre-defined macros;configuration file>`__
+
 HTCondor provides pre-defined macros that help configure HTCondor.
 Pre-defined macros are listed as ``$(macro_name)``.
 
@@ -899,12 +931,12 @@ routine which parses the configuration files. This implies that a change
 to the underlying value of any of these variables will require a full
 restart of HTCondor in order to use the changed value.
 
- ``$(FULL_HOSTNAME)``
+ ``$(FULL_HOSTNAME)``\ :index:`FULL_HOSTNAME<single: FULL_HOSTNAME>`
     The fully qualified host name of the local machine, which is host
     name plus domain name.
- ``$(HOSTNAME)``
+ ``$(HOSTNAME)``\ :index:`HOSTNAME<single: HOSTNAME>`
     The host name of the local machine, without a domain name.
- ``$(IP_ADDRESS)``
+ ``$(IP_ADDRESS)``\ :index:`IP_ADDRESS<single: IP_ADDRESS>`
     The ASCII string version of the local machine’s “most public” IP
     address. This address may be IPv4 or IPv6, but the macro will always
     be set.
@@ -916,28 +948,32 @@ restart of HTCondor in order to use the changed value.
 
     labelparam:IPv4Address
 
- ``$(IPV4_ADDRESS)``
+ ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS<single: IPV4_ADDRESS>`
     The ASCII string version of the local machine’s “most public” IPv4
     address; unset if the local machine has no IPv4 address.
 
     See ``IP_ADDRESS`` about “most public”.
 
- ``$(IPV6_ADDRESS)``
+ ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS<single: IPV6_ADDRESS>`
     The ASCII string version of the local machine’s “most public” IPv6
     address; unset if the local machine has no IPv6 address.
 
     See ``IP_ADDRESS`` about “most public”.
 
- ``$(IP_ADDRESS_IS_V6)``
-    A boolean which is true if and only if ``IP_ADDRESS`` is an IPv6
-    address. Useful for conditonal configuration.
- ``$(TILDE)``
+ ``$(IP_ADDRESS_IS_V6)``\ :index:`IP_ADDRESS_IS_V6<single: IP_ADDRESS_IS_V6>`
+    A boolean which is true if and only if ``IP_ADDRESS``
+    :index:`IP_ADDRESS<single: IP_ADDRESS>` is an IPv6 address. Useful for conditonal
+    configuration.
+ ``$(TILDE)``\ :index:`TILDE<single: TILDE>`
     The full path to the home directory of the Unix user condor, if such
     a user exists on the local machine.
- ``$(SUBSYSTEM)``
+    :index:`configuration file<single: configuration file; subsystem names>`
+ ``$(SUBSYSTEM)``\ :index:`SUBSYSTEM<single: SUBSYSTEM>`
     The subsystem name of the daemon or tool that is evaluating the
     macro. This is a unique string which identifies a given daemon
     within the HTCondor system. The possible subsystem names are:
+    :index:`subsystem names<single: subsystem names>`
+    :index:`macro<single: macro; subsystem names>`
 
     -  C\_GAHP
     -  C\_GAHP\_WORKER\_THREAD
@@ -966,20 +1002,22 @@ restart of HTCondor in order to use the changed value.
     -  TOOL
     -  TRANSFERER
 
- ``$(DETECTED_CPUS)``
+ ``$(DETECTED_CPUS)``\ :index:`DETECTED_CPUS<single: DETECTED_CPUS>`
     The integer number of hyper-threaded CPUs, as given by
     ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
-    by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS`` is
-    ``False``. When ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
- ``$(DETECTED_PHYSICAL_CPUS)``
+    by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS``
+    :index:`COUNT_HYPERTHREAD_CPUS<single: COUNT_HYPERTHREAD_CPUS>` is ``False``. When
+    ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
+ ``$(DETECTED_PHYSICAL_CPUS)``\ :index:`DETECTED_PHYSICAL_CPUS<single: DETECTED_PHYSICAL_CPUS>`
     The integer number of physical (non hyper-threaded) CPUs. This will
     be equal the number of unique CPU IDs.
 
 This second set of macros are entries whose default values are
 determined automatically at run time but which can be overwritten.
+:index:`configuration file<single: configuration file; macros>`
 
- ``$(ARCH)``
+ ``$(ARCH)``\ :index:`ARCH<single: ARCH>`
     Defines the string used to identify the architecture of the local
     machine to HTCondor. The *condor\_startd* will advertise itself with
     this attribute so that users can submit binaries compiled for a
@@ -991,44 +1029,44 @@ determined automatically at run time but which can be overwritten.
     manual page on
     page \ `condor\_submit <../man-pages/condor_submit.html>`__ for
     details.
- ``$(OPSYS)``
+ ``$(OPSYS)``\ :index:`OPSYS<single: OPSYS>`
     Defines the string used to identify the operating system of the
     local machine to HTCondor. If it is not defined in the configuration
     file, HTCondor will automatically insert the operating system of
     this machine as determined by *uname*.
- ``$(OPSYS_VER)``
+ ``$(OPSYS_VER)``\ :index:`OPSYS_VER<single: OPSYS_VER>`
     Defines the integer used to identify the operating system version
     number.
- ``$(OPSYS_AND_VER)``
+ ``$(OPSYS_AND_VER)``\ :index:`OPSYS_AND_VER<single: OPSYS_AND_VER>`
     Defines the string used prior to HTCondor version 7.7.2 as
     ``$(OPSYS)``.
- ``$(UNAME_ARCH)``
+ ``$(UNAME_ARCH)``\ :index:`UNAME_ARCH<single: UNAME_ARCH>`
     The architecture as reported by *uname*\ (2)’s ``machine`` field.
     Always the same as ``ARCH`` on Windows.
- ``$(UNAME_OPSYS)``
+ ``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS<single: UNAME_OPSYS>`
     The operating system as reported by *uname*\ (2)’s ``sysname``
     field. Always the same as ``OPSYS`` on Windows.
- ``$(DETECTED_MEMORY)``
+ ``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY<single: DETECTED_MEMORY>`
     The amount of detected physical memory (RAM) in MiB.
- ``$(DETECTED_CORES)``
+ ``$(DETECTED_CORES)``\ :index:`DETECTED_CORES<single: DETECTED_CORES>`
     The number of CPU cores that the operating system schedules. On
     machines that support hyper-threading, this will be the number of
     hyper-threads.
- ``$(PID)``
+ ``$(PID)``\ :index:`PID<single: PID>`
     The process ID for the daemon or tool.
- ``$(PPID)``
+ ``$(PPID)``\ :index:`PPID<single: PPID>`
     The process ID of the parent process for the daemon or tool.
- ``$(USERNAME)``
+ ``$(USERNAME)``\ :index:`USERNAME<single: USERNAME>`
     The user name of the UID of the daemon or tool. For daemons started
     as root, but running under another UID (typically the user condor),
     this will be the other UID.
- ``$(FILESYSTEM_DOMAIN)``
+ ``$(FILESYSTEM_DOMAIN)``\ :index:`FILESYSTEM_DOMAIN<single: FILESYSTEM_DOMAIN>`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See section \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
- ``$(UID_DOMAIN)``
+ ``$(UID_DOMAIN)``\ :index:`UID_DOMAIN<single: UID_DOMAIN>`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See section \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__ for the full

@@ -3,30 +3,45 @@
 Current Limitations
 ===================
 
+` <index://limitations, under UNIX;HTCondor>`__
+
  Limitations on Jobs which can Checkpointed
     Although HTCondor can schedule and run any type of process, HTCondor
     does have some limitations on jobs that it can transparently
     checkpoint and migrate:
 
+    :index:`Unix<single: Unix; fork>` :index:`Unix<single: Unix; exec>`
+    :index:`Unix<single: Unix; system>`
+
     #. Multi-process jobs are not allowed. This includes system calls
        such as ``fork()``, ``exec()``, and ``system()``.
+       :index:`Unix<single: Unix; pipe>` :index:`Unix<single: Unix; semaphore>`
+       :index:`Unix<single: Unix; shared memory>`
     #. Interprocess communication is not allowed. This includes pipes,
-       semaphores, and shared memory.
+       semaphores, and shared memory. :index:`Unix<single: Unix; socket>`
+       :index:`network<single: network>`
     #. Network communication must be brief. A job may make network
        connections using system calls such as ``socket()``, but a
        network connection left open for long periods will delay
-       checkpointing and migration.
+       checkpointing and migration. :index:`signal<single: signal>`
+       :index:`signal<single: signal; SIGUSR2>` :index:`signal<single: signal; SIGTSTP>`
     #. Sending or receiving the SIGUSR2 or SIGTSTP signals is not
        allowed. HTCondor reserves these signals for its own use. Sending
        or receiving all other signals is allowed.
+       :index:`Unix<single: Unix; alarm>` :index:`Unix<single: Unix; timer>`
+       :index:`Unix<single: Unix; sleep>`
     #. Alarms, timers, and sleeping are not allowed. This includes
        system calls such as ``alarm()``, ``getitimer()``, and
-       ``sleep()``.
+       ``sleep()``. ` <index://kernel-level;thread>`__
+       ` <index://user-level;thread>`__
     #. Multiple kernel-level threads are not allowed. However, multiple
-       user-level threads are allowed.
+       user-level threads are allowed. ` <index://memory-mapped;file>`__
+       :index:`Unix<single: Unix; mmap>`
     #. Memory mapped files are not allowed. This includes system calls
-       such as ``mmap()`` and ``munmap()``.
+       such as ``mmap()`` and ``munmap()``. :index:`file<single: file; locking>`
+       :index:`Unix<single: Unix; flock>` :index:`Unix<single: Unix; lockf>`
     #. File locks are allowed, but not retained between checkpoints.
+       :index:`file<single: file; read only>` :index:`file<single: file; write only>`
     #. All files must be opened read-only or write-only. A file opened
        for both reading and writing will cause trouble if a job must be
        rolled back to an old checkpoint image. For compatibility
@@ -37,9 +52,10 @@ Current Limitations
        is approximately equal to the virtual memory consumed by a job
        while it runs. If disk space is short, a special checkpoint
        server can be designated for storing all the checkpoint images
-       for a pool.
+       for a pool. :index:`linking<single: linking; dynamic>`
+       :index:`linking<single: linking; static>`
     #. On Linux, the job must be statically linked. *condor\_compile*
-       does this by default.
+       does this by default. :index:`Unix<single: Unix; large files>`
     #. Reading to or writing from files larger than 2 GBytes is only
        supported when the submit side *condor\_shadow* and the standard
        universe user job application itself are both 64-bit executables.
