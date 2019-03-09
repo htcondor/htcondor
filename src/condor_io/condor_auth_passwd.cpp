@@ -39,7 +39,9 @@
 
 #include "condor_auth_passwd.h"
 
+#include "jwt-cpp/jwt.h"
 
+#include <fstream>
 
 // HKDF_Extract and HKDF_Expand functions taken from OpenSSL 1.1.0 implementation.
 // Licensed under the OpenSSL license.
@@ -208,44 +210,98 @@ Condor_Auth_Passwd::fetchLogin()
 	std::string derived_keyfilename;
 	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWORD_DERIVED_KEYFILE")) {
 		dprintf(D_SECURITY, "PW: Will use derived keys found in %s.\n", derived_keyfilename.c_str());
-		FILE *keyfile_fp = fopen(derived_keyfilename.c_str(), "r");
-		if (!keyfile_fp) {
-			dprintf(D_ALWAYS, "Failed to open derived key file %s (%s, errno=%d).\n",
-				derived_keyfilename.c_str(), strerror(errno), errno);
+		std::ifstream keyfile(derived_keyfilename, std::ifstream::in);
+		if (!keyfile) {
+			dprintf(D_ALWAYS, "Failed to open derived key file %s\n",
+				derived_keyfilename.c_str());
 			return NULL;
 		}
-		classad::ClassAdParser parser;
-		std::unique_ptr<classad::ClassAd> ad(parser.ParseClassAd(keyfile_fp, true));
-		fclose(keyfile_fp);
-		if (!ad.get()) {
-			return NULL;
-		}
+
 		std::string username;
 		std::string token;
-		std::string k_encoded;
-		std::string k_prime_encoded;
-		if (!ad->EvaluateAttrString(ATTR_SEC_USER, username) ||
-			!ad->EvaluateAttrString("Token", token) ||
-			!ad->EvaluateAttrString("K", k_encoded) ||
-			!ad->EvaluateAttrString("K_prime", k_prime_encoded))
+		std::string signature;
+		bool found_token = false;
+		for (std::string line; std::getline(keyfile, line); ) {
+			line.erase(line.begin(),
+				std::find_if(line.begin(),
+					line.end(), [](int ch) {  return !std::isspace(ch) && (ch != '\n');}));
+			if (line.empty() || line[0] == '#') {
+				continue;
+			}
+			try {
+				auto decoded_jwt = jwt::decode(line);
+				if (decoded_jwt.has_key_id()) {
+					const std::string &tmp_key_id = decoded_jwt.get_key_id();
+					if (!m_server_keys.empty() && m_server_keys.find(tmp_key_id) == m_server_keys.end()) {
+						continue;
+					}
+				}
+				const std::string &tmp_issuer = decoded_jwt.get_issuer();
+				if (!m_server_issuer.empty() && m_server_issuer != tmp_issuer) {
+					continue;
+				}
+				if (!decoded_jwt.has_subject()) {
+					dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
+					continue;
+				}
+				username = decoded_jwt.get_subject();
+				token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+				signature = decoded_jwt.get_signature();
+			} catch (std::exception) {
+				dprintf(D_ALWAYS, "Failed to decode JWT in keyfile; ignoring.\n");
+			}
+			found_token = true;
+			break;
+		}
+		if (!found_token) {
+			dprintf(D_ALWAYS, "PW: No token found.\n");
+			return nullptr;
+		}
+
+		size_t key_size = AUTH_PW_KEY_LEN + token.size();
+		auto seed_ka = (unsigned char *)malloc(key_size);
+		auto seed_kb = (unsigned char *)malloc(key_size);
+		auto ka = (unsigned char *)malloc(key_strength_bytes());
+		auto kb = (unsigned char *)malloc(key_strength_bytes());
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, token.c_str(), token.size());
+		memcpy(seed_kb + AUTH_PW_KEY_LEN, token.c_str(), token.size());
+
+		setup_seed(seed_ka, seed_kb);
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			&seed_ka[0], key_size,
+			(const unsigned char *)"master ka", 9,
+			&ka[0],
+			key_strength_bytes_v2()))
 		{
-			dprintf(D_ALWAYS, "Missing keys from derived key file\n");
-			return NULL;
+			dprintf(D_SECURITY, "PW: Failed to generate master key K\n");
+			return nullptr;
+		}
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			&seed_kb[0], key_size,
+			(const unsigned char *)"master kb", 9,
+			&kb[0],
+			key_strength_bytes_v2()))
+		{
+			dprintf(D_SECURITY, "PW: Failed to generate master key K'\n");
+			return nullptr;
 		}
 
 		m_k_len = 0;
-		free(m_k); m_k = NULL;
-		int k_len, k_prime_len;
-		condor_base64_decode(k_encoded.c_str(), &m_k, &k_len, false);
-		m_k_len = k_len;
-		m_k_prime_len = 0;
-		free(m_k_prime); m_k_prime = NULL;
-		condor_base64_decode(k_prime_encoded.c_str(), &m_k_prime, &k_prime_len, false);
-		m_k_prime_len = k_prime_len;
-
-		if (!m_k || !m_k_prime) {
-			return NULL;
+		free(m_k); m_k = nullptr;
+		if (!(m_k = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
+			dprintf(D_SECURITY, "PW: Failed to allocate new copy of K\n");
+			return nullptr;
 		}
+		memcpy(m_k, &ka[0], key_strength_bytes_v2());
+		m_k_len = key_strength_bytes_v2();
+		m_k_prime_len = 0;
+		free(m_k_prime); m_k_prime = nullptr;
+		if (!(m_k_prime = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
+			dprintf(D_SECURITY, "PW: Failed to allocate new copy of K'\n");
+			return nullptr;
+		}
+		memcpy(m_k_prime, &kb[0], key_strength_bytes_v2());
+		m_k_prime_len = key_strength_bytes_v2();
 		m_keyfile_token = token;
 		return strdup(username.c_str());
 	}
@@ -380,12 +436,11 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
-Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const char *client_id, const std::string &init_text)
+Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
 	if ( sk->shared_key == NULL ) {
 		return false;
 	}
-	auto client_id_len = strlen(client_id);
 
 		// These were generated randomly at coding time (see
 		// setup_seed).  They are used as hash keys to create the two
@@ -393,7 +448,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const char *client_id, 
 		// respectively).  We derive these ka and kb by hmacing the
 		// shared key with these two seed keys.
 		//
-    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : (init_text.size() + client_id_len));
+    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : init_text.size());
     unsigned char *seed_ka = (unsigned char *)malloc(key_size);
     unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
@@ -420,10 +475,8 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const char *client_id, 
 
 		// Copy the text seed into the key.
 	if (m_version == 2) {
-		memcpy(seed_ka + AUTH_PW_KEY_LEN, client_id, client_id_len);
-		memcpy(seed_ka + AUTH_PW_KEY_LEN + client_id_len, init_text.c_str(), init_text.size());
-		memcpy(seed_kb + AUTH_PW_KEY_LEN, client_id, client_id_len);
-		memcpy(seed_kb + AUTH_PW_KEY_LEN + client_id_len, init_text.c_str(), init_text.size());
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
+		memcpy(seed_kb + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
 	}
 
     sk->len = strlen(sk->shared_key);
@@ -438,11 +491,39 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const char *client_id, 
 			 seed_kb, key_size,
 			 kb, &kb_len );
 	} else {
+		// Re-derive the signing key
+		std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
 		if (hkdf((unsigned char *)sk->shared_key, sk->len,
+			reinterpret_cast<const unsigned char *>("htcondor"), 8,
+			(const unsigned char *)"master jwt", 10,
+			&jwt_key[0], key_strength_bytes_v2()))
+		{
+			return false;
+		}
+		std::string jwt_key_str(reinterpret_cast<char *>(&jwt_key[0]), key_strength_bytes_v2());
+
+		// Sign the JWT.
+		std::string token = init_text + ".";
+		auto jwt = jwt::decode(token);
+		const std::string& algo = jwt.get_algorithm();
+		std::string signature;
+		if (algo == "HS256") {
+			auto signer = jwt::algorithm::hs256{jwt_key_str};
+			signature = signer.sign(init_text);
+		} else if (algo == "HS384") {
+			auto signer = jwt::algorithm::hs384{jwt_key_str};
+			signature = signer.sign(init_text);
+		} else if (algo == "HS512") {
+			auto signer = jwt::algorithm::hs512{jwt_key_str};
+			signature = signer.sign(init_text);
+		}
+
+		// Derive K and K' from the JWT's signature.
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
 			seed_ka, key_size,
 			(const unsigned char *)"master ka", 9,
 			ka, AUTH_PW_KEY_STRENGTH) ||
-		hkdf((unsigned char *)sk->shared_key, sk->len,
+		hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
 			seed_kb, key_size,
 			(const unsigned char *)"master kb", 9,
 			kb, AUTH_PW_KEY_STRENGTH))
@@ -1035,66 +1116,49 @@ fail:
 
 bool
 Condor_Auth_Passwd::generate_derived_key(const std::string & id,
-	const std::string &token,
-	classad::ClassAd & ad,
+	const std::string &key_id,
+	std::string &token,
 	CondorError *err)
 {
-	size_t key_size = AUTH_PW_KEY_LEN + id.size() + token.size();
-	std::vector<unsigned char> seed_ka; seed_ka.reserve(key_size);
-	std::vector<unsigned char> seed_kb; seed_kb.reserve(key_size);
-
-		// Fill in the data for the seed keys.
-	setup_seed(&seed_ka[0], &seed_kb[0]);
-	memcpy(&seed_ka[AUTH_PW_KEY_LEN], id.c_str(), id.size());
-	memcpy(&seed_kb[AUTH_PW_KEY_LEN], id.c_str(), id.size());
-	memcpy(&seed_ka[AUTH_PW_KEY_LEN + id.size()], token.c_str(), token.size());
-	memcpy(&seed_kb[AUTH_PW_KEY_LEN + id.size()], token.c_str(), token.size());
-
-		// These are the keys K and K' referred to in the AKEP2
-		// description.
-	std::vector<unsigned char> ka; ka.reserve(key_strength_bytes_v2());
-	std::vector<unsigned char> kb; kb.reserve(key_strength_bytes_v2());
-
-		// TODO: Load up master key.
 	std::string example_username(POOL_PASSWORD_USERNAME);
 	example_username += "@";
-	char *master_password = fetchPassword(example_username.c_str(), example_username.c_str());
-	if (master_password == nullptr) {
+	std::unique_ptr<char> master_password;
+	if (key_id.empty()) {
+		master_password.reset(fetchPassword(example_username.c_str(), example_username.c_str()));
+	}
+	if (master_password.get() == nullptr) {
 		err->push("PASSWD", 1, "No master pool password setup in SEC_PASSWORD_FILE");
 		return false;
 	}
-	size_t master_password_len = strlen(master_password);
+	size_t master_password_len = strlen(master_password.get());
 	std::vector<unsigned char> shared_key; shared_key.reserve(master_password_len);
-	memcpy(&shared_key[0], master_password, master_password_len);
+	memcpy(&shared_key[0], master_password.get(), master_password_len);
 
-	if (hkdf(&shared_key[0], master_password_len, &seed_ka[0], key_size,
-		(const unsigned char *)"master ka", 9,
-		&ka[0],
+	std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
+	if (hkdf(&shared_key[0], master_password_len,
+		reinterpret_cast<const unsigned char *>("htcondor"), 8,
+		(const unsigned char *)"master jwt", 10,
+		&jwt_key[0],
 		key_strength_bytes_v2()))
 	{
-		if (err) err->push("PASSWD", 1, "Failed to derive key K");
-		return false;
-	}
-	if (hkdf(&shared_key[0], master_password_len, &seed_kb[0], key_size,
-		(const unsigned char *)"master kb", 9,
-		&kb[0],
-		key_strength_bytes_v2()))
-	{
-		if (err) err->push("PASSWD", 1, "Failed to derive key K'");
+		if (err) err->push("PASSWD", 1, "Failed to derive key for JWT signature");
 		return false;
 	}
 
-	std::unique_ptr<char> K_encoded(condor_base64_encode(&ka[0], key_strength_bytes_v2(), false));
-	std::unique_ptr<char> K_prime_encoded(condor_base64_encode(&kb[0], key_strength_bytes_v2(), false));
-
-	if (!ad.InsertAttr("K", K_encoded.get()) ||
-		!ad.InsertAttr("K_prime", K_prime_encoded.get()) ||
-		!ad.InsertAttr(ATTR_SEC_USER, id) ||
-		!ad.InsertAttr("Token", token) )
-	{
-		if (err) err->push("PASSWD", 1, "Unable to create key ClassAd");
+	std::string issuer;
+	if (!param(issuer, "SEC_ISSUER_NAMESPACE")) {
+		if (err) err->push("PASSWD", 1, "Issuer namespace is not set");
 		return false;
 	}
+
+	std::string jwt_key_str(reinterpret_cast<const char *>(&jwt_key[0]), key_strength_bytes_v2());
+	auto jwt_token = jwt::create()
+		.set_issuer(issuer)
+		.set_subject(id)
+		.set_issued_at(std::chrono::system_clock::now())
+		.sign(jwt::algorithm::hs256(jwt_key_str));
+
+	token = jwt_token;
 	return true;
 }
 
@@ -1195,6 +1259,9 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// learns my name.
 		dprintf(D_SECURITY, "PW: getting name.\n");
 		m_t_client.a = fetchLogin();
+		if (!m_t_client.a) {
+			dprintf(D_SECURITY, "PW: Failed to fetch a login name\n");
+		}
 		m_t_client.a_token = m_keyfile_token;
 
 			// We complete the entire protocol even if there's an
@@ -1245,7 +1312,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 				dprintf(D_SECURITY, "PW: Client using pool password.\n");
 				m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
-				if(!setup_shared_keys(&m_sk, m_t_client.a, m_t_client.a_token)) {
+				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
 				}
 			}
@@ -1383,7 +1450,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
 		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk, m_t_client.a, m_t_client.a_token)) {
+		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");

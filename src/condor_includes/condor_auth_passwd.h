@@ -29,7 +29,8 @@
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
 
-
+#include <string>
+#include <set>
 
 
 #define AUTH_PW_KEY_LEN 256
@@ -139,8 +140,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
     int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
 	/** Generate a derived key ClassAd */
-    static bool generate_derived_key(const std::string &id, const std::string &token,
-	classad::ClassAd &ad, CondorError *err);
+    static bool generate_derived_key(const std::string &id, const std::string &key_id,
+	std::string &token, CondorError *err);
 
  private:
 
@@ -232,7 +233,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			Note that in protocol v2, the symmetric keys are derived
 			from both the compile-time seed and a fixed text.
 		*/
-	bool setup_shared_keys(struct sk_buf *sk, const char *client_id, const std::string &init_token);
+	bool setup_shared_keys(struct sk_buf *sk, const std::string &init_token);
 
 		/** The "seed" consists of the two keys used to hmac the
 			shared key.  Each byte in the seed keys is specified in
@@ -328,6 +329,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	size_t m_k_len;
 	size_t m_k_prime_len;
 	std::string m_keyfile_token;
+	std::string m_server_issuer;
+	std::set<std::string> m_server_keys;
 
 	CondorAuthPasswordState m_state;
 };

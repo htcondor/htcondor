@@ -2469,6 +2469,11 @@ default=false
 type=bool
 tags=io,condor_auth_claim
 
+[SEC_ISSUER_NAMESPACE]
+default=$(COLLECTOR_HOST)
+type=string
+tags=condor_auth_passwd
+
 [FS_REMOTE_DIR]
 default=
 type=string
