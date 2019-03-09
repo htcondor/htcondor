@@ -2176,20 +2176,23 @@ case CONDOR_getdir:
 		cred_dir_name += DIR_DELIM_CHAR;
 		cred_dir_name += user;
 
-		dprintf( D_SECURITY, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
-		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
-		const char *fname;
+		// what we want to do is send only the ".use" creds, and only
+		// the ones required for this job.  we will need to get that
+		// list of names from the Job Ad.
+		MyString services_needed;
+		ad->LookupString("OAuthServicesNeeded", services_needed);
+		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.Value(), services_needed.Value());
+
 		bool had_error = false;
-		while((fname = cred_dir.Next())) {
-			// only send the "use level" creds.
-			const char *last4 = fname + strlen(fname) - 4;
-			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
-				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
-				continue;
-			}
-			MyString fullname = cred_dir_name;
-			fullname += DIR_DELIM_CHAR;
-			fullname += fname;
+		StringList services_list(services_needed.Value());
+		services_list.rewind();
+		char *curr;
+		while((curr = services_list.next())) {
+			MyString fname,fullname;
+			fname.formatstr("%s.use", curr);
+			fullname.formatstr("%s%c%s", cred_dir_name.Value(), DIR_DELIM_CHAR, fname.Value());
+
+			dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
 
 			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
 			// read the file (fourth argument "true" means as_root)
@@ -2207,7 +2210,7 @@ case CONDOR_getdir:
 			free(buf);
 
 			ClassAd ad;
-			ad.Assign("Service", fname);
+			ad.Assign("Service", fname.Value());
 			ad.Assign("Data", b64);
 
 			int more_ads = 1;

@@ -12,6 +12,7 @@
 
 #include <classad/source.h>
 #include <classad/sink.h>
+#include <classad/jsonSink.h>
 #include <classad/classadCache.h>
 #include <classad/matchClassad.h>
 
@@ -967,6 +968,14 @@ std::string ClassAdWrapper::toOldString() const
     pp.SetOldClassAd(true);
     pp.Unparse(ad_str, this);
     return ad_str;
+}
+
+std::string ClassAdWrapper::toJsonString() const
+{
+	classad::ClassAdJsonUnParser pp;
+	std::string ad_str;
+	pp.Unparse(ad_str, this);
+	return ad_str;
 }
 
 bool ClassAdWrapper::contains(const std::string & attr) const
