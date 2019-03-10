@@ -40,6 +40,7 @@
 #include "subsystem_info.h"
 #include "setenv.h"
 #include "ipv6_hostname.h"
+#include "condor_auth_passwd.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -382,6 +383,24 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 }
 
 
+void
+SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
+{
+	std::string method_list_str;
+	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
+		return;
+	}
+	StringList  method_list( method_list_str.c_str() );
+	const char *method;
+
+	method_list.rewind();
+	while ( (method = method_list.next()) ) {
+		if (!strcmp(method, "PASSWORD2")) {
+			Condor_Auth_Passwd::preauth_metadata(ad);
+		}
+	}
+}
+
 
 // params() for a bunch of stuff and sets up a class ad describing our security
 // preferences/requirements.  returns true if the security policy is valid, and
@@ -482,6 +501,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
 		free(paramer);
 		paramer = NULL;
+
+		// Some methods may need to insert additional metadata into this ad
+		// in order for the client & server to determine if they can be used.
+		UpdateAuthenticationMetadata(*ad);
 	} else {
 		if( sec_authentication == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
@@ -912,6 +935,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	sprintf (buf, "%s=\"YES\"", ATTR_SEC_ENACT);
 	action_ad->Insert(buf);
+
+	UpdateAuthenticationMetadata(*action_ad);
 
 	return action_ad;
 

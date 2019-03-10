@@ -1071,6 +1071,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	m_sock->setAuthenticationMethodsTried(auth_methods);
 
 	char *method_used = NULL;
+	m_sock->setPolicyAd(*m_policy);
 	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
 	m_sock->getPolicyAd(*m_policy);
 	free( auth_methods );

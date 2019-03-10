@@ -85,5 +85,15 @@ bool isValidCredential( const char *user, const char* pw );
 */
 char* getStoredCredential(const char *user, const char *domain);
 
+/** Get a named credential from disk. */
+bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err);
+
+/** List all the named credentials. To allow this to be invoked frequently,
+ *  it will cache the list internally. */
+bool listNamedCredentials(std::vector<std::string> &creds, CondorError *err);
+
+/** Force-refresh the named credential list on the next lookup. */
+void refreshNamedCredentials();
+
 #endif // STORE_CRED_H
 

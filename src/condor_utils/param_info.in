@@ -2443,6 +2443,12 @@ default=
 type=string
 tags=store_cred
 
+[SEC_PASSWORD_DIRECTORY]
+default=/etc/condor/passwords.d
+win32_default=
+type=path
+tags=store_cred
+
 [SEC_PASSWORD_DERIVED_KEYFILE]
 default=
 description=File containing derived key matter for password auth.

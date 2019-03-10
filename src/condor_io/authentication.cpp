@@ -248,10 +248,30 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
 				break;
-                        case CAUTH_PASSWORD2:
-                                m_auth = new Condor_Auth_Passwd(mySock, 2);
+                        case CAUTH_PASSWORD2: {
+				auto tmp_auth = new Condor_Auth_Passwd(mySock, 2);
+				m_auth = tmp_auth;
+				const classad::ClassAd *policy = mySock->getPolicyAd();
+				if (policy) {
+					std::string issuer;
+					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_NAMESPACE, issuer)) {
+						tmp_auth->set_remote_issuer(issuer);
+					}
+					std::string key_str;
+					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, key_str)) {
+						StringList key_list(key_str.c_str());
+						const char *key;
+						key_list.rewind();
+						std::vector<std::string> keys;
+						while ( (key = key_list.next()) ) {
+							keys.push_back(key);
+						}
+						tmp_auth->set_remote_keys(keys);
+					}
+				}
                                 m_method_name = "PASSWORD2";
                                 break;
+			}
 #endif
  
 #if defined(WIN32)

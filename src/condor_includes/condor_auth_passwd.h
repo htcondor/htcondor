@@ -43,6 +43,9 @@
 #define AUTH_PW_ABORT          1
 
 class CondorError;
+namespace classad {
+	class ClassAd;
+}
 
 /** A class to implement the AKEP2 protocol for password-based authentication.
  
@@ -139,9 +142,15 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	*/    
     int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
-	/** Generate a derived key ClassAd */
+	/** Generate a derived key */
     static bool generate_derived_key(const std::string &id, const std::string &key_id,
 	std::string &token, CondorError *err);
+
+	/** Metadata needed prior to starting authorization */
+    static bool preauth_metadata(classad::ClassAd &ad);
+
+    void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
+    void set_remote_keys(const std::vector<std::string> &keys);
 
  private:
 
@@ -194,6 +203,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			information.  
 		*/
 	static char* fetchPassword(const char* nameA,
+	                    const std::string &token,
 	                    const char* nameB);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
