@@ -1370,11 +1370,40 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			m_perm = USER_AUTH_FAILURE;
 		}
 		else {
-			m_perm = daemonCore->Verify(
-						  command_desc.c_str(),
-						  m_comTable[m_cmd_index].perm,
-						  m_sock->peer_addr(),
-						  m_user.c_str() );
+				// Authentication methods can limit the authorizations associated with
+				// a given identity (at time of coding, only PASSWORD2 does this); apply
+				// these limits if present.
+			std::string authz_policy;
+			bool can_attempt = true;
+			if (m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+				StringList authz_limits(authz_policy.c_str());
+				authz_limits.rewind();
+				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
+				const char *authz_name;
+				bool found_limit = false;
+				while ( (authz_name = authz_limits.next()) ) {
+					if (!strcmp(perm_cstr, authz_name)) {
+						found_limit = true;
+						break;
+					}
+				}
+				if (!found_limit) {
+					can_attempt = false;
+				}
+			}
+			if (can_attempt) {
+				m_perm = daemonCore->Verify(
+							  command_desc.c_str(),
+							  m_comTable[m_cmd_index].perm,
+							  m_sock->peer_addr(),
+							  m_user.c_str() );
+			} else {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s was successful but resulted in a limited authorization which did not include this command (%d %s), so aborting.\n",
+					m_sock->peer_description(),
+					m_req,
+					m_comTable[m_cmd_index].command_descrip);
+				m_perm = USER_AUTH_FAILURE;
+			}
 		}
 
 	} else {

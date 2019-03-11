@@ -553,9 +553,29 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 		}
 		std::string jwt_key_str(reinterpret_cast<char *>(&jwt_key[0]), key_strength_bytes_v2());
 
-		// Sign the JWT.
+		// Verify known keys and Sign the JWT.
 		std::string token = init_text + ".";
 		auto jwt = jwt::decode(token);
+
+		int max_age = -1;
+		auto now = std::chrono::system_clock::now();
+		if (jwt.has_issued_at() && (max_age = param_integer("SEC_DERIVED_SECRETS_MAX_AGE", -1))) {
+			auto iat = jwt.get_issued_at();
+			auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
+			if ((max_age != -1) && age > max_age) {
+				dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", age, max_age);
+				return false;
+			}
+		}
+		if (jwt.has_expires_at()) {
+			auto expiry = jwt.get_expires_at();
+			auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
+			if (expired_for > 0) {
+				dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", expired_for);
+				return false;
+			}
+		}
+
 		const std::string& algo = jwt.get_algorithm();
 		std::string signature;
 		if (algo == "HS256") {
@@ -1168,6 +1188,8 @@ fail:
 bool
 Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 	const std::string &key_id,
+	const std::vector<std::string> &authz_list,
+	long lifetime,
 	std::string &token,
 	CondorError *err)
 {
@@ -1207,12 +1229,26 @@ Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 	}
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(&jwt_key[0]), key_strength_bytes_v2());
-	auto jwt_token = jwt::create()
+	auto jwt_builder = jwt::create()
 		.set_issuer(issuer)
 		.set_subject(id)
 		.set_issued_at(std::chrono::system_clock::now())
-		.set_key_id(key_id.empty() ? "POOL" : key_id)
-		.sign(jwt::algorithm::hs256(jwt_key_str));
+		.set_key_id(key_id.empty() ? "POOL" : key_id);
+
+	if (!authz_list.empty()) {
+		std::stringstream ss;
+		for (const auto &authz : authz_list) {
+			std::string authz_full = "condor:/" + authz;
+			ss << authz_full << " ";
+		}
+		const std::string &authz_set = ss.str();
+		jwt_builder.set_payload_claim("scope", authz_set.substr(0, authz_set.size()-1));
+	}
+	if (lifetime >= 0) {
+		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
+	}
+
+	auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 
 	token = jwt_token;
 	return true;
@@ -1612,6 +1648,38 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 		setRemoteUser(login);
 		setRemoteDomain(domain);
+
+		if (!m_t_client.a_token.empty()) {
+			std::vector<std::string> authz;
+			try {
+				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
+				if (decoded_jwt.has_payload_claim("scope")) {
+						// throws std::bad_cast if this isn't a string; caught below.
+					const std::string &scopes = decoded_jwt.get_payload_claim("scope").as_string();
+					StringList scope_list(scopes.c_str());
+					scope_list.rewind();
+					const char *scope;
+					while ( (scope = scope_list.next()) ) {
+						if (strncmp(scope, "condor:/", 8)) {
+							continue;
+						}
+						scope += 8;
+						authz.emplace_back(scope);
+					}
+				}
+			} catch (...) {
+				dprintf(D_SECURITY, "PW: Unable to parse final token.\n");
+			}
+			if (!authz.empty()) {
+				std::stringstream ss;
+				for (const auto &auth : authz) {
+					ss << auth << ",";
+				}
+				classad::ClassAd ad;
+				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+				mySock_->setPolicyAd(ad);
+			}
+		}
 	}
 
 	destroy_t_buf(&m_t_client);
