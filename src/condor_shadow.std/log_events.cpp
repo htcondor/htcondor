@@ -97,7 +97,7 @@ extern "C" void
 initializeUserLog ()
 {
 	std::string logfilename,dagmanLogName;
-	bool use_xml;
+	int use_classad = 0;
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
 		logfiles.push_back(logfilename.c_str());
@@ -113,7 +113,8 @@ initializeUserLog ()
 				Proc->id.cluster, Proc->id.proc, 0)) {
 			EXCEPT("Failed to initialize user log!");
 		} else {
-			ULog.setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+			if ( ! JobAd->LookupInteger(ATTR_ULOG_USE_XML, use_classad)) { use_classad = 0; }
+			ULog.setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
 		}
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found and no %s found\n", ATTR_ULOG_FILE,

@@ -357,8 +357,8 @@ JobEvent::Py_Repr() {
 	// We could (also) sPrintAd() the backing ClassAd, but might be TMI.
 	std::string constructorish;
 	formatstr( constructorish,
-		"JobEvent(type=%d, cluster=%d, proc=%d, timestamp=%ld)",
-		type(), cluster(), proc(), timestamp() );
+		"JobEvent(type=%d, cluster=%d, proc=%d, timestamp=%lld)",
+		type(), cluster(), proc(), (long long)timestamp() );
 	return constructorish;
 }
 

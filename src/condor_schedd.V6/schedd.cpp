@@ -4204,7 +4204,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	MyString owner;
 	MyString domain;
 	MyString iwd;
-	bool use_xml;
+	int use_classad = 0;
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
@@ -4216,8 +4216,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	}
 
 	WriteUserLog* ULog=new WriteUserLog();
-	ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
-		ATTR_ULOG_USE_XML, &use_xml) && use_xml);
+	if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_ULOG_USE_XML, &use_classad) < 0) {
+		use_classad = 0;
+	}
+	ULog->setUseCLASSAD(use_classad);
 	ULog->setCreatorName( Name );
 
     if (m_userlog_file_cache_max > 0) {

@@ -43,8 +43,21 @@ enum ISO8601Type
 	ISO8601_DateAndTime
 };
 
+/* required buffer sizes based on: yyyy-mm-dd hh:mm:ss.ffffff+hh:mm
+                                            1         2         3
+                                   12345678901234567890123456789012
+*/
+enum ISO8601BufferMax
+{
+	ISO8601_DateOnlyBufferMax = 11,
+	ISO8601_TimeOnlyBufferMax = 23,
+	ISO8601_DateAndTimeBufferMax = 33,
+};
+
 /**
  * Convert a struct tm into an ISO 8601 standard date
+ * @param buf output buffer, must be large enough to hold the string
+ *        use ISO8601BufferMax enum for buffer sizes for the various ISO8601Type options
  * @param time The time you wish to convert. A normal "struct tm",
  *        which has the usual weirdness: the year is off by 1900, etc.
  *        (See ctime(3).)
@@ -55,8 +68,11 @@ enum ISO8601Type
  *        local time. (We don't do timezones.)
  * @return A string allcoated with malloc. You'll need to free() it
  *         when you're done with it. */
-char *time_to_iso8601(const struct tm &time, ISO8601Format format, 
-					  ISO8601Type type, bool is_utc);
+char *time_to_iso8601(
+	char * outbuf,
+	const struct tm &time, ISO8601Format format, 
+	ISO8601Type type, bool is_utc,
+	unsigned int sub_sec=0, int sub_sec_digits=0);
 
 /**
  * This converts a date/time in ISO 8601 format to a "struct tm". 
@@ -71,6 +87,6 @@ char *time_to_iso8601(const struct tm &time, ISO8601Format format,
  * @param time This is filled in with the time.
  * @param is_utc This is set to true if it's UTC. Assume localtime 
  *        otherwise. */
-void iso8601_to_time(const char *iso_time, struct tm *time, bool *is_utc);
+void iso8601_to_time(const char *iso_time, struct tm *time, long *usec, bool *is_utc);
 
 #endif 

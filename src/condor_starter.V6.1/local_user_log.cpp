@@ -61,7 +61,7 @@ LocalUserLog::init( const std::vector<const char*>& filename, bool is_xml,
 	}
 
 	set_priv( priv );
-	u_log.setUseXML( is_xml );
+	u_log.setUseCLASSAD( is_xml ? ULogEvent::formatOpt::XML : 0 );
 	for(std::vector<const char*>::const_iterator p = filename.begin();
 			p != filename.end(); ++p) {
 		dprintf( D_FULLDEBUG, "Starter's UserLog: %s\n", *p );

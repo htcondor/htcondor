@@ -806,7 +806,6 @@ BaseShadow::emailRemoveEvent( const char* reason )
 void BaseShadow::initUserLog()
 {
 	std::string logfilename,dagmanLogFile;
-	bool use_xml;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
@@ -835,8 +834,9 @@ void BaseShadow::initUserLog()
 				// EXCEPT
 			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) &&
-			use_xml);
+		int use_classad = 0;
+		if ( ! jobAd->LookupInteger(ATTR_ULOG_USE_XML, use_classad)) { use_classad = 0; }
+		uLog.setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
 		if(logfiles.size() > 1) {
 			MyString msk;
 			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);

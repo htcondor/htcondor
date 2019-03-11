@@ -180,7 +180,7 @@ class WriteUserLog
 	*/
 	bool Configure( bool force = true );
 
-	void setUseXML(bool new_use_xml);
+	void setUseCLASSAD(int fmt_type); // 0 = not key value pair, 1 = XML, 2 = JSON
 
 	/** Enable / disable writing of user or global logs
 	 */

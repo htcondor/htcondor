@@ -189,7 +189,7 @@ class ULogEvent {
 	 */
 	bool formatEvent( std::string &out, int options );
 	// Flags for the formatting options for formatEvent and formatHeader
-	enum formatOpt { XML = 0x0001, ISO_DATE=0x0010, UTC=0x0020, USEC=0x0040, };
+	enum formatOpt { XML = 0x0001, JSON = 0x0002, CLASSAD = 0x0003, ISO_DATE=0x0010, UTC=0x0020, SUB_SECOND=0x0040, };
 	static int parse_opts(const char * fmt, int default_opts);
 
 		// returns a pointer to the current event name char[], or NULL
@@ -202,7 +202,7 @@ class ULogEvent {
 		@return NULL for failure, or the ClassAd pointer for success
 	*/
 	virtual ClassAd* toClassAd(bool event_time_utc);
-	    
+
 	/** Initialize from this ClassAd. This is implemented differently in each
 		of the known (by John Bethencourt as of 6/5/02) subclasses of
 		ULogEvent. Each implementation also calls ULogEvent::initFromClassAd
@@ -218,7 +218,13 @@ class ULogEvent {
 		but keeping that in sync with the eventclock was a problem, so we got rid of it
 		@return The time at which this event occurred.
 	*/
-	time_t GetEventTime() const { return eventclock; }
+	time_t GetEventTime(struct timeval *tv=NULL) const {
+		if (tv) {
+			tv->tv_sec = eventclock;
+			tv->tv_usec = event_usec;
+		}
+		return eventclock;
+	}
 
 	/** Get the time at which this event occurred, in the form
 	    of a time_t.
@@ -315,8 +321,9 @@ class ULogEvent {
   private:
     /// The time this event occurred as a UNIX timestamp
 	time_t				eventclock;
+	long				event_usec;
 };
-
+ 
 //----------------------------------------------------------------------------
 /** Instantiates an event object based on the given event number.
     @param event The event number

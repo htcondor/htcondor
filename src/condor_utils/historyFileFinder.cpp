@@ -160,7 +160,7 @@ static bool isHistoryBackup(const char *fullFilename, time_t *backup_time)
         struct tm file_time;
         bool is_utc;
 
-        iso8601_to_time(filename + history_base_length + 1, &file_time, &is_utc);
+        iso8601_to_time(filename + history_base_length + 1, &file_time, NULL, &is_utc);
         if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
             && file_time.tm_mday != -1 && file_time.tm_hour != -1
             && file_time.tm_min != -1  && file_time.tm_sec != -1

@@ -1882,7 +1882,7 @@ Dag::PostScriptReaper( Job *job, int status )
 		// write to the user log also fails, and DAGMan hangs
 		// waiting for the event that wasn't written).
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( false );
+	ulog.setUseCLASSAD( 0 );
 
 	debug_printf( DEBUG_QUIET,
 				"Initializing user log writer for %s, (%d.%d.%d)\n",
@@ -2501,7 +2501,7 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 		// Be sure to pass GetEventTime() here, because we want the
 		// event time to always be output has a human-readable string,
 		// even if dprintf() is configured to print timestamps.
-	time_to_str( event->GetEventTime(), timestr );
+	time_to_str( event->GetEventclock(), timestr );
 		// String from time_to_str has trailing blank (needed for other
 		// places in the code).
 	timestr.trim();

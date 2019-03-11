@@ -343,7 +343,7 @@ WriteUserLog::internalInitialize( int c, int p, int s )
 }
 
 // Read in just the m_format_opts configuration
-void WriteUserLog::setUseXML(bool new_use_xml)
+void WriteUserLog::setUseCLASSAD(int fmt_type)
 {
 	if ( ! m_configured) {
 		m_format_opts = USERLOG_FORMAT_DEFAULT;
@@ -352,11 +352,8 @@ void WriteUserLog::setUseXML(bool new_use_xml)
 			m_format_opts = ULogEvent::parse_opts(fmt, m_format_opts);
 		}
 	}
-	if (new_use_xml) {
-		m_format_opts |= ULogEvent::formatOpt::XML;
-	} else {
-		m_format_opts &= ~(ULogEvent::formatOpt::XML);
-	}
+	m_format_opts &= ~(ULogEvent::formatOpt::CLASSAD);
+	m_format_opts |= (ULogEvent::formatOpt::CLASSAD & fmt_type);
 }
 
 // Read in our configuration information
@@ -423,7 +420,10 @@ WriteUserLog::Configure( bool force )
 	m_global_format_opts = 0;
 	fmt.set(param("EVENT_LOG_FORMAT_OPTIONS"));
 	if (fmt) { m_global_format_opts |= ULogEvent::parse_opts(fmt, 0); }
-	if (param_boolean("EVENT_LOG_USE_XML", false)) { m_global_format_opts |= ULogEvent::formatOpt::XML; }
+	if (param_boolean("EVENT_LOG_USE_XML", false)) {
+		m_global_format_opts &= ~(ULogEvent::formatOpt::CLASSAD);
+		m_global_format_opts |= ULogEvent::formatOpt::XML;
+	}
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
 	m_global_fsync_enable = param_boolean( "EVENT_LOG_FSYNC", false );
@@ -1356,7 +1356,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 	ClassAd* eventAd = NULL;
 	bool success = true;
 
-	if(format_opts & ULogEvent::formatOpt::XML) {
+	if (format_opts & ULogEvent::formatOpt::CLASSAD) {
 
 		eventAd = event->toClassAd((format_opts & ULogEvent::formatOpt::UTC) != 0);	// must delete eventAd eventually
 		if (!eventAd) {
@@ -1365,18 +1365,25 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 					 event->eventNumber);
 			success = false;
 		} else {
-			std::string adXML;
-			classad::ClassAdXMLUnParser xmlunp;
-
-			eventAd->Delete( ATTR_TARGET_TYPE );
-			xmlunp.SetCompactSpacing(false);
-			xmlunp.Unparse(adXML, eventAd);
-			if ( adXML.length() < 1 ) {
-				dprintf( D_ALWAYS,
-						 "WriteUserLog Failed to convert event type # %d to XML.\n",
-						 event->eventNumber);
+			std::string output;
+			if (format_opts & ULogEvent::formatOpt::JSON) {
+				classad::ClassAdJsonUnParser  unparser;
+				unparser.Unparse(output, eventAd);
+				if ( ! output.empty()) output += "\n";
+			} else /*if (format_opts & ULogEvent::formatOpt::XML)*/ {
+				eventAd->Delete(ATTR_TARGET_TYPE); // TJ 2019: I think this is no longer necessary
+				classad::ClassAdXMLUnParser unparser;
+				unparser.SetCompactSpacing(false);
+				unparser.Unparse(output, eventAd);
 			}
-			if ( write( fd, adXML.c_str(), adXML.length() ) < 0) {
+
+			if (output.empty()) {
+				dprintf( D_ALWAYS,
+						 "WriteUserLog Failed to convert event type # %d to %s.\n",
+						 event->eventNumber,
+						 (format_opts & ULogEvent::formatOpt::JSON) ? "JSON" : "XML");
+			}
+			if ( write( fd, output.data(), output.length() ) < 0) {
 				success = false;
 			} else {
 				success = true;
@@ -1386,7 +1393,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 		std::string output;
 		success = event->formatEvent( output, format_opts );
 		output += SynchDelimiter;
-		if ( success && write( fd, output.c_str(), output.length() ) < 0 ) {
+		if ( success && write( fd, output.data(), output.length() ) < 0 ) {
 			// TODO Should we print a '\n...\n' like in the older code?
 			success = false;
 		}

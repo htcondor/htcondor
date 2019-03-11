@@ -1007,7 +1007,7 @@ InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string userLogFile, dagmanNodeLog;
-	bool use_xml = false;
+	int use_classad = 0;
 	std::vector<const char*> logfiles;
 
 	if( getPathToUserLog(job_ad, userLogFile) ) {
@@ -1022,11 +1022,11 @@ InitializeUserLog( ClassAd *job_ad )
 
 	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
+	job_ad->LookupInteger( ATTR_ULOG_USE_XML, use_classad);
 
 	WriteUserLog *ULog = new WriteUserLog();
 	ULog->initialize(logfiles, cluster, proc, 0);
-	ULog->setUseXML( use_xml );
+	ULog->setUseCLASSAD(use_classad);
 	return ULog;
 }
 

@@ -85,7 +85,7 @@ class ReadUserLog
 		@param XML mode?
 		@param close the FP when done?
 	*/
-    ReadUserLog( FILE *fp, bool is_xml, bool enable_close = false );
+    ReadUserLog( FILE *fp, int log_type, bool enable_close = false );
 
     /** Constructor.
         @param filename the file to read from
@@ -203,14 +203,14 @@ class ReadUserLog
 		@param is_xml should be true if we have an XML log file,
 		 false otherwise
 	*/
-	void setIsXMLLog( bool is_xml );
+	void setIsCLASSADLog( int log_type ); // 0 = not classad, 1 = xml, 2 = json
 
 	/** Determine whether this ReadUserLog thinks its log file is XML.
 		Note that false may mean that the type is not yet known (e.g.,
 		the log file is empty).
 		@return true if XML, false otherwise
 	*/
-	bool getIsXMLLog( void ) const;
+	int getIsCLASSADLog( void ) const;
 
     /** Check the status of the file - has it grown, shrunk, etc.
 		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
@@ -228,7 +228,7 @@ class ReadUserLog
 		@param is_old should be true if we have a "old-style" log file,
 		false otherwise
 	*/
-	void setIsOldLog( bool is_old );
+	//void setIsOldLog( bool is_old );
 
 	/** Determine whether this ReadUserLog thinks its log file is "old-style"
 	    (non-XML).
@@ -236,7 +236,7 @@ class ReadUserLog
 		the log file is empty).
 		@return true if "old-style", false otherwise
 	*/
-	bool getIsOldLog( void ) const;
+	//bool getIsOldLog( void ) const;
 
 	/** Get error data
 		@param error type
@@ -397,14 +397,14 @@ class ReadUserLog
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventXML (ULogEvent * & event);
+    ULogEventOutcome readEventClassad (ULogEvent * & event, int log_type);
 
     /** Read the next event from the old style log file. The event pointer to
         set to point to a newly instatiated ULogEvent object.
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventOld (ULogEvent * & event);
+    ULogEventOutcome readEventNormal (ULogEvent * & event);
 
 	/** Reopen the log file
 		@param Restore from state?

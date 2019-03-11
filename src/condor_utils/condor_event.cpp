@@ -31,6 +31,7 @@
 #include "condor_netdb.h"
 
 #include "misc_utils.h"
+#include "utc_time.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -250,8 +251,7 @@ ULogEvent::ULogEvent(void)
 {
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
-
-	(void) time ((time_t *)&eventclock);
+	eventclock = condor_gettimestamp(event_usec);
 }
 
 
@@ -279,9 +279,10 @@ int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
 			bool bang = *opt == '!'; if (bang) ++opt;
 		#define DOOPT(tag,flag) if (YourStringNoCase(tag) == opt) { if (bang) { opts &= ~(flag); } else { opts |= (flag); } }
 			DOOPT("XML", formatOpt::XML)
+			DOOPT("JSON", formatOpt::JSON)
 			DOOPT("ISO_DATE", formatOpt::ISO_DATE)
 			DOOPT("UTC", formatOpt::UTC)
-			DOOPT("SUB_SECOND", formatOpt::USEC)
+			DOOPT("SUB_SECOND", formatOpt::SUB_SECOND)
 		#undef DOOPT
 			if (YourStringNoCase("LEGACY") == opt) {
 				if (bang) {
@@ -289,7 +290,7 @@ int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
 					opts |= formatOpt::ISO_DATE;
 				} else {
 					// turn off the non-legacy options
-					opts &= ~(formatOpt::ISO_DATE | formatOpt::UTC | formatOpt::UTC);
+					opts &= ~(formatOpt::ISO_DATE | formatOpt::UTC | formatOpt::SUB_SECOND);
 				}
 			}
 		}
@@ -351,7 +352,7 @@ ULogEvent::readHeader (FILE *file)
 	// (broken) parsing algorithm to parse it
 	if (datebuf[2] == '/') {
 		// this will set -1 into all fields of dt that are not set by time parsing code
-		iso8601_to_time(&datebuf[11], &dt, &is_utc);
+		iso8601_to_time(&datebuf[11], &dt, &event_usec, &is_utc);
 		dt.tm_mon = atoi(datebuf);
 		if (dt.tm_mon <= 0) { // this detects completely garbage dates because atoi returns 0 if there are no numbers to parse
 			return 0;
@@ -363,7 +364,7 @@ ULogEvent::readHeader (FILE *file)
 		// so we can turn this into a full iso8601 datetime by stuffing a T inbetween
 		datebuf[10] = 'T';
 		// this will set -1 into all fields of dt that are not set by date/time parsing code
-		iso8601_to_time(datebuf, &dt, &is_utc);
+		iso8601_to_time(datebuf, &dt, &event_usec, &is_utc);
 	}
 	// check for a bogus date stamp
 	if (dt.tm_mon < 0 || dt.tm_mon > 11 || dt.tm_mday < 0 || dt.tm_mday > 32 || dt.tm_hour < 0 || dt.tm_hour > 24) {
@@ -393,6 +394,8 @@ ULogEvent::readHeader (FILE *file)
 
 bool ULogEvent::formatHeader( std::string &out, int options )
 {
+	out.reserve(1024);
+
 	// print event number and job id.
 	int retval = formatstr_cat(out, "%03d (%03d.%03d.%03d) ", eventNumber, cluster, proc, subproc);
 	if (retval < 0)
@@ -418,6 +421,7 @@ bool ULogEvent::formatHeader( std::string &out, int options )
 			lt->tm_hour, lt->tm_min,
 			lt->tm_sec);
 	}
+	if (options & formatOpt::SUB_SECOND) formatstr_cat(out, ".%03d", (int)(event_usec / 1000));
 	if (options & formatOpt::UTC) out += "Z";
 	out += " ";
 
@@ -650,16 +654,13 @@ ULogEvent::toClassAd(bool event_time_utc)
 	} else {
 		localtime_r(&eventclock, &eventTime);
 	}
-	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
-										 ISO8601_DateAndTime, event_time_utc);
-	if( eventTimeStr ) {
-		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
-			delete myad;
-			free( eventTimeStr );
-			return NULL;
-		}
-		free( eventTimeStr );
-	} else {
+	// print the time, including milliseconds if the event_usec is non-zero
+	char str[ISO8601_DateAndTimeBufferMax];
+	unsigned int sub_sec = event_usec / 1000;
+	int sub_digits = event_usec ? 3 : 0;
+	time_to_iso8601(str, eventTime, ISO8601_ExtendedFormat,
+		ISO8601_DateAndTime, event_time_utc, sub_sec, sub_digits);
+	if ( !myad->InsertAttr("EventTime", str) ) {
 		delete myad;
 		return NULL;
 	}
@@ -700,7 +701,7 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool is_utc = false;
 		struct tm eventTime;
-		iso8601_to_time(timestr, &eventTime, &is_utc);
+		iso8601_to_time(timestr, &eventTime, &event_usec, &is_utc);
 		if (is_utc) {
 			eventclock = timegm(&eventTime);
 		} else {

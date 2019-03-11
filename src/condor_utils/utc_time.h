@@ -27,8 +27,28 @@
 # include <sys/time.h>
 #endif
 
+#ifdef WIN32
+time_t condor_gettimestamp(long & usec);
 
-void condor_gettimestamp( struct timeval &tv );
+// note: at the time this was written, timeval on windows was declared as two longs
+// while timeval on linux was declared as a time_t and a long. the cast to long below
+// should be removed if microsoft updates their declaration of timeval
+inline
+void condor_gettimestamp(struct timeval &tv) {
+	tv.tv_sec = (long)condor_gettimestamp(tv.tv_usec);
+}
+#else
+void condor_gettimestamp(struct timeval &tv);
+
+inline
+time_t condor_gettimestamp(long & tv_usec) {
+	struct timeval tv;
+	condor_gettimestamp(tv);
+	tv_usec = tv.tv_usec;
+	return tv.tv_sec;
+}
+#endif
+
 
 inline
 double condor_gettimestamp_double() {

@@ -514,7 +514,7 @@ ReadEvents(Options &opts, int &totalEvents)
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
 						event->cluster, event->proc, event->subproc,
-						timestr(event->GetEventTime()) );
+						timestr(event->GetEventclock()) );
 			}
 
 			if (opts.missedCheck ) {

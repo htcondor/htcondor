@@ -153,7 +153,7 @@ ReadUserLog::ReadUserLog (const FileState &state, bool read_only )
 
 // Create a log reader with minimal functionality
 // Only reads from the file, will not lock, write the header, etc.
-ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml, bool enable_close )
+ReadUserLog::ReadUserLog ( FILE *fp, int log_type, bool enable_close )
 {
 	clear();
 	if ( ! fp ) {
@@ -170,7 +170,7 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml, bool enable_close )
 
 	m_initialized = true;
 
-	setIsXMLLog( is_xml );
+	setIsCLASSADLog( log_type );
 }
 
 // ***************************************
@@ -554,7 +554,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 	}
 
 	// Determine the type of the log file (if needed)
-	if ( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN) ) {
+	if ( m_state->IsUnknownLogType() ) {
 		if ( !determineLogType() ) {
 			dprintf( D_ALWAYS,
 					 "ReadUserLog::OpenLogFile(): Can't log type\n" );
@@ -624,7 +624,6 @@ ReadUserLog::determineLogType( void )
 	}
 	m_state->Offset( filepos );
 
-	char afterangle;
 	if ( fseek( m_fp, 0, SEEK_SET ) < 0 ) {
 		dprintf(D_ALWAYS,
 				"fseek(0) failed in ReadUserLog::determineLogType\n");
@@ -632,10 +631,17 @@ ReadUserLog::determineLogType( void )
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
-	int scanf_result = fscanf(m_fp, " <%c", &afterangle);
+	char intro[2] = { 0,0 };
+	int scanf_result = fscanf(m_fp, " %1[<{0]", intro);
 
-	if( scanf_result > 0 ) {
+	if (scanf_result <= 0) {
+		// what sort of log is this???
+		dprintf(D_FULLDEBUG, "Error, apparently invalid user log file\n");
+		m_state->LogType(ReadUserLogState::LOG_TYPE_UNKNOWN);
+	} else if (YourString("<") == intro) {
 		m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
+
+		char afterangle = fgetc(m_fp);
 
 		// If we're at the start of the file, skip the header
 		if ( filepos == 0 ) {
@@ -650,25 +656,10 @@ ReadUserLog::determineLogType( void )
 		// File type set, we're all done.
 		Unlock( false );
 		return true;
-	}
-
-	// the first non whitespace char is not <, so this doesn't look like
-	// XML; go back to the beginning and take another look
-	int nothing;
-	if( fseek( m_fp, 0, SEEK_SET) )	{
-		dprintf(D_ALWAYS,
-				"fseek failed in ReadUserLog::determineLogType\n");
-		Unlock( false );
-		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
-		return false;
-	}
-	if( fscanf( m_fp, " %d", &nothing ) > 0 ) {
-		setIsOldLog(true);
-	}
-	else {
-		// what sort of log is this???
-		dprintf(D_FULLDEBUG, "Error, apparently invalid user log file\n");
-		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
+	} else if (YourString("{") == intro) {
+		m_state->LogType(ReadUserLogState::LOG_TYPE_JSON);
+	} else {
+		m_state->LogType(ReadUserLogState::LOG_TYPE_NORMAL);
 	}
 
 	if( fseek( m_fp, filepos, SEEK_SET ) ) {
@@ -903,7 +894,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	
 	ULogEventOutcome	outcome = ULOG_OK;
 	bool try_again = false;
-	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
+	if( m_state->IsUnknownLogType() ) {
 	    if( !determineLogType() ) {
 			outcome = ULOG_RD_ERROR;
 			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
@@ -999,13 +990,13 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 {
 	ULogEventOutcome	outcome;
 
-	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_XML ) ) {
-		outcome = readEventXML( event );
+	if( m_state->IsClassadLogType() ) {
+		outcome = readEventClassad( event, m_state->LogType() );
 		if ( try_again ) {
 			*try_again = (outcome == ULOG_NO_EVENT );
 		}
-	} else if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_OLD ) ) {
-		outcome = readEventOld( event );
+	} else if(m_state->LogType() == ReadUserLogState::LOG_TYPE_NORMAL) {
+		outcome = readEventNormal( event );
 		if ( try_again ) {
 			*try_again = (outcome == ULOG_NO_EVENT );
 		}
@@ -1019,9 +1010,8 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 }
 
 ULogEventOutcome
-ReadUserLog::readEventXML( ULogEvent *& event )
+ReadUserLog::readEventClassad( ULogEvent *& event, int log_type )
 {
-	classad::ClassAdXMLParser xmlp;
 
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
@@ -1039,9 +1029,18 @@ ReadUserLog::readEventXML( ULogEvent *& event )
   	}
 
 	ClassAd* eventad = new ClassAd();
-	if ( !xmlp.ParseClassAd(m_fp, *eventad) ) {
-		delete eventad;
-		eventad = NULL;
+	if (log_type == ReadUserLogFileState::LOG_TYPE_JSON) {
+		classad::ClassAdJsonParser jsonp;
+		if (!jsonp.ParseClassAd(m_fp, *eventad)) {
+			delete eventad;
+			eventad = NULL;
+		}
+	} else {
+		classad::ClassAdXMLParser xmlp;
+		if ( !xmlp.ParseClassAd(m_fp, *eventad) ) {
+			delete eventad;
+			eventad = NULL;
+		}
 	}
 
 	Unlock( true );
@@ -1078,7 +1077,7 @@ ReadUserLog::readEventXML( ULogEvent *& event )
 }
 
 ULogEventOutcome
-ReadUserLog::readEventOld( ULogEvent *& event )
+ReadUserLog::readEventNormal( ULogEvent *& event )
 {
 	long   filepos;
 	int    eventnumber;
@@ -1405,21 +1404,21 @@ ReadUserLog::outputFilePos( const char *pszWhereAmI )
 }
 
 void
-ReadUserLog::setIsXMLLog( bool is_xml )
+ReadUserLog::setIsCLASSADLog( int log_type )
 {
-	if( is_xml ) {
-	    m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
-	} else {
-	    m_state->LogType( ReadUserLogState::LOG_TYPE_OLD );
-	}
+	m_state->LogType((ReadUserLogFileState::UserLogType)log_type);
 }
 
-bool
-ReadUserLog::getIsXMLLog( void ) const
+int
+ReadUserLog::getIsCLASSADLog( void ) const
 {
-	return ( m_state->IsLogType( ReadUserLogState::LOG_TYPE_XML ) );
+	int log_type = m_state->LogType();
+	if (log_type > 0)
+		return log_type;
+	return 0;
 }
 
+#if 0
 void
 ReadUserLog::setIsOldLog( bool is_old )
 {
@@ -1435,6 +1434,7 @@ ReadUserLog::getIsOldLog( void ) const
 {
 	return ( m_state->IsLogType( ReadUserLogState::LOG_TYPE_OLD ) );
 }
+#endif
 
 void
 ReadUserLog::clear( void )
