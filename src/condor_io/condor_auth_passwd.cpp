@@ -262,14 +262,13 @@ Condor_Auth_Passwd::fetchLogin()
 		if (!keyfile) {
 			dprintf(D_ALWAYS, "Failed to open derived key file %s\n",
 				derived_keyfilename.c_str());
-			return NULL;
 		}
 
 		std::string username;
 		std::string token;
 		std::string signature;
 		bool found_token = false;
-		for (std::string line; std::getline(keyfile, line); ) {
+		if (keyfile) for (std::string line; std::getline(keyfile, line); ) {
 			line.erase(line.begin(),
 				std::find_if(line.begin(),
 					line.end(), [](int ch) {  return !std::isspace(ch) && (ch != '\n');}));
@@ -305,8 +304,56 @@ Condor_Auth_Passwd::fetchLogin()
 			break;
 		}
 		if (!found_token) {
-			dprintf(D_ALWAYS, "PW: No token found.\n");
-			return nullptr;
+			// Check to see if we have access to the master key and generate a token accordingly.
+			std::string issuer;
+			param(issuer, "SEC_ISSUER_NAMESPACE");
+			if (m_server_issuer == issuer && !m_server_keys.empty()) {
+					// We use the same issuer; iterate through compatible keys.
+				std::vector<std::string> local_creds;
+				CondorError err;
+				if (!listNamedCredentials(local_creds, &err)) {
+					dprintf(D_SECURITY, "Failed to determine available credentials: %s\n", err.getFullText().c_str());
+					return nullptr;
+				}
+				std::string match_key;
+				for (auto const &server_key : m_server_keys) {
+					for ( auto const &local_key : local_creds ) {
+						if (server_key == local_key) {
+							match_key = local_key;
+							break;
+						}
+					}
+					if (!match_key.empty()) {
+						break;
+					}
+				}
+				if (!match_key.empty()) {
+					CondorError err;
+					std::string identity = POOL_PASSWORD_USERNAME; identity += "@";
+					std::vector<std::string> authz_list;
+					int lifetime = 60;
+					std::string local_token;
+					if (!Condor_Auth_Passwd::generate_derived_key(identity, match_key,
+						authz_list, lifetime, local_token, &err))
+					{
+						dprintf(D_SECURITY, "Failed to generate a derived key: %s\n",
+							err.getFullText().c_str());
+					}
+					else {
+						username = identity;
+						auto decoded_jwt = jwt::decode(local_token);
+						signature = decoded_jwt.get_signature();
+						token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+						found_token = true;
+					}
+				} else {
+					dprintf(D_SECURITY, "No compatible security key found.\n");
+				}
+			}
+			if (!found_token) {
+				dprintf(D_ALWAYS, "PW: No token found.\n");
+				return nullptr;
+			}
 		}
 
 		size_t key_size = AUTH_PW_KEY_LEN + token.size();
@@ -555,38 +602,43 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
 		// Verify known keys and Sign the JWT.
 		std::string token = init_text + ".";
-		auto jwt = jwt::decode(token);
-
-		int max_age = -1;
-		auto now = std::chrono::system_clock::now();
-		if (jwt.has_issued_at() && (max_age = param_integer("SEC_DERIVED_SECRETS_MAX_AGE", -1))) {
-			auto iat = jwt.get_issued_at();
-			auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
-			if ((max_age != -1) && age > max_age) {
-				dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", age, max_age);
-				return false;
-			}
-		}
-		if (jwt.has_expires_at()) {
-			auto expiry = jwt.get_expires_at();
-			auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
-			if (expired_for > 0) {
-				dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", expired_for);
-				return false;
-			}
-		}
-
-		const std::string& algo = jwt.get_algorithm();
 		std::string signature;
-		if (algo == "HS256") {
-			auto signer = jwt::algorithm::hs256{jwt_key_str};
-			signature = signer.sign(init_text);
-		} else if (algo == "HS384") {
-			auto signer = jwt::algorithm::hs384{jwt_key_str};
-			signature = signer.sign(init_text);
-		} else if (algo == "HS512") {
-			auto signer = jwt::algorithm::hs512{jwt_key_str};
-			signature = signer.sign(init_text);
+		try {
+			auto jwt = jwt::decode(token);
+
+			int max_age = -1;
+			auto now = std::chrono::system_clock::now();
+			if (jwt.has_issued_at() && (max_age = param_integer("SEC_DERIVED_SECRETS_MAX_AGE", -1))) {
+				auto iat = jwt.get_issued_at();
+				auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
+				if ((max_age != -1) && age > max_age) {
+					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", age, max_age);
+					return false;
+				}
+			}
+			if (jwt.has_expires_at()) {
+				auto expiry = jwt.get_expires_at();
+				auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
+				if (expired_for > 0) {
+					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", expired_for);
+					return false;
+				}
+			}
+
+			const std::string& algo = jwt.get_algorithm();
+			if (algo == "HS256") {
+				auto signer = jwt::algorithm::hs256{jwt_key_str};
+				signature = signer.sign(init_text);
+			} else if (algo == "HS384") {
+				auto signer = jwt::algorithm::hs384{jwt_key_str};
+				signature = signer.sign(init_text);
+			} else if (algo == "HS512") {
+				auto signer = jwt::algorithm::hs512{jwt_key_str};
+				signature = signer.sign(init_text);
+			}
+		} catch (...) {
+			dprintf(D_SECURITY, "Failed to deserialize JWT.\n");
+			return false;
 		}
 
 		// Derive K and K' from the JWT's signature.

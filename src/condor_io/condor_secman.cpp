@@ -1853,6 +1853,9 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
+
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
 			m_auth_info.Assign(ATTR_SEC_USE_SESSION, "YES");
@@ -1956,6 +1959,7 @@ SecManStartCommand::authenticate_inner()
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
 			}
 
+			m_sock->setPolicyAd(m_auth_info);
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
 			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
 
