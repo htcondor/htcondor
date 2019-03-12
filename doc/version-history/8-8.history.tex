@@ -49,6 +49,11 @@ the termination event of the job event log could be reversed.
 This has been fixed.
 \Ticket{6914}
 
+\item For grid universe jobs of type \Expr{batch}, the job now receives a
+signal when the batch system wants it to exit, giving the job a chance to
+shut down gracefully.
+\Ticket{6915}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
