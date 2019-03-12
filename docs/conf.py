@@ -29,7 +29,14 @@ sys.path.append(os.path.abspath('extensions'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['ticket', 'macro', 'reference-index']
+extensions = [
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'ticket',
+    'macro',
+    'reference-index',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -258,5 +265,85 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+# intersphinx
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+
+# autodoc settings
+autoclass_content = 'both'
+
+# napoleon settings
+napoleon_use_param = False
+
+
+def modify_docstring(app, what, name, obj, options, lines):
+    """
+    Hook function that has a chance to modify whatever comes out of autodoc.
+
+    Parameters
+    ----------
+    app
+        The Sphinx application object
+    what
+        The type of the object which the docstring belongs to
+        "module", "class", "exception", "function", "method", "attribute"
+    name
+        The fully qualified name of the object
+    obj
+        The object itself
+    options
+        The autodoc options
+    lines
+        The actual lines: modify in-place!
+    """
+    # strip trailing C++ signature text
+    for i, line in enumerate(lines):
+        if 'C++ signature :' in line:
+            for _ in range(len(lines) - i):
+                lines.pop()
+            break
+
+    # strip leading spaces
+    if len(lines) > 0:
+        first_indent_len = len(lines[0]) - len(lines[0].lstrip())
+        for i, line in enumerate(lines):
+            if len(line) > first_indent_len:
+                lines[i] = line[first_indent_len:]
+
+
+def modify_signature(app, what, name, obj, options, signature, return_annotation):
+    """
+    Hook function that has a chance to modify whatever comes out of autodoc.
+
+    Parameters
+    ----------
+    app
+        The Sphinx application object
+    what
+        The type of the object which the docstring belongs to
+        "module", "class", "exception", "function", "method", "attribute"
+    name
+        The fully qualified name of the object
+    obj
+        The object itself
+    options
+        The autodoc options
+    signature
+        the function signature, of the form "(parameter_1, parameter_2)"
+        or None if there was no return annotation
+    return_annotation
+        the function return annotation, of the form
+        " -> annotation", or None if there is no return annotation
+
+    Returns
+    -------
+    (signature, return_annotation)
+    """
+    # no-op for now
+    return signature, return_annotation
+
+
 def setup(app):
     app.add_stylesheet('css/htcondor-manual.css')
+    app.connect('autodoc-process-docstring', modify_docstring)
+    app.connect('autodoc-process-signature', modify_signature)
+
