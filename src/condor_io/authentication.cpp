@@ -248,7 +248,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
 				break;
-                        case CAUTH_PASSWORD2: {
+			case CAUTH_PASSWORD2: {
 				auto tmp_auth = new Condor_Auth_Passwd(mySock, 2);
 				m_auth = tmp_auth;
 				const classad::ClassAd *policy = mySock->getPolicyAd();

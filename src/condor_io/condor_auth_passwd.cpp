@@ -144,13 +144,13 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
-	if (m_k) free(m_k);
-	if (m_k_prime) free(m_k_prime);
+    if (m_k) free(m_k);
+    if (m_k_prime) free(m_k_prime);
 }
 
 // Determine the password to use for key derivation.
 // - For protocol version 1, the password is the pool password concatenated twice.
-//   - The intent appears to hve been to allow multiple users within this protocol and to concatenate
+//   - The intent appears to have been to allow multiple users within this protocol and to concatenate
 //     the two unique passwords from two unique users.  This was never implemented.
 // - For protocol version 2, the token is decoded and the key id ('kid' claim in the header) is used
 //   as the password name; the corresponding named credential is fetched.
@@ -1590,7 +1590,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
 			// In version 2, we always want to forcibly fetch the pool password.
-			// However, the client ID might not actuall be condor_pool@whatever;
+			// However, the client ID might not actually be condor_pool@whatever;
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
 		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_client.a_token, m_t_server.b);

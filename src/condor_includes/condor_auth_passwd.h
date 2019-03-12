@@ -57,9 +57,9 @@ namespace classad {
 
   An overview of the protocol follows:
 
-	SUMMARY: A and B exchange 3 messages to derive a session key W.
+    SUMMARY: A and B exchange 3 messages to derive a session key W.
 
-	RESULT: mutual entity authentication, and implicit key authentication of W.
+    RESULT: mutual entity authentication, and implicit key authentication of W.
 
         1. Setup: The pool sets up a long-term symmetric master key, M.  kdfM is a keyed
         derivation function from key K.  seed_a and seed_b are fixed, compile-time seeds.
@@ -72,31 +72,31 @@ namespace classad {
         latter case, (A) does not have access to M and B may reject the key K if text t
         indicates the derived key K / K' is too old or invalid.
         hK is a MAC (keyed hash function) used for entity
-	authentication.  kdfK' is a pseudorandom permutation or keyed
-	one-way function used for key derivation.
+        authentication.  kdfK' is a pseudorandom permutation or keyed
+        one-way function used for key derivation.
 
-	2. Protocol messages.  Define  T = (B, A, rA, rB).
-		A -> B : A, t, rA 			(1)
-		A <- B : T, hK(T) 			(2)
-		A -> B : (A, rB), hK(A, rB)		(3)
-		W = kdfK'(rB)
+    2. Protocol messages.  Define  T = (B, A, rA, rB).
+        A -> B : A, t, rA               (1)
+        A <- B : T, hK(T)               (2)
+        A -> B : (A, rB), hK(A, rB)     (3)
+        W = kdfK'(rB)
 
-	3. Protocol actions. Perform the following steps for each shared key required.
+    3. Protocol actions. Perform the following steps for each shared key required.
 
-	(a) A selects and sends to B a random number rA.
+    (a) A selects and sends to B a random number rA.
 
-	(b) B selects a random number rB and sends to A the values (B,A,t,rA,rB), along
-	with a MAC over these quantities generated using h with key K.
+    (b) B selects a random number rB and sends to A the values (B,A,t,rA,rB), along
+    with a MAC over these quantities generated using h with key K.
 
-	(c) Upon receiving message (2), A checks the identities are proper, that the 
-	rA received matches that in (1), and verifies the MAC.
+    (c) Upon receiving message (2), A checks the identities are proper, that the
+    rA received matches that in (1), and verifies the MAC.
 
-	(d) A then sends to B the values (A,rB), along with a MAC thereon.
+    (d) A then sends to B the values (A,rB), along with a MAC thereon.
 
-	(e) Upon receiving (3), B verifies that the MAC is correct, and that the received
-	value rB matches that sent earlier.
+    (e) Upon receiving (3), B verifies that the MAC is correct, and that the received
+    value rB matches that sent earlier.
 
-	(f) Both A and B compute the session key as W = kdfK'(rB).
+    (f) Both A and B compute the session key as W = kdfK'(rB).
 
   As a result of this exchange, A and B have:
     1.  Demonstrated possession of keys K and K' (which were derived from the master key M, but
@@ -134,23 +134,23 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		buffer must be dealloated by the caller with free().
 		@returns 1 on success, 0 on failure
 	*/
-    int wrap(const char* input, int input_len, char*& output, int& output_len);
+	int wrap(const char* input, int input_len, char*& output, int& output_len);
 
 	/** Decrypt the input buffer into an output buffer.  The output
 		buffer must be dealloated by the caller with free().
 		@returns 1 on success, 0 on failure
 	*/    
-    int unwrap(const char* input, int input_len, char*& output, int& output_len);
+	int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
 	/** Generate a derived key */
-    static bool generate_derived_key(const std::string &id, const std::string &key_id,
-	const std::vector<std::string> &authz_list, long lifetime, std::string &token, CondorError *err);
+	static bool generate_derived_key(const std::string &id, const std::string &key_id,
+		const std::vector<std::string> &authz_list, long lifetime, std::string &token, CondorError *err);
 
 	/** Metadata needed prior to starting authorization */
-    static bool preauth_metadata(classad::ClassAd &ad);
+	static bool preauth_metadata(classad::ClassAd &ad);
 
-    void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
-    void set_remote_keys(const std::vector<std::string> &keys);
+	void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
+	void set_remote_keys(const std::vector<std::string> &keys);
 
  private:
 
@@ -329,7 +329,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		// the sk_buf structure.
 	struct sk_buf m_sk;
 
-		// Version of the protocol.  In version 1, the time parameter (t)
+		// Version of the protocol.  In version 1, the text parameter (t)
 		// was non-existent.
 	int m_version;
 

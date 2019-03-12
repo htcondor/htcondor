@@ -1549,12 +1549,14 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 		// If we can, try reading out the passwords as root.
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
-        Directory dir(dirpath.c_str());
-        if (!dir.Rewind()) {
-                if (err) err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
-			dirpath.c_str(), strerror(errno), errno);
-                return false;
-        }
+	Directory dir(dirpath.c_str());
+	if (!dir.Rewind()) {
+		if (err) {
+			err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
+				dirpath.c_str(), strerror(errno), errno);
+		}
+		return false;
+	}
 	m_creds.clear();
 
 	const char *file;
