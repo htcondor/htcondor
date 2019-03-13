@@ -150,7 +150,9 @@ bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
-int		create_local_factory_file=0; // create a copy of the submit digest in the current directory
+const char *create_local_factory_file=NULL; // create a copy of the submit digest in the current directory
+bool	sim_current_condor_version=false; // don't bother to locate the schedd before creating a SimSchedd
+int		sim_starting_cluster=0;			// initial clusterId value for a SimSchedd
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
@@ -604,18 +606,18 @@ main( int argc, const char *argv[] )
 				DashDryRun = 1;
 				bool needs_file_arg = true;
 				if (pcolon) { 
-					needs_file_arg = false;
 					StringList opts(++pcolon);
 					for (const char * opt = opts.first(); opt; opt = opts.next()) {
 						if (YourString(opt) == "hash") {
 							DumpSubmitHash |= 0x100 | HASHITER_NO_DEFAULTS;
-							needs_file_arg = true;
 						} else if (YourString(opt) == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
-							needs_file_arg = true;
 						} else if (YourString(opt) == "digest") {
 							DumpSubmitDigest = 1;
-							needs_file_arg = true;
+						} else if (starts_with(opt, "cluster=")) {
+							sim_current_condor_version = true;
+							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
+							sim_starting_cluster = MAX(sim_starting_cluster - 1, 0);
 						} else {
 							int optval = atoi(opt);
 							// if the argument is -dry:<number> and number is > 0x10,
@@ -651,6 +653,12 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				cmd_file = *ptr;
+			} else if (is_dash_arg_prefix(ptr[0], "digest", 6)) {
+				if (!(--argc) || !(*(++ptr)) || ((*ptr)[0] == '-')) {
+					fprintf(stderr, "%s: -digest requires a filename argument that is not -\n", MyName);
+					exit(1);
+				}
+				create_local_factory_file = *ptr;
 			} else if (is_dash_arg_prefix(ptr[0], "factory", 2)) {
 				dash_factory++;
 				DisableFileChecks = 1;
@@ -913,7 +921,7 @@ main( int argc, const char *argv[] )
 	if (DashDryRun > 0x10) { exit(DoUnitTests(DashDryRun)); }
 
 	// we don't want a schedd instance if we are dumping to a file
-	if ( !DumpClassAdToFile ) {
+	if ( !DumpClassAdToFile && !sim_current_condor_version) {
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
         if (!ScheddAddr.empty()) {
@@ -1243,7 +1251,7 @@ main( int argc, const char *argv[] )
 
 	// don't try to reschedule jobs if we are dumping to a file, because, again
 	// there will be not schedd present to reschedule thru.
-	if ( !DumpClassAdToFile ) {
+	if ( !DumpClassAdToFile) {
 		if( ProcId != -1 ) {
 			reschedule();
 		}
@@ -1471,8 +1479,17 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 void
 reschedule()
 {
+	if ( ! MySchedd)
+		return;
 	if ( param_boolean("SUBMIT_SEND_RESCHEDULE",true) ) {
 		Stream::stream_type st = MySchedd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		if (DashDryRun) {
+			if (DashDryRun & 2) {
+				fprintf(stdout, "::sendCommand(RESCHEDULE, %s, 0)\n", 
+					(st == Stream::safe_sock) ? "UDP" : "TCP");
+			}
+			return;
+		}
 		if ( ! MySchedd->sendCommand(RESCHEDULE, st, 0) ) {
 			fprintf( stderr,
 					 "Can't send RESCHEDULE command to condor scheduler\n" );
@@ -1919,6 +1936,11 @@ int submit_jobs (
 			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
 
 		#if 1
+			//if (DashDryRun && create_local_factory_file) {
+			//	MyString items_fn = create_local_factory_file;
+			//	items_fn += ".items";
+			//	MyQ->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+			//}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
 				break;
@@ -1936,12 +1958,8 @@ int submit_jobs (
 
 			// write the submit digest to the current working directory.
 			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
-			MyString factory_path;
 			if (create_local_factory_file) {
-				MyString factory_fn;
-				factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
-				factory_path = submit_hash.full_path(factory_fn.c_str(), false);
-				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
+				rval = write_factory_file(create_local_factory_file, submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
 			}
@@ -1960,7 +1978,7 @@ int submit_jobs (
 
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
-			rval = MyQ->set_Factory(ClusterId, (int)max_materialize, factory_path.c_str(), submit_digest.c_str());
+			rval = MyQ->set_Factory(ClusterId, (int)max_materialize, "", submit_digest.c_str());
 			if (rval < 0)
 				break;
 
@@ -2109,7 +2127,7 @@ int queue_connect()
 	if ( ! ActiveQueueConnection)
 	{
 		if (DumpClassAdToFile || DashDryRun) {
-			SimScheddQ* SimQ = new SimScheddQ();
+			SimScheddQ* SimQ = new SimScheddQ(sim_starting_cluster);
 			if (DumpFileIsStdout) {
 				SimQ->Connect(stdout, false, false);
 			} else if (DashDryRun) {

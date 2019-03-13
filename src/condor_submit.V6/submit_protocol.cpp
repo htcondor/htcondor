@@ -323,6 +323,12 @@ int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, con
 int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 {
 	ASSERT(cluster_id == cluster);
+	if (fp && ! log_all_communication) {
+		// normally get_NewProc would terminate the previous line, but if we get here
+		// we know that we are doing a DashDryRun and get_NewProc will never be called
+		// and we have just printed Dry-Run jobs(s) without a \n, so print the \n now.
+		fprintf(fp, "\n");
+	}
 	if (o.items.number() > 0) {
 		if (log_all_communication) {
 			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
