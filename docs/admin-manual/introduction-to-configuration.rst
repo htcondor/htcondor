@@ -3,8 +3,8 @@
 Introduction to Configuration
 =============================
 
-` <index://configuration-intro;HTCondor>`__
-` <index://configuration: introduction>`__
+:index:`HTCondor<single: HTCondor; configuration-intro>`
+:index:`configuration: introduction<single: configuration: introduction>`
 
 This section of the manual contains general information about HTCondor
 configuration, relating to all parts of the HTCondor system. If you’re
@@ -840,7 +840,7 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
  ``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
-    ` <index://$RANDOM_CHOICE() function macro>`__ A random choice
+    :index:`$RANDOM_CHOICE() function macro<single: $RANDOM_CHOICE() function macro>` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -850,7 +850,7 @@ as given in these definitions.
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
-    ` <index://in configuration;$RANDOM_INTEGER()>`__ A random integer
+    :index:`$RANDOM_INTEGER()<single: $RANDOM_INTEGER(); in configuration>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
     to the value 1. For example, to randomly chose an even integer in
@@ -919,8 +919,8 @@ will not be enough.
 Pre-Defined Macros
 ------------------
 
-` <index://pre-defined macros;configuration>`__
-` <index://pre-defined macros;configuration file>`__
+:index:`configuration<single: configuration; pre-defined macros>`
+:index:`configuration file<single: configuration file; pre-defined macros>`
 
 HTCondor provides pre-defined macros that help configure HTCondor.
 Pre-defined macros are listed as ``$(macro_name)``.

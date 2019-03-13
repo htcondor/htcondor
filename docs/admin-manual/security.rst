@@ -1908,7 +1908,7 @@ the configuration file, but this is not recommended.
 Host-Based Security in HTCondor
 -------------------------------
 
-` <index://host-based;security>`__
+:index:`security<single: security; host-based>`
 
 This section describes the mechanisms for setting up HTCondor’s
 host-based security. This is now an outdated form of implementing
@@ -2252,7 +2252,7 @@ publish information. Granting access to modify settings used to control
 the behavior of HTCondor is not secure. The goal is to ensure no one can
 use the power to change configuration attributes to compromise the
 security of your HTCondor pool.
-` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__
+:index:`SETTABLE_ATTRS_<PERMISSION-LEVEL><single: SETTABLE_ATTRS_<PERMISSION-LEVEL>>`
 :index:`SETTABLE_ATTRS_CONFIG<single: SETTABLE_ATTRS_CONFIG>` :index:`SETTABLE_ATTRS_WRITE<single: SETTABLE_ATTRS_WRITE>`
 :index:`SETTABLE_ATTRS_OWNER<single: SETTABLE_ATTRS_OWNER>`
 :index:`SETTABLE_ATTRS_ADMINISTRATOR<single: SETTABLE_ATTRS_ADMINISTRATOR>`
@@ -2280,7 +2280,7 @@ section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
 on page \ `567 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
 for a list. If there is no daemon-specific value for a given daemon,
 HTCondor will look for ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
-` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__.
+:index:`SETTABLE_ATTRS_<PERMISSION-LEVEL><single: SETTABLE_ATTRS_<PERMISSION-LEVEL>>`.
 
 Each control list is defined by a comma-separated list of attribute
 names which should be allowed to be modified. The lists can contain wild
@@ -2568,7 +2568,7 @@ Under Unix, HTCondor runs jobs as one of
    compute slots, create two users that are intended only to be used by
    HTCondor. As an example, call them cndrusr1 and cndrusr2.
    Configuration identifies these users with the ``SLOT<N>_USER``
-   ` <index://SLOT<N>_USER>`__ configuration variable, where ``<N>`` is
+   :index:`SLOT<N>_USER<single: SLOT<N>_USER>` configuration variable, where ``<N>`` is
    replaced with the slot number. Here is configuration for this
    example:
 

@@ -487,7 +487,7 @@ Machine ClassAd Attributes
     names will be of the form “slot#@full.hostname”, for example,
     “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
     vulture.cs.wisc.edu.
-    ` <index://Offline<name>;ClassAd machine attribute>`__
+    :index:`ClassAd machine attribute<single: ClassAd machine attribute; Offline<name>>`
  ``Offline<name>``:
     A string that lists specific instances of a user-defined machine
     resource, identified by ``name``. Each instance is currently
@@ -1112,21 +1112,21 @@ Machine ClassAd Attributes
 
 In addition, there are a few attributes that are automatically inserted
 into the machine ClassAd whenever a resource is in the Claimed state:
-` <index://ClientMachine;ClassAd machine attribute (in Claimed State)>`__
+:index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); ClientMachine>`
 
  ``ClientMachine``:
     The host name of the machine that has claimed this resource
-    ` <index://RemoteAutoregroup;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); RemoteAutoregroup>`
  ``RemoteAutoregroup``:
     A boolean attribute which is ``True`` if this resource was claimed
     via negotiation when the configuration variable
     ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP<single: GROUP_AUTOREGROUP>` is ``True``.
     It is ``False`` otherwise.
-    ` <index://RemoteGroup;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); RemoteGroup>`
  ``RemoteGroup``:
     The accounting group name corresponding to the submitter that
     claimed this resource.
-    ` <index://RemoteNegotiatingGroup;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); RemoteNegotiatingGroup>`
  ``RemoteNegotiatingGroup``:
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
@@ -1134,10 +1134,10 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     configuration variable ``GROUP_AUTOREGROUP``
     :index:`GROUP_AUTOREGROUP<single: GROUP_AUTOREGROUP>` is ``True``, in which case it will
     have the name of the root group, identified as ``<none>``.
-    ` <index://RemoteOwner;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); RemoteOwner>`
  ``RemoteOwner``:
     The name of the user who originally claimed this resource.
-    ` <index://RemoteUser;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); RemoteUser>`
  ``RemoteUser``:
     The name of the user who is currently using this resource. In
     general, this will always be the same as the ``RemoteOwner``, but in
@@ -1146,17 +1146,17 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     ``RemoteUser`` would hold the name of the entity currently using the
     resource, while ``RemoteOwner`` would hold the name of the entity
     that claimed the resource.
-    ` <index://PreemptingOwner;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); PreemptingOwner>`
  ``PreemptingOwner``:
     The name of the user who is preempting the job that is currently
     running on this resource.
-    ` <index://PreemptingUser;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); PreemptingUser>`
  ``PreemptingUser``:
     The name of the user who is preempting the job that is currently
     running on this resource. The relationship between
     ``PreemptingUser`` and ``PreemptingOwner`` is the same as the
     relationship between ``RemoteUser`` and ``RemoteOwner``.
-    ` <index://PreemptingRank;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); PreemptingRank>`
  ``PreemptingRank``:
     A float which represents this machine owner’s affinity for running
     the HTCondor job which is waiting for the current job to finish or
@@ -1165,20 +1165,20 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     is already a job running, the attribute’s value is computed by
     evaluating the machine’s ``Rank`` expression with respect to the
     preempting job’s ClassAd.
-    ` <index://TotalClaimRunTime;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); TotalClaimRunTime>`
  ``TotalClaimRunTime``:
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) ran (have spent in the Claimed/Busy state).
-    ` <index://TotalClaimSuspendTime;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); TotalClaimSuspendTime>`
  ``TotalClaimSuspendTime``:
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) have been suspended (in the Claimed/Suspended
     state).
-    ` <index://TotalJobRunTime;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); TotalJobRunTime>`
  ``TotalJobRunTime``:
     A running total of the amount of time (in seconds) that a single job
     ran (has spent in the Claimed/Busy state).
-    ` <index://TotalJobSuspendTime;ClassAd machine attribute (in Claimed State)>`__
+    :index:`ClassAd machine attribute (in Claimed State)<single: ClassAd machine attribute (in Claimed State); TotalJobSuspendTime>`
  ``TotalJobSuspendTime``:
     A running total of the amount of time (in seconds) that a single job
     has been suspended (in the Claimed/Suspended state).
@@ -1186,17 +1186,17 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 There are a few attributes that are only inserted into the machine
 ClassAd if a job is currently executing. If the resource is claimed but
 no job are running, none of these attributes will be defined.
-` <index://JobId;ClassAd machine attribute (when running)>`__
+:index:`ClassAd machine attribute (when running)<single: ClassAd machine attribute (when running); JobId>`
 
  ``JobId``:
     The job’s identifier (for example, 152.3), as seen from *condor\_q*
     on the submitting machine.
-    ` <index://JobStart;ClassAd machine attribute (when running)>`__
+    :index:`ClassAd machine attribute (when running)<single: ClassAd machine attribute (when running); JobStart>`
  ``JobStart``:
     The time stamp in integer seconds of when the job began executing,
     since the Unix epoch (00:00:00 UTC, Jan 1, 1970). For idle machines,
     the value is ``UNDEFINED``.
-    ` <index://LastPeriodicCheckpoint;ClassAd machine attribute (when running)>`__
+    :index:`ClassAd machine attribute (when running)<single: ClassAd machine attribute (when running); LastPeriodicCheckpoint>`
  ``LastPeriodicCheckpoint``:
     If the job has performed a periodic checkpoint, this attribute will
     be defined and will hold the time stamp of when the last periodic
@@ -1208,7 +1208,7 @@ no job are running, none of these attributes will be defined.
 
 There are a few attributes that are applicable to machines that are
 offline, that is, hibernating.
-` <index://MachineLastMatchTime;ClassAd machine attribute (when offline)>`__
+:index:`ClassAd machine attribute (when offline)<single: ClassAd machine attribute (when offline); MachineLastMatchTime>`
 
  ``MachineLastMatchTime``:
     The Unix epoch time when this offline ClassAd would have been
@@ -1217,13 +1217,13 @@ offline, that is, hibernating.
     ``slot<X>_MachineLastMatchTime`` defined, where ``<X>`` is replaced
     by the slot id of each of the slots with ``MachineLastMatchTime``
     defined.
-    ` <index://Offline;ClassAd machine attribute (when offline)>`__
+    :index:`ClassAd machine attribute (when offline)<single: ClassAd machine attribute (when offline); Offline>`
  ``Offline``:
     A boolean value, that when ``True``, indicates this machine is in an
     offline state in the *condor\_collector*. Such ClassAds are stored
     persistently, such that they will continue to exist after the
     *condor\_collector* restarts.
-    ` <index://Unhibernate;ClassAd machine attribute (when offline)>`__
+    :index:`ClassAd machine attribute (when offline)<single: ClassAd machine attribute (when offline); Unhibernate>`
  ``Unhibernate``:
     A boolean expression that specifies when a hibernating machine
     should be woken up, for example, by *condor\_rooster*.
@@ -1232,16 +1232,16 @@ For machines with user-defined or custom resource specifications,
 including GPUs, the following attributes will be in the ClassAd for each
 slot. In the name of the attribute, ``<name>`` is substituted with the
 configured name given to the resource.
-` <index://Assigned<name>;ClassAd machine attribute (for a user-defined resource)>`__
+:index:`ClassAd machine attribute (for a user-defined resource)<single: ClassAd machine attribute (for a user-defined resource); Assigned<name>>`
 
  ``Assigned<name>``:
     A space separated list that identifies which of these resources are
     currently assigned to slots.
-    ` <index://Offline<name>;ClassAd machine attribute (for a user-defined resource)>`__
+    :index:`ClassAd machine attribute (for a user-defined resource)<single: ClassAd machine attribute (for a user-defined resource); Offline<name>>`
  ``Offline<name>``:
     A space separated list that indicates which of these resources is
     unavailable for match making.
-    ` <index://Total<name>;ClassAd machine attribute (for a user-defined resource)>`__
+    :index:`ClassAd machine attribute (for a user-defined resource)<single: ClassAd machine attribute (for a user-defined resource); Total<name>>`
  ``Total<name>``:
     An integer quantity of the total number of these resources.
 
@@ -1251,116 +1251,116 @@ the value of configuration variable ``MACHINE_RESOURCE_INVENTORY_GPUs``
 :index:`MACHINE_RESOURCE_INVENTORY_GPUs<single: MACHINE_RESOURCE_INVENTORY_GPUs>` and what GPUs are
 detected. In the name of the attribute, ``<name>`` is substituted with
 the *prefix string* assigned for the GPU.
-` <index://<name>BoardTempC;ClassAd machine attribute (for GPU resources)>`__
+:index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>BoardTempC>`
 
  ``<name>BoardTempC``:
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the board containing the GPU.
-    ` <index://<name>Capability;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>Capability>`
  ``<name>Capability``:
     The CUDA-defined capability for the GPU.
-    ` <index://<name>ClockMhz;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>ClockMhz>`
  ``<name>ClockMhz``:
     For CUDA or Open CL devices, the integer clocking speed of the GPU
     in MHz.
-    ` <index://<name>ComputeUnits;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>ComputeUnits>`
  ``<name>ComputeUnits``:
     For CUDA or Open CL devices, the integer number of compute units per
     GPU.
-    ` <index://<name>CoresPerCU;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>CoresPerCU>`
  ``<name>CoresPerCU``:
     For CUDA devices, the integer number of cores per compute unit.
-    ` <index://<name>DeviceName;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>DeviceName>`
  ``<name>DeviceName``:
     For CUDA or Open CL devices, a string representing the
     manufacturer’s proprietary device name.
-    ` <index://<name>DieTempC;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>DieTempC>`
  ``<name>DieTempC``:
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the GPU die.
-    ` <index://<name>DriverVersion;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>DriverVersion>`
  ``<name>DriverVersion``:
     For CUDA devices, a string representing the manufacturer’s driver
     version.
-    ` <index://<name>ECCEnabled;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>ECCEnabled>`
  ``<name>ECCEnabled``:
     For CUDA or Open CL devices, a boolean value representing whether
     error correction is enabled.
-    ` <index://<name>EccErrorsDoubleBit;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>EccErrorsDoubleBit>`
  ``<name>EccErrorsDoubleBit``:
     For NVIDIA devices, a count of the number of double bit errors
     detected for this GPU.
-    ` <index://<name>EccErrorsSingleBit;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>EccErrorsSingleBit>`
  ``<name>EccErrorsSingleBit``:
     For NVIDIA devices, a count of the number of single bit errors
     detected for this GPU.
-    ` <index://<name>FanSpeedPct;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>FanSpeedPct>`
  ``<name>FanSpeedPct``:
     For NVIDIA devices, a value between 0 and 100 (inclusive), used to
     represent the level of fan operation as percentage of full fan
     speed.
-    ` <index://<name>GlobalMemoryMb;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>GlobalMemoryMb>`
  ``<name>GlobalMemoryMb``:
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
-    ` <index://<name>OpenCLVersion;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>OpenCLVersion>`
  ``<name>OpenCLVersion``:
     For Open CL devices, a string representing the manufacturer’s
     version number.
-    ` <index://<name>RuntimeVersion;ClassAd machine attribute (for GPU resources)>`__
+    :index:`ClassAd machine attribute (for GPU resources)<single: ClassAd machine attribute (for GPU resources); <name>RuntimeVersion>`
  ``<name>RuntimeVersion``:
     For CUDA devices, a string representing the manufacturer’s version
     number.
 
 The following attributes are advertised for a machine in which
 partitionable slot preemption is enabled.
-` <index://ChildAccountingGroup;ClassAd machine attribute (for pslot preemption)>`__
+:index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildAccountingGroup>`
 
  ``ChildAccountingGroup``:
     A ClassAd list containing the values of the ``AccountingGroup``
     attribute for each dynamic slot of the partitionable slot.
-    ` <index://ChildActivity;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildActivity>`
  ``ChildActivity``:
     A ClassAd list containing the values of the ``Activity`` attribute
     for each dynamic slot of the partitionable slot.
-    ` <index://ChildCpus;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildCpus>`
  ``ChildCpus``:
     A ClassAd list containing the values of the ``Cpus`` attribute for
     each dynamic slot of the partitionable slot.
-    ` <index://ChildCurrentRank;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildCurrentRank>`
  ``ChildCurrentRank``:
     A ClassAd list containing the values of the ``CurrentRank``
     attribute for each dynamic slot of the partitionable slot.
-    ` <index://ChildEnteredCurrentState;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildEnteredCurrentState>`
  ``ChildEnteredCurrentState``:
     A ClassAd list containing the values of the ``EnteredCurrentState``
     attribute for each dynamic slot of the partitionable slot.
-    ` <index://ChildMemory;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildMemory>`
  ``ChildMemory``:
     A ClassAd list containing the values of the ``Memory`` attribute for
     each dynamic slot of the partitionable slot.
-    ` <index://ChildName;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildName>`
  ``ChildName``:
     A ClassAd list containing the values of the ``Name`` attribute for
     each dynamic slot of the partitionable slot.
-    ` <index://ChildRemoteOwner;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildRemoteOwner>`
  ``ChildRemoteOwner``:
     A ClassAd list containing the values of the ``RemoteOwner``
     attribute for each dynamic slot of the partitionable slot.
-    ` <index://ChildRemoteUser;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildRemoteUser>`
  ``ChildRemoteUser``:
     A ClassAd list containing the values of the ``RemoteUser`` attribute
     for each dynamic slot of the partitionable slot.
-    ` <index://ChildRetirementTimeRemaining;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildRetirementTimeRemaining>`
  ``ChildRetirementTimeRemaining``:
     A ClassAd list containing the values of the
     ``RetirementTimeRemaining`` attribute for each dynamic slot of the
     partitionable slot.
-    ` <index://ChildState;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); ChildState>`
  ``ChildState``:
     A ClassAd list containing the values of the ``State`` attribute for
     each dynamic slot of the partitionable slot.
-    ` <index://PslotRollupInformation;ClassAd machine attribute (for pslot preemption)>`__
+    :index:`ClassAd machine attribute (for pslot preemption)<single: ClassAd machine attribute (for pslot preemption); PslotRollupInformation>`
  ``PslotRollupInformation``:
     A boolean value set to ``True`` in both the partitionable and
     dynamic slots, when configuration variable

@@ -99,7 +99,7 @@ Enabling the Transfer of Files Specified by a URL
 -------------------------------------------------
 
 :index:`file transfer mechanism<single: file transfer mechanism; input file specified by URL>`
-` <index://output file(s) specified by URL;file transfer mechanism>`__
+:index:`file transfer mechanism<single: file transfer mechanism; output file(s) specified by URL>`
 :index:`URL file transfer<single: URL file transfer>`
 
 Because staging data on the submit machine is not always efficient,

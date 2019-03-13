@@ -200,9 +200,9 @@ There are a few restrictions on standard universe jobs:
    :index:`Unix<single: Unix; timer>` :index:`Unix<single: Unix; sleep>`
 #. Alarms, timers, and sleeping are not allowed. This includes system
    calls such as ``alarm()``, ``getitimer()``, and ``sleep()``.
-   ` <index://kernel-level;thread>`__ ` <index://user-level;thread>`__
+   :index:`thread<single: thread; kernel-level>` :index:`thread<single: thread; user-level>`
 #. Multiple kernel-level threads are not allowed. However, multiple
-   user-level threads are allowed. ` <index://memory-mapped;file>`__
+   user-level threads are allowed. :index:`file<single: file; memory-mapped>`
    :index:`Unix<single: Unix; mmap>`
 #. Memory mapped files are not allowed. This includes system calls such
    as ``mmap()`` and ``munmap()``. :index:`file<single: file; locking>`

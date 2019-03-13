@@ -62,7 +62,6 @@
 ./rst-cleanup.py ../../cloud-computing/annex-customization-guide.rst ../../cloud-computing/annex-customization-guide.rst
 ./rst-cleanup.py ../../cloud-computing/annex-configuration.rst ../../cloud-computing/annex-configuration.rst
 ./rst-cleanup.py ../../apis/index.rst ../../apis/index.rst
-./rst-cleanup.py ../../apis/python-bindings.rst ../../apis/python-bindings.rst
 ./rst-cleanup.py ../../apis/chirp.rst ../../apis/chirp.rst
 ./rst-cleanup.py ../../apis/user-job-log-reader-api.rst ../../apis/user-job-log-reader-api.rst
 ./rst-cleanup.py ../../apis/command-line-interface.rst ../../apis/command-line-interface.rst

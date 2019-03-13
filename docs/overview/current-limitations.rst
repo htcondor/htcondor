@@ -3,7 +3,7 @@
 Current Limitations
 ===================
 
-` <index://limitations, under UNIX;HTCondor>`__
+:index:`HTCondor<single: HTCondor; limitations, under UNIX>`
 
  Limitations on Jobs which can Checkpointed
     Although HTCondor can schedule and run any type of process, HTCondor
@@ -32,10 +32,10 @@ Current Limitations
        :index:`Unix<single: Unix; sleep>`
     #. Alarms, timers, and sleeping are not allowed. This includes
        system calls such as ``alarm()``, ``getitimer()``, and
-       ``sleep()``. ` <index://kernel-level;thread>`__
-       ` <index://user-level;thread>`__
+       ``sleep()``. :index:`thread<single: thread; kernel-level>`
+       :index:`thread<single: thread; user-level>`
     #. Multiple kernel-level threads are not allowed. However, multiple
-       user-level threads are allowed. ` <index://memory-mapped;file>`__
+       user-level threads are allowed. :index:`file<single: file; memory-mapped>`
        :index:`Unix<single: Unix; mmap>`
     #. Memory mapped files are not allowed. This includes system calls
        such as ``mmap()`` and ``munmap()``. :index:`file<single: file; locking>`

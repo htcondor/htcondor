@@ -617,7 +617,7 @@ items must be correct to get things to work:
 HTCondor Connection Brokering (CCB)
 -----------------------------------
 
-` <index://CCB (HTCondor Connection Brokering)>`__
+:index:`CCB (HTCondor Connection Brokering)<single: CCB (HTCondor Connection Brokering)>`
 
 HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
 components to communicate with each other when one side is in a private

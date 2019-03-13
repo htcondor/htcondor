@@ -12,9 +12,9 @@ or months of computation to solve. Scientists and engineers engaged in
 this sort of work need a computing environment that delivers large
 amounts of computational power over a long period of time. Such an
 environment is called a High-Throughput Computing (HTC) environment.
-` <index://High-Throughput Computing (HTC)>`__\ ` <index://HTC (High-Throughput Computing)>`__
+:index:`High-Throughput Computing (HTC)<single: High-Throughput Computing (HTC)>`\ :index:`HTC (High-Throughput Computing)<single: HTC (High-Throughput Computing)>`
 In contrast, High Performance Computing (HPC)
-` <index://High-Performance Computing (HPC)>`__\ ` <index://HPC (High-Performance Computing)>`__
+:index:`High-Performance Computing (HPC)<single: High-Performance Computing (HPC)>`\ :index:`HPC (High-Performance Computing)<single: HPC (High-Performance Computing)>`
 environments deliver a tremendous amount of compute power over a short
 period of time. HPC environments are often measured in terms of FLoating
 point Operations Per Second (FLOPS). A growing community is not

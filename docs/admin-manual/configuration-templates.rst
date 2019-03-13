@@ -3,8 +3,8 @@
 Configuration Templates
 =======================
 
-` <index://configuration-templates;HTCondor>`__
-` <index://configuration: templates>`__
+:index:`HTCondor<single: HTCondor; configuration-templates>`
+:index:`configuration: templates<single: configuration: templates>`
 
 Achieving certain behaviors in an HTCondor pool often requires setting
 the values of a number of configuration macros in concert with each

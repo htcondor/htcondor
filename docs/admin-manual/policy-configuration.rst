@@ -11,7 +11,7 @@ Templates <../admin-manual/configuration-templates.html>`__.
 -------------------------------------
 
 :index:`configuration<single: configuration; condor_startd policy>`
-` <index://of machines, to implement a given policy;configuration>`__
+:index:`configuration<single: configuration; of machines, to implement a given policy>`
 :index:`startd<single: startd; configuration>`
 
 This section describes the configuration of machines, such that they,
@@ -475,7 +475,7 @@ is described below.
 The Claimed State and Leases
 ''''''''''''''''''''''''''''
 
-` <index://claimed, the claim lease;machine state>`__
+:index:`machine state<single: machine state; claimed, the claim lease>`
 :index:`claim lease<single: claim lease>`
 
 When a *condor\_schedd* claims a *condor\_startd*, there is a claim
@@ -1409,7 +1409,7 @@ checkpoint every 12 hours.
                                 ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                               ( $(LastCkpt) > (12 * $(HOUR)) )
 
-` <index://at UW-Madison;policy>`__
+:index:`policy<single: policy; at UW-Madison>`
 
 At UW-Madison, we have a fast network. We simplify our expression
 considerably to
@@ -1645,7 +1645,7 @@ policy:
    is killed. The job will return to the idle state in the job queue,
    and it can try to run again in the future.
 
-` <index://eval();ClassAd functions>`__
+:index:`ClassAd functions<single: ClassAd functions; eval()>`
 
 ::
 
@@ -1730,7 +1730,7 @@ Multi-Core Machine Terminology
 ''''''''''''''''''''''''''''''
 
 :index:`SMP machines<single: SMP machines; configuration>`
-` <index://configuration;multi-core machines>`__
+:index:`multi-core machines<single: multi-core machines; configuration>`
 
 Machines with more than one CPU or core may be configured to run more
 than one job at a time. As always, owners of the resources have great
@@ -1745,7 +1745,7 @@ HTCondor system as a collection of separate slots. As an example, a
 multi-core machine named ``vulture.cs.wisc.edu`` would appear to
 HTCondor as the multiple machines, named ``slot1@vulture.cs.wisc.edu``,
 ``slot2@vulture.cs.wisc.edu``, ``slot3@vulture.cs.wisc.edu``, and so on.
-` <index://dividing resources in multi-core machines>`__
+:index:`dividing resources in multi-core machines<single: dividing resources in multi-core machines>`
 
 The way that the *condor\_startd* breaks up the shared system resources
 into the different slots is configurable. All shared system resources,
@@ -1801,7 +1801,7 @@ ways to go about dividing the resources of a multi-core machine:
     that list how much of each system resource goes to each slot type.
 
     Configuration variable ``SLOT_TYPE_<N>``
-    ` <index://SLOT_TYPE_<N>>`__, where <N> is an integer (for example,
+    :index:`SLOT_TYPE_<N><single: SLOT_TYPE_<N>>`, where <N> is an integer (for example,
     ``SLOT_TYPE_1``) defines the slot type. Note that there may be
     multiple slots of each type. The number of slots created of a given
     type is configured with ``NUM_SLOTS_TYPE_<N>``.
@@ -1846,7 +1846,7 @@ ways to go about dividing the resources of a multi-core machine:
 
     The disk space allocated to each slot is taken from the disk
     partition containing the slot’s ``EXECUTE`` or ``SLOT<N>_EXECUTE``
-    ` <index://SLOT<N>_EXECUTE>`__ directory. If every slot is in a
+    :index:`SLOT<N>_EXECUTE<single: SLOT<N>_EXECUTE>` directory. If every slot is in a
     different partition, then each one may be defined with up to
     100% for its disk share. If some slots are in the same partition,
     then their total is not allowed to exceed 100%.
@@ -1913,7 +1913,7 @@ ways to go about dividing the resources of a multi-core machine:
 
     The resource names and quantities of available resources are defined
     using configuration variables of the form
-    ``MACHINE_RESOURCE_<name>`` ` <index://MACHINE_RESOURCE_<name>>`__,
+    ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name><single: MACHINE_RESOURCE_<name>>`,
     as shown in this example:
 
     ::
@@ -1933,7 +1933,7 @@ ways to go about dividing the resources of a multi-core machine:
         endif
 
     Local machine resource names defined in this way may now be used in
-    conjunction with ``SLOT_TYPE_<N>`` ` <index://SLOT_TYPE_<N>>`__,
+    conjunction with ``SLOT_TYPE_<N>`` :index:`SLOT_TYPE_<N><single: SLOT_TYPE_<N>>`,
     using all the same syntax described earlier in this section. The
     following example demonstrates the definition of static and
     partitionable slot types with local machine resources:
@@ -1953,7 +1953,7 @@ ways to go about dividing the resources of a multi-core machine:
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    **request\_<name>**\ ` <index://request_<name>;submit commands>`__,
+    **request\_<name>**\ :index:`submit commands<single: submit commands; request_<name>>`,
     as described in section \ `3.7.1 <#x35-2600003.7.1>`__. This example
     shows a portion of a submit description file that requests GPUs and
     an actuator:
@@ -2005,7 +2005,7 @@ Configuration Specific to Multi-core Machines
 '''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`configuration<single: configuration; SMP machines>`
-` <index://multi-core machines;configuration>`__
+:index:`configuration<single: configuration; multi-core machines>`
 
 Each slot within a multi-core machine is treated as an independent
 machine, each with its own view of its state as represented by the
@@ -2320,7 +2320,7 @@ resources have been consumed by jobs.
 To enable dynamic provisioning, define a slot type. and declare at least
 one slot of that type. Then, identify that slot type as partitionable by
 setting configuration variable ``SLOT_TYPE_<N>_PARTITIONABLE``
-` <index://SLOT_TYPE_<N>_PARTITIONABLE>`__ to ``True``. The value of
+:index:`SLOT_TYPE_<N>_PARTITIONABLE<single: SLOT_TYPE_<N>_PARTITIONABLE>` to ``True``. The value of
 ``<N>`` within the configuration variable name is the same value as in
 slot type definition configuration variable ``SLOT_TYPE_<N>``. For the
 most common cases the machine should be configured for one slot,
@@ -2488,7 +2488,7 @@ condor\_negotiator-Side Resource Consumption Policies
 '''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`consumption policy<single: consumption policy>`
-` <index://negotiator-side resource consumption policy;partitionable slots>`__
+:index:`partitionable slots<single: partitionable slots; negotiator-side resource consumption policy>`
 
 For partitionable slots, the specification of a consumption policy
 permits matchmaking at the negotiator. A dynamic slot carved from the
@@ -2676,7 +2676,7 @@ ClassAd:
     condor_status -l -any -constraint 'MyType == "Defrag"'
 
 :index:`SMP machines<single: SMP machines; configuration>`
-` <index://configuration;multi-core machines>`__
+:index:`multi-core machines<single: multi-core machines; configuration>`
 
 *condor\_schedd* Policy Configuration
 -------------------------------------
@@ -2709,7 +2709,7 @@ transforms and their order are configured using the Configuration
 variable ``JOB_TRANSFORM_NAMES`` :index:`JOB_TRANSFORM_NAMES<single: JOB_TRANSFORM_NAMES>`.
 
 For each entry in this list there must be a corresponding
-``JOB_TRANSFORM_<name>`` ` <index://JOB_TRANSFORM_<name>>`__
+``JOB_TRANSFORM_<name>`` :index:`JOB_TRANSFORM_<name><single: JOB_TRANSFORM_<name>>`
 configuration variable that specifies the transform rules. Transforms
 use the same syntax as *condor\_job\_router* transforms; although unlike
 the *condor\_job\_router* there is no default transform, and all
@@ -2772,7 +2772,7 @@ a descriptive name. For the three example submit requirements described:
 
 The criterion for each submit requirement is then specified in
 configuration variable ``SUBMIT_REQUIREMENT_<Name>``
-` <index://SUBMIT_REQUIREMENT_<Name>>`__, where ``<Name>`` matches the
+:index:`SUBMIT_REQUIREMENT_<Name><single: SUBMIT_REQUIREMENT_<Name>>`, where ``<Name>`` matches the
 chosen name listed in ``SUBMIT_REQUIREMENT_NAMES``. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
@@ -2793,7 +2793,7 @@ and the job ClassAd, which is the ``TARGET.`` name space. Note that
 
 Further configuration may associate a rejection reason with a submit
 requirement with the ``SUBMIT_REQUIREMENT_<Name>_REASON``
-` <index://SUBMIT_REQUIREMENT_<Name>_REASON>`__.
+:index:`SUBMIT_REQUIREMENT_<Name>_REASON<single: SUBMIT_REQUIREMENT_<Name>_REASON>`.
 
 ::
 
@@ -2834,7 +2834,7 @@ Submit Warnings
 Starting in HTCondor 8.7.4, you may instead configure submit warnings. A
 submit warning is a submit requirement for which
 ``SUBMIT_REQUIREMENT_<Name>_IS_WARNING``
-` <index://SUBMIT_REQUIREMENT_<Name>_IS_WARNING>`__ is true. A submit
+:index:`SUBMIT_REQUIREMENT_<Name>_IS_WARNING<single: SUBMIT_REQUIREMENT_<Name>_IS_WARNING>` is true. A submit
 warning does not cause the submission to fail; instead, it returns a
 warning to the user’s console (when triggered via *condor\_submit*) or
 writes a message to the user log (always). Submit warnings are intended

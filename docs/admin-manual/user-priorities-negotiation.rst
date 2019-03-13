@@ -32,8 +32,8 @@ Macros <../admin-manual/configuration-macros.html>`__.
 Real User Priority (RUP)
 ------------------------
 
-` <index://real user priority (RUP)>`__
-` <index://real (RUP);user priority>`__
+:index:`real user priority (RUP)<single: real user priority (RUP)>`
+:index:`user priority<single: user priority; real (RUP)>`
 
 A user’s RUP measures the resource usage of the user through time. Every
 user begins with a RUP of one half (0.5), and at steady state, the RUP
@@ -52,8 +52,8 @@ would be 5 one day later, 2.5 two days later, and so on.
 Effective User Priority (EUP)
 -----------------------------
 
-` <index://effective user priority (EUP)>`__
-` <index://effective (EUP);user priority>`__
+:index:`effective user priority (EUP)<single: effective user priority (EUP)>`
+:index:`user priority<single: user priority; effective (EUP)>`
 
 The effective user priority (EUP) of a user is used to determine how
 many resources that user may receive. The EUP is linearly related to the
@@ -162,68 +162,68 @@ Macros <../admin-manual/configuration-macros.html>`__ for definitions of
 these configuration variables.
 
 
-` <index://SubmitterUserPrio;ClassAd attribute, ephemeral>`__\ ``SubmitterUserPrio``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterUserPrio>`\ ``SubmitterUserPrio``:
     A floating point value representing the user priority of the
     candidate job.
 
-` <index://SubmitterUserResourcesInUse;ClassAd attribute, ephemeral>`__\ ``SubmitterUserResourcesInUse``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterUserResourcesInUse>`\ ``SubmitterUserResourcesInUse``:
     The integer number of slots currently utilized by the user
     submitting the candidate job.
 
-` <index://RemoteUserPrio;ClassAd attribute, ephemeral>`__\ ``RemoteUserPrio``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteUserPrio>`\ ``RemoteUserPrio``:
     A floating point value representing the user priority of the job
     currently running on the machine. This version of the attribute,
     with no slot represented in the attribute name, refers to the
     current slot being evaluated.
 
-` <index://Slot<N>_RemoteUserPrio;ClassAd attribute, ephemeral>`__\ ``Slot<N>_RemoteUserPrio``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; Slot<N>_RemoteUserPrio>`\ ``Slot<N>_RemoteUserPrio``:
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
     machine.
 
-` <index://RemoteUserResourcesInUse;ClassAd attribute, ephemeral>`__\ ``RemoteUserResourcesInUse``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteUserResourcesInUse>`\ ``RemoteUserResourcesInUse``:
     The integer number of slots currently utilized by the user of the
     job currently running on the machine.
 
-` <index://SubmitterGroupResourcesInUse;ClassAd attribute, ephemeral>`__\ ``SubmitterGroupResourcesInUse``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterGroupResourcesInUse>`\ ``SubmitterGroupResourcesInUse``:
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots currently utilized by the group.
 
-` <index://SubmitterGroup;ClassAd attribute, ephemeral>`__\ ``SubmitterGroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterGroup>`\ ``SubmitterGroup``:
     The accounting group name of the requesting submitter.
 
-` <index://SubmitterGroupQuota;ClassAd attribute, ephemeral>`__\ ``SubmitterGroupQuota``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterGroupQuota>`\ ``SubmitterGroupQuota``:
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots defined as the group’s quota.
 
-` <index://RemoteGroupResourcesInUse;ClassAd attribute, ephemeral>`__\ ``RemoteGroupResourcesInUse``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteGroupResourcesInUse>`\ ``RemoteGroupResourcesInUse``:
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots currently utilized by the group.
 
-` <index://RemoteGroup;ClassAd attribute, ephemeral>`__\ ``RemoteGroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteGroup>`\ ``RemoteGroup``:
     The accounting group name of the owner of the currently running job.
 
-` <index://RemoteGroupQuota;ClassAd attribute, ephemeral>`__\ ``RemoteGroupQuota``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteGroupQuota>`\ ``RemoteGroupQuota``:
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots defined as the group’s quota.
 
-` <index://SubmitterNegotiatingGroup;ClassAd attribute, ephemeral>`__\ ``SubmitterNegotiatingGroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterNegotiatingGroup>`\ ``SubmitterNegotiatingGroup``:
     The accounting group name that the candidate job is negotiating
     under.
 
-` <index://RemoteNegotiatingGroup;ClassAd attribute, ephemeral>`__\ ``RemoteNegotiatingGroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteNegotiatingGroup>`\ ``RemoteNegotiatingGroup``:
     The accounting group name that the currently running job negotiated
     under.
 
-` <index://SubmitterAutoregroup;ClassAd attribute, ephemeral>`__\ ``SubmitterAutoregroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; SubmitterAutoregroup>`\ ``SubmitterAutoregroup``:
     Boolean attribute is ``True`` if candidate job is negotiated via
     autoregoup.
 
-` <index://RemoteAutoregroup;ClassAd attribute, ephemeral>`__\ ``RemoteAutoregroup``:
+:index:`ClassAd attribute, ephemeral<single: ClassAd attribute, ephemeral; RemoteAutoregroup>`\ ``RemoteAutoregroup``:
     Boolean attribute is ``True`` if currently running job negotiated
     via autoregoup.
 
@@ -516,8 +516,8 @@ is the convention, which helps to avoid naming conflicts between groups
 and subgroups. The hierarchy is identified by using the period (’.’)
 character to separate a group name from a subgroup name from a sub
 subgroup name, etc. Group names are case-insensitive for negotiation.
-` <index://<none> group>`__
-` <index://<none> group;group accounting>`__
+:index:`<none> group<single: <none> group>`
+:index:`group accounting<single: group accounting; <none> group>`
 
 At the root of the tree that defines the hierarchical groups is the
 invented "<none>" group. The implied quota of the "<none>" group will be
@@ -631,7 +631,7 @@ Accepting surplus may be enabled for all groups by setting
 ``GROUP_ACCEPT_SURPLUS`` :index:`GROUP_ACCEPT_SURPLUS<single: GROUP_ACCEPT_SURPLUS>` to
 ``True``. Surplus may be enabled for individual groups by setting
 ``GROUP_ACCEPT_SURPLUS_<groupname>``
-` <index://GROUP_ACCEPT_SURPLUS_<groupname>>`__ to ``True``. Consider
+:index:`GROUP_ACCEPT_SURPLUS_<groupname><single: GROUP_ACCEPT_SURPLUS_<groupname>>` to ``True``. Consider
 the following example:
 
 ::

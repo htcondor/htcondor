@@ -28,27 +28,27 @@ Job and Daemon Logs
     Each daemon configured to have a log writes events relevant to that
     daemon. Each event written consists of a timestamp and message. The
     name of the log file is set by the value of configuration variable
-    ``<SUBSYS>_LOG`` ` <index://<SUBSYS>_LOG>`__, where ``<SUBSYS>`` is
+    ``<SUBSYS>_LOG`` :index:`<SUBSYS>_LOG<single: <SUBSYS>_LOG>`, where ``<SUBSYS>`` is
     replaced by the name of the daemon. The log is not permitted to grow
     without bound; log rotation takes place after a configurable maximum
     size or length of time is encountered. This maximum is specified by
     configuration variable ``MAX_<SUBSYS>_LOG``
-    ` <index://MAX_<SUBSYS>_LOG>`__.
+    :index:`MAX_<SUBSYS>_LOG<single: MAX_<SUBSYS>_LOG>`.
 
     Which events are logged for a particular daemon are determined by
     the value of configuration variable ``<SUBSYS>_DEBUG``
-    ` <index://<SUBSYS>_DEBUG>`__. The possible values for
+    :index:`<SUBSYS>_DEBUG<single: <SUBSYS>_DEBUG>`. The possible values for
     ``<SUBSYS>_DEBUG`` categorize events, such that it is possible to
     control the level and quantity of events written to the daemon’s
     log.
 
     Configuration variables that affect daemon logs are
 
-     ``MAX_NUM_<SUBSYS>_LOG`` ` <index://MAX_NUM_<SUBSYS>_LOG>`__
+     ``MAX_NUM_<SUBSYS>_LOG`` :index:`MAX_NUM_<SUBSYS>_LOG<single: MAX_NUM_<SUBSYS>_LOG>`
      ``TRUNC_<SUBSYS>_LOG_ON_OPEN``
-    ` <index://TRUNC_<SUBSYS>_LOG_ON_OPEN>`__
-     ``<SUBSYS>_LOG_KEEP_OPEN`` ` <index://<SUBSYS>_LOG_KEEP_OPEN>`__
-     ``<SUBSYS>_LOCK`` ` <index://<SUBSYS>_LOCK>`__
+    :index:`TRUNC_<SUBSYS>_LOG_ON_OPEN<single: TRUNC_<SUBSYS>_LOG_ON_OPEN>`
+     ``<SUBSYS>_LOG_KEEP_OPEN`` :index:`<SUBSYS>_LOG_KEEP_OPEN<single: <SUBSYS>_LOG_KEEP_OPEN>`
+     ``<SUBSYS>_LOCK`` :index:`<SUBSYS>_LOCK<single: <SUBSYS>_LOCK>`
      ``FILE_LOCK_VIA_MUTEX`` :index:`FILE_LOCK_VIA_MUTEX<single: FILE_LOCK_VIA_MUTEX>`
      ``TOUCH_LOG_INTERVAL`` :index:`TOUCH_LOG_INTERVAL<single: TOUCH_LOG_INTERVAL>`
      ``LOGS_USE_TIMESTAMP`` :index:`LOGS_USE_TIMESTAMP<single: LOGS_USE_TIMESTAMP>`

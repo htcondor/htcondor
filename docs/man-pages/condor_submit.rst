@@ -363,7 +363,7 @@ BASIC COMMANDS :index:`submit commands<single: submit commands; arguments>`
 
  environment = <parameter\_list>
     List of environment
-    ` <index://setting, for a job;environment variables>`__\ variables.
+    :index:`environment variables<single: environment variables; setting, for a job>`\ variables.
 
     There are two different formats for specifying the environment
     variables: the old format and the new format. The old format is
@@ -542,7 +542,7 @@ BASIC COMMANDS :index:`submit commands<single: submit commands; arguments>`
     job event log file, ensure that all of the jobs specify this option
     in the same way.
     :index:`email notification<single: email notification; submit command>`
-    ` <index://e-mail related to a job;notification>`__
+    :index:`notification<single: notification; e-mail related to a job>`
     :index:`submit commands<single: submit commands; notification>`
  notification = <Always \| Complete \| Error \| Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
@@ -822,7 +822,7 @@ COMMANDS FOR MATCHMAKING :index:`submit commands<single: submit commands; rank>`
     or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
-    ` <index://request_<name>;submit commands>`__
+    :index:`submit commands<single: submit commands; request_<name>>`
     :index:`submit commands<single: submit commands; request_GPUs>`
     :index:`GPUs<single: GPUs; requesting GPUs for a job>`
 
@@ -878,7 +878,7 @@ COMMANDS FOR MATCHMAKING :index:`submit commands<single: submit commands; rank>`
 
 FILE TRANSFER COMMANDS
 :index:`submit commands<single: submit commands; dont_encrypt_input_files>`
-` <index://input file(s) encryption;file transfer mechanism>`__
+:index:`file transfer mechanism<single: file transfer mechanism; input file(s) encryption>`
 
  dont\_encrypt\_input\_files = < file1,file2,file... >
     A comma and/or space separated list of input files that are not to
@@ -891,7 +891,7 @@ FILE TRANSFER COMMANDS
     specifies the path to the file on the submit side. A single wild
     card character (``*``) may be used in each file name.
     :index:`submit commands<single: submit commands; dont_encrypt_output_files>`
-    ` <index://output file(s) encryption;file transfer mechanism>`__
+    :index:`file transfer mechanism<single: file transfer mechanism; output file(s) encryption>`
  dont\_encrypt\_output\_files = < file1,file2,file... >
     A comma and/or space separated list of output files that are not to
     be network encrypted when transferred back with the file transfer
@@ -923,7 +923,7 @@ FILE TRANSFER COMMANDS
     limited to Windows platforms that use the NTFS file system and Linux
     platforms with the *ecryptfs-utils* package installed.
     :index:`submit commands<single: submit commands; encrypt_input_files>`
-    ` <index://input file(s) encryption;file transfer mechanism>`__
+    :index:`file transfer mechanism<single: file transfer mechanism; input file(s) encryption>`
 
  encrypt\_input\_files = < file1,file2,file... >
     A comma and/or space separated list of input files that are to be
@@ -939,7 +939,7 @@ FILE TRANSFER COMMANDS
     if that negotiation failed, then the file transfer mechanism must
     also fail for files to be network encrypted.
     :index:`submit commands<single: submit commands; encrypt_output_files>`
-    ` <index://output file(s) encryption;file transfer mechanism>`__
+    :index:`file transfer mechanism<single: file transfer mechanism; output file(s) encryption>`
  encrypt\_output\_files = < file1,file2,file... >
     A comma and/or space separated list of output files that are to be
     network encrypted when transferred back with the file transfer
@@ -984,7 +984,7 @@ FILE TRANSFER COMMANDS
     the point when the limit is hit, so some files may be fully
     transferred, some partially, and some not at all.
     :index:`submit commands<single: submit commands; output_destination>`
-    ` <index://output file(s) specified by URL;file transfer mechanism>`__
+    :index:`file transfer mechanism<single: file transfer mechanism; output file(s) specified by URL>`
  output\_destination = <destination-URL>
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
@@ -1807,7 +1807,7 @@ COMMANDS FOR THE GRID :index:`submit commands<single: submit commands; azure_adm
  ec2\_parameter\_names = ParameterName1, ParameterName2, ...
     For grid type **ec2** jobs, a space or comma separated list of the
     names of additional parameters to pass when instantiating an
-    instance. ` <index://ec2_parameter_<name>;submit commands>`__
+    instance. :index:`submit commands<single: submit commands; ec2_parameter_<name>>`
  ec2\_parameter\_<name> = <value>
     For grid type **ec2** jobs, specifies the value for the
     correspondingly named (instance instantiation) parameter. **<name>**
@@ -1836,7 +1836,7 @@ COMMANDS FOR THE GRID :index:`submit commands<single: submit commands; azure_adm
     will be associated with the running instance. This is only necessary
     if a tag name case matters. By default the list will be
     automatically generated.
-    ` <index://ec2_tag_<name>;submit commands>`__
+    :index:`submit commands<single: submit commands; ec2_tag_<name>>`
  ec2\_tag\_<name> = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
     the running instance. The tag name will be lower-cased, use
@@ -2141,10 +2141,10 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
  hold\_kill\_sig = <signal-number>
     For the scheduler universe only,
-    **signal-number**\ ` <index://signal-number;submit commands>`__ is
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>` is
     the signal delivered to the job when the job is put on hold with
     *condor\_hold*.
-    **signal-number**\ ` <index://signal-number;submit commands>`__
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>`
     may be either the platform-specific name or value of the signal. If
     this command is not present, the value of
     **kill\_sig**\ :index:`submit commands<single: submit commands; kill_sig>` is used.
@@ -2167,10 +2167,10 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
     :index:`submit commands<single: submit commands; remove_kill_sig>`
  remove\_kill\_sig = <signal-number>
     For the scheduler universe only,
-    **signal-number**\ ` <index://signal-number;submit commands>`__ is
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>` is
     the signal delivered to the job when the job is removed with
     *condor\_rm*.
-    **signal-number**\ ` <index://signal-number;submit commands>`__
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>`
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
@@ -2555,8 +2555,8 @@ ADVANCED COMMANDS :index:`submit commands<single: submit commands; accounting_gr
  kill\_sig = <signal-number>
     When HTCondor needs to kick a job off of a machine, it will send the
     job the signal specified by
-    **signal-number**\ ` <index://signal-number;submit commands>`__.
-    **signal-number**\ ` <index://signal-number;submit commands>`__
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>`.
+    **signal-number**\ :index:`submit commands<single: submit commands; signal-number>`
     needs to be an integer which represents a valid signal on the
     execution machine. For jobs submitted to the standard universe, the
     default value is the number for SIGTSTP which tells the HTCondor
@@ -2829,7 +2829,7 @@ and comments.
     within the submit description file. If the macro is defined, then
     the default value is useless. If the macro is not defined, then
     there is no point in using it in a submit command.
-    ` <index://as a literal character in a submit description file;$>`__
+    :index:`$<single: $; as a literal character in a submit description file>`
 
     To use the dollar sign character ($) as a literal, without macro
     expansion, use
@@ -2908,7 +2908,7 @@ and comments.
 
         arguments = --memory $$([TARGET.Memory * 0.9])
 
-    ` <index://as literal characters in a submit description file;$$>`__
+    :index:`$$<single: $$; as literal characters in a submit description file>`
 
     To insert two dollar sign characters ($$) as literals into a ClassAd
     string, use
@@ -2917,8 +2917,8 @@ and comments.
 
         $$(DOLLARDOLLAR)
 
-    ` <index://in submit description file;$ENV>`__
-    ` <index://$ENV macro;submit commands>`__
+    :index:`$ENV<single: $ENV; in submit description file>`
+    :index:`submit commands<single: submit commands; $ENV macro>`
     :index:`environment variables<single: environment variables; in submit description file>`
 
     The environment macro, $ENV, allows the evaluation of an environment
@@ -2939,9 +2939,9 @@ and comments.
 
     The environment variable is evaluated when the submit description
     file is processed.
-    ` <index://in submit description file;$RANDOM_CHOICE()>`__
-    ` <index://$RANDOM_CHOICE() macro;submit commands>`__
-    ` <index://use in submit description file;RANDOM_CHOICE() macro>`__
+    :index:`$RANDOM_CHOICE()<single: $RANDOM_CHOICE(); in submit description file>`
+    :index:`submit commands<single: submit commands; $RANDOM_CHOICE() macro>`
+    :index:`RANDOM_CHOICE() macro<single: RANDOM_CHOICE() macro; use in submit description file>`
 
     The $RANDOM\_CHOICE macro allows a random choice to be made from a
     given list of parameters at submission time. For an expression, if

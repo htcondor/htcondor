@@ -48,7 +48,7 @@ Collector ClassAd Attributes
  ``CurrentJobsRunningAll``:
     An integer value representing the sum of all jobs running under all
     universes.
-    ` <index://CurrentJobsRunning<universe>;ClassAd Collector attribute>`__
+    :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; CurrentJobsRunning<universe>>`
  ``CurrentJobsRunning<universe>``:
     An integer value representing the current number of jobs running
     under the universe which forms the attribute name. For example
@@ -191,7 +191,7 @@ Collector ClassAd Attributes
  ``MaxJobsRunning<universe``:
     An integer value representing the sum of all
     ``MaxJobsRunning<universe>`` values.
-    ` <index://MaxJobsRunning<universe>;ClassAd Collector attribute>`__
+    :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; MaxJobsRunning<universe>>`
  ``MaxJobsRunning<universe>``:
     An integer value representing largest number of currently running
     jobs ever seen under the universe which forms the attribute name,
@@ -261,7 +261,7 @@ Collector ClassAd Attributes
     An integer that begins at 0, and increments by one each time the
     same ClassAd is again advertised.
     :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesInitial>`
-    ` <index://UpdatesInitial_<ClassAd-Name>;ClassAd Collector attribute>`__
+    :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesInitial_<ClassAd-Name>>`
  ``UpdatesInitial``:
     A Statistics attribute representing a count of unique ClassAds seen,
     over the lifetime of this *condor\_collector*. Counts per ClassAd
@@ -270,7 +270,7 @@ Collector ClassAd Attributes
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
     ``Start``, ``StartdPvt``, and ``Submittor``.
     :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesLost>`
-    ` <index://UpdatesLost_<ClassAd-Name>;ClassAd Collector attribute>`__
+    :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesLost_<ClassAd-Name>>`
  ``UpdatesLost``:
     A Statistics attribute representing the count of updates lost, over
     the lifetime of this *condor\_collector*. Counts per ClassAd are
@@ -291,7 +291,7 @@ Collector ClassAd Attributes
     used to detect lost ClassAds. A value of 1 indicates that all
     ClassAds have been lost.
     :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesTotal>`
-    ` <index://UpdatesTotal_<ClassAd-Name>;ClassAd Collector attribute>`__
+    :index:`ClassAd Collector attribute<single: ClassAd Collector attribute; UpdatesTotal_<ClassAd-Name>>`
  ``UpdatesTotal``:
     A Statistics attribute representing the count of the number of
     ClassAd updates received over the lifetime of this

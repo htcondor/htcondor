@@ -3,8 +3,8 @@
 Computing On Demand (COD)
 =========================
 
-` <index://COD (Computing on Demand)>`__
-` <index://Computing on Demand (see COD)>`__
+:index:`COD (Computing on Demand)<single: COD (Computing on Demand)>`
+:index:`Computing on Demand (see COD)<single: Computing on Demand (see COD)>`
 :index:`COD<single: COD; introduction>`
 
 Computing On Demand (COD) extends HTCondor’s high throughput computing
@@ -836,6 +836,6 @@ HTCondor’s support for COD has a few limitations:
    business of developing applications, we only provide mechanisms to
    execute them.
 
-` <index://COD (Computing on Demand)>`__
+:index:`COD (Computing on Demand)<single: COD (Computing on Demand)>`
 
       
