@@ -90,11 +90,11 @@ protected:
 	MyString m_suspendfile;
 	float m_cputime_before_suspend;
 
-	MyString m_xen_kernel_submit_param;
+	std::string m_xen_kernel_submit_param;
 	MyString m_xen_kernel_file;
-	MyString m_xen_initrd_file;
-	MyString m_xen_root;
-	MyString m_xen_kernel_params;
+	std::string m_xen_initrd_file;
+	std::string m_xen_root;
+	std::string m_xen_kernel_params;
 	MyString m_xen_bootloader;
 	std::string m_vm_bridge_interface;
 

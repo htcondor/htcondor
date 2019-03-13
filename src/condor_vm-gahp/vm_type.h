@@ -110,7 +110,7 @@ protected:
 	ClassAd m_classAd;
 	int m_vm_mem;  // VM memory requested in Job classAd
 	bool m_vm_networking;
-	MyString m_vm_networking_type;
+	std::string m_vm_networking_type;
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;
@@ -149,7 +149,7 @@ protected:
 	time_t m_last_status_time;
 	MyString m_last_status_result;
 	int m_vcpus;
-	MyString m_vm_job_mac;
+	std::string m_vm_job_mac;
 
 	priv_state m_file_owner;
 private:

@@ -363,14 +363,14 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
     {
       classad_string += VMPARAM_BRIDGE_INTERFACE;
       classad_string += " = \"";
-      classad_string += m_vm_bridge_interface.c_str();
+      classad_string += m_vm_bridge_interface;
       classad_string += "\"\n";
     }
   if(classad_string.find(ATTR_JOB_VM_NETWORKING_TYPE) < 1)
     {
       classad_string += ATTR_JOB_VM_NETWORKING_TYPE;
       classad_string += " = \"";
-      classad_string += m_vm_networking_type.Value();
+      classad_string += m_vm_networking_type;
       classad_string += "\"\n";
     }
   input_strings.append(classad_string.Value());
@@ -825,11 +825,11 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 		m_xml += "<console type='pty'><source path='/dev/ptmx'/></console>";
 		if( m_vm_networking )
 			{
-			vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
-			if( m_vm_networking_type.find("nat") >= 0 ) {
+			vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.c_str());
+			if( m_vm_networking_type.find("nat") != std::string::npos ) {
 			m_xml += "<interface type='network'><source network='default'/></interface>";
 			}
-			else if( m_vm_networking_type.find("bridge") >= 0 )
+			else if( m_vm_networking_type.find("bridge") != std::string::npos )
 			{
 			m_xml += "<interface type='bridge'>";
 			if (!m_vm_bridge_interface.empty()) {
@@ -837,7 +837,7 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 				m_xml += m_vm_bridge_interface.c_str();
 				m_xml += "'/>";
 			}
-			if(!m_vm_job_mac.IsEmpty())
+			if(!m_vm_job_mac.empty())
 				{
 				m_xml += "<mac address='";
 				m_xml += m_vm_job_mac;
@@ -885,18 +885,18 @@ XenType::CreateVirshConfigFile(const char* filename)
 			m_xml += "<kernel>";
 			m_xml += m_xen_kernel_file;
 			m_xml += "</kernel>";
-			if( m_xen_initrd_file.IsEmpty() == false ) {
+			if( m_xen_initrd_file.empty() == false ) {
 				m_xml += "<initrd>";
 				m_xml += m_xen_initrd_file;
 				m_xml += "</initrd>";
 			}
-			if( m_xen_root.IsEmpty() == false ) {
+			if( m_xen_root.empty() == false ) {
 				m_xml += "<root>";
 				m_xml += m_xen_root;
 				m_xml += "</root>";
 			}
 
-			if( m_xen_kernel_params.IsEmpty() == false ) {
+			if( m_xen_kernel_params.empty() == false ) {
 				m_xml += "<cmdline>";
 				m_xml += m_xen_kernel_params;
 				m_xml += "</cmdline>";
@@ -904,7 +904,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		}
 
 		m_xml += "</os>";
-		if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
+		if( strcasecmp(m_xen_kernel_submit_param.c_str(), XEN_KERNEL_INCLUDED) == 0) {
 			m_xml += "<bootloader>";
 			m_xml += m_xen_bootloader;
 			m_xml += "</bootloader>";
@@ -912,17 +912,17 @@ XenType::CreateVirshConfigFile(const char* filename)
 		m_xml += "<devices>";
 		m_xml += "<console type='pty'><source path='/dev/ptmx'/></console>";
 		if( m_vm_networking ) {
-			if( m_vm_networking_type.find("nat") >= 0 ) {
+			if( m_vm_networking_type.find("nat") != std::string::npos ) {
 				m_xml += "<interface type='network'><source network='default'/></interface>";
-			} else if( m_vm_networking_type.find("bridge") >= 0 ){
+			} else if( m_vm_networking_type.find("bridge") != std::string::npos ){
 				m_xml += "<interface type='bridge'>";
 				if (!m_vm_bridge_interface.empty()) {
 					m_xml += "<source bridge='";
 					m_xml += m_vm_bridge_interface.c_str();
 					m_xml += "'/>";
 				}
-				vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.Value());
-				if(!m_vm_job_mac.IsEmpty())
+				vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.c_str());
+				if(!m_vm_job_mac.empty())
 				{
 					m_xml += "<mac address='";
 					m_xml += m_vm_job_mac;
@@ -1504,9 +1504,9 @@ bool XenType::CreateConfigFile()
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM;
 		return false;
 	}
-	m_xen_kernel_submit_param.trim();
+	trim(m_xen_kernel_submit_param);
 
-	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0 )
+	if(strcasecmp(m_xen_kernel_submit_param.c_str(), XEN_KERNEL_INCLUDED) == 0 )
 	{
 		//if (strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == 0){
 			vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
@@ -1521,7 +1521,7 @@ bool XenType::CreateConfigFile()
 				free(config_value);
 			}
 		//}
-	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_HW_VT) == 0) {
+	}else if(strcasecmp(m_xen_kernel_submit_param.c_str(), XEN_KERNEL_HW_VT) == 0) {
 		vmprintf(D_ALWAYS, "This VM requires hardware virtualization\n");
 		if( !m_vm_hardware_vt ) {
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
@@ -1533,18 +1533,18 @@ bool XenType::CreateConfigFile()
 	}else {
 		// A job user defined a customized kernel
 		// make sure that the file for xen kernel is readable
-		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), false) == false) {
+		if( check_vm_read_access_file(m_xen_kernel_submit_param.c_str(), false) == false) {
 			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n",
-					m_xen_kernel_submit_param.Value());
+					m_xen_kernel_submit_param.c_str());
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
 			return false;
 		}
 		MyString tmp_fullname;
-		if( isTransferedFile(m_xen_kernel_submit_param.Value(),
+		if( isTransferedFile(m_xen_kernel_submit_param.c_str(),
 					tmp_fullname) ) {
 			// this file is transferred
 			// we need a full path
-			m_xen_kernel_submit_param = tmp_fullname;
+			m_xen_kernel_submit_param = tmp_fullname.Value();
 		}
 
 		m_xen_kernel_file = m_xen_kernel_submit_param;
@@ -1552,19 +1552,19 @@ bool XenType::CreateConfigFile()
 		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file)
 					== 1 ) {
 			// A job user defined a customized ramdisk
-			m_xen_initrd_file.trim();
-			if( check_vm_read_access_file(m_xen_initrd_file.Value(), false) == false) {
+			trim(m_xen_initrd_file);
+			if( check_vm_read_access_file(m_xen_initrd_file.c_str(), false) == false) {
 				// make sure that the file for xen ramdisk is readable
 				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n",
-						m_xen_initrd_file.Value());
+						m_xen_initrd_file.c_str());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
 				return false;
 			}
-			if( isTransferedFile(m_xen_initrd_file.Value(),
+			if( isTransferedFile(m_xen_initrd_file.c_str(),
 						tmp_fullname) ) {
 				// this file is transferred
 				// we need a full path
-				m_xen_initrd_file = tmp_fullname;
+				m_xen_initrd_file = tmp_fullname.Value();
 			}
 		}
 	}
@@ -1577,10 +1577,10 @@ bool XenType::CreateConfigFile()
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM;
 			return false;
 		}
-		m_xen_root.trim();
+		trim(m_xen_root);
 	}
 
-	MyString xen_disk;
+	std::string xen_disk;
 	// Read the parameter of Virsh Disk
 	if( m_classAd.LookupString(VMPARAM_VM_DISK, xen_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
@@ -1588,15 +1588,15 @@ bool XenType::CreateConfigFile()
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
 		return false;
 	}
-	xen_disk.trim();
+	trim(xen_disk);
 
 	// from this point below we start to check the params
 	// and access data.
 	priv = set_root_priv();
 
-	if( parseXenDiskParam(xen_disk.Value()) == false ) {
+	if( parseXenDiskParam(xen_disk.c_str()) == false ) {
 		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n",
-				xen_disk.Value());
+				xen_disk.c_str());
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
 		set_priv(priv);
 		return false;
@@ -1605,7 +1605,7 @@ bool XenType::CreateConfigFile()
 
 	// Read the parameter of Virsh Kernel Param
 	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
-		m_xen_kernel_params.trim();
+		trim(m_xen_kernel_params);
 	}
 
 	// Check whether this is re-starting after vacating checkpointing,
@@ -1696,7 +1696,7 @@ KVMType::CreateConfigFile()
 		m_vm_mem = 32;
 	}
 
-	MyString kvm_disk;
+	std::string kvm_disk;
 	// Read the parameter of Virsh Disk
 	if( m_classAd.LookupString(VMPARAM_VM_DISK, kvm_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
@@ -1704,15 +1704,15 @@ KVMType::CreateConfigFile()
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM;
 		return false;
 	}
-	kvm_disk.trim();
+	trim(kvm_disk);
 
 	// from this point below we start to check the params
 	// and access data.
 	priv = set_root_priv();
 
-	if( parseXenDiskParam(kvm_disk.Value()) == false ) {
+	if( parseXenDiskParam(kvm_disk.c_str()) == false ) {
 		vmprintf(D_ALWAYS, "kvm disk format(%s) is incorrect\n",
-				kvm_disk.Value());
+				kvm_disk.c_str());
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM;
 		set_priv(priv);
 		return false;
