@@ -409,7 +409,7 @@ are two ways to fix the problem:
 Job in the Hold State
 ---------------------
 
-` <index://not running, on hold;job>`__
+:index:`job<single: job; not running, on hold>`
 
 A variety of errors and unusual conditions may cause a job to be placed
 into the Hold state. The job will stay in this state and in the job

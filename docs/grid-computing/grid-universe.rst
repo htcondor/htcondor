@@ -3,12 +3,12 @@
 The Grid Universe
 =================
 
-` <index://HTCondor-C>`__
+:index:`HTCondor-C<single: HTCondor-C>`
 
 HTCondor-C, The condor Grid Type
 --------------------------------
 
-` <index://HTCondor-C;grid computing>`__
+:index:`grid computing<single: grid computing; HTCondor-C>`
 
 HTCondor-C allows jobs in one machine’s job queue to be moved to another
 machine’s job queue. These machines may be far removed from each other,
@@ -30,7 +30,7 @@ the number of jobs queued or running.
 HTCondor-C Configuration
 ''''''''''''''''''''''''
 
-` <index://configuration;HTCondor-C>`__
+:index:`HTCondor-C<single: HTCondor-C; configuration>`
 
 There are two aspects to configuration to enable the submission and
 execution of HTCondor-C jobs. These two aspects correspond to the
@@ -49,7 +49,7 @@ extra configuration variables:
     C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 
 :index:`HTCondor GAHP<single: HTCondor GAHP>`
-` <index://GAHP (Grid ASCII Helper Protocol)>`__
+:index:`GAHP (Grid ASCII Helper Protocol)<single: GAHP (Grid ASCII Helper Protocol)>`
 
 The acronym GAHP stands for Grid ASCII Helper Protocol. A GAHP server
 provides grid-related services for a variety of underlying middle-ware
@@ -93,7 +93,7 @@ Other working authentication methods are GSI, SSL, KERBEROS, and FS.
 HTCondor-C Job Submission
 '''''''''''''''''''''''''
 
-` <index://job submission;HTCondor-C>`__ :index:`universe<single: universe; grid>`
+:index:`HTCondor-C<single: HTCondor-C; job submission>` :index:`universe<single: universe; grid>`
 
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The **universe** is **grid**. The submit command
@@ -231,7 +231,7 @@ description file defines the Windows domain of the remote machine with
       +remote_NTDomain = "DomainAtRemoteMachine"
 
 A Windows machine not part of a domain defines the Windows domain as the
-machine name. ` <index://HTCondor-C>`__ ` <index://HTCondor-G>`__
+machine name. :index:`HTCondor-C<single: HTCondor-C>` :index:`HTCondor-G<single: HTCondor-G>`
 
 HTCondor-G, the gt2, and gt5 Grid Types
 ---------------------------------------
@@ -270,9 +270,9 @@ The protocols allow HTCondor to interact with grid machines toward the
 end result of executing jobs.
 
  GSI
-    ` <index://GSI (Grid Security Infrastructure)>`__ The Globus
+    :index:`GSI (Grid Security Infrastructure)<single: GSI (Grid Security Infrastructure)>` The Globus
     Toolkit’s Grid Security Infrastructure (GSI) provides essential
-    ` <index://GSI;HTCondor-G>`__\ building blocks for other grid
+    :index:`HTCondor-G<single: HTCondor-G; GSI>`\ building blocks for other grid
     protocols and HTCondor-G. This authentication and authorization
     system makes it possible to authenticate a user just once, using
     public key infrastructure (PKI) mechanisms to verify a user-supplied
@@ -282,7 +282,7 @@ end result of executing jobs.
  GRAM
     The Grid Resource Allocation and Management (GRAM) protocol supports
     remote
-    ` <index://GRAM;HTCondor-G>`__\ ` <index://GRAM (Grid Resource Allocation and Management)>`__
+    :index:`HTCondor-G<single: HTCondor-G; GRAM>`\ :index:`GRAM (Grid Resource Allocation and Management)<single: GRAM (Grid Resource Allocation and Management)>`
     submission of a computational request (for example, to run a
     program) to a remote computational resource, and it supports
     subsequent monitoring and control of the computation. GRAM is the
@@ -291,7 +291,7 @@ end result of executing jobs.
  GASS
     The Globus Toolkit’s Global Access to Secondary Storage (GASS)
     service provides
-    ` <index://GASS;HTCondor-G>`__\ ` <index://GASS (Global Access to Secondary Storage)>`__
+    :index:`HTCondor-G<single: HTCondor-G; GASS>`\ :index:`GASS (Global Access to Secondary Storage)<single: GASS (Global Access to Secondary Storage)>`
     mechanisms for transferring data to and from a remote HTTP, FTP, or
     GASS server. GASS is used by HTCondor for the **gt2** grid type to
     transfer a job’s files to and from the machine where the job is
@@ -337,7 +337,7 @@ usage: **gt2** and **gt5**. HTCondor supports both of them.
 The gt2 Grid Type
 '''''''''''''''''
 
-` <index://grid, grid type gt2;universe>`__
+:index:`universe<single: universe; grid, grid type gt2>`
 :index:`grid computing<single: grid computing; submitting jobs to gt2>`
 
 HTCondor-G supports submitting jobs to remote resources running the
@@ -347,12 +347,12 @@ other HTCondor job. The **universe** is **grid**, and the pre-web
 services GRAM protocol is specified by setting the type of grid as
 **gt2** in the
 **grid\_resource**\ :index:`submit commands<single: submit commands; grid_resource>`
-command. ` <index://job submission;HTCondor-G>`__
-` <index://proxy;HTCondor-G>`__ :index:`proxy<single: proxy>`
+command. :index:`HTCondor-G<single: HTCondor-G; job submission>`
+:index:`HTCondor-G<single: HTCondor-G; proxy>` :index:`proxy<single: proxy>`
 
 Under HTCondor, successful job submission to the **grid** **universe**
 with **gt2** requires credentials.
-` <index://X.509 certificate;HTCondor-G>`__\ An X.509 certificate is
+:index:`HTCondor-G<single: HTCondor-G; X.509 certificate>`\ An X.509 certificate is
 used to create a proxy, and an account, authorization, or allocation to
 use a grid resource is required. For general information on proxies and
 certificates, please consult the Globus page at
@@ -626,7 +626,7 @@ the value assigned is ``Test_Project``.
 The gt5 Grid Type
 '''''''''''''''''
 
-` <index://grid, grid type gt5;universe>`__
+:index:`universe<single: universe; grid, grid type gt5>`
 :index:`grid computing<single: grid computing; submitting jobs to gt5>`
 
 The Globus GRAM5 protocol works the same as the gt2 grid type. Its
@@ -816,7 +816,7 @@ the executable.
 Limitations of HTCondor-G
 '''''''''''''''''''''''''
 
-` <index://limitations;HTCondor-G>`__
+:index:`HTCondor-G<single: HTCondor-G; limitations>`
 
 Submitting jobs to run under the grid universe has not yet been
 perfected. The following is a list of known limitations:
@@ -825,7 +825,7 @@ perfected. The following is a list of known limitations:
 #. No job exit codes are available when using **gt2**.
 #. Limited platform availability. Windows support is not available.
 
-` <index://HTCondor-G>`__
+:index:`HTCondor-G<single: HTCondor-G>`
 
 The nordugrid Grid Type
 -----------------------
@@ -952,7 +952,7 @@ to tell it where to find
     the LSF binaries. ``lsf_confpath`` is the location of the LSF
     configuration file.
 
-` <index://PBS (Portable Batch System)>`__
+:index:`PBS (Portable Batch System)<single: PBS (Portable Batch System)>`
 :index:`grid computing<single: grid computing; submitting jobs to PBS>`
 
 The popular PBS (Portable Batch System) can be found at
@@ -986,7 +986,7 @@ into the submit description file.
 
     grid_resource = lsf
 
-` <index://SGE (Sun Grid Engine)>`__
+:index:`SGE (Sun Grid Engine)<single: SGE (Sun Grid Engine)>`
 :index:`grid computing<single: grid computing; submitting jobs to SGE>`
 
 The popular Grid Engine batch system (formerly known as Sun Grid Engine

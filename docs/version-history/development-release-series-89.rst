@@ -46,13 +46,11 @@ New Features:
    Guide <../cloud-computing/annex-customization-guide.html>`__ before
    adding privileges (an instance role) to an instance which allows
    access by other users, specifically including the submitting of jobs
-   to or running jobs on that instance. `(Ticket
-   #6789). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6789>`__
+   to or running jobs on that instance. :ticket:`6789`
 
 -  the *condor\_hdfs* daemon which allowed the hdfs daemons to run under
    the *condor\_master* has been removed from the contributed source.
-   `(Ticket
-   #6809). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6809>`__
+   :ticket:`6809`
 -  Scheduler Universe jobs now start in order of priority, instead of
    random order. This is most typically used for DAGMan. When running
    *condor\_submit\_dag* against a .dag file, you can use the -priority
@@ -60,8 +58,7 @@ New Features:
    When the *condor\_schedd* is starting new Scheduler Universe jobs,
    the highest priority queued job will start first. If all queued
    Scheduler Universe jobs have equal priority, they get started in
-   order of subnmission. `(Ticket
-   #6703). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6703>`__
+   order of subnmission. :ticket:`6703`
 
 Bugs Fixed:
 

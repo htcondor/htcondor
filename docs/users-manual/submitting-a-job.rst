@@ -670,7 +670,7 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
  ``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
-    ` <index://$RANDOM_CHOICE() function macro>`__ A random choice
+    :index:`$RANDOM_CHOICE() function macro<single: $RANDOM_CHOICE() function macro>` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -680,7 +680,7 @@ as given in these definitions.
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
-    ` <index://in configuration;$RANDOM_INTEGER()>`__ A random integer
+    :index:`$RANDOM_INTEGER()<single: $RANDOM_INTEGER(); in configuration>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
     to the value 1. For example, to randomly chose an even integer in
@@ -1613,7 +1613,7 @@ File Transfer Using a URL
 '''''''''''''''''''''''''
 
 :index:`file transfer mechanism<single: file transfer mechanism; input file specified by URL>`
-` <index://output file(s) specified by URL;file transfer mechanism>`__
+:index:`file transfer mechanism<single: file transfer mechanism; output file(s) specified by URL>`
 :index:`URL file transfer<single: URL file transfer>`
 
 Instead of file transfer that goes only between the submit machine and

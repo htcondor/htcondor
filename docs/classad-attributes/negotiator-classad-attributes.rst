@@ -17,13 +17,13 @@ Negotiator ClassAd Attributes
  ``DaemonLastReconfigTime``:
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
-    ` <index://LastNegotiationCycleActiveSubmitterCount<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleActiveSubmitterCount<X>>`
  ``LastNegotiationCycleActiveSubmitterCount<X>``:
     The integer number of submitters the *condor\_negotiator* attempted
     to negotiate with in the negotiation cycle. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
-    ` <index://LastNegotiationCycleCandidateSlots<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleCandidateSlots<X>>`
  ``LastNegotiationCycleCandidateSlots<X>``:
     The number of slot ClassAds after filtering by
     ``NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT``
@@ -31,28 +31,28 @@ Negotiator ClassAd Attributes
     number of slots actually considered for matching. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
-    ` <index://LastNegotiationCycleDuration<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleDuration<X>>`
  ``LastNegotiationCycleDuration<X>``:
     The number of seconds that it took to complete the negotiation
     cycle. The number ``<X>`` appended to the attribute name indicates
     how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleEnd<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleEnd<X>>`
  ``LastNegotiationCycleEnd<X>``:
     The time, represented as the number of seconds since the Unix epoch,
     at which the negotiation cycle ended. The number ``<X>`` appended to
     the attribute name indicates how many negotiation cycles ago this
     cycle happened.
-    ` <index://LastNegotiationCycleMatches<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleMatches<X>>`
  ``LastNegotiationCycleMatches<X>``:
     The number of successful matches that were made in the negotiation
     cycle. The number ``<X>`` appended to the attribute name indicates
     how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleMatchRate<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleMatchRate<X>>`
  ``LastNegotiationCycleMatchRate<X>``:
     The number of matched jobs divided by the duration of this cycle
     giving jobs per second. The number ``<X>`` appended to the attribute
     name indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleMatchRateSustained<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleMatchRateSustained<X>>`
  ``LastNegotiationCycleMatchRateSustained<X>``:
     The number of matched jobs divided by the period of this cycle
     giving jobs per second. The period is the time elapsed between the
@@ -60,57 +60,57 @@ Negotiator ClassAd Attributes
     rate includes the interval between cycles. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
-    ` <index://LastNegotiationCycleNumIdleJobs<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleNumIdleJobs<X>>`
  ``LastNegotiationCycleNumIdleJobs<X>``:
     The number of idle jobs considered for matchmaking. The number
     ``<X>`` appended to the attribute name indicates how many
     negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleNumJobsConsidered<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleNumJobsConsidered<X>>`
  ``LastNegotiationCycleNumJobsConsidered<X>``:
     The number of jobs requests returned from the schedulers for
     consideration. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleNumSchedulers<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleNumSchedulers<X>>`
  ``LastNegotiationCycleNumSchedulers<X>``:
     The number of individual schedulers negotiated with during
     matchmaking. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCyclePeriod<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCyclePeriod<X>>`
  ``LastNegotiationCyclePeriod<X>``:
     The number of seconds elapsed between the end of the previous
     negotiation cycle and the end of this cycle. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
-    ` <index://LastNegotiationCyclePhase1Duration<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCyclePhase1Duration<X>>`
  ``LastNegotiationCyclePhase1Duration<X>``:
     The duration, in seconds, of Phase 1 of the negotiation cycle: the
     process of getting submitter and machine ClassAds from the
     *condor\_collector*. The number ``<X>`` appended to the attribute
     name indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCyclePhase2Duration<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCyclePhase2Duration<X>>`
  ``LastNegotiationCyclePhase2Duration<X>``:
     The duration, in seconds, of Phase 2 of the negotiation cycle: the
     process of filtering slots and processing accounting group
     configuration. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCyclePhase3Duration<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCyclePhase3Duration<X>>`
  ``LastNegotiationCyclePhase3Duration<X>``:
     The duration, in seconds, of Phase 3 of the negotiation cycle:
     sorting submitters by priority. The number ``<X>`` appended to the
     attribute name indicates how many negotiation cycles ago this cycle
     happened.
-    ` <index://LastNegotiationCyclePhase4Duration<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCyclePhase4Duration<X>>`
  ``LastNegotiationCyclePhase4Duration<X>``:
     The duration, in seconds, of Phase 4 of the negotiation cycle: the
     process of matching slots to jobs in conjunction with the
     schedulers. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleRejections<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleRejections<X>>`
  ``LastNegotiationCycleRejections<X>``:
     The number of rejections that occurred in the negotiation cycle. The
     number ``<X>`` appended to the attribute name indicates how many
     negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleSlotShareIter<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleSlotShareIter<X>>`
  ``LastNegotiationCycleSlotShareIter<X>``:
     The number of iterations performed during the negotiation cycle.
     Each iteration includes the reallocation of remaining slots to
@@ -121,7 +121,7 @@ Negotiator ClassAd Attributes
     :index:`GROUP_QUOTA_MAX_ALLOCATION_ROUNDS<single: GROUP_QUOTA_MAX_ALLOCATION_ROUNDS>`. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
-    ` <index://LastNegotiationCycleSubmittersFailed<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleSubmittersFailed<X>>`
  ``LastNegotiationCycleSubmittersFailed<X>``:
     A string containing a space and comma-separated list of the names of
     all submitters who failed to negotiate in the negotiation cycle. One
@@ -132,7 +132,7 @@ Negotiator ClassAd Attributes
     separately in ``LastNegotiationCycleSubmittersOutOfTime<X>``. The
     number ``<X>`` appended to the attribute name indicates how many
     negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleSubmittersOutOfTime<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleSubmittersOutOfTime<X>>`
  ``LastNegotiationCycleSubmittersOutOfTime<X>``:
     A string containing a space and comma separated list of the names of
     all submitters who ran out of time due to
@@ -146,18 +146,18 @@ Negotiator ClassAd Attributes
     submitters who encountered their fair-share slot limit during the
     negotiation cycle. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleTime<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleTime<X>>`
  ``LastNegotiationCycleTime<X>``:
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which the negotiation cycle
     started. The number ``<X>`` appended to the attribute name indicates
     how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleTotalSlots<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleTotalSlots<X>>`
  ``LastNegotiationCycleTotalSlots<X>``:
     The total number of slot ClassAds received by the
     *condor\_negotiator*. The number ``<X>`` appended to the attribute
     name indicates how many negotiation cycles ago this cycle happened.
-    ` <index://LastNegotiationCycleTrimmedSlots<X>;ClassAd Negotiator attribute>`__
+    :index:`ClassAd Negotiator attribute<single: ClassAd Negotiator attribute; LastNegotiationCycleTrimmedSlots<X>>`
  ``LastNegotiationCycleTrimmedSlots<X>``:
     The number of slot ClassAds left after trimming currently claimed
     slots (when enabled). The number ``<X>`` appended to the attribute

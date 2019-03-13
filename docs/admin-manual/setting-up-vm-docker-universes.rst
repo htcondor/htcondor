@@ -126,7 +126,7 @@ To work around this problem:
 
 -  If using file transfer (the submit description file contains
    **vmware\_should\_transfer\_files =
-   true**\ ` <index://vmware_should_transfer_files = true;submit commands>`__),
+   true**\ :index:`submit commands<single: submit commands; vmware_should_transfer_files = true>`),
    then modify any configuration variable ``EXECUTE``
    :index:`EXECUTE<single: EXECUTE>` values on all execute machines, such that they
    do not contain symbolic link path components.

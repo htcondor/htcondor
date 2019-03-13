@@ -1,14 +1,12 @@
-      
-
 Configuration Macros
 ====================
 
 The section contains a list of the individual configuration macros for
 HTCondor. Before attempting to set up HTCondor configuration, you should
-probably read the introduction to configuration section ( `Introduction
+probably read the introduction to configuration section (`Introduction
 to
 Configuration <../admin-manual/introduction-to-configuration.html>`__)
-and possibly the configuration template section ( `Configuration
+and possibly the configuration template section (`Configuration
 Templates <../admin-manual/configuration-templates.html>`__).
 
 The settings that control the policy under which HTCondor will start,
@@ -26,15 +24,17 @@ section \ `3.5.4 <#x33-1910003.5.4>`__ on “Network-Related Configuration
 File Entries”, and section \ `3.5.5 <#x33-1920003.5.5>`__ on “Shared
 File System Configuration File Entries”.
 
- ``CONDOR_HOST``
-    This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
-    Normally the *condor\_collector* and *condor\_negotiator* would run
-    on the same machine. If for some reason they were not run on the
-    same machine, ``$(CONDOR_HOST)`` would not be needed. Some of the
-    host-based security macros use ``$(CONDOR_HOST)`` by default. See
-    section \ `Security <../admin-manual/security.html>`__, on Setting
-    up IP/host-based security in HTCondor for details.
- ``COLLECTOR_HOST``
+``CONDOR_HOST``
+
+This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
+Normally the *condor\_collector* and *condor\_negotiator* would run
+on the same machine. If for some reason they were not run on the
+same machine, ``$(CONDOR_HOST)`` would not be needed. Some of the
+host-based security macros use ``$(CONDOR_HOST)`` by default. See
+section \ `Security <../admin-manual/security.html>`__, on Setting
+up IP/host-based security in HTCondor for details.
+
+``COLLECTOR_HOST``
     The host name of the machine where the *condor\_collector* is
     running for your pool. Normally, it is defined relative to the
     ``$(CONDOR_HOST)`` macro. There is no default value for this macro;

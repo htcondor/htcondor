@@ -42,7 +42,7 @@ Each *DAGInputFile* contains commands to direct the submission of jobs
 implied by the nodes of a DAG to HTCondor. Extensive documentation is in
 the HTCondor User Manual section on DAGMan.
 :index:`email notification<single: email notification; in DAGs>`
-` <index://e-mail in DAGs;notification>`__
+:index:`notification<single: notification; e-mail in DAGs>`
 
 Some options may be specified on the command line or in the
 configuration or in a node job’s submit description file. Precedence is

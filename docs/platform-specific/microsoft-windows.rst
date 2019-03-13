@@ -3,7 +3,7 @@
 Microsoft Windows
 =================
 
-` <index://Windows;platform-specific information>`__
+:index:`platform-specific information<single: platform-specific information; Windows>`
 
 Windows is a strategic platform for HTCondor, and therefore we have been
 working toward a complete port to Windows. Our goal is to make HTCondor
@@ -732,6 +732,6 @@ Some differences between HTCondor for Unix -vs- HTCondor for Windows
    and where it happened. This information can be used by the HTCondor
    developers to fix the problem.
 
-` <index://Windows;platform-specific information>`__
+:index:`platform-specific information<single: platform-specific information; Windows>`
 
       

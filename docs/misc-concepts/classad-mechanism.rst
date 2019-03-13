@@ -263,7 +263,7 @@ given as
     ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 
 Optional parameters are given within square brackets.
-` <index://eval();ClassAd functions>`__
+:index:`ClassAd functions<single: ClassAd functions; eval()>`
 
  ``AnyType eval(AnyType Expr)``
     Evaluates ``Expr`` as a string and then returns the result of
@@ -285,7 +285,7 @@ Optional parameters are given within square brackets.
     because HTCondor needs to determine which ClassAd attributes are
     significant for matchmaking purposes, and indirect references from
     within the string passed to eval() will not be counted.
-    ` <index://unparse();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; unparse()>`
 
  ``String unparse(Attribute attr)``
     This function looks up the value of the provided attribute and
@@ -296,7 +296,7 @@ Optional parameters are given within square brackets.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given or the argument is not an attribute reference.
-    ` <index://ifThenElse();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; ifThenElse()>`
 
 
 ``AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)``
@@ -317,49 +317,49 @@ Optional parameters are given within square brackets.
     evaluation, so expressions are only evaluated as defined.
 
     This function returns ``ERROR`` if other than exactly 3 arguments
-    are given. ` <index://isUndefined();ClassAd functions>`__
+    are given. :index:`ClassAd functions<single: ClassAd functions; isUndefined()>`
 
  ``Boolean isUndefined(AnyType Expr)``
     Returns ``True``, if ``Expr`` evaluates to ``UNDEFINED``. Returns
     ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://isError();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; isError()>`
 
  ``Boolean isError(AnyType Expr)``
     Returns ``True``, if ``Expr`` evaluates to ``ERROR``. Returns
     ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://isString();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; isString()>`
 
  ``Boolean isString(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``String``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://isInteger();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; isInteger()>`
 
  ``Boolean isInteger(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``Integer``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://isReal();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; isReal()>`
 
  ``Boolean isReal(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``Real``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://isBoolean();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; isBoolean()>`
 
  ``Boolean isBoolean(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives the integer
     value 0 or 1. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://int();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; int()>`
 
  ``Integer int(AnyType Expr)``
     Returns the integer value as defined by ``Expr``. Where the type of
@@ -371,7 +371,7 @@ Optional parameters are given within square brackets.
     ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://real();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; real()>`
 
  ``Real real(AnyType Expr)``
     Returns the real value as defined by ``Expr``. Where the type of the
@@ -383,7 +383,7 @@ Optional parameters are given within square brackets.
     returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://string();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; string()>`
 
  ``String string(AnyType Expr)``
     Returns the string that results from the evaluation of ``Expr``.
@@ -391,7 +391,7 @@ Optional parameters are given within square brackets.
     ``Expr`` is ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://floor();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; floor()>`
 
  ``Integer floor(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
@@ -403,7 +403,7 @@ Optional parameters are given within square brackets.
     ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://ceiling();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; ceiling()>`
 
  ``Integer ceiling(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
@@ -415,7 +415,7 @@ Optional parameters are given within square brackets.
     ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://pow();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; pow()>`
 
  ``Integer pow(Integer base, Integer exponent)``
  OR ``Real pow(Integer base, Integer exponent)``
@@ -427,7 +427,7 @@ Optional parameters are given within square brackets.
     or ``exponent`` is a real, then a real value is returned. An
     invocation with ``exponent=0`` or ``exponent=0.0``, for any value of
     ``base``, including 0 or 0.0, returns the value 1 or 1.0, type
-    appropriate. ` <index://quantize();ClassAd functions>`__
+    appropriate. :index:`ClassAd functions<single: ClassAd functions; quantize()>`
  ``Integer quantize(AnyType a, Integer b)``
  OR ``Real quantize(AnyType a, Real b)``
  OR ``AnyType quantize(AnyType a, AnyType list b)``
@@ -463,7 +463,7 @@ Optional parameters are given within square brackets.
              3.0   = quantize(2.7, {1, 2, 0.5}) 
              ERROR = quantize(3, {1, 2, "A"})
 
-    ` <index://round();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; round()>`
 
  ``Integer round(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
@@ -478,7 +478,7 @@ Optional parameters are given within square brackets.
     value does not fit into 32 bits, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://random();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; random()>`
 
  ``Integer random([ AnyType Expr ])``
     Where the optional argument ``Expr`` evaluates to type ``Integer``
@@ -488,14 +488,14 @@ Optional parameters are given within square brackets.
     Returns ``ERROR`` in all other cases.
 
     This function returns ``ERROR`` if greater than 1 argument is given.
-    ` <index://strcat();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; strcat()>`
 
  ``String strcat(AnyType Expr1 [ , AnyType Expr2 …])``
     Returns the string which is the concatenation of all arguments,
     where all arguments are converted to type ``String`` by function
     ``string(Expr)``. Returns ``ERROR`` if any argument evaluates to
     ``UNDEFINED`` or ``ERROR``.
-    ` <index://join();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; join()>`
  ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 …])``
  OR ``String join(String sep, List list``
  OR ``String join(List list``
@@ -520,7 +520,7 @@ Optional parameters are given within square brackets.
             "abc"   = join(split("a b c")) 
             "a;b;c" = join(";", split("a b c"))
 
-    ` <index://substr();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; substr()>`
 
  ``String substr(String s, Integer offset [ , Integer length ])``
     Returns the substring of ``s``, from the position indicated by
@@ -538,7 +538,7 @@ Optional parameters are given within square brackets.
     returned.
 
     This function returns ``ERROR`` if greater than 3 or less than 2
-    arguments are given. ` <index://strcmp();ClassAd functions>`__
+    arguments are given. :index:`ClassAd functions<single: ClassAd functions; strcmp()>`
 
  ``Integer strcmp(AnyType Expr1, AnyType Expr2)``
     Both arguments are converted to type ``String`` by function
@@ -554,11 +554,11 @@ Optional parameters are given within square brackets.
     evaluates to ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than 2 arguments are given.
-    ` <index://stricmp();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stricmp()>`
 
  ``Integer stricmp(AnyType Expr1, AnyType Expr2)``
     This function is the same as ``strcmp``, except that letter case is
-    not significant. ` <index://toUpper();ClassAd functions>`__
+    not significant. :index:`ClassAd functions<single: ClassAd functions; toUpper()>`
  ``String toUpper(AnyType Expr)``
     The single argument is converted to type ``String`` by function
     ``string(Expr)``. The return value is this string, with all lower
@@ -566,7 +566,7 @@ Optional parameters are given within square brackets.
     ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://toLower();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; toLower()>`
 
  ``String toLower(AnyType Expr)``
     The single argument is converted to type ``String`` by function
@@ -575,7 +575,7 @@ Optional parameters are given within square brackets.
     ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://size();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; size()>`
 
  ``Integer size(AnyType Expr)``
     Returns the number of characters in the string, after calling
@@ -583,14 +583,14 @@ Optional parameters are given within square brackets.
     ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
-    given. ` <index://split();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; split()>`
 
  ``List split(String s [ , String tokens ] )``
     Returns a list of the substrings of ``s`` that have been split up by
     using any of the characters within string ``tokens``. If ``tokens``
     is not specified, then all white space characters are used to
     delimit the string.
-    ` <index://splitUserName();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; splitUserName()>`
  ``List splitUserName(String Name)``
     Returns a list of two strings. Where ``Name`` includes an ``@``
     character, the first string in the list will be the substring that
@@ -601,7 +601,7 @@ Optional parameters are given within square brackets.
     the first string in the list will be ``Name``, and the second string
     in the list will be the empty string. Thus, if ``Name`` is
     ``"username"``, then the returned list will be {"username", ""}.
-    ` <index://splitSlotName();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; splitSlotName()>`
  ``List splitSlotName(String Name)``
     Returns a list of two strings. Where ``Name`` includes an ``@``
     character, the first string in the list will be the substring that
@@ -612,11 +612,11 @@ Optional parameters are given within square brackets.
     then the first string in the list will be the empty string, and the
     second string in the list will be ``Name``, Thus, if ``Name`` is
     ``"machinename"``, then the returned list will be
-    {"", "machinename"}. ` <index://time();ClassAd functions>`__
+    {"", "machinename"}. :index:`ClassAd functions<single: ClassAd functions; time()>`
  ``Integer time()``
     Returns the current coordinated universal time. This is the time, in
     seconds, since midnight of January 1, 1970.
-    ` <index://formatTime();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; formatTime()>`
  ``String formatTime([ Integer time ] [ , String format ])``
     Returns a formatted string that is a representation of ``time``. The
     argument ``time`` is interpreted as coordinated universal time in
@@ -678,7 +678,7 @@ Optional parameters are given within square brackets.
      ``%Z``
         time zone name, if any
 
-    ` <index://interval();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; interval()>`
 
  ``String interval(Integer seconds)``
     Uses ``seconds`` to return a string of the form ``days+hh:mm:ss``.
@@ -686,7 +686,7 @@ Optional parameters are given within square brackets.
     are omitted from the string. For example, ``seconds`` of 67 becomes
     "1:07". A second example, ``seconds`` of 1472523 = 17\*24\*60\*60 +
     1\*60\*60 + 2\*60 + 3, results in the string "17+1:02:03".
-    ` <index://debug();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; debug()>`
  ``AnyType debug(AnyType expression)``
     This function evaluates its argument, and it returns the result.
     Thus, it is a no-operation. However, a side-effect of the function
@@ -698,7 +698,7 @@ Optional parameters are given within square brackets.
     wrapping the expression in this debug() function will log
     information about each component of the expression to the log file,
     making it easier to understand the expression.
-    ` <index://envV1ToV2();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; envV1ToV2()>`
  ``String envV1ToV2(String old_env)``
     This function converts a set of environment variables from the old
     HTCondor syntax to the new syntax. The single argument should
@@ -708,7 +708,7 @@ Optional parameters are given within square brackets.
     variables using the new HTCondor syntax (usually stored in the job
     ClassAd attribute ``Environment``). If the argument evaluates to
     ``UNDEFINED``, then the result is also ``UNDEFINED``.
-    ` <index://mergeEnvironment();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; mergeEnvironment()>`
  ``String mergeEnvironment(String env1 [ , String env2, ... ])``
     This function merges multiple sets of environment variables into a
     single set. If multiple arguments include the same variable, the one
@@ -725,7 +725,7 @@ Each character within the delimiter string delimits individual strings
 within a list of strings that is given by a single string. The default
 delimiter contains the comma and space characters. A string within the
 list is ended (delimited) by one or more characters within the delimiter
-string. ` <index://stringListSize();ClassAd functions>`__
+string. :index:`ClassAd functions<single: ClassAd functions; stringListSize()>`
 
  ``Integer stringListSize(String list [ , String delimiter ])``
     Returns the number of elements in the string ``list``, as delimited
@@ -733,7 +733,7 @@ string. ` <index://stringListSize();ClassAd functions>`__
     argument is not a string.
 
     This function returns ``ERROR`` if other than 1 or 2 arguments are
-    given. ` <index://stringListSum();ClassAd functions>`__
+    given. :index:`ClassAd functions<single: ClassAd functions; stringListSum()>`
 
  ``Integer stringListSum(String list [ , String delimiter ])``
  OR ``Real stringListSum(String list [ , String delimiter ])``
@@ -743,13 +743,13 @@ string. ` <index://stringListSize();ClassAd functions>`__
     in the list is a real value (noninteger), the return value is a
     real. If any item does not represent an integer or real value, the
     return value is ``ERROR``.
-    ` <index://stringListAvg();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringListAvg()>`
  ``Real stringListAvg(String list [ , String delimiter ])``
     Sums and returns the real-valued average of all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If any
     item does not represent an integer or real value, the return value
     is ``ERROR``. A list with 0 items (the empty list) returns the value
-    0.0. ` <index://stringListMin();ClassAd functions>`__
+    0.0. :index:`ClassAd functions<single: ClassAd functions; stringListMin()>`
  ``Integer stringListMin(String list [ , String delimiter ])``
  OR ``Real stringListMin(String list [ , String delimiter ])``
     Finds and returns the minimum value from all items in the string
@@ -759,7 +759,7 @@ string. ` <index://stringListSize();ClassAd functions>`__
     value is a real. If any item does not represent an integer or real
     value, the return value is ``ERROR``. A list with 0 items (the empty
     list) returns the value ``UNDEFINED``.
-    ` <index://stringListMax();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringListMax()>`
  ``Integer stringListMax(String list [ , String delimiter ])``
  OR ``Real stringListMax(String list [ , String delimiter ])``
     Finds and returns the maximum value from all items in the string
@@ -769,7 +769,7 @@ string. ` <index://stringListSize();ClassAd functions>`__
     value is a real. If any item does not represent an integer or real
     value, the return value is ``ERROR``. A list with 0 items (the empty
     list) returns the value ``UNDEFINED``.
-    ` <index://stringListMember();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringListMember()>`
 
 ``Boolean stringListMember(String x, String list [ , String delimiter ])``
     Returns ``TRUE`` if item ``x`` is in the string ``list``, as
@@ -777,12 +777,12 @@ string. ` <index://stringListSize();ClassAd functions>`__
     item ``x`` is not in the string ``list``. Comparison is done with
     ``strcmp()``. The return value is ``ERROR``, if any of the arguments
     are not strings.
-    ` <index://stringListIMember();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringListIMember()>`
 
 ``Boolean stringListIMember(String x, String list [ , String delimiter ])``
     Same as ``stringListMember()``, but comparison is done with
     ``stricmp()``, so letter case is not relevant.
-    ` <index://stringListsIntersect();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringListsIntersect()>`
 
 ``Integer stringListsIntersect(String list1, String list2 [ , String delimiter ])``
     Returns ``TRUE`` if the lists contain any matching elements, and
@@ -809,7 +809,7 @@ characters other than these as options are ignored.
  ``S`` or ``s``
     The period matches any character, including the newline character.
 
-` <index://regexp();ClassAd functions>`__
+:index:`ClassAd functions<single: ClassAd functions; regexp()>`
 
  ``Boolean regexp(String pattern, String target [ , String options ])``
     Uses the description of a regular expression given by string
@@ -817,7 +817,7 @@ characters other than these as options are ignored.
     when ``target`` is a regular expression as described by ``pattern``.
     Returns ``FALSE`` otherwise. If any argument is not a string, or if
     ``pattern`` does not describe a valid regular expression, returns
-    ``ERROR``. ` <index://regexps();ClassAd functions>`__
+    ``ERROR``. :index:`ClassAd functions<single: ClassAd functions; regexps()>`
  ``String regexps``
     ``(String pattern, String target,      String substitute [ , String options ]) ``
     Uses the description of a regular expression given by string
@@ -825,7 +825,7 @@ characters other than these as options are ignored.
     is a regular expression as described by ``pattern``, the string
     ``substitute`` is returned, with backslash expansion performed. If
     any argument is not a string, returns ``ERROR``.
-    ` <index://stringList_regexpMember();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; stringList_regexpMember()>`
  ``Boolean stringList_regexpMember``
     ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
     Uses the description of a regular expression given by string
@@ -836,24 +836,24 @@ characters other than these as options are ignored.
     match is performed. Returns ``FALSE`` if ``pattern`` does not match
     any entries in ``list``. The return value is ``ERROR``, if any of
     the arguments are not strings, or if ``pattern`` is not a valid
-    regular expression. ` <index://userHome();ClassAd functions>`__
+    regular expression. :index:`ClassAd functions<single: ClassAd functions; userHome()>`
  ``String userHome(String userName [ , String default ])``
     Returns the home directory of the given user as configured on the
     current system (determined using the getpwdnam() call). (Returns
     ``default`` if the ``default`` argument is passed and the home
     directory of the user is not defined.)
-    ` <index://userMap();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; userMap()>`
  ``List userMap(String mapSetName, String userName)``
     Map an input string using the given mapping set. Returns a list of
     groups to which the user belongs.
-    ` <index://userMap();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; userMap()>`
 
 ``String userMap(String mapSetName, String userName, String preferredGroup)``
     Map an input string using the given mapping set. Returns a string,
     which is the preferred group if the user is in that group; otherwise
     it is the first group to which the user belongs, or undefined if the
     user belongs to no groups.
-    ` <index://userMap();ClassAd functions>`__
+    :index:`ClassAd functions<single: ClassAd functions; userMap()>`
 
 ``String userMap(String mapSetName, String userName, String preferredGroup, String defaultGroup)``
     Map an input string using the given mapping set. Returns a string,
@@ -888,10 +888,10 @@ error values evaluate to themselves.
 Attribute References
 ''''''''''''''''''''
 
-` <index://scope of evaluation, MY.;ClassAd>`__
-` <index://scope of evaluation, TARGET.;ClassAd>`__
-` <index://TARGET., ClassAd scope resolution prefix>`__
-` <index://MY., ClassAd scope resolution prefix>`__
+:index:`ClassAd<single: ClassAd; scope of evaluation, MY.>`
+:index:`ClassAd<single: ClassAd; scope of evaluation, TARGET.>`
+:index:`TARGET., ClassAd scope resolution prefix<single: TARGET., ClassAd scope resolution prefix>`
+:index:`MY., ClassAd scope resolution prefix<single: MY., ClassAd scope resolution prefix>`
 
 Since the expression evaluation is being carried out in the context of
 two ClassAds, there is a potential for name space ambiguities. The

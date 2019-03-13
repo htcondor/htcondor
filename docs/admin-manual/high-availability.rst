@@ -106,7 +106,7 @@ configuration variables used to set timing and polling intervals.
 Working with Remote Job Submission
 ''''''''''''''''''''''''''''''''''
 
-` <index://of job queue, with remote job submission;High Availability>`__
+:index:`High Availability<single: High Availability; of job queue, with remote job submission>`
 
 Remote job submission requires identification of the job queue,
 submitting with a command similar to:

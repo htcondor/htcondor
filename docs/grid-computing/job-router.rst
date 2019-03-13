@@ -389,28 +389,28 @@ may appear in a Routing Table entry.
     name. When ``False``, it indicates that if there is a previous entry
     by the same name, the previous entry should be retained and this
     entry should be ignored. The default value is ``True``.
-    ` <index://Set_<ATTR>;Job Router Routing Table ClassAd attribute>`__
+    :index:`Job Router Routing Table ClassAd attribute<single: Job Router Routing Table ClassAd attribute; Set_<ATTR>>`
  Set\_<ATTR>
     Sets the value of ``<ATTR>`` in the routed copy’s job ClassAd to the
     specified value. An example of an attribute that might be set is
     ``PeriodicRemove``. For example, if the routed job goes on hold or
     stays idle for too long, remove it and return the original copy of
     the job to a normal state.
-    ` <index://Eval_Set_<ATTR>;Job Router Routing Table ClassAd attribute>`__
+    :index:`Job Router Routing Table ClassAd attribute<single: Job Router Routing Table ClassAd attribute; Eval_Set_<ATTR>>`
  Eval\_Set\_<ATTR>
     Defines an expression. The expression is evaluated, and the
     resulting value sets the value of the routed copy’s job ClassAd
     attribute ``<ATTR>``. Use this attribute to set a custom or local
     value, especially for modifying an attribute which may have been
     already specified in a default routing table.
-    ` <index://Copy_<ATTR>;Job Router Routing Table ClassAd attribute>`__
+    :index:`Job Router Routing Table ClassAd attribute<single: Job Router Routing Table ClassAd attribute; Copy_<ATTR>>`
  Copy\_<ATTR>
     Defined with the name of a routed copy ClassAd attribute. Copies the
     value of ``<ATTR>`` from the original job ClassAd into the specified
     attribute named of the routed copy. Useful to save the value of an
     expression, before replacing it with something else that references
     the original expression.
-    ` <index://Delete_<ATTR>;Job Router Routing Table ClassAd attribute>`__
+    :index:`Job Router Routing Table ClassAd attribute<single: Job Router Routing Table ClassAd attribute; Delete_<ATTR>>`
  Delete\_<ATTR>
     Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
     this attribute in the routing table entry is ignored.
@@ -420,7 +420,7 @@ may appear in a Routing Table entry.
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
     Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    ` <index://<Keyword>_HOOK_TRANSLATE_JOB>`__ and transformation rules
+    :index:`<Keyword>_HOOK_TRANSLATE_JOB<single: <Keyword>_HOOK_TRANSLATE_JOB>` and transformation rules
     in the routing table are applied during the job transformation. The
     routing table attribute ``GridResource`` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid

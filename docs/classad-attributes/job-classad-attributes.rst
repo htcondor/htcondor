@@ -975,16 +975,16 @@ Job ClassAd Attributes
 
     :index:`ClassAd job attribute<single: ClassAd job attribute; JobUniverse>`
     :index:`JobUniverse<single: JobUniverse; job ClassAd attribute>`
-    :index:`job<single: job; universe>` ` <index://standard = 1>`__
-    ` <index://pipe = 2 (no longer used)>`__
-    ` <index://linda = 3 (no longer used)>`__
-    ` <index://pvm = 4 (no longer used)>`__
-    ` <index://vanilla = 5, docker = 5>`__
-    ` <index://pvmd = 6 (no longer used)>`__
-    ` <index://scheduler = 7>`__ ` <index://mpi = 8>`__
-    ` <index://grid = 9>`__ ` <index://parallel = 10>`__
-    ` <index://java = 11>`__ ` <index://local = 12>`__
-    ` <index://vm = 13>`__
+    :index:`job<single: job; universe>` :index:`standard = 1<single: standard = 1>`
+    :index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used)>`
+    :index:`linda = 3 (no longer used)<single: linda = 3 (no longer used)>`
+    :index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used)>`
+    :index:`vanilla = 5, docker = 5<single: vanilla = 5, docker = 5>`
+    :index:`pvmd = 6 (no longer used)<single: pvmd = 6 (no longer used)>`
+    :index:`scheduler = 7<single: scheduler = 7>` :index:`mpi = 8<single: mpi = 8>`
+    :index:`grid = 9<single: grid = 9>` :index:`parallel = 10<single: parallel = 10>`
+    :index:`java = 11<single: java = 11>` :index:`local = 12<single: local = 12>`
+    :index:`vm = 13<single: vm = 13>`
 
  ``JobUniverse``:
     Integer which indicates the job universe.
@@ -1097,8 +1097,8 @@ Job ClassAd Attributes
  ``LocalUserCpu``:
     An accumulated number of seconds of user CPU time that the job
     caused to the machine upon which the job was submitted.
-    ` <index://MachineAttr<X><N>;ClassAd job attribute>`__
-    ` <index://job ClassAd attribute;MachineAttr<X><N>>`__
+    :index:`ClassAd job attribute<single: ClassAd job attribute; MachineAttr<X><N>>`
+    :index:`MachineAttr<X><N><single: MachineAttr<X><N>; job ClassAd attribute>`
  ``MachineAttr<X><N>``:
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable
@@ -2014,8 +2014,8 @@ written to the job’s execute directory while the job is running.
     allocated to the slot. With dynamically-allocated slots, it is based
     upon the job attribute ``RequestMemory``, but may be larger due to
     the minimum given to a dynamic slot.
-    ` <index://<Name>Provisioned;ClassAd job attribute>`__
-    ` <index://job ClassAd attribute;<Name>Provisioned>`__
+    :index:`ClassAd job attribute<single: ClassAd job attribute; <Name>Provisioned>`
+    :index:`<Name>Provisioned<single: <Name>Provisioned; job ClassAd attribute>`
  ``<Name>Provisioned``:
     The amount of the custom resource identified by ``<Name>`` allocated
     to the job. For jobs using GPUs, ``<Name>`` will be ``GPUs``. With

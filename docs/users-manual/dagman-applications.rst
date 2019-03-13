@@ -3,8 +3,8 @@
 DAGMan Applications
 ===================
 
-:index:`DAGMan<single: DAGMan>` ` <index://directed acyclic graph (DAG)>`__
-` <index://Directed Acyclic Graph Manager (DAGMan)>`__
+:index:`DAGMan<single: DAGMan>` :index:`directed acyclic graph (DAG)<single: directed acyclic graph (DAG)>`
+:index:`Directed Acyclic Graph Manager (DAGMan)<single: Directed Acyclic Graph Manager (DAGMan)>`
 :index:`job<single: job; dependencies within>`
 
 A directed acyclic graph (DAG) can be used to represent a set of
@@ -1002,7 +1002,7 @@ or POST script.
 Stopping the Entire DAG
 '''''''''''''''''''''''
 
-` <index://ABORT-DAG-ON command;DAG input file>`__
+:index:`DAG input file<single: DAG input file; ABORT-DAG-ON command>`
 :index:`DAGMan<single: DAGMan; aborting a DAG>`
 
 The *ABORT-DAG-ON* command provides a way to abort the entire DAG if a
@@ -1065,7 +1065,7 @@ Variable Values Associated with Nodes
 '''''''''''''''''''''''''''''''''''''
 
 :index:`DAG input file<single: DAG input file; VARS command>`
-` <index://VARS (macro for submit description file);DAGMan>`__
+:index:`DAGMan<single: DAGMan; VARS (macro for submit description file)>`
 
 Macros defined for DAG nodes can be used within the submit description
 file of the node job. The *VARS* command provides a method for defining
@@ -1189,7 +1189,7 @@ then the argument will be ``bar``.
 
  Special characters within VARS string definitions
 
-` <index://VARS (use of special characters);DAGMan>`__
+:index:`DAGMan<single: DAGMan; VARS (use of special characters)>`
 
 The value defined for a macro may contain spaces and tabs. It is also
 possible to have double quote marks and backslashes within a value. In
@@ -1669,7 +1669,7 @@ the node job, unless the job requests it using the submit command
 Single Submission of Multiple, Independent DAGs
 '''''''''''''''''''''''''''''''''''''''''''''''
 
-` <index://single submission of multiple, independent DAGs;DAGMan>`__
+:index:`DAGMan<single: DAGMan; single submission of multiple, independent DAGs>`
 
 A single use of *condor\_submit\_dag* may execute multiple, independent
 DAGs. Each independent DAG has its own, distinct DAG input file. These
@@ -3316,7 +3316,7 @@ A Machine-Readable Event History, the jobstate.log File
 
 :index:`DAG input file<single: DAG input file; JOBSTATE_LOG command>`
 :index:`DAGMan<single: DAGMan; jobstate.log file>`
-` <index://machine-readable event history;DAGMan>`__
+:index:`DAGMan<single: DAGMan; machine-readable event history>`
 
 DAGMan can produce a machine-readable history of events. The
 ``jobstate.log`` file is designed for use by the Pegasus Workflow
