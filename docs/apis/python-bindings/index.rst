@@ -4,8 +4,6 @@ Python Bindings
 The HTCondor Python bindings expose a Pythonic interface to the HTCondor client libraries.
 They utilize the same C++ libraries as HTCondor itself, meaning they have nearly the same behavior as the command line tools.
 
-Tutorials
----------
 
 :doc:`intro_tutorials/index`
     These tutorials cover the basics of the Python bindings and how to use them through a quick overview of the major components.
@@ -16,14 +14,12 @@ Tutorials
     The advanced tutorials are in-depth looks at specific pieces of the Python modules.
     Each is meant to be stand-alone and should only require knowledge from the introductory tutorials.
 
-API References
---------------
-
 :doc:`api/htcondor`
     Documentation for the public API of :mod:`htcondor`.
 
 :doc:`api/classad`
     Documentation for the public API of :mod:`classad`.
+
 
 .. toctree::
    :maxdepth: 2
@@ -33,4 +29,3 @@ API References
    advanced_tutorials/index
    api/htcondor
    api/classad
-
