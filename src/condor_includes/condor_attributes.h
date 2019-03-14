@@ -874,6 +874,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_ISSUER_NAMESPACE "IssuerNamespace"
 #define ATTR_SEC_ISSUER_KEYS "IssuerKeys"
 #define ATTR_SEC_LIMIT_AUTHORIZATION "LimitAuthorization"
+#define ATTR_SEC_TOKEN "Token"
+#define ATTR_SEC_TOKEN_LIFETIME "TokenLifetime"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

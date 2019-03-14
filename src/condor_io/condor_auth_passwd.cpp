@@ -1703,6 +1703,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 		if (!m_t_client.a_token.empty()) {
 			std::vector<std::string> authz;
+			time_t expiry = 0;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
 				if (decoded_jwt.has_payload_claim("scope")) {
@@ -1719,18 +1720,25 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 						authz.emplace_back(scope);
 					}
 				}
+				if (decoded_jwt.has_expires_at()) {
+					auto token_expiry = decoded_jwt.get_expires_at();
+					expiry = std::chrono::duration_cast<std::chrono::seconds>(token_expiry.time_since_epoch()).count();
+				}
 			} catch (...) {
 				dprintf(D_SECURITY, "PW: Unable to parse final token.\n");
 			}
+			classad::ClassAd ad;
 			if (!authz.empty()) {
 				std::stringstream ss;
 				for (const auto &auth : authz) {
 					ss << auth << ",";
 				}
-				classad::ClassAd ad;
 				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
-				mySock_->setPolicyAd(ad);
 			}
+			if (expiry > 0) {
+				ad.InsertAttr("TokenExpirationTime", expiry);
+			}
+			mySock_->setPolicyAd(ad);
 		}
 	}
 

@@ -2455,6 +2455,18 @@ description=File containing derived key matter for password auth.
 type=string
 tags=condor_auth_passwd
 
+[SEC_DERIVED_SECRETS_ISSUER_KEY]
+default=POOL
+description=Name of the key used to issue session tokens
+type=string
+tags=condor_auth_passwd
+
+[SEC_DERIVED_SECRETS_EXPIRATION]
+default=
+description=Default max expiration time of issued session tokens.
+type=int
+tags=condor_auth_passwd
+
 [EMAIL_DOMAIN]
 default=
 type=string
