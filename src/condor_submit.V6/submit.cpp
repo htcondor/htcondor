@@ -1180,11 +1180,11 @@ main( int argc, const char *argv[] )
 
 					fprintf(stdout,
 							"Locating a Sandbox for %lu jobs.\n",JobAdsArray.size());
-					MyString td_sinful;
-					MyString td_capability;
+					std::string td_sinful;
+					std::string td_capability;
 					ClassAd respad;
 					int invalid;
-					MyString reason;
+					std::string reason;
 
 					result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
 												JobAdsArray.size(),
@@ -1202,20 +1202,20 @@ main( int argc, const char *argv[] )
 						fprintf( stderr, 
 							"Schedd rejected sand box location request:\n");
 						respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-						fprintf( stderr, "\t%s\n", reason.Value());
+						fprintf( stderr, "\t%s\n", reason.c_str());
 						return 0;
 					}
 
 					respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 					respad.LookupString(ATTR_TREQ_CAPABILITY, td_capability);
 
-					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.Value(),
-						td_capability.Value());
+					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.c_str(),
+						td_capability.c_str());
 
 					fprintf(stdout,"Spooling data files for %lu jobs.\n",
 						JobAdsArray.size());
 
-					DCTransferD dctd(td_sinful.Value());
+					DCTransferD dctd(td_sinful.c_str());
 
 					result = dctd.upload_job_files( JobAdsArray.size(),
 											  JobAdsArray.data(),

@@ -48,7 +48,7 @@ int
 TransferD::read_files_handler(int /* cmd */, Stream *sock) 
 {
 	ReliSock *rsock = (ReliSock*)sock;
-	MyString capability;
+	std::string capability;
 	int protocol = FTP_UNKNOWN;
 	TransferRequest *treq = NULL;
 	MyString fquser;
@@ -117,7 +117,7 @@ TransferD::read_files_handler(int /* cmd */, Stream *sock)
 
 		dprintf(D_ALWAYS, "Client identity '%s' tried to read some files "
 			"using capability '%s', but there was no such capability. "
-			"Access denied.\n", fquser.Value(), capability.Value());
+			"Access denied.\n", fquser.Value(), capability.c_str());
 		return CLOSE_STREAM;
 	}
 
