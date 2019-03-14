@@ -166,8 +166,8 @@ NegotiationCycleStats::NegotiationCycleStats():
 static MyString MachineAdID(ClassAd * ad)
 {
 	ASSERT(ad);
-	MyString addr;
-	MyString name;
+	std::string addr;
+	std::string name;
 
 	// We should always be passed an ad with an ATTR_NAME.
 	ASSERT(ad->LookupString(ATTR_NAME, name));
@@ -1566,13 +1566,13 @@ negotiationTime ()
         dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
         submitterAds.Open();
         while (ClassAd* ad = submitterAds.Next()) {
-            MyString tname;
+            std::string tname;
             if (!ad->LookupString(ATTR_NAME, tname)) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
                 continue;
             }
             // this holds the submitter name, which includes group, if present
-            const string subname(tname.Value());
+            const string subname(tname);
 
             // is there a username separator?
             string::size_type pos = subname.find_last_of('@');
@@ -2791,7 +2791,7 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 
 	ClassAd *curr_ad = NULL;
 	ClassAd *prev_ad = NULL;
-	MyString curr_name, curr_addr, prev_name, prev_addr;
+	std::string curr_name, curr_addr, prev_name, prev_addr;
 	int min_prio=INT_MAX, max_prio=INT_MIN; // initialize to shut gcc up, the loop always sets before using.
 
 	submitterAds.Open();
@@ -2863,9 +2863,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 float groupQuota, const char* groupName)
 {
 	ClassAd		*submitter_ad;
-	MyString    submitterName;
-	MyString    scheddName;
-	MyString    scheddAddr;
+	std::string    submitterName;
+	std::string    scheddName;
+	std::string    scheddAddr;
 	int			result;
 	int			numStartdAds;
 	double      slotWeightTotal;
@@ -3029,12 +3029,12 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				totalTime = 0;
 			}
 
-			totalTimeSchedd = ScheddsTimeInCycle[scheddAddr.Value()];
+			totalTimeSchedd = ScheddsTimeInCycle[scheddAddr.c_str()];
 
 			if (( num_idle_jobs > 0 ) && (totalTime < MaxTimePerSubmitter) &&
 				(totalTimeSchedd < MaxTimePerSchedd)) {
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
-					submitterName.Value(), scheddAddr.Value());
+					submitterName.c_str(), scheddAddr.c_str());
 				dprintf(D_ALWAYS, "%d seconds so far for this submitter\n", totalTime);
 				dprintf(D_ALWAYS, "%d seconds so far for this schedd\n", totalTimeSchedd);
 			}
@@ -3044,7 +3044,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			double submitterUsage = 0.0;
 
 			calculateSubmitterLimit(
-				submitterName.Value(),
+				submitterName.c_str(),
 				groupName,
 				groupQuota,
 				groupusage,
@@ -3122,46 +3122,46 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
-					submitterName.Value());
+					submitterName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisSubmitter <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
-					submitterName.Value());
+					submitterName.c_str());
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this user, MAX_TIME_PER_USER is %d secs\n ",
 					totalTime, MaxTimePerSubmitter);
-				negotiation_cycle_stats[0]->submitters_out_of_time.insert(submitterName.Value());
+				negotiation_cycle_stats[0]->submitters_out_of_time.insert(submitterName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisSchedd <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
-					submitterName.Value());
+					submitterName.c_str());
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this schedd, MAX_TIME_PER_SCHEDD is %d secs\n ",
 					totalTimeSchedd, MaxTimePerSchedd);
-				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.Value());
+				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
-					submitterName.Value(),MaxTimePerCycle);
+					submitterName.c_str(),MaxTimePerCycle);
 				result = MM_DONE;
 			} else if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped as pieLeft < minSlotWeight\n",
-					submitterName.Value());
+					submitterName.c_str());
 				result = MM_RESUME;
 			} else {
 				int numMatched = 0;
 				time_t deadline = startTime + 
 					MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle, MIN(remainingTimeForThisSubmitter, remainingTimeForThisSchedd)));
-                if (negotiation_cycle_stats[0]->active_submitters.count(submitterName.Value()) <= 0) {
+                if (negotiation_cycle_stats[0]->active_submitters.count(submitterName.c_str()) <= 0) {
                     negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                 }
-				negotiation_cycle_stats[0]->active_submitters.insert(submitterName.Value());
-				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-				result=negotiate(groupName, submitterName.Value(), submitter_ad, submitterPrio,
+				negotiation_cycle_stats[0]->active_submitters.insert(submitterName.c_str());
+				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.c_str());
+				result=negotiate(groupName, submitterName.c_str(), submitter_ad, submitterPrio,
                               submitterLimit, submitterLimitUnclaimed,
 							  startdAds, claimIds, 
 							  ignore_submitter_limit,
@@ -3174,8 +3174,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
 					// negotiations in next spin
-					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
-                    negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName.Value());
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+                    negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName.c_str());
 					dprintf(D_FULLDEBUG, "  This submitter hit its submitterLimit.\n");
 					break;
 				case MM_DONE: 
@@ -3188,23 +3188,23 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					} else {
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
-						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", submitterName.Value());
-                        scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
-                        dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
-                                 accountant.GetWeightedResourcesUsed(submitterName.Value()));
+						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", submitterName.c_str());
+                        scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+                        dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
+                                 accountant.GetWeightedResourcesUsed(submitterName.c_str()));
 						submitterAds.Remove( submitter_ad );
 					}
 					break;
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
-					sockCache->invalidateSock( scheddAddr.Value() );
+					sockCache->invalidateSock( scheddAddr.c_str() );
 	
-					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
-					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
-						    accountant.GetWeightedResourcesUsed(submitterName.Value()));
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
+						    accountant.GetWeightedResourcesUsed(submitterName.c_str()));
 					submitterAds.Remove( submitter_ad );
-					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.Value());
+					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.c_str());
 			}
 		}
 		submitterAds.Close();
@@ -3230,8 +3230,8 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 {
 	Matchmaker* mm = (Matchmaker*)m;
 
-    MyString subname1;
-    MyString subname2;
+	std::string subname1;
+	std::string subname2;
 
     // nameless submitters are filtered elsewhere
 	ad1->LookupString(ATTR_NAME, subname1);
@@ -3699,7 +3699,7 @@ obtainAdsFromCollector (
 			startdAds.Insert(ad);
 		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
-            MyString subname;
+            std::string subname;
             string schedd_addr;
             if (!ad->LookupString(ATTR_NAME, subname) ||
                 !ad->LookupString(ATTR_SCHEDD_IP_ADDR, schedd_addr)) {
@@ -3722,11 +3722,11 @@ obtainAdsFromCollector (
             if (requested <= 0) {
                 dprintf(D_FULLDEBUG,
 					"Ignoring submitter %s from schedd at %s with no requested jobs\n",
-					subname.Value(), schedd_addr.c_str());
+					subname.c_str(), schedd_addr.c_str());
                 continue;
             }
 
-			submitterNames.insert(std::string(subname.Value()));
+			submitterNames.insert(std::string(subname.c_str()));
 
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 
@@ -3737,7 +3737,7 @@ obtainAdsFromCollector (
 			// we insert a submitter ad for each job priority in the submitter
 			// ad's job_prio_array attribute.  See gittrac #3218.
 			if ( want_globaljobprio ) {
-				MyString jobprioarray;
+				std::string jobprioarray;
 				StringList jobprios;
 
 				if (!ad->LookupString(ATTR_JOB_PRIO_ARRAY,jobprioarray)) {
@@ -3747,7 +3747,7 @@ obtainAdsFromCollector (
 					jobprioarray = IntToStr( INT_MIN );
 				}
 
-				jobprios.initializeFromString( jobprioarray.Value() );
+				jobprios.initializeFromString( jobprioarray.c_str() );
 				jobprios.rewind();
 				char *prio = NULL;
 				// Insert a group of submitter ads with one ATTR_JOB_PRIO value
@@ -3816,11 +3816,11 @@ Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 		// optimize it accordingly.
 	std::string error_msg;
 	if( !classad::MatchClassAd::OptimizeRightAdForMatchmaking( ad, &error_msg ) ) {
-		MyString name;
+		std::string name;
 		ad->LookupString(ATTR_NAME,name);
 		dprintf(D_ALWAYS,
 				"Failed to optimize machine ad %s for matchmaking: %s\n",	
-			name.Value(),
+			name.c_str(),
 				error_msg.c_str());
 	}
 }
@@ -3856,8 +3856,8 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 	childClaimHash.clear();
 
 	while( (ad = startdPvtAdList.Next()) ) {
-		MyString name;
-		MyString ip_addr;
+		std::string name;
+		std::string ip_addr;
 		string claim_id;
         string claimlist;
 
@@ -5199,7 +5199,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		}
 
 		int cluster_id=-1,proc_id=-1;
-		MyString machine_name;
+		std::string machine_name;
 		if( IsDebugLevel( D_MACHINE ) ) {
 			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
 			request.LookupInteger(ATTR_PROC_ID,proc_id);
@@ -5208,7 +5208,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					cluster_id,
 					proc_id,
 					is_a_match ? "does" : "does not",
-					machine_name.Value());
+					machine_name.c_str());
 		}
 
 		if( !is_a_match ) {
@@ -5249,7 +5249,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 				dprintf(D_MACHINE,
 						"Ignoring %s because it is unclaimed and we are currently "
 						"only considering startd rank preemption for job %d.%d.\n",
-						machine_name.Value(), cluster_id, proc_id);
+						machine_name.c_str(), cluster_id, proc_id);
 				continue;
 			}
 			if ( !(EvalExprTree(rankCondStd, candidate, &request, result) && 
@@ -5259,7 +5259,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 				dprintf(D_MACHINE,
 						"Job %d.%d does not have higher startd rank than existing job on %s.\n",
-						cluster_id, proc_id, machine_name.Value());
+						cluster_id, proc_id, machine_name.c_str());
 				continue;
 			}
 			// If we made it here, we have a candidate which strictly prefers
@@ -5296,7 +5296,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					rejPreemptForPolicy++;
 					dprintf(D_MACHINE,
 							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
-							cluster_id, proc_id, machine_name.Value());
+							cluster_id, proc_id, machine_name.c_str());
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -5308,7 +5308,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					rejPreemptForRank++;
 					dprintf(D_MACHINE,
 							"Job %d.%d has lower startd rank than existing job on %s.\n",
-							cluster_id, proc_id, machine_name.Value());
+							cluster_id, proc_id, machine_name.c_str());
 					continue;
 				}
 			} else {
@@ -5316,7 +5316,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					// request --- find another machine
 				dprintf(D_MACHINE,
 						"Job %d.%d is from the same user as the existing job on %s and is not preferred by startd rank\n",
-						cluster_id, proc_id, machine_name.Value());
+						cluster_id, proc_id, machine_name.c_str());
 				continue;
 			}
 		}
@@ -5652,11 +5652,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 {
 	int  cluster = 0;
 	int proc = 0;
-	MyString startdAddr;
+	std::string startdAddr;
 	string remoteUser;
 	char accountingGroup[256];
 	char remoteOwner[256];
-    MyString startdName;
+	std::string startdName;
 	bool send_failed;
 	bool claiming_set = false;
 	bool want_claiming = true;
@@ -5705,11 +5705,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	string dslotDesc;
     ClaimIdHash::iterator claimset = claimIds.end();
 	if (want_claiming) {
-        string key = startdName.Value();
-        key += startdAddr.Value();
+        string key = startdName;
+        key += startdAddr;
         claimset = claimIds.find(key);
         if ((claimIds.end() == claimset) || (claimset->second.size() < 1)) {
-            dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
+            dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.c_str());
             return MM_BAD_MATCH;
         }
 		claim_id = *(claimset->second.begin());
@@ -5790,7 +5790,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
-				startdName.Value(),startdAddr.Value(),NegotiatorTimeout,
+				startdName.c_str(),startdAddr.c_str(),NegotiatorTimeout,
 				claim_id.c_str(),want_nonblocking_startd_contact);
 
 		if(!h->startCommand()) {
@@ -5840,7 +5840,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s%s\n",
 			cluster, proc, submitterName, scheddAddr, remoteUser.c_str(),
-			startdAddr.Value(), startdName.Value(),
+			startdAddr.c_str(), startdName.c_str(),
 			offline ? " (offline)" : "");
 
     // At this point we're offering this match as good.
@@ -5876,7 +5876,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// done
 	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",
-			 startdName.Value(),
+			 startdName.c_str(),
 			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
@@ -5959,7 +5959,7 @@ Matchmaker::calculatePieLeft(
 		double submitterAbsShare = 0.0;
 		double submitterPrio = 0.0;
 		double submitterPrioFactor = 0.0;
-		MyString submitterName;
+		std::string submitterName;
 		double submitterLimit = 0.0;
         double submitterLimitUnclaimed = 0.0;
 		double submitterUsage = 0.0;
@@ -5967,7 +5967,7 @@ Matchmaker::calculatePieLeft(
 		submitter->LookupString( ATTR_NAME, submitterName );
 
 		calculateSubmitterLimit(
-			submitterName.Value(),
+			submitterName.c_str(),
 			groupAccountingName,
 			groupQuota,
 			groupusage,
@@ -6002,7 +6002,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
 		// this will succeed (comes from collector)
-        MyString subname;
+		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
 		double prio = accountant.GetPriority(subname);
 		if (prio > max) max = prio;
@@ -6020,7 +6020,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	normalAbsFactor = 0.0;
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
-        MyString subname;
+		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
         std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
         // Only count each submitter once
@@ -6055,7 +6055,7 @@ addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
 void Matchmaker::
 addRemoteUserPrios( ClassAd	*ad )
 {	
-	MyString	remoteUser;
+	std::string	remoteUser;
 	MyString	buffer,buffer1,buffer2,buffer3;
 	MyString    slot_prefix;
 	MyString    expr;
@@ -6073,14 +6073,14 @@ addRemoteUserPrios( ClassAd	*ad )
 		ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
 		ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
 	{
-		prio = (float) accountant.GetPriority( remoteUser.Value() );
+		prio = (float) accountant.GetPriority( remoteUser.c_str() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
+		expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
-		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
+		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
@@ -6121,21 +6121,21 @@ addRemoteUserPrios( ClassAd	*ad )
 		{
 				// If there is a user on that VM, stick that user's priority
 				// information into the ad	
-			prio = (float) accountant.GetPriority( remoteUser.Value() );
+			prio = (float) accountant.GetPriority( remoteUser.c_str() );
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_PRIO);
 			ad->Assign(buffer.Value(),prio);
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
-			ad->AssignExpr(buffer.Value(),expr.Value());
-			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
+			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+			ad->AssignExpr(buffer.Value(),expr.c_str());
+			if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
 				ad->Assign( buffer.Value(), temp_groupName );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.Value(),expr_buffer));
-				ad->AssignExpr( buffer.Value(), expr.Value() );
+				expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+				ad->AssignExpr( buffer.Value(), expr.c_str() );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
 			}
@@ -6599,11 +6599,11 @@ Matchmaker::invalidateNegotiatorAd( void )
 void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
 {
 	if( IsFulldebug(D_FULLDEBUG) ) {
-		MyString name;
+		std::string name;
 		startd_ad->LookupString(ATTR_NAME,name);
-		MyString owner;
+		std::string owner;
 		job_ad->LookupString(ATTR_OWNER,owner);
-		dprintf(D_FULLDEBUG,"Registering attempt to match offline machine %s by %s.\n",name.Value(),owner.Value());
+		dprintf(D_FULLDEBUG,"Registering attempt to match offline machine %s by %s.\n",name.c_str(),owner.c_str());
 	}
 
 	ClassAd update_ad;
@@ -6628,8 +6628,8 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 		// also insert slotX_LastMatchTime into the slot1 ad so that
 		// the match info about all slots is available in one place
-	MyString name;
-	MyString slot1_name;
+	std::string name;
+	std::string slot1_name;
 	int slot_id = -1;
 	startd_ad->LookupString(ATTR_NAME,name);
 	startd_ad->LookupInteger(ATTR_SLOT_ID,slot_id);
@@ -6640,18 +6640,18 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	if( !startd_ad->LookupString("OfflinePrimarySlotName",slot1_name) ) {
 			// no primary slot name specified, so use slot1
 
-		const char *at = strchr(name.Value(),'@');
+		const char *at = strchr(name.c_str(),'@');
 		if( at ) {
 				// in case the slot prefix is something other than "slot"
 				// figure out the prefix
-			int prefix_len = strcspn(name.Value(),"0123456789");
-			if( prefix_len < at - name.Value() ) {
-				slot1_name.formatstr("%.*s1%s",prefix_len,name.Value(),at);
+			int prefix_len = strcspn(name.c_str(),"0123456789");
+			if( prefix_len < at - name.c_str() ) {
+				formatstr(slot1_name,"%.*s1%s",prefix_len,name.c_str(),at);
 			}
 		}
 	}
 
-	if( !slot1_name.IsEmpty() && slot_id >= 0 ) {
+	if( !slot1_name.empty() && slot_id >= 0 ) {
 		ClassAd slot1_update_ad;
 
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);

@@ -821,9 +821,9 @@ void Accountant::DisplayMatches()
 	char const *key = HK.c_str();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
-    MyString RemoteUser;
+    std::string RemoteUser;
     ad->LookupString(RemoteUserAttr,RemoteUser);
-    printf("Customer=%s , Resource=%s\n",RemoteUser.Value(),ResourceName.Value());
+    printf("Customer=%s , Resource=%s\n",RemoteUser.c_str(),ResourceName.Value());
   }
 }
 
@@ -991,7 +991,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   std::string HK;
   ClassAd* ad;
   MyString ResourceName;
-  MyString CustomerName;
+  std::string CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
   HashTable<MyString,ClassAd *> resource_hash(hashFunction);
@@ -1020,7 +1020,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 		// Here we need to figure out the CustomerName.
       ad->LookupString(RemoteUserAttr,CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
-        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
+        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.c_str());
         RemoveMatch(ResourceName);
       }
     }
@@ -1029,7 +1029,8 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   // Scan startd ads and add matches that are not registered
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
-    if (IsClaimed(ResourceAd, CustomerName)) AddMatch(CustomerName, ResourceAd);
+    MyString cust_name;
+    if (IsClaimed(ResourceAd, cust_name)) AddMatch(cust_name, ResourceAd);
   }
   ResourceList.Close();
 
@@ -1062,7 +1063,7 @@ ClassAd* Accountant::ReportState(const MyString& CustomerName) {
     while (AcctLog->table.iterate(HK,ResourceAd)) {
         if (strncmp(ResourceRecord.Value(), HK.c_str(), ResourceRecord.Length())) continue;
 
-        MyString rname;
+        std::string rname;
         if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
 
         if (isGroup) {
@@ -1384,8 +1385,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  MyString startdName;
-  MyString startdAddr;
+  std::string startdName;
+  std::string startdAddr;
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
     //This should never happen, because unnamed startd ads are rejected.
@@ -1398,7 +1399,7 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
     //This may happen for grid site ClassAds.
     //Actually, the collector now inserts an IP address if none is provided,
     //but it is more robust to not assume that behavior here.
-	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
+	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.c_str());
   }
   Name+=startdAddr;
   
@@ -1631,7 +1632,9 @@ bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrNam
   ClassAd* ad;
   if (AcctLog->table.lookup(Key.Value(),ad)==-1) return false;
 
-  if (ad->LookupString(AttrName.Value(),AttrValue)==0) return false;
+  std::string tmp;
+  if (ad->LookupString(AttrName.Value(),tmp)==0) return false;
+  AttrValue = tmp;
   return true;
 }
 
@@ -1846,10 +1849,10 @@ float Accountant::GetSlotWeight(ClassAd *candidate)
 	}
 
 	if(candidate->LookupFloat(SlotWeightAttr, SlotWeight) == 0 || SlotWeight<0) {
-		MyString candidateName;
+		std::string candidateName;
 		candidate->LookupString(ATTR_NAME, candidateName);
 		dprintf(D_FULLDEBUG, "Can't get SlotWeight for '%s'; using 1.0\n", 
-				candidateName.Value());
+				candidateName.c_str());
 		SlotWeight = 1.0;
 	}
 	return SlotWeight;
