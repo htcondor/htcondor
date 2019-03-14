@@ -101,7 +101,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		return 0;
 	}
 
-	MyString JobName;
+	std::string JobName;
 	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
 				 ATTR_JOB_CMD );
@@ -135,23 +135,23 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
         preserve_rel = false;
     }
 
-    bool relative_exe = !fullpath(JobName.Value());
+    bool relative_exe = !fullpath(JobName.c_str());
 
     if (relative_exe && preserve_rel && !transfer_exe) {
-        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.Value());
+        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
     }
-	else if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
-		JobName.formatstr( "%s%c%s",
+	else if ( strcmp(CONDOR_EXEC,JobName.c_str()) == 0 ) {
+		formatstr( JobName, "%s%c%s",
 		                 Starter->GetWorkingDir(),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
     }
 	else if (relative_exe && job_iwd && *job_iwd) {
-		MyString full_name;
-		full_name.formatstr("%s%c%s",
+		std::string full_name;
+		formatstr(full_name, "%s%c%s",
 		                  job_iwd,
 		                  DIR_DELIM_CHAR,
-		                  JobName.Value());
+		                  JobName.c_str());
 		JobName = full_name;
 
 	}
@@ -161,10 +161,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			// globus probably transfered it for us and left it with
 			// bad permissions...
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName.Value(), S_IRWXU | S_IRWXO | S_IRWXG );
+		int retval = chmod( JobName.c_str(), S_IRWXU | S_IRWXO | S_IRWXG );
 		set_priv( old_priv );
 		if( retval < 0 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName.Value() );
+			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName.c_str() );
 			return 0;
 		}
 	} 
@@ -181,7 +181,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// the wrapper or the actual job.
 
 	if( !getArgv0() ) {
-		args.AppendArg(JobName.Value());
+		args.AppendArg(JobName.c_str());
 	} else {
 		args.AppendArg(getArgv0());
 	}
@@ -199,7 +199,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				return 0;
 			} else {
-				args.AppendArg(JobName.Value());
+				args.AppendArg(JobName.c_str());
 				JobName = parrot;
 				free( parrot );
 			}
@@ -541,7 +541,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			// "JobName" so we exec it directly, and we want to put
 			// what was the JobName (with the full path) as the first
 			// argument to the wrapper
-		args.InsertArg(JobName.Value(),0);
+		args.InsertArg(JobName.c_str(),0);
 		JobName = wrapper;
 		free(wrapper);
 	}
@@ -553,10 +553,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(), 
 				 args_string.Value() );
 	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
+		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
 				 args_string.Value() );
 	}
 
@@ -574,7 +574,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			privsep_stdout_name.Value(),
 			privsep_stderr_name.Value()
 		};
-		JobPid = privsep_helper->create_process(JobName.Value(),
+		JobPid = privsep_helper->create_process(JobName.c_str(),
 		                                        args,
 		                                        job_env,
 		                                        job_iwd,
@@ -589,7 +589,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 												&create_process_err_msg);
 	}
 	else {
-		JobPid = daemonCore->Create_Process( JobName.Value(),
+		JobPid = daemonCore->Create_Process( JobName.c_str(),
 		                                     args,
 		                                     PRIV_USER_FINAL,
 		                                     1,
@@ -672,7 +672,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
-			JobName.Value(), args_string.Value(), create_process_err_msg.Value());
+			JobName.c_str(), args_string.Value(), create_process_err_msg.Value());
 		job_not_started = true;
 		return 0;
 	}

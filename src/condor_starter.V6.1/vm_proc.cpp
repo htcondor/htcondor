@@ -317,7 +317,7 @@ VMProc::StartJob()
 	}
 
 	// Get job name
-	MyString vm_job_name;
+	std::string vm_job_name;
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
@@ -328,7 +328,7 @@ VMProc::StartJob()
 	m_job_name = vm_job_name;
 
 	// vm_type should be from ClassAd
-	MyString vm_type_name;
+	std::string vm_type_name;
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
@@ -336,7 +336,7 @@ VMProc::StartJob()
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
-	vm_type_name.lower_case();
+	lower_case(vm_type_name);
 	m_vm_type = vm_type_name;
 
 	// get vm checkpoint flag from ClassAd
@@ -345,7 +345,7 @@ VMProc::StartJob()
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.
-	MyString string_value;
+	std::string string_value;
 	if( JobAd->LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
 		m_vm_mac = string_value;
 	}

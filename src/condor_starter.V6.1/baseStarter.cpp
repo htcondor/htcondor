@@ -586,9 +586,9 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// the job and facilitates the creation of a security session
 		// between the starter and the tool.
 
-	MyString fqu;
+	std::string fqu;
 	getJobOwnerFQUOrDummy(fqu);
-	ASSERT( !fqu.IsEmpty() );
+	ASSERT( !fqu.empty() );
 
 	MyString error_msg;
 	ClassAd input;
@@ -601,11 +601,11 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// In order to ensure that we are really talking to the schedd
 		// that is managing this job, check that the schedd has provided
 		// the correct secret claim id.
-	MyString job_claim_id;
-	MyString input_claim_id;
+	std::string job_claim_id;
+	std::string input_claim_id;
 	getJobClaimId(job_claim_id);
 	input.LookupString(ATTR_CLAIM_ID,input_claim_id);
-	if( job_claim_id != input_claim_id || job_claim_id.IsEmpty() ) {
+	if( job_claim_id != input_claim_id || job_claim_id.empty() ) {
 		dprintf(D_ALWAYS,
 				"Claim ID provided to createJobOwnerSecSession does not match "
 				"expected value!  Rejecting connection from %s\n",
@@ -616,7 +616,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	char *session_id = Condor_Crypt_Base::randomHexKey();
 	char *session_key = Condor_Crypt_Base::randomHexKey();
 
-	MyString session_info;
+	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);
 
 		// Create an authorization rule so that the job owner can
@@ -643,17 +643,19 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			READ,
 			session_id,
 			session_key,
-			session_info.Value(),
-			fqu.Value(),
+			session_info.c_str(),
+			fqu.c_str(),
 			NULL,
 			0 );
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen
 		session_info = "";
+		MyString tmp;
 		rc = daemonCore->getSecMan()->ExportSecSessionInfo(
 			session_id,
-			session_info );
+			tmp );
+		session_info = tmp.Value();
 	}
 
 	ClassAd response;
@@ -671,13 +673,13 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// We use a "claim id" string to hold the security session info,
 		// because it is a convenient container.
 
-		ClaimIdParser claimid(session_id,session_info.Value(),session_key);
+		ClaimIdParser claimid(session_id,session_info.c_str(),session_key);
 		response.Assign(ATTR_RESULT,true);
 		response.Assign(ATTR_CLAIM_ID,claimid.claimId());
 		response.Assign(ATTR_STARTER_IP_ADDR,daemonCore->publicNetworkIpAddr());
 
 		dprintf(D_FULLDEBUG,"Created security session for job owner (%s).\n",
-				fqu.Value());
+				fqu.c_str());
 	}
 
 	if( !putClassAd(s, response) || !s->end_of_message() ) {
@@ -850,7 +852,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	MyString error_msg;
 	ReliSock *s = (ReliSock*)sock;
 	char const *fqu = s->getFullyQualifiedUser();
-	MyString job_owner;
+	std::string job_owner;
 	getJobOwnerFQUOrDummy(job_owner);
 	if( !fqu || job_owner != fqu )
 	{
@@ -1223,7 +1225,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	Sock *sock = (Sock*)s;
 	char const *fqu = sock->getFullyQualifiedUser();
-	MyString job_owner;
+	std::string job_owner;
 	getJobOwnerFQUOrDummy(job_owner);
 	if( !fqu || job_owner != fqu ) {
 		dprintf(D_ALWAYS,"Unauthorized attempt to start sshd by '%s'\n",
@@ -1272,10 +1274,10 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		return SSHDRetry(s,"This slot is currently suspended.");
 	}
 
-	MyString preferred_shells;
+	std::string preferred_shells;
 	input.LookupString(ATTR_SHELL,preferred_shells);
 
-	MyString slot_name;
+	std::string slot_name;
 	input.LookupString(ATTR_NAME,slot_name);
 
 	if( !jic->userPrivInitialized() ) {
@@ -1327,9 +1329,9 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 						  error_msg.Value());
 	}
 
-	MyString client_keygen_args;
+	std::string client_keygen_args;
 	input.LookupString(ATTR_SSH_KEYGEN_ARGS,client_keygen_args);
-	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.Value(),&error_msg) ) {
+	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.c_str(),&error_msg) ) {
 		return SSHDFailed(s,
 						  "Failed to produce ssh-keygen arg list: %s",
 						  error_msg.Value());
@@ -1363,8 +1365,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			s,"Failed to get job environment: %s",error_msg.Value());
 	}
 
-	if( !slot_name.IsEmpty() ) {
-		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
+	if( !slot_name.empty() ) {
+		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.c_str());
 	}
 
     int setup_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
@@ -1372,10 +1374,10 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
         setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
     }
 
-	if( !preferred_shells.IsEmpty() ) {
+	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
-				"Checking preferred shells: %s\n",preferred_shells.Value());
-		StringList shells(preferred_shells.Value(),",");
+				"Checking preferred shells: %s\n",preferred_shells.c_str());
+		StringList shells(preferred_shells.c_str(),",");
 		shells.rewind();
 		char *shell;
 		while( (shell=shells.next()) ) {
@@ -1967,14 +1969,14 @@ CStarter::jobEnvironmentReady( void )
 		//
 	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
 	if (gpsh != NULL) {
-		MyString proxy_path;
+		std::string proxy_path;
 		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
 		                                     proxy_path))
 		{
 			EXCEPT("configuration specifies use of glexec, "
 			           "but job has no proxy");
 		}
-		const char* proxy_name = condor_basename(proxy_path.Value());
+		const char* proxy_name = condor_basename(proxy_path.c_str());
 		gpsh->initialize(proxy_name, WorkingDir.Value());
 	}
 #endif
@@ -2328,18 +2330,18 @@ CStarter::SpawnPreScript( void )
 	}
 }
 
-void CStarter::getJobOwnerFQUOrDummy(MyString &result)
+void CStarter::getJobOwnerFQUOrDummy(std::string &result)
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
 		jobAd->LookupString(ATTR_USER,result);
 	}
-	if( result.IsEmpty() ) {
+	if( result.empty() ) {
 		result = "job-owner@submit-domain";
 	}
 }
 
-bool CStarter::getJobClaimId(MyString &result)
+bool CStarter::getJobClaimId(std::string &result)
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -3163,7 +3165,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// variable with the same value.
 	ClassAd * mad = jic->machClassAd();
 	if (mad) {
-		MyString restags;
+		std::string restags;
 		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
 			StringList tags(restags.c_str());
 			tags.rewind();
@@ -3179,7 +3181,7 @@ CStarter::PublishToEnv( Env* proc_env )
 				MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
 				param(env_name, param_name.c_str());
 
-				MyString assigned;
+				std::string assigned;
 				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
 				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
 

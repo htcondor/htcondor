@@ -1416,8 +1416,8 @@ Starter::getIpAddr( void )
 	if( ! s_pid ) {
 		return NULL;
 	}
-	if( !m_starter_addr.IsEmpty() ) {
-		return m_starter_addr.Value();
+	if( !m_starter_addr.empty() ) {
+		return m_starter_addr.c_str();
 	}
 
 	// Fall back on the raw contact string known to daemonCore.

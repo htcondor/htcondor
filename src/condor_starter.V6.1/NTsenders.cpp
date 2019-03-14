@@ -2586,42 +2586,42 @@ REMOTE_CONDOR_getcreds()
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
 		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
 
-		MyString fname, b64;
+		std::string fname, b64;
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		MyString full_name = cred_dir_name;
+		std::string full_name = cred_dir_name;
 		full_name += DIR_DELIM_CHAR;
 		full_name += fname;
 
-		MyString tmpname = full_name;
+		std::string tmpname = full_name;
 		tmpname += ".tmp";
 
 		// contents of pw are base64 encoded.  decode now just before they go
 		// into the file.
 		int rawlen = -1;
 		unsigned char* rawbuf = NULL;
-		zkm_base64_decode(b64.Value(), &rawbuf, &rawlen);
+		zkm_base64_decode(b64.c_str(), &rawbuf, &rawlen);
 
 		if (rawlen <= 0) {
 			EXCEPT("Failed to decode credential sent by shadow!");
 		}
 
 		// write temp file
-		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
-		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
+		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.c_str());
+		bool rc = write_secure_file(tmpname.c_str(), rawbuf, rawlen, true);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
 
 		if (rc != true) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.Value());
+			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.c_str());
 			EXCEPT("failure");
 		}
 
-		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
+		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.c_str(), full_name.c_str());
 		priv_state priv = set_root_priv();
-		rename(tmpname.Value(), full_name.Value());
+		rename(tmpname.c_str(), full_name.c_str());
 		set_priv (priv);
 	}
 
