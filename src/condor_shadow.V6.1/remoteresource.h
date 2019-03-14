@@ -477,7 +477,7 @@ private:
 	int next_reconnect_tid;
 	int proxy_check_tid;
 
-	MyString proxy_path;
+	std::string proxy_path;
 	time_t last_proxy_timestamp;
 
 	time_t m_remote_proxy_expiration;
