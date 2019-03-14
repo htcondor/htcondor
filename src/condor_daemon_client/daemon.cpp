@@ -41,6 +41,8 @@
 #include "counted_ptr.h"
 #include "ipv6_hostname.h"
 
+#include <sstream>
+
 void
 Daemon::common_init() {
 	_type = DT_NONE;
@@ -2448,5 +2450,101 @@ Daemon::getInstanceID( std::string & instanceID ) {
 	}
 
 	instanceID.assign( (const char *)instance_id, instance_length );
+	return true;
+}
+
+bool
+Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
+	std::string &token, CondorError *err)
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getSessionToken() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	std::stringstream ss;
+	for (const auto &authz : authz_bounding_limit) {
+		ss << authz << ",";
+	}
+	const std::string &authz_limit_str = ss.str();
+	if (!authz_limit_str.empty() && !ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_limit_str.substr(0, authz_limit_str.size()-1))) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+			return false;
+	}
+
+	if (!startCommand( DC_GET_SESSION_TOKEN, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to start command for "
+			"token request with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() Failed to send ClassAd to remote"
+			" daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+			return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to recieve response from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getSessionToken() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getSessionToken() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		if (err) err->pushf("DAEMON", 1, "BUG!  Daemon::getSessionToken() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
 	return true;
 }
