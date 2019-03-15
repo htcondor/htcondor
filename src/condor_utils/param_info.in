@@ -2455,12 +2455,6 @@ win32_default=
 type=path
 tags=condor_auth_passwd
 
-[SEC_TOKEN_USER_DIRECTORY]
-default=$(TILDE)/.condor/tokens.d
-win32_default=
-type=path
-tags=condor_auth_passwd
-
 [SEC_TOKEN_DIRECTORY]
 default=
 description=Directory containing the tokens for token auth.
