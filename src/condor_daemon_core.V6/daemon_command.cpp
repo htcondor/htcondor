@@ -1371,7 +1371,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		}
 		else {
 				// Authentication methods can limit the authorizations associated with
-				// a given identity (at time of coding, only PASSWORD2 does this); apply
+				// a given identity (at time of coding, only TOKEN does this); apply
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;

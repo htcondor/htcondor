@@ -395,7 +395,7 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 
 	method_list.rewind();
 	while ( (method = method_list.next()) ) {
-		if (!strcmp(method, "PASSWORD2")) {
+		if (!strcmp(method, "TOKEN")) {
 			Condor_Auth_Passwd::preauth_metadata(ad);
 		}
 	}
@@ -2672,8 +2672,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_NTSSPI;
 	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
-	} else if ( !strcasecmp( method, "PASSWORD2" ) ) {
-		return CAUTH_PASSWORD2;
+	} else if ( !strcasecmp( method, "TOKEN" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
 	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {

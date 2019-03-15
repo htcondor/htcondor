@@ -131,7 +131,7 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 
 
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
-    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2),
+    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
     m_version(version),
     m_k(NULL),
@@ -181,7 +181,10 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 			return nullptr;
 		}
 		if (key_id.empty()) {
+			// At one point, we considered allowing an empty key ID (which would imply POOL);
+			// we decided against this as explicit is better than implicit.
 			dprintf(D_SECURITY, "Client JWT has empty key ID\n");
+			return nullptr;
 		}
 		std::string shared_key;
 		CondorError err;
@@ -257,7 +260,7 @@ Condor_Auth_Passwd::fetchLogin()
 	// If we are a client of the password v2 protocol, we may have a derived password.
 	std::string derived_keyfilename;
 	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWORD_DERIVED_KEYFILE")) {
-		dprintf(D_SECURITY, "PW: Will use derived keys found in %s.\n", derived_keyfilename.c_str());
+		dprintf(D_SECURITY, "TOKEN: Will use derived keys found in %s.\n", derived_keyfilename.c_str());
 		std::ifstream keyfile(derived_keyfilename, std::ifstream::in);
 		if (!keyfile) {
 			dprintf(D_ALWAYS, "Failed to open derived key file %s\n",
@@ -307,6 +310,7 @@ Condor_Auth_Passwd::fetchLogin()
 			// Check to see if we have access to the master key and generate a token accordingly.
 			std::string issuer;
 			param(issuer, "SEC_ISSUER_NAMESPACE");
+			issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 			if (m_server_issuer == issuer && !m_server_keys.empty()) {
 					// We use the same issuer; iterate through compatible keys.
 				std::vector<std::string> local_creds;
@@ -351,7 +355,7 @@ Condor_Auth_Passwd::fetchLogin()
 				}
 			}
 			if (!found_token) {
-				dprintf(D_ALWAYS, "PW: No token found.\n");
+				dprintf(D_ALWAYS, "TOKEN: No token found.\n");
 				return nullptr;
 			}
 		}
@@ -361,6 +365,10 @@ Condor_Auth_Passwd::fetchLogin()
 		auto seed_kb = (unsigned char *)malloc(key_size);
 		auto ka = (unsigned char *)malloc(key_strength_bytes());
 		auto kb = (unsigned char *)malloc(key_strength_bytes());
+		if (!seed_ka || !seed_kb || !ka || !kb) {
+			dprintf(D_ALWAYS, "TOKEN: Failed to allocate memory buffers.\n");
+			return nullptr;
+		}
 		memcpy(seed_ka + AUTH_PW_KEY_LEN, token.c_str(), token.size());
 		memcpy(seed_kb + AUTH_PW_KEY_LEN, token.c_str(), token.size());
 
@@ -371,7 +379,7 @@ Condor_Auth_Passwd::fetchLogin()
 			&ka[0],
 			key_strength_bytes_v2()))
 		{
-			dprintf(D_SECURITY, "PW: Failed to generate master key K\n");
+			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K\n");
 			return nullptr;
 		}
 		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
@@ -380,14 +388,14 @@ Condor_Auth_Passwd::fetchLogin()
 			&kb[0],
 			key_strength_bytes_v2()))
 		{
-			dprintf(D_SECURITY, "PW: Failed to generate master key K'\n");
+			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K'\n");
 			return nullptr;
 		}
 
 		m_k_len = 0;
 		free(m_k); m_k = nullptr;
 		if (!(m_k = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
-			dprintf(D_SECURITY, "PW: Failed to allocate new copy of K\n");
+			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K\n");
 			return nullptr;
 		}
 		memcpy(m_k, &ka[0], key_strength_bytes_v2());
@@ -395,7 +403,7 @@ Condor_Auth_Passwd::fetchLogin()
 		m_k_prime_len = 0;
 		free(m_k_prime); m_k_prime = nullptr;
 		if (!(m_k_prime = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
-			dprintf(D_SECURITY, "PW: Failed to allocate new copy of K'\n");
+			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K'\n");
 			return nullptr;
 		}
 		memcpy(m_k_prime, &kb[0], key_strength_bytes_v2());
@@ -1279,6 +1287,7 @@ Condor_Auth_Passwd::generate_derived_key(const std::string & id,
 		if (err) err->push("PASSWD", 1, "Issuer namespace is not set");
 		return false;
 	}
+	issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(&jwt_key[0]), key_strength_bytes_v2());
 	auto jwt_builder = jwt::create()
@@ -2431,6 +2440,7 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
 	std::string issuer;
 	if (param(issuer, "SEC_ISSUER_NAMESPACE")) {
+		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 		ad.InsertAttr(ATTR_SEC_ISSUER_NAMESPACE, issuer);
 	}
 	std::vector<std::string> creds;

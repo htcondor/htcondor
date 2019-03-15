@@ -1868,6 +1868,9 @@ dc_reconfig()
 	// Clear out the passwd cache.
 	clear_passwd_cache();
 
+	// Flush the cached list of keys.
+	refreshNamedCredentials();
+
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
 
@@ -2905,7 +2908,7 @@ int dc_main( int argc, char** argv )
 
 		//
 		// Request a token that can be used to authenticat / authorize a future
-		// session using the PASSWORD2 protocol.
+		// session using the TOKEN protocol.
 		//
 	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,

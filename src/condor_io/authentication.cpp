@@ -248,7 +248,9 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
 				break;
-			case CAUTH_PASSWORD2: {
+			case CAUTH_TOKEN: {
+					// Make a copy of the pointer as a Condor_Auth_Passwd to avoid
+					// repetitive static_cast<> below.
 				auto tmp_auth = new Condor_Auth_Passwd(mySock, 2);
 				m_auth = tmp_auth;
 				const classad::ClassAd *policy = mySock->getPolicyAd();
@@ -269,7 +271,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 						tmp_auth->set_remote_keys(keys);
 					}
 				}
-                                m_method_name = "PASSWORD2";
+                                m_method_name = "TOKEN";
                                 break;
 			}
 #endif
