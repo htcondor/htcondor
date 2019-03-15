@@ -404,7 +404,7 @@ Condor_Auth_Passwd::fetchLogin()
 		if (!found_token) {
 			// Check to see if we have access to the master key and generate a token accordingly.
 			std::string issuer;
-			param(issuer, "SEC_ISSUER_NAMESPACE");
+			param(issuer, "TRUST_DOMAIN");
 			issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 			if (m_server_issuer == issuer && !m_server_keys.empty()) {
 					// We use the same issuer; iterate through compatible keys.
@@ -1378,7 +1378,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 	std::string issuer;
-	if (!param(issuer, "SEC_ISSUER_NAMESPACE")) {
+	if (!param(issuer, "TRUST_DOMAIN")) {
 		if (err) err->push("PASSWD", 1, "Issuer namespace is not set");
 		return false;
 	}
@@ -2535,9 +2535,9 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::string issuer;
-	if (param(issuer, "SEC_ISSUER_NAMESPACE")) {
+	if (param(issuer, "TRUST_DOMAIN")) {
 		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
-		ad.InsertAttr(ATTR_SEC_ISSUER_NAMESPACE, issuer);
+		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
 	}
 	std::vector<std::string> creds;
 	CondorError err;

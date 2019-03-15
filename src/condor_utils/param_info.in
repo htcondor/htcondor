@@ -2505,7 +2505,7 @@ default=false
 type=bool
 tags=io,condor_auth_claim
 
-[SEC_ISSUER_NAMESPACE]
+[TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string
 tags=condor_auth_passwd

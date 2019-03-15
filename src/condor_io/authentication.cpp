@@ -256,7 +256,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				const classad::ClassAd *policy = mySock->getPolicyAd();
 				if (policy) {
 					std::string issuer;
-					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_NAMESPACE, issuer)) {
+					if (policy->EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, issuer)) {
 						tmp_auth->set_remote_issuer(issuer);
 					}
 					std::string key_str;
