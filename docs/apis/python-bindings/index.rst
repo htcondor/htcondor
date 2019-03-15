@@ -29,3 +29,4 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
    advanced_tutorials/index
    api/htcondor
    api/classad
+   api/htcondor_old

@@ -49,22 +49,25 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ExprTree.eval
 
 
-Parsing and Manipulating
-------------------------
+Parsing and Creating ClassAds
+-----------------------------
 
 :mod:`classad` provides a variety of utility functions that can help you
 construct ClassAd expressions and parse string representations of ClassAds.
 
-.. autofunction:: quote
-.. autofunction:: unquote
 .. autofunction:: parseAds
 .. autofunction:: parseNext
 .. autofunction:: parseOne
-.. autofunction:: version
-.. autofunction:: lastError
+
+.. autofunction:: quote
+.. autofunction:: unquote
+
 .. autofunction:: Attribute
 .. autofunction:: Function
 .. autofunction:: Literal
+
+.. autofunction:: lastError
+
 .. autofunction:: register
 .. autofunction:: registerLibrary
 
@@ -78,6 +81,11 @@ enumeration.
 
 .. autoclass:: Parser
 
+
+Utility Functions
+-----------------
+
+.. autofunction:: version
 
 Deprecated Functions
 --------------------

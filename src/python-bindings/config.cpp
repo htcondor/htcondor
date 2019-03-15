@@ -637,15 +637,33 @@ void export_config()
     param_insert("ENABLE_CLASSAD_CACHING", "false");
     classad::ClassAdSetExpressionCaching(false);
 
-    def("version", CondorVersionWrapper, "Returns the version of HTCondor this module is linked against.");
-    def("platform", CondorPlatformWrapper, "Returns the platform of HTCondor this module is running on.");
-    def("reload_config", configWrapper, "Reload the HTCondor configuration from disk.");
-    class_<Param>("_Param")
+    def("version", CondorVersionWrapper,
+        R"C0ND0R(
+        Returns the version of HTCondor this module is linked against.
+        )C0ND0R");
+    def("platform", CondorPlatformWrapper,
+        R"C0ND0R(
+        Returns the platform of HTCondor this module is running on.
+        )C0ND0R");
+    def("reload_config", configWrapper,
+        R"C0ND0R(
+        Reload the HTCondor configuration from disk.
+        )C0ND0R");
+    class_<Param>("_Param",
+            R"C0ND0R(
+            A dictionary-like object for the local HTCondor configuration; the keys and
+            values of this object are the keys and values of the HTCondor configuration.
+
+            The  ``get``, ``setdefault``, ``update``, ``keys``, ``items``, and ``values``
+            methods of this class have the same semantics as a Python dictionary.
+
+            Writing to a ``_Param`` object will update the in-memory HTCondor configuration.
+            )C0ND0R")
         .def("__getitem__", &Param::getitem)
         .def("__setitem__", &Param::setitem)
         .def("__contains__", &Param::contains)
         .def("setdefault", &Param::setdefault)
-        .def("get", &Param::get, "Returns the value associated with the key; if the key is not a defined parameter, returns the default argument.  Default is None.", (arg("self"), arg("key"), arg("default")=object()))
+        .def("get", &Param::get, (arg("self"), arg("key"), arg("default")=object()))
         .def("keys", &Param::keys)
         .def("__iter__", &Param::iter)
         .def("__len__", &Param::len)
@@ -653,7 +671,13 @@ void export_config()
         .def("update", &Param::update)
         ;
     object param = object(Param());
-    param.attr("__doc__") = "A dictionary-like object containing the HTCondor configuration.";
+    param.attr("__doc__") =
+        R"C0ND0R(
+        Provides dictionary-like access the HTCondor configuration.
+
+        An instance of :class:`_Param`.  Upon importing the :mod:`htcondor` module, the
+        HTCondor configuration files are parsed and populate this dictionary-like object.
+        )C0ND0R";
     scope().attr("param") = param;
 
     class_<RemoteParam>("RemoteParam", boost::python::init<const ClassAdWrapper &>(":param ad: An ad containing the location of the remote daemon."))
@@ -661,7 +685,7 @@ void export_config()
         .def("__setitem__", &RemoteParam::setitem)
         .def("__contains__", &RemoteParam::contains)
         .def("setdefault", &RemoteParam::setdefault)
-        .def("get", &RemoteParam::get, "Returns the value associated with the remote parameter; if the parameter is not defined, return the default argument.  Default is None.", (arg("self"), arg("key"), arg("default")=boost::python::object()))
+        .def("get", &RemoteParam::get, (arg("self"), arg("key"), arg("default")=boost::python::object()))
         .def("keys", &RemoteParam::keys)
         .def("__iter__", &RemoteParam::iter)
         .def("__len__", &RemoteParam::len)
