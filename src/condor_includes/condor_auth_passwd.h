@@ -142,8 +142,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	*/    
 	int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
-	/** Generate a derived key */
-	static bool generate_derived_key(const std::string &id, const std::string &key_id,
+	/** Generate a token */
+	static bool generate_token(const std::string &id, const std::string &key_id,
 		const std::vector<std::string> &authz_list, long lifetime, std::string &token, CondorError *err);
 
 	/** Metadata needed prior to starting authorization */

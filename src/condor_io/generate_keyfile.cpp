@@ -13,7 +13,7 @@ namespace {
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s -identity USER@UID_DOMAIN [-key KEYID] [-authz AUTHZ] [-lifetime VAL]\n"
 		"Alternate usage: %s ([-type TYPE]|[-name NAME]|[-pool POOL]) [-authz AUTHZ] [-lifetime VAL]\n\n"
-		"Generates a derived key from the local master password or remote session and prints its contents to stdout.\n", argv0, argv0);
+		"Generates a token from the local master password or remote session and prints its contents to stdout.\n", argv0, argv0);
 	exit(1);
 }
 
@@ -150,8 +150,8 @@ int main(int argc, char *argv[]) {
 
 	CondorError err;
 	std::string token;
-	if (!Condor_Auth_Passwd::generate_derived_key(identity, key, authz_list, lifetime, token, &err)) {
-		fprintf(stderr, "Failed to generate a derived key.\n");
+	if (!Condor_Auth_Passwd::generate_token(identity, key, authz_list, lifetime, token, &err)) {
+		fprintf(stderr, "Failed to generate a token.\n");
 		fprintf(stderr, "%s\n", err.getFullText(true).c_str());
 		exit(2);
 	}

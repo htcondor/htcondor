@@ -1320,7 +1320,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 	}
 	int requested_lifetime;
 	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
-		int max_lifetime = param_integer("SEC_DERIVED_SECRETS_EXPIRATION", -1);
+		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
 		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
 			requested_lifetime = max_lifetime;
 		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
@@ -1330,7 +1330,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 		requested_lifetime = -1;
 	}
 	std::string key_name = "POOL";
-	param(key_name, "SEC_DERIVED_SECRETS_ISSUER_KEY");
+	param(key_name, "SEC_TOKEN_ISSUER_KEY");
 	std::vector<std::string> creds;
 	std::string final_key_name;
 	if (!listNamedCredentials(creds, &err)) {
@@ -1379,7 +1379,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 	{
 #if defined(HAVE_EXT_OPENSSL)
 		std::string token;
-		if (!Condor_Auth_Passwd::generate_derived_key(
+		if (!Condor_Auth_Passwd::generate_token(
 			auth_user,
 			final_key_name,
 			authz_list,
