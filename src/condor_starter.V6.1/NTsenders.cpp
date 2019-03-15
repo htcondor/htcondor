@@ -2515,14 +2515,13 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 }
 
 
-// take NO parameters.  the shadow knows which creds belong to the job
-// and will only give out those creds.  the creds are ALWAYS written to
-// the SEC_CREDENTIAL_DIRECTORY so no path is needed either.
+// takes the directory that creds should be written into.  the shadow knows
+// which creds belong to the job and will only give out those creds.
 //
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds()
+REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 {
 	int result = 0;
 
@@ -2532,7 +2531,7 @@ REMOTE_CONDOR_getcreds()
 		return -1;
 	}
 
-	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds\n" );
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds into path %s\n", creds_receive_dir );
 
 	CurrentSysCall = CONDOR_getcreds;
 	char empty[1] = "";
@@ -2552,23 +2551,8 @@ REMOTE_CONDOR_getcreds()
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 
-	// send response
+	// receive response
 	syscall_sock->decode();
-
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return -1;
-	}
-	MyString pid_s;
-	pid_s.formatstr("%i", getpid());
-	cred_dir_name += DIR_DELIM_CHAR;
-	cred_dir_name += pid_s;
-
-	// create dir to hold creds
-	priv_state p = set_root_priv();
-	mkdir(cred_dir_name.Value(), 0700);
-	set_priv(p);
 
 	// driver:  receive int.  -1 == error, 0 == done, 1 == cred classad coming
 	int cmd;
@@ -2590,7 +2574,7 @@ REMOTE_CONDOR_getcreds()
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		MyString full_name = cred_dir_name;
+		MyString full_name = creds_receive_dir;
 		full_name += DIR_DELIM_CHAR;
 		full_name += fname;
 
