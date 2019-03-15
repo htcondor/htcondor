@@ -315,6 +315,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
     // Libcurl options that apply to all transfer protocols
     curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
+    curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
 
     if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
 
