@@ -2974,23 +2974,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
 	}
 
-	// do syscall to receive credential wallet
-	if (REMOTE_CONDOR_getcreds() <= 0) {
-		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
-		return false;
-	}
-
 	// setup .condor_creds directory in sandbox (may already exist).
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return false;
-	}
-	MyString pid_s;
-	pid_s.formatstr("%i", getpid());
-	cred_dir_name += DIR_DELIM_CHAR;
-	cred_dir_name += pid_s;
-
 	MyString sandbox_dir_name = Starter->GetWorkingDir();
 	sandbox_dir_name += DIR_DELIM_CHAR;
 	sandbox_dir_name += ".condor_creds";
@@ -3003,48 +2987,19 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	set_priv(p);
 	if(rc != 0) {
 		if(errno != 17) {
-			dprintf(D_SECURITY, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
 			return false;
+		} else {
+			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.Value());
 		}
+	} else {
+		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.Value());
 	}
 
-	// for each file in SEC_CREDENTIAL_DIR, atomically update in sandbox
-	Directory source_dir(cred_dir_name.Value(), PRIV_ROOT);
-
-	const char* filename;
-	while ((filename = source_dir.Next())) {
-
-		dprintf(D_SECURITY, "CREDS: copying %s from %s to %s\n", filename, cred_dir_name.Value(), sandbox_dir_name.Value());
-		// use dircat() instead
-		MyString src_filename = cred_dir_name;
-		src_filename += DIR_DELIM_CHAR;
-		src_filename += filename;
-
-		// read the file (fourth argument "true" means as_root)
-		unsigned char *buf = 0;
-		size_t len = 0;
-		bool rc = read_secure_file(src_filename.Value(), (void**)(&buf), &len, true);
-		dprintf(D_SECURITY, "CREDS: reading %s, result %i\n", src_filename.Value(), rc);
-
-		// use dircat() instead
-		MyString dest_filename = sandbox_dir_name;
-		dest_filename += DIR_DELIM_CHAR;
-		dest_filename += filename;
-
-		MyString tmp_filename = dest_filename;
-		tmp_filename += ".tmp";
-
-		// write file as user
-		priv_state p = set_user_priv();
-
-		rc = write_secure_file(tmp_filename.Value(), buf, len, false);
-		dprintf(D_SECURITY, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
-
-		// move file into place (as user);
-		rc = rename(tmp_filename.Value(), dest_filename.Value());
-		dprintf(D_SECURITY, "CREDS: moving %s to %s, result %i\n", tmp_filename.Value(), dest_filename.Value(), (rc==0)?rc:errno);
-
-		set_priv(p);
+	// do syscall to receive credential wallet directly into sandbox
+	if (REMOTE_CONDOR_getcreds(sandbox_dir_name.Value()) <= 0) {
+		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
+		return false;
 	}
 
 	// only need to do this once
