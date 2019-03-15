@@ -1,25 +1,68 @@
 
 #include "condor_auth_passwd.h"
-#include "classad/classad.h"
-#include "classad/sink.h"
 #include "match_prefix.h"
 #include "CondorError.h"
 #include "condor_config.h"
 #include "daemon.h"
 #include "dc_collector.h"
+#include "directory.h"
 
 namespace {
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s -identity USER@UID_DOMAIN [-key KEYID] [-authz AUTHZ] [-lifetime VAL]\n"
-		"Alternate usage: %s ([-type TYPE]|[-name NAME]|[-pool POOL]) [-authz AUTHZ] [-lifetime VAL]\n\n"
-		"Generates a token from the local master password or remote session and prints its contents to stdout.\n", argv0, argv0);
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
+		"Generates a token from a remote daemon and prints its contents to stdout.\n"
+		"\nToken options:\n"
+		"    -authz    <authz>                Whitelist one or more authorization\n"
+		"    -lifetime <val>                  Max token lifetime, in seconds\n"
+		"Specifying target options:\n"
+		"    -pool    <host>                 Query this collector\n"
+		"    -name    <name>                 Find a daemon with this name\n"
+		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
+		"\nOther options:\n"
+		"    -token    <NAME>                 Name of token file\n", argv0);
 	exit(1);
 }
 
 int
+write_out_token(const std::string &token_name, const std::string &token)
+{
+	if (token_name.empty()) {
+		printf("%s\n", token.c_str());
+		return 0;
+	}
+	std::string dirpath;
+	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+		MyString file_location;
+		if (!find_user_file(file_location, "tokens.d", false)) {
+			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
+		} else {
+			dirpath = file_location;
+		}
+	}
+	mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
+
+	std::string token_file = dirpath + DIR_DELIM_CHAR + token_name;
+	int fd = open(token_file.c_str(), O_CREAT | O_APPEND | O_WRONLY, 0600);
+	if (-1 == fd) {
+		fprintf(stderr, "Cannot write token to %s: %s (errno=%d)\n", token_file.c_str(),
+			strerror(errno), errno);
+		return 1;
+	}
+	auto result = _condor_full_write(fd, token.c_str(), token.size());
+	if (result != static_cast<ssize_t>(token.size())) {
+		fprintf(stderr, "Failed to write token to %s: %s (errno=%d)\n", token_file.c_str(),
+			strerror(errno), errno);
+		return 1;
+	}
+	std::string newline = "\n";
+	_condor_full_write(fd, newline.c_str(), 1);
+	return 0;
+}
+
+int
 generate_remote_token(const std::string &pool, const std::string &name, daemon_t dtype,
-	const std::vector<std::string> &authz_list, long lifetime)
+	const std::vector<std::string> &authz_list, long lifetime, const std::string &token_name)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -48,8 +91,7 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 		fprintf(stderr, "Failed to request a session token: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
-	printf("%s\n", token.c_str());
-	return 0;
+	return write_out_token(token_name, token);
 }
 
 }
@@ -57,33 +99,15 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 
 int main(int argc, char *argv[]) {
 
-	if (argc < 3) {
-		print_usage(argv[0]);
-	}
-
-	daemon_t dtype = DT_NONE;
+	daemon_t dtype = DT_SCHEDD;
 	std::string pool;
 	std::string name;
 	std::string identity;
-	std::string key = "POOL";
+	std::string token_name;
 	std::vector<std::string> authz_list;
 	long lifetime = -1;
 	for (int i = 1; i < argc; i++) {
-		if (is_dash_arg_prefix(argv[i], "identity", 2)) {
-			i++;
-			if (!argv[i]) {
-				fprintf(stderr, "%s: -identity requires a condor identity as an argument\n", argv[0]);
-				exit(1);
-			}
-			identity = argv[i];
-		} else if (is_dash_arg_prefix(argv[i], "key", 1)) {
-			i++;
-			if (!argv[i]) {
-				fprintf(stderr, "%s: -key requires a key ID as an argument\n", argv[0]);
-				exit(1);
-			}
-			key = argv[i];
-		} else if (is_dash_arg_prefix(argv[i], "authz", 1)) {
+		if (is_dash_arg_prefix(argv[i], "authz", 1)) {
 			i++;
 			if (!argv[i]) {
 				fprintf(stderr, "%s: -authz requires an authorization name argument\n", argv[0]);
@@ -116,6 +140,13 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			name = argv[i];
+		} else if (is_dash_arg_prefix(argv[i], "token", 2)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -token requires a file name argument.\n", argv[0]);
+				exit(1);
+			}
+			token_name = argv[i];
 		} else if (is_dash_arg_prefix(argv[i], "type", 1)) {
 			i++;
 			if (!argv[i]) {
@@ -143,19 +174,5 @@ int main(int argc, char *argv[]) {
 
 	config();
 
-	if ((dtype != DT_NONE) || (!name.empty())) {
-		if (dtype == DT_NONE) { dtype = DT_SCHEDD; }
-		return generate_remote_token(pool, name, dtype, authz_list, lifetime);
-	}
-
-	CondorError err;
-	std::string token;
-	if (!Condor_Auth_Passwd::generate_token(identity, key, authz_list, lifetime, token, &err)) {
-		fprintf(stderr, "Failed to generate a token.\n");
-		fprintf(stderr, "%s\n", err.getFullText(true).c_str());
-		exit(2);
-	}
-
-	printf("%s\n", token.c_str());
-	return 0;
+	return generate_remote_token(pool, name, dtype, authz_list, lifetime, token_name);
 }

@@ -59,6 +59,7 @@ bool findToken(const std::string &tokenfilename,
 	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
 	if (!tokenfile) {
 		dprintf(D_ALWAYS, "Failed to open token file %s\n", tokenfilename.c_str());
+		return false;
 	}
 
 	for (std::string line; std::getline(tokenfile, line); ) {
@@ -149,20 +150,25 @@ findTokens(const std::string &issuer,
 	}
 
 	const char *file;
+	std::vector<std::string> tokens;
 	while ( (file = dir.Next()) ) {
 		if (dir.IsDirectory()) {
 			continue;
 		}
 		if(!excludeFilesRegex.match(file)) {
-			if (findToken(dir.GetFullPath(), issuer, server_key_ids,
-				username, token, signature))
-			{
-				return true;
-			}
+			tokens.emplace_back(dir.GetFullPath());
 		} else {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring token file "
 				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
 				"'%s'\n", dir.GetFullPath());
+		}
+	}
+	std::sort(tokens.begin(), tokens.end());
+	for (const auto &token_filename : tokens) {
+		if (findToken(token_filename, issuer, server_key_ids,
+			username, token, signature))
+		{
+			return true;
 		}
 	}
 
