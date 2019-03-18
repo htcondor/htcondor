@@ -262,7 +262,7 @@ class Matchmaker : public Service
 			@param submitterPrio User priority
 			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateSubmitterLimit(char const *submitterName,
+		void calculateSubmitterLimit(const string &submitterName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
 					  float groupusage,

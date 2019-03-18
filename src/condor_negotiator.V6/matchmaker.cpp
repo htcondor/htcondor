@@ -211,7 +211,7 @@ bool ResourcesInUseByUser_classad_func( const char * /*name*/,
 		return true;
 	}
 
-	float usage = matchmaker_for_classad_func->getAccountant().GetWeightedResourcesUsed(user.c_str());
+	float usage = matchmaker_for_classad_func->getAccountant().GetWeightedResourcesUsed(user);
 
 	result.SetRealValue( usage );
 	return true;
@@ -1557,8 +1557,8 @@ negotiationTime ()
             }
             group->submitterAds->Close();
 
-            group->usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
-            group->priority = accountant.GetPriority(group->name.c_str());
+            group->usage = accountant.GetWeightedResourcesUsed(group->name);
+            group->priority = accountant.GetPriority(group->name);
         }
 
 
@@ -1581,7 +1581,7 @@ negotiationTime ()
                 continue;
             }
 
-            GroupEntry* group = accountant.GetAssignedGroup(subname.c_str());
+            GroupEntry* group = accountant.GetAssignedGroup(subname);
 
             // attach the submitter ad to the assigned group
             group->submitterAds->Insert(ad);
@@ -1850,7 +1850,7 @@ negotiationTime ()
             for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
 
-                double usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
+                double usage = accountant.GetWeightedResourcesUsed(group->name);
 
                 group->usage = usage;
                 dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
@@ -2572,7 +2572,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 			std::string key("Customer.");  // hashkey is "Customer" followed by name
 			key += name;
 
-			ClassAd *accountingAd = accountant.GetClassAd(MyString(key));
+			ClassAd *accountingAd = accountant.GetClassAd(key);
 			if (accountingAd) {
 
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
@@ -2580,12 +2580,11 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
 				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
-				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
+				updateAd.Assign("Priority", accountant.GetPriority(name));
 
 				bool isGroup;
-				MyString nameMyString(name);
 
-				GroupEntry *ge = accountant.GetAssignedGroup(nameMyString, isGroup);
+				GroupEntry *ge = accountant.GetAssignedGroup(name, isGroup);
 				std::string groupName(ge->name);
 
 				updateAd.Assign("IsAccountingGroup", isGroup);
@@ -2623,12 +2622,12 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 
-    MyString CustomerName = group->name;
+    string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(MyString("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(string("Customer.") + CustomerName);
 
     if (CustomerAd == NULL) {
-        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.Value());
+        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
         return;
     } 
 
@@ -2643,7 +2642,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
     if (isGroup) {
         cgname = (cgrp->parent != NULL) ? cgrp->parent->name : cgrp->name;
     } else {
-        dprintf(D_ALWAYS, "WARNING: Expected \"%s\" to be a defined group in the accountant", CustomerName.Value());
+        dprintf(D_ALWAYS, "WARNING: Expected \"%s\" to be a defined group in the accountant", CustomerName.c_str());
         return;
     }
 
@@ -3044,7 +3043,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			double submitterUsage = 0.0;
 
 			calculateSubmitterLimit(
-				submitterName.c_str(),
+				submitterName,
 				groupName,
 				groupQuota,
 				groupusage,
@@ -3174,7 +3173,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
 					// negotiations in next spin
-					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName);
                     negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName.c_str());
 					dprintf(D_FULLDEBUG, "  This submitter hit its submitterLimit.\n");
 					break;
@@ -3189,9 +3188,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
 						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", submitterName.c_str());
-                        scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+                        scheddUsed += accountant.GetWeightedResourcesUsed(submitterName);
                         dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
-                                 accountant.GetWeightedResourcesUsed(submitterName.c_str()));
+                                 accountant.GetWeightedResourcesUsed(submitterName));
 						submitterAds.Remove( submitter_ad );
 					}
 					break;
@@ -3200,9 +3199,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.c_str() );
 	
-					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.c_str());
+					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName);
 					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
-						    accountant.GetWeightedResourcesUsed(submitterName.c_str()));
+						    accountant.GetWeightedResourcesUsed(submitterName));
 					submitterAds.Remove( submitter_ad );
 					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.c_str());
 			}
@@ -5883,7 +5882,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 void
 Matchmaker::calculateSubmitterLimit(
-	char const *submitterName,
+	const string &submitterName,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5967,7 +5966,7 @@ Matchmaker::calculatePieLeft(
 		submitter->LookupString( ATTR_NAME, submitterName );
 
 		calculateSubmitterLimit(
-			submitterName.c_str(),
+			submitterName,
 			groupAccountingName,
 			groupQuota,
 			groupusage,
@@ -6073,7 +6072,7 @@ addRemoteUserPrios( ClassAd	*ad )
 		ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
 		ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
 	{
-		prio = (float) accountant.GetPriority( remoteUser.c_str() );
+		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
 		expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
@@ -6121,7 +6120,7 @@ addRemoteUserPrios( ClassAd	*ad )
 		{
 				// If there is a user on that VM, stick that user's priority
 				// information into the ad	
-			prio = (float) accountant.GetPriority( remoteUser.c_str() );
+			prio = (float) accountant.GetPriority( remoteUser );
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_PRIO);
 			ad->Assign(buffer.Value(),prio);
@@ -6841,7 +6840,7 @@ Matchmaker::calculate_subtree_usage(GroupEntry *group) {
     for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
 		subtree_usage += calculate_subtree_usage(*i);
 	}
-	subtree_usage += accountant.GetWeightedResourcesUsed(group->name.c_str());
+	subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
 
 	group->subtree_usage = subtree_usage;;
 	dprintf(D_FULLDEBUG, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
