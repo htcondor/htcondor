@@ -1815,9 +1815,10 @@ void init_firewall_exceptions() {
 	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", NT_ServiceFlag);
 
 	if ( add_exception == false ) {
-		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping\n");
+		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping firewall configuration\n");
 		return;
 	}
+	dprintf(D_ALWAYS, "Adding/Checking Windows firewall exceptions for all daemons\n");
 
 	// We use getExecPath() here instead of param() since it's
 	// possible the the Windows Service Control Manager

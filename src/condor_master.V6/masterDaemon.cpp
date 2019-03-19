@@ -1258,7 +1258,7 @@ daemon::Exited( int status )
 	int d_flag = D_ALWAYS;
 	if( had_failure ) {
 		d_flag |= D_FAILURE;
-    }
+	}
 	dprintf(d_flag, "%s\n", msg.Value());
 
 		// For HA, release the lock
@@ -3038,6 +3038,13 @@ Daemons::SetDefaultReaper()
 	reaper = DEFAULT_R;
 }
 
+/*static*/ void
+Daemons::ProcdStopped(void* me, int pid, int status)
+{
+	dprintf(D_FULLDEBUG, "ProcD (pid %d) is gone. status=%d\n", pid, status);
+	((Daemons*)me)->AllDaemonsGone();
+}
+
 bool
 Daemons::StopDaemonsBeforeMasterStops()
 {
@@ -3053,6 +3060,15 @@ Daemons::StopDaemonsBeforeMasterStops()
 			running++;
 		}
 	}
+
+	// If we didn't stop any daemons (I'm looking at you shared-port)
+	// then we can now stop the procd if it is running
+	if ( ! running) {
+		if (daemonCore && daemonCore->Proc_Family_QuitProcd(ProcdStopped, this)) {
+			++running;
+		}
+	}
+
 	return !running;
 }
 
