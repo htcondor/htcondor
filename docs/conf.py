@@ -302,6 +302,12 @@ def modify_docstring(app, what, name, obj, options, lines):
                 lines.pop()
             break
 
+    # this is Boost's dumb way of saying an object has no __init__
+    for i, line in enumerate(lines):
+        if line == 'Raises an exception':
+            lines[i] = ''
+            lines[i+1] = ''
+
     # strip leading spaces
     if len(lines) > 0:
         first_indent_len = len(lines[0]) - len(lines[0].lstrip())

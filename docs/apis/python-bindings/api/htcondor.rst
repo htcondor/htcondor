@@ -10,13 +10,9 @@ This page is an exhaustive reference of the API exposed by the :mod:`htcondor`
 module.  It is not meant to be a tutorial for new users but rather a helpful
 guide for those who already understand the basic usage of the module.
 
-This reference covers the following:
 
 Common Module-Level Functions and Objects
 -----------------------------------------
-
-.. autofunction:: enable_debug
-.. autofunction:: enable_log
 
 .. autofunction:: poll
 
@@ -104,6 +100,9 @@ Module Classes
    .. automethod:: disconnect
 
 
+Reading Job Events
+------------------
+
 .. autoclass:: JobEventLog
 
    .. automethod:: events
@@ -111,36 +110,64 @@ Module Classes
 
 .. autoclass:: JobEvent
 
+   .. autoattribute:: type
+   .. autoattribute:: cluster
+   .. autoattribute:: proc
+   .. autoattribute:: timestamp
+   .. automethod:: get
+   .. automethod:: keys
+   .. automethod:: values
+   .. automethod:: items
+
+
+HTCondor Configuration
+----------------------
+
+.. autodata:: param
+.. autofunction:: reload_config
+.. autoclass:: _Param
+
+.. autofunction:: platform
+.. autofunction:: version
+
+
+Module Logging
+--------------
+
+.. autofunction:: enable_debug
+.. autofunction:: enable_log
+
+
 Esoteric Module-Level Functions
 -------------------------------
 
 .. autofunction:: send_command
 .. autofunction:: send_alive
 .. autofunction:: set_subsystem
-.. autofunction:: lock
+.. .. autofunction:: lock
 .. autofunction:: log
 
 
 Iterator and Helper Classes
 ---------------------------
 
-.. autoclass:: HistoryIterator
+.. .. autoclass:: HistoryIterator
 
-   .. automethod:: next
+.. .. automethod:: next
 
-.. autoclass:: QueryIterator
+.. .. autoclass:: QueryIterator
 
-   .. automethod:: next
+..    .. automethod:: next
    .. automethod:: nextAdsNonBlocking
    .. automethod:: tag
    .. automethod:: done
    .. automethod:: watch
 
-.. autoclass:: BulkQueryIterator
+.. .. autoclass:: BulkQueryIterator
 
-   .. automethod:: next
+.. .. automethod:: next
 
-.. autoclass:: FileLock
+.. .. autoclass:: FileLock
 
 Enumerations
 ------------
@@ -163,21 +190,10 @@ Enumerations
 
 .. autoclass:: VacateTypes
 
-.. autoclass:: LockType
+.. .. autoclass:: LockType
 
 .. autoclass:: SubsystemType
 
 .. autoclass:: LogLevel
 
 .. autoclass:: JobEventType
-
-
-HTCondor Configuration
-----------------------
-
-.. autodata:: param
-.. autofunction:: reload_config
-.. autoclass:: _Param
-
-.. autofunction:: platform
-.. autofunction:: version
