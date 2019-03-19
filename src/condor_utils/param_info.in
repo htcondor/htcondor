@@ -3435,8 +3435,8 @@ type=path
 tags=transferer,log
 
 [ADD_WINDOWS_FIREWALL_EXCEPTION]
-default=true
-type=bool
+default=$(CondorIsAdmin)
+type=string
 description=Master should automatically open ports in the Windows firewall for HTCondor daemons
 tags=master
 

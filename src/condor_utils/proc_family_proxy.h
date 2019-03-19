@@ -93,6 +93,10 @@ public:
 	//
 	bool use_glexec_for_family(pid_t, const char* proxy);
 
+	// called by the master prior to exiting to insure that the procd child process is reaped
+	//
+	bool quit(void(*notify)(void*me, int pid, int status),void*me);
+
 	// reaper for the ProcD (called by our PrcFamilyProxyReaperHelper
 	// member)
 	//
@@ -104,9 +108,9 @@ private:
 	//
 	bool start_procd();
 
-	// tell the procd to exit
+	// tell the procd to exit, returns true if the command was successfully delivered
 	//
-	void stop_procd();
+	bool stop_procd();
 
 	// recover from a ProcD problem; kill and restart it if we're
 	// the one who launched it
@@ -131,6 +135,11 @@ private:
 	//
 	int m_procd_pid;
 
+	// The pid of the ProcD we just told to exit.  used to we can ignore
+	// a subsequent request to unregister the family of the procd pid
+	//
+	int m_former_procd_pid;
+
 	// object for managing our connection to the ProcD
 	//
 	ProcFamilyClient* m_client;
@@ -142,6 +151,11 @@ private:
 	// ID of reaper for the ProcD, if registered
 	//
 	int m_reaper_id;
+
+	// Optional callback to let an external component know that the reaper fired
+	//
+	void(*m_reaper_notify)(void* me, int pid, int status);
+	void* m_reaper_notify_me;
 };
 
 #endif

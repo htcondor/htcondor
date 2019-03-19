@@ -108,7 +108,13 @@ LocalClient::start_connection(void* buffer, int len)
 		}
 		DWORD error = GetLastError();
 		if (error != ERROR_PIPE_BUSY) {
-			dprintf(D_ALWAYS, "CreateFile error: %u\n", error);
+			if (error == ERROR_FILE_NOT_FOUND) {
+				dprintf(D_ALWAYS | D_BACKTRACE,
+					"Could not open pipe handle '%s'. error %u : The system cannot find the file specified.\n",
+					m_pipe_addr, error);
+			} else {
+				dprintf(D_ALWAYS, "CreateFile error: %u\n", error);
+			}
 			return false;
 		}
 		if (WaitNamedPipe(m_pipe_addr, NMPWAIT_WAIT_FOREVER) == FALSE) {
