@@ -71,17 +71,6 @@ Module Classes
    .. automethod:: cancelDrainJobs
 
 
-.. autoclass:: SecMan
-
-   .. automethod:: invalidateAllSessions
-   .. automethod:: ping
-   .. automethod:: getCommandString
-   .. automethod:: setConfig
-   .. automethod:: setGSICredential
-   .. automethod:: setPoolPassword
-   .. automethod:: setTag
-
-
 .. autoclass:: Claim
 
    .. automethod:: requestCOD
@@ -98,6 +87,19 @@ Module Classes
 
    .. automethod:: sendClaim
    .. automethod:: disconnect
+
+Security Management
+-------------------
+
+.. autoclass:: SecMan
+
+   .. automethod:: invalidateAllSessions
+   .. automethod:: ping
+   .. automethod:: getCommandString
+   .. automethod:: setConfig
+   .. automethod:: setGSICredential
+   .. automethod:: setPoolPassword
+   .. automethod:: setTag
 
 
 Reading Job Events
