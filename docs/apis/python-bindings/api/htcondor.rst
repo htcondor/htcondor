@@ -36,15 +36,6 @@ Module Classes
    .. automethod:: reschedule
 
 
-.. autoclass:: Collector
-
-   .. automethod:: locate
-   .. automethod:: locateAll
-   .. automethod:: query
-   .. automethod:: directQuery
-   .. automethod:: advertise
-
-
 .. autoclass:: Submit
 
    .. automethod:: expand
@@ -88,6 +79,20 @@ Module Classes
    .. automethod:: sendClaim
    .. automethod:: disconnect
 
+Querying a Collector
+--------------------
+
+.. autoclass:: Collector
+
+   .. automethod:: locate
+   .. automethod:: locateAll
+   .. automethod:: query
+   .. automethod:: directQuery
+   .. automethod:: advertise
+
+.. autoclass:: DaemonTypes
+
+
 Security Management
 -------------------
 
@@ -121,6 +126,8 @@ Reading Job Events
    .. automethod:: values
    .. automethod:: items
 
+.. autoclass:: JobEventType
+
 
 HTCondor Configuration
 ----------------------
@@ -140,8 +147,8 @@ Module Logging
 .. autofunction:: enable_log
 
 
-Esoteric Module-Level Functions
--------------------------------
+Esoteric Functions
+------------------
 
 .. autofunction:: send_command
 .. autofunction:: send_alive
@@ -171,10 +178,9 @@ Iterator and Helper Classes
 
 .. .. autoclass:: FileLock
 
+
 Enumerations
 ------------
-
-.. autoclass:: DaemonTypes
 
 .. autoclass:: AdTypes
 
@@ -198,4 +204,3 @@ Enumerations
 
 .. autoclass:: LogLevel
 
-.. autoclass:: JobEventType
