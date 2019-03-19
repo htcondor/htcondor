@@ -92,6 +92,8 @@ Querying a Collector
 
 .. autoclass:: DaemonTypes
 
+.. autoclass:: AdTypes
+
 
 Security Management
 -------------------
@@ -181,8 +183,6 @@ Iterator and Helper Classes
 
 Enumerations
 ------------
-
-.. autoclass:: AdTypes
 
 .. autoclass:: JobAction
 

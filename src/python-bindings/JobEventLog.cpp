@@ -480,7 +480,7 @@ void export_event_log() {
 	boost::python::register_ptr_to_python< boost::shared_ptr<JobEvent>>();
 
 	// Register the ULogEventNumber enumeration as JobEventType
-	boost::python::enum_<ULogEventNumber>( "JobEventType",
+	boost::python::enum_<ULogEventNumber>("JobEventType",
             R"C0ND0R(
             The type event of a user log event; corresponds to ``ULogEventNumber``
             in the C++ source.
