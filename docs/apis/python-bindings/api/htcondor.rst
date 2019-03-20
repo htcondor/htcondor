@@ -62,6 +62,15 @@ Module Classes
    .. automethod:: cancelDrainJobs
 
 
+.. autoclass:: ScheddNegotiate
+
+   .. automethod:: sendClaim
+   .. automethod:: disconnect
+
+
+Managing Claims
+---------------
+
 .. autoclass:: Claim
 
    .. automethod:: requestCOD
@@ -74,10 +83,8 @@ Module Classes
    .. automethod:: delegateGSIProxy
 
 
-.. autoclass:: ScheddNegotiate
+.. autoclass:: VacateTypes
 
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
 
 Querying a Collector
 --------------------
@@ -195,8 +202,6 @@ Enumerations
 .. autoclass:: BlockingMode
 
 .. autoclass:: DrainTypes
-
-.. autoclass:: VacateTypes
 
 .. .. autoclass:: LockType
 
