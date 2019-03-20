@@ -3308,7 +3308,12 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
+		// handle queued pump work. these are like zero timeout one-shot timers
+		// but unlike timers, can be registered from any thread (only Windows needs the second part)
+		// We do this before the signal handlers so that pump work can be used to raise a signal
+		int num_pumpwork_fired = DoPumpWork();
 
+		// call signal handlers for any pending signals
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
 			for (i=0;i<nSig;i++) {
@@ -3361,10 +3366,6 @@ void DaemonCore::Driver()
         group_runtime = runtime;
 
 		// Prepare to enter main select()
-
-		// handle queued pump work. these are like zero timeout one-shot timers
-		// but unlike timers, can be registered from any thread
-		int num_pumpwork_fired = DoPumpWork();
 
 		// call Timeout() - this function does 2 things:
 		//   first, it calls any timer handlers whose time has arrived.
@@ -3524,7 +3525,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_ALWAYS, "PERF: entering select\n");
+			dprintf(D_ALWAYS, "PERF: entering select. timeout=%d\n", (int)timeout);
 		}
 
 		selector.execute();
