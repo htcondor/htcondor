@@ -56,16 +56,22 @@ Module Classes
    .. automethod:: setUsage
 
 
-.. autoclass:: Startd
-
-   .. automethod:: drainJobs
-   .. automethod:: cancelDrainJobs
-
 
 .. autoclass:: ScheddNegotiate
 
    .. automethod:: sendClaim
    .. automethod:: disconnect
+
+
+Managing Starters
+-----------------
+
+.. autoclass:: Startd
+
+   .. automethod:: drainJobs
+   .. automethod:: cancelDrainJobs
+
+.. autoclass:: DrainTypes
 
 
 Managing Claims
@@ -200,8 +206,6 @@ Enumerations
 .. autoclass:: QueryOpts
 
 .. autoclass:: BlockingMode
-
-.. autoclass:: DrainTypes
 
 .. .. autoclass:: LockType
 
