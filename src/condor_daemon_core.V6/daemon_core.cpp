@@ -235,6 +235,13 @@ static size_t compute_pid_hash(const pid_t &key)
 
 // DaemonCore constructor.
 
+#ifdef WIN32
+// when this is set to true, the pidWatcherThreads will quit without touching any DaemonCore data structures
+// used in the DaemonCore destructor to insure we don't crash on the way out the door even if a child
+// races us to the exit.
+bool abort_pid_watcher_threads = false;
+#endif
+
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
 	: m_create_family_session(true),
@@ -264,6 +271,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	pidTable = new PidHashTable(compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
+	abort_pid_watcher_threads = false;
 	// init the mutex
 	#pragma warning(suppress: 28125) // should InitCritSec inside a try/except block..
 	InitializeCriticalSection(&Big_fat_mutex);
@@ -463,6 +471,11 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 DaemonCore::~DaemonCore()
 {
 	int		i;
+
+	#ifdef WIN32
+	// force pid watcher threads to quit without doing any more "reaping" (lest they crash)
+	abort_pid_watcher_threads = true;
+	#endif
 
 	if( m_ccb_listeners ) {
 		delete m_ccb_listeners;
@@ -688,7 +701,7 @@ int DaemonCore::FileDescriptorSafetyLimit()
 		int file_descriptor_max = Selector::fd_select_size();
 #ifdef WIN32
 		// Set the danger level at 1 less than the max (Windows doesn't put sockets into the same table as files)
-		file_descriptor_safety_limit = file_descriptor_max - 1;
+		file_descriptor_safety_limit = file_descriptor_max - 10;
 #else
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
@@ -8564,6 +8577,16 @@ DaemonCore::Proc_Family_Cleanup()
 	}
 }
 
+bool
+DaemonCore::Proc_Family_QuitProcd(void(*notify)(void*me, int pid, int status), void*me)
+{
+	if (m_proc_family) {
+		return m_proc_family->quit(notify, me);
+	}
+	return false;
+}
+
+
 #define REFACTOR_SOCK_INHERIT 1
 #ifdef REFACTOR_SOCK_INHERIT
 // extracts the parent address and inherited socket information from the given inherit string
@@ -9253,6 +9276,7 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 
 
 #ifdef WIN32
+
 // This function runs in a seperate thread and wathces over children
 unsigned
 pidWatcherThread( void* arg )
@@ -9271,6 +9295,8 @@ pidWatcherThread( void* arg )
 	entry = (DaemonCore::PidWatcherEntry *) arg;
 
 	for (;;) {
+
+	if (abort_pid_watcher_threads) { return FALSE; };
 
 	::EnterCriticalSection(&(entry->crit_section));
 	numentries = 0;
@@ -9382,6 +9408,7 @@ pidWatcherThread( void* arg )
 
 		// now just wait for something to happen instead of busy looping.
 		result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, INFINITE);
+		if (abort_pid_watcher_threads) { return FALSE; };
 	}
 
 

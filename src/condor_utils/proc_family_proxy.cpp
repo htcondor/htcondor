@@ -53,9 +53,12 @@ public:
 
 int ProcFamilyProxy::s_instantiated = false;
 
-ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
-	m_procd_pid(-1),
-	m_reaper_id(FALSE)
+ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
+	: m_procd_pid(-1)
+	, m_former_procd_pid(-1)
+	, m_reaper_id(FALSE)
+	, m_reaper_notify(NULL)
+	, m_reaper_notify_me(NULL)
 {
 	// only one of these should be instantiated
 	//
@@ -336,6 +339,16 @@ ProcFamilyProxy::continue_family(pid_t pid)
 bool
 ProcFamilyProxy::unregister_family(pid_t pid)
 {
+	//dprintf(D_ALWAYS, "ProcFamilyProxy::unregister_family(%d)\n", pid);
+
+	// if we just stopped the procd, quietly ignore a request to unregister a pid
+	// since stopping the procd unregisters everthing. In normal operation, we hit
+	// this code for shared-port and for the procd itself during master shutdown and restart.
+	if ((m_former_procd_pid != -1) && (m_procd_pid == -1)) {
+		// procd is gone, so unregister is successful by definition. ;)
+		return true;
+	}
+
 	bool response;
 	if (!m_client->unregister_family(pid, response)) {
 		dprintf(D_ALWAYS, "unregister_subfamily: ProcD communication error\n");
@@ -356,6 +369,20 @@ ProcFamilyProxy::use_glexec_for_family(pid_t pid, const char* proxy)
 		return false;
 	}
 	return response;
+}
+
+bool
+ProcFamilyProxy::quit(void(*notify)(void*me, int pid, int status), void* me)
+{
+	if (m_procd_pid != -1) {
+		m_reaper_notify = notify;
+		m_reaper_notify_me = me;
+		bool stopping = stop_procd();
+		UnsetEnv("CONDOR_PROCD_ADDRESS_BASE");
+		UnsetEnv("CONDOR_PROCD_ADDRESS");
+		return stopping;
+	}
+	return false;
 }
 
 bool
@@ -609,18 +636,28 @@ ProcFamilyProxy::start_procd()
 	return true;
 }
 
-void
+bool
 ProcFamilyProxy::stop_procd()
 {
-	bool response;
+	//dprintf(D_ALWAYS, "stop_procd(). pid = %d, former_pid=%d\n", m_procd_pid, m_former_procd_pid);
+
+	bool response=false;
 	if (!m_client->quit(response)) {
 		dprintf(D_ALWAYS, "error telling ProcD to exit\n");
+	}
+
+	// remember the procd pid before we overwrite it
+	// so that we can quietly ignore a subsequent request to unregister it from daemoncore
+	if (m_procd_pid != -1) {
+		m_former_procd_pid = m_procd_pid;
 	}
 
 	// set m_procd_pid back to -1 so the reaper expects to see
 	// the ProcD exit
 	//
 	m_procd_pid = -1;
+	//dprintf(D_ALWAYS, "return %d from stop_procd() pid = %d, former_pid=%d\n", response, m_procd_pid, m_former_procd_pid);
+	return response;
 }
 
 void
@@ -703,6 +740,12 @@ ProcFamilyProxy::procd_reaper(int pid, int status)
 		        status);
 		recover_from_procd_error();
 	}
+
+	// do one-time reaping callback if one was requested.
+	if (m_reaper_notify) {
+		m_reaper_notify(m_reaper_notify_me, pid, status);
+	}
+	m_reaper_notify = NULL;
 
 	return 0;
 }

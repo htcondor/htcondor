@@ -1239,9 +1239,15 @@ class DaemonCore : public Service
 
 	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
-	    case the DaemonCore destructor won't be called)
+	    case the DaemonCore destructor won't be called. also used by a glexec'd starter before it exits)
 	*/
 	void Proc_Family_Cleanup();
+
+	/** Used to explicitly stop a condor_procd child process if there is one
+		(used by the Master before it restarts or exits so that it can be sure to reap the child process)
+		returns true if the procd is stopping and the notify callback will be called when it is reaped
+	*/
+	bool Proc_Family_QuitProcd(void(*notify)(void*me,int pid,int status), void*me);
 
     /** @name Data pointer functions.
         These functions deal with
