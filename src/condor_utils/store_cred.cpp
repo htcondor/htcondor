@@ -38,6 +38,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <iterator>
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 

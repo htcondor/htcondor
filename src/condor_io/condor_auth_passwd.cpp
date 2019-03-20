@@ -27,6 +27,10 @@
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 
+#ifdef EVP_PKEY_HKDF
+#include <openssl/kdf.h>
+#endif
+
 #include "condor_auth.h"
 #include "CryptKey.h"
 #include "store_cred.h"
@@ -1308,13 +1312,16 @@ Condor_Auth_Passwd::hkdf(const unsigned char *sk, size_t sk_len,
 	unsigned char *result, size_t result_len)
 {
 #ifdef EVP_PKEY_HKDF
+	// I had to fix two simple syntax errors in this code before
+	// it would build.  I rather suspect it's never been tested.
+	// See ticket #6962.
 	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 	if (EVP_PKEY_derive_init(pctx) <= 0) {goto fail;}
-	if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256() <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0) {goto fail;}
 	if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt, salt_len) <= 0) {goto fail;}
 	if (EVP_PKEY_CTX_set1_hkdf_key(pctx, sk, sk_len) <= 0) {goto fail;}
 	if (EVP_PKEY_CTX_add1_hkdf_info(pctx, info, info_len) <= 0) {goto fail;}
-	if (EVP_PKEY_derive, pctx, result, &result_len) <= 0) {goto fail;}
+	if (EVP_PKEY_derive(pctx, result, &result_len) <= 0) {goto fail;}
 	EVP_PKEY_CTX_free(pctx);
 	return 0;
 
