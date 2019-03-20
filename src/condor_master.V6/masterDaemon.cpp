@@ -1251,7 +1251,7 @@ daemon::Exited( int status )
 				// immediately), and it doesn't check executable
 				// timestamps and restart based on that, either.
 			on_hold = true;
-		} else if (WEXITSTATUS(status) == 0 && MasterShuttingDown) {
+		} else if (WEXITSTATUS(status) == 0 && (on_hold || MasterShuttingDown)) {
 			had_failure = false;
 		}
 	}
@@ -1544,7 +1544,7 @@ daemon::InitParams()
 		tmp = watch_name;
 	}
 			
-	int length = strlen(name_in_config_file) + 32;
+	int length = (int)strlen(name_in_config_file) + 32;
 	buf = (char *)malloc(length);
 	ASSERT( buf != NULL );
 	snprintf( buf, length, "%s_WATCH_FILE", name_in_config_file );
