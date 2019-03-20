@@ -6,7 +6,19 @@
 #include "directory.h"
 
 #if defined(HAVE_EXT_OPENSSL)
-#include <jwt-cpp/jwt.h>
+
+// The GCC_DIAG_OFF() disables warnings so that we can build on our
+// -Werror platforms.  We have to undefine max and min because of
+// Windows-related silliness.
+
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#undef min
+#undef max
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
+
 #endif
 
 #include <fstream>
@@ -33,7 +45,7 @@ bool printToken(const std::string &tokenfilename) {
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
-				[](int ch) {return !std::isspace(ch) && (ch != '\n');}));
+				[](int ch) {return !isspace(ch) && (ch != '\n');}));
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
