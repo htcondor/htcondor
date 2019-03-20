@@ -42,6 +42,14 @@ Module Classes
    .. automethod:: queue
 
 
+.. autoclass:: ScheddNegotiate
+
+   .. automethod:: sendClaim
+   .. automethod:: disconnect
+
+Controlling a Negotiator
+------------------------
+
 .. autoclass:: Negotiator
 
    .. automethod:: deleteUser
@@ -56,26 +64,16 @@ Module Classes
    .. automethod:: setUsage
 
 
-
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
-
-
-Managing Starters
------------------
+Managing Starters and Claims
+----------------------------
 
 .. autoclass:: Startd
 
    .. automethod:: drainJobs
    .. automethod:: cancelDrainJobs
 
+
 .. autoclass:: DrainTypes
-
-
-Managing Claims
----------------
 
 .. autoclass:: Claim
 
