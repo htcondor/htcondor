@@ -871,6 +871,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
 #define ATTR_SEC_AUTHORIZATION_SUCCEEDED  "AuthorizationSucceeded"
 #define ATTR_SEC_RETURN_CODE  "ReturnCode"
+#define ATTR_SEC_ISSUER_KEYS "IssuerKeys"
+#define ATTR_SEC_LIMIT_AUTHORIZATION "LimitAuthorization"
+#define ATTR_SEC_TOKEN "Token"
+#define ATTR_SEC_TOKEN_LIFETIME "TokenLifetime"
+#define ATTR_SEC_TRUST_DOMAIN "TrustDomain"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

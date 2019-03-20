@@ -389,6 +389,7 @@ public:
 	const std::string &getSessionID() const {return _session;}
 
 	void getPolicyAd(classad::ClassAd &ad) const;
+	const classad::ClassAd *getPolicyAd() const {return _policy_ad;}
 	void setPolicyAd(const classad::ClassAd &ad);
 
 		/// True if socket has tried to authenticate or socket is

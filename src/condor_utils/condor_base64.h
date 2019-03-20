@@ -25,10 +25,10 @@
 #define HAVE_CONDOR_BASE64 1
 
 // Caller needs to free the returned pointer
-char* condor_base64_encode(const unsigned char *input, int length);
+char* condor_base64_encode(const unsigned char *input, int length, bool include_newline=true);
 
 // Caller needs to free *output if non-NULL
-void condor_base64_decode(const char *input,unsigned char **output, int *output_length);
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length, bool require_newline=true);
 
 #endif
 #endif

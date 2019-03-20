@@ -40,9 +40,14 @@
 #include "exit.h"
 #include "match_prefix.h"
 #include "historyFileFinder.h"
+#include "store_cred.h"
 
 #ifdef LINUX
 #include <sys/prctl.h>
+#endif
+
+#if defined(HAVE_EXT_OPENSSL)
+#include "condor_auth_passwd.h"
 #endif
 
 #define _NO_EXTERN_DAEMON_CORE 1	
@@ -1290,6 +1295,119 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+static int
+handle_dc_session_token( Service*, int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to read input from client\n");
+		return false;
+	}
+	CondorError err;
+	classad::ClassAd result_ad;
+
+	std::vector<std::string> authz_list;
+	std::string authz_list_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
+		StringList authz_str_list(authz_list_str.c_str());
+		authz_str_list.rewind();
+		const char *authz;
+		while ( (authz = authz_str_list.next()) ) {
+			authz_list.emplace_back(authz);
+		}
+	}
+	int requested_lifetime;
+	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+			requested_lifetime = max_lifetime;
+		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+			requested_lifetime = max_lifetime;
+		}
+	} else {
+		requested_lifetime = -1;
+	}
+	std::string key_name = "POOL";
+	param(key_name, "SEC_TOKEN_ISSUER_KEY");
+	std::vector<std::string> creds;
+	std::string final_key_name;
+	if (!listNamedCredentials(creds, &err)) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+		result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+	}
+	for (const auto &cred : creds) {
+		if (cred == key_name) {
+			final_key_name = key_name;
+			break;
+		}
+	}
+
+	classad::ClassAd policy_ad;
+	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
+	const char *auth_user_cstr;
+	std::string auth_user;
+	long original_expiry = -1;
+	long max_lifetime = 0;
+	if (policy_ad.EvaluateAttrInt("TokenExpirationTime", original_expiry)) {
+		time_t now = time(NULL);
+		max_lifetime = original_expiry - now;
+		if ((requested_lifetime > max_lifetime) ||
+			((max_lifetime >= 0) && (requested_lifetime < 0)))
+		{
+			requested_lifetime = max_lifetime;
+		}
+	}
+
+	if (max_lifetime < 0) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Cannot create new session as original one expired.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+	} else if (!static_cast<Sock*>(stream)->isMappedFQU() ||
+		!(auth_user_cstr = static_cast<Sock*>(stream)->getFullyQualifiedUser()) ||
+		(auth_user = auth_user_cstr).empty())
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server did not successfully authenticate session.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 2);
+	} else if (final_key_name.empty()) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to requested key.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+		dprintf(D_SECURITY, "Daemon configured to sign with key named %s; this is not available.\n",
+			key_name.c_str());
+	}
+	else
+	{
+#if defined(HAVE_EXT_OPENSSL)
+		std::string token;
+		if (!Condor_Auth_Passwd::generate_token(
+			auth_user,
+			final_key_name,
+			authz_list,
+			requested_lifetime,
+			token,
+			&err))
+		{
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+		} else {
+			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+		}
+#else
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+#endif
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
 int
 handle_nop( Service*, int, Stream* stream)
 {
@@ -1749,6 +1867,9 @@ dc_reconfig()
 
 	// Clear out the passwd cache.
 	clear_passwd_cache();
+
+	// Flush the cached list of keys.
+	refreshNamedCredentials();
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
@@ -2784,6 +2905,14 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_TIME_OFFSET, "DC_TIME_OFFSET",
 								  (CommandHandler)time_offset_receive_cedar_stub,
 								  "time_offset_cedar_stub", 0, DAEMON );
+
+		//
+		// Request a token that can be used to authenticat / authorize a future
+		// session using the TOKEN protocol.
+		//
+	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
+								(CommandHandler)handle_dc_session_token,
+								"handle_dc_session_token()", 0, ALLOW );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

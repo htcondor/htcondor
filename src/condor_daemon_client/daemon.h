@@ -567,6 +567,15 @@ public:
 		 */
 	bool getInstanceID( std::string & instanceID );
 
+		/*
+		 * Request a token from the remote daemon.
+		 *
+		 * Caller can optionally request a maximum token lifetime; if none is desired,
+		 * then set `lifetime` to -1.
+		 */
+	bool getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
+		std::string &token, CondorError *err=NULL );
+
 protected:
 	// Data members
 	char* _name;

@@ -40,6 +40,7 @@
 #include "subsystem_info.h"
 #include "setenv.h"
 #include "ipv6_hostname.h"
+#include "condor_auth_passwd.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -382,6 +383,24 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 }
 
 
+void
+SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
+{
+	std::string method_list_str;
+	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
+		return;
+	}
+	StringList  method_list( method_list_str.c_str() );
+	const char *method;
+
+	method_list.rewind();
+	while ( (method = method_list.next()) ) {
+		if (!strcmp(method, "TOKEN")) {
+			Condor_Auth_Passwd::preauth_metadata(ad);
+		}
+	}
+}
+
 
 // params() for a bunch of stuff and sets up a class ad describing our security
 // preferences/requirements.  returns true if the security policy is valid, and
@@ -482,6 +501,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
 		free(paramer);
 		paramer = NULL;
+
+		// Some methods may need to insert additional metadata into this ad
+		// in order for the client & server to determine if they can be used.
+		UpdateAuthenticationMetadata(*ad);
 	} else {
 		if( sec_authentication == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
@@ -912,6 +935,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	sprintf (buf, "%s=\"YES\"", ATTR_SEC_ENACT);
 	action_ad->Insert(buf);
+
+	UpdateAuthenticationMetadata(*action_ad);
 
 	return action_ad;
 
@@ -1828,6 +1853,9 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
+
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
 			m_auth_info.Assign(ATTR_SEC_USE_SESSION, "YES");
@@ -1931,6 +1959,7 @@ SecManStartCommand::authenticate_inner()
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
 			}
 
+			m_sock->setPolicyAd(m_auth_info);
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
 			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
 
@@ -2643,6 +2672,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_NTSSPI;
 	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
+	} else if ( !strcasecmp( method, "TOKEN" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
 	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {
