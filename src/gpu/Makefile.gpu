@@ -1,0 +1,25 @@
+HEADERS = \
+	pi_sleep.h \
+	pi_dynlink.h \
+	cuda_device_enumeration.h
+
+OBJECTS = \
+	cuda_device_enumeration.o \
+	condor_gpu_utilization.o
+
+TARGETS = \
+	condor_gpu_utilization
+
+all : $(TARGETS)
+
+condor_gpu_utilization.o : condor_gpu_utilization.cpp $(HEADERS)
+gpu_function_pointers.o : gpu_function_pointers.cpp $(HEADERS)
+
+condor_gpu_utilization : $(OBJECTS)
+	g++ -Wall -g -std=c++11 -o $@ -ldl $+
+
+%.o : %.cpp
+	g++ -Wall -g -std=c++11 -I../condor_tools -c $< -o $@
+
+clean :
+	rm -f $(TARGETS) $(OBJECTS)
