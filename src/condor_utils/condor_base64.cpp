@@ -48,12 +48,12 @@ char* condor_base64_encode(const unsigned char *input, int length, bool include_
 	(void)BIO_flush(b64);
 	BIO_get_mem_ptr(b64, &bptr);
 
-		// NOTE: HTCondor strips out the last character, which is usually a newline.
-	auto length_to_copy = bptr->length - (include_newline ? -1 : 0);
-	char *buff = (char *)malloc(length_to_copy);
+	// Previous versions of this function stripped the trailing newline.
+	int l = bptr->length + (include_newline ? 0 : 1);
+	char * buff = (char *)malloc(l);
 	ASSERT(buff);
-	memcpy(buff, bptr->data, length_to_copy);
-	buff[length_to_copy] = 0;
+	memcpy(buff, bptr->data, l - 1);
+	buff[l-1] = 0;
 	BIO_free_all(b64);
 
 	return buff;
