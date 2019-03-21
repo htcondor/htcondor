@@ -17,8 +17,24 @@ Common Module-Level Functions and Objects
 .. autofunction:: poll
 
 
-Module Classes
---------------
+Interacting with Collectors
+---------------------------
+
+.. autoclass:: Collector
+
+   .. automethod:: locate
+   .. automethod:: locateAll
+   .. automethod:: query
+   .. automethod:: directQuery
+   .. automethod:: advertise
+
+.. autoclass:: DaemonTypes
+
+.. autoclass:: AdTypes
+
+
+Interacting with Schedulers
+---------------------------
 
 .. autoclass:: Schedd
 
@@ -35,6 +51,22 @@ Module Classes
    .. automethod:: negotiate
    .. automethod:: reschedule
 
+.. autoclass:: ScheddNegotiate
+
+   .. automethod:: sendClaim
+   .. automethod:: disconnect
+
+.. autoclass:: JobAction
+
+.. autoclass:: TransactionFlags
+
+.. autoclass:: QueryOpts
+
+.. autoclass:: BlockingMode
+
+
+Submitting Jobs
+---------------
 
 .. autoclass:: Submit
 
@@ -42,13 +74,8 @@ Module Classes
    .. automethod:: queue
 
 
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
-
-Controlling a Negotiator
-------------------------
+Interacting with Negotiators
+----------------------------
 
 .. autoclass:: Negotiator
 
@@ -88,22 +115,6 @@ Managing Starters and Claims
 
 
 .. autoclass:: VacateTypes
-
-
-Querying a Collector
---------------------
-
-.. autoclass:: Collector
-
-   .. automethod:: locate
-   .. automethod:: locateAll
-   .. automethod:: query
-   .. automethod:: directQuery
-   .. automethod:: advertise
-
-.. autoclass:: DaemonTypes
-
-.. autoclass:: AdTypes
 
 
 Security Management
@@ -195,15 +206,7 @@ Iterator and Helper Classes
 Enumerations
 ------------
 
-.. autoclass:: JobAction
-
 .. autoclass:: DaemonCommands
-
-.. autoclass:: TransactionFlags
-
-.. autoclass:: QueryOpts
-
-.. autoclass:: BlockingMode
 
 .. .. autoclass:: LockType
 
