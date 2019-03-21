@@ -48,11 +48,38 @@
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.  We have to undefine max and min because of
 // Windows-related silliness.
+// Older Clang compilers on macOS define __cpp_attributes but not
+//   __has_cpp_attribute.
+// LibreSSL advertises itself as OpenSSL 2.0.0
+//   (OPENSSL_VERSION_NUMBER 0x20000000L), but doesn't have some
+//   functions introduced in OpenSSL 1.1.0.
+// OpenSSL 0.9.8 (used on older macOS versions) doesn't have
+//    RSA_verify_PKCS1_PSS_mgf1() or RSA_padding_add_PKCS1_PSS_mgf1().
+//    But since jwt calls them using the same value for the Hash and
+//    mgf1Hash arguments, we can use the non-mgf1 versions of these
+//    functions, which are available.
 
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #undef min
 #undef max
+#if defined(LIBRESSL_VERSION_NUMBER)
+#define OPENSSL10
+#endif
+#if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
+#undef __cpp_attributes
+#endif
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+#include <openssl/rsa.h>
+static int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash,
+        const unsigned char *EM, int sLen)
+{ return RSA_verify_PKCS1_PSS(rsa, mHash, Hash, EM, sLen); }
+static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
+        const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)
+{ return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
+#endif
 #include "jwt-cpp/jwt.h"
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
@@ -211,6 +238,15 @@ static unsigned char *HKDF_Extract(const EVP_MD *evp_md,
     return prk;
 }
 
+// In OpenSSL 0.9.8, several of the HMAC functions returned void.
+// This macro lets us fake a successful return code when using these
+// crusty versions of OpenSSL, but use the real return code when using
+// newer versions.
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+#define FAKE_RC(x) ((x), 1)
+#else
+#define FAKE_RC(x) x
+#endif
 
 static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
                                   const unsigned char *prk, size_t prk_len,
@@ -234,7 +270,7 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 
     HMAC_CTX_init(&hmac);
 
-    if (!HMAC_Init_ex(&hmac, prk, prk_len, evp_md, NULL))
+    if (!FAKE_RC(HMAC_Init_ex(&hmac, prk, prk_len, evp_md, NULL)))
         goto err;
 
     for (i = 1; i <= n; i++) {
@@ -242,20 +278,20 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
         const unsigned char ctr = i;
 
         if (i > 1) {
-            if (!HMAC_Init_ex(&hmac, NULL, 0, NULL, NULL))
+            if (!FAKE_RC(HMAC_Init_ex(&hmac, NULL, 0, NULL, NULL)))
                 goto err;
 
-            if (!HMAC_Update(&hmac, prev, dig_len))
+            if (!FAKE_RC(HMAC_Update(&hmac, prev, dig_len)))
                 goto err;
         }
 
-        if (!HMAC_Update(&hmac, info, info_len))
+        if (!FAKE_RC(HMAC_Update(&hmac, info, info_len)))
             goto err;
 
-        if (!HMAC_Update(&hmac, &ctr, 1))
+        if (!FAKE_RC(HMAC_Update(&hmac, &ctr, 1)))
             goto err;
 
-        if (!HMAC_Final(&hmac, prev, NULL))
+        if (!FAKE_RC(HMAC_Final(&hmac, prev, NULL)))
             goto err;
 
         copy_len = (done_len + dig_len > okm_len) ?

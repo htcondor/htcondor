@@ -30,11 +30,40 @@
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.  We have to undefine max and min because of
 // Windows-related silliness.
+// Older Clang compilers on macOS define __cpp_attributes but not
+//   __has_cpp_attribute.
+// LibreSSL advertises itself as OpenSSL 2.0.0
+//   (OPENSSL_VERSION_NUMBER 0x20000000L), but doesn't have some
+//   functions introduced in OpenSSL 1.1.0.
+// OpenSSL 0.9.8 (used on older macOS versions) doesn't have
+//    RSA_verify_PKCS1_PSS_mgf1() or RSA_padding_add_PKCS1_PSS_mgf1().
+//    But since jwt calls them using the same value for the Hash and
+//    mgf1Hash arguments, we can use the non-mgf1 versions of these
+//    functions, which are available.
+
+#include <openssl/opensslv.h>
 
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #undef min
 #undef max
+#if defined(LIBRESSL_VERSION_NUMBER)
+#define OPENSSL10
+#endif
+#if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
+#undef __cpp_attributes
+#endif
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+#include <openssl/rsa.h>
+static int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash,
+        const unsigned char *EM, int sLen)
+{ return RSA_verify_PKCS1_PSS(rsa, mHash, Hash, EM, sLen); }
+static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
+        const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)
+{ return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
+#endif
 #include "jwt-cpp/jwt.h"
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
