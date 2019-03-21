@@ -1935,13 +1935,13 @@ bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
 {
 	std::string prefix;
-	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP");
 	if (!prefix.size())
 	{
 		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
 	}
 	StringList sl(prefix.c_str());
-	if (sl.contains_anycase_withwildcard(name.c_str()))
+	if (sl.prefix_anycase(name.c_str()))
 	{
 		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
 			m_delayed_update_attrs.end(), name);
