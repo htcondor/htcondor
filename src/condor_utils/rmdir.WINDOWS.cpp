@@ -1182,7 +1182,7 @@ static bool WINAPI DeletePathCallback (
       dpd.cFilesVisited += 1;
 
    dpd.cLastDepth = cDepth;
-   dpd.cMaxDepth = max(cDepth, dpd.cMaxDepth);
+   dpd.cMaxDepth = MAX(cDepth, dpd.cMaxDepth);
 
    if (fProtected)
       {

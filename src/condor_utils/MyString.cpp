@@ -360,10 +360,6 @@ template <> bool MyString::serialize_int<bool>(bool val) { append_str(val ? "1" 
 
 #ifdef WIN32
 #define strtoull _strtoui64
-#pragma push_macro("min")
-#pragma push_macro("max")
-#undef min
-#undef max
 #endif
 
 // deserialize an int into the given value, and advance the deserialization pointer.
@@ -482,11 +478,6 @@ void force_mystring_templates() {
 	buf.deserialize_int(&ul);
 	buf.deserialize_int(&ull);
 }
-#endif
-
-#ifdef WIN32
- #pragma pop_macro("min")
- #pragma pop_macro("max")
 #endif
 
 MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
