@@ -57,6 +57,7 @@
 
 // #define NOGDI
 #define NOSOUND
+#define NOMINMAX
 
 // Make it official that Windows 2000 is our target
 //#define _WIN32_WINNT 0x0500
