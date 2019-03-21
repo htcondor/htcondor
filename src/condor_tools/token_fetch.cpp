@@ -27,7 +27,7 @@
 #include "dc_collector.h"
 #include "directory.h"
 
-namespace {
+extern int write_out_token(const std::string &token_name, const std::string &token);
 
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
@@ -42,42 +42,6 @@ void print_usage(const char *argv0) {
 		"\nOther options:\n"
 		"    -token    <NAME>                 Name of token file\n", argv0);
 	exit(1);
-}
-
-int
-write_out_token(const std::string &token_name, const std::string &token)
-{
-	if (token_name.empty()) {
-		printf("%s\n", token.c_str());
-		return 0;
-	}
-	std::string dirpath;
-	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
-		if (!find_user_file(file_location, "tokens.d", false)) {
-			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
-		} else {
-			dirpath = file_location;
-		}
-	}
-	mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
-
-	std::string token_file = dirpath + DIR_DELIM_CHAR + token_name;
-	int fd = open(token_file.c_str(), O_CREAT | O_APPEND | O_WRONLY, 0600);
-	if (-1 == fd) {
-		fprintf(stderr, "Cannot write token to %s: %s (errno=%d)\n", token_file.c_str(),
-			strerror(errno), errno);
-		return 1;
-	}
-	auto result = _condor_full_write(fd, token.c_str(), token.size());
-	if (result != static_cast<ssize_t>(token.size())) {
-		fprintf(stderr, "Failed to write token to %s: %s (errno=%d)\n", token_file.c_str(),
-			strerror(errno), errno);
-		return 1;
-	}
-	std::string newline = "\n";
-	_condor_full_write(fd, newline.c_str(), 1);
-	return 0;
 }
 
 int
@@ -113,9 +77,6 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 	}
 	return write_out_token(token_name, token);
 }
-
-}
-
 
 int main(int argc, char *argv[]) {
 

@@ -28,8 +28,8 @@
 #if defined(HAVE_EXT_OPENSSL)
 
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
-// -Werror platforms.  We have to undefine max and min because of
-// Windows-related silliness.
+// -Werror platforms.
+//
 // Older Clang compilers on macOS define __cpp_attributes but not
 //   __has_cpp_attribute.
 // LibreSSL advertises itself as OpenSSL 2.0.0
@@ -43,16 +43,14 @@
 
 #include <openssl/opensslv.h>
 
-GCC_DIAG_OFF(float-equal)
-GCC_DIAG_OFF(cast-qual)
-#undef min
-#undef max
 #if defined(LIBRESSL_VERSION_NUMBER)
 #define OPENSSL10
 #endif
+
 #if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
 #undef __cpp_attributes
 #endif
+
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
 #include <openssl/rsa.h>
 static int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash,
@@ -64,6 +62,9 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
         const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
+
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
 #include "jwt-cpp/jwt.h"
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
@@ -71,6 +72,7 @@ GCC_DIAG_ON(cast-qual)
 #endif
 
 #include <fstream>
+#include <stdio.h>
 
 namespace {
 
@@ -84,13 +86,27 @@ bool printToken(const std::string &tokenfilename) {
 
 	dprintf(D_SECURITY|D_FULLDEBUG, "TOKEN: Will use examine tokens found in %s.\n",
 		tokenfilename.c_str());
+/*
 	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
 	if (!tokenfile) {
 		dprintf(D_ALWAYS, "Failed to open token file %s\n", tokenfilename.c_str());
 		return false;
 	}
 
+*/
+	FILE * f = safe_fopen_no_create( tokenfilename.c_str(), O_RDONLY );
+	if( f == NULL ) {
+		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
+			tokenfilename.c_str(), errno, strerror(errno));
+		return false;
+	}
+/*
 	for (std::string line; std::getline(tokenfile, line); ) {
+*/
+	char * ptr = NULL; size_t len;
+	while( getdelim( &ptr, &len, '\n', f ) != -1 ) {
+		std::string line( ptr );
+		free( ptr );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),

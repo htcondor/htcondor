@@ -34,11 +34,11 @@ condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}"
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 # Temporarily move the token tools out of the way so they aren't distributed
 # while we're not telling anyone about the new TOKEN method.
-# condor_exe(condor_token_create "token_create.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-# condor_exe(condor_token_fetch "token_fetch.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# condor_exe(condor_token_create "token_create.cpp;token_utils.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# condor_exe(condor_token_fetch "token_fetch.cpp;token_utils.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 # condor_exe(condor_token_list "token_list.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe_test(condor_token_create "token_create.cpp" "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe_test(condor_token_fetch "token_fetch.cpp" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe_test(condor_token_create "token_create.cpp;token_utils.cpp" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe_test(condor_token_fetch "token_fetch.cpp;token_utils.cpp" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe_test(condor_token_list "token_list.cpp" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
