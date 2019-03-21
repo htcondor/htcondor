@@ -11,6 +11,7 @@
 #include <thread>
 #include <fstream>
 #include <cstdio>
+#include <stdexcept>
 #include <rapidjson/document.h>
 
 #define MAX_RETRY_ATTEMPTS 20
