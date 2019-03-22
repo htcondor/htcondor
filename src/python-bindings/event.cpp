@@ -261,7 +261,7 @@ EventIterator::next()
     // Bug workaround: the last event generates ULOG_RD_ERROR on line 0.
     switch (retval) {
         case ULOG_OK:
-            tmp_ad = reinterpret_cast<classad::ClassAd*>(new_event->toClassAd());
+            tmp_ad = reinterpret_cast<classad::ClassAd*>(new_event->toClassAd(false));
             if (tmp_ad)
             {
                 output->CopyFrom(*tmp_ad);
