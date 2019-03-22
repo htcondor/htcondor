@@ -187,11 +187,14 @@ HTCondor Configuration
 .. autofunction:: version
 
 
-Module Logging
---------------
+HTCondor Logging
+----------------
 
 .. autofunction:: enable_debug
 .. autofunction:: enable_log
+
+.. autofunction:: log
+.. autoclass:: LogLevel
 
 
 Esoteric Functionality
@@ -204,9 +207,6 @@ Esoteric Functionality
 
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
-
-.. autofunction:: log
-.. autoclass:: LogLevel
 
 .. .. autofunction:: lock
 .. .. autoclass:: FileLock
