@@ -4,7 +4,7 @@
 ==============
 
 Queue jobs that use PBS/SGE-style submission
-:index:`HTCondor commands<single: HTCondor commands; condor_qsub>`\ :index:`condor_qsub command<single: condor_qsub command>`
+:index:` <single: condor_qsub;HTCondor commands>`\ :index:` <single: condor_qsub command>`
 
 Synopsis
 --------
@@ -95,16 +95,16 @@ Options
     (Directory option) Specifies the initial directory in which the job
     will run to be the current directory from which the job was
     submitted. This sets
-    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` for
+    **initialdir**\ :index:` <single: initialdir;submit commands>` for
     *condor\_submit*.
  **-d **\ *path* or **-wd **\ *path*
     (Directory option) Specifies the initial directory in which the job
     will run to be *path*. This sets
-    **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` for
+    **initialdir**\ :index:` <single: initialdir;submit commands>` for
     *condor\_submit*.
  **-e **\ *filename*
     (File option) Specifies the *condor\_submit* command
-    **error**\ :index:`submit commands<single: submit commands; error>`, the file where
+    **error**\ :index:` <single: error;submit commands>`, the file where
     ``stderr`` is written. If not specified, set to the default name of
     ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
     *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
@@ -135,7 +135,7 @@ Options
     have completed.
  **-i **\ *[hostname:]filename*
     (File option) Specifies the *condor\_submit* command
-    **input**\ :index:`submit commands<single: submit commands; input>`, the file from
+    **input**\ :index:` <single: input;submit commands>`, the file from
     which ``stdin`` is read.
  **-j **\ *characters*
     (File option) Acceptable characters for this option are ``e``,
@@ -199,14 +199,14 @@ Options
     e-mail.
  **-o **\ *filename*
     (File option) Specifies the *condor\_submit* command
-    **output**\ :index:`submit commands<single: submit commands; output>`, the file where
+    **output**\ :index:` <single: output;submit commands>`, the file where
     ``stdout`` is written. If not specified, set to the default name of
     ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
     *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
     ``ClusterId`` assigned for the job.
  **-p **\ *integer*
     (Status option) Sets the
-    **priority**\ :index:`submit commands<single: submit commands; priority>` submit
+    **priority**\ :index:` <single: priority;submit commands>` submit
     command for the job, with 0 being the default. Jobs with higher
     numerical priority will run before jobs with lower numerical
     priority.
@@ -240,7 +240,7 @@ Options
     Never submits the job, even if no errors are encountered.
  **-v **\ *variable list*
     (Environmental option) Used to set the submit command
-    **environment**\ :index:`submit commands<single: submit commands; environment>` for
+    **environment**\ :index:` <single: environment;submit commands>` for
     the job. *variable list* is as that defined for the submit command.
     Note that the syntax needed is specialized to deal with quote marks
     and white space characters.

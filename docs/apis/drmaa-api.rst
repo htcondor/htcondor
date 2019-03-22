@@ -3,9 +3,9 @@
 The DRMAA API
 =============
 
-:index:`DRMAA (Distributed Resource Management Application API)<single: DRMAA (Distributed Resource Management Application API)>`
-:index:`API<single: API; DRMAA>`
-:index:`Distributed Resource Management Application API (DRMAA)<single: Distributed Resource Management Application API (DRMAA)>`
+:index:` <single: DRMAA (Distributed Resource Management Application API)>`
+:index:` <single: DRMAA;API>`
+:index:` <single: Distributed Resource Management Application API (DRMAA)>`
 
 The following quote from the DRMAA Specification 1.0 abstract nicely
 describes the purpose of the API:

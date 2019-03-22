@@ -4,7 +4,7 @@
 =================
 
 print HTCondor version and platform information
-:index:`HTCondor commands<single: HTCondor commands; condor_version>`\ :index:`condor_version command<single: condor_version command>`
+:index:` <single: condor_version;HTCondor commands>`\ :index:` <single: condor_version command>`
 
 Synopsis
 --------

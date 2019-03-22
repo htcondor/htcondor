@@ -9,7 +9,7 @@ priorities.
 Job Priority
 ------------
 
-:index:`job<single: job; priority>` :index:`priority<single: priority; of a job>`
+:index:` <single: priority;job>` :index:` <single: of a job;priority>`
 
 Job priorities allow a user to assign a priority level to each of their
 own submitted HTCondor jobs, in order to control the order of job
@@ -20,7 +20,7 @@ are executed; a higher job priority job is matched and executed before a
 lower priority job. A job priority can be any integer, and larger values
 are of higher priority. So, 0 is a higher job priority than -3, and 6 is
 a higher job priority than 5.
-:index:`HTCondor commands<single: HTCondor commands; condor_prio>`
+:index:` <single: condor_prio;HTCondor commands>`
 
 For the simple case, each job can be given a distinct priority. For an
 already queued job, its priority may be set with the *condor\_prio*
@@ -36,8 +36,8 @@ for experts by using the job ClassAd attributes: ``PreJobPrio1``,
 User priority
 -------------
 
-:index:`preemption<single: preemption; priority>` :index:`user<single: user; priority>`
-:index:`priority<single: priority; of a user>`
+:index:` <single: priority;preemption>` :index:` <single: priority;user>`
+:index:` <single: of a user;priority>`
 
 Machines are allocated to users based upon a user’s priority. A lower
 numerical value for user priority means higher priority, so a user with
@@ -45,7 +45,7 @@ priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor\_userprio*
 command (see
 page \ `condor\_userprio <../man-pages/condor_userprio.html>`__).
-:index:`HTCondor commands<single: HTCondor commands; condor_userprio>`\ HTCondor
+:index:` <single: condor_userprio;HTCondor commands>`\ HTCondor
 administrators can set and change individual user priorities with the
 same utility.
 
@@ -62,7 +62,7 @@ the priority, the priority will improve by numerically decreasing over
 time. The long-term result is fair-share access across all users. The
 speed at which HTCondor adjusts the priorities is controlled with the
 configuration variable ``PRIORITY_HALFLIFE``
-:index:`PRIORITY_HALFLIFE<single: PRIORITY_HALFLIFE>`, an exponential half-life value. The
+:index:` <single: PRIORITY_HALFLIFE>`, an exponential half-life value. The
 default is one day. If a user that has user priority of 100 and is
 utilizing 100 machines removes all his/her jobs, one day later that
 user’s priority will be 50, and two days later the priority will be 25.
@@ -79,7 +79,7 @@ priority user; it will preempt only enough jobs so that the higher
 priority user’s fair share can be realized (based upon the ratio between
 user priorities). To prevent thrashing of the system due to priority
 preemption, the HTCondor site administrator can define a
-``PREEMPTION_REQUIREMENTS`` :index:`PREEMPTION_REQUIREMENTS<single: PREEMPTION_REQUIREMENTS>`
+``PREEMPTION_REQUIREMENTS`` :index:` <single: PREEMPTION_REQUIREMENTS>`
 expression in HTCondor’s configuration. The default expression that
 ships with HTCondor is configured to only preempt lower priority jobs
 that have run for at least one hour. So in the previous example, in the
@@ -95,7 +95,7 @@ User priorities are keyed on ``<username>@<domain>``, for example
 by the HTCondor site administrator. Thus, user priority and therefore
 resource allocation is not impacted by which machine the user submits
 from or even if the user submits jobs from multiple machines.
-:index:`nice job<single: nice job>` :index:`priority<single: priority; nice job>`
+:index:` <single: nice job>` :index:` <single: nice job;priority>`
 
 An extra feature is the ability to submit a job as a nice job (see
 page \ `condor\_submit <../man-pages/condor_submit.html>`__). Nice jobs
@@ -110,7 +110,7 @@ the system.
 Details About How HTCondor Jobs Vacate Machines
 -----------------------------------------------
 
-:index:`vacate<single: vacate>` :index:`preemption<single: preemption; vacate>`
+:index:` <single: vacate>` :index:` <single: vacate;preemption>`
 
 When HTCondor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig``
@@ -125,7 +125,7 @@ clean up signal is specified to be used with **kill\_sig**. Note that
 the clean up work needs to be quick. If the job takes too long to go
 away, HTCondor follows up with a SIGKILL signal which immediately
 terminates the process.
-:index:`HTCondor commands<single: HTCondor commands; condor_compile>`
+:index:` <single: condor_compile;HTCondor commands>`
 
 A job that is linked using *condor\_compile* and is subsequently
 submitted into the standard universe, will checkpoint and exit upon

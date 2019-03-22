@@ -5,7 +5,7 @@
 
 Display information about owners of jobs and jobs running on an execute
 machine
-:index:`HTCondor commands<single: HTCondor commands; condor_who>`\ :index:`condor_who command<single: condor_who command>`
+:index:` <single: condor_who;HTCondor commands>`\ :index:` <single: condor_who command>`
 
 Synopsis
 --------

@@ -12,7 +12,7 @@ Table B.5: DaemonCore Daemon Exit Codes
 +-------------+----------------------------------------------------------------------------+
 | 0           | Normal exit of daemon                                                      |
 +-------------+----------------------------------------------------------------------------+
-| 99          | ``DAEMON_SHUTDOWN`` :index:`DAEMON_SHUTDOWN<single: DAEMON_SHUTDOWN>` evaluated to ``True``   |
+| 99          | ``DAEMON_SHUTDOWN`` :index:` <single: DAEMON_SHUTDOWN>` evaluated to ``True``   |
 +-------------+----------------------------------------------------------------------------+
 
 --------------

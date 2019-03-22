@@ -3,10 +3,10 @@
 Java Support Installation
 =========================
 
-:index:`installation<single: installation; Java>` :index:`Java<single: Java>`
+:index:` <single: Java;installation>` :index:` <single: Java>`
 
 Compiled Java programs may be executed (under HTCondor) on any execution
-site with a :index:`Java Virtual Machine<single: Java Virtual Machine>`\ :index:`JVM<single: JVM>`
+site with a :index:` <single: Java Virtual Machine>`\ :index:` <single: JVM>`
 Java Virtual Machine (JVM). To do this, HTCondor must be informed of
 some details of the JVM installation.
 
@@ -15,7 +15,7 @@ instructions. Your machine may have been delivered with a JVM already
 installed – installed code is frequently found in ``/usr/bin/java``.
 
 HTCondor’s configuration includes the location of the installed JVM.
-Edit the configuration file. Modify the ``JAVA`` :index:`JAVA<single: JAVA>`
+Edit the configuration file. Modify the ``JAVA`` :index:` <single: JAVA>`
 entry to point to the JVM binary, typically ``/usr/bin/java``. Restart
 the *condor\_startd* daemon on that host. For example,
 
@@ -89,7 +89,7 @@ Many implementations of the JVM set a value of the Java maximum heap
 size that is too small for particular applications. HTCondor uses this
 value. The administrator can change this value through configuration by
 setting a different value for ``JAVA_EXTRA_ARGUMENTS``
-:index:`JAVA_EXTRA_ARGUMENTS<single: JAVA_EXTRA_ARGUMENTS>`.
+:index:` <single: JAVA_EXTRA_ARGUMENTS>`.
 
 ::
 
@@ -97,7 +97,7 @@ setting a different value for ``JAVA_EXTRA_ARGUMENTS``
 
 Note that if a specific job sets the value in the submit description
 file, using the submit command
-**java\_vm\_args**\ :index:`submit commands<single: submit commands; java_vm_args>`, the
+**java\_vm\_args**\ :index:` <single: java_vm_args;submit commands>`, the
 job’s value takes precedence over a configured value.
 
       

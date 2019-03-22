@@ -4,8 +4,8 @@
 =============
 
 Display status and runtime statistics of a HTCondor daemon
-:index:`HTCondor commands<single: HTCondor commands; condor_top>`
-:index:`condor_top command<single: condor_top command>`
+:index:` <single: condor_top;HTCondor commands>`
+:index:` <single: condor_top command>`
 
 Synopsis
 --------

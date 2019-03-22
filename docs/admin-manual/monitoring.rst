@@ -3,8 +3,8 @@
 Monitoring
 ==========
 
-:index:`pool management<single: pool management; monitoring>`
-:index:`monitoring pools<single: monitoring pools>` :index:`pool monitoring<single: pool monitoring>`
+:index:` <single: monitoring;pool management>`
+:index:` <single: monitoring pools>` :index:` <single: pool monitoring>`
 
 Information that the *condor\_collector* collects can be used to monitor
 a pool. The *condor\_status* command can be used to display snapshot of
@@ -15,9 +15,9 @@ administrator about exceptional conditions.
 Ganglia
 -------
 
-:index:`Monitoring<single: Monitoring; with Ganglia>`
-:index:`Ganglia monitoring<single: Ganglia monitoring>`
-:index:`condor_gangliad daemon<single: condor_gangliad daemon>`
+:index:` <single: with Ganglia;Monitoring>`
+:index:` <single: Ganglia monitoring>`
+:index:` <single: condor_gangliad daemon>`
 
 Support for the Ganglia monitoring system
 (`http://ganglia.info/ <http://ganglia.info/>`__) is integral to
@@ -43,7 +43,7 @@ because on a large pool with many ClassAds, there is likely to be less
 network traffic. If the *condor\_gangliad* daemon is to run on a
 different machine than the one running Ganglia’s *gmetad*, modify
 configuration variable ``GANGLIA_GSTAT_COMMAND``
-:index:`GANGLIA_GSTAT_COMMAND<single: GANGLIA_GSTAT_COMMAND>` to get the list of monitored hosts
+:index:` <single: GANGLIA_GSTAT_COMMAND>` to get the list of monitored hosts
 from the master *gmond* program.
 
 If the pool does not use Ganglia, the pool can still be monitored by a
@@ -52,7 +52,7 @@ separate server running Ganglia.
 By default, the *condor\_gangliad* will only propagate metrics to hosts
 that are already monitored by Ganglia. Set configuration variable
 ``GANGLIA_SEND_DATA_FOR_ALL_HOSTS``
-:index:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS<single: GANGLIA_SEND_DATA_FOR_ALL_HOSTS>` to ``True`` to set up a
+:index:` <single: GANGLIA_SEND_DATA_FOR_ALL_HOSTS>` to ``True`` to set up a
 Ganglia host to monitor a pool not monitored by Ganglia or have a
 heterogeneous pool where some hosts are not monitored. In this case,
 default graphs that Ganglia provides will not be present. However, the
@@ -60,18 +60,18 @@ HTCondor metrics will appear.
 
 On large pools, setting configuration variable
 ``GANGLIAD_PER_EXECUTE_NODE_METRICS``
-:index:`GANGLIAD_PER_EXECUTE_NODE_METRICS<single: GANGLIAD_PER_EXECUTE_NODE_METRICS>` to ``False`` will
+:index:` <single: GANGLIAD_PER_EXECUTE_NODE_METRICS>` to ``False`` will
 reduce the amount of data sent to Ganglia. The execute node data is the
 least important to monitor. One can also limit the amount of data by
 setting configuration variable ``GANGLIAD_REQUIREMENTS``
-:index:`GANGLIAD_REQUIREMENTS<single: GANGLIAD_REQUIREMENTS>`. Be aware that aggregate sums over
+:index:` <single: GANGLIAD_REQUIREMENTS>`. Be aware that aggregate sums over
 the entire pool will not be accurate if this variable limits the
 ClassAds queried.
 
 Metrics to be sent to Ganglia are specified in all files within the
 directory specified by configuration variable
 ``GANGLIAD_METRICS_CONFIG_DIR``
-:index:`GANGLIAD_METRICS_CONFIG_DIR<single: GANGLIAD_METRICS_CONFIG_DIR>`. Each file in the directory
+:index:` <single: GANGLIAD_METRICS_CONFIG_DIR>`. Each file in the directory
 is read, and the format within each file is that of New ClassAds. Here
 is an example of a single metric definition given as a New ClassAd:
 
@@ -102,7 +102,7 @@ Recognized metric attribute names and their use:
  Verbosity
     The integer verbosity level of this metric. Metrics with a higher
     verbosity level than that specified by configuration variable
-    ``GANGLIA_VERBOSITY`` :index:`GANGLIA_VERBOSITY<single: GANGLIA_VERBOSITY>` will not be
+    ``GANGLIA_VERBOSITY`` :index:` <single: GANGLIA_VERBOSITY>` will not be
     published.
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
@@ -128,7 +128,7 @@ Recognized metric attribute names and their use:
     A string specifying the cluster name for this metric. The default
     cluster name is taken from the configuration variable
     ``GANGLIAD_DEFAULT_CLUSTER``
-    :index:`GANGLIAD_DEFAULT_CLUSTER<single: GANGLIAD_DEFAULT_CLUSTER>`.
+    :index:` <single: GANGLIAD_DEFAULT_CLUSTER>`.
  Units
     A string describing the units of this metric.
  Scale
@@ -196,7 +196,7 @@ Recognized metric attribute names and their use:
  Machine
     The name of the host associated with this metric. If configuration
     variable ``GANGLIAD_DEFAULT_MACHINE``
-    :index:`GANGLIAD_DEFAULT_MACHINE<single: GANGLIAD_DEFAULT_MACHINE>` is not specified, the
+    :index:` <single: GANGLIAD_DEFAULT_MACHINE>` is not specified, the
     default is taken from the ``Machine`` attribute of the daemon
     ClassAd. If the daemon name is of the form name@hostname, this may
     indicate that there are multiple instances of HTCondor running on
@@ -207,7 +207,7 @@ Recognized metric attribute names and their use:
  IP
     A string containing the IP address of the host associated with this
     metric. If ``GANGLIAD_DEFAULT_IP``
-    :index:`GANGLIAD_DEFAULT_IP<single: GANGLIAD_DEFAULT_IP>` is not specified, the default is
+    :index:` <single: GANGLIAD_DEFAULT_IP>` is not specified, the default is
     extracted from the ``MyAddress`` attribute of the daemon ClassAd.
     This value must be unique for each machine published to Ganglia. It
     need not be a valid IP address. If the value of ``Machine`` contains
@@ -218,14 +218,14 @@ Recognized metric attribute names and their use:
 Absent ClassAds
 ---------------
 
-:index:`pool management<single: pool management; absent ClassAds>`
-:index:`absent ClassAd<single: absent ClassAd>` :index:`ClassAd<single: ClassAd; absent ClassAd>`
+:index:` <single: absent ClassAds;pool management>`
+:index:` <single: absent ClassAd>` :index:` <single: absent ClassAd;ClassAd>`
 
 By default, HTCondor assumes that resources are transient: the
 *condor\_collector* will discard ClassAds older than
-``CLASSAD_LIFETIME`` :index:`CLASSAD_LIFETIME<single: CLASSAD_LIFETIME>` seconds. Its
+``CLASSAD_LIFETIME`` :index:` <single: CLASSAD_LIFETIME>` seconds. Its
 default configuration value is 15 minutes, and as such, the default
-value for ``UPDATE_INTERVAL`` :index:`UPDATE_INTERVAL<single: UPDATE_INTERVAL>` will pass
+value for ``UPDATE_INTERVAL`` :index:` <single: UPDATE_INTERVAL>` will pass
 three times before HTCondor forgets about a resource. In some pools,
 especially those with dedicated resources, this approach may make it
 unnecessarily difficult to determine what the composition of the pool
@@ -235,7 +235,7 @@ pool, if HTCondor were properly functioning on all of them.
 This assumption of transient machines can be modified by the use of
 absent ClassAds. When a machine ClassAd would otherwise expire, the
 *condor\_collector* evaluates the configuration variable
-``ABSENT_REQUIREMENTS`` :index:`ABSENT_REQUIREMENTS<single: ABSENT_REQUIREMENTS>` against the
+``ABSENT_REQUIREMENTS`` :index:` <single: ABSENT_REQUIREMENTS>` against the
 machine ClassAd. If ``True``, the machine ClassAd will be saved in a
 persistent manner and be marked as absent; this causes the machine to
 appear in the output of ``condor_status -absent``. When the machine
@@ -245,12 +245,12 @@ invalidate the absent machine ClassAd.
 Absent ClassAds, like offline ClassAds, are stored to disk to ensure
 that they are remembered, even across *condor\_collector* crashes. The
 configuration variable ``COLLECTOR_PERSISTENT_AD_LOG``
-:index:`COLLECTOR_PERSISTENT_AD_LOG<single: COLLECTOR_PERSISTENT_AD_LOG>` defines the file in which the
+:index:` <single: COLLECTOR_PERSISTENT_AD_LOG>` defines the file in which the
 ClassAds are stored, and replaces the no longer used variable
 ``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
 the *condor\_collector* for a length of time in seconds defined by the
 configuration variable ``ABSENT_EXPIRE_ADS_AFTER``
-:index:`ABSENT_EXPIRE_ADS_AFTER<single: ABSENT_EXPIRE_ADS_AFTER>`. A value of 0 for this variable
+:index:` <single: ABSENT_EXPIRE_ADS_AFTER>`. A value of 0 for this variable
 means that the ClassAds are never discarded, and the default value is
 thirty days.
 
@@ -268,7 +268,7 @@ invalidated ClassAd. An example of a ClassAd that could benefit from
 being absent is a system with an uninterruptible power supply that shuts
 down cleanly but unexpectedly as a result of a power outage. To cause
 all invalidated ClassAds to become absent instead of invalidated, set
-``EXPIRE_INVALIDATED_ADS`` :index:`EXPIRE_INVALIDATED_ADS<single: EXPIRE_INVALIDATED_ADS>` to
+``EXPIRE_INVALIDATED_ADS`` :index:` <single: EXPIRE_INVALIDATED_ADS>` to
 ``True``. Invalidated ClassAds will instead be treated as if they
 expired, including when evaluating ``ABSENT_REQUIREMENTS``.
 

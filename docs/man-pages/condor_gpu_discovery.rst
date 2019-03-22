@@ -4,7 +4,7 @@
 ========================
 
 Output GPU-related ClassAd attributes
-:index:`HTCondor commands<single: HTCondor commands; condor_gpu_discovery>`\ :index:`condor_gpu_discovery command<single: condor_gpu_discovery command>`
+:index:` <single: condor_gpu_discovery;HTCondor commands>`\ :index:` <single: condor_gpu_discovery command>`
 
 Synopsis
 --------

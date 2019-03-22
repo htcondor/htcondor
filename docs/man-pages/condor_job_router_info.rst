@@ -4,7 +4,7 @@
 ===========================
 
 Discover and display information related to job routing
-:index:`HTCondor commands<single: HTCondor commands; condor_job_router_info>`\ :index:`condor_job_router_info command<single: condor_job_router_info command>`
+:index:` <single: condor_job_router_info;HTCondor commands>`\ :index:` <single: condor_job_router_info command>`
 
 Synopsis
 --------

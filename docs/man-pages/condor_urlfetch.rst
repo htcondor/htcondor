@@ -4,7 +4,7 @@
 ==================
 
 fetch configuration given a URL
-:index:`HTCondor commands<single: HTCondor commands; condor_urlfetch>`\ :index:`condor_urlfetch command<single: condor_urlfetch command>`
+:index:` <single: condor_urlfetch;HTCondor commands>`\ :index:` <single: condor_urlfetch command>`
 
 Synopsis
 --------
