@@ -11,14 +11,6 @@ module.  It is not meant to be a tutorial for new users but rather a helpful
 guide for those who already understand the basic usage of the module.
 
 
-Common Module-Level Functions and Objects
------------------------------------------
-
-.. autofunction:: poll
-
-.. autoclass:: BulkQueryIterator
-
-
 Interacting with Collectors
 ---------------------------
 
@@ -75,6 +67,10 @@ Interacting with Schedulers
    .. automethod:: done
    .. automethod:: watch
    .. automethod:: next
+
+.. autofunction:: poll
+
+.. autoclass:: BulkQueryIterator
 
 
 Submitting Jobs
