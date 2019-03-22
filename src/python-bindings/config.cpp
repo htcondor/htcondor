@@ -680,7 +680,16 @@ void export_config()
         )C0ND0R";
     scope().attr("param") = param;
 
-    class_<RemoteParam>("RemoteParam", boost::python::init<const ClassAdWrapper &>(":param ad: An ad containing the location of the remote daemon."))
+    class_<RemoteParam>("RemoteParam",
+                R"C0ND0R(
+                The :class:`RemoteParam` class provides a dictionary-like interface to the configuration of an HTCondor daemon.
+                The  ``get``, ``setdefault``, ``update``, ``keys``, ``items``, and ``values``
+                methods of this class have the same semantics as a Python dictionary.
+                )C0ND0R",
+            boost::python::init<const ClassAdWrapper &>(
+            R"C0ND0R(
+            :param ad: An ad containing the location of the remote daemon.
+            )C0ND0R"))
         .def("__getitem__", &RemoteParam::getitem)
         .def("__setitem__", &RemoteParam::setitem)
         .def("__contains__", &RemoteParam::contains)
@@ -692,6 +701,9 @@ void export_config()
         .def("__delitem__", &RemoteParam::delitem)
         .def("items", &RemoteParam::items)
         .def("update", &RemoteParam::update)
-        .def("refresh", &RemoteParam::refresh)
+        .def("refresh", &RemoteParam::refresh,
+            R"C0ND0R(
+            Rebuilds the dictionary based on the current configuration of the daemon.
+            )C0ND0R")
         ;
 }

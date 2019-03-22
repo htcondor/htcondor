@@ -66,7 +66,6 @@ Interacting with Schedulers
    .. automethod:: tag
    .. automethod:: done
    .. automethod:: watch
-   .. automethod:: next
 
 .. autofunction:: poll
 
@@ -182,6 +181,11 @@ HTCondor Configuration
 .. autodata:: param
 .. autofunction:: reload_config
 .. autoclass:: _Param
+
+.. autoclass:: RemoteParam
+
+   .. automethod:: refresh
+
 
 .. autofunction:: platform
 .. autofunction:: version
