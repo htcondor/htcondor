@@ -116,10 +116,7 @@ bool findToken(const std::string &tokenfilename,
 /*
 	for (std::string line; std::getline(tokenfile, line); ) {
 */
-	char * ptr = NULL; size_t len;
-	while( getdelim( &ptr, &len, '\n', f ) != -1 ) {
-		std::string line( ptr );
-		free( ptr );
+    for( std::string line; readLine( line, f, false ); ) {
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
