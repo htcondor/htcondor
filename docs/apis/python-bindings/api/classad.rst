@@ -22,13 +22,6 @@ objects, which correspond to un-evaluated ClassAd expressions.
 
 .. autoclass:: ClassAd
 
-   .. automethod:: ClassAd.items
-   .. automethod:: ClassAd.keys
-   .. automethod:: ClassAd.values
-   .. automethod:: ClassAd.get
-   .. automethod:: ClassAd.setdefault
-   .. automethod:: ClassAd.update
-   .. automethod:: ClassAd.eval
    .. automethod:: ClassAd.eval
    .. automethod:: ClassAd.lookup
    .. automethod:: ClassAd.printOld

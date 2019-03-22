@@ -16,6 +16,8 @@ Common Module-Level Functions and Objects
 
 .. autofunction:: poll
 
+.. autoclass:: BulkQueryIterator
+
 
 Interacting with Collectors
 ---------------------------
@@ -64,14 +66,39 @@ Interacting with Schedulers
 
 .. autoclass:: BlockingMode
 
+.. autoclass:: HistoryIterator
+
+.. autoclass:: QueryIterator
+
+   .. automethod:: nextAdsNonBlocking
+   .. automethod:: tag
+   .. automethod:: done
+   .. automethod:: watch
+   .. automethod:: next
+
 
 Submitting Jobs
 ---------------
 
 .. autoclass:: Submit
 
-   .. automethod:: expand
    .. automethod:: queue
+   .. automethod:: queue_with_itemdata
+   .. automethod:: expand
+   .. automethod:: jobs
+   .. automethod:: procs
+   .. automethod:: itemdata
+   .. automethod:: getQArgs
+   .. automethod:: setQArgs
+
+.. autoclass:: QueueItemsIterator
+
+.. autoclass:: SubmitResult
+
+   .. automethod:: cluster
+   .. automethod:: clusterad
+   .. automethod:: first_proc
+   .. automethod:: num_procs
 
 
 Interacting with Negotiators
@@ -171,46 +198,21 @@ Module Logging
 .. autofunction:: enable_log
 
 
-Esoteric Functions
-------------------
+Esoteric Functionality
+----------------------
 
 .. autofunction:: send_command
-.. autofunction:: send_alive
-.. autofunction:: set_subsystem
-.. .. autofunction:: lock
-.. autofunction:: log
-
-
-Iterator and Helper Classes
----------------------------
-
-.. .. autoclass:: HistoryIterator
-
-.. .. automethod:: next
-
-.. .. autoclass:: QueryIterator
-
-..    .. automethod:: next
-   .. automethod:: nextAdsNonBlocking
-   .. automethod:: tag
-   .. automethod:: done
-   .. automethod:: watch
-
-.. .. autoclass:: BulkQueryIterator
-
-.. .. automethod:: next
-
-.. .. autoclass:: FileLock
-
-
-Enumerations
-------------
-
 .. autoclass:: DaemonCommands
 
-.. .. autoclass:: LockType
+.. autofunction:: send_alive
 
+.. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
 
+.. autofunction:: log
 .. autoclass:: LogLevel
+
+.. .. autofunction:: lock
+.. .. autoclass:: FileLock
+.. .. autoclass:: LockType
 

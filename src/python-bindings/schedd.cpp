@@ -3506,83 +3506,195 @@ void export_schedd()
             )C0ND0R")
         ;
 
-    class_<Submit>("Submit")
+    class_<Submit>("Submit",
+            R"C0ND0R(
+            An object representing a job submit description.  It uses the same submit
+            language as ``condor_submit``.
+
+            The submit description contains ``key = value`` pairs and implements the python
+            dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
+            ``items``, and ``values`` methods.
+
+            :param input: ``Key = value`` pairs for initializing the submit description.
+                If omitted, the submit class is initially empty.
+            :type input: dict
+            )C0ND0R")
         .def(init<boost::python::dict>())
         .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
-        .def("expand", &Submit::expand, "Expand all macros for a given attribute")
-        .def("queue", &Submit::queue, "Submit the current object to the remote queue\n"
-             ":param txn: An active transaction object\n"
-             ":return: Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
-             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
+        .def("expand", &Submit::expand,
+            R"C0ND0R(
+            Expand all macros for the given attribute.
+
+            :param str attr: The name of the relevant attribute.
+            :return: The value of the given attribute; all macros are expanded.
+            :rtype: str
+            )C0ND0R")
+        .def("queue", &Submit::queue,
+            R"C0ND0R(
+            Submit the current object to a remote queue.
+
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
+            :type txn: :class:`Transaction`
+            :param int count: The number of jobs to create (defaults to ``1``).
+            :param ad_results: A list to receive the ClassAd resulting from this submit.
+                As with :meth:`Schedd.submit`, this is often used to later spool the input
+                files.
+            :return: The ClusterID of the submitted job(s).
+            :rtype: int
+            :raises RuntimeError: if the submission fails.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
             )
-        .def("queue_with_itemdata", &Submit::queue_from_iter, "Submit the current object to the remote queue\n"
-             ":param txn: An active transaction object\n"
-             ":param count: a queue count for each item from the iterator, defaults to 1\n"	 // set to 0 in prototype, treated as 1 by queue method.
-             ":param from: an iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
-             ":return: a SubmitResult class, containing cluster ID, cluster ClassAd and range of Job ids Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
-             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
+        .def("queue_with_itemdata", &Submit::queue_from_iter,
+            R"C0ND0R(
+            Submit the current object to a remote queue.
+
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
+            :type txn: :class:`Transaction`
+            :param int count: A queue count for each item from the iterator, defaults to 1.
+            :param from: an iterator of strings or dictionaries containing the itemdata
+                for each job as in ``queue in`` or ``queue from``.
+            :return: a :class:`SubmitResult``, containing the cluster ID, cluster ClassAd and
+                range of Job ids Cluster ID of the submitted job(s).
+            :rtype: :class:`SubmitResult``
+            :raises RuntimeError: if the submission fails.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
             )
-        .def("jobs", &Submit::iterjobs, "Turn the current object into sequence of simulated job ClassAds\n"
-             ":param count: the queue count for each item in the from list, defaults to 1\n"
-             ":param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
-             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
-             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
-             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
-             ":param owner: a string value for the Owner attribute of the job\n"
-             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
-             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+        .def("jobs", &Submit::iterjobs,
+            R"C0ND0R(
+            Turn the current object into a sequence of simulated job ClassAds
+
+            :param int count: the queue count for each item in the from list, defaults to 1
+            :param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
+            :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
+            :param int procid: the initial value for ProcId when making job ads, defaults to 0
+            :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
+            :param str owner: a string value for the Owner attribute of the job
+            :return: An iterator for the resulting job ads.
+
+            :raises RuntimeError: if valid job ads cannot be made
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
-        .def("procs", &Submit::iterprocs, "Turn the current object into sequence of simulate job proc ClassAds. The first ClassAd will be the cluster ad plus a ProcId attribute\n"
-             ":param count: the queue count for each item in the from list, defaults to 1\n"
-             ":param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'\n"
-             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
-             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
-             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
-             ":param owner: a string value for the Owner attribute of the job\n"
-             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
-             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+        .def("procs", &Submit::iterprocs,
+            R"C0ND0R(
+            Turn the current object into a sequence of simulated job proc ClassAds.
+            The first ClassAd will be the cluster ad plus a ProcId attribute
+
+            :param int count: the queue count for each item in the from list, defaults to 1
+            :param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
+            :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
+            :param int procid: the initial value for ProcId when making job ads, defaults to 0
+            :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
+            :param str owner: a string value for the Owner attribute of the job
+            :return: An iterator for the resulting job ads.
+
+            :raises RuntimeError: if valid job ads cannot be made
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
-        .def("itemdata", &Submit::iterqitems, "Iterate the itemdata from the queue statement\n"
-             ":param queue: a submit queue statement, or the arguments to a submit queue statement, defaults to QArgs\n"
-             ":return: An iterator for the resulting items\n",
-             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
+        .def("itemdata", &Submit::iterqitems,
+            R"C0ND0R(
+            Create an iterator over itemdata derived from a queue statement.
+
+            For example ``itemdata("matching *.dat")`` would return an iterator
+            of filenames that end in ``.dat`` from the current directory.
+            This is the same iterator used by ``condor_submit`` when processing
+            ``QUEUE`` statements.
+
+            :param str queue: a submit queue statement, or the arguments to a submit queue statement.
+            :return: An iterator for the resulting items
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
             )
-        .def("getQArgs", &Submit::getQArgs, "get the arguments of Queue statement passed to the constructor\n")
-        .def("setQArgs", &Submit::setQArgs, "set the arguments for the Queue statement\n")
+        .def("getQArgs", &Submit::getQArgs,
+            R"C0ND0R(
+            Returns arguments specified in the ``QUEUE`` statement passed to the contructor.
+            These are the arguments that will be used by the :meth:`Submit.queue`
+            and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
+            )C0ND0R")
+        .def("setQArgs", &Submit::setQArgs,
+            R"C0ND0R(
+            Sets the arguments to be used by
+            subsequent calls to the :meth:`Submit.queue`
+            and :meth:`Submit.queue_with_itemdata` methods.
+            )C0ND0R")
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)
         .def("__str__", &Submit::toString)
         .def("__repr__", &Submit::toRepr)
         .def("__iter__", &Submit::iter)
-        .def("keys", &Submit::keys)
-        .def("values", &Submit::values)
-        .def("items", &Submit::items)
+        .def("keys", &Submit::keys,
+            R"C0ND0R(
+            As :meth:`dict.keys`.
+            )C0ND0R")
+        .def("values", &Submit::values,
+            R"C0ND0R(
+            As :meth:`dict.values`.
+            )C0ND0R")
+        .def("items", &Submit::items,
+            R"C0ND0R(
+            As :meth:`dict.items`.
+            )C0ND0R")
         .def("__len__", &Submit::size)
-        .def("get", &Submit::get, "Retrieve a value from the submit description",
-             (boost::python::arg("self"), boost::python::arg("default")=boost::python::object())
+        .def("get", &Submit::get,
+            R"C0ND0R(
+            As :meth:`dict.get`.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("default")=boost::python::object())
             )
-        .def("setdefault", &Submit::setDefault, "Set a default value for a command")
-        .def("update", &Submit::update, "Copy the contents of a given Submit object into the current object")
+        .def("setdefault", &Submit::setDefault,
+            R"C0ND0R(
+            As :meth:`dict.setdefault`.
+            )C0ND0R")
+        .def("update", &Submit::update,
+            R"C0ND0R(
+            As :meth:`dict.update`.
+            )C0ND0R")
         ;
 
     class_<SubmitResult>("SubmitResult", no_init)
         .def("__str__", &SubmitResult::toString)
-        .def("cluster", &SubmitResult::cluster, "return the clusterid from the submitted jobs")
-        .def("clusterad", &SubmitResult::clusterad, "return the Cluster ad from the submitted jobs")
-        .def("first_proc", &SubmitResult::first_procid, "return the first ProcId from the submitted jobs")
-        .def("num_procs", &SubmitResult::num_procs, "return the number of submitted jobs")
+        .def("cluster", &SubmitResult::cluster,
+            R"C0ND0R(
+            :return: the ClusterID of the submitted jobs.
+            :rtype: int
+            )C0ND0R")
+        .def("clusterad", &SubmitResult::clusterad,
+            R"C0ND0R(
+            :return: the cluster Ad of the submitted jobs.
+            :rtype:
+            )C0ND0R")
+        .def("first_proc", &SubmitResult::first_procid,
+            R"C0ND0R(
+            :return: the first ProcID of the submitted jobs.
+            :rtype: int
+            )C0ND0R")
+        .def("num_procs", &SubmitResult::num_procs,
+            R"C0ND0R(
+            :return: the number of submitted jobs.
+            :rtype: int
+            )C0ND0R")
         ;
-    register_ptr_to_python< boost::shared_ptr<SubmitResult> >();
+    register_ptr_to_python< boost::shared_ptr<SubmitResult>>();
 
     class_<SubmitJobsIterator>("SubmitJobsIterator", no_init)
         .def(NEXT_FN, &SubmitJobsIterator::next, "return the next ad from Submit.jobs.")
         .def("__iter__", &SubmitJobsIterator::pass_through)
-        .def("clusterad", &SubmitJobsIterator::clusterad, "return the Cluster ad that proc ads should be chained to")
+        .def("clusterad", &SubmitJobsIterator::clusterad,
+            R"C0ND0R(
+            Return the Cluster ad that proc ads should be chained to.
+            )C0ND0R""")
         ;
 
-    class_<QueueItemsIterator>("QueueItemsIterator", no_init)
+    class_<QueueItemsIterator>("QueueItemsIterator",
+            R"C0ND0R(
+            An iterator over itemdata produced by :meth:`Submit.itemdata`.
+            )C0ND0R",
+            no_init)
         .def(NEXT_FN, &QueueItemsIterator::next, "return the next item from a submit queue statement.")
         .def("__iter__", &QueueItemsIterator::pass_through)
         ;
@@ -3591,29 +3703,69 @@ void export_schedd()
         .def(NEXT_FN, &RequestIterator::next, "Get next resource request.")
         ;
 
-    class_<HistoryIterator>("HistoryIterator", no_init)
+    class_<HistoryIterator>("HistoryIterator",
+        R"C0ND0R(
+        An iterator over ads in the history produced by :meth:`Schedd.history`.
+        )C0ND0R",
+     no_init)
         .def(NEXT_FN, &HistoryIterator::next)
         .def("__iter__", &HistoryIterator::pass_through)
         ;
 
-    class_<QueryIterator>("QueryIterator", no_init)
-        .def(NEXT_FN, &QueryIterator::next, "Return the next ad from the query results.\n"
-            ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
-            ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
-            "Throws a StopIterator exception if no results are available..\n",
+    class_<QueryIterator>("QueryIterator",
+            R"C0ND0R(
+            An iterator class for managing results of the :meth:`Schedd.query` and
+            :meth:`Schedd.xquery` methods.
+            )C0ND0R",
+            no_init)
+        .def(NEXT_FN, &QueryIterator::next,
+            R"C0ND0R(
+            :param mode: The blocking mode for this call to :meth:`next`; defaults
+                to :attr:`~BlockingMode.Blocking`.
+            :type mode: :class:`BlockingMode`
+            :return: the next available job ad.
+            :rtype: :class:`~classad.ClassAd`
+            :raises StopIteration: when no additional ads are available.
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("mode") = Blocking)
 #else
             (boost::python::arg("self"), boost::python::arg("mode") = Blocking)
 #endif
             )
-        .def("nextAdsNonBlocking", &QueryIterator::nextAds, "Return any available ads.\n"
-            ":return: A list of ads.  If no ads are available, returns an empty list.\n"
-            "Does not throw an exception if no ads are available or the iterator is finished.\n"
-            )
-        .def("tag", &QueryIterator::tag, "Return the query's tag.")
-        .def("done", &QueryIterator::done, "Returns True if the iterator is finished; False otherwise.")
-        .def("watch", &QueryIterator::watch, "Returns a file descriptor associated with this query.")
+        .def("nextAdsNonBlocking", &QueryIterator::nextAds,
+            R"C0ND0R(
+            Retrieve as many ads are available to the iterator object.
+
+            If no ads are available, returns an empty list.  Does not throw
+            an exception if no ads are available or the iterator is finished.
+
+            :return: Zero-or-more job ads.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R")
+        .def("tag", &QueryIterator::tag,
+            R"C0ND0R(
+            Retrieve the tag associated with this iterator; when using the :func:`poll` method,
+            this is useful to distinguish multiple iterators.
+
+            :return: The query's tag.
+            )C0ND0R")
+        .def("done", &QueryIterator::done,
+            R"C0ND0R(
+            :return: ``True`` if the iterator is finished; ``False`` otherwise.
+            :rtype: bool
+            )C0ND0R")
+        .def("watch", &QueryIterator::watch,
+            R"C0ND0R(
+            Returns an ``inotify``-based file descriptor; if this descriptor is given
+            to a ``select()`` instance, ``select`` will indicate this file descriptor is ready
+            to read whenever there are more jobs ready on the iterator.
+
+            If ``inotify`` is not available on this platform, this will return ``-1``.
+
+            :return: A file descriptor associated with this query.
+            :rtype: int
+            )C0ND0R")
         .def("__iter__", &QueryIterator::pass_through)
         ;
 
