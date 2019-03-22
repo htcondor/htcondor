@@ -58,6 +58,13 @@ signal when the batch system wants it to exit, giving the job a chance to
 shut down gracefully.
 \Ticket{6915}
 
+\item Restored the old Python bindings for reading the job event log
+(\Code{EventIterator} and \Code{read\_events()}).
+These bindings are marked as deprecated and will likely be removed
+permanently in the 8.9 series.
+Users should transition to the replacement bindings (\Code{JobEventLog})
+\Ticket{6939}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
