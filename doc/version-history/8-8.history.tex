@@ -44,7 +44,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Corrected a problem where the only the only attribute Chirp could
+\item Corrected a problem where the only attribute Chirp could
 set via its \Expr{set\_job\_attr\_delayed} command was \Attr{Chirp}.
 \Ticket{6958}
 
@@ -57,6 +57,13 @@ This has been fixed.
 signal when the batch system wants it to exit, giving the job a chance to
 shut down gracefully.
 \Ticket{6915}
+
+\item Restored the old Python bindings for reading the job event log
+(\Code{EventIterator} and \Code{read\_events()}).
+These bindings are marked as deprecated and will likely be removed
+permanently in the 8.9 series.
+Users should transition to the replacement bindings (\Code{JobEventLog})
+\Ticket{6939}
 
 \end{itemize}
 
