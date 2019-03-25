@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new submit file option, docker\_network\_type = host
+which causes a docker universe job to use the host's network,
+instead of the default NATed interface.
+\Ticket{6906}
+
 \item Added a new config knob, \Macro{DOCKER\_EXTRA\_ARGUMENTS}
 to allow admins to add arbritrary docker command line options to
 the docker create command.
