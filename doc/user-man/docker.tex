@@ -97,4 +97,12 @@ A debian container is the HTCondor job,
 and it runs the \Prog{/bin/cat} program on the \File{/etc/hosts} file
 before exiting.
 
+By default, docker universe jobs will be run with a private, NATed network
+interface.  In the job submit file, if the user specifies
+\begin{verbatim}
+docker_network_type = host
+\end{verbatim}
+
+then, instead of at NATted interface, the job will use the host's network 
+interface, just like a vanilla universe job.
 \index{docker universe|)}
