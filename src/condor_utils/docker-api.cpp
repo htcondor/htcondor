@@ -112,6 +112,9 @@ int DockerAPI::createContainer(
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
 
+		// Add a label to mark this container as htcondor-managed
+	runArgs.AppendArg("--label=org.htcondorproject=True");
+
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
 		return -8;
