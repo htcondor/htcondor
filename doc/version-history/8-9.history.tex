@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new config knob, \Macro{DOCKER\_EXTRA\_ARGUMENTS}
+to allow admins to add arbritrary docker command line options to
+the docker create command.
+\Ticket{6900}
+
 \item If a job RequestGpus and is a Docker Universe job , HTCondor
 automatically mounts the nvidia gpu devices.
 \Ticket{6910}
