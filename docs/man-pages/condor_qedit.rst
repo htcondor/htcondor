@@ -4,7 +4,7 @@
 ===============
 
 modify job attributes
-:index:`HTCondor commands<single: HTCondor commands; condor_qedit>`\ :index:`condor_qedit command<single: condor_qedit command>`
+:index:` <single: condor_qedit;HTCondor commands>`\ :index:` <single: condor_qedit command>`
 
 Synopsis
 --------

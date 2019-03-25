@@ -4,7 +4,7 @@
 ==============
 
 Display the last contents of a running job’s standard output or file
-:index:`HTCondor commands<single: HTCondor commands; condor_tail>`\ :index:`condor_tail command<single: condor_tail command>`
+:index:` <single: condor_tail;HTCondor commands>`\ :index:` <single: condor_tail command>`
 
 Synopsis
 --------

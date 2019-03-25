@@ -4,8 +4,8 @@
 ===================================
 
 Report the statistics of a DAGMan run to a central HTTP server
-:index:`HTCondor commands<single: HTCondor commands; condor_dagman_metrics_reporter>`
-:index:`condor_dagman_metrics_reporter command<single: condor_dagman_metrics_reporter command>`
+:index:` <single: condor_dagman_metrics_reporter;HTCondor commands>`
+:index:` <single: condor_dagman_metrics_reporter command>`
 
 Synopsis
 --------
@@ -59,7 +59,7 @@ what is sent:
 
 Metrics are sent only if the *condor\_dagman* process has
 ``PEGASUS_METRICS`` set to ``True`` in its environment, and the
-``CONDOR_DEVELOPERS`` :index:`CONDOR_DEVELOPERS<single: CONDOR_DEVELOPERS>` configuration
+``CONDOR_DEVELOPERS`` :index:` <single: CONDOR_DEVELOPERS>` configuration
 variable does not have the value ``NONE``.
 
 Ordinarily, this program will be run by *condor\_dagman*, and users do
@@ -94,7 +94,7 @@ Options
     from the server. A setting of zero will result in a single attempt
     per server. *condor\_dagman* retrieves this value from the
     ``DAGMAN_PEGASUS_REPORT_TIMEOUT``
-    :index:`DAGMAN_PEGASUS_REPORT_TIMEOUT<single: DAGMAN_PEGASUS_REPORT_TIMEOUT>` configuration variable.
+    :index:` <single: DAGMAN_PEGASUS_REPORT_TIMEOUT>` configuration variable.
  **-f **\ *metrics\_file*
     The name of the file containing the metrics values to be reported.
 

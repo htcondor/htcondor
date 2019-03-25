@@ -3,8 +3,8 @@
 *bosco\_findplatform*
 =====================
 
-:index:`Bosco commands<single: Bosco commands; bosco_findplatform>`
-:index:`bosco_findplatform command<single: bosco_findplatform command>`
+:index:` <single: bosco_findplatform;Bosco commands>`
+:index:` <single: bosco_findplatform command>`
 
 Synopsis
 --------

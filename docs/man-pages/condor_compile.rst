@@ -4,8 +4,8 @@
 =================
 
 create a relinked executable for use as a standard universe job
-:index:`HTCondor commands<single: HTCondor commands; condor_compile>`
-:index:`condor_compile command<single: condor_compile command>`
+:index:` <single: condor_compile;HTCondor commands>`
+:index:` <single: condor_compile command>`
 
 Synopsis
 --------

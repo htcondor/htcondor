@@ -112,7 +112,10 @@ def create_index_entry(index_tag):
                             if type(previous_sibling) == bs4.element.Tag:
                                 if "class" in previous_sibling.attrs.keys():
                                     if previous_sibling['class'][0] == "index-item":
-                                        parent_name = previous_sibling.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                                        try:
+                                            parent_name = previous_sibling.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                                        except:
+                                            print("Weird parsing error, skipping this one for now")
                                         break
                 break
 

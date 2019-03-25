@@ -3,7 +3,7 @@
 Job Monitor/Log Viewer
 ======================
 
-:index:`Job monitor<single: Job monitor>` :index:`viewing<single: viewing; log files>`
+:index:` <single: Job monitor>` :index:` <single: log files;viewing>`
 
 The HTCondor Job Monitor is a Java application designed to allow users
 to view user log files. It is identified as the Contrib Module called

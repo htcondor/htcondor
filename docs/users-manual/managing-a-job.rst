@@ -14,7 +14,7 @@ pages) <../man-pages/index.html>`__) for more information.
 When jobs are submitted, HTCondor will attempt to find resources to run
 the jobs. A list of all those with jobs submitted may be obtained
 through *condor\_status*
-:index:`HTCondor commands<single: HTCondor commands; condor_status>`\ with the *-submitters*
+:index:` <single: condor_status;HTCondor commands>`\ with the *-submitters*
 option. An example of this would yield output similar to:
 
 ::
@@ -41,7 +41,7 @@ Checking on the progress of jobs
 --------------------------------
 
 At any time, you can check on the status of your jobs with the
-*condor\_q* command. :index:`HTCondor commands<single: HTCondor commands; condor_q>`\ This
+*condor\_q* command. :index:` <single: condor_q;HTCondor commands>`\ This
 command displays the status of all queued jobs. An example of the output
 from *condor\_q* is
 
@@ -69,7 +69,7 @@ from *condor\_q* is
     14 jobs; 4 idle, 8 running, 2 held 
 
 This output contains many columns of information about the queued jobs.
-:index:`status<single: status; of queued jobs>`\ :index:`job<single: job; state>` The
+:index:` <single: of queued jobs;status>`\ :index:` <single: state;job>` The
 ST column (for status) shows the status of current jobs in the queue:
 
     R: The job is currently running.
@@ -93,7 +93,7 @@ execution commencement, checkpoint, eviction and termination are logged
 in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor\_shadow* process
-:index:`condor_shadow<single: condor_shadow>`\ :index:`remote system call<single: remote system call; condor_shadow>`
+:index:` <single: condor_shadow>`\ :index:` <single: condor_shadow;remote system call>`
 on the submit machine. The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.
@@ -103,12 +103,12 @@ hundreds of *condor\_shadow* processes running on the machine. Since the
 text segments of all these processes is the same, the load on the submit
 machine is usually not significant. If there is degraded performance,
 limit the number of jobs that can run simultaneously by reducing the
-``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING<single: MAX_JOBS_RUNNING>` configuration
+``MAX_JOBS_RUNNING`` :index:` <single: MAX_JOBS_RUNNING>` configuration
 variable.
 
 You can also find all the machines that are running your job through the
 *condor\_status* command.
-:index:`HTCondor commands<single: HTCondor commands; condor_status>`\ For example, to find
+:index:` <single: condor_status;HTCondor commands>`\ For example, to find
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
 
@@ -152,7 +152,7 @@ Removing a job from the queue
 -----------------------------
 
 A job can be removed from the queue at any time by using the
-*condor\_rm* :index:`HTCondor commands<single: HTCondor commands; condor_rm>`\ command. If
+*condor\_rm* :index:` <single: condor_rm;HTCondor commands>`\ command. If
 the job that is being removed is currently running, the job is killed
 without a checkpoint, and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
@@ -182,9 +182,9 @@ example shows the queue of jobs before and after a job is removed.
 Placing a job on hold
 ---------------------
 
-:index:`HTCondor commands<single: HTCondor commands; condor_hold>`
-:index:`HTCondor commands<single: HTCondor commands; condor_release>`
-:index:`job<single: job; state>`
+:index:` <single: condor_hold;HTCondor commands>`
+:index:` <single: condor_release;HTCondor commands>`
+:index:` <single: state;job>`
 
 A job in the queue may be placed on hold by running the command
 *condor\_hold*. A job in the hold state remains in the hold state until
@@ -209,7 +209,7 @@ usage details.
 Changing the priority of jobs
 -----------------------------
 
-:index:`job<single: job; priority>` :index:`priority<single: priority; of a job>`
+:index:` <single: priority;job>` :index:` <single: of a job;priority>`
 
 In addition to the priorities assigned to each user, HTCondor also
 provides each user with the capability of assigning priorities to each
@@ -218,7 +218,7 @@ any integer value, with higher values meaning better priority.
 
 The default priority of a job is 0, but can be changed using the
 *condor\_prio* command.
-:index:`HTCondor commands<single: HTCondor commands; condor_prio>`\ For example, to change
+:index:` <single: condor_prio;HTCondor commands>`\ For example, to change
 the priority of a job to -15,
 
 ::
@@ -250,7 +250,7 @@ the user to that specific queue.
 Why is the job not running?
 ---------------------------
 
-:index:`job<single: job; analysis>` :index:`job<single: job; not running>`
+:index:` <single: analysis;job>` :index:` <single: not running;job>`
 
 Users occasionally find that their jobs do not run. There are many
 possible reasons why a specific job is not running. The following prose
@@ -270,7 +270,7 @@ Further inquiries are dependent on whether the job has never run at all,
 or has run for at least a little bit.
 
 For jobs that have never run,
-:index:`HTCondor commands<single: HTCondor commands; condor_q>`\ many problems can be
+:index:` <single: condor_q;HTCondor commands>`\ many problems can be
 diagnosed by using the **-analyze** option of the *condor\_q* command.
 Here is an example; running *condor\_q*\ ’s analyzer provided the
 following information:
@@ -317,7 +317,7 @@ following information:
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
-**Requirements**\ :index:`submit commands<single: submit commands; Requirements>`
+**Requirements**\ :index:` <single: Requirements;submit commands>`
 expression in the submit description file, the platform requested for an
 execute machine will be the same as the platform where *condor\_submit*
 is run to submit the job. And, while Mac OS X is a Unix-type operating
@@ -336,12 +336,12 @@ A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
 identifying whether the job is in this category. The *condor\_q* command
 is not enough; it only tells the current state of the job. The needed
-information will be in the **log**\ :index:`submit commands<single: submit commands; log>`
-file or the **error**\ :index:`submit commands<single: submit commands; error>` file, as
+information will be in the **log**\ :index:` <single: log;submit commands>`
+file or the **error**\ :index:` <single: error;submit commands>` file, as
 defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
-**log**\ :index:`submit commands<single: submit commands; log>` file will contain an event
+**log**\ :index:` <single: log;submit commands>` file will contain an event
 of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
@@ -398,7 +398,7 @@ are two ways to fix the problem:
 #. Configure the machine with some real swap space.
 #. Disable this check within HTCondor. Define the amount of reserved
    swap space for the submit machine to 0. Set ``RESERVED_SWAP``
-   :index:`RESERVED_SWAP<single: RESERVED_SWAP>` to 0 in the configuration file:
+   :index:` <single: RESERVED_SWAP>` to 0 in the configuration file:
 
    ::
 
@@ -409,7 +409,7 @@ are two ways to fix the problem:
 Job in the Hold State
 ---------------------
 
-:index:`job<single: job; not running, on hold>`
+:index:` <single: not running, on hold;job>`
 
 A variety of errors and unusual conditions may cause a job to be placed
 into the Hold state. The job will stay in this state and in the job
@@ -432,8 +432,8 @@ attribute ``HoldReason``.
 In the Job Event Log File
 -------------------------
 
-:index:`job<single: job; event log file>`
-:index:`log files<single: log files; job event codes and descriptions>`
+:index:` <single: event log file;job>`
+:index:` <single: job event codes and descriptions;log files>`
 
 In a job event log file are a listing of events in chronological order
 that occurred during the life of one or more jobs. The formatting of the
@@ -606,7 +606,7 @@ auspices of the grid resource.
 | **Event Description:** Extra job ClassAd attributes are noted. This
 event is written as a supplement to other events when the configuration
 parameter ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS``
-:index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS<single: EVENT_LOG_JOB_AD_INFORMATION_ATTRS>` is set.
+:index:` <single: EVENT_LOG_JOB_AD_INFORMATION_ATTRS>` is set.
 
 | **Event Number:** 029
 | **Event Name:** The job’s remote status is unknown
@@ -674,7 +674,7 @@ while waiting for a new event to appear in the log).
 Job Completion
 --------------
 
-:index:`job<single: job; completion>`
+:index:` <single: completion;job>`
 
 When an HTCondor job completes, either through normal means or by
 abnormal termination by signal, HTCondor will remove it from the job
@@ -683,11 +683,11 @@ queue. That is, the job will no longer appear in the output of
 Examine the job history file with the *condor\_history* command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well.
-:index:`submit commands<single: submit commands; notification>`
+:index:` <single: notification;submit commands>`
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
-**notification**\ :index:`submit commands<single: submit commands; notification>` command
+**notification**\ :index:` <single: notification;submit commands>` command
 in the submit description file. The message will include the exit status
 of the job, which is the argument that the job passed to the exit system
 call when it completed, or it will be notification that the job was

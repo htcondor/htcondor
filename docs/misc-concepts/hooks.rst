@@ -3,7 +3,7 @@
 Hooks
 =====
 
-:index:`Hooks<single: Hooks>`
+:index:` <single: Hooks>`
 
 A hook is an external program or script invoked by HTCondor.
 
@@ -26,8 +26,8 @@ Note that standard universe jobs execute different *condor\_starter* and
 Job Hooks That Fetch Work
 -------------------------
 
-:index:`Job hooks<single: Job hooks>`
-:index:`Hooks<single: Hooks; job hooks that fetch work>`
+:index:` <single: Job hooks>`
+:index:` <single: job hooks that fetch work;Hooks>`
 
 In the past, HTCondor has always sent work to the execute machines by
 pushing jobs to the *condor\_startd* daemon, either from the
@@ -88,21 +88,21 @@ the slot will return to the Owner state.
 Work Fetching Hooks Invoked by HTCondor
 '''''''''''''''''''''''''''''''''''''''
 
-:index:`Job hooks<single: Job hooks; Hooks invoked by HTCondor>`
+:index:` <single: Hooks invoked by HTCondor;Job hooks>`
 
 There are a handful of hooks invoked by HTCondor related to fetching
 work, some of which are called by the *condor\_startd* and others by the
 *condor\_starter*. Each hook is described, including when it is invoked,
 what task it is supposed to accomplish, what data is passed to the hook,
 what output is expected, and, when relevant, the exit status expected.
-:index:`Fetch work<single: Fetch work>`
+:index:` <single: Fetch work>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_FETCH_WORK``
-   :index:`<Keyword>_HOOK_FETCH_WORK<single: <Keyword>_HOOK_FETCH_WORK>` is invoked whenever the
+   :index:` <single: <Keyword>_HOOK_FETCH_WORK>` is invoked whenever the
    *condor\_startd* wants to see if there is any work to fetch. There is
    a related configuration variable called ``FetchWorkDelay``
-   :index:`FetchWorkDelay<single: FetchWorkDelay>` which determines how long the
+   :index:` <single: FetchWorkDelay>` which determines how long the
    *condor\_startd* will wait between attempts to fetch work, which is
    described in detail in within section \ `4.4.1 <#x51-4410004.4.1>`__
    on page \ `1371 <#x51-4410004.4.1>`__. ``<Keyword>_HOOK_FETCH_WORK``
@@ -128,21 +128,21 @@ what output is expected, and, when relevant, the exit status expected.
        should return no output.
     User id that the hook runs as
        The ``<Keyword>_HOOK_FETCH_WORK``
-       :index:`<Keyword>_HOOK_FETCH_WORK<single: <Keyword>_HOOK_FETCH_WORK>` hook runs with the same
+       :index:` <single: <Keyword>_HOOK_FETCH_WORK>` hook runs with the same
        privileges as the *condor\_startd*. When Condor was started as
        root, this is usually the condor user, or the user specified in
-       the ``CONDOR_IDS`` :index:`CONDOR_IDS<single: CONDOR_IDS>` configuration
+       the ``CONDOR_IDS`` :index:` <single: CONDOR_IDS>` configuration
        variable.
     Exit status of the hook
        Ignored.
 
-   :index:`Reply to fetched work<single: Reply to fetched work>`
+   :index:` <single: Reply to fetched work>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_REPLY_FETCH``
-   :index:`<Keyword>_HOOK_REPLY_FETCH<single: <Keyword>_HOOK_REPLY_FETCH>` is invoked whenever
+   :index:` <single: <Keyword>_HOOK_REPLY_FETCH>` is invoked whenever
    ``<Keyword>_HOOK_FETCH_WORK``
-   :index:`<Keyword>_HOOK_FETCH_WORK<single: <Keyword>_HOOK_FETCH_WORK>` returns data and the
+   :index:` <single: <Keyword>_HOOK_FETCH_WORK>` returns data and the
    *condor\_startd* decides if it is going to accept the fetched job or
    not.
 
@@ -160,19 +160,19 @@ what output is expected, and, when relevant, the exit status expected.
        None.
     User id that the hook runs as
        The ``<Keyword>_HOOK_REPLY_FETCH``
-       :index:`<Keyword>_HOOK_REPLY_FETCH<single: <Keyword>_HOOK_REPLY_FETCH>` hook runs with the same
+       :index:` <single: <Keyword>_HOOK_REPLY_FETCH>` hook runs with the same
        privileges as the *condor\_startd*. When Condor was started as
        root, this is usually the condor user, or the user specified in
-       the ``CONDOR_IDS`` :index:`CONDOR_IDS<single: CONDOR_IDS>` configuration
+       the ``CONDOR_IDS`` :index:` <single: CONDOR_IDS>` configuration
        variable.
     Exit status of the hook
        Ignored.
 
-   :index:`Evict a claim<single: Evict a claim>`
+   :index:` <single: Evict a claim>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_EVICT_CLAIM``
-   :index:`<Keyword>_HOOK_EVICT_CLAIM<single: <Keyword>_HOOK_EVICT_CLAIM>` is invoked whenever the
+   :index:` <single: <Keyword>_HOOK_EVICT_CLAIM>` is invoked whenever the
    *condor\_startd* needs to evict a claim representing fetched work.
 
    The *condor\_startd* will not wait for this hook to return before
@@ -188,19 +188,19 @@ what output is expected, and, when relevant, the exit status expected.
        None.
     User id that the hook runs as
        The ``<Keyword>_HOOK_EVICT_CLAIM``
-       :index:`<Keyword>_HOOK_EVICT_CLAIM<single: <Keyword>_HOOK_EVICT_CLAIM>` hook runs with the same
+       :index:` <single: <Keyword>_HOOK_EVICT_CLAIM>` hook runs with the same
        privileges as the *condor\_startd*. When Condor was started as
        root, this is usually the condor user, or the user specified in
-       the ``CONDOR_IDS`` :index:`CONDOR_IDS<single: CONDOR_IDS>` configuration
+       the ``CONDOR_IDS`` :index:` <single: CONDOR_IDS>` configuration
        variable.
     Exit status of the hook
        Ignored.
 
-   :index:`Prepare job<single: Prepare job>`
+   :index:` <single: Prepare job>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_PREPARE_JOB``
-   :index:`<Keyword>_HOOK_PREPARE_JOB<single: <Keyword>_HOOK_PREPARE_JOB>` is invoked by the
+   :index:` <single: <Keyword>_HOOK_PREPARE_JOB>` is invoked by the
    *condor\_starter* before a job is going to be run. This hook provides
    a chance to execute commands to set up the job environment, for
    example, to transfer input files.
@@ -220,23 +220,23 @@ what output is expected, and, when relevant, the exit status expected.
        changes the executable to be run.
     User id that the hook runs as
        The ``<Keyword>_HOOK_PREPARE_JOB``
-       :index:`<Keyword>_HOOK_PREPARE_JOB<single: <Keyword>_HOOK_PREPARE_JOB>` hook runs with the same
+       :index:` <single: <Keyword>_HOOK_PREPARE_JOB>` hook runs with the same
        privileges as the job itself. If slot users are defined, the hook
        runs as the slot user, just as the job does.
     Exit status of the hook
        0 for success preparing the job, any non-zero value on failure.
 
-   :index:`Update job info<single: Update job info>`
+   :index:` <single: Update job info>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_UPDATE_JOB_INFO``
-   :index:`<Keyword>_HOOK_UPDATE_JOB_INFO<single: <Keyword>_HOOK_UPDATE_JOB_INFO>` is invoked periodically
+   :index:` <single: <Keyword>_HOOK_UPDATE_JOB_INFO>` is invoked periodically
    during the life of the job to update information about the status of
    the job. When the job is first spawned, the *condor\_starter* will
    invoke this hook after ``STARTER_INITIAL_UPDATE_INTERVAL``
-   :index:`STARTER_INITIAL_UPDATE_INTERVAL<single: STARTER_INITIAL_UPDATE_INTERVAL>` seconds (defaults to
+   :index:` <single: STARTER_INITIAL_UPDATE_INTERVAL>` seconds (defaults to
    8). Thereafter, the *condor\_starter* will invoke the hook every
-   ``STARTER_UPDATE_INTERVAL`` :index:`STARTER_UPDATE_INTERVAL<single: STARTER_UPDATE_INTERVAL>`
+   ``STARTER_UPDATE_INTERVAL`` :index:` <single: STARTER_UPDATE_INTERVAL>`
    seconds (defaults to 300, which is 5 minutes).
 
    The *condor\_starter* will not wait for this hook to return before
@@ -276,15 +276,15 @@ what output is expected, and, when relevant, the exit status expected.
        None.
     User id that the hook runs as
        The ``<Keyword>_HOOK_UPDATE_JOB_INFO``
-       :index:`<Keyword>_HOOK_UPDATE_JOB_INFO<single: <Keyword>_HOOK_UPDATE_JOB_INFO>` hook runs with the
+       :index:` <single: <Keyword>_HOOK_UPDATE_JOB_INFO>` hook runs with the
        same privileges as the job itself.
     Exit status of the hook
        Ignored.
 
-   :index:`Job exit<single: Job exit>`
+   :index:` <single: Job exit>`
 
 -  The hook defined by the configuration variable
-   ``<Keyword>_HOOK_JOB_EXIT`` :index:`<Keyword>_HOOK_JOB_EXIT<single: <Keyword>_HOOK_JOB_EXIT>` is
+   ``<Keyword>_HOOK_JOB_EXIT`` :index:` <single: <Keyword>_HOOK_JOB_EXIT>` is
    invoked by the *condor\_starter* whenever a job exits, either on its
    own or when being evicted from an execution slot.
 
@@ -305,7 +305,7 @@ what output is expected, and, when relevant, the exit status expected.
        -  hold The job was held with *condor\_hold* or the user job
           policy expressions (for example, ``PeriodicHold``).
        -  evict The job was evicted from the execution slot for any
-          other reason (``PREEMPT`` :index:`PREEMPT<single: PREEMPT>` evaluated to
+          other reason (``PREEMPT`` :index:` <single: PREEMPT>` evaluated to
           TRUE in the *condor\_startd*, *condor\_vacate*, *condor\_off*,
           etc).
 
@@ -316,7 +316,7 @@ what output is expected, and, when relevant, the exit status expected.
 
        The job ClassAd passed to this hook contains all of the extra
        attributes described above for ``<Keyword>_HOOK_UPDATE_JOB_INFO``
-       :index:`<Keyword>_HOOK_UPDATE_JOB_INFO<single: <Keyword>_HOOK_UPDATE_JOB_INFO>`, and the following
+       :index:` <single: <Keyword>_HOOK_UPDATE_JOB_INFO>`, and the following
        additional attributes that are only present once a job exits:
 
         ``ExitReason``
@@ -338,7 +338,7 @@ what output is expected, and, when relevant, the exit status expected.
        None.
     User id that the hook runs as
        The ``<Keyword>_HOOK_JOB_EXIT``
-       :index:`<Keyword>_HOOK_JOB_EXIT<single: <Keyword>_HOOK_JOB_EXIT>` hook runs with the same
+       :index:` <single: <Keyword>_HOOK_JOB_EXIT>` hook runs with the same
        privileges as the job itself.
     Exit status of the hook
        Ignored.
@@ -346,7 +346,7 @@ what output is expected, and, when relevant, the exit status expected.
 Keywords to Define Job Fetch Hooks in the HTCondor Configuration files
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-:index:`Job hooks<single: Job hooks; keywords>`
+:index:` <single: keywords;Job hooks>`
 
 Hooks are defined in the HTCondor configuration files by prefixing the
 name of the hook with a keyword. This way, a given machine can have
@@ -354,19 +354,19 @@ multiple sets of hooks, each set identified by a specific keyword.
 
 Each slot on the machine can define a separate keyword for the set of
 hooks that should be used with ``SLOT<N>_JOB_HOOK_KEYWORD``
-:index:`SLOT<N>_JOB_HOOK_KEYWORD<single: SLOT<N>_JOB_HOOK_KEYWORD>`. For example, on slot 1, the
+:index:` <single: SLOT<N>_JOB_HOOK_KEYWORD>`. For example, on slot 1, the
 variable name will be called ``SLOT1_JOB_HOOK_KEYWORD``. If the
 slot-specific keyword is not defined, the *condor\_startd* will use a
 global keyword as defined by ``STARTD_JOB_HOOK_KEYWORD``
-:index:`STARTD_JOB_HOOK_KEYWORD<single: STARTD_JOB_HOOK_KEYWORD>`.
+:index:` <single: STARTD_JOB_HOOK_KEYWORD>`.
 
 Once a job is fetched via ``<Keyword>_HOOK_FETCH_WORK``
-:index:`<Keyword>_HOOK_FETCH_WORK<single: <Keyword>_HOOK_FETCH_WORK>`, the *condor\_startd* will
+:index:` <single: <Keyword>_HOOK_FETCH_WORK>`, the *condor\_startd* will
 insert the keyword used to fetch that job into the job ClassAd as
 ``HookKeyword``. This way, the same keyword will be used to select the
 hooks invoked by the *condor\_starter* during the actual execution of
 the job. However, the ``STARTER_JOB_HOOK_KEYWORD``
-:index:`STARTER_JOB_HOOK_KEYWORD<single: STARTER_JOB_HOOK_KEYWORD>` can be defined to force the
+:index:` <single: STARTER_JOB_HOOK_KEYWORD>` can be defined to force the
 *condor\_starter* to always use a given keyword for its own hooks,
 instead of looking the job ClassAd for a ``HookKeyword`` attribute.
 
@@ -400,7 +400,7 @@ appropriate for their own needs.
 Defining the FetchWorkDelay Expression
 ''''''''''''''''''''''''''''''''''''''
 
-:index:`Job hooks<single: Job hooks; FetchWorkDelay>`
+:index:` <single: FetchWorkDelay;Job hooks>`
 
 There are two events that trigger the *condor\_startd* to attempt to
 fetch new work:
@@ -416,7 +416,7 @@ its own state, especially when a slot is claimed. Therefore,
 administrators can define a configuration variable which controls how
 long the *condor\_startd* will wait between attempts to fetch new work.
 This variable is called ``FetchWorkDelay``
-:index:`FetchWorkDelay<single: FetchWorkDelay>`.
+:index:` <single: FetchWorkDelay>`.
 
 The ``FetchWorkDelay`` expression must evaluate to an integer, which
 defines the number of seconds since the last fetch attempt completed
@@ -446,7 +446,7 @@ a five minute (300 second) delay between all attempts to fetch work.
 Example Hook: Specifying the Executable at Execution Time
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-:index:`Job hooks<single: Job hooks; Java example>`
+:index:` <single: Java example;Job hooks>`
 
 The availability of multiple versions of an application leads to the
 need to specify one of the versions. As an example, consider that the
@@ -474,7 +474,7 @@ with
 
 in the submit description file causes the *condor\_starter* will run the
 hook specified by ``JAVA5_HOOK_PREPARE_JOB``
-:index:`JAVA5_HOOK_PREPARE_JOB<single: JAVA5_HOOK_PREPARE_JOB>` before running this job. Note that
+:index:` <single: JAVA5_HOOK_PREPARE_JOB>` before running this job. Note that
 the double quote marks are required to correctly define the attribute.
 Any output from this hook is an update to the job ClassAd. Therefore,
 the hook that changes the executable may be
@@ -518,14 +518,14 @@ The submit description file for this example job may be
     queue 
 
 Note that the
-**requirements**\ :index:`submit commands<single: submit commands; requirements>` command
+**requirements**\ :index:` <single: requirements;submit commands>` command
 ensures that this job matches with a machine that has
 ``JAVA5_HOOK_PREPARE_JOB`` defined.
 
 Hooks for a Job Router
 ----------------------
 
-:index:`Hooks<single: Hooks; Job Router hooks>`
+:index:` <single: Job Router hooks;Hooks>`
 
 Job Router Hooks allow for an alternate transformation and/or monitoring
 than the *condor\_job\_router* daemon implements. Routing is still
@@ -545,7 +545,7 @@ configure HTCondor to use these Hooks.
 Hooks Invoked for Job Routing
 '''''''''''''''''''''''''''''
 
-:index:`Job Router<single: Job Router>`
+:index:` <single: Job Router>`
 
 The Job Router Hooks allow for replacement of the transformation engine
 used by HTCondor for routing a job. Since the external transformation
@@ -589,11 +589,11 @@ for the hook, replaced as desired or appropriate.
 There are 4 hooks that the Job Router can be configured to use. Each
 hook will be described below along with data passed to the hook and
 expected output. All hooks must exit successfully.
-:index:`Translate Job<single: Translate Job>`
+:index:` <single: Translate Job>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_TRANSLATE_JOB``
-   :index:`<Keyword>_HOOK_TRANSLATE_JOB<single: <Keyword>_HOOK_TRANSLATE_JOB>` is invoked when the Job
+   :index:` <single: <Keyword>_HOOK_TRANSLATE_JOB>` is invoked when the Job
    Router has determined that a job meets the definition for a route.
    This hook is responsible for doing the transformation of the job and
    configuring any resources that are external to HTCondor if
@@ -610,15 +610,15 @@ expected output. All hooks must exit successfully.
     Exit status of the hook
        0 for success, any non-zero value on failure.
 
-   :index:`Update Job Info<single: Update Job Info>`
+   :index:` <single: Update Job Info>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_UPDATE_JOB_INFO``
-   :index:`<Keyword>_HOOK_UPDATE_JOB_INFO<single: <Keyword>_HOOK_UPDATE_JOB_INFO>` is invoked to provide
+   :index:` <single: <Keyword>_HOOK_UPDATE_JOB_INFO>` is invoked to provide
    status on the specified routed job when the Job Router polls the
    status of routed jobs at intervals set by
    ``JOB_ROUTER_POLLING_PERIOD``
-   :index:`JOB_ROUTER_POLLING_PERIOD<single: JOB_ROUTER_POLLING_PERIOD>`.
+   :index:` <single: JOB_ROUTER_POLLING_PERIOD>`.
 
     Command-line arguments passed to the hook
        None.
@@ -632,11 +632,11 @@ expected output. All hooks must exit successfully.
     Exit status of the hook
        0 for success, any non-zero value on failure.
 
-   :index:`Job Finalize<single: Job Finalize>`
+   :index:` <single: Job Finalize>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_JOB_FINALIZE``
-   :index:`<Keyword>_HOOK_JOB_FINALIZE<single: <Keyword>_HOOK_JOB_FINALIZE>` is invoked when the Job
+   :index:` <single: <Keyword>_HOOK_JOB_FINALIZE>` is invoked when the Job
    Router has found that the job has completed. Any output from the hook
    is treated as an update to the source job.
 
@@ -650,11 +650,11 @@ expected output. All hooks must exit successfully.
     Exit status of the hook
        0 for success, any non-zero value on failure.
 
-   :index:`Job Cleanup<single: Job Cleanup>`
+   :index:` <single: Job Cleanup>`
 
 -  The hook defined by the configuration variable
    ``<Keyword>_HOOK_JOB_CLEANUP``
-   :index:`<Keyword>_HOOK_JOB_CLEANUP<single: <Keyword>_HOOK_JOB_CLEANUP>` is invoked when the Job
+   :index:` <single: <Keyword>_HOOK_JOB_CLEANUP>` is invoked when the Job
    Router finishes managing the job. This hook will be invoked
    regardless of whether the job completes successfully or not, and must
    exit successfully.
@@ -671,11 +671,11 @@ expected output. All hooks must exit successfully.
 Daemon ClassAd Hooks
 --------------------
 
-:index:`Hooks<single: Hooks; Daemon ClassAd Hooks>`
-:index:`Daemon ClassAd Hooks<single: Daemon ClassAd Hooks>`
-:index:`Hawkeye<single: Hawkeye; see Daemon ClassAd Hooks>`
-:index:`Startd Cron functionality<single: Startd Cron functionality; see Daemon ClassAd Hooks>`
-:index:`Schedd Cron functionality<single: Schedd Cron functionality; see Daemon ClassAd Hooks>`
+:index:` <single: Daemon ClassAd Hooks;Hooks>`
+:index:` <single: Daemon ClassAd Hooks>`
+:index:` <single: see Daemon ClassAd Hooks;Hawkeye>`
+:index:` <single: see Daemon ClassAd Hooks;Startd Cron functionality>`
+:index:` <single: see Daemon ClassAd Hooks;Schedd Cron functionality>`
 
  Overview
 
@@ -835,6 +835,6 @@ jobs, and ones that use the *condor\_schedd*.
     SCHEDD_CRON_TEST_KILL = True 
     SCHEDD_CRON_TEST_ARGS = abc 123 
 
-:index:`Hooks<single: Hooks>`
+:index:` <single: Hooks>`
 
       

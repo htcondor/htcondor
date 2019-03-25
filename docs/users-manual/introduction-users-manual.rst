@@ -4,7 +4,7 @@ Introduction
 ============
 
 In a nutshell, HTCondor is a specialized batch system
-:index:`batch system<single: batch system>`\ for managing compute-intensive jobs. Like
+:index:` <single: batch system>`\ for managing compute-intensive jobs. Like
 most batch systems, HTCondor provides a queuing mechanism, scheduling
 policy, priority scheme, and resource classifications. Users submit
 their compute jobs to HTCondor, HTCondor puts the jobs in a queue, runs

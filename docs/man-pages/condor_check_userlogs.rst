@@ -4,8 +4,8 @@
 =========================
 
 Check job event log files for errors
-:index:`HTCondor commands<single: HTCondor commands; condor_check_userlogs>`
-:index:`condor_check_userlogs command<single: condor_check_userlogs command>`
+:index:` <single: condor_check_userlogs;HTCondor commands>`
+:index:` <single: condor_check_userlogs command>`
 
 Synopsis
 --------

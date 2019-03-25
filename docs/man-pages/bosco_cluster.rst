@@ -4,8 +4,8 @@
 ================
 
 Manage and configure the clusters to be accessed.
-:index:`Bosco commands<single: Bosco commands; bosco_cluster>`
-:index:`bosco_cluster command<single: bosco_cluster command>`
+:index:` <single: bosco_cluster;Bosco commands>`
+:index:` <single: bosco_cluster command>`
 
 Synopsis
 --------

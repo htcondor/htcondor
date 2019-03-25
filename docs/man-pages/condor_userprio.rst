@@ -4,7 +4,7 @@
 ==================
 
 Manage user priorities
-:index:`HTCondor commands<single: HTCondor commands; condor_userprio>`\ :index:`condor_userprio command<single: condor_userprio command>`
+:index:` <single: condor_userprio;HTCondor commands>`\ :index:` <single: condor_userprio command>`
 
 Synopsis
 --------

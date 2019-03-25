@@ -4,7 +4,7 @@
 ===============
 
 Track and manage process families
-:index:`HTCondor commands<single: HTCondor commands; condor_procd>`\ :index:`condor_procd command<single: condor_procd command>`
+:index:` <single: condor_procd;HTCondor commands>`\ :index:` <single: condor_procd command>`
 
 Synopsis
 --------

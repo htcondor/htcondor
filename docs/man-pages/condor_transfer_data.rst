@@ -4,7 +4,7 @@
 ========================
 
 transfer spooled data
-:index:`HTCondor commands<single: HTCondor commands; condor_transfer_data>`\ :index:`condor_transfer_data command<single: condor_transfer_data command>`
+:index:` <single: condor_transfer_data;HTCondor commands>`\ :index:` <single: condor_transfer_data command>`
 
 Synopsis
 --------

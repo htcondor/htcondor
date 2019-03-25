@@ -1,12 +1,17 @@
+      
+
 Configuration Macros
 ====================
 
+` <index://configuration-macros;HTCondor>`__
+:index:` <single: configuration: macros>`
+
 The section contains a list of the individual configuration macros for
 HTCondor. Before attempting to set up HTCondor configuration, you should
-probably read the introduction to configuration section (`Introduction
+probably read the introduction to configuration section ( `Introduction
 to
 Configuration <../admin-manual/introduction-to-configuration.html>`__)
-and possibly the configuration template section (`Configuration
+and possibly the configuration template section ( `Configuration
 Templates <../admin-manual/configuration-templates.html>`__).
 
 The settings that control the policy under which HTCondor will start,
@@ -18,23 +23,23 @@ Configuration for the *condor\_startd*, not in this section.
 HTCondor-wide Configuration File Entries
 ----------------------------------------
 
+` <index://HTCondor-wide configuration variables;configuration>`__
+
 This section describes settings which affect all parts of the HTCondor
 system. Other system-wide settings can be found in
 section \ `3.5.4 <#x33-1910003.5.4>`__ on “Network-Related Configuration
 File Entries”, and section \ `3.5.5 <#x33-1920003.5.5>`__ on “Shared
 File System Configuration File Entries”.
 
-``CONDOR_HOST``
-
-This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
-Normally the *condor\_collector* and *condor\_negotiator* would run
-on the same machine. If for some reason they were not run on the
-same machine, ``$(CONDOR_HOST)`` would not be needed. Some of the
-host-based security macros use ``$(CONDOR_HOST)`` by default. See
-section \ `Security <../admin-manual/security.html>`__, on Setting
-up IP/host-based security in HTCondor for details.
-
-``COLLECTOR_HOST``
+ ``CONDOR_HOST`` :index:` <single: CONDOR_HOST>`
+    This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
+    Normally the *condor\_collector* and *condor\_negotiator* would run
+    on the same machine. If for some reason they were not run on the
+    same machine, ``$(CONDOR_HOST)`` would not be needed. Some of the
+    host-based security macros use ``$(CONDOR_HOST)`` by default. See
+    section \ `Security <../admin-manual/security.html>`__, on Setting
+    up IP/host-based security in HTCondor for details.
+ ``COLLECTOR_HOST`` :index:` <single: COLLECTOR_HOST>`
     The host name of the machine where the *condor\_collector* is
     running for your pool. Normally, it is defined relative to the
     ``$(CONDOR_HOST)`` macro. There is no default value for this macro;
@@ -66,18 +71,18 @@ up IP/host-based security in HTCondor for details.
     With more than one running, queries are sent to one of the
     *condor\_collector* daemons, chosen at random.
 
- ``COLLECTOR_PORT``
+ ``COLLECTOR_PORT`` :index:` <single: COLLECTOR_PORT>`
     The default port used when contacting the *condor\_collector* and
     the default port the *condor\_collector* listens on if no port is
     specified. This variable is referenced if no port is given and there
     is no other means to find the *condor\_collector* port. The default
     value is 9618.
- ``NEGOTIATOR_HOST``
+ ``NEGOTIATOR_HOST`` :index:` <single: NEGOTIATOR_HOST>`
     This configuration variable is no longer used. It previously defined
     the host name of the machine where the *condor\_negotiator* is
     running. At present, the port where the *condor\_negotiator* is
     listening is dynamically allocated.
- ``CONDOR_VIEW_HOST``
+ ``CONDOR_VIEW_HOST`` :index:` <single: CONDOR_VIEW_HOST>`
     A list of HTCondorView servers, separated by commas and/or spaces.
     Each HTCondorView server is denoted by the host name of the machine
     it is running on, optionally appended by a colon and the port
@@ -89,47 +94,50 @@ up IP/host-based security in HTCondor for details.
     on page \ `Setting Up for Special
     Environments <../admin-manual/setting-up-special-environments.html>`__
     for more details.
- ``SCHEDD_HOST``
+ ``SCHEDD_HOST`` :index:` <single: SCHEDD_HOST>`
     The host name of the machine where the *condor\_schedd* is running
     for your pool. This is the host that queues submitted jobs. If the
-    host specifies ``SCHEDD_NAME`` or ``MASTER_NAME`` , that name must
-    be included in the form name@hostname. In most condor installations,
+    host specifies ``SCHEDD_NAME`` :index:` <single: SCHEDD_NAME>` or
+    ``MASTER_NAME`` :index:` <single: MASTER_NAME>`, that name must be
+    included in the form name@hostname. In most condor installations,
     there is a *condor\_schedd* running on each host from which jobs are
-    submitted. The default value of ``SCHEDD_HOST`` is the current host
-    with the optional name included. For most pools, this macro is not
-    defined, nor does it need to be defined..
- ``RELEASE_DIR``
+    submitted. The default value of ``SCHEDD_HOST``
+    :index:` <single: SCHEDD_HOST>` is the current host with the optional
+    name included. For most pools, this macro is not defined, nor does
+    it need to be defined..
+ ``RELEASE_DIR`` :index:` <single: RELEASE_DIR>`
     The full path to the HTCondor release directory, which holds the
     ``bin``, ``etc``, ``lib``, and ``sbin`` directories. Other macros
     are defined relative to this one. There is no default value for
-    ``RELEASE_DIR`` .
- ``BIN``
+    ``RELEASE_DIR`` :index:` <single: RELEASE_DIR>`.
+ ``BIN`` :index:` <single: BIN>`
     This directory points to the HTCondor directory where user-level
     programs are installed. The default value is ``$(RELEASE_DIR)``/bin.
- ``LIB``
+ ``LIB`` :index:` <single: LIB>`
     This directory points to the HTCondor directory where libraries used
     to link jobs for HTCondor’s standard universe are stored. The
     *condor\_compile* program uses this macro to find these libraries,
     so it must be defined for *condor\_compile* to function. The default
     value is ``$(RELEASE_DIR)``/lib.
- ``LIBEXEC``
+ ``LIBEXEC`` :index:` <single: LIBEXEC>`
     This directory points to the HTCondor directory where support
     commands that HTCondor needs will be placed. Do not add this
     directory to a user or system-wide path.
- ``INCLUDE``
+ ``INCLUDE`` :index:` <single: INCLUDE>`
     This directory points to the HTCondor directory where header files
     reside. The default value is ``$(RELEASE_DIR)``/include. It can make
     inclusion of necessary header files for compilation of programs
     (such as those programs that use ``libcondorapi.a``) easier through
     the use of *condor\_config\_val*.
- ``SBIN``
+ ``SBIN`` :index:` <single: SBIN>`
     This directory points to the HTCondor directory where HTCondor’s
     system binaries (such as the binaries for the HTCondor daemons) and
-    administrative tools are installed. Whatever directory ``$(SBIN)``
-    points to ought to be in the ``PATH`` of users acting as HTCondor
-    administrators. The default value is ``$(BIN)`` in Windows and
-    ``$(RELEASE_DIR)``/sbin on all other platforms.
- ``LOCAL_DIR``
+    administrative tools are installed. Whatever directory
+    ``$(SBIN)``\ :index:` <single: SBIN>` points to ought to be in the
+    ``PATH`` of users acting as HTCondor administrators. The default
+    value is ``$(BIN)`` in Windows and ``$(RELEASE_DIR)``/sbin on all
+    other platforms.
+ ``LOCAL_DIR`` :index:` <single: LOCAL_DIR>`
     The location of the local HTCondor directory on each machine in your
     pool. The default value is ``$(RELEASE_DIR)`` on Windows and
     ``$(RELEASE_DIR)``/hosts/``$(HOSTNAME)`` on all other platforms.
@@ -142,7 +150,7 @@ up IP/host-based security in HTCondor for details.
             LOCAL_DIR = $(tilde) 
           
 
- ``LOG``
+ ``LOG`` :index:` <single: LOG>`
     Used to specify the directory where each HTCondor daemon writes its
     log files. The names of the log files themselves are defined with
     other macros, which use the ``$(LOG)`` macro by default. The log
@@ -154,11 +162,11 @@ up IP/host-based security in HTCondor for details.
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
- ``RUN``
+ ``RUN`` :index:` <single: RUN>`
     A path and directory name to be used by the HTCondor init script to
     specify the directory where the *condor\_master* should write its
     process ID (PID) file. The default if not defined is ``$(LOG)``.
- ``SPOOL``
+ ``SPOOL`` :index:` <single: SPOOL>`
     The spool directory is where certain files used by the
     *condor\_schedd* are stored, such as the job queue file and the
     initial executables of any jobs that have been submitted. In
@@ -170,12 +178,12 @@ up IP/host-based security in HTCondor for details.
     to execute HTCondor jobs and not submit them, it would not need a
     spool directory (or this macro defined). The default value is
     ``$(LOCAL_DIR)``/spool. The *condor\_schedd* will not function if
-    ``SPOOL`` is not defined.
+    ``SPOOL`` :index:` <single: SPOOL>` is not defined.
 
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
- ``EXECUTE``
+ ``EXECUTE`` :index:` <single: EXECUTE>`
     This directory acts as a place to create the scratch directory of
     any HTCondor job that is executing on the local machine. The scratch
     directory is the destination of any input files that were specified
@@ -191,42 +199,47 @@ up IP/host-based security in HTCondor for details.
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
- ``TMP_DIR``
+ ``TMP_DIR`` :index:` <single: TMP_DIR>`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
     use this directory are the *condor\_gridmanager*,
     *condor\_config\_val* when using the **-rset** option, systems that
     use lock files when configuration variable
-    ``CREATE_LOCKS_ON_LOCAL_DISK`` is ``True``, the Web Service API, and
-    the *condor\_credd* daemon. There is no default value.
+    ``CREATE_LOCKS_ON_LOCAL_DISK``
+    :index:` <single: CREATE_LOCKS_ON_LOCAL_DISK>` is ``True``, the Web
+    Service API, and the *condor\_credd* daemon. There is no default
+    value.
 
     If both ``TMP_DIR`` and ``TEMP_DIR`` are defined, the value set for
     ``TMP_DIR`` is used and ``TEMP_DIR`` is ignored.
 
- ``TEMP_DIR``
+ ``TEMP_DIR`` :index:` <single: TEMP_DIR>`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
     use this directory are the *condor\_gridmanager*,
     *condor\_config\_val* when using the **-rset** option, systems that
     use lock files when configuration variable
-    ``CREATE_LOCKS_ON_LOCAL_DISK`` is ``True``, the Web Service API, and
-    the *condor\_credd* daemon. There is no default value.
+    ``CREATE_LOCKS_ON_LOCAL_DISK``
+    :index:` <single: CREATE_LOCKS_ON_LOCAL_DISK>` is ``True``, the Web
+    Service API, and the *condor\_credd* daemon. There is no default
+    value.
 
     If both ``TMP_DIR`` and ``TEMP_DIR`` are defined, the value set for
     ``TMP_DIR`` is used and ``TEMP_DIR`` is ignored.
 
- ``SLOT<N>_EXECUTE``
+ ``SLOT<N>_EXECUTE`` :index:` <single: SLOT<N>_EXECUTE>`
     Specifies an execute directory for use by a specific batch slot.
     ``<N>`` represents the number of the batch slot, such as 1, 2, 3,
-    etc. This execute directory serves the same purpose as ``EXECUTE`` ,
-    but it allows the configuration of the directory independently for
-    each batch slot. Having slots each using a different partition would
-    be useful, for example, in preventing one job from filling up the
-    same disk that other jobs are trying to write to. If this parameter
-    is undefined for a given batch slot, it will use ``EXECUTE`` as the
-    default. Note that each slot will advertise ``TotalDisk`` and
-    ``Disk`` for the partition containing its execute directory.
- ``LOCAL_CONFIG_FILE``
+    etc. This execute directory serves the same purpose as ``EXECUTE``
+    :index:` <single: EXECUTE>`, but it allows the configuration of the
+    directory independently for each batch slot. Having slots each using
+    a different partition would be useful, for example, in preventing
+    one job from filling up the same disk that other jobs are trying to
+    write to. If this parameter is undefined for a given batch slot, it
+    will use ``EXECUTE`` as the default. Note that each slot will
+    advertise ``TotalDisk`` and ``Disk`` for the partition containing
+    its execute directory.
+ ``LOCAL_CONFIG_FILE`` :index:` <single: LOCAL_CONFIG_FILE>`
     Identifies the location of the local, machine-specific configuration
     file for each machine in the pool. The two most common choices would
     be putting this file in the ``$(LOCAL_DIR)``, or putting all local
@@ -279,7 +292,7 @@ up IP/host-based security in HTCondor for details.
     processed, then consider using ``LOCAL_CONFIG_DIR``, defined at
     section \ `3.5.1 <#x33-1880003.5.1>`__.
 
- ``REQUIRE_LOCAL_CONFIG_FILE``
+ ``REQUIRE_LOCAL_CONFIG_FILE`` :index:` <single: REQUIRE_LOCAL_CONFIG_FILE>`
     A boolean value that defaults to ``True``. When ``True``, HTCondor
     exits with an error, if any file listed in ``LOCAL_CONFIG_FILE``
     cannot be read. A value of ``False`` allows local configuration
@@ -288,7 +301,7 @@ up IP/host-based security in HTCondor for details.
     that uses the ``$(HOSTNAME)`` macro in its definition. Instead of
     having an empty file for every host in the pool, files can simply be
     omitted.
- ``LOCAL_CONFIG_DIR``
+ ``LOCAL_CONFIG_DIR`` :index:` <single: LOCAL_CONFIG_DIR>`
     A directory may be used as a container for local configuration
     files. The files found in the directory are sorted into
     lexicographical order by file name, and then each file is treated as
@@ -299,7 +312,7 @@ up IP/host-based security in HTCondor for details.
     order it appears in the list. The process is not recursive, so any
     directories found inside the directory being processed are ignored.
     See also ``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP``.
- ``USER_CONFIG_FILE``
+ ``USER_CONFIG_FILE`` :index:` <single: USER_CONFIG_FILE>`
     The file name of a configuration file to be parsed after other local
     configuration files and before environment variables set
     configuration. Relevant only if HTCondor daemons are not run as root
@@ -320,27 +333,29 @@ up IP/host-based security in HTCondor for details.
           USER_CONFIG_FILE =
 
  ``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP``
+:index:` <single: LOCAL_CONFIG_DIR_EXCLUDE_REGEXP>`
     A regular expression that specifies file names to be ignored when
     looking for configuration files within the directories specified via
     ``LOCAL_CONFIG_DIR``. The default expression ignores files with
     names beginning with a ‘.’ or a ‘#’, as well as files with names
     ending in ‘˜’. This avoids accidents that can be caused by treating
     temporary files created by text editors as configuration files.
- ``CONDOR_IDS``
+ ``CONDOR_IDS`` :index:` <single: CONDOR_IDS>`
     The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
-    should run as, if the daemons are spawned as root. This value can
-    also be specified in the ``CONDOR_IDS`` environment variable. If the
-    HTCondor daemons are not started as root, then neither this
-    ``CONDOR_IDS`` configuration macro nor the ``CONDOR_IDS``
-    environment variable are used. The value is given by two integers,
-    separated by a period. For example, CONDOR\_IDS = 1234.1234. If this
-    pair is not specified in either the configuration file or in the
-    environment, and the HTCondor daemons are spawned as root, then
-    HTCondor will search for a condor user on the system, and run as
-    that user’s UID and GID. See
+    should run as, if the daemons are spawned as root.
+    :index:` <single: CONDOR_IDS environment variable>`\ :index:` <single: CONDOR_IDS;environment variables>`
+    This value can also be specified in the ``CONDOR_IDS`` environment
+    variable. If the HTCondor daemons are not started as root, then
+    neither this ``CONDOR_IDS`` configuration macro nor the
+    ``CONDOR_IDS`` environment variable are used. The value is given by
+    two integers, separated by a period. For example,
+    CONDOR\_IDS = 1234.1234. If this pair is not specified in either the
+    configuration file or in the environment, and the HTCondor daemons
+    are spawned as root, then HTCondor will search for a condor user on
+    the system, and run as that user’s UID and GID. See
     section \ `3.8.13 <Security.html#x36-2960003.8.13>`__ on UIDs in
     HTCondor for more details.
- ``CONDOR_ADMIN``
+ ``CONDOR_ADMIN`` :index:` <single: CONDOR_ADMIN>`
     The email address that HTCondor will send mail to if something goes
     wrong in the pool. For example, if a daemon crashes, the
     *condor\_master* can send an obituary to this address with the last
@@ -348,17 +363,18 @@ up IP/host-based security in HTCondor for details.
     describes what signal or exit status that daemon exited with. The
     default value is root@\ ``$(FULL_HOSTNAME)``.
  ``<SUBSYS>_ADMIN_EMAIL``
-    The email address that HTCondor will send mail to if something goes
-    wrong with the named ``<SUBSYS>``. Identical to ``CONDOR_ADMIN``,
-    but done on a per subsystem basis. There is no default value.
- ``CONDOR_SUPPORT_EMAIL``
+    :index:` <single: <SUBSYS>_ADMIN_EMAIL>` The email address that HTCondor
+    will send mail to if something goes wrong with the named
+    ``<SUBSYS>``. Identical to ``CONDOR_ADMIN``, but done on a per
+    subsystem basis. There is no default value.
+ ``CONDOR_SUPPORT_EMAIL`` :index:` <single: CONDOR_SUPPORT_EMAIL>`
     The email address to be included at the bottom of all email HTCondor
     sends out under the label “Email address of the local HTCondor
     administrator:”. This is the address where HTCondor users at your
     site should send their questions about HTCondor and get technical
     support. If this setting is not defined, HTCondor will use the
     address specified in ``CONDOR_ADMIN`` (described above).
- ``EMAIL_SIGNATURE``
+ ``EMAIL_SIGNATURE`` :index:` <single: EMAIL_SIGNATURE>`
     Every e-mail sent by HTCondor includes a short signature line
     appended to the body. By default, this signature includes the URL to
     the global HTCondor project website. When set, this variable defines
@@ -366,7 +382,7 @@ up IP/host-based security in HTCondor for details.
     Note that the value can only be one line in length. This variable
     could be used to direct users to look at local web site with
     information specific to the installation of HTCondor.
- ``MAIL``
+ ``MAIL`` :index:` <single: MAIL>`
     The full path to a mail sending program that uses **-s** to specify
     a subject for the message. On all platforms, the default shipped
     with HTCondor should work. Only if you installed things in a
@@ -376,35 +392,36 @@ up IP/host-based security in HTCondor for details.
     will not function unless ``MAIL`` is defined. For security reasons,
     non-Windows platforms should not use this setting and should use
     ``SENDMAIL`` instead.
- ``SENDMAIL``
+ ``SENDMAIL`` :index:` <single: SENDMAIL>`
     The full path to the *sendmail* executable. If defined, which it is
     by default on non-Windows platforms, *sendmail* is used instead of
     the mail program defined by ``MAIL``.
- ``MAIL_FROM``
+ ``MAIL_FROM`` :index:` <single: MAIL_FROM>`
     The e-mail address that notification e-mails appear to come from.
     Contents is that of the ``From`` header. There is no default value;
     if undefined, the ``From`` header may be nonsensical.
- ``SMTP_SERVER``
+ ``SMTP_SERVER`` :index:` <single: SMTP_SERVER>`
     For Windows platforms only, the host name of the server through
     which to route notification e-mail. There is no default value; if
     undefined and the debug level is at ``FULLDEBUG``, an error message
     will be generated.
- ``RESERVED_SWAP``
+ ``RESERVED_SWAP`` :index:` <single: RESERVED_SWAP>`
     The amount of swap space in MiB to reserve for this machine.
     HTCondor will not start up more *condor\_shadow* processes if the
     amount of free swap space on this machine falls below this level.
     The default value is 0, which disables this check. It is anticipated
     that this configuration variable will no longer be used in the near
     future. If ``RESERVED_SWAP`` is not set to 0, the value of
-    ``SHADOW_SIZE_ESTIMATE`` is used.
- ``RESERVED_DISK``
+    ``SHADOW_SIZE_ESTIMATE`` :index:` <single: SHADOW_SIZE_ESTIMATE>` is
+    used.
+ ``RESERVED_DISK`` :index:` <single: RESERVED_DISK>`
     Determines how much disk space you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor\_startd*, which advertises the
     amount of free space in the ``$(EXECUTE)`` directory. The default
-    value of ``RESERVED_DISK`` is zero.
- ``LOCK``
+    value of ``RESERVED_DISK`` :index:` <single: RESERVED_DISK>` is zero.
+ ``LOCK`` :index:` <single: LOCK>`
     HTCondor needs to create lock files to synchronize access to various
     log files. Because of problems with network file systems and file
     locking over the years, we highly recommend that you put these lock
@@ -415,15 +432,17 @@ up IP/host-based security in HTCondor for details.
     access to this directory. If you are not running as root, this is
     whatever user you started up the *condor\_master* as. If you are
     running as root, and there is a condor account, it is most likely
-    condor. Otherwise, it is whatever you set in the ``CONDOR_IDS``
-    environment variable, or whatever you define in the ``CONDOR_IDS``
-    setting in the HTCondor config files. See
+    condor.
+    :index:` <single: CONDOR_IDS environment variable>`\ :index:` <single: CONDOR_IDS;environment variables>`
+    Otherwise, it is whatever you set in the ``CONDOR_IDS`` environment
+    variable, or whatever you define in the ``CONDOR_IDS`` setting in
+    the HTCondor config files. See
     section \ `3.8.13 <Security.html#x36-2960003.8.13>`__ on UIDs in
     HTCondor for details.
 
     If no value for ``LOCK`` is provided, the value of ``LOG`` is used.
 
- ``HISTORY``
+ ``HISTORY`` :index:` <single: HISTORY>`
     Defines the location of the HTCondor history file, which stores
     information about all HTCondor jobs that have completed on a given
     machine. This macro is used by both the *condor\_schedd* which
@@ -431,17 +450,17 @@ up IP/host-based security in HTCondor for details.
     program used to view the history file. This configuration macro is
     given the default value of ``$(SPOOL)/history`` in the default
     configuration. If not defined, no history file is kept.
- ``ENABLE_HISTORY_ROTATION``
+ ``ENABLE_HISTORY_ROTATION`` :index:` <single: ENABLE_HISTORY_ROTATION>`
     If this is defined to be true, then the history file will be
     rotated. If it is false, then it will not be rotated, and it will
     grow indefinitely, to the limits allowed by the operating system. If
     this is not defined, it is assumed to be true. The rotated files
     will be stored in the same directory as the history file.
- ``MAX_HISTORY_LOG``
+ ``MAX_HISTORY_LOG`` :index:` <single: MAX_HISTORY_LOG>`
     Defines the maximum size for the history file, in bytes. It defaults
     to 20MB. This parameter is only used if history file rotation is
     enabled.
- ``MAX_HISTORY_ROTATIONS``
+ ``MAX_HISTORY_ROTATIONS`` :index:` <single: MAX_HISTORY_ROTATIONS>`
     When history file rotation is turned on, this controls how many
     backup files there are. It default to 2, which means that there may
     be up to three history files (two backups, plus the history file
@@ -449,6 +468,7 @@ up IP/host-based security in HTCondor for details.
     rotated, and this rotation would cause the number of backups to be
     too large, the oldest file is removed.
  ``HISTORY_HELPER_MAX_CONCURRENCY``
+:index:` <single: HISTORY_HELPER_MAX_CONCURRENCY>`
     Specifies the maximum number of concurrent remote *condor\_history*
     queries allowed at a time; defaults to 50. When this maximum is
     exceeded, further queries will be queued in a non-blocking manner.
@@ -457,12 +477,14 @@ up IP/host-based security in HTCondor for details.
     specifies a **-name** option to query a *condor\_schedd* running on
     a remote machine.
  ``HISTORY_HELPER_MAX_HISTORY``
+:index:` <single: HISTORY_HELPER_MAX_HISTORY>`
     Specifies the maximum number of ClassAds to parse on behalf of
     remote history clients. The default is 10,000. This allows the
     system administrator to indirectly manage the maximum amount of CPU
     time spent on each client. Setting this option to 0 disables remote
     history access.
  ``MAX_JOB_QUEUE_LOG_ROTATIONS``
+:index:` <single: MAX_JOB_QUEUE_LOG_ROTATIONS>`
     The *condor\_schedd* daemon periodically rotates the job queue
     database file, in order to save disk space. This option controls how
     many rotated files are saved. It defaults to 1, which means there
@@ -472,6 +494,7 @@ up IP/host-based security in HTCondor for details.
     of backups to be larger the the maximum specified, the oldest file
     is removed.
  ``CLASSAD_LOG_STRICT_PARSING``
+:index:` <single: CLASSAD_LOG_STRICT_PARSING>`
     A boolean value that defaults to ``True``. When ``True``, ClassAd
     log files will be read using a strict syntax checking for ClassAd
     expressions. ClassAd log files include the job queue log and the
@@ -481,7 +504,7 @@ up IP/host-based security in HTCondor for details.
     configuration variable may no longer be supported in future
     releases, eventually requiring all ClassAd log files to pass strict
     ClassAd syntax checking.
- ``DEFAULT_DOMAIN_NAME``
+ ``DEFAULT_DOMAIN_NAME`` :index:` <single: DEFAULT_DOMAIN_NAME>`
     The value to be appended to a machine’s host name, representing a
     domain name, which HTCondor then uses to form a fully qualified host
     name. This is required if there is no fully qualified host name in
@@ -492,16 +515,16 @@ up IP/host-based security in HTCondor for details.
     is bogus, and must be changed. If this variable is removed from the
     global configuration file, or if the definition is empty, then
     HTCondor attempts to discover the value.
- ``NO_DNS``
+ ``NO_DNS`` :index:` <single: NO_DNS>`
     A boolean value that defaults to ``False``. When ``True``, HTCondor
     constructs host names using the host’s IP address together with the
     value defined for ``DEFAULT_DOMAIN_NAME``.
- ``CM_IP_ADDR``
+ ``CM_IP_ADDR`` :index:` <single: CM_IP_ADDR>`
     If neither ``COLLECTOR_HOST`` nor ``COLLECTOR_IP_ADDR`` macros are
     defined, then this macro will be used to determine the IP address of
     the central manager (collector daemon). This macro is defined by an
     IP address.
- ``EMAIL_DOMAIN``
+ ``EMAIL_DOMAIN`` :index:` <single: EMAIL_DOMAIN>`
     By default, if a user does not specify ``notify_user`` in the submit
     description file, any email HTCondor sends about that job will go to
     "username@UID\_DOMAIN". If your machines all share a common UID
@@ -517,42 +540,44 @@ up IP/host-based security in HTCondor for details.
     commented out unless two things are true: 1) ``UID_DOMAIN`` is set
     to your domain, not ``$(FULL_HOSTNAME)``, and 2) email to
     user@UID\_DOMAIN will not work.
- ``CREATE_CORE_FILES``
+ ``CREATE_CORE_FILES`` :index:` <single: CREATE_CORE_FILES>`
     Defines whether or not HTCondor daemons are to create a core file in
-    the ``LOG`` directory if something really bad happens. It is used to
-    set the resource limit for the size of a core file. If not defined,
-    it leaves in place whatever limit was in effect when the HTCondor
-    daemons (normally the *condor\_master*) were started. This allows
-    HTCondor to inherit the default system core file generation behavior
-    at start up. For Unix operating systems, this behavior can be
-    inherited from the parent shell, or specified in a shell script that
-    starts HTCondor. If this parameter is set and ``True``, the limit is
-    increased to the maximum. If it is set to ``False``, the limit is
-    set at 0 (which means that no core files are created). Core files
-    greatly help the HTCondor developers debug any problems you might be
-    having. By using the parameter, you do not have to worry about
-    tracking down where in your boot scripts you need to set the core
-    limit before starting HTCondor. You set the parameter to whatever
-    behavior you want HTCondor to enforce. This parameter defaults to
-    undefined to allow the initial operating system default value to
-    take precedence, and is commented out in the default configuration
-    file.
- ``CKPT_PROBE``
+    the ``LOG`` :index:` <single: LOG>` directory if something really bad
+    happens. It is used to set the resource limit for the size of a core
+    file. If not defined, it leaves in place whatever limit was in
+    effect when the HTCondor daemons (normally the *condor\_master*)
+    were started. This allows HTCondor to inherit the default system
+    core file generation behavior at start up. For Unix operating
+    systems, this behavior can be inherited from the parent shell, or
+    specified in a shell script that starts HTCondor. If this parameter
+    is set and ``True``, the limit is increased to the maximum. If it is
+    set to ``False``, the limit is set at 0 (which means that no core
+    files are created). Core files greatly help the HTCondor developers
+    debug any problems you might be having. By using the parameter, you
+    do not have to worry about tracking down where in your boot scripts
+    you need to set the core limit before starting HTCondor. You set the
+    parameter to whatever behavior you want HTCondor to enforce. This
+    parameter defaults to undefined to allow the initial operating
+    system default value to take precedence, and is commented out in the
+    default configuration file.
+ ``CKPT_PROBE`` :index:` <single: CKPT_PROBE>`
     Defines the path and executable name of the helper process HTCondor
     will use to determine information for the ``CheckpointPlatform``
     attribute in the machine’s ClassAd. The default value is
     ``$(LIBEXEC)/condor_ckpt_probe``.
- ``ABORT_ON_EXCEPTION``
+ ``ABORT_ON_EXCEPTION`` :index:` <single: ABORT_ON_EXCEPTION>`
     When HTCondor programs detect a fatal internal exception, they
     normally log an error message and exit. If you have turned on
-    ``CREATE_CORE_FILES`` , in some cases you may also want to turn on
-    ``ABORT_ON_EXCEPTION`` so that core files are generated when an
-    exception occurs. Set the following to True if that is what you
-    want.
- ``Q_QUERY_TIMEOUT``
+    ``CREATE_CORE_FILES`` :index:` <single: CREATE_CORE_FILES>`, in some
+    cases you may also want to turn on ``ABORT_ON_EXCEPTION``
+    :index:` <single: ABORT_ON_EXCEPTION>` so that core files are generated
+    when an exception occurs. Set the following to True if that is what
+    you want.
+ ``Q_QUERY_TIMEOUT`` :index:` <single: Q_QUERY_TIMEOUT>`
     Defines the timeout (in seconds) that *condor\_q* uses when trying
     to connect to the *condor\_schedd*. Defaults to 20 seconds.
  ``DEAD_COLLECTOR_MAX_AVOIDANCE_TIME``
+:index:` <single: DEAD_COLLECTOR_MAX_AVOIDANCE_TIME>`
     Defines the interval of time (in seconds) between checks for a
     failed primary *condor\_collector* daemon. If connections to the
     dead primary *condor\_collector* take very little time to fail, new
@@ -561,7 +586,7 @@ up IP/host-based security in HTCondor for details.
     value equals one hour. This variable has relevance to flocked jobs,
     as it defines the maximum time they may be reporting to the primary
     *condor\_collector* without the *condor\_negotiator* noticing.
- ``PASSWD_CACHE_REFRESH``
+ ``PASSWD_CACHE_REFRESH`` :index:` <single: PASSWD_CACHE_REFRESH>`
     HTCondor can cause NIS servers to become overwhelmed by queries for
     uid and group information in large pools. In order to avoid this
     problem, HTCondor caches UID and group information internally. This
@@ -577,11 +602,12 @@ up IP/host-based security in HTCondor for details.
     also be flushed explicitly by running the command
     *condor\_reconfig*. This configuration variable has no effect on
     Windows.
- ``SYSAPI_GET_LOADAVG``
+ ``SYSAPI_GET_LOADAVG`` :index:` <single: SYSAPI_GET_LOADAVG>`
     If set to False, then HTCondor will not attempt to compute the load
     average on the system, and instead will always report the system
     load average to be 0.0. Defaults to True.
  ``NETWORK_MAX_PENDING_CONNECTS``
+:index:` <single: NETWORK_MAX_PENDING_CONNECTS>`
     This specifies a limit to the maximum number of simultaneous network
     connection attempts. This is primarily relevant to *condor\_schedd*,
     which may try to connect to large numbers of startds when claiming
@@ -589,7 +615,7 @@ up IP/host-based security in HTCondor for details.
     when initiating security sessions used for sending MATCH messages.
     On Unix, the default for this parameter is eighty percent of the
     process file descriptor limit. On windows, the default is 1600.
- ``WANT_UDP_COMMAND_SOCKET``
+ ``WANT_UDP_COMMAND_SOCKET`` :index:` <single: WANT_UDP_COMMAND_SOCKET>`
     This setting, added in version 6.9.5, controls if HTCondor daemons
     should create a UDP command socket in addition to the TCP command
     socket (which is required). The default is ``True``, and modifying
@@ -616,29 +642,31 @@ up IP/host-based security in HTCondor for details.
     for more information).
 
  ``ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES``
+:index:` <single: ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES>`
     A boolean value that, when ``True``, permits scripts on Windows
-    platforms to be used in place of the **executable** in a job submit
-    description file, in place of a *condor\_dagman* pre or post script,
-    or in producing the configuration, for example. Allows a script to
-    be used in any circumstance previously limited to a Windows
-    executable or a batch file. The default value is ``True``. See
-    section \ `8.2.7 <MicrosoftWindows.html#x76-5810008.2.7>`__ on
+    platforms to be used in place of the
+    **executable**\ :index:` <single: executable;submit commands>` in a job
+    submit description file, in place of a *condor\_dagman* pre or post
+    script, or in producing the configuration, for example. Allows a
+    script to be used in any circumstance previously limited to a
+    Windows executable or a batch file. The default value is ``True``.
+    See section \ `8.2.7 <MicrosoftWindows.html#x76-5810008.2.7>`__ on
     page \ `1634 <MicrosoftWindows.html#x76-5810008.2.7>`__ for further
     description.
- ``OPEN_VERB_FOR_<EXT>_FILES``
+ ``OPEN_VERB_FOR_<EXT>_FILES`` :index:` <single: OPEN_VERB_FOR_<EXT>_FILES>`
     A string that defines a Windows verb for use in a root hive registry
     look up. <EXT> defines the file name extension, which represents a
     scripting language, also needed for the look up. See
     section \ `8.2.7 <MicrosoftWindows.html#x76-5810008.2.7>`__ on
     page \ `1634 <MicrosoftWindows.html#x76-5810008.2.7>`__ for a more
     complete description.
- ``ENABLE_CLASSAD_CACHING``
+ ``ENABLE_CLASSAD_CACHING`` :index:` <single: ENABLE_CLASSAD_CACHING>`
     A boolean value that controls the caching of ClassAds. Caching saves
     memory when an HTCondor process contains many ClassAds with the same
     expressions. The default value is ``True`` for all daemons other
     than the *condor\_shadow*, *condor\_starter*, and *condor\_master*.
     A value of ``True`` enables caching.
- ``STRICT_CLASSAD_EVALUATION``
+ ``STRICT_CLASSAD_EVALUATION`` :index:` <single: STRICT_CLASSAD_EVALUATION>`
     A boolean value that controls how ClassAd expressions are evaluated.
     If set to ``True``, then New ClassAd evaluation semantics are used.
     This means that attribute references without a ``MY.`` or
@@ -648,10 +676,11 @@ up IP/host-based security in HTCondor for details.
     section \ `4.1.1 <HTCondorsClassAdMechanism.html#x48-3990004.1.1>`__
     on page \ `1280 <HTCondorsClassAdMechanism.html#x48-3990004.1.1>`__
     for details.
- ``CLASSAD_USER_LIBS``
+ ``CLASSAD_USER_LIBS`` :index:` <single: CLASSAD_USER_LIBS>`
     A comma separated list of paths to shared libraries that contain
     additional ClassAd functions to be used during ClassAd evaluation.
  ``CLASSAD_USER_PYTHON_MODULES``
+:index:` <single: CLASSAD_USER_PYTHON_MODULES>`
     A comma separated list of python modules to load, which are to be
     used during ClassAd evaluation. If module ``foo`` is in this list,
     then function ``bar`` can be invoked in ClassAds via the expression
@@ -665,19 +694,20 @@ up IP/host-based security in HTCondor for details.
     Functions executed by ClassAds should be non-blocking and have no
     side-effects; otherwise, unpredictable HTCondor behavior may occur.
 
- ``CLASSAD_USER_PYTHON_LIB``
+ ``CLASSAD_USER_PYTHON_LIB`` :index:` <single: CLASSAD_USER_PYTHON_LIB>`
     Specifies the path to the python libraries, which is needed when
-    ``CLASSAD_USER_PYTHON_MODULES`` is set. Defaults to
+    ``CLASSAD_USER_PYTHON_MODULES``
+    :index:` <single: CLASSAD_USER_PYTHON_MODULES>` is set. Defaults to
     ``$(LIBEXEC)/libclassad_python_user.so``, and would rarely be
     changed from the default value.
- ``CONDOR_FSYNC``
+ ``CONDOR_FSYNC`` :index:` <single: CONDOR_FSYNC>`
     A boolean value that controls whether HTCondor calls fsync() when
     writing the user job and transaction logs. Setting this value to
     ``False`` will disable calls to fsync(), which can help performance
     for *condor\_schedd* log writes at the cost of some durability of
     the log contents, should there be a power or hardware failure. The
     default value is ``True``.
- ``STATISTICS_TO_PUBLISH``
+ ``STATISTICS_TO_PUBLISH`` :index:` <single: STATISTICS_TO_PUBLISH>`
     A comma and/or space separated list that identifies which statistics
     collections are to place attributes in ClassAds. Additional
     information specifies a level of verbosity and other identification
@@ -845,6 +875,7 @@ up IP/host-based security in HTCondor for details.
           STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 
  ``STATISTICS_TO_PUBLISH_LIST``
+:index:` <single: STATISTICS_TO_PUBLISH_LIST>`
     A comma and/or space separated list of statistics attribute names
     that should be published in updates to the *condor\_collector*
     daemon, even though the verbosity specified in
@@ -853,7 +884,7 @@ up IP/host-based security in HTCondor for details.
     attributes that it mentions, so that they will always match the
     current statistics publication level as specified in
     ``STATISTICS_TO_PUBLISH``.
- ``STATISTICS_WINDOW_SECONDS``
+ ``STATISTICS_WINDOW_SECONDS`` :index:` <single: STATISTICS_WINDOW_SECONDS>`
     An integer value that controls the time window size, in seconds, for
     collecting windowed daemon statistics. These statistics are, by
     convention, those attributes with names that are of the form
@@ -868,11 +899,12 @@ up IP/host-based security in HTCondor for details.
     window advances one quantum at a time.
 
  ``STATISTICS_WINDOW_SECONDS_<collection>``
+:index:` <single: STATISTICS_WINDOW_SECONDS_<collection>>`
     The same as ``STATISTICS_WINDOW_SECONDS``, but used to override the
     global setting for a particular statistic collection. Collection
     names currently implemented are ``DC`` or ``DAEMONCORE`` and
     ``SCHEDD`` or ``SCHEDULER``.
- ``STATISTICS_WINDOW_QUANTUM``
+ ``STATISTICS_WINDOW_QUANTUM`` :index:` <single: STATISTICS_WINDOW_QUANTUM>`
     For experts only, an integer value that controls the time
     quantization that form a time window, in seconds, for the data
     structures that maintain windowed statistics. Defaults to 240
@@ -882,11 +914,12 @@ up IP/host-based security in HTCondor for details.
     requirement for the statistics. Graphing of statistics at the level
     of the quantum expects to see counts that appear like a saw tooth.
  ``STATISTICS_WINDOW_QUANTUM_<collection>``
+:index:` <single: STATISTICS_WINDOW_QUANTUM_<collection>>`
     The same as ``STATISTICS_WINDOW_QUANTUM``, but used to override the
     global setting for a particular statistic collection. Collection
     names currently implemented are ``DC`` or ``DAEMONCORE`` and
     ``SCHEDD`` or ``SCHEDULER``.
- ``TCP_KEEPALIVE_INTERVAL``
+ ``TCP_KEEPALIVE_INTERVAL`` :index:` <single: TCP_KEEPALIVE_INTERVAL>`
     The number of seconds specifying a keep alive interval to use for
     any HTCondor TCP connection. The default keep alive interval is 360
     (6 minutes); this value is chosen to minimize the likelihood that
@@ -897,7 +930,7 @@ up IP/host-based security in HTCondor for details.
     Most users will not need to tune this configuration variable. A
     value of 0 will use the operating system default, and a value of -1
     will disable HTCondor’s use of a TCP keep alive.
- ``ENABLE_IPV4``
+ ``ENABLE_IPV4`` :index:` <single: ENABLE_IPV4>`
     A boolean with the additional special value of ``auto``. If true,
     HTCondor will use IPv4 if available, and fail otherwise. If false,
     HTCondor will not use IPv4. If ``auto``, which is the default,
@@ -906,7 +939,7 @@ up IP/host-based security in HTCondor for details.
     interface’s IPv6 address is public or private. If HTCondor finds
     more than one address of each protocol, only the most public address
     is considered for that protocol.
- ``ENABLE_IPV6``
+ ``ENABLE_IPV6`` :index:` <single: ENABLE_IPV6>`
     A boolean with the additional special value of ``auto``. If true,
     HTCondor will use IPv6 if available, and fail otherwise. If false,
     HTCondor will not use IPv6. If ``auto``, which is the default,
@@ -915,42 +948,48 @@ up IP/host-based security in HTCondor for details.
     interface’s IPv4 address is public or private. If HTCondor finds
     more than one address of each protocol, only the most public address
     is considered for that protocol.
- ``PREFER_IPV4``
+ ``PREFER_IPV4`` :index:` <single: PREFER_IPV4>`
     A boolean which will cause HTCondor to prefer IPv4 when it is able
     to choose. HTCondor will otherwise prefer IPv6. The default is
     ``True``.
- ``ADVERTISE_IPV4_FIRST``
+ ``ADVERTISE_IPV4_FIRST`` :index:` <single: ADVERTISE_IPV4_FIRST>`
     A string (treated as a boolean). If ``ADVERTISE_IPV4_FIRST``
     evaluates to ``True``, HTCondor will advertise its IPv4 addresses
     before its IPv6 addresses; otherwise the IPv6 addresses will come
     first. Defaults to ``$(PREFER_IPV4)``.
  ``IGNORE_TARGET_PROTOCOL_PREFERENCE``
+:index:` <single: IGNORE_TARGET_PROTOCOL_PREFERENCE>`
     A string (treated as a boolean). If
     ``IGNORE_TARGET_PROTOCOL_PREFERENCE`` evaluates to ``True``, the
     target’s listed protocol preferences will be ignored; othwerwise
     they will not. Defaults to ``$(PREFER_IPV4)``.
  ``IGNORE_DNS_PROTOCOL_PREFERENCE``
+:index:` <single: IGNORE_DNS_PROTOCOL_PREFERENCE>`
     A string (treated as a boolean). ``IGNORE_DNS_PROTOCOL_PREFERENCE``
     evaluates to ``True``, the protocol order returned by the DNS will
     be ignored; otherwise it will not. Defaults to ``$(PREFER_IPV4)``.
- ``PREFER_OUTBOUND_IPV4``
+ ``PREFER_OUTBOUND_IPV4`` :index:` <single: PREFER_OUTBOUND_IPV4>`
     A string (treated as a boolean). ``PREFER_OUTBOUND_IPV4`` evaluates
     to ``True``, HTCondor will prefer IPv4; otherwise it will not.
     Defaults to ``$(PREFER_IPV4)``.
  ``<SUBSYS>_CLASSAD_USER_MAP_NAMES``
+:index:` <single: <SUBSYS>_CLASSAD_USER_MAP_NAMES>`
     A string defining a list of names for username-to-accounting group
     mappings for the specified daemon. Names must be separated by spaces
     or commas.
  ``CLASSAD_USER_MAPFILE_<name>``
+:index:` <single: CLASSAD_USER_MAPFILE_<name>>`
     A string giving the name of a file to parse to initialize the map
     for the given username. Note that this macro is only used if
     ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` is defined for the relevant
     daemon.
  ``CLASSAD_USER_MAPDATA_<name>``
+:index:` <single: CLASSAD_USER_MAPDATA_<name>>`
     A string containing data to be used to initialize the map for the
     given username. Note that this macro is only used if
     ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` is defined for the relevant
-    daemon, and ``CLASSAD_USER_MAPFILE_<name>`` is not defined for the
+    daemon, and ``CLASSAD_USER_MAPFILE_<name>``
+    :index:` <single: CLASSAD_USER_MAPFILE_<name>>` is not defined for the
     given name.
 
     The format for the map file and map data is the same as the format
@@ -985,7 +1024,7 @@ up IP/host-based security in HTCondor for details.
         *   Alice security,math 
         alt Alice math,hacking
 
- ``IGNORE_LEAF_OOM``
+ ``IGNORE_LEAF_OOM`` :index:` <single: IGNORE_LEAF_OOM>`
     A boolean value that, when ``True``, tells HTCondor not to kill and
     hold a job that is within its memory allocation, even if other
     processes within the same cgroup have exceeded theirs. The default
@@ -997,6 +1036,8 @@ up IP/host-based security in HTCondor for details.
 Daemon Logging Configuration File Entries
 -----------------------------------------
 
+:index:` <single: daemon logging configuration variables;configuration>`
+
 These entries control how and where the HTCondor daemons write to log
 files. Many of the entries in this section represents multiple macros.
 There is one for each subsystem (listed in
@@ -1005,38 +1046,40 @@ The macro name for each substitutes ``<SUBSYS>`` with the name of the
 subsystem corresponding to the daemon.
 
  ``<SUBSYS>_LOG``
-    Defines the path and file name of the log file for a given
-    subsystem. For example, ``$(STARTD_LOG)`` gives the location of the
-    log file for the *condor\_startd* daemon. The default value for most
-    daemons is the daemon’s name in camel case, concatenated with
-    ``Log``. For example, the default log defined for the
-    *condor\_master* daemon is ``$(LOG)/MasterLog``. The default value
-    for other subsystems is ``$(LOG)/<SUBSYS>LOG``. The special value
-    ``SYSLOG`` causes the daemon to log via the syslog facility on
+    :index:` <single: <SUBSYS>_LOG>` Defines the path and file name of the
+    log file for a given subsystem. For example, ``$(STARTD_LOG)`` gives
+    the location of the log file for the *condor\_startd* daemon. The
+    default value for most daemons is the daemon’s name in camel case,
+    concatenated with ``Log``. For example, the default log defined for
+    the *condor\_master* daemon is ``$(LOG)/MasterLog``. The default
+    value for other subsystems is ``$(LOG)/<SUBSYS>LOG``. The special
+    value ``SYSLOG`` causes the daemon to log via the syslog facility on
     Linux. If the log file cannot be written to, then the daemon will
     attempt to log this into a new file of the name
     ``$(LOG)/dprintf_failure.<SUBSYS>`` before the daemon exits.
- ``LOG_TO_SYSLOG``
+ ``LOG_TO_SYSLOG`` :index:` <single: LOG_TO_SYSLOG>`
     A boolean value that is ``False`` by default. When ``True``, all
     daemon logs are routed to the syslog facility on Linux.
- ``MAX_<SUBSYS>_LOG``
+ ``MAX_<SUBSYS>_LOG`` :index:` <single: MAX_<SUBSYS>_LOG>`
     Controls the maximum size in bytes or amount of time that a log will
     be allowed to grow. For any log not specified, the default is
-    ``$(MAX_DEFAULT_LOG)``, which currently defaults to 10 MiB in size.
-    Values are specified with the same syntax as ``MAX_DEFAULT_LOG`` .
+    ``$(MAX_DEFAULT_LOG)``\ :index:` <single: MAX_DEFAULT_LOG>`, which
+    currently defaults to 10 MiB in size. Values are specified with the
+    same syntax as ``MAX_DEFAULT_LOG`` :index:` <single: MAX_DEFAULT_LOG>`.
 
     Note that a log file for the *condor\_procd* does not use this
     configuration variable definition. Its implementation is separate.
     See section \ `3.5.16 <#x33-2030003.5.16>`__ for the definition of
     ``MAX_PROCD_LOG``.
 
- ``MAX_DEFAULT_LOG``
+ ``MAX_DEFAULT_LOG`` :index:` <single: MAX_DEFAULT_LOG>`
     Controls the maximum size in bytes or amount of time that any log
-    not explicitly specified using ``MAX_<SUBSYS>_LOG`` will be allowed
-    to grow. When it is time to rotate a log file, it will be saved to a
-    file with an ISO timestamp suffix. The oldest rotated file receives
-    the ending ``.old``. The ``.old`` files are overwritten each time
-    the maximum number of rotated files (determined by the value of
+    not explicitly specified using ``MAX_<SUBSYS>_LOG``
+    :index:` <single: MAX_<SUBSYS>_LOG>` will be allowed to grow. When it is
+    time to rotate a log file, it will be saved to a file with an ISO
+    timestamp suffix. The oldest rotated file receives the ending
+    ``.old``. The ``.old`` files are overwritten each time the maximum
+    number of rotated files (determined by the value of
     ``MAX_NUM_<SUBSYS>_LOG``) is exceeded. The default value is 10 MiB
     in size. A value of 0 specifies that the file may grow without
     bounds. A single integer value is specified; without a suffix, it
@@ -1055,47 +1098,49 @@ subsystem corresponding to the daemon.
     ``Hr`` for hours
     ``Day`` for days
     ``Wk`` for weeks
- ``MAX_NUM_<SUBSYS>_LOG``
+ ``MAX_NUM_<SUBSYS>_LOG`` :index:` <single: MAX_NUM_<SUBSYS>_LOG>`
     An integer that controls the maximum number of rotations a log file
     is allowed to perform before the oldest one will be rotated away.
     Thus, at most ``MAX_NUM_<SUBSYS>_LOG + 1`` log files of the same
     program coexist at a given time. The default value is 1.
  ``TRUNC_<SUBSYS>_LOG_ON_OPEN``
+:index:` <single: TRUNC_<SUBSYS>_LOG_ON_OPEN>`
     If this macro is defined and set to ``True``, the affected log will
     be truncated and started from an empty file with each invocation of
     the program. Otherwise, new invocations of the program will append
     to the previous log file. By default this setting is ``False`` for
     all daemons.
  ``<SUBSYS>_LOG_KEEP_OPEN``
-    A boolean value that controls whether or not the log file is kept
-    open between writes. When ``True``, the daemon will not open and
-    close the log file between writes. Instead the daemon will hold the
-    log file open until the log needs to be rotated. When ``False``, the
-    daemon reverts to the previous behavior of opening and closing the
-    log file between writes. When the ``$(<SUBSYS>_LOCK)`` macro is
-    defined, setting ``$(<SUBSYS>_LOG_KEEP_OPEN)`` has no effect, as the
-    daemon will unconditionally revert back to the open/close between
-    writes behavior. On Windows platforms, the value defaults to
-    ``True`` for all daemons. On Linux platforms, the value defaults to
-    ``True`` for all daemons, except the *condor\_shadow*, due to a
-    global file descriptor limit.
+    :index:` <single: <SUBSYS>_LOG_KEEP_OPEN>` A boolean value that controls
+    whether or not the log file is kept open between writes. When
+    ``True``, the daemon will not open and close the log file between
+    writes. Instead the daemon will hold the log file open until the log
+    needs to be rotated. When ``False``, the daemon reverts to the
+    previous behavior of opening and closing the log file between
+    writes. When the ``$(<SUBSYS>_LOCK)`` macro is defined, setting
+    ``$(<SUBSYS>_LOG_KEEP_OPEN)`` has no effect, as the daemon will
+    unconditionally revert back to the open/close between writes
+    behavior. On Windows platforms, the value defaults to ``True`` for
+    all daemons. On Linux platforms, the value defaults to ``True`` for
+    all daemons, except the *condor\_shadow*, due to a global file
+    descriptor limit.
  ``<SUBSYS>_LOCK``
-    This macro specifies the lock file used to synchronize append
-    operations to the log file for this subsystem. It must be a separate
-    file from the ``$(<SUBSYS>_LOG)`` file, since the
-    ``$(<SUBSYS>_LOG)`` file may be rotated and you want to be able to
-    synchronize access across log file rotations. A lock file is only
+    :index:` <single: <SUBSYS>_LOCK>` This macro specifies the lock file used
+    to synchronize append operations to the log file for this subsystem.
+    It must be a separate file from the ``$(<SUBSYS>_LOG)`` file, since
+    the ``$(<SUBSYS>_LOG)`` file may be rotated and you want to be able
+    to synchronize access across log file rotations. A lock file is only
     required for log files which are accessed by more than one process.
     Currently, this includes only the ``SHADOW`` subsystem. This macro
     is defined relative to the ``$(LOCK)`` macro.
- ``JOB_QUEUE_LOG``
+ ``JOB_QUEUE_LOG`` :index:` <single: JOB_QUEUE_LOG>`
     A full path and file name, specifying the job queue log. The default
     value, when not defined is ``$(SPOOL)``/job\_queue.log. This
     specification can be useful, if there is a solid state drive which
     is big enough to hold the frequently written to ``job_queue.log``,
     but not big enough to hold the whole contents of the spool
     directory.
- ``FILE_LOCK_VIA_MUTEX``
+ ``FILE_LOCK_VIA_MUTEX`` :index:` <single: FILE_LOCK_VIA_MUTEX>`
     This macro setting only works on Win32 – it is ignored on Unix. If
     set to be ``True``, then log locking is implemented via a kernel
     mutex instead of via file locking. On Win32, mutex access is FIFO,
@@ -1103,7 +1148,7 @@ subsystem corresponding to the daemon.
     ``True`` fixes problems on Win32 where processes (usually shadows)
     could starve waiting for a lock on a log file. Defaults to ``True``
     on Win32, and is always ``False`` on Unix.
- ``LOCK_DEBUG_LOG_TO_APPEND``
+ ``LOCK_DEBUG_LOG_TO_APPEND`` :index:` <single: LOCK_DEBUG_LOG_TO_APPEND>`
     A boolean value that defaults to ``False``. This variable controls
     whether a daemon’s debug lock is used when appending to the log.
     When ``False``, the debug lock is only used when rotating the log
@@ -1122,16 +1167,16 @@ subsystem corresponding to the daemon.
     interleaved messages without requiring HTCondor to use a lock. Tests
     of AFS and NFS have not revealed any problems when appending to the
     log without locking.
- ``ENABLE_USERLOG_LOCKING``
+ ``ENABLE_USERLOG_LOCKING`` :index:` <single: ENABLE_USERLOG_LOCKING>`
     A boolean value that defaults to ``False`` on Unix platforms and
     ``True`` on Windows platforms. When ``True``, a user’s job event log
     will be locked before being written to. If ``False``, HTCondor will
     not lock the file before writing.
- ``ENABLE_USERLOG_FSYNC``
+ ``ENABLE_USERLOG_FSYNC`` :index:` <single: ENABLE_USERLOG_FSYNC>`
     A boolean value that is ``True`` by default. When ``True``, writes
     to the user’s job event log are sync-ed to disk before releasing the
     lock.
- ``USERLOG_FILE_CACHE_MAX``
+ ``USERLOG_FILE_CACHE_MAX`` :index:` <single: USERLOG_FILE_CACHE_MAX>`
     The integer number of job event log files that the *condor\_schedd*
     will keep open for writing during an interval of time (specified by
     ``USERLOG_FILE_CACHE_CLEAR_INTERVAL``). The default value is 0,
@@ -1149,6 +1194,7 @@ subsystem corresponding to the daemon.
     *condor\_schedd* will have one file descriptor per running job for
     the *condor\_shadow*.
  ``USERLOG_FILE_CACHE_CLEAR_INTERVAL``
+:index:` <single: USERLOG_FILE_CACHE_CLEAR_INTERVAL>`
     The integer number of seconds that forms the time interval within
     which job event logs will be permitted to remain open when
     ``USERLOG_FILE_CACHE_MAX`` is greater than zero. The default is 60
@@ -1160,7 +1206,7 @@ subsystem corresponding to the daemon.
     will not exceed the maximum number of file descriptors; a longer
     interval may yield higher performance due to fewer files being
     opened and closed.
- ``EVENT_LOG_COUNT_EVENTS``
+ ``EVENT_LOG_COUNT_EVENTS`` :index:` <single: EVENT_LOG_COUNT_EVENTS>`
     A boolean value that is ``False`` by default. When ``True``, upon
     rotation of the user’s job event log, a count of the number of job
     events is taken by scanning the log, such that the newly created,
@@ -1168,6 +1214,7 @@ subsystem corresponding to the daemon.
     This configuration variable is relevant when rotation of the user’s
     job event log is enabled.
  ``CREATE_LOCKS_ON_LOCAL_DISK``
+:index:` <single: CREATE_LOCKS_ON_LOCAL_DISK>`
     A boolean value utilized only for Unix operating systems, that
     defaults to ``True``. This variable is only relevant if
     ``ENABLE_USERLOG_LOCKING`` is ``True``. When ``True``, lock files
@@ -1181,20 +1228,20 @@ subsystem corresponding to the daemon.
     #. The default value of ``/tmp``, if neither ``TEMP_DIR`` nor
        ``TMP_DIR`` is defined.
 
- ``TOUCH_LOG_INTERVAL``
+ ``TOUCH_LOG_INTERVAL`` :index:` <single: TOUCH_LOG_INTERVAL>`
     The time interval in seconds between when daemons touch their log
     files. The change in last modification time for the log file is
     useful when a daemon restarts after failure or shut down. The last
     modification date is printed, and it provides an upper bound on the
     length of time that the daemon was not running. Defaults to 60
     seconds.
- ``LOGS_USE_TIMESTAMP``
+ ``LOGS_USE_TIMESTAMP`` :index:` <single: LOGS_USE_TIMESTAMP>`
     This macro controls how the current time is formatted at the start
     of each line in the daemon log files. When ``True``, the Unix time
     is printed (number of seconds since 00:00:00 UTC, January 1, 1970).
     When ``False`` (the default value), the time is printed like so:
     ``<Month>/<Day> <Hour>:<Minute>:<Second>`` in the local timezone.
- ``DEBUG_TIME_FORMAT``
+ ``DEBUG_TIME_FORMAT`` :index:` <single: DEBUG_TIME_FORMAT>`
     This string defines how to format the current time printed at the
     start of each line in the daemon log files. The value is a format
     string is passed to the C strftime() function, so see that manual
@@ -1206,13 +1253,13 @@ subsystem corresponding to the daemon.
            "%m/%d/%y %H:%M:%S"
 
  ``<SUBSYS>_DEBUG``
-    All of the HTCondor daemons can produce different levels of output
-    depending on how much information is desired. The various levels of
-    verbosity for a given daemon are determined by this macro. All
-    daemons have the default level ``D_ALWAYS``, and log messages for
-    that level will be printed to the daemon’s log, regardless of this
-    macro’s setting. Settings are a comma- or space-separated list of
-    the following values:
+    :index:` <single: <SUBSYS>_DEBUG>` All of the HTCondor daemons can
+    produce different levels of output depending on how much information
+    is desired. The various levels of verbosity for a given daemon are
+    determined by this macro. All daemons have the default level
+    ``D_ALWAYS``, and log messages for that level will be printed to the
+    daemon’s log, regardless of this macro’s setting. Settings are a
+    comma- or space-separated list of the following values:
 
      ``D_ALL``
         This flag turns on all debugging output by enabling all of the
@@ -1323,10 +1370,12 @@ subsystem corresponding to the daemon.
         Enable debug messages relating to the TCP statistics for file
         transfers. Note that the shadow and starter, by default, log
         these statistics to special log files (see ``SHADOW_STATS_LOG``
+        :index:` <single: SHADOW_STATS_LOG>`
         section \ `3.5.10 <#x33-1970003.5.10>`__ and
-        ``STARTER_STATS_LOG`` ,
+        ``STARTER_STATS_LOG`` :index:` <single: STARTER_STATS_LOG>`,
         section \ `3.5.11 <#x33-1980003.5.11>`__). Note that, as of
-        version 8.5.6, ``C_GAHP_DEBUG`` defaults to ``D_STATS``.
+        version 8.5.6, ``C_GAHP_DEBUG`` :index:` <single: C_GAHP_DEBUG>`
+        defaults to ``D_STATS``.
      ``D_PID``
         This flag is different from the other flags, because it is used
         to change the formatting of all log messages that are printed,
@@ -1371,12 +1420,12 @@ subsystem corresponding to the daemon.
         of each line in the log file will contain a fractional part to
         the seconds field that is accurate to the millisecond.
 
- ``ALL_DEBUG``
+ ``ALL_DEBUG`` :index:` <single: ALL_DEBUG>`
     Used to make all subsystems share a debug flag. Set the parameter
     ``ALL_DEBUG`` instead of changing all of the individual parameters.
     For example, to turn on all debugging in all subsystems, set
     ALL\_DEBUG = D\_ALL.
- ``TOOL_DEBUG``
+ ``TOOL_DEBUG`` :index:` <single: TOOL_DEBUG>`
     Uses the same values (debugging levels) as ``<SUBSYS>_DEBUG`` to
     describe the amount of debugging information sent to ``stderr`` for
     HTCondor tools.
@@ -1384,31 +1433,34 @@ subsystem corresponding to the daemon.
 Log files may optionally be specified per debug level as follows:
 
  ``<SUBSYS>_<LEVEL>_LOG``
-    The name of a log file for messages at a specific debug level for a
-    specific subsystem. <LEVEL> is defined by any debug level, but
-    without the D\_ prefix. See section \ `3.5.2 <#x33-1890003.5.2>`__
-    for the list of debug levels. If the debug level is included in
-    ``$(<SUBSYS>_DEBUG)``, then all messages of this debug level will be
-    written both to the log file defined by ``<SUBSYS>_LOG`` and the the
-    log file defined by ``<SUBSYS>_<LEVEL>_LOG``. As examples,
-    ``SHADOW_SYSCALLS_LOG`` specifies a log file for all remote system
-    call debug messages, and ``NEGOTIATOR_MATCH_LOG`` specifies a log
-    file that only captures *condor\_negotiator* debug events occurring
-    with matches.
- ``MAX_<SUBSYS>_<LEVEL>_LOG``
+    :index:` <single: <SUBSYS>_<LEVEL>_LOG>` The name of a log file for
+    messages at a specific debug level for a specific subsystem. <LEVEL>
+    is defined by any debug level, but without the D\_ prefix. See
+    section \ `3.5.2 <#x33-1890003.5.2>`__ for the list of debug levels.
+    If the debug level is included in ``$(<SUBSYS>_DEBUG)``, then all
+    messages of this debug level will be written both to the log file
+    defined by ``<SUBSYS>_LOG`` and the the log file defined by
+    ``<SUBSYS>_<LEVEL>_LOG``. As examples, ``SHADOW_SYSCALLS_LOG``
+    specifies a log file for all remote system call debug messages, and
+    ``NEGOTIATOR_MATCH_LOG`` :index:` <single: NEGOTIATOR_MATCH_LOG>`
+    specifies a log file that only captures *condor\_negotiator* debug
+    events occurring with matches.
+ ``MAX_<SUBSYS>_<LEVEL>_LOG`` :index:` <single: MAX_<SUBSYS>_<LEVEL>_LOG>`
     See section \ `3.5.2 <#x33-1890003.5.2>`__, the definition of
     ``MAX_<SUBSYS>_LOG``.
  ``TRUNC_<SUBSYS>_<LEVEL>_LOG_ON_OPEN``
-    Similar to ``TRUNC_<SUBSYS>_LOG_ON_OPEN`` .
+:index:` <single: TRUNC_<SUBSYS>_<LEVEL>_LOG_ON_OPEN>`
+    Similar to ``TRUNC_<SUBSYS>_LOG_ON_OPEN``
+    :index:` <single: TRUNC_<SUBSYS>_LOG_ON_OPEN>`.
 
 The following macros control where and what is written to the event log,
 a file that receives job events, but across all users and user’s jobs.
 
- ``EVENT_LOG``
+ ``EVENT_LOG`` :index:` <single: EVENT_LOG>`
     The full path and file name of the event log. There is no default
     value for this variable, so no event log will be written, if not
     defined.
- ``EVENT_LOG_MAX_SIZE``
+ ``EVENT_LOG_MAX_SIZE`` :index:` <single: EVENT_LOG_MAX_SIZE>`
     Controls the maximum length in bytes to which the event log will be
     allowed to grow. The log file will grow to the specified length,
     then be saved to a file with the suffix .old. The .old files are
@@ -1417,9 +1469,9 @@ a file that receives job events, but across all users and user’s jobs.
     default is 1 MiB. For backwards compatibility, ``MAX_EVENT_LOG``
     will be used if ``EVENT_LOG_MAX_SIZE`` is not defined. If
     ``EVENT_LOG`` is not defined, this parameter has no effect.
- ``MAX_EVENT_LOG``
+ ``MAX_EVENT_LOG`` :index:` <single: MAX_EVENT_LOG>`
     See ``EVENT_LOG_MAX_SIZE``.
- ``EVENT_LOG_MAX_ROTATIONS``
+ ``EVENT_LOG_MAX_ROTATIONS`` :index:` <single: EVENT_LOG_MAX_ROTATIONS>`
     Controls the maximum number of rotations of the event log that will
     be stored. If this value is 1 (the default), the event log will be
     rotated to a “.old” file as described above. However, if this is
@@ -1430,7 +1482,7 @@ a file that receives job events, but across all users and user’s jobs.
     value of 1. If ``EVENT_LOG`` is not defined, or if
     ``EVENT_LOG_MAX_SIZE`` has a value of 0 (which disables event log
     rotation), this parameter has no effect.
- ``EVENT_LOG_ROTATION_LOCK``
+ ``EVENT_LOG_ROTATION_LOCK`` :index:` <single: EVENT_LOG_ROTATION_LOCK>`
     Specifies the lock file that will be used to ensure that, when
     rotating files, the rotation is done by a single process. This is a
     string parameter; its default value is ``$(LOCK)/EventLogLock``. If
@@ -1439,23 +1491,24 @@ a file that receives job events, but across all users and user’s jobs.
     ``EVENT_LOG`` is not defined, or if ``EVENT_LOG_MAX_SIZE`` has a
     value of 0 (which disables event log rotation), this configuration
     variable has no effect.
- ``EVENT_LOG_FSYNC``
+ ``EVENT_LOG_FSYNC`` :index:` <single: EVENT_LOG_FSYNC>`
     A boolean value that controls whether HTCondor will perform an
     fsync() after writing each event to the event log. When ``True``, an
     fsync() operation is performed after each event. This fsync()
     operation forces the operating system to synchronize the updates to
     the event log to the disk, but can negatively affect the performance
     of the system. Defaults to ``False``.
- ``EVENT_LOG_LOCKING``
+ ``EVENT_LOG_LOCKING`` :index:` <single: EVENT_LOG_LOCKING>`
     A boolean value that defaults to ``False`` on Unix platforms and
     ``True`` on Windows platforms. When ``True``, the event log (as
     specified by ``EVENT_LOG``) will be locked before being written to.
     When ``False``, HTCondor does not lock the file before writing.
- ``EVENT_LOG_USE_XML``
+ ``EVENT_LOG_USE_XML`` :index:` <single: EVENT_LOG_USE_XML>`
     A boolean value that defaults to ``False``. When ``True``, events
     are logged in XML format. If ``EVENT_LOG`` is not defined, this
     parameter has no effect.
  ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS``
+:index:` <single: EVENT_LOG_JOB_AD_INFORMATION_ATTRS>`
     A comma separated list of job ClassAd attributes, whose evaluated
     values form a new event, the ``JobAdInformationEvent``, given Event
     Number 028. This new event is placed in the event log in addition to
@@ -1468,19 +1521,22 @@ a file that receives job events, but across all users and user’s jobs.
 DaemonCore Configuration File Entries
 -------------------------------------
 
+:index:` <single: DaemonCore configuration variables;configuration>`
+
 Please read section \ `3.11 <DaemonCore.html#x39-3300003.11>`__ for
 details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons (except the
 checkpoint server, standard universe shadow, and standard universe
 starter, none of which use DaemonCore).
 
- ``HOSTALLOW…``
-    All macros that begin with either ``HOSTALLOW`` or ``HOSTDENY`` are
+ ``HOSTALLOW…`` :index:` <single: HOSTALLOW>`
+    All macros that begin with either ``HOSTALLOW``
+    :index:` <single: HOSTALLOW>` or ``HOSTDENY`` :index:` <single: HOSTDENY>` are
     settings for HTCondor’s host-based security. See
     section \ `3.8.9 <Security.html#x36-2920003.8.9>`__ on Setting up
     IP/host-based security in HTCondor for details on these macros and
     how to configure them.
- ``ENABLE_RUNTIME_CONFIG``
+ ``ENABLE_RUNTIME_CONFIG`` :index:` <single: ENABLE_RUNTIME_CONFIG>`
     The *condor\_config\_val* tool has an option **-rset** for
     dynamically setting run time configuration values, and which only
     affect the in-memory configuration variables. Because of the
@@ -1490,7 +1546,7 @@ starter, none of which use DaemonCore).
     by setting ``ENABLE_RUNTIME_CONFIG`` to ``True``, and specify what
     configuration variables can be changed using the ``SETTABLE_ATTRS…``
     family of configuration options. Defaults to ``False``.
- ``ENABLE_PERSISTENT_CONFIG``
+ ``ENABLE_PERSISTENT_CONFIG`` :index:` <single: ENABLE_PERSISTENT_CONFIG>`
     The *condor\_config\_val* tool has a **-set** option for dynamically
     setting persistent configuration values. These values override
     options in the normal HTCondor configuration files. Because of the
@@ -1503,7 +1559,7 @@ starter, none of which use DaemonCore).
     ``PERSISTENT_CONFIG_DIR``, described below) and specify what
     configuration variables can be changed using the ``SETTABLE_ATTRS…``
     family of configuration options. Defaults to ``False``.
- ``PERSISTENT_CONFIG_DIR``
+ ``PERSISTENT_CONFIG_DIR`` :index:` <single: PERSISTENT_CONFIG_DIR>`
     Directory where daemons should store dynamically-generated
     persistent configuration files (used to support
     *condor\_config\_val* **-set**) This directory should **only** be
@@ -1517,7 +1573,9 @@ starter, none of which use DaemonCore).
     HTCondor daemons running as root will not be able to write to them.
     A directory (only writable by root) on the local file system is
     usually the best location for this directory.
+    :index:` <single: SETTABLE_ATTRS_CONFIG>`
  ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
+` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__
     All macros that begin with ``SETTABLE_ATTRS`` or
     ``<SUBSYS>.SETTABLE_ATTRS`` are settings used to restrict the
     configuration values that can be changed using the
@@ -1528,52 +1586,58 @@ starter, none of which use DaemonCore).
     section \ `3.8.9 <Security.html#x36-2920003.8.9>`__ on
     page \ `1052 <Security.html#x36-2920003.8.9>`__ contains details
     specific to these macros.
- ``SHUTDOWN_GRACEFUL_TIMEOUT``
+ ``SHUTDOWN_GRACEFUL_TIMEOUT`` :index:` <single: SHUTDOWN_GRACEFUL_TIMEOUT>`
     Determines how long HTCondor will allow daemons try their graceful
     shutdown methods before they do a hard shutdown. It is defined in
     terms of seconds. The default is 1800 (30 minutes).
  ``<SUBSYS>_ADDRESS_FILE``
-    A complete path to a file that is to contain an IP address and port
-    number for a daemon. Every HTCondor daemon that uses DaemonCore has
-    a command port where commands are sent. The IP/port of the daemon is
-    put in that daemon’s ClassAd, so that other machines in the pool can
-    query the *condor\_collector* (which listens on a well-known port)
-    to find the address of a given daemon on a given machine. When tools
-    and daemons are all executing on the same single machine,
-    communications do not require a query of the *condor\_collector*
-    daemon. Instead, they look in a file on the local disk to find the
-    IP/port. This macro causes daemons to write the IP/port of their
-    command socket to a specified file. In this way, local tools will
-    continue to operate, even if the machine running the
-    *condor\_collector* crashes. Using this file will also generate
-    slightly less network traffic in the pool, since tools including
-    *condor\_q* and *condor\_rm* do not need to send any messages over
-    the network to locate the *condor\_schedd* daemon. This macro is not
-    necessary for the *condor\_collector* daemon, since its command
-    socket is at a well-known port.
+    :index:` <single: <SUBSYS>_ADDRESS_FILE>`
+    :index:` <single: NEGOTIATOR_ADDRESS_FILE>`
+    :index:` <single: COLLECTOR_ADDRESS_FILE>` A complete path to a file that
+    is to contain an IP address and port number for a daemon. Every
+    HTCondor daemon that uses DaemonCore has a command port where
+    commands are sent. The IP/port of the daemon is put in that daemon’s
+    ClassAd, so that other machines in the pool can query the
+    *condor\_collector* (which listens on a well-known port) to find the
+    address of a given daemon on a given machine. When tools and daemons
+    are all executing on the same single machine, communications do not
+    require a query of the *condor\_collector* daemon. Instead, they
+    look in a file on the local disk to find the IP/port. This macro
+    causes daemons to write the IP/port of their command socket to a
+    specified file. In this way, local tools will continue to operate,
+    even if the machine running the *condor\_collector* crashes. Using
+    this file will also generate slightly less network traffic in the
+    pool, since tools including *condor\_q* and *condor\_rm* do not need
+    to send any messages over the network to locate the *condor\_schedd*
+    daemon. This macro is not necessary for the *condor\_collector*
+    daemon, since its command socket is at a well-known port.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
     subsystem string as defined in
     section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__.
 
  ``<SUBSYS>_SUPER_ADDRESS_FILE``
-    A complete path to a file that is to contain an IP address and port
-    number for a command port that is serviced with priority for a
-    daemon. Every HTCondor daemon that uses DaemonCore may have a higher
-    priority command port where commands are sent. Any command that goes
-    through *condor\_sos*, and any command issued by the super user
-    (root or local system) for a daemon on the local machine will have
-    the command sent to this port. Default values are provided for the
+    :index:` <single: <SUBSYS>_SUPER_ADDRESS_FILE>`
+    :index:` <single: SCHEDD_SUPER_ADDRESS_FILE>`
+    :index:` <single: COLLECTOR_SUPER_ADDRESS_FILE>` A complete path to a
+    file that is to contain an IP address and port number for a command
+    port that is serviced with priority for a daemon. Every HTCondor
+    daemon that uses DaemonCore may have a higher priority command port
+    where commands are sent. Any command that goes through
+    *condor\_sos*, and any command issued by the super user (root or
+    local system) for a daemon on the local machine will have the
+    command sent to this port. Default values are provided for the
     *condor\_schedd* daemon at ``$(SPOOL)/.schedd_address.super`` and
     the *condor\_collector* daemon at
     ``$(LOG)/.collector_address.super``. When not defined for other
     DaemonCore daemons, there will be no higher priority command port.
  ``<SUBSYS>_DAEMON_AD_FILE``
-    A complete path to a file that is to contain the ClassAd for a
-    daemon. When the daemon sends a ClassAd describing itself to the
-    *condor\_collector*, it will also place a copy of the ClassAd in
-    this file. Currently, this setting only works for the
-    *condor\_schedd*.
+    :index:` <single: <SUBSYS>_DAEMON_AD_FILE>` A complete path to a file
+    that is to contain the ClassAd for a daemon. When the daemon sends a
+    ClassAd describing itself to the *condor\_collector*, it will also
+    place a copy of the ClassAd in this file. Currently, this setting
+    only works for the *condor\_schedd*. :index:` <single: <SUBSYS>_ATTRS>`
+    :index:` <single: <SUBSYS>_EXPRS>`
  ``<SUBSYS>_ATTRS`` or ``<SUBSYS>_EXPRS``
     Allows any DaemonCore daemon to advertise arbitrary expressions from
     the configuration file in its ClassAd. Give the comma-separated list
@@ -1615,7 +1679,7 @@ starter, none of which use DaemonCore).
             STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2 
           
 
- ``DAEMON_SHUTDOWN``
+ ``DAEMON_SHUTDOWN`` :index:` <single: DAEMON_SHUTDOWN>`
     Starting with HTCondor version 6.9.3, whenever a daemon is about to
     publish a ClassAd update to the *condor\_collector*, it will
     evaluate this expression. If it evaluates to ``True``, the daemon
@@ -1647,11 +1711,12 @@ starter, none of which use DaemonCore).
     for more information). If you enable high-availability for a
     particular daemon, you should not define this expression.
 
- ``DAEMON_SHUTDOWN_FAST``
+ ``DAEMON_SHUTDOWN_FAST`` :index:` <single: DAEMON_SHUTDOWN_FAST>`
     Identical to ``DAEMON_SHUTDOWN`` (defined above), except the daemon
     will use the fast shutdown mode (as if it sent itself a
     *condor\_off* command using the **-fast** option).
  ``USE_CLONE_TO_CREATE_PROCESSES``
+:index:` <single: USE_CLONE_TO_CREATE_PROCESSES>`
     A boolean value that controls how an HTCondor daemon creates a new
     process on Linux platforms. If set to the default value of ``True``,
     the ``clone`` system call is used. Otherwise, the ``fork`` system
@@ -1661,14 +1726,14 @@ starter, none of which use DaemonCore).
     of ``clone`` is available on Linux systems. If HTCondor detects that
     it is running under the *valgrind* analysis tools, this setting is
     ignored and treated as ``False``, to work around incompatibilities.
- ``MAX_TIME_SKIP``
+ ``MAX_TIME_SKIP`` :index:` <single: MAX_TIME_SKIP>`
     When an HTCondor daemon notices the system clock skip forwards or
     backwards more than the number of seconds specified by this
     parameter, it may take special action. For instance, the
     *condor\_master* will restart HTCondor in the event of a clock skip.
     Defaults to a value of 1200, which in effect means that HTCondor
     will restart if the system clock jumps by more than 20 minutes.
- ``NOT_RESPONDING_TIMEOUT``
+ ``NOT_RESPONDING_TIMEOUT`` :index:` <single: NOT_RESPONDING_TIMEOUT>`
     When an HTCondor daemon’s parent process is another HTCondor daemon,
     the child daemon will periodically send a short message to its
     parent stating that it is alive and well. If the parent does not
@@ -1684,7 +1749,7 @@ starter, none of which use DaemonCore).
     ``SCHEDD_NOT_RESPONDING_TIMEOUT`` controls how long the
     *condor\_schedd*\ ’s parent daemon will wait without receiving an
     alive and well message from the *condor\_schedd* before killing it.
- ``NOT_RESPONDING_WANT_CORE``
+ ``NOT_RESPONDING_WANT_CORE`` :index:` <single: NOT_RESPONDING_WANT_CORE>`
     A boolean value with a default value of ``False``. This parameter is
     for debugging purposes on Unix systems, and it controls the behavior
     of the parent process when the parent process determines that a
@@ -1696,7 +1761,7 @@ starter, none of which use DaemonCore).
     ``NOT_RESPONDING_TIMEOUT`` on page `622 <#x33-1900003.5.3>`__, and
     ``CREATE_CORE_FILES`` on page `598 <#x33-1880003.5.1>`__ for related
     details.
- ``LOCK_FILE_UPDATE_INTERVAL``
+ ``LOCK_FILE_UPDATE_INTERVAL`` :index:` <single: LOCK_FILE_UPDATE_INTERVAL>`
     An integer value representing seconds, controlling how often valid
     lock files should have their on disk timestamps updated. Updating
     the timestamps prevents administrative programs, such as *tmpwatch*,
@@ -1704,13 +1769,13 @@ starter, none of which use DaemonCore).
     the update time will be 60 seconds. The default value is 28800,
     which is 8 hours. This variable only takes effect at the start or
     restart of a daemon.
- ``SOCKET_LISTEN_BACKLOG``
+ ``SOCKET_LISTEN_BACKLOG`` :index:` <single: SOCKET_LISTEN_BACKLOG>`
     An integer value that defaults to 500, which defines the backlog
     value for the listen() network call when a daemon creates a socket
     for incoming connections. It limits the number of new incoming
     network connections the operating system will accept for a daemon
     that the daemon has not yet serviced.
- ``MAX_ACCEPTS_PER_CYCLE``
+ ``MAX_ACCEPTS_PER_CYCLE`` :index:` <single: MAX_ACCEPTS_PER_CYCLE>`
     An integer value that defaults to 8. It is a rarely changed
     performance tuning parameter to limit the number of accepts of new,
     incoming, socket connect requests per DaemonCore event cycle. A
@@ -1718,15 +1783,15 @@ starter, none of which use DaemonCore).
     effect on the *condor\_schedd*, and would be given a higher integer
     value for tuning purposes when there is a high number of jobs
     starting and exiting per second.
- ``MAX_REAPS_PER_CYCLE``
+ ``MAX_REAPS_PER_CYCLE`` :index:` <single: MAX_REAPS_PER_CYCLE>`
     An integer value that defaults to 0. It is a rarely changed
     performance tuning parameter that places a limit on the number of
     child process exits to process per DaemonCore event cycle. A value
     of zero or less means no limit.
- ``CORE_FILE_NAME``
+ ``CORE_FILE_NAME`` :index:` <single: CORE_FILE_NAME>`
     Defines the name of the core file created on Windows platforms.
     Defaults to ``core.$(SUBSYSTEM).WIN32``.
- ``PIPE_BUFFER_MAX``
+ ``PIPE_BUFFER_MAX`` :index:` <single: PIPE_BUFFER_MAX>`
     The maximum number of bytes read from a ``stdout`` or ``stdout``
     pipe. The default value is 10240. A rare example in which the value
     would need to increase from its default value is when a hook must
@@ -1736,12 +1801,14 @@ starter, none of which use DaemonCore).
 Network-Related Configuration File Entries
 ------------------------------------------
 
+` <index://network-related configuration variables;configuration>`__
+
 More information about networking in HTCondor can be found in
 section \ `3.9 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`__
 on
 page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`__.
 
- ``BIND_ALL_INTERFACES``
+ ``BIND_ALL_INTERFACES`` :index:` <single: BIND_ALL_INTERFACES>`
     For systems with multiple network interfaces, if this configuration
     setting is ``False``, HTCondor will only bind network sockets to the
     IP address specified with ``NETWORK_INTERFACE`` (described below).
@@ -1756,17 +1823,18 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     section \ `3.9.3 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3110003.9.3>`__
     on
     page \ `1093 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3110003.9.3>`__.
- ``CCB_ADDRESS``
+ ``CCB_ADDRESS`` :index:` <single: CCB_ADDRESS>`
     This is the address of a *condor\_collector* that will serve as this
     daemon’s HTCondor Connection Broker (CCB). Multiple addresses may be
     listed (separated by commas and/or spaces) for redundancy. The CCB
     server must authorize this daemon at DAEMON level for this
     configuration to succeed. It is highly recommended to also configure
-    ``PRIVATE_NETWORK_NAME`` if you configure ``CCB_ADDRESS`` so
+    ``PRIVATE_NETWORK_NAME`` :index:` <single: PRIVATE_NETWORK_NAME>` if you
+    configure ``CCB_ADDRESS`` :index:` <single: CCB_ADDRESS>` so
     communications originating within the same private network do not
     need to go through CCB. For more information about CCB, see
     page \ `1100 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3150003.9.4>`__.
- ``CCB_HEARTBEAT_INTERVAL``
+ ``CCB_HEARTBEAT_INTERVAL`` :index:` <single: CCB_HEARTBEAT_INTERVAL>`
     This is the maximum number of seconds of silence on a daemon’s
     connection to the CCB server after which it will ping the server to
     verify that the connection still works. The default is 5 minutes.
@@ -1778,7 +1846,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     Having the heartbeat interval greater than the job ClassAd attribute
     ``JobLeaseDuration`` may cause unnecessary job disconnects in pools
     with network issues.
- ``CCB_POLLING_INTERVAL``
+ ``CCB_POLLING_INTERVAL`` :index:` <single: CCB_POLLING_INTERVAL>`
     In seconds, the smallest amount of time that could go by before CCB
     would begin another round of polling to check on already connected
     clients. While the value of this variable does not change, the
@@ -1786,47 +1854,52 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     previously taken to poll to check on already connected clients
     exceeded the amount of time desired, as expressed with
     ``CCB_POLLING_TIMESLICE``. The default value is 20 seconds.
- ``CCB_POLLING_MAX_INTERVAL``
+ ``CCB_POLLING_MAX_INTERVAL`` :index:` <single: CCB_POLLING_MAX_INTERVAL>`
     In seconds, the interval of time after which polling to check on
     already connected clients must occur, independent of any other
     factors. The default value is 600 seconds.
- ``CCB_POLLING_TIMESLICE``
+ ``CCB_POLLING_TIMESLICE`` :index:` <single: CCB_POLLING_TIMESLICE>`
     A floating point fraction representing the fractional amount of the
     total run time of CCB to set as a target for the maximum amount of
     CCB running time used on polling to check on already connected
     clients. The default value is 0.05.
- ``CCB_READ_BUFFER``
+ ``CCB_READ_BUFFER`` :index:` <single: CCB_READ_BUFFER>`
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
- ``CCB_WRITE_BUFFER``
+ ``CCB_WRITE_BUFFER`` :index:` <single: CCB_WRITE_BUFFER>`
     The size of the kernel TCP write buffer in bytes for all sockets
     used by CCB. The default value is 2 KiB.
- ``CCB_SWEEP_INTERVAL``
+ ``CCB_SWEEP_INTERVAL`` :index:` <single: CCB_SWEEP_INTERVAL>`
     The interval, in seconds, between times when the CCB server writes
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is 1200
     seconds (20 minutes).
- ``CCB_RECONNECT_FILE``
+ ``CCB_RECONNECT_FILE`` :index:` <single: CCB_RECONNECT_FILE>`
     The full path and file name of the file that the CCB server writes
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
     ``$(SPOOL)/.ccb_reconnect``.
  ``COLLECTOR_USES_SHARED_PORT``
+:index:` <single: COLLECTOR_USES_SHARED_PORT>`
     A boolean value that specifies whether the *condor\_collector* uses
     the *condor\_shared\_port* daemon. When true, the
     *condor\_shared\_port* will transparently proxy queries to the
     *condor\_collector* so users do not need to be aware of the presence
     of the *condor\_shared\_port* when querying the collector and
     configuring other daemons. The default is ``True``
- ``SHARED_PORT_DEFAULT_ID``
-    When ``COLLECTOR_USES_SHARED_PORT`` is set to ``True``, this is the
-    shared port ID used by the *condor\_collector*. This defaults to
-    ``collector`` and will not need to be changed by most sites.
+ ``SHARED_PORT_DEFAULT_ID`` :index:` <single: SHARED_PORT_DEFAULT_ID>`
+    When ``COLLECTOR_USES_SHARED_PORT``
+    :index:` <single: COLLECTOR_USES_SHARED_PORT>` is set to ``True``, this
+    is the shared port ID used by the *condor\_collector*. This defaults
+    to ``collector`` and will not need to be changed by most sites.
  ``AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST``
-    A boolean value that specifies whether ``SHARED_PORT`` should be
-    automatically inserted into *condor\_master*\ ’s ``DAEMON_LIST``
-    when ``USE_SHARED_PORT`` is ``True``. The default for this setting
-    is ``True``.
+:index:` <single: AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST>`
+    A boolean value that specifies whether ``SHARED_PORT``
+    :index:` <single: SHARED_PORT>` should be automatically inserted into
+    *condor\_master*\ ’s ``DAEMON_LIST``\ :index:` <single: DAEMON_LIST>`
+    when ``USE_SHARED_PORT``\ :index:` <single: USE_SHARED_PORT>` is
+    ``True``. The default for this setting is ``True``.
+    :index:` <single: <SUBSYS>_MAX_FILE_DESCRIPTORS>`
  ``<SUBSYS>_MAX_FILE_DESCRIPTORS``
     This setting is identical to ``MAX_FILE_DESCRIPTORS``, but it only
     applies to a specific subsystem. If the subsystem-specific setting
@@ -1835,7 +1908,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     *condor\_schedd* daemon, the value defaults to 4096. If the
     *condor\_shared\_port* daemon is in use, its value for this
     parameter should match the largest value set for the other daemons.
- ``MAX_FILE_DESCRIPTORS``
+ ``MAX_FILE_DESCRIPTORS`` :index:` <single: MAX_FILE_DESCRIPTORS>`
     Under Unix, this specifies the maximum number of file descriptors to
     allow the HTCondor daemon to use. File descriptors are a system
     resource used for open files and for network connections. HTCondor
@@ -1847,7 +1920,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     to take effect. Also note that only if HTCondor is running as root
     will it be able to increase the limit above the hard limit (on
     maximum open files) that it inherits.
- ``NETWORK_HOSTNAME``
+ ``NETWORK_HOSTNAME`` :index:` <single: NETWORK_HOSTNAME>`
     The name HTCondor should use as the host name of the local machine,
     overriding the value returned by gethostname(). Among other things,
     the host name is used to identify daemons in an HTCondor pool, via
@@ -1856,7 +1929,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     with different host names, to use a host name that is not the
     primary one. It should be set to a fully-qualified host name that
     will resolve to an IP address of the local machine.
- ``NETWORK_INTERFACE``
+ ``NETWORK_INTERFACE`` :index:` <single: NETWORK_INTERFACE>`
     An IP address of the form ``123.123.123.123`` or the name of a
     network device, as in the example ``eth0``. The wild card character
     (``*``) may be used within either. For example, ``123.123.*`` would
@@ -1876,7 +1949,8 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     space, or a loopback address, in that order of preference. If it is
     desired to advertise an IP address that is not associated with any
     local network interface, for example, when TCP forwarding is being
-    used, then ``TCP_FORWARDING_HOST`` should be used instead of
+    used, then ``TCP_FORWARDING_HOST``
+    :index:` <single: TCP_FORWARDING_HOST>` should be used instead of
     ``NETWORK_INTERFACE``.
 
     If ``BIND_ALL_INTERFACES`` is ``False``, then ``NETWORK_INTERFACE``
@@ -1893,7 +1967,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     on
     page \ `1093 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3100003.9.3>`__.
 
- ``PRIVATE_NETWORK_NAME``
+ ``PRIVATE_NETWORK_NAME`` :index:` <single: PRIVATE_NETWORK_NAME>`
     If two HTCondor daemons are trying to communicate with each other,
     and they both belong to the same private network, this setting will
     allow them to communicate directly using the private network
@@ -1913,7 +1987,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     is ``$(FULL_HOSTNAME)``. After changing this setting and running
     *condor\_reconfig*, it may take up to one *condor\_collector* update
     interval before the change becomes visible.
- ``PRIVATE_NETWORK_INTERFACE``
+ ``PRIVATE_NETWORK_INTERFACE`` :index:` <single: PRIVATE_NETWORK_INTERFACE>`
     For systems with multiple network interfaces, if this configuration
     setting and ``PRIVATE_NETWORK_NAME`` are both defined, HTCondor
     daemons will advertise some additional attributes in their ClassAds
@@ -1935,7 +2009,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     *condor\_reconfig*, it may take up to one *condor\_collector* update
     interval before the change becomes visible.
 
- ``TCP_FORWARDING_HOST``
+ ``TCP_FORWARDING_HOST`` :index:` <single: TCP_FORWARDING_HOST>`
     This specifies the host or IP address that should be used as the
     public address of this daemon. If a host name is specified, be aware
     that it will be resolved to an IP address by this daemon, not by the
@@ -1951,21 +2025,21 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     host rather than from the real remote host, so any authorization
     settings that rely on host addresses should be considered
     accordingly.
- ``HIGHPORT``
+ ``HIGHPORT`` :index:` <single: HIGHPORT>`
     Specifies an upper limit of given port numbers for HTCondor to use,
     such that HTCondor is restricted to a range of port numbers. If this
     macro is not explicitly specified, then HTCondor will not restrict
     the port numbers that it uses. HTCondor will use system-assigned
     port numbers. For this macro to work, both ``HIGHPORT`` and
     ``LOWPORT`` (given below) must be defined.
- ``LOWPORT``
+ ``LOWPORT`` :index:` <single: LOWPORT>`
     Specifies a lower limit of given port numbers for HTCondor to use,
     such that HTCondor is restricted to a range of port numbers. If this
     macro is not explicitly specified, then HTCondor will not restrict
     the port numbers that it uses. HTCondor will use system-assigned
     port numbers. For this macro to work, both ``HIGHPORT`` (given
     above) and ``LOWPORT`` must be defined.
- ``IN_LOWPORT``
+ ``IN_LOWPORT`` :index:` <single: IN_LOWPORT>`
     An integer value that specifies a lower limit of given port numbers
     for HTCondor to use on incoming connections (ports for listening),
     such that HTCondor is restricted to a range of port numbers. This
@@ -1976,7 +2050,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     Applies only to Unix machine configuration. Use of ``IN_LOWPORT``
     and ``IN_HIGHPORT`` overrides any definition of ``LOWPORT`` and
     ``HIGHPORT``.
- ``IN_HIGHPORT``
+ ``IN_HIGHPORT`` :index:` <single: IN_HIGHPORT>`
     An integer value that specifies an upper limit of given port numbers
     for HTCondor to use on incoming connections (ports for listening),
     such that HTCondor is restricted to a range of port numbers. This
@@ -1987,7 +2061,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     Applies only to Unix machine configuration. Use of ``IN_LOWPORT``
     and ``IN_HIGHPORT`` overrides any definition of ``LOWPORT`` and
     ``HIGHPORT``.
- ``OUT_LOWPORT``
+ ``OUT_LOWPORT`` :index:` <single: OUT_LOWPORT>`
     An integer value that specifies a lower limit of given port numbers
     for HTCondor to use on outgoing connections, such that HTCondor is
     restricted to a range of port numbers. This range implies the use of
@@ -1996,7 +2070,7 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     be run as root. Applies only to Unix machine configuration. Use of
     ``OUT_LOWPORT`` and ``OUT_HIGHPORT`` overrides any definition of
     ``LOWPORT`` and ``HIGHPORT``.
- ``OUT_HIGHPORT``
+ ``OUT_HIGHPORT`` :index:` <single: OUT_HIGHPORT>`
     An integer value that specifies an upper limit of given port numbers
     for HTCondor to use on outgoing connections, such that HTCondor is
     restricted to a range of port numbers. This range implies the use of
@@ -2005,24 +2079,26 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     be run as root. Applies only to Unix machine configuration. Use of
     ``OUT_LOWPORT`` and ``OUT_HIGHPORT`` overrides any definition of
     ``LOWPORT`` and ``HIGHPORT``.
- ``UPDATE_COLLECTOR_WITH_TCP``
+ ``UPDATE_COLLECTOR_WITH_TCP`` :index:` <single: UPDATE_COLLECTOR_WITH_TCP>`
     This boolean value controls whether TCP or UDP is used by daemons to
     send ClassAd updates to the *condor\_collector*. Please read
     section \ `3.9.5 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3200003.9.5>`__
     for more details and a discussion of when this functionality is
     needed. When using TCP in large pools, it is also necessary to
     ensure that the *condor\_collector* has a large enough file
-    descriptor limit using ``COLLECTOR_MAX_FILE_DESCRIPTORS`` . The
-    default value is ``True``.
+    descriptor limit using ``COLLECTOR_MAX_FILE_DESCRIPTORS``
+    :index:` <single: COLLECTOR_MAX_FILE_DESCRIPTORS>`. The default value is
+    ``True``.
  ``UPDATE_VIEW_COLLECTOR_WITH_TCP``
+:index:` <single: UPDATE_VIEW_COLLECTOR_WITH_TCP>`
     This boolean value controls whether TCP or UDP is used by the
     *condor\_collector* to forward ClassAd updates to the
-    *condor\_collector* daemons specified by ``CONDOR_VIEW_HOST`` .
-    Please read
+    *condor\_collector* daemons specified by ``CONDOR_VIEW_HOST``
+    :index:` <single: CONDOR_VIEW_HOST>`. Please read
     section \ `3.9.5 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3200003.9.5>`__
     for more details and a discussion of when this functionality is
     needed. The default value is ``False``.
- ``TCP_UPDATE_COLLECTORS``
+ ``TCP_UPDATE_COLLECTORS`` :index:` <single: TCP_UPDATE_COLLECTORS>`
     The list of *condor\_collector* daemons which will be updated with
     TCP instead of UDP when ``UPDATE_COLLECTOR_WITH_TCP`` or
     ``UPDATE_VIEW_COLLECTOR_WITH_TCP`` is ``False``. Please read
@@ -2030,38 +2106,42 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     for more details and a discussion of when a site needs this
     functionality.
  ``<SUBSYS>_TIMEOUT_MULTIPLIER``
-    An integer value that defaults to 1. This value multiplies
-    configured timeout values for all targeted subsystem communications,
-    thereby increasing the time until a timeout occurs. This
-    configuration variable is intended for use by developers for
-    debugging purposes, where communication timeouts interfere.
+    :index:` <single: <SUBSYS>_TIMEOUT_MULTIPLIER>` An integer value that
+    defaults to 1. This value multiplies configured timeout values for
+    all targeted subsystem communications, thereby increasing the time
+    until a timeout occurs. This configuration variable is intended for
+    use by developers for debugging purposes, where communication
+    timeouts interfere.
  ``NONBLOCKING_COLLECTOR_UPDATE``
+:index:` <single: NONBLOCKING_COLLECTOR_UPDATE>`
     A boolean value that defaults to ``True``. When ``True``, the
     establishment of TCP connections to the *condor\_collector* daemon
     for a security-enabled pool are done in a nonblocking manner.
  ``NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT``
+:index:` <single: NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT>`
     A boolean value that defaults to ``True``. When ``True``, the
     establishment of TCP connections from the *condor\_negotiator*
     daemon to the *condor\_startd* daemon for a security-enabled pool
     are done in a nonblocking manner.
- ``UDP_NETWORK_FRAGMENT_SIZE``
+ ``UDP_NETWORK_FRAGMENT_SIZE`` :index:` <single: UDP_NETWORK_FRAGMENT_SIZE>`
     An integer value that defaults to 1000 and represents the maximum
     size in bytes of an outgoing UDP packet. If the outgoing message is
     larger than ``$(UDP_NETWORK_FRAGMENT_SIZE)``, then the message will
     be split (fragmented) into multiple packets no larger than
     ``$(UDP_NETWORK_FRAGMENT_SIZE)``. If the destination of the message
     is the loopback network interface, see
-    ``UDP_LOOPBACK_FRAGMENT_SIZE`` below. For instance, the maximum
-    payload size of a UDP packet over Ethernet is typically 1472 bytes,
-    and thus if a UDP payload exceeds 1472 bytes the IP network stack on
-    either hosts or forwarding devices (such as network routers) will
-    have to perform message fragmentation on transmission and reassembly
-    on receipt. Experimentation has shown that such devices are more
-    likely to simply drop a UDP message under high-traffic scenarios if
-    the message requires reassembly. HTCondor avoids this situation via
-    the capability to perform UDP fragmentation and reassembly on its
-    own.
+    ``UDP_LOOPBACK_FRAGMENT_SIZE``\ :index:` <single: UDP_LOOPBACK_FRAGMENT_SIZE>`
+    below. For instance, the maximum payload size of a UDP packet over
+    Ethernet is typically 1472 bytes, and thus if a UDP payload exceeds
+    1472 bytes the IP network stack on either hosts or forwarding
+    devices (such as network routers) will have to perform message
+    fragmentation on transmission and reassembly on receipt.
+    Experimentation has shown that such devices are more likely to
+    simply drop a UDP message under high-traffic scenarios if the
+    message requires reassembly. HTCondor avoids this situation via the
+    capability to perform UDP fragmentation and reassembly on its own.
  ``UDP_LOOPBACK_FRAGMENT_SIZE``
+:index:` <single: UDP_LOOPBACK_FRAGMENT_SIZE>`
     An integer value that defaults to 60000 and represents the maximum
     size in bytes of an outgoing UDP packet that is being sent to the
     loopback network interface (e.g. 127.0.0.1). If the outgoing message
@@ -2069,8 +2149,8 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
     will be split (fragmented) into multiple packets no larger than
     ``$(UDP_LOOPBACK_FRAGMENT_SIZE)``. If the destination of the message
     is not the loopback interface, see ``UDP_NETWORK_FRAGMENT_SIZE``
-    above.
- ``ALWAYS_REUSEADDR``
+    :index:` <single: UDP_NETWORK_FRAGMENT_SIZE>` above.
+ ``ALWAYS_REUSEADDR`` :index:` <single: ALWAYS_REUSEADDR>`
     A boolean value that, when ``True``, tells HTCondor to set
     ``SO_REUSEADDR`` socket option, so that the schedd can run large
     numbers of very short jobs without exhausting the number of local
@@ -2083,6 +2163,8 @@ page \ `1080 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`_
 Shared File System Configuration File Macros
 --------------------------------------------
 
+:index:` <single: shared file system configuration variables;configuration>`
+
 These macros control how HTCondor interacts with various shared and
 network file systems. If you are using AFS as your shared file system,
 be sure to read
@@ -2091,7 +2173,7 @@ on Using HTCondor with AFS. For information on submitting jobs under
 shared file systems, see
 section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
 
- ``UID_DOMAIN``
+ ``UID_DOMAIN`` :index:` <single: UID_DOMAIN>`
     The ``UID_DOMAIN`` macro is used to decide under which user to run
     jobs. If the ``$(UID_DOMAIN)`` on the submitting machine is
     different than the ``$(UID_DOMAIN)`` on the machine that runs a job,
@@ -2139,7 +2221,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     ``user@$(UID_DOMAIN)``. If ``UID_DOMAIN`` is undefined, the e-mail
     is sent to ``user@submitmachinename``.
 
- ``TRUST_UID_DOMAIN``
+ ``TRUST_UID_DOMAIN`` :index:` <single: TRUST_UID_DOMAIN>`
     As an added security precaution when HTCondor is about to spawn a
     job, it ensures that the ``UID_DOMAIN`` of a given submit machine is
     a substring of that machine’s fully-qualified host name. However, at
@@ -2154,7 +2236,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     of making sure the submit machine’s host name matches the
     ``UID_DOMAIN``. When not defined, the default is ``False``, since it
     is more secure to perform this test.
- ``TRUST_LOCAL_UID_DOMAIN``
+ ``TRUST_LOCAL_UID_DOMAIN`` :index:` <single: TRUST_LOCAL_UID_DOMAIN>`
     This parameter works like ``TRUST_UID_DOMAIN``, but is only applied
     when the *condor\_starter* and *condor\_shadow* are on the same
     machine. If this paramater is set to ``True``, then the
@@ -2162,7 +2244,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     its hostname. If this paramater is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
     enforced by the *condor\_starter*. The default is ``True``.
- ``SOFT_UID_DOMAIN``
+ ``SOFT_UID_DOMAIN`` :index:` <single: SOFT_UID_DOMAIN>`
     A boolean variable that defaults to ``False`` when not defined. When
     HTCondor is about to run a job as a particular user (instead of as
     user nobody), it verifies that the UID given for the user is in the
@@ -2172,7 +2254,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     be aborted. To cause HTCondor not to do this check, set this
     configuration variable to ``True``. HTCondor will then run the job
     under the user’s UID.
- ``SLOT<N>_USER``
+ ``SLOT<N>_USER`` :index:` <single: SLOT<N>_USER>`
     The name of a user for HTCondor to use instead of user nobody, as
     part of a solution that plugs a security hole whereby a lurker
     process can prey on a subsequent job run as user name nobody.
@@ -2181,7 +2263,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     user is stored on the execute machine using *condor\_store\_cred*.
     See Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for more
     information.
- ``STARTER_ALLOW_RUNAS_OWNER``
+ ``STARTER_ALLOW_RUNAS_OWNER`` :index:` <single: STARTER_ALLOW_RUNAS_OWNER>`
     A boolean expression evaluated with the job ad as the target, that
     determines whether the job may run under the job owner’s account
     (``True``) or whether it will run as ``SLOT<N>_USER`` or nobody
@@ -2197,6 +2279,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for more
     information.
  ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
+:index:` <single: DEDICATED_EXECUTE_ACCOUNT_REGEXP>`
     This is a regular expression (i.e. a string matching pattern) that
     matches the account name(s) that are dedicated to running condor
     jobs on the execute machine and which will never be used for more
@@ -2229,6 +2312,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
         Tracking process family by login "cndrusr1"
 
  ``EXECUTE_LOGIN_IS_DEDICATED``
+:index:` <single: EXECUTE_LOGIN_IS_DEDICATED>`
     This configuration setting is deprecated because it cannot handle
     the case where some jobs run as dedicated accounts and some do not.
     Use ``DEDICATED_EXECUTE_ACCOUNT_REGEXP`` instead.
@@ -2239,7 +2323,7 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     ``SLOT<N>_USER``). Therefore, when the job exits, all processes
     running under the same account will be killed.
 
- ``FILESYSTEM_DOMAIN``
+ ``FILESYSTEM_DOMAIN`` :index:` <single: FILESYSTEM_DOMAIN>`
     An arbitrary string that is used to decide if the two machines, a
     submit machine and an execute machine, share a file system. Although
     this configuration variable name contains the word “DOMAIN”, its
@@ -2261,12 +2345,12 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     Since each machine will have a different ``$(FILESYSTEM_DOMAIN)``,
     they will not be considered to have shared file systems.
 
- ``RESERVE_AFS_CACHE``
+ ``RESERVE_AFS_CACHE`` :index:` <single: RESERVE_AFS_CACHE>`
     If your machine is running AFS and the AFS cache lives on the same
     partition as the other HTCondor directories, and you want HTCondor
     to reserve the space that your AFS cache is configured to use, set
     this macro to ``True``. It defaults to ``False``.
- ``USE_NFS``
+ ``USE_NFS`` :index:` <single: USE_NFS>`
     This macro influences how HTCondor jobs running in the standard
     universe access their files. By default, HTCondor will redirect the
     file I/O requests of standard universe jobs from the executing
@@ -2324,10 +2408,10 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
     the locally mounted file system. Other than Chirp file access, this
     variable is unused outside of the standard universe.
 
- ``IGNORE_NFS_LOCK_ERRORS``
+ ``IGNORE_NFS_LOCK_ERRORS`` :index:` <single: IGNORE_NFS_LOCK_ERRORS>`
     When set to ``True``, all errors related to file locking errors from
     NFS are ignored. Defaults to ``False``, not ignoring errors.
- ``USE_AFS``
+ ``USE_AFS`` :index:` <single: USE_AFS>`
     If your machines have AFS, this macro determines whether HTCondor
     will use remote system calls for standard universe jobs to send I/O
     requests to the submit machine, or if it should use local file
@@ -2365,6 +2449,8 @@ section \ `2.5.8 <SubmittingaJob.html#x17-370002.5.8>`__.
 Checkpoint Server Configuration File Macros
 -------------------------------------------
 
+:index:` <single: checkpoint server configuration variables;configuration>`
+
 These macros control whether or not HTCondor uses a checkpoint server.
 This section describes the settings that the checkpoint server itself
 needs defined. See
@@ -2372,42 +2458,44 @@ section \ `3.10 <TheCheckpointServer.html#x38-3250003.10>`__ on
 Installing a Checkpoint Server for details on installing and running a
 checkpoint server.
 
- ``CKPT_SERVER_HOST``
+ ``CKPT_SERVER_HOST`` :index:` <single: CKPT_SERVER_HOST>`
     The host name of a checkpoint server.
  ``STARTER_CHOOSES_CKPT_SERVER``
+:index:` <single: STARTER_CHOOSES_CKPT_SERVER>`
     If this parameter is ``True`` or undefined on the submit machine,
     the checkpoint server specified by ``$(CKPT_SERVER_HOST)`` on the
     execute machine is used. If it is ``False`` on the submit machine,
     the checkpoint server specified by ``$(CKPT_SERVER_HOST)`` on the
     submit machine is used.
- ``CKPT_SERVER_DIR``
+ ``CKPT_SERVER_DIR`` :index:` <single: CKPT_SERVER_DIR>`
     The full path of the directory the checkpoint server should use to
     store checkpoint files. Depending on the size of the pool and the
     size of the jobs submitted, this directory and its subdirectories
     might need to store many MiB of data.
- ``USE_CKPT_SERVER``
+ ``USE_CKPT_SERVER`` :index:` <single: USE_CKPT_SERVER>`
     A boolean which determines if a given submit machine is to use a
     checkpoint server if one is available. If a checkpoint server is not
     available or the variable ``USE_CKPT_SERVER`` is set to ``False``,
     checkpoints will be written to the local ``$(SPOOL)`` directory on
     the submission machine.
- ``MAX_DISCARDED_RUN_TIME``
+ ``MAX_DISCARDED_RUN_TIME`` :index:` <single: MAX_DISCARDED_RUN_TIME>`
     If the *condor\_shadow* daemon is unable to read a checkpoint file
     from the checkpoint server, it keeps trying only if the job has
     accumulated more than this many seconds of CPU usage. Otherwise, the
     job is started from scratch. Defaults to 3600 (1 hour). This
     variable is only used if ``$(USE_CKPT_SERVER)`` is ``True``.
  ``CKPT_SERVER_CHECK_PARENT_INTERVAL``
+:index:` <single: CKPT_SERVER_CHECK_PARENT_INTERVAL>`
     This is the number of seconds between checks to see whether the
     parent of the checkpoint server (usually the *condor\_master*) has
     died. If the parent has died, the checkpoint server shuts itself
     down. The default is 120 seconds. A setting of 0 disables this
     check.
- ``CKPT_SERVER_INTERVAL``
+ ``CKPT_SERVER_INTERVAL`` :index:` <single: CKPT_SERVER_INTERVAL>`
     The maximum number of seconds the checkpoint server waits for
     activity on network sockets before performing other tasks. The
     default value is 300 seconds.
- ``CKPT_SERVER_CLASSAD_FILE``
+ ``CKPT_SERVER_CLASSAD_FILE`` :index:` <single: CKPT_SERVER_CLASSAD_FILE>`
     A string that represents a file in the file system to which ClassAds
     will be written. The ClassAds denote information about stored
     checkpoint files, such as owner, shadow IP address, name of the
@@ -2415,34 +2503,41 @@ checkpoint server.
     recorded in the ``TransferLog``. The default setting is undefined,
     which means a checkpoint server ClassAd file will not be kept.
  ``CKPT_SERVER_CLEAN_INTERVAL``
+:index:` <single: CKPT_SERVER_CLEAN_INTERVAL>`
     The number of seconds that must pass until the ClassAd log file as
     described by the ``CKPT_SERVER_CLASSAD_FILE`` variable gets
     truncated. The default is 86400 seconds, which is one day.
  ``CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL``
+:index:` <single: CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL>`
     The number of seconds between attempts to discover and remove stale
     checkpoint files. It defaults to 86400 seconds, which is one day.
  ``CKPT_SERVER_SOCKET_BUFSIZE``
+:index:` <single: CKPT_SERVER_SOCKET_BUFSIZE>`
     The number of bytes representing the size of the TCP send/recv
     buffer on the socket file descriptor related to moving the
     checkpoint file to and from the checkpoint server. The default value
     is 0, which allows the operating system to decide the size.
- ``CKPT_SERVER_MAX_PROCESSES``
+ ``CKPT_SERVER_MAX_PROCESSES`` :index:` <single: CKPT_SERVER_MAX_PROCESSES>`
     The maximum number of child processes that could be working on
     behalf of the checkpoint server. This includes store processes and
     restore processes. The default value is 50.
  ``CKPT_SERVER_MAX_STORE_PROCESSES``
+:index:` <single: CKPT_SERVER_MAX_STORE_PROCESSES>`
     The maximum number of child process strictly devoted to the storage
     of checkpoints. The default is the value of
     ``CKPT_SERVER_MAX_PROCESSES``.
  ``CKPT_SERVER_MAX_RESTORE_PROCESSES``
+:index:` <single: CKPT_SERVER_MAX_RESTORE_PROCESSES>`
     The maximum number of child process strictly devoted to the
     restoring of checkpoints. The default is the value of
     ``CKPT_SERVER_MAX_PROCESSES``.
  ``CKPT_SERVER_STALE_CKPT_AGE_CUTOFF``
+:index:` <single: CKPT_SERVER_STALE_CKPT_AGE_CUTOFF>`
     The number of seconds after which if a checkpoint file has not been
     accessed, it is considered stale. The default value is 5184000
     seconds, which is sixty days.
  ``ALWAYS_USE_LOCAL_CKPT_SERVER``
+:index:` <single: ALWAYS_USE_LOCAL_CKPT_SERVER>`
     A boolean value that defaults to ``False``. When ``True``, it forces
     all checkpoints to be read from a checkpoint server running on the
     same machine where the job is running. This is intended to be used
@@ -2451,9 +2546,11 @@ checkpoint server.
 condor\_master Configuration File Macros
 ----------------------------------------
 
+:index:` <single: condor_master configuration variables;configuration>`
+
 These macros control the *condor\_master*.
 
- ``DAEMON_LIST``
+ ``DAEMON_LIST`` :index:` <single: DAEMON_LIST>`
     This macro determines what daemons the *condor\_master* will start
     and keep its watchful eyes on. The list is a comma or space
     separated list of subsystem names (listed in
@@ -2473,7 +2570,7 @@ These macros control the *condor\_master*.
     different from your regular pool, since it will include entries for
     the *condor\_collector* and *condor\_negotiator*.
 
- ``DC_DAEMON_LIST``
+ ``DC_DAEMON_LIST`` :index:` <single: DC_DAEMON_LIST>`
     A list delimited by commas and/or spaces that lists the daemons in
     ``DAEMON_LIST`` which use the HTCondor DaemonCore library. The
     *condor\_master* must differentiate between daemons that use
@@ -2491,9 +2588,9 @@ These macros control the *condor\_master*.
           DC_DAEMON_LIST = +NEW_DAEMON
 
  ``<SUBSYS>``
-    Once you have defined which subsystems you want the *condor\_master*
-    to start, you must provide it with the full path to each of these
-    binaries. For example:
+    :index:` <single: <SUBSYS>>` Once you have defined which subsystems you
+    want the *condor\_master* to start, you must provide it with the
+    full path to each of these binaries. For example:
 
     ::
 
@@ -2508,7 +2605,7 @@ These macros control the *condor\_master*.
     subsystem string as defined in
     section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__.
 
- ``<DaemonName>_ENVIRONMENT``
+ ``<DaemonName>_ENVIRONMENT`` :index:` <single: <DaemonName>_ENVIRONMENT>`
     ``<DaemonName>`` is the name of a daemon listed in ``DAEMON_LIST``.
     Defines changes to the environment that the daemon is invoked with.
     It should use the same syntax for specifying the environment as the
@@ -2523,6 +2620,7 @@ These macros control the *condor\_master*.
 
     When the *condor\_schedd* daemon is started by the *condor\_master*,
     it would see the specified values of ``TMP`` and ``CONDOR_CONFIG``.
+    :index:` <single: <SUBSYS>_ARGS>`
 
  ``<SUBSYS>_ARGS``
     This macro allows the specification of additional command line
@@ -2542,14 +2640,14 @@ These macros control the *condor\_master*.
     section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__.
 
  ``<SUBSYS>_USERID``
-    The account name that should be used to run the ``SUBSYS`` process
-    spawned by the *condor\_master*. When not defined, the process is
-    spawned as the same user that is running *condor\_master*. When
-    defined, the real user id of the spawned process will be set to the
-    specified account, so if this account is not root, the process will
-    not have root privileges. The *condor\_master* must be running as
-    root in order to start processes as other users. Example
-    configuration:
+    :index:` <single: <SUBSYS>_USERID>` The account name that should be used
+    to run the ``SUBSYS`` process spawned by the *condor\_master*. When
+    not defined, the process is spawned as the same user that is running
+    *condor\_master*. When defined, the real user id of the spawned
+    process will be set to the specified account, so if this account is
+    not root, the process will not have root privileges. The
+    *condor\_master* must be running as root in order to start processes
+    as other users. Example configuration:
 
     ::
 
@@ -2567,14 +2665,14 @@ These macros control the *condor\_master*.
     account the daemons are using, and configure the daemons to use that
     copy.
 
- ``PREEN``
+ ``PREEN`` :index:` <single: PREEN>`
     In addition to the daemons defined in ``$(DAEMON_LIST)``, the
     *condor\_master* also starts up a special process, *condor\_preen*
     to clean out junk files that have been left laying around by
     HTCondor. This macro determines where the *condor\_master* finds the
     *condor\_preen* binary. If this macro is set to nothing,
     *condor\_preen* will not run.
- ``PREEN_ARGS``
+ ``PREEN_ARGS`` :index:` <single: PREEN_ARGS>`
     Controls how *condor\_preen* behaves by allowing the specification
     of command-line arguments. This macro works as ``$(<SUBSYS>_ARGS)``
     does. The difference is that you must specify this macro for
@@ -2583,21 +2681,21 @@ These macros control the *condor\_master*.
     e-mail about files *condor\_preen* finds that it thinks it should
     remove. **-r** means you want *condor\_preen* to actually remove
     these files.
- ``PREEN_INTERVAL``
+ ``PREEN_INTERVAL`` :index:` <single: PREEN_INTERVAL>`
     This macro determines how often *condor\_preen* should be started.
     It is defined in terms of seconds and defaults to 86400 (once a
     day).
- ``PUBLISH_OBITUARIES``
+ ``PUBLISH_OBITUARIES`` :index:` <single: PUBLISH_OBITUARIES>`
     When a daemon crashes, the *condor\_master* can send e-mail to the
     address specified by ``$(CONDOR_ADMIN)`` with an obituary letting
     the administrator know that the daemon died, the cause of death
     (which signal or exit status it exited with), and (optionally) the
     last few entries from that daemon’s log file. If you want
     obituaries, set this macro to ``True``.
- ``OBITUARY_LOG_LENGTH``
+ ``OBITUARY_LOG_LENGTH`` :index:` <single: OBITUARY_LOG_LENGTH>`
     This macro controls how many lines of the log file are part of
     obituaries. This macro has a default value of 20 lines.
- ``START_MASTER``
+ ``START_MASTER`` :index:` <single: START_MASTER>`
     If this setting is defined and set to ``False`` the *condor\_master*
     will immediately exit upon startup. This appears strange, but
     perhaps you do not want HTCondor to run on certain machines in your
@@ -2607,21 +2705,22 @@ These macros control the *condor\_master*.
     entry you would most likely find in a local configuration file, not
     a global configuration file. If not defined, ``START_MASTER``
     defaults to ``True``.
- ``START_DAEMONS``
+ ``START_DAEMONS`` :index:` <single: START_DAEMONS>`
     This macro is similar to the ``$(START_MASTER)`` macro described
     above. However, the *condor\_master* does not exit; it does not
     start any of the daemons listed in the ``$(DAEMON_LIST)``. The
     daemons may be started at a later time with a *condor\_on* command.
- ``MASTER_UPDATE_INTERVAL``
+ ``MASTER_UPDATE_INTERVAL`` :index:` <single: MASTER_UPDATE_INTERVAL>`
     This macro determines how often the *condor\_master* sends a ClassAd
     update to the *condor\_collector*. It is defined in seconds and
     defaults to 300 (every 5 minutes).
  ``MASTER_CHECK_NEW_EXEC_INTERVAL``
+:index:` <single: MASTER_CHECK_NEW_EXEC_INTERVAL>`
     This macro controls how often the *condor\_master* checks the
     timestamps of the running daemons. If any daemons have been
     modified, the master restarts them. It is defined in seconds and
     defaults to 300 (every 5 minutes).
- ``MASTER_NEW_BINARY_RESTART``
+ ``MASTER_NEW_BINARY_RESTART`` :index:` <single: MASTER_NEW_BINARY_RESTART>`
     Defines a mode of operation for the restart of the *condor\_master*,
     when it notices that the *condor\_master* binary has changed. Valid
     values are ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
@@ -2630,27 +2729,29 @@ These macros control the *condor\_master*.
     expires, then they are killed. On a ``PEACEFUL`` restart, child
     processes are told to exit, after which the *condor\_master* waits
     until they do so.
- ``MASTER_NEW_BINARY_DELAY``
+ ``MASTER_NEW_BINARY_DELAY`` :index:` <single: MASTER_NEW_BINARY_DELAY>`
     Once the *condor\_master* has discovered a new binary, this macro
     controls how long it waits before attempting to execute the new
     binary. This delay exists because the *condor\_master* might notice
     a new binary while it is in the process of being copied, in which
     case trying to execute it yields unpredictable results. The entry is
     defined in seconds and defaults to 120 (2 minutes).
- ``SHUTDOWN_FAST_TIMEOUT``
+ ``SHUTDOWN_FAST_TIMEOUT`` :index:` <single: SHUTDOWN_FAST_TIMEOUT>`
     This macro determines the maximum amount of time daemons are given
     to perform their fast shutdown procedure before the *condor\_master*
     kills them outright. It is defined in seconds and defaults to 300 (5
     minutes).
  ``DEFAULT_MASTER_SHUTDOWN_SCRIPT``
+:index:` <single: DEFAULT_MASTER_SHUTDOWN_SCRIPT>`
     A full path and file name of a program that the *condor\_master* is
     to execute via the Unix execl() call, or the similar Win32 \_execl()
     call, instead of the normal call to exit(). This allows the admin to
     specify a program to execute as root when the *condor\_master*
     exits. Note that a successful call to the *condor\_set\_shutdown*
     program will override this setting; see the documentation for config
-    knob ``MASTER_SHUTDOWN_<Name>`` below.
- ``MASTER_SHUTDOWN_<Name>``
+    knob ``MASTER_SHUTDOWN_<Name>``
+    :index:` <single: MASTER_SHUTDOWN_<Name>>` below.
+ ``MASTER_SHUTDOWN_<Name>`` :index:` <single: MASTER_SHUTDOWN_<Name>>`
     A full path and file name of a program that the *condor\_master* is
     to execute via the Unix execl() call, or the similar Win32 \_execl()
     call, instead of the normal call to exit(). Multiple programs to
@@ -2673,7 +2774,9 @@ These macros control the *condor\_master*.
     ensure that this cannot be used in such a way as to violate system
     integrity.
 
- ``MASTER_BACKOFF_CONSTANT`` and ``MASTER_<name>_BACKOFF_CONSTANT``
+ ``MASTER_BACKOFF_CONSTANT`` :index:` <single: MASTER_BACKOFF_CONSTANT>` and
+``MASTER_<name>_BACKOFF_CONSTANT``
+:index:` <single: MASTER_<name>_BACKOFF_CONSTANT>`
     When a daemon crashes, *condor\_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2687,7 +2790,9 @@ These macros control the *condor\_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
- ``MASTER_BACKOFF_FACTOR`` and ``MASTER_<name>_BACKOFF_FACTOR``
+ ``MASTER_BACKOFF_FACTOR`` :index:` <single: MASTER_BACKOFF_FACTOR>` and
+``MASTER_<name>_BACKOFF_FACTOR``
+:index:` <single: MASTER_<name>_BACKOFF_FACTOR>`
     When a daemon crashes, *condor\_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2700,7 +2805,9 @@ These macros control the *condor\_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
- ``MASTER_BACKOFF_CEILING`` and ``MASTER_<name>_BACKOFF_CEILING``
+ ``MASTER_BACKOFF_CEILING`` :index:` <single: MASTER_BACKOFF_CEILING>` and
+``MASTER_<name>_BACKOFF_CEILING``
+:index:` <single: MASTER_<name>_BACKOFF_CEILING>`
     When a daemon crashes, *condor\_master* uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -2715,7 +2822,9 @@ These macros control the *condor\_master*.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
- ``MASTER_RECOVER_FACTOR`` and ``MASTER_<name>_RECOVER_FACTOR``
+ ``MASTER_RECOVER_FACTOR`` :index:` <single: MASTER_RECOVER_FACTOR>` and
+``MASTER_<name>_RECOVER_FACTOR``
+:index:` <single: MASTER_<name>_RECOVER_FACTOR>`
     A macro to set how long a daemon needs to run without crashing
     before it is considered recovered. Once a daemon has recovered, the
     number of restarts is reset, so the exponential back off returns to
@@ -2780,7 +2889,7 @@ the count of how many restarts this daemon has performed is reset to 0.
 The moral of the example is that the defaults work quite well, and you
 probably will not want to change them for any reason.
 
- ``MASTER_NAME``
+ ``MASTER_NAME`` :index:` <single: MASTER_NAME>`
     Defines a unique name given for a *condor\_master* daemon on a
     machine. For a *condor\_master* running as root, it defaults to the
     fully qualified host name. When not running as root, it defaults to
@@ -2806,8 +2915,9 @@ probably will not want to change them for any reason.
 
     If the ``MASTER_NAME`` setting is used, and the *condor\_master* is
     configured to spawn a *condor\_schedd*, the name defined with
-    ``MASTER_NAME`` takes precedence over the ``SCHEDD_NAME`` setting
-    (see section \ `3.5.9 <#x33-1960003.5.9>`__ on
+    ``MASTER_NAME`` takes precedence over the ``SCHEDD_NAME``
+    :index:` <single: SCHEDD_NAME>` setting (see
+    section \ `3.5.9 <#x33-1960003.5.9>`__ on
     page \ `696 <#x33-1960003.5.9>`__). Since HTCondor makes the
     assumption that there is only one instance of the *condor\_startd*
     running on a machine, the ``MASTER_NAME`` is not automatically
@@ -2820,20 +2930,20 @@ probably will not want to change them for any reason.
     unique name, all HTCondor tools that need to contact that daemon can
     be told what name to use via the **-name** command-line option.
 
- ``MASTER_ATTRS``
+ ``MASTER_ATTRS`` :index:` <single: MASTER_ATTRS>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ATTRS``.
- ``MASTER_DEBUG``
+ ``MASTER_DEBUG`` :index:` <single: MASTER_DEBUG>`
     This macro is described in section \ `3.5.2 <#x33-1890003.5.2>`__ as
     ``<SUBSYS>_DEBUG``.
- ``MASTER_ADDRESS_FILE``
+ ``MASTER_ADDRESS_FILE`` :index:` <single: MASTER_ADDRESS_FILE>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ADDRESS_FILE``.
- ``ALLOW_ADMIN_COMMANDS``
+ ``ALLOW_ADMIN_COMMANDS`` :index:` <single: ALLOW_ADMIN_COMMANDS>`
     If set to NO for a given host, this macro disables administrative
     commands, such as *condor\_restart*, *condor\_on*, and
     *condor\_off*, to that host.
- ``MASTER_INSTANCE_LOCK``
+ ``MASTER_INSTANCE_LOCK`` :index:` <single: MASTER_INSTANCE_LOCK>`
     Defines the name of a file for the *condor\_master* daemon to lock
     in order to prevent multiple *condor\_master*\ s from starting. This
     is useful when using shared file systems like NFS which do not
@@ -2844,12 +2954,14 @@ probably will not want to change them for any reason.
     *condor\_master*\ ’s ``InstanceLock``. If ``$(LOCK)`` is undefined,
     then the master log itself is locked.
  ``ADD_WINDOWS_FIREWALL_EXCEPTION``
+:index:` <single: ADD_WINDOWS_FIREWALL_EXCEPTION>`
     When set to ``False``, the *condor\_master* will not automatically
     add HTCondor to the Windows Firewall list of trusted applications.
     Such trusted applications can accept incoming connections without
     interference from the firewall. This only affects machines running
     Windows XP SP2 or higher. The default is ``True``.
  ``WINDOWS_FIREWALL_FAILURE_RETRY``
+:index:` <single: WINDOWS_FIREWALL_FAILURE_RETRY>`
     An integer value (default value is 2) that represents the number of
     times the *condor\_master* will retry to add firewall exceptions.
     When a Windows machine boots up, HTCondor starts up by default as
@@ -2861,13 +2973,14 @@ probably will not want to change them for any reason.
     administrators to set the number of times (once every 5 seconds)
     that the *condor\_master* will retry to add firewall exceptions. A
     value of 0 means that HTCondor will retry indefinitely.
- ``USE_PROCESS_GROUPS``
+ ``USE_PROCESS_GROUPS`` :index:` <single: USE_PROCESS_GROUPS>`
     A boolean value that defaults to ``True``. When ``False``, HTCondor
     daemons on Unix machines will not create new sessions or process
     groups. HTCondor uses processes groups to help it track the
     descendants of processes it creates. This can cause problems when
     HTCondor is run under another job execution system.
  ``DISCARD_SESSION_KEYRING_ON_STARTUP``
+:index:` <single: DISCARD_SESSION_KEYRING_ON_STARTUP>`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor\_master* daemon will replace the kernel session keyring it
     was invoked with with a new keyring named ``htcondor``. Various
@@ -2875,22 +2988,25 @@ probably will not want to change them for any reason.
     session keyring to hold passwords and authentication tokens. By
     replacing the keyring on start up, the *condor\_master* ensures
     these keys cannot be unintentionally obtained by user jobs.
- ``ENABLE_KERNEL_TUNING``
+ ``ENABLE_KERNEL_TUNING`` :index:` <single: ENABLE_KERNEL_TUNING>`
     Relevant only to Linux platforms, a boolean value that defaults to
     ``True``. When ``True``, the *condor\_master* daemon invokes the
     kernel tuning script specified by configuration variable
     ``LINUX_KERNEL_TUNING_SCRIPT`` once as root when the
     *condor\_master* daemon starts up.
- ``KERNEL_TUNING_LOG``
+ ``KERNEL_TUNING_LOG`` :index:` <single: KERNEL_TUNING_LOG>`
     A string value that defaults to ``$(LOG)/KernelTuningLog``. If the
     kernel tuning script runs, its output will be logged to this file.
  ``LINUX_KERNEL_TUNING_SCRIPT``
+:index:` <single: LINUX_KERNEL_TUNING_SCRIPT>`
     A string value that defaults to ``$(LIBEXEC)/linux_kernel_tuning``.
     This is the script that the *condor\_master* runs to tune the kernel
     when ``ENABLE_KERNEL_TUNING`` is ``True``.
 
 condor\_startd Configuration File Macros
 ----------------------------------------
+
+:index:` <single: condor_startd configuration variables;configuration>`
 
 NOTE: If you are running HTCondor on a multi-CPU machine, be sure to
 also read
@@ -2906,29 +3022,33 @@ explanation is found in
 section \ `3.7 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__
 on Configuring The Startd Policy.
 
- ``START``
+ ``START`` :index:` <single: START>`
     A boolean expression that, when ``True``, indicates that the machine
     is willing to start running an HTCondor job. ``START`` is considered
     when the *condor\_negotiator* daemon is considering evicting the job
     to replace it with one that will generate a better rank for the
     *condor\_startd* daemon, or a user with a higher priority.
- ``SUSPEND``
+ ``SUSPEND`` :index:` <single: SUSPEND>`
     A boolean expression that, when ``True``, causes HTCondor to suspend
     running an HTCondor job. The machine may still be claimed, but the
     job makes no further progress, and HTCondor does not generate a load
     on the machine.
- ``PREEMPT``
+ ``PREEMPT`` :index:` <single: PREEMPT>`
     A boolean expression that, when ``True``, causes HTCondor to stop a
-    currently running job once ``MAXJOBRETIREMENTTIME`` has expired.
-    This expression is not evaluated if ``WANT_SUSPEND`` is ``True``.
-    The default value is ``False``, such that preemption is disabled.
- ``WANT_HOLD``
+    currently running job once ``MAXJOBRETIREMENTTIME``
+    :index:` <single: MAXJOBRETIREMENTTIME>` has expired. This expression is
+    not evaluated if ``WANT_SUSPEND`` is ``True``. The default value is
+    ``False``, such that preemption is disabled.
+ ``WANT_HOLD`` :index:` <single: WANT_HOLD>`
     A boolean expression that defaults to ``False``. When ``True`` and
     the value of ``PREEMPT`` becomes ``True`` and ``WANT_SUSPEND`` is
     ``False`` and ``MAXJOBRETIREMENTTIME`` has expired, the job is put
     on hold for the reason (optionally) specified by the variables
     ``WANT_HOLD_REASON`` and ``WANT_HOLD_SUBCODE``. As usual, the job
-    owner may specify **periodic\_release** and/or **periodic\_remove**
+    owner may specify
+    **periodic\_release**\ :index:` <single: periodic_release;submit commands>`
+    and/or
+    **periodic\_remove**\ :index:` <single: periodic_remove;submit commands>`
     expressions to react to specific hold states automatically. The
     attribute ``HoldReasonCode`` in the job ClassAd is set to the value
     21 when ``WANT_HOLD`` is responsible for putting the job on hold.
@@ -2948,38 +3068,41 @@ on Configuring The Startd Policy.
                        "Your job used too much virtual memory.", \ 
                        undefined )
 
- ``WANT_HOLD_REASON``
+ ``WANT_HOLD_REASON`` :index:` <single: WANT_HOLD_REASON>`
     An expression that defines a string utilized to set the job ClassAd
     attribute ``HoldReason`` when a job is put on hold due to
     ``WANT_HOLD``. If not defined or if the expression evaluates to
     ``Undefined``, a default hold reason is provided.
- ``WANT_HOLD_SUBCODE``
+ ``WANT_HOLD_SUBCODE`` :index:` <single: WANT_HOLD_SUBCODE>`
     An expression that defines an integer value utilized to set the job
     ClassAd attribute ``HoldReasonSubCode`` when a job is put on hold
     due to ``WANT_HOLD``. If not defined or if the expression evaluates
     to ``Undefined``, the value is set to 0. Note that
     ``HoldReasonCode`` is always set to 21.
- ``CONTINUE``
+ ``CONTINUE`` :index:` <single: CONTINUE>`
     A boolean expression that, when ``True``, causes HTCondor to
     continue the execution of a suspended job.
- ``KILL``
+ ``KILL`` :index:` <single: KILL>`
     A boolean expression that, when ``True``, causes HTCondor to
     immediately stop the execution of a vacating job, without delay. The
     job is hard-killed, so any attempt by the job to checkpoint or clean
     up will be aborted. This expression should normally be ``False``.
     When desired, it may be used to abort the graceful shutdown of a job
-    earlier than the limit imposed by ``MachineMaxVacateTime`` .
- ``PERIODIC_CHECKPOINT``
+    earlier than the limit imposed by ``MachineMaxVacateTime``
+    :index:` <single: MachineMaxVacateTime>`.
+ ``PERIODIC_CHECKPOINT`` :index:` <single: PERIODIC_CHECKPOINT>`
     A boolean expression that, when ``True``, causes HTCondor to
     initiate a checkpoint of the currently running job. This setting
     applies to all standard universe jobs and to vm universe jobs that
-    have set **vm\_checkpoint** to ``True`` in the submit description
-    file.
- ``RANK``
+    have set
+    **vm\_checkpoint**\ :index:` <single: vm_checkpoint;submit commands>`
+    to ``True`` in the submit description file.
+ ``RANK`` :index:` <single: RANK>`
     A floating point value that HTCondor uses to compare potential jobs.
     A larger value for a specific job ranks that job above others with
     lower values for ``RANK``.
  ``ADVERTISE_PSLOT_ROLLUP_INFORMATION``
+:index:` <single: ADVERTISE_PSLOT_ROLLUP_INFORMATION>`
     A boolean value that defaults to ``True``, causing the
     *condor\_startd* to advertise ClassAd attributes that may be used in
     partitionable slot preemption. The attributes are
@@ -2998,10 +3121,12 @@ on Configuring The Startd Policy.
     -  ``PslotRollupInformation``
 
  ``STARTD_PARTITIONABLE_SLOT_ATTRS``
+:index:` <single: STARTD_PARTITIONABLE_SLOT_ATTRS>`
     A list of additional from the above default attributes from dynamic
     slots that will be rolled up into a list attribute in their parent
     partitionable slot, prefixed with the name Child.
  ``IS_VALID_CHECKPOINT_PLATFORM``
+:index:` <single: IS_VALID_CHECKPOINT_PLATFORM>`
     A boolean expression that is logically ANDed with the with the
     ``START`` expression to limit which machines a standard universe job
     may continue execution on once they have produced a checkpoint. The
@@ -3023,7 +3148,7 @@ on Configuring The Startd Policy.
            ) 
            
 
- ``CHECKPOINT_PLATFORM``
+ ``CHECKPOINT_PLATFORM`` :index:` <single: CHECKPOINT_PLATFORM>`
     A string used to override the automatically-generated machine
     ClassAd attribute ``CheckpointPlatform`` (see section
     `A.3 <MachineClassAdAttributes.html#x171-1235000A.3>`__), which is
@@ -3033,20 +3158,21 @@ on Configuring The Startd Policy.
     resume. Overriding the value may be necessary for architectures that
     are the same in name, but actually have differences in instruction
     sets, such as the AVX extensions to the Intel processor.
- ``WANT_SUSPEND``
+ ``WANT_SUSPEND`` :index:` <single: WANT_SUSPEND>`
     A boolean expression that, when ``True``, tells HTCondor to evaluate
     the ``SUSPEND`` expression to decide whether to suspend a running
     job. When ``True``, the ``PREEMPT`` expression is not evaluated.
     When not explicitly set, the *condor\_startd* exits with an error.
     When explicitly set, but the evaluated value is anything other than
     ``True``, the value is utilized as if it were ``False``.
- ``WANT_VACATE``
+ ``WANT_VACATE`` :index:` <single: WANT_VACATE>`
     A boolean expression that, when ``True``, defines that a preempted
     HTCondor job is to be vacated, instead of killed. This means the job
     will be soft-killed and given time to checkpoint or clean up. The
-    amount of time given depends on ``MachineMaxVacateTime`` and
-    ``KILL`` . The default value is ``True``.
- ``ENABLE_VERSIONED_OPSYS``
+    amount of time given depends on ``MachineMaxVacateTime``
+    :index:` <single: MachineMaxVacateTime>` and ``KILL``
+    :index:` <single: KILL>`. The default value is ``True``.
+ ``ENABLE_VERSIONED_OPSYS`` :index:` <single: ENABLE_VERSIONED_OPSYS>`
     A boolean expression that determines whether pre-7.7.2 strings used
     for the machine ClassAd attribute ``OpSys`` are used or not.
     Defaults to ``False`` on Windows platforms, meaning that the newer
@@ -3055,13 +3181,13 @@ on Configuring The Startd Policy.
     than Windows, the default value is ``True``, meaning that the values
     for ``OpSys`` and ``OpSysAndVer`` are the same, implementing the
     pre-7.7.2 behavior.
- ``IS_OWNER``
+ ``IS_OWNER`` :index:` <single: IS_OWNER>`
     A boolean expression that determines when a machine ad should enter
     the ``Owner`` state. While in the ``Owner`` state, the machine ad
     will not be matched to any jobs. The default value is ``False``
     (never enter ``Owner`` state). Job ClassAd attributes should not be
     used in defining ``IS_OWNER``, as they would be ``Undefined``.
- ``STARTD_HISTORY``
+ ``STARTD_HISTORY`` :index:` <single: STARTD_HISTORY>`
     A file name where the *condor\_startd* daemon will maintain a job
     history file in an analogous way to that of the history file defined
     by the configuration variable ``HISTORY``. It will be rotated in the
@@ -3074,21 +3200,21 @@ on Configuring The Startd Policy.
 
         condor_history -file `condor_config_val LOG`/startd_history
 
- ``STARTER``
+ ``STARTER`` :index:` <single: STARTER>`
     This macro holds the full path to the *condor\_starter* binary that
     the *condor\_startd* should spawn. It is normally defined relative
     to ``$(SBIN)``.
- ``KILLING_TIMEOUT``
+ ``KILLING_TIMEOUT`` :index:` <single: KILLING_TIMEOUT>`
     The amount of time in seconds that the *condor\_startd* should wait
     after sending a fast shutdown request to *condor\_starter* before
     forcibly killing the job and *condor\_starter*. The default value is
     30 seconds.
- ``POLLING_INTERVAL``
+ ``POLLING_INTERVAL`` :index:` <single: POLLING_INTERVAL>`
     When a *condor\_startd* enters the claimed state, this macro
     determines how often the state of the machine is polled to check the
     need to suspend, resume, vacate or kill the job. It is defined in
     terms of seconds and defaults to 5.
- ``UPDATE_INTERVAL``
+ ``UPDATE_INTERVAL`` :index:` <single: UPDATE_INTERVAL>`
     Determines how often the *condor\_startd* should send a ClassAd
     update to the *condor\_collector*. The *condor\_startd* also sends
     update on any state or activity change, or if the value of its
@@ -3101,7 +3227,7 @@ on Configuring The Startd Policy.
     on *condor\_startd* ``START`` expression for details on states,
     activities, and the ``START`` expression. This macro is defined in
     terms of seconds and defaults to 300 (5 minutes).
- ``UPDATE_OFFSET``
+ ``UPDATE_OFFSET`` :index:` <single: UPDATE_OFFSET>`
     An integer value representing the number of seconds of delay that
     the *condor\_startd* should wait before sending its initial update,
     and the first update after a *condor\_reconfig* command is sent to
@@ -3124,7 +3250,7 @@ on Configuring The Startd Policy.
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
 
- ``MachineMaxVacateTime``
+ ``MachineMaxVacateTime`` :index:` <single: MachineMaxVacateTime>`
     An integer expression representing the number of seconds the machine
     is willing to wait for a job that has been soft-killed to gracefully
     shut down. The default value is 600 seconds (10 minutes). This
@@ -3136,10 +3262,11 @@ on Configuring The Startd Policy.
     job has more retirement time left than the machine’s maximum vacate
     time setting, then retirement time will be converted into vacating
     time, up to the amount of ``JobMaxVacateTime``. The ``KILL``
-    expression may be used to abort the graceful shutdown of the job at
-    any time. At the time when the job is preempted, the ``WANT_VACATE``
-    expression may be used to skip the graceful shutdown of the job.
- ``MAXJOBRETIREMENTTIME``
+    :index:` <single: KILL>` expression may be used to abort the graceful
+    shutdown of the job at any time. At the time when the job is
+    preempted, the ``WANT_VACATE`` :index:` <single: WANT_VACATE>` expression
+    may be used to skip the graceful shutdown of the job.
+ ``MAXJOBRETIREMENTTIME`` :index:` <single: MAXJOBRETIREMENTTIME>`
     When the *condor\_startd* wants to evict a job, a job which has run
     for less than the number of seconds specified by this expression
     will not be hard-killed. The *condor\_startd* will wait for the job
@@ -3154,19 +3281,20 @@ on Configuring The Startd Policy.
     then. Note that in peaceful shutdown mode of the *condor\_startd*,
     retirement time is treated as though infinite. In graceful shutdown
     mode, the job will not be preempted until the configured retirement
-    time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT`` expires. In fast
-    shutdown mode, retirement time is ignored. See
-    ``MAXJOBRETIREMENTTIME`` in
+    time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT``
+    :index:` <single: SHUTDOWN_GRACEFUL_TIMEOUT>` expires. In fast shutdown
+    mode, retirement time is ignored. See ``MAXJOBRETIREMENTTIME`` in
     section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2510003.7.1>`__
     for further explanation.
 
     By default the *condor\_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`` .
+    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
+    :index:` <single: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION>`.
 
     There is no default value for this configuration variable.
 
- ``CLAIM_WORKLIFE``
+ ``CLAIM_WORKLIFE`` :index:` <single: CLAIM_WORKLIFE>`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. The default is 1200, which is
     20 minutes. Once the *condor\_negotiator* gives a *condor\_schedd* a
@@ -3181,23 +3309,23 @@ on Configuring The Startd Policy.
     value of 0 has the effect of not allowing more than one job to run
     per claim, since it immediately expires after the first job starts
     running.
- ``MAX_CLAIM_ALIVES_MISSED``
+ ``MAX_CLAIM_ALIVES_MISSED`` :index:` <single: MAX_CLAIM_ALIVES_MISSED>`
     The *condor\_schedd* sends periodic updates to each *condor\_startd*
-    as a keep alive (see the description of ``ALIVE_INTERVAL`` on
-    page \ `693 <#x33-1960003.5.9>`__). If the *condor\_startd* does not
-    receive any keep alive messages, it assumes that something has gone
-    wrong with the *condor\_schedd* and that the resource is not being
-    effectively used. Once this happens, the *condor\_startd* considers
-    the claim to have timed out, it releases the claim, and starts
-    advertising itself as available for other jobs. Because these keep
-    alive messages are sent via UDP, they are sometimes dropped by the
-    network. Therefore, the *condor\_startd* has some tolerance for
-    missed keep alive messages, so that in case a few keep alives are
-    lost, the *condor\_startd* will not immediately release the claim.
-    This setting controls how many keep alive messages can be missed
-    before the *condor\_startd* considers the claim no longer valid. The
-    default is 6.
- ``STARTD_HAS_BAD_UTMP``
+    as a keep alive (see the description of ``ALIVE_INTERVAL``
+    :index:` <single: ALIVE_INTERVAL>` on page \ `693 <#x33-1960003.5.9>`__).
+    If the *condor\_startd* does not receive any keep alive messages, it
+    assumes that something has gone wrong with the *condor\_schedd* and
+    that the resource is not being effectively used. Once this happens,
+    the *condor\_startd* considers the claim to have timed out, it
+    releases the claim, and starts advertising itself as available for
+    other jobs. Because these keep alive messages are sent via UDP, they
+    are sometimes dropped by the network. Therefore, the
+    *condor\_startd* has some tolerance for missed keep alive messages,
+    so that in case a few keep alives are lost, the *condor\_startd*
+    will not immediately release the claim. This setting controls how
+    many keep alive messages can be missed before the *condor\_startd*
+    considers the claim no longer valid. The default is 6.
+ ``STARTD_HAS_BAD_UTMP`` :index:` <single: STARTD_HAS_BAD_UTMP>`
     When the *condor\_startd* is computing the idle time of all the
     users of the machine (both local and remote), it checks the ``utmp``
     file to find all the currently active ttys, and only checks access
@@ -3206,7 +3334,7 @@ on Configuring The Startd Policy.
     miss keyboard activity by doing this. So, if your ``utmp`` is
     unreliable, set this macro to ``True`` and the *condor\_startd* will
     check the access time on all tty and pty devices.
- ``CONSOLE_DEVICES``
+ ``CONSOLE_DEVICES`` :index:` <single: CONSOLE_DEVICES>`
     This macro allows the *condor\_startd* to monitor console (keyboard
     and mouse) activity by checking the access times on special files in
     ``/dev``. Activity on these files shows up as ``ConsoleIdle`` time
@@ -3229,7 +3357,7 @@ on Configuring The Startd Policy.
     *condor\_kbdd* daemon, which gets this information by connecting to
     the X server.
 
- ``KBDD_BUMP_CHECK_SIZE``
+ ``KBDD_BUMP_CHECK_SIZE`` :index:` <single: KBDD_BUMP_CHECK_SIZE>`
     The number of pixels that the mouse can move in the X and/or Y
     direction, while still being considered a bump, and not keyboard
     activity. If the movement is greater than this bump size then the
@@ -3237,9 +3365,10 @@ on Configuring The Startd Policy.
     default is 16, and units are pixels. Setting the value to 0
     effectively disables bump testing.
  ``KBDD_BUMP_CHECK_AFTER_IDLE_TIME``
+:index:` <single: KBDD_BUMP_CHECK_AFTER_IDLE_TIME>`
     The number of seconds of keyboard idle time that will pass before
     bump testing begins. The default is 15 minutes.
- ``STARTD_JOB_ATTRS``
+ ``STARTD_JOB_ATTRS`` :index:` <single: STARTD_JOB_ATTRS>`
     When the machine is claimed by a remote user, the *condor\_startd*
     can also advertise arbitrary attributes from the job ClassAd in the
     machine ClassAd. List the attribute names to be advertised. NOTE:
@@ -3249,31 +3378,33 @@ on Configuring The Startd Policy.
     into the machine ClassAd. This setting was formerly called
     ``STARTD_JOB_EXPRS``. The older name is still supported, but support
     for the older name may be removed in a future version of HTCondor.
- ``STARTD_ATTRS``
+ ``STARTD_ATTRS`` :index:` <single: STARTD_ATTRS>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ATTRS``.
- ``STARTD_DEBUG``
+ ``STARTD_DEBUG`` :index:` <single: STARTD_DEBUG>`
     This macro (and other settings related to debug logging in the
     *condor\_startd*) is described in
     section \ `3.5.2 <#x33-1890003.5.2>`__ as ``<SUBSYS>_DEBUG``.
- ``STARTD_ADDRESS_FILE``
+ ``STARTD_ADDRESS_FILE`` :index:` <single: STARTD_ADDRESS_FILE>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ADDRESS_FILE``
  ``STARTD_SHOULD_WRITE_CLAIM_ID_FILE``
+:index:` <single: STARTD_SHOULD_WRITE_CLAIM_ID_FILE>`
     The *condor\_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
     boolean attribute controls whether the *condor\_startd* should write
     these files. The default value is ``True``.
- ``STARTD_CLAIM_ID_FILE``
+ ``STARTD_CLAIM_ID_FILE`` :index:` <single: STARTD_CLAIM_ID_FILE>`
     This macro controls what file names are used if the above
     ``STARTD_SHOULD_WRITE_CLAIM_ID_FILE`` is true. By default, HTCondor
-    will write the ClaimId into a file in the ``$(LOG)`` directory
-    called ``.startd_claim_id.slotX``, where X is the value of
-    ``SlotID``, the integer that identifies a given slot on the system,
-    or 1 on a single-slot machine. If you define your own value for this
-    setting, you should provide a full path, and HTCondor will
-    automatically append the .slotX portion of the file name.
- ``NUM_CPUS``
+    will write the ClaimId into a file in the
+    ``$(LOG)``\ :index:` <single: LOG>` directory called
+    ``.startd_claim_id.slotX``, where X is the value of ``SlotID``, the
+    integer that identifies a given slot on the system, or 1 on a
+    single-slot machine. If you define your own value for this setting,
+    you should provide a full path, and HTCondor will automatically
+    append the .slotX portion of the file name.
+ ``NUM_CPUS`` :index:` <single: NUM_CPUS>`
     An integer value, which can be used to lie to the *condor\_startd*
     daemon about how many CPUs a machine has. When set, it overrides the
     value determined with HTCondor’s automatic computation of the number
@@ -3288,7 +3419,8 @@ on Configuring The Startd Policy.
     specifically want this behavior and know what they are doing. It is
     disabled by default.
 
-    The default value is ``$(DETECTED_CPUS)``.
+    The default value is
+    ``$(DETECTED_CPUS)``\ :index:` <single: DETECTED_CPUS>`.
 
     The *condor\_startd* only takes note of the value of this
     configuration variable on start up, therefore it cannot be changed
@@ -3300,7 +3432,7 @@ on Configuring The Startd Policy.
 
           condor_restart -startd
 
- ``MAX_NUM_CPUS``
+ ``MAX_NUM_CPUS`` :index:` <single: MAX_NUM_CPUS>`
     An integer value used as a ceiling for the number of CPUs detected
     by HTCondor on a machine. This value is ignored if ``NUM_CPUS`` is
     set. If set to zero, there is no ceiling. If not defined, the
@@ -3315,7 +3447,7 @@ on Configuring The Startd Policy.
 
           condor_restart -startd
 
- ``COUNT_HYPERTHREAD_CPUS``
+ ``COUNT_HYPERTHREAD_CPUS`` :index:` <single: COUNT_HYPERTHREAD_CPUS>`
     This configuration variable controls how HTCondor sees
     hyper-threaded processors. When set to the default value of
     ``True``, it includes virtual CPUs in the default value of
@@ -3323,20 +3455,21 @@ on Configuring The Startd Policy.
     can sometimes improve total throughput at the expense of individual
     job speed. However, counting them on desktop workstations can
     interfere with interactive job performance.
- ``MEMORY``
+ ``MEMORY`` :index:` <single: MEMORY>`
     Normally, HTCondor will automatically detect the amount of physical
     memory available on your machine. Define ``MEMORY`` to tell HTCondor
     how much physical memory (in MB) your machine has, overriding the
     value HTCondor computes automatically. The actual amount of memory
     detected by HTCondor is always available in the pre-defined
-    configuration macro ``DETECTED_MEMORY`` .
- ``RESERVED_MEMORY``
+    configuration macro ``DETECTED_MEMORY``
+    :index:` <single: DETECTED_MEMORY>`.
+ ``RESERVED_MEMORY`` :index:` <single: RESERVED_MEMORY>`
     How much memory would you like reserved from HTCondor? By default,
     HTCondor considers all the physical memory of your machine as
     available to be used by HTCondor jobs. If ``RESERVED_MEMORY`` is
     defined, HTCondor subtracts it from the amount of memory it
     advertises as available.
- ``STARTD_NAME``
+ ``STARTD_NAME`` :index:` <single: STARTD_NAME>`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor\_startd*\ ’s ClassAd. This esoteric configuration macro
     might be used in the situation where there are two *condor\_startd*
@@ -3346,26 +3479,26 @@ on Configuring The Startd Policy.
     section \ `3.5.7 <#x33-1940003.5.7>`__ on
     page \ `646 <#x33-1940003.5.7>`__ for defaults and composition of
     valid HTCondor daemon names.
- ``RUNBENCHMARKS``
+ ``RUNBENCHMARKS`` :index:` <single: RUNBENCHMARKS>`
     A boolean expression that specifies whether to run benchmarks. When
     the machine is in the Unclaimed state and this expression evaluates
     to ``True``, benchmarks will be run. If ``RUNBENCHMARKS`` is
     specified and set to anything other than ``False``, additional
     benchmarks will be run once, when the *condor\_startd* starts. To
     disable start up benchmarks, set ``RunBenchmarks`` to ``False``.
- ``DedicatedScheduler``
+ ``DedicatedScheduler`` :index:` <single: DedicatedScheduler>`
     A string that identifies the dedicated scheduler this machine is
     managed by.
     Section \ `3.14.9 <SettingUpforSpecialEnvironments.html#x42-3670003.14.9>`__
     on
     page \ `1184 <SettingUpforSpecialEnvironments.html#x42-3670003.14.9>`__
     details the use of a dedicated scheduler.
- ``STARTD_NOCLAIM_SHUTDOWN``
+ ``STARTD_NOCLAIM_SHUTDOWN`` :index:` <single: STARTD_NOCLAIM_SHUTDOWN>`
     The number of seconds to run without receiving a claim before
     shutting HTCondor down on this machine. Defaults to unset, which
     means to never shut down. This is primarily intended to facilitate
     glidein; use in other situations is not recommended.
- ``STARTD_PUBLISH_WINREG``
+ ``STARTD_PUBLISH_WINREG`` :index:` <single: STARTD_PUBLISH_WINREG>`
     A string containing a semicolon-separated list of Windows registry
     key names. For each registry key, the contents of the registry key
     are published in the machine ClassAd. All attribute names are
@@ -3425,7 +3558,7 @@ on Configuring The Startd Policy.
           WINREG_Processor_Percent_Idle_Time = 72.350384 
           WINREG_System_Processes = 166
 
- ``MOUNT_UNDER_SCRATCH``
+ ``MOUNT_UNDER_SCRATCH`` :index:` <single: MOUNT_UNDER_SCRATCH>`
     A ClassAd expression, which when evaluated in the context of the job
     ClassAd, evaluates to a string that contains a comma separated list
     of directories. For each directory in the list, HTCondor creates a
@@ -3479,14 +3612,14 @@ on
 page \ `1193 <SettingUpforSpecialEnvironments.html#x42-3700003.14.10>`__
 on Configuring HTCondor for Running Backfill Jobs for details.
 
- ``ENABLE_BACKFILL``
+ ``ENABLE_BACKFILL`` :index:` <single: ENABLE_BACKFILL>`
     A boolean value that, when ``True``, indicates that the machine is
     willing to perform backfill computations when it would otherwise be
     idle. This is not a policy expression that is evaluated, it is a
     simple ``True`` or ``False``. This setting controls if any of the
     other backfill-related expressions should be evaluated. The default
     is ``False``.
- ``BACKFILL_SYSTEM``
+ ``BACKFILL_SYSTEM`` :index:` <single: BACKFILL_SYSTEM>`
     A string that defines what backfill system to use for spawning and
     managing backfill computations. Currently, the only supported value
     for this is ``"BOINC"``, which stands for the Berkeley Open
@@ -3494,17 +3627,18 @@ on Configuring HTCondor for Running Backfill Jobs for details.
     `http://boinc.berkeley.edu <http://boinc.berkeley.edu>`__ for more
     information about BOINC. There is no default value, administrators
     must define this.
- ``START_BACKFILL``
+ ``START_BACKFILL`` :index:` <single: START_BACKFILL>`
     A boolean expression that is evaluated whenever an HTCondor resource
     is in the Unclaimed/Idle state and the ``ENABLE_BACKFILL``
     expression is ``True``. If ``START_BACKFILL`` evaluates to ``True``,
     the machine will enter the Backfill state and attempt to spawn a
     backfill computation. This expression is analogous to the ``START``
-    expression that controls when an HTCondor resource is available to
-    run normal HTCondor jobs. The default value is ``False`` (which
-    means do not spawn a backfill job even if the machine is idle and
-    ``ENABLE_BACKFILL`` expression is ``True``). For more information
-    about policy expressions and the Backfill state, see
+    :index:` <single: START>` expression that controls when an HTCondor
+    resource is available to run normal HTCondor jobs. The default value
+    is ``False`` (which means do not spawn a backfill job even if the
+    machine is idle and ``ENABLE_BACKFILL`` expression is ``True``). For
+    more information about policy expressions and the Backfill state,
+    see
     section \ `3.7 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__
     beginning on
     page \ `858 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__,
@@ -3513,7 +3647,7 @@ on Configuring HTCondor for Running Backfill Jobs for details.
     `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2490003.7.1>`__,
     and
     `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2500003.7.1>`__.
- ``EVICT_BACKFILL``
+ ``EVICT_BACKFILL`` :index:` <single: EVICT_BACKFILL>`
     A boolean expression that is evaluated whenever an HTCondor resource
     is in the Backfill state which, when ``True``, indicates the machine
     should immediately kill the currently running backfill computation
@@ -3538,7 +3672,7 @@ on
 page \ `912 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2530003.7.1>`__
 for details.
 
- ``STARTD_RESOURCE_PREFIX``
+ ``STARTD_RESOURCE_PREFIX`` :index:` <single: STARTD_RESOURCE_PREFIX>`
     A string which specifies what prefix to give the unique HTCondor
     resources that are advertised on multi-core machines. Previously,
     HTCondor used the term virtual machine to describe these resources,
@@ -3552,17 +3686,20 @@ for details.
     *condor\_startd* will use to name the individual resources on a
     multi-core machine.
  ``SLOTS_CONNECTED_TO_CONSOLE``
+:index:` <single: SLOTS_CONNECTED_TO_CONSOLE>`
     An integer which indicates how many of the machine slots the
     *condor\_startd* is representing should be "connected" to the
     console. This allows the *condor\_startd* to notice console
     activity. Defaults to the number of slots in the machine, which is
     ``$(NUM_CPUS)``.
  ``SLOTS_CONNECTED_TO_KEYBOARD``
+:index:` <single: SLOTS_CONNECTED_TO_KEYBOARD>`
     An integer which indicates how many of the machine slots the
     *condor\_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
     This defaults to all slots (N in a machine with N CPUs).
  ``DISCONNECTED_KEYBOARD_IDLE_BOOST``
+:index:` <single: DISCONNECTED_KEYBOARD_IDLE_BOOST>`
     If there are slots not connected to either the keyboard or the
     console, the corresponding idle time reported will be the time since
     the *condor\_startd* was spawned, plus the value of this macro. It
@@ -3575,14 +3712,15 @@ for details.
     you change your START expression to require more than 15 minutes
     before a job starts, but you still want jobs to start right away on
     some of your multi-core nodes, increase this macro’s value.
- ``STARTD_SLOT_ATTRS``
+ ``STARTD_SLOT_ATTRS`` :index:` <single: STARTD_SLOT_ATTRS>`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` or ``STARTD_VM_EXPRS`` (before version 6.9.3).
-    For each attribute in the list, the attribute’s value is taken from
-    each slot’s machine ClassAd and placed into the machine ClassAd of
-    all the other slots within the machine. For example, if the
-    configuration file for a 2-slot machine contains
+    ``STARTD_VM_ATTRS`` :index:` <single: STARTD_VM_ATTRS>` or
+    ``STARTD_VM_EXPRS`` :index:` <single: STARTD_VM_EXPRS>` (before version
+    6.9.3). For each attribute in the list, the attribute’s value is
+    taken from each slot’s machine ClassAd and placed into the machine
+    ClassAd of all the other slots within the machine. For example, if
+    the configuration file for a 2-slot machine contains
 
     ::
 
@@ -3623,12 +3761,12 @@ NOTE: Prior to version 6.9.3, any settings that included the term
 information about one of these older settings, search for the
 corresponding attribute names using ``slot``, instead.
 
- ``MAX_SLOT_TYPES``
+ ``MAX_SLOT_TYPES`` :index:` <single: MAX_SLOT_TYPES>`
     The maximum number of different slot types. Note: this is the
     maximum number of different types, not of actual slots. Defaults to
     10. (You should only need to change this setting if you define more
     than 10 separate slot types, which would be pretty rare.)
- ``SLOT_TYPE_<N>``
+ ``SLOT_TYPE_<N>`` :index:` <single: SLOT_TYPE_<N>>`
     This setting defines a given slot type, by specifying what part of
     each shared system resource (like RAM, swap space, etc) this kind of
     slot gets. This setting has no effect unless you also define
@@ -3640,24 +3778,26 @@ corresponding attribute names using ``slot``, instead.
     page \ `912 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2540003.7.1>`__
     for details on the different possibilities.
  ``SLOT_TYPE_<N>_PARTITIONABLE``
+:index:` <single: SLOT_TYPE_<N>_PARTITIONABLE>`
     A boolean variable that defaults to ``False``. When ``True``, this
     slot permits dynamic provisioning, as specified in section 
     `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2600003.7.1>`__.
  ``CLAIM_PARTITIONABLE_LEFTOVERS``
+:index:` <single: CLAIM_PARTITIONABLE_LEFTOVERS>`
     A boolean variable that defaults to ``True``. When ``True`` within
     the configuration for both the *condor\_schedd* and the
     *condor\_startd*, and the *condor\_schedd* claims a partitionable
     slot, the *condor\_startd* returns the slot’s ClassAd and a claim id
     for leftover resources. In doing so, the *condor\_schedd* can claim
     multiple dynamic slots without waiting for a negotiation cycle.
- ``MACHINE_RESOURCE_NAMES``
+ ``MACHINE_RESOURCE_NAMES`` :index:` <single: MACHINE_RESOURCE_NAMES>`
     A comma and/or space separated list of resource names that represent
     custom resources specific to a machine. These resources are further
     intended to be statically divided or partitioned, and these resource
     names identify the configuration variables that define the
     partitioning. If used, custom resources without names in the list
     are ignored.
- ``MACHINE_RESOURCE_<name>``
+ ``MACHINE_RESOURCE_<name>`` :index:` <single: MACHINE_RESOURCE_<name>>`
     An integer that specifies the quantity of or list of identifiers for
     the customized local machine resource available for an SMP machine.
     The portion of this configuration variable’s name identified with
@@ -3669,19 +3809,23 @@ corresponding attribute names using ``slot``, instead.
     identifiers and slots will be allocated both a quantity of the
     resource and assigned specific resource identifiers.
  ``OFFLINE_MACHINE_RESOURCE_<name>``
+:index:` <single: OFFLINE_MACHINE_RESOURCE_<name>>`
     A comma and/or space separated list of resource identifiers for any
     customized local machine resources that are currently offline, and
     therefore should not be allocated to a slot. The identifiers
     specified here must match those specified by value of configuration
-    variables ``MACHINE_RESOURCE_<name>`` or
-    ``MACHINE_RESOURCE_INVENTORY_<name>`` , or the identifiers will be
-    ignored. The ``<name>`` identifies the type of resource, as
+    variables ``MACHINE_RESOURCE_<name>``
+    :index:` <single: MACHINE_RESOURCE_<name>>` or
+    ``MACHINE_RESOURCE_INVENTORY_<name>``
+    :index:` <single: MACHINE_RESOURCE_INVENTORY_<name>>`, or the identifiers
+    will be ignored. The ``<name>`` identifies the type of resource, as
     specified by the value of configuration variable
     ``MACHINE_RESOURCE_NAMES``. This configuration variable is used to
     have resources that are detected and reported to exist by HTCondor,
     but not assigned to slots. A restart of the *condor\_startd* is
     required for changes to this configuration variable to take effect.
  ``MACHINE_RESOURCE_INVENTORY_<name>``
+:index:` <single: MACHINE_RESOURCE_INVENTORY_<name>>`
     Specifies a command line that is executed upon start up of the
     *condor\_startd* daemon. The script is expected to output an
     attribute definition of the form
@@ -3705,9 +3849,10 @@ corresponding attribute names using ``slot``, instead.
     convenient way to specify a calculated or detected quantity of the
     resource, instead of specifying a fixed quantity or list of the
     resource in the the configuration when set by
-    ``MACHINE_RESOURCE_<name>`` .
+    ``MACHINE_RESOURCE_<name>`` :index:` <single: MACHINE_RESOURCE_<name>>`.
 
  ``ENVIRONMENT_FOR_Assigned<name>``
+:index:` <single: ENVIRONMENT_FOR_Assigned<name>>`
     A space separated list of environment variables to set for the job.
     Each environment variable will be set to the list of assigned
     resources defined by the slot ClassAd attribute ``Assigned<name>``.
@@ -3733,6 +3878,7 @@ corresponding attribute names using ``slot``, instead.
           VISIBLE_GPUS = gpuid:CUDA1, gpuid:CUDA2
 
  ``ENVIRONMENT_VALUE_FOR_UnAssigned<name>``
+:index:` <single: ENVIRONMENT_VALUE_FOR_UnAssigned<name>>`
     Defines the value to set for environment variables specified in by
     configuration variable ``ENVIRONMENT_FOR_Assigned<name>`` when there
     is no machine ClassAd attribute ``Assigned<name>`` for the slot.
@@ -3755,7 +3901,7 @@ corresponding attribute names using ``slot``, instead.
 
           VISIBLE_GPUS = none
 
- ``MUST_MODIFY_REQUEST_EXPRS``
+ ``MUST_MODIFY_REQUEST_EXPRS`` :index:` <single: MUST_MODIFY_REQUEST_EXPRS>`
     A boolean value that defaults to ``False``. When ``False``,
     configuration variables whose names begin with
     ``MODIFY_REQUEST_EXPR`` are only applied if the job claim still
@@ -3764,6 +3910,7 @@ corresponding attribute names using ``slot``, instead.
     claim to no longer match, then the *condor\_startd* will simply
     refuse the claim.
  ``MODIFY_REQUEST_EXPR_REQUESTMEMORY``
+:index:` <single: MODIFY_REQUEST_EXPR_REQUESTMEMORY>`
     An integer expression used by the *condor\_startd* daemon to modify
     the evaluated value of the ``RequestMemory`` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
@@ -3775,6 +3922,7 @@ corresponding attribute names using ``slot``, instead.
           
 
  ``MODIFY_REQUEST_EXPR_REQUESTDISK``
+:index:` <single: MODIFY_REQUEST_EXPR_REQUESTDISK>`
     An integer expression used by the *condor\_startd* daemon to modify
     the evaluated value of the ``RequestDisk`` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
@@ -3786,6 +3934,7 @@ corresponding attribute names using ``slot``, instead.
           
 
  ``MODIFY_REQUEST_EXPR_REQUESTCPUS``
+:index:` <single: MODIFY_REQUEST_EXPR_REQUESTCPUS>`
     An integer expression used by the *condor\_startd* daemon to modify
     the evaluated value of the ``RequestCpus`` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
@@ -3796,10 +3945,10 @@ corresponding attribute names using ``slot``, instead.
           quantize(RequestCpus,{1}) 
           
 
- ``NUM_SLOTS_TYPE_<N>``
+ ``NUM_SLOTS_TYPE_<N>`` :index:` <single: NUM_SLOTS_TYPE_<N>>`
     This macro controls how many of a given slot type are actually
     reported to HTCondor. There is no default.
- ``NUM_SLOTS``
+ ``NUM_SLOTS`` :index:` <single: NUM_SLOTS>`
     An integer value representing the number of slots reported when the
     multi-core machine is being evenly divided, and the slot type
     settings described above are not being used. The default is one slot
@@ -3807,20 +3956,20 @@ corresponding attribute names using ``slot``, instead.
     multi-core machine, which would not be reported to the HTCondor
     pool. This value cannot be used to make HTCondor advertise more
     slots than there are CPUs on the machine. To do that, use
-    ``NUM_CPUS`` .
+    ``NUM_CPUS`` :index:` <single: NUM_CPUS>`.
 
 The following variables set consumption policies for partitionable
 slots.
 Section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2620003.7.1>`__
 details consumption policies.
 
- ``CONSUMPTION_POLICY``
+ ``CONSUMPTION_POLICY`` :index:` <single: CONSUMPTION_POLICY>`
     A boolean value that defaults to ``False``. When ``True``,
     consumption policies are enabled for partitionable slots within the
     *condor\_startd* daemon. Any definition of the form
     ``SLOT_TYPE_<N>_CONSUMPTION_POLICY`` overrides this global
     definition for the given slot type.
- ``CONSUMPTION_<Resource>``
+ ``CONSUMPTION_<Resource>`` :index:` <single: CONSUMPTION_<Resource>>`
     An expression that specifies a consumption policy for a particular
     resource within a partitionable slot. To support a consumption
     policy, each resource advertised by the slot must have such a policy
@@ -3839,7 +3988,7 @@ details consumption policies.
 
     Custom resources have no default consumption policy.
 
- ``SLOT_WEIGHT``
+ ``SLOT_WEIGHT`` :index:` <single: SLOT_WEIGHT>`
     An expression that specifies a slot’s weight, used as a multiplier
     the *condor\_negotiator* daemon during matchmaking to assess user
     usage of a slot, which affects user priority. Defaults to ``Cpus``.
@@ -3850,7 +3999,7 @@ details consumption policies.
     from the slot. Only Memory, Cpus and Disk are valid attributes for
     this parameter.
 
- ``NUM_CLAIMS``
+ ``NUM_CLAIMS`` :index:` <single: NUM_CLAIMS>`
     Specifies the number of claims a partitionable slot will advertise
     for use by the *condor\_negotiator* daemon. In the case of slots
     with a defined consumption policy, the *condor\_negotiator* may
@@ -3861,44 +4010,45 @@ details consumption policies.
 
 The following configuration variables support java universe jobs.
 
- ``JAVA``
+ ``JAVA`` :index:` <single: JAVA>`
     The full path to the Java interpreter (the Java Virtual Machine).
- ``JAVA_CLASSPATH_ARGUMENT``
+ ``JAVA_CLASSPATH_ARGUMENT`` :index:` <single: JAVA_CLASSPATH_ARGUMENT>`
     The command line argument to the Java interpreter (the Java Virtual
     Machine) that specifies the Java Classpath. Classpath is a
     Java-specific term that denotes the list of locations (``.jar``
     files and/or directories) where the Java interpreter can look for
     the Java class files that a Java program requires.
- ``JAVA_CLASSPATH_SEPARATOR``
+ ``JAVA_CLASSPATH_SEPARATOR`` :index:` <single: JAVA_CLASSPATH_SEPARATOR>`
     The single character used to delimit constructed entries in the
     Classpath for the given operating system and Java Virtual Machine.
     If not defined, the operating system is queried for its default
     Classpath separator.
- ``JAVA_CLASSPATH_DEFAULT``
+ ``JAVA_CLASSPATH_DEFAULT`` :index:` <single: JAVA_CLASSPATH_DEFAULT>`
     A list of path names to ``.jar`` files to be added to the Java
     Classpath by default. The comma and/or space character delimits list
     entries.
- ``JAVA_EXTRA_ARGUMENTS``
+ ``JAVA_EXTRA_ARGUMENTS`` :index:` <single: JAVA_EXTRA_ARGUMENTS>`
     A list of additional arguments to be passed to the Java executable.
 
 The following configuration variables control .NET version
 advertisement.
 
- ``STARTD_PUBLISH_DOTNET``
+ ``STARTD_PUBLISH_DOTNET`` :index:` <single: STARTD_PUBLISH_DOTNET>`
     A boolean value that controls the advertising of the .NET framework
     on Windows platforms. When ``True``, the *condor\_startd* will
     advertise all installed versions of the .NET framework within the
     ``DotNetVersions`` attribute in the *condor\_startd* machine
     ClassAd. The default value is ``True``. Set the value to ``false``
     to turn off .NET version advertising.
- ``DOT_NET_VERSIONS``
+ ``DOT_NET_VERSIONS`` :index:` <single: DOT_NET_VERSIONS>`
     A string expression that administrators can use to override the way
     that .NET versions are advertised. If the administrator wishes to
     advertise .NET installations, but wishes to do so in a format
     different than what the *condor\_startd* publishes in its ClassAds,
     setting a string in this expression will result in the
     *condor\_startd* publishing the string when
-    ``STARTD_PUBLISH_DOTNET`` is ``True``. No value is set by default.
+    ``STARTD_PUBLISH_DOTNET`` :index:` <single: STARTD_PUBLISH_DOTNET>` is
+    ``True``. No value is set by default.
 
 These macros control the power management capabilities of the
 *condor\_startd* to optionally put the machine in to a low power state
@@ -3907,7 +4057,7 @@ section \ `3.18 <PowerManagement.html#x46-3910003.18>`__ on
 page \ `1265 <PowerManagement.html#x46-3910003.18>`__ on Power
 Management for more details.
 
- ``HIBERNATE_CHECK_INTERVAL``
+ ``HIBERNATE_CHECK_INTERVAL`` :index:` <single: HIBERNATE_CHECK_INTERVAL>`
     An integer number of seconds that determines how often the
     *condor\_startd* checks to see if the machine is ready to enter a
     low power state. The default value is 0, which disables the check.
@@ -3921,7 +4071,7 @@ Management for more details.
     power state, an hour of uptime is enforced after a machine has been
     woken. After the hour has passed, regular checks resume.
 
- ``HIBERNATE``
+ ``HIBERNATE`` :index:` <single: HIBERNATE>`
     A string expression that represents lower power state. When this
     state name evaluates to a valid state other than ``"NONE"``, causes
     HTCondor to put the machine into the specified low power state. The
@@ -3958,7 +4108,7 @@ Management for more details.
     Strings that do not match any in the table above are treated as
     ``"NONE"``.
 
- ``UNHIBERNATE``
+ ``UNHIBERNATE`` :index:` <single: UNHIBERNATE>`
     A boolean expression that specifies when an offline machine should
     be woken up. The default value is
     ``MachineLastMatchTime =!= UNDEFINED``. This expression does not do
@@ -3966,7 +4116,8 @@ Management for more details.
     or another program that evaluates the ``Unhibernate`` expression of
     offline machine ClassAds. In addition, the collecting of offline
     machine ClassAds must be enabled for this expression to work. The
-    variable ``COLLECTOR_PERSISTENT_AD_LOG`` on
+    variable ``COLLECTOR_PERSISTENT_AD_LOG``
+    :index:` <single: COLLECTOR_PERSISTENT_AD_LOG>` on
     page \ `736 <#x33-2010003.5.14>`__ detailed on
     page \ `681 <#x33-1950003.5.8>`__ explains this. The special
     attribute ``MachineLastMatchTime`` is updated in the ClassAds of
@@ -3975,11 +4126,13 @@ Management for more details.
     for slot1 will also contain the attributes
     ``slot<X>_MachineLastMatchTime``, where ``X`` is replaced by the
     slot id of the other slots that would have been matched while
-    offline. This allows the slot1 ``UNHIBERNATE`` expression to refer
-    to all of the slots on the machine, in case that is necessary. By
-    default, *condor\_rooster* will wake up a machine if any slot on the
-    machine has its ``UNHIBERNATE`` expression evaluate to ``True``.
- ``HIBERNATION_PLUGIN``
+    offline. This allows the slot1 ``UNHIBERNATE``
+    :index:` <single: UNHIBERNATE>` expression to refer to all of the slots
+    on the machine, in case that is necessary. By default,
+    *condor\_rooster* will wake up a machine if any slot on the machine
+    has its ``UNHIBERNATE`` :index:` <single: UNHIBERNATE>` expression
+    evaluate to ``True``.
+ ``HIBERNATION_PLUGIN`` :index:` <single: HIBERNATION_PLUGIN>`
     A string which specifies the path and executable name of the
     hibernation plug-in that the *condor\_startd* should use in the
     detection of low power states and switching to the low power states.
@@ -4009,11 +4162,11 @@ Management for more details.
     the supported states as given in the attribute
     ``HibernationSupportedStates``.
 
- ``HIBERNATION_PLUGIN_ARGS``
+ ``HIBERNATION_PLUGIN_ARGS`` :index:` <single: HIBERNATION_PLUGIN_ARGS>`
     Command line arguments appended to the command that invokes the
     plug-in. The additional argument *ad* is appended when the
     *condor\_startd* initially invokes the plug-in.
- ``HIBERNATION_OVERRIDE_WOL``
+ ``HIBERNATION_OVERRIDE_WOL`` :index:` <single: HIBERNATION_OVERRIDE_WOL>`
     A boolean value that defaults to ``False``. When ``True``, it causes
     the *condor\_startd* daemon’s detection of the whether or not the
     network interface handles WOL packets to be ignored. When ``False``,
@@ -4021,7 +4174,7 @@ Management for more details.
     packets to wake from hibernation. Therefore, when ``True``
     hibernation can be enabled despite the fact that WOL packets are not
     used to wake machines.
- ``LINUX_HIBERNATION_METHOD``
+ ``LINUX_HIBERNATION_METHOD`` :index:` <single: LINUX_HIBERNATION_METHOD>`
     A string that can be used to override the default search used by
     HTCondor on Linux platforms to detect the hibernation method to use.
     This is used by the default hibernation plug-in executable that is
@@ -4038,15 +4191,15 @@ Management for more details.
     particular method, set ``LINUX_HIBERNATION_METHOD`` to one of the
     defined strings.
 
- ``OFFLINE_LOG``
+ ``OFFLINE_LOG`` :index:` <single: OFFLINE_LOG>`
     This configuration variable is no longer used. It has been replaced
     by ``COLLECTOR_PERSISTENT_AD_LOG``.
- ``OFFLINE_EXPIRE_ADS_AFTER``
+ ``OFFLINE_EXPIRE_ADS_AFTER`` :index:` <single: OFFLINE_EXPIRE_ADS_AFTER>`
     An integer number of seconds specifying the lifetime of the
     persistent machine ClassAd representing a hibernating machine.
     Defaults to the largest 32-bit integer.
 
- ``DOCKER``
+ ``DOCKER`` :index:` <single: DOCKER>`
     Defines the path and executable name of the Docker CLI. The default
     value is /usr/bin/docker. Remember that the condor user must also be
     in the docker group for Docker Universe to work. See the Docker
@@ -4058,28 +4211,30 @@ Management for more details.
 
           DOCKER = /usr/bin/docker
 
- ``DOCKER_VOLUMES``
+ ``DOCKER_VOLUMES`` :index:` <single: DOCKER_VOLUMES>`
     A list of directories on the host execute machine to be volume
     mounted within the container. See the Docker Universe section for
     full details.
     ( `3.16.2 <SettingUptheVMandDockerUniverses.html#x44-3890003.16.2>`__)
- ``DOCKER_IMAGE_CACHE_SIZE``
+ ``DOCKER_IMAGE_CACHE_SIZE`` :index:` <single: DOCKER_IMAGE_CACHE_SIZE>`
     The number of most recently used Docker images that will be kept on
     the local machine. The default value is 20.
  ``DOCKER_DROP_ALL_CAPABILITIES``
+:index:` <single: DOCKER_DROP_ALL_CAPABILITIES>`
     A class ad expression, which defaults to true. Evaluated in the
     context of the job ad and the machine ad, when true, runs the docker
     container with the command line option –drop-all-capabilities.
     Admins should be very careful with this setting, and only allow
     trusted users to run with full linux capabilities within the
     container.
- ``OPENMPI_INSTALL_PATH``
+ ``OPENMPI_INSTALL_PATH`` :index:` <single: OPENMPI_INSTALL_PATH>`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
     Open MPI jobs in the parallel universe. The Open MPI bin and lib
     directories should exist under this path. The default value is
     ``/usr/lib64/openmpi``.
  ``OPENMPI_EXCLUDE_NETWORK_INTERFACES``
+:index:` <single: OPENMPI_EXCLUDE_NETWORK_INTERFACES>`
     A comma-delimited list of network interfaces that Open MPI should
     not use for MPI communications. Referenced by
     ``examples/openmpiscript``, which is used for running Open MPI jobs
@@ -4095,21 +4250,24 @@ Management for more details.
 condor\_schedd Configuration File Entries
 -----------------------------------------
 
+:index:` <single: condor_schedd configuration variables;configuration>`
+
 These macros control the *condor\_schedd*.
 
- ``SHADOW``
+ ``SHADOW`` :index:` <single: SHADOW>`
     This macro determines the full path of the *condor\_shadow* binary
     that the *condor\_schedd* spawns. It is normally defined in terms of
     ``$(SBIN)``.
- ``START_LOCAL_UNIVERSE``
+ ``START_LOCAL_UNIVERSE`` :index:` <single: START_LOCAL_UNIVERSE>`
     A boolean value that defaults to ``TotalLocalJobsRunning < 200``.
     The *condor\_schedd* uses this macro to determine whether to start a
     **local** universe job. At intervals determined by
     ``SCHEDD_INTERVAL``, the *condor\_schedd* daemon evaluates this
     macro for each idle **local** universe job that it has. For each
     job, if the ``START_LOCAL_UNIVERSE`` macro is ``True``, then the
-    job’s ``Requirements`` expression is evaluated. If both conditions
-    are met, then the job is allowed to begin execution.
+    job’s ``Requirements`` :index:` <single: Requirements>` expression is
+    evaluated. If both conditions are met, then the job is allowed to
+    begin execution.
 
     The following example only allows 10 **local** universe jobs to
     execute concurrently. The attribute ``TotalLocalJobsRunning`` is
@@ -4120,7 +4278,7 @@ These macros control the *condor\_schedd*.
             START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 10 
           
 
- ``STARTER_LOCAL``
+ ``STARTER_LOCAL`` :index:` <single: STARTER_LOCAL>`
     The complete path and executable name of the *condor\_starter* to
     run for **local** universe jobs. This variable’s value is defined in
     the initial configuration provided with HTCondor as
@@ -4136,21 +4294,21 @@ These macros control the *condor\_schedd*.
     includes the **local** universe, but without utilizing the newer,
     provided configuration files.
 
- ``LOCAL_UNIV_EXECUTE``
+ ``LOCAL_UNIV_EXECUTE`` :index:` <single: LOCAL_UNIV_EXECUTE>`
     A string value specifying the execute location for local universe
     jobs. Each running local universe job will receive a uniquely named
     subdirectory within this directory. If not specified, it defaults to
     ``$(SPOOL)/local_univ_execute``.
- ``START_SCHEDULER_UNIVERSE``
+ ``START_SCHEDULER_UNIVERSE`` :index:` <single: START_SCHEDULER_UNIVERSE>`
     A boolean value that defaults to
     ``TotalSchedulerJobsRunning < 500``. The *condor\_schedd* uses this
     macro to determine whether to start a **scheduler** universe job. At
     intervals determined by ``SCHEDD_INTERVAL``, the *condor\_schedd*
     daemon evaluates this macro for each idle **scheduler** universe job
     that it has. For each job, if the ``START_SCHEDULER_UNIVERSE`` macro
-    is ``True``, then the job’s ``Requirements`` expression is
-    evaluated. If both conditions are met, then the job is allowed to
-    begin execution.
+    is ``True``, then the job’s ``Requirements``
+    :index:` <single: Requirements>` expression is evaluated. If both
+    conditions are met, then the job is allowed to begin execution.
 
     The following example only allows 10 **scheduler** universe jobs to
     execute concurrently. The attribute ``TotalSchedulerJobsRunning`` is
@@ -4162,12 +4320,13 @@ These macros control the *condor\_schedd*.
           
 
  ``SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE``
+:index:` <single: SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE>`
     A boolean value that defaults to false. When true, the
     *condor\_schedd* will spawn a special startd process to run local
     universe jobs. This allows local universe jobs to run with both a
     condor\_shadow and a condor\_starter, which means that file transfer
     will work with local universe jobs.
- ``MAX_JOBS_RUNNING``
+ ``MAX_JOBS_RUNNING`` :index:` <single: MAX_JOBS_RUNNING>`
     An integer representing a limit on the number of *condor\_shadow*
     processes spawned by a given *condor\_schedd* daemon, for all job
     universes except grid, scheduler, and local universe. Limiting the
@@ -4226,13 +4385,13 @@ These macros control the *condor\_schedd*.
                       $(MAX_SHADOWS_OPSYS), \ 
                       $(MAX_JOBS_RUNNING) )
 
- ``MAX_JOBS_SUBMITTED``
+ ``MAX_JOBS_SUBMITTED`` :index:` <single: MAX_JOBS_SUBMITTED>`
     This integer value limits the number of jobs permitted in a
     *condor\_schedd* daemon’s queue. Submission of a new cluster of jobs
     fails, if the total number of jobs would exceed this limit. The
     default value for this variable is the largest positive integer
     value.
- ``MAX_JOBS_PER_OWNER``
+ ``MAX_JOBS_PER_OWNER`` :index:` <single: MAX_JOBS_PER_OWNER>`
     This integer value limits the number of jobs any given owner (user)
     is permitted to have within a *condor\_schedd* daemon’s queue. A job
     submission fails if it would cause this limit on the number of jobs
@@ -4243,11 +4402,12 @@ These macros control the *condor\_schedd*.
     queue.
 
  ``MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER``
+:index:` <single: MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER>`
     This integer value limits the number of scheduler universe jobs that
     any given owner (user) can have running at one time. This limit will
     affect the number of running Dagman jobs, but not the number of
     nodes within a DAG. The default value is 200
- ``MAX_JOBS_PER_SUBMISSION``
+ ``MAX_JOBS_PER_SUBMISSION`` :index:` <single: MAX_JOBS_PER_SUBMISSION>`
     This integer value limits the number of jobs any single submission
     is permitted to add to a *condor\_schedd* daemon’s queue. The whole
     submission fails if the number of jobs would exceed this limit. The
@@ -4258,25 +4418,26 @@ These macros control the *condor\_schedd*.
     excessively lengthy interruption required to accept a very large
     number of jobs at one time.
 
- ``MAX_SHADOW_EXCEPTIONS``
+ ``MAX_SHADOW_EXCEPTIONS`` :index:` <single: MAX_SHADOW_EXCEPTIONS>`
     This macro controls the maximum number of times that
     *condor\_shadow* processes can have a fatal error (exception) before
     the *condor\_schedd* will relinquish the match associated with the
     dying shadow. Defaults to 5.
  ``MAX_PENDING_STARTD_CONTACTS``
+:index:` <single: MAX_PENDING_STARTD_CONTACTS>`
     An integer value that limits the number of simultaneous connection
     attempts by the *condor\_schedd* when it is requesting claims from
     one or more *condor\_startd* daemons. The intention is to protect
     the *condor\_schedd* from being overloaded by authentication
     operations. The default value is 0. The special value 0 indicates no
     limit.
- ``CURB_MATCHMAKING``
+ ``CURB_MATCHMAKING`` :index:` <single: CURB_MATCHMAKING>`
     A ClassAd expression evaluated by the *condor\_schedd* in the
     context of the *condor\_schedd* daemon’s own ClassAd. While this
     expression evaluates to ``True``, the *condor\_schedd* will refrain
     from requesting more resources from a *condor\_negotiator*. Defaults
     to ``RecentDaemonCoreDutyCycle > 0.98``.
- ``MAX_CONCURRENT_DOWNLOADS``
+ ``MAX_CONCURRENT_DOWNLOADS`` :index:` <single: MAX_CONCURRENT_DOWNLOADS>`
     This specifies the maximum number of simultaneous transfers of
     output files from execute machines to the submit machine. The limit
     applies to all jobs submitted from the same *condor\_schedd*. The
@@ -4285,7 +4446,7 @@ These macros control the *condor\_schedd*.
     jobs, and it also does not apply to streaming output files. When the
     limit is reached, additional transfers will queue up and wait before
     proceeding.
- ``MAX_CONCURRENT_UPLOADS``
+ ``MAX_CONCURRENT_UPLOADS`` :index:` <single: MAX_CONCURRENT_UPLOADS>`
     This specifies the maximum number of simultaneous transfers of input
     files from the submit machine to execute machines. The limit applies
     to all jobs submitted from the same *condor\_schedd*. The default is
@@ -4294,13 +4455,16 @@ These macros control the *condor\_schedd*.
     the limit is reached, additional transfers will queue up and wait
     before proceeding.
  ``FILE_TRANSFER_DISK_LOAD_THROTTLE``
+:index:` <single: FILE_TRANSFER_DISK_LOAD_THROTTLE>`
     This configures throttling of file transfers based on the disk load
     generated by file transfers. The maximum number of concurrent file
-    transfers is specified by ``MAX_CONCURRENT_UPLOADS`` and
-    ``MAX_CONCURRENT_DOWNLOADS`` . Throttling will dynamically reduce
-    the level of concurrency further to attempt to prevent disk load
-    from exceeding the specified level. Disk load is computed as the
-    average number of file transfer processes conducting read/write
+    transfers is specified by ``MAX_CONCURRENT_UPLOADS``
+    :index:` <single: MAX_CONCURRENT_UPLOADS>` and
+    ``MAX_CONCURRENT_DOWNLOADS``
+    :index:` <single: MAX_CONCURRENT_DOWNLOADS>`. Throttling will dynamically
+    reduce the level of concurrency further to attempt to prevent disk
+    load from exceeding the specified level. Disk load is computed as
+    the average number of file transfer processes conducting read/write
     operations at the same time. The throttle may be specified as a
     single floating point number or as a range. Syntax for the range is
     the smaller number followed by 1 or more spaces or tabs, the string
@@ -4318,42 +4482,48 @@ These macros control the *condor\_schedd*.
     started to replace ones that finish. The default value is 2.0.
 
  ``FILE_TRANSFER_DISK_LOAD_THROTTLE_WAIT_BETWEEN_INCREMENTS``
+:index:` <single: FILE_TRANSFER_DISK_LOAD_THROTTLE_WAIT_BETWEEN_INCREMENTS>`
     This rarely configured variable sets the waiting period between
     increments to the concurrency level set by
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE``. The default is 1 minute. A
     value that is too short risks starting too many transfers before
     their effect on the disk load becomes apparent.
  ``FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON``
+:index:` <single: FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON>`
     This rarely configured variable specifies the string name of the
     short monitoring time span to use for throttling. The named time
-    span must exist in ``TRANSFER_IO_REPORT_TIMESPANS`` . The default is
-    ``1m``, which is 1 minute.
+    span must exist in ``TRANSFER_IO_REPORT_TIMESPANS``
+    :index:` <single: TRANSFER_IO_REPORT_TIMESPANS>`. The default is ``1m``,
+    which is 1 minute.
  ``FILE_TRANSFER_DISK_LOAD_THROTTLE_LONG_HORIZON``
+:index:` <single: FILE_TRANSFER_DISK_LOAD_THROTTLE_LONG_HORIZON>`
     This rarely configured variable specifies the string name of the
     long monitoring time span to use for throttling. The named time span
-    must exist in ``TRANSFER_IO_REPORT_TIMESPANS`` . The default is
-    ``5m``, which is 5 minutes.
- ``TRANSFER_QUEUE_USER_EXPR``
+    must exist in ``TRANSFER_IO_REPORT_TIMESPANS``
+    :index:` <single: TRANSFER_IO_REPORT_TIMESPANS>`. The default is ``5m``,
+    which is 5 minutes.
+ ``TRANSFER_QUEUE_USER_EXPR`` :index:` <single: TRANSFER_QUEUE_USER_EXPR>`
     This rarely configured expression specifies the user name to be used
     for scheduling purposes in the file transfer queue. The scheduler
     attempts to give equal weight to each user when there are multiple
     jobs waiting to transfer files within the limits set by
-    ``MAX_CONCURRENT_UPLOADS`` and/or ``MAX_CONCURRENT_DOWNLOADS`` .
-    When choosing a new job to allow to transfer, the first job
-    belonging to the transfer queue user who has least number of active
-    transfers will be selected. In case of a tie, the user who has least
-    recently been given an opportunity to start a transfer will be
-    selected. By default, a transfer queue user is identified as the job
-    owner. A different user name may be specified by configuring
-    ``TRANSFER_QUEUE_USER_EXPR`` to a string expression that is
-    evaluated in the context of the job ad. For example, if this
-    expression were set to a name that is the same for all jobs, file
-    transfers would be scheduled in first-in-first-out order rather than
-    equal share order. Note that the string produced by this expression
-    is used as a prefix in the ClassAd attributes for per-user file
-    transfer I/O statistics that are published in the *condor\_schedd*
-    ClassAd.
- ``MAX_TRANSFER_INPUT_MB``
+    ``MAX_CONCURRENT_UPLOADS`` :index:` <single: MAX_CONCURRENT_UPLOADS>`
+    and/or ``MAX_CONCURRENT_DOWNLOADS``
+    :index:` <single: MAX_CONCURRENT_DOWNLOADS>`. When choosing a new job to
+    allow to transfer, the first job belonging to the transfer queue
+    user who has least number of active transfers will be selected. In
+    case of a tie, the user who has least recently been given an
+    opportunity to start a transfer will be selected. By default, a
+    transfer queue user is identified as the job owner. A different user
+    name may be specified by configuring ``TRANSFER_QUEUE_USER_EXPR`` to
+    a string expression that is evaluated in the context of the job ad.
+    For example, if this expression were set to a name that is the same
+    for all jobs, file transfers would be scheduled in
+    first-in-first-out order rather than equal share order. Note that
+    the string produced by this expression is used as a prefix in the
+    ClassAd attributes for per-user file transfer I/O statistics that
+    are published in the *condor\_schedd* ClassAd.
+ ``MAX_TRANSFER_INPUT_MB`` :index:` <single: MAX_TRANSFER_INPUT_MB>`
     This integer expression specifies the maximum allowed total size in
     MiB of the input files that are transferred for a job. This
     expression does not apply to grid universe, standard universe, or
@@ -4367,7 +4537,7 @@ These macros control the *condor\_schedd*.
     initial test, but the size of the input files increases or the limit
     decreases so that the limit is violated, the job will be placed on
     hold at the time when the file transfer is attempted.
- ``MAX_TRANSFER_OUTPUT_MB``
+ ``MAX_TRANSFER_OUTPUT_MB`` :index:` <single: MAX_TRANSFER_OUTPUT_MB>`
     This integer expression specifies the maximum allowed total size in
     MiB of the output files that are transferred for a job. This
     expression does not apply to grid universe, standard universe, or
@@ -4381,11 +4551,12 @@ These macros control the *condor\_schedd*.
     output will be transferred up to the point when the limit is hit, so
     some files may be fully transferred, some partially, and some not at
     all.
- ``MAX_TRANSFER_QUEUE_AGE``
+ ``MAX_TRANSFER_QUEUE_AGE`` :index:` <single: MAX_TRANSFER_QUEUE_AGE>`
     The number of seconds after which an aged and queued transfer may be
     dequeued from the transfer queue, as it is presumably hung. Defaults
     to 7200 seconds, which is 120 minutes.
  ``TRANSFER_IO_REPORT_INTERVAL``
+:index:` <single: TRANSFER_IO_REPORT_INTERVAL>`
     The sampling interval in seconds for collecting I/O statistics for
     file transfer. The default is 10 seconds. To provide sufficient
     resolution, the sampling interval should be small compared to the
@@ -4396,6 +4567,7 @@ These macros control the *condor\_schedd*.
     page \ `2443 <SchedulerClassAdAttributes.html#x173-1237000A.5>`__
     for a description of the published attributes.
  ``TRANSFER_IO_REPORT_TIMESPANS``
+:index:` <single: TRANSFER_IO_REPORT_TIMESPANS>`
     A string that specifies a list of time spans over which I/O
     statistics are reported, using exponential moving averages (like the
     1m, 5m, and 15m load averages in Unix). Each entry in the list
@@ -4407,54 +4579,56 @@ These macros control the *condor\_schedd*.
     See
     page \ `2443 <SchedulerClassAdAttributes.html#x173-1237000A.5>`__
     for a description of the published attributes.
- ``SCHEDD_QUERY_WORKERS``
+ ``SCHEDD_QUERY_WORKERS`` :index:` <single: SCHEDD_QUERY_WORKERS>`
     This specifies the maximum number of concurrent sub-processes that
     the *condor\_schedd* will spawn to handle queries. The setting is
     ignored in Windows. In Unix, the default is 8. If the limit is
     reached, the next query will be handled in the *condor\_schedd*\ ’s
     main process.
- ``CONDOR_Q_USE_V3_PROTOCOL``
+ ``CONDOR_Q_USE_V3_PROTOCOL`` :index:` <single: CONDOR_Q_USE_V3_PROTOCOL>`
     A boolean value that, when ``True``, causes the *condor\_schedd* to
     use an algorithm that responds to *condor\_q* requests by not
     forking itself to handle each request. It instead handles the
     requests in a non-blocking way. The default value is ``True``.
  ``CONDOR_Q_DASH_BATCH_IS_DEFAULT``
+:index:` <single: CONDOR_Q_DASH_BATCH_IS_DEFAULT>`
     A boolean value that, when ``True``, causes *condor\_q* to print the
     **-batch** output unless the **-nobatch** option is used or the
     other arguments to *condor\_q* are incompatible with batch mode. For
     instance **-long** is incompatible with **-batch**. The default
     value is ``True``.
- ``CONDOR_Q_ONLY_MY_JOBS``
+ ``CONDOR_Q_ONLY_MY_JOBS`` :index:` <single: CONDOR_Q_ONLY_MY_JOBS>`
     A boolean value that, when ``True``, causes *condor\_q* to request
     that only the current user’s jobs be queried unless the current user
     is a queue superuser. It also causes the *condor\_schedd* to honor
     that request. The default value is ``True``. A value of ``False`` in
     either *condor\_q* or the *condor\_schedd* will result in the old
     behavior of querying all jobs.
- ``CONDOR_Q_SHOW_OLD_SUMMARY``
+ ``CONDOR_Q_SHOW_OLD_SUMMARY`` :index:` <single: CONDOR_Q_SHOW_OLD_SUMMARY>`
     A boolean value that, when ``True``, causes *condor\_q* to show the
     old single line summary totals. When ``False`` *condor\_q* will show
     the new multi-line summary totals.
- ``SCHEDD_INTERVAL``
+ ``SCHEDD_INTERVAL`` :index:` <single: SCHEDD_INTERVAL>`
     This macro determines the maximum interval for both how often the
     *condor\_schedd* sends a ClassAd update to the *condor\_collector*
     and how often the *condor\_schedd* daemon evaluates jobs. It is
     defined in terms of seconds and defaults to 300 (every 5 minutes).
- ``ABSENT_SUBMITTER_LIFETIME``
+ ``ABSENT_SUBMITTER_LIFETIME`` :index:` <single: ABSENT_SUBMITTER_LIFETIME>`
     This macro determines the maximum time that the *condor\_schedd*
     will remember a submitter after the last job for that submitter
     leaves the queue. It is defined in terms of seconds and defaults to
     1 week.
  ``ABSENT_SUBMITTER_UPDATE_RATE``
+:index:` <single: ABSENT_SUBMITTER_UPDATE_RATE>`
     This macro can be used to set the maximum rate at which the
     *condor\_schedd* sends updates to the *condor\_collector* for
     submitters that have no jobs in the queue. It is defined in terms of
     seconds and defaults to 300 (every 5 minutes).
- ``WINDOWED_STAT_WIDTH``
+ ``WINDOWED_STAT_WIDTH`` :index:` <single: WINDOWED_STAT_WIDTH>`
     The number of seconds that forms a time window within which
     performance statistics of the *condor\_schedd* daemon are
     calculated. Defaults to 300 seconds.
- ``SCHEDD_INTERVAL_TIMESLICE``
+ ``SCHEDD_INTERVAL_TIMESLICE`` :index:` <single: SCHEDD_INTERVAL_TIMESLICE>`
     The bookkeeping done by the *condor\_schedd* takes more time when
     there are large numbers of jobs in the job queue. However, when it
     is not too expensive to do this bookkeeping, it is best to keep the
@@ -4465,36 +4639,38 @@ These macros control the *condor\_schedd*.
     default is 0.05, which means the schedd will adapt its bookkeeping
     interval to consume no more than 5% of the total time available to
     the schedd. The lower bound is configured by ``SCHEDD_MIN_INTERVAL``
-    (default 5 seconds), and the upper bound is configured by
-    ``SCHEDD_INTERVAL`` (default 300 seconds).
- ``JOB_START_COUNT``
-    This macro works together with the ``JOB_START_DELAY`` macro to
-    throttle job starts. The default and minimum values for this integer
-    configuration variable are both 1.
- ``JOB_START_DELAY``
+    :index:` <single: SCHEDD_MIN_INTERVAL>` (default 5 seconds), and the
+    upper bound is configured by ``SCHEDD_INTERVAL``
+    :index:` <single: SCHEDD_INTERVAL>` (default 300 seconds).
+ ``JOB_START_COUNT`` :index:` <single: JOB_START_COUNT>`
+    This macro works together with the ``JOB_START_DELAY``
+    :index:` <single: JOB_START_DELAY>` macro to throttle job starts. The
+    default and minimum values for this integer configuration variable
+    are both 1.
+ ``JOB_START_DELAY`` :index:` <single: JOB_START_DELAY>`
     This integer-valued macro works together with the
-    ``JOB_START_COUNT`` macro to throttle job starts. The
-    *condor\_schedd* daemon starts ``$(JOB_START_COUNT)`` jobs at a
-    time, then delays for ``$(JOB_START_DELAY)`` seconds before starting
-    the next set of jobs. This delay prevents a sudden, large load on
-    resources required by the jobs during their start up phase. The
-    resulting job start rate averages as fast as
-    (``$(JOB_START_COUNT)``/``$(JOB_START_DELAY)``) jobs/second. This
-    setting is defined in terms of seconds and defaults to 0, which
-    means jobs will be started as fast as possible. If you wish to
-    throttle the rate of specific types of jobs, you can use the job
-    attribute ``NextJobStartDelay``.
- ``MAX_NEXT_JOB_START_DELAY``
+    ``JOB_START_COUNT`` :index:` <single: JOB_START_COUNT>` macro to throttle
+    job starts. The *condor\_schedd* daemon starts
+    ``$(JOB_START_COUNT)`` jobs at a time, then delays for
+    ``$(JOB_START_DELAY)`` seconds before starting the next set of jobs.
+    This delay prevents a sudden, large load on resources required by
+    the jobs during their start up phase. The resulting job start rate
+    averages as fast as (``$(JOB_START_COUNT)``/``$(JOB_START_DELAY)``)
+    jobs/second. This setting is defined in terms of seconds and
+    defaults to 0, which means jobs will be started as fast as possible.
+    If you wish to throttle the rate of specific types of jobs, you can
+    use the job attribute ``NextJobStartDelay``.
+ ``MAX_NEXT_JOB_START_DELAY`` :index:` <single: MAX_NEXT_JOB_START_DELAY>`
     An integer number of seconds representing the maximum allowed value
     of the job ClassAd attribute ``NextJobStartDelay``. It defaults to
     600, which is 10 minutes.
- ``JOB_STOP_COUNT``
+ ``JOB_STOP_COUNT`` :index:` <single: JOB_STOP_COUNT>`
     An integer value representing the number of jobs operated on at one
     time by the *condor\_schedd* daemon, when throttling the rate at
     which jobs are stopped via *condor\_rm*, *condor\_hold*, or
     *condor\_vacate\_job*. The default and minimum values are both 1.
     This variable is ignored for grid and scheduler universe jobs.
- ``JOB_STOP_DELAY``
+ ``JOB_STOP_DELAY`` :index:` <single: JOB_STOP_DELAY>`
     An integer value representing the number of seconds delay utilized
     by the *condor\_schedd* daemon, when throttling the rate at which
     jobs are stopped via *condor\_rm*, *condor\_hold*, or
@@ -4510,19 +4686,19 @@ These macros control the *condor\_schedd*.
     *condor\_shadow* daemon to gracefully shut down. The default value
     is 0, which means jobs will be stopped as fast as possible. This
     variable is ignored for grid and scheduler universe jobs.
- ``JOB_IS_FINISHED_COUNT``
+ ``JOB_IS_FINISHED_COUNT`` :index:` <single: JOB_IS_FINISHED_COUNT>`
     An integer value representing the number of jobs that the
     *condor\_schedd* will let permanently leave the job queue each time
     that it examines the jobs that are ready to do so. The default value
     is 1.
- ``JOB_IS_FINISHED_INTERVAL``
+ ``JOB_IS_FINISHED_INTERVAL`` :index:` <single: JOB_IS_FINISHED_INTERVAL>`
     The *condor\_schedd* maintains a list of jobs that are ready to
     permanently leave the job queue, for example, when they have
     completed or been removed. This integer-valued macro specifies a
     delay in seconds between instances of taking jobs permanently out of
     the queue. The default value is 0, which tells the *condor\_schedd*
     to not impose any delay.
- ``ALIVE_INTERVAL``
+ ``ALIVE_INTERVAL`` :index:` <single: ALIVE_INTERVAL>`
     An initial value for an integer number of seconds defining how often
     the *condor\_schedd* sends a UDP keep alive message to any
     *condor\_startd* it has claimed. When the *condor\_schedd* claims a
@@ -4534,12 +4710,12 @@ These macros control the *condor\_schedd*.
     the interval is further constrained by the floor value of 10
     seconds. If the *condor\_startd* does not receive any of these keep
     alive messages during a certain period of time (defined via
-    ``MAX_CLAIM_ALIVES_MISSED`` , described on
-    page \ `655 <#x33-1950003.5.8>`__) the *condor\_startd* releases the
-    claim, and the *condor\_schedd* no longer pays for the resource (in
-    terms of user priority in the system). The macro is defined in terms
-    of seconds and defaults to 300, which is 5 minutes.
- ``STARTD_SENDS_ALIVES``
+    ``MAX_CLAIM_ALIVES_MISSED`` :index:` <single: MAX_CLAIM_ALIVES_MISSED>`,
+    described on page \ `655 <#x33-1950003.5.8>`__) the *condor\_startd*
+    releases the claim, and the *condor\_schedd* no longer pays for the
+    resource (in terms of user priority in the system). The macro is
+    defined in terms of seconds and defaults to 300, which is 5 minutes.
+ ``STARTD_SENDS_ALIVES`` :index:` <single: STARTD_SENDS_ALIVES>`
     Note: This setting is deprecated, and may go away in a future
     version of HTCondor. This setting is mainly useful when running
     mixing very old *condor\_schedd* daemons with newer pools. A boolean
@@ -4551,15 +4727,17 @@ These macros control the *condor\_schedd*.
     version 7.5.4 or more recent, this variable is only used by the
     *condor\_schedd* daemon. For earlier HTCondor versions, the variable
     must be set to the same value, and it must be set for both daemons.
- ``REQUEST_CLAIM_TIMEOUT``
+ ``REQUEST_CLAIM_TIMEOUT`` :index:` <single: REQUEST_CLAIM_TIMEOUT>`
     This macro sets the time (in seconds) that the *condor\_schedd* will
     wait for a claim to be granted by the *condor\_startd*. The default
     is 30 minutes. This is only likely to matter if
-    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`` is ``True``, and the
-    *condor\_startd* has an existing claim, and it takes a long time for
-    the existing claim to be preempted due to ``MaxJobRetirementTime``.
-    Once a request times out, the *condor\_schedd* will simply begin the
-    process of finding a machine for the job all over again.
+    ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
+    :index:` <single: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION>` is ``True``, and
+    the *condor\_startd* has an existing claim, and it takes a long time
+    for the existing claim to be preempted due to
+    ``MaxJobRetirementTime``. Once a request times out, the
+    *condor\_schedd* will simply begin the process of finding a machine
+    for the job all over again.
 
     Normally, it is not a good idea to set this to be very small, where
     a small value is a few minutes. Doing so can lead to failure to
@@ -4568,11 +4746,11 @@ These macros control the *condor\_schedd*.
     would miss out on any opportunity to run if the job it is trying to
     preempt gets out of the way.
 
- ``SHADOW_SIZE_ESTIMATE``
+ ``SHADOW_SIZE_ESTIMATE`` :index:` <single: SHADOW_SIZE_ESTIMATE>`
     The estimated private virtual memory size of each *condor\_shadow*
     process in KiB. This value is only used if ``RESERVED_SWAP`` is
     non-zero. The default value is 800.
- ``SHADOW_RENICE_INCREMENT``
+ ``SHADOW_RENICE_INCREMENT`` :index:` <single: SHADOW_RENICE_INCREMENT>`
     When the *condor\_schedd* spawns a new *condor\_shadow*, it can do
     so with a nice-level. A nice-level is a Unix mechanism that allows
     users to assign their own processes a lower priority so that the
@@ -4580,11 +4758,12 @@ These macros control the *condor\_schedd*.
     The value can be any integer between 0 and 19, with a value of 19
     being the lowest priority. It defaults to 0.
  ``SCHED_UNIV_RENICE_INCREMENT``
+:index:` <single: SCHED_UNIV_RENICE_INCREMENT>`
     Analogous to ``JOB_RENICE_INCREMENT`` and
     ``SHADOW_RENICE_INCREMENT``, scheduler universe jobs can be given a
     nice-level. The value can be any integer between 0 and 19, with a
     value of 19 being the lowest priority. It defaults to 0.
- ``QUEUE_CLEAN_INTERVAL``
+ ``QUEUE_CLEAN_INTERVAL`` :index:` <single: QUEUE_CLEAN_INTERVAL>`
     The *condor\_schedd* maintains the job queue on a given machine. It
     does so in a persistent way such that if the *condor\_schedd*
     crashes, it can recover a valid state of the job queue. The
@@ -4601,7 +4780,7 @@ These macros control the *condor\_schedd*.
     queue is really in. This macro determines how often the
     *condor\_schedd* should rework this queue to cleaning it up. It is
     defined in terms of seconds and defaults to 86400 (once a day).
- ``WALL_CLOCK_CKPT_INTERVAL``
+ ``WALL_CLOCK_CKPT_INTERVAL`` :index:` <single: WALL_CLOCK_CKPT_INTERVAL>`
     The job queue contains a counter for each job’s “wall clock” run
     time, i.e., how long each job has executed so far. This counter is
     displayed by *condor\_q*. The counter is updated when the job is
@@ -4614,14 +4793,14 @@ These macros control the *condor\_schedd*.
     lost. This macro controls how often the *condor\_schedd* saves run
     time checkpoints. It is defined in terms of seconds and defaults to
     3600 (one hour). A value of 0 will disable wall clock checkpoints.
- ``QUEUE_ALL_USERS_TRUSTED``
+ ``QUEUE_ALL_USERS_TRUSTED`` :index:` <single: QUEUE_ALL_USERS_TRUSTED>`
     Defaults to False. If set to True, then unauthenticated users are
     allowed to write to the queue, and also we always trust whatever the
     ``Owner`` value is set to be by the client in the job ad. This was
     added so users can continue to use the SOAP web-services interface
     over HTTP (w/o authenticating) to submit jobs in a secure,
     controlled environment – for instance, in a portal setting.
- ``QUEUE_SUPER_USERS``
+ ``QUEUE_SUPER_USERS`` :index:` <single: QUEUE_SUPER_USERS>`
     A comma and/or space separated list of user names on a given machine
     that are given super-user access to the job queue, meaning that they
     can modify or delete the job ClassAds of other users. When not on
@@ -4639,6 +4818,7 @@ These macros control the *condor\_schedd*.
     percent character (``%``) followed by the user group name. All
     members of the user group are given super-user access.
  ``QUEUE_SUPER_USER_MAY_IMPERSONATE``
+:index:` <single: QUEUE_SUPER_USER_MAY_IMPERSONATE>`
     A regular expression that matches the user names (that is, job owner
     names) that the queue super user may impersonate when managing jobs.
     When not set, the default behavior is to allow impersonation of any
@@ -4650,42 +4830,47 @@ These macros control the *condor\_schedd*.
     matches only part of the user name is still considered a match. If
     acceptance of partial matches is not desired, the regular expression
     should begin with ^ and end with $.
- ``SYSTEM_JOB_MACHINE_ATTRS``
+ ``SYSTEM_JOB_MACHINE_ATTRS`` :index:` <single: SYSTEM_JOB_MACHINE_ATTRS>`
     This macro specifies a space and/or comma separated list of machine
     attributes that should be recorded in the job ClassAd. The default
     attributes are ``Cpus`` and ``SlotWeight``. When there are multiple
     run attempts, history of machine attributes from previous run
     attempts may be kept. The number of run attempts to store is
     specified by the configuration variable
-    ``SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH`` . A machine attribute
-    named ``X`` will be inserted into the job ClassAd as an attribute
-    named ``MachineAttrX0``. The previous value of this attribute will
-    be named ``MachineAttrX1``, the previous to that will be named
-    ``MachineAttrX2``, and so on, up to the specified history length. A
-    history of length 1 means that only ``MachineAttrX0`` will be
-    recorded. Additional attributes to record may be specified on a
-    per-job basis by using the **job\_machine\_attrs** submit file
-    command. The value recorded in the job ClassAd is the evaluation of
-    the machine attribute in the context of the job ClassAd when the
-    *condor\_schedd* daemon initiates the start up of the job. If the
-    evaluation results in an ``Undefined`` or ``Error`` result, the
-    value recorded in the job ClassAd will be ``Undefined`` or ``Error``
-    respectively.
+    ``SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH``
+    :index:` <single: SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH>`. A machine
+    attribute named ``X`` will be inserted into the job ClassAd as an
+    attribute named ``MachineAttrX0``. The previous value of this
+    attribute will be named ``MachineAttrX1``, the previous to that will
+    be named ``MachineAttrX2``, and so on, up to the specified history
+    length. A history of length 1 means that only ``MachineAttrX0`` will
+    be recorded. Additional attributes to record may be specified on a
+    per-job basis by using the
+    **job\_machine\_attrs**\ :index:` <single: job_machine_attrs;submit commands>`
+    submit file command. The value recorded in the job ClassAd is the
+    evaluation of the machine attribute in the context of the job
+    ClassAd when the *condor\_schedd* daemon initiates the start up of
+    the job. If the evaluation results in an ``Undefined`` or ``Error``
+    result, the value recorded in the job ClassAd will be ``Undefined``
+    or ``Error`` respectively.
  ``SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH``
+:index:` <single: SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH>`
     The integer number of run attempts to store in the job ClassAd when
     recording the values of machine attributes listed in
-    ``SYSTEM_JOB_MACHINE_ATTRS`` . The default is 1. The history length
-    may also be extended on a per-job basis by using the submit file
-    command **job\_machine\_attrs\_history\_length**. The larger of the
-    system and per-job history lengths will be used. A history length of
-    0 disables recording of machine attributes.
- ``SCHEDD_LOCK``
+    ``SYSTEM_JOB_MACHINE_ATTRS``
+    :index:` <single: SYSTEM_JOB_MACHINE_ATTRS>`. The default is 1. The
+    history length may also be extended on a per-job basis by using the
+    submit file command
+    **job\_machine\_attrs\_history\_length**\ :index:` <single: job_machine_attrs_history_length;submit commands>`.
+    The larger of the system and per-job history lengths will be used. A
+    history length of 0 disables recording of machine attributes.
+ ``SCHEDD_LOCK`` :index:` <single: SCHEDD_LOCK>`
     This macro specifies what lock file should be used for access to the
     ``SchedLog`` file. It must be a separate file from the ``SchedLog``,
     since the ``SchedLog`` may be rotated and synchronization across log
     file rotations is desired. This macro is defined relative to the
     ``$(LOCK)`` macro.
- ``SCHEDD_NAME``
+ ``SCHEDD_NAME`` :index:` <single: SCHEDD_NAME>`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor\_schedd*\ ’s ClassAd.
 
@@ -4694,20 +4879,20 @@ These macros control the *condor\_schedd*.
     page \ `646 <#x33-1940003.5.7>`__ for defaults and composition of
     valid HTCondor daemon names.
 
- ``SCHEDD_ATTRS``
+ ``SCHEDD_ATTRS`` :index:` <single: SCHEDD_ATTRS>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ATTRS``.
- ``SCHEDD_DEBUG``
+ ``SCHEDD_DEBUG`` :index:` <single: SCHEDD_DEBUG>`
     This macro (and other settings related to debug logging in the
     *condor\_schedd*) is described in
     section \ `3.5.2 <#x33-1890003.5.2>`__ as ``<SUBSYS>_DEBUG``.
- ``SCHEDD_ADDRESS_FILE``
+ ``SCHEDD_ADDRESS_FILE`` :index:` <single: SCHEDD_ADDRESS_FILE>`
     This macro is described in section \ `3.5.3 <#x33-1900003.5.3>`__ as
     ``<SUBSYS>_ADDRESS_FILE``.
- ``SCHEDD_EXECUTE``
+ ``SCHEDD_EXECUTE`` :index:` <single: SCHEDD_EXECUTE>`
     A directory to use as a temporary sandbox for local universe jobs.
     Defaults to ``$(SPOOL)``/execute.
- ``FLOCK_NEGOTIATOR_HOSTS``
+ ``FLOCK_NEGOTIATOR_HOSTS`` :index:` <single: FLOCK_NEGOTIATOR_HOSTS>`
     Defines a comma and/or space separated list of *condor\_negotiator*
     host names for pools in which the *condor\_schedd* should attempt to
     run jobs. If not set, the *condor\_schedd* will query the
@@ -4720,7 +4905,7 @@ These macros control the *condor\_schedd*.
     definition as ``$(FLOCK_COLLECTOR_HOSTS)``. This configuration value
     is also typically used as a macro for adding the
     *condor\_negotiator* to the relevant authorization lists.
- ``FLOCK_COLLECTOR_HOSTS``
+ ``FLOCK_COLLECTOR_HOSTS`` :index:` <single: FLOCK_COLLECTOR_HOSTS>`
     This macro defines a list of collector host names (not including the
     local ``$(COLLECTOR_HOST)`` machine) for pools in which the
     *condor\_schedd* should attempt to run jobs. Hosts in the list
@@ -4735,17 +4920,19 @@ These macros control the *condor\_schedd*.
     configured to allow this *condor\_schedd* to join the pool (this
     requires ``ADVERTISE_SCHEDD`` authorization level, which defaults to
     ``WRITE``).
- ``FLOCK_INCREMENT``
+ ``FLOCK_INCREMENT`` :index:` <single: FLOCK_INCREMENT>`
     This integer value controls how quickly flocking to various pools
     will occur. It defaults to 1, meaning that pools will be considered
     for flocking slowly. The first *condor\_collector* daemon listed in
-    ``FLOCK_COLLECTOR_HOSTS`` will be considered for flocking, and then
-    the second, and so on. A larger value increases the number of
-    *condor\_collector* daemons to be considered for flocking. For
-    example, a value of 2 will partition the ``FLOCK_COLLECTOR_HOSTS``
+    ``FLOCK_COLLECTOR_HOSTS`` :index:` <single: FLOCK_COLLECTOR_HOSTS>` will
+    be considered for flocking, and then the second, and so on. A larger
+    value increases the number of *condor\_collector* daemons to be
+    considered for flocking. For example, a value of 2 will partition
+    the ``FLOCK_COLLECTOR_HOSTS`` :index:` <single: FLOCK_COLLECTOR_HOSTS>`
     into sets of 2 *condor\_collector* daemons, and each set will be
     considered for flocking.
  ``NEGOTIATE_ALL_JOBS_IN_CLUSTER``
+:index:` <single: NEGOTIATE_ALL_JOBS_IN_CLUSTER>`
     If this macro is set to False (the default), when the
     *condor\_schedd* fails to start an idle job, it will not try to
     start any other idle jobs in the same cluster during that
@@ -4760,7 +4947,7 @@ These macros control the *condor\_schedd*.
     *condor\_schedd* to try to start all idle jobs in each negotiation
     cycle. This will make negotiation cycles last longer, but it will
     ensure that all jobs that can be started will be started.
- ``PERIODIC_EXPR_INTERVAL``
+ ``PERIODIC_EXPR_INTERVAL`` :index:` <single: PERIODIC_EXPR_INTERVAL>`
     This macro determines the minimum period, in seconds, between
     evaluation of periodic job control expressions, such as
     periodic\_hold, periodic\_release, and periodic\_remove, given by
@@ -4768,13 +4955,14 @@ These macros control the *condor\_schedd*.
     seconds. A value of 0 prevents the *condor\_schedd* from performing
     the periodic evaluations.
  ``MAX_PERIODIC_EXPR_INTERVAL``
+:index:` <single: MAX_PERIODIC_EXPR_INTERVAL>`
     This macro determines the maximum period, in seconds, between
     evaluation of periodic job control expressions, such as
     periodic\_hold, periodic\_release, and periodic\_remove, given by
     the user in an HTCondor submit file. By default, this value is 1200
     seconds. If HTCondor is behind on processing events, the actual
     period between evaluations may be higher than specified.
- ``PERIODIC_EXPR_TIMESLICE``
+ ``PERIODIC_EXPR_TIMESLICE`` :index:` <single: PERIODIC_EXPR_TIMESLICE>`
     This macro is used to adapt the frequency with which the
     *condor\_schedd* evaluates periodic job control expressions. When
     the job queue is very large, the cost of evaluating all of the
@@ -4783,10 +4971,11 @@ These macros control the *condor\_schedd*.
     frequently. The default time slice is 0.01, so the *condor\_schedd*
     will set the interval between evaluations so that it spends only 1%
     of its time in this activity. The lower bound for the interval is
-    configured by ``PERIODIC_EXPR_INTERVAL`` (default 60 seconds) and
-    the upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
-    (default 1200 seconds).
- ``SYSTEM_PERIODIC_HOLD``
+    configured by ``PERIODIC_EXPR_INTERVAL``
+    :index:` <single: PERIODIC_EXPR_INTERVAL>` (default 60 seconds) and the
+    upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
+    :index:` <single: MAX_PERIODIC_EXPR_INTERVAL>` (default 1200 seconds).
+ ``SYSTEM_PERIODIC_HOLD`` :index:` <single: SYSTEM_PERIODIC_HOLD>`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
@@ -4802,28 +4991,30 @@ These macros control the *condor\_schedd*.
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
 
  ``SYSTEM_PERIODIC_HOLD_REASON``
+:index:` <single: SYSTEM_PERIODIC_HOLD_REASON>`
     This string expression is evaluated when the job is placed on hold
     due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
  ``SYSTEM_PERIODIC_HOLD_SUBCODE``
+:index:` <single: SYSTEM_PERIODIC_HOLD_SUBCODE>`
     This integer expression is evaluated when the job is placed on hold
     due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
     attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
     The attribute ``HoldReasonCode`` is set to 26, which indicates that
     the job went on hold due to a system job policy expression.
- ``SYSTEM_PERIODIC_RELEASE``
+ ``SYSTEM_PERIODIC_RELEASE`` :index:` <single: SYSTEM_PERIODIC_RELEASE>`
     This expression behaves identically to a job’s definition of a
-    **periodic\_release** expression in a submit description file, but
-    it is evaluated for every job in the queue. It defaults to
-    ``False``. When ``True``, it causes a Held job to return to the Idle
-    state. Here is an example that releases jobs from hold if they have
-    tried to run less than 20 times, have most recently been on hold for
-    over 20 minutes, and have gone on hold due to
-    ``Connection timed out`` when trying to execute the job, because the
-    file system containing the job’s executable is temporarily
-    unavailable.
+    **periodic\_release**\ :index:` <single: periodic_release;submit commands>`
+    expression in a submit description file, but it is evaluated for
+    every job in the queue. It defaults to ``False``. When ``True``, it
+    causes a Held job to return to the Idle state. Here is an example
+    that releases jobs from hold if they have tried to run less than 20
+    times, have most recently been on hold for over 20 minutes, and have
+    gone on hold due to ``Connection timed out`` when trying to execute
+    the job, because the file system containing the job’s executable is
+    temporarily unavailable.
 
     ::
 
@@ -4831,7 +5022,7 @@ These macros control the *condor\_schedd*.
           (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \ 
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
- ``SYSTEM_PERIODIC_REMOVE``
+ ``SYSTEM_PERIODIC_REMOVE`` :index:` <single: SYSTEM_PERIODIC_REMOVE>`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -4846,6 +5037,7 @@ These macros control the *condor\_schedd*.
           (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
 
  ``SCHEDD_ASSUME_NEGOTIATOR_GONE``
+:index:` <single: SCHEDD_ASSUME_NEGOTIATOR_GONE>`
     This macro determines the period, in seconds, that the
     *condor\_schedd* will wait for the *condor\_negotiator* to initiate
     a negotiation cycle before the schedd will simply try to claim any
@@ -4853,12 +5045,12 @@ These macros control the *condor\_schedd*.
     both a submit and execute node to run jobs locally if it cannot
     communicate with the central manager. The default value, if not
     specified, is 1200 (20 minutes).
- ``GRACEFULLY_REMOVE_JOBS``
+ ``GRACEFULLY_REMOVE_JOBS`` :index:` <single: GRACEFULLY_REMOVE_JOBS>`
     A boolean value that causes jobs to be gracefully removed when the
     default value of ``True``. A submit description file command
-    **want\_graceful\_removal** overrides the value set for this
-    configuration variable.
- ``SCHEDD_ROUND_ATTR_<xxxx>``
+    **want\_graceful\_removal**\ :index:` <single: want_graceful_removal;submit commands>`
+    overrides the value set for this configuration variable.
+ ``SCHEDD_ROUND_ATTR_<xxxx>`` :index:` <single: SCHEDD_ROUND_ATTR_<xxxx>>`
     This is used to round off attributes in the job ClassAd so that
     similar jobs may be grouped together for negotiation purposes. There
     are two cases. One is that a percentage such as 25% is specified. In
@@ -4899,30 +5091,31 @@ These macros control the *condor\_schedd*.
     the rounded values, it may be necessary to reduce the amount of
     rounding, because the job requirements will not be met.
 
- ``SCHEDD_BACKUP_SPOOL``
+ ``SCHEDD_BACKUP_SPOOL`` :index:` <single: SCHEDD_BACKUP_SPOOL>`
     A boolean value that, when ``True``, causes the *condor\_schedd* to
     make a backup of the job queue as it starts. When ``True``, the
     *condor\_schedd* creates a host-specific backup of the current spool
     file to the spool directory. This backup file will be overwritten
     each time the *condor\_schedd* starts. Defaults to ``False``.
  ``SCHEDD_PREEMPTION_REQUIREMENTS``
+:index:` <single: SCHEDD_PREEMPTION_REQUIREMENTS>`
     This boolean expression is utilized only for machines allocated by a
     dedicated scheduler. When ``True``, a machine becomes a candidate
     for job preemption. This configuration variable has no default; when
     not defined, preemption will never be considered.
- ``SCHEDD_PREEMPTION_RANK``
+ ``SCHEDD_PREEMPTION_RANK`` :index:` <single: SCHEDD_PREEMPTION_RANK>`
     This floating point value is utilized only for machines allocated by
     a dedicated scheduler. It is evaluated in context of a job ClassAd,
     and it represents a machine’s preference for running a job. This
     configuration variable has no default; when not defined, preemption
     will never be considered.
- ``ParallelSchedulingGroup``
+ ``ParallelSchedulingGroup`` :index:` <single: ParallelSchedulingGroup>`
     For parallel jobs which must be assigned within a group of machines
     (and not cross group boundaries), this configuration variable is a
     string which identifies a group of which this machine is a member.
     Each machine within a group sets this configuration variable with a
     string that identifies the group.
- ``PER_JOB_HISTORY_DIR``
+ ``PER_JOB_HISTORY_DIR`` :index:` <single: PER_JOB_HISTORY_DIR>`
     If set to a directory writable by the HTCondor user, when a job
     leaves the *condor\_schedd*\ ’s queue, a copy of the job’s ClassAd
     will be written in that directory. The files are named ``history``,
@@ -4932,12 +5125,14 @@ These macros control the *condor\_schedd*.
     the directory, it can grow very large. This option defaults to being
     unset. When not set, no files are written.
  ``DEDICATED_SCHEDULER_USE_FIFO``
+:index:` <single: DEDICATED_SCHEDULER_USE_FIFO>`
     When this parameter is set to true (the default), parallel universe
     jobs will be scheduled in a first-in, first-out manner. When set to
     false, parallel jobs are scheduled using a best-fit algorithm. Using
     the best-fit algorithm is not recommended, as it can cause
     starvation.
  ``DEDICATED_SCHEDULER_WAIT_FOR_SPOOLER``
+:index:` <single: DEDICATED_SCHEDULER_WAIT_FOR_SPOOLER>`
     A boolean value that when ``True``, causes the dedicated scheduler
     to schedule parallel universe jobs in a very strict first-in,
     first-out manner. When the default value of ``False``, parallel jobs
@@ -4949,28 +5144,33 @@ These macros control the *condor\_schedd*.
     jobs have finished spooling in their input files and have been
     scheduled.
  ``DEDICATED_SCHEDULER_DELAY_FACTOR``
+:index:` <single: DEDICATED_SCHEDULER_DELAY_FACTOR>`
     Limits the cpu usage of the dedicated scheduler within the
     *condor\_schedd*. The default value of 5 is the ratio of time spent
     not in the dedicated scheduler to the time scheduling parallel jobs.
     Therefore, the default caps the time spent in the dedicated
     scheduler to 20%.
  ``SCHEDD_SEND_VACATE_VIA_TCP``
+:index:` <single: SCHEDD_SEND_VACATE_VIA_TCP>`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor\_schedd* daemon sends vacate signals via TCP, instead of the
     default UDP.
  ``SCHEDD_CLUSTER_INITIAL_VALUE``
+:index:` <single: SCHEDD_CLUSTER_INITIAL_VALUE>`
     An integer that specifies the initial cluster number value to use
     within a job id when a job is first submitted. If the job cluster
     number reaches the value set by ``SCHEDD_CLUSTER_MAXIMUM_VALUE`` and
     wraps, it will be re-set to the value given by this variable. The
     default value is 1.
  ``SCHEDD_CLUSTER_INCREMENT_VALUE``
+:index:` <single: SCHEDD_CLUSTER_INCREMENT_VALUE>`
     A positive integer that defaults to 1, representing a stride used
     for the assignment of cluster numbers within a job id. When a job is
     submitted, the job will be assigned a job id. The cluster number of
     the job id will be equal to the previous cluster number used plus
     the value of this variable.
  ``SCHEDD_CLUSTER_MAXIMUM_VALUE``
+:index:` <single: SCHEDD_CLUSTER_MAXIMUM_VALUE>`
     An integer that specifies an upper bound on assigned job cluster id
     values. For value M, the maximum job cluster id assigned to any job
     will be M - 1. When the maximum id is reached, cluster ids will
@@ -4988,6 +5188,7 @@ These macros control the *condor\_schedd*.
     which will result in a corrupt job queue.
 
  ``GRIDMANAGER_SELECTION_EXPR``
+:index:` <single: GRIDMANAGER_SELECTION_EXPR>`
     By default, the *condor\_schedd* daemon will start a new
     *condor\_gridmanager* process for each discrete user that submits a
     grid universe job, that is, for each discrete value of job attribute
@@ -5007,6 +5208,7 @@ These macros control the *condor\_schedd*.
           GRIDMANAGER_SELECTION_EXPR = GridResource
 
  ``CKPT_SERVER_CLIENT_TIMEOUT``
+:index:` <single: CKPT_SERVER_CLIENT_TIMEOUT>`
     An integer which specifies how long in seconds the *condor\_schedd*
     is willing to wait for a response from a checkpoint server before
     declaring the checkpoint server down. The value of 0 makes the
@@ -5014,25 +5216,28 @@ These macros control the *condor\_schedd*.
     be a very long time) before the ``connect()`` returns on its own
     with a connection timeout. The default value is 20.
  ``CKPT_SERVER_CLIENT_TIMEOUT_RETRY``
+:index:` <single: CKPT_SERVER_CLIENT_TIMEOUT_RETRY>`
     An integer which specifies how long in seconds the *condor\_schedd*
     will ignore a checkpoint server that is deemed to be down. After
     this time elapses, the *condor\_schedd* will try again in talking to
     the checkpoint server. The default is 1200.
  ``SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY``
+:index:` <single: SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY>`
     An integer which specifies an upper bound in seconds on how long it
     takes for changes to the job ClassAd to be visible to the HTCondor
     Job Router. The default is 5 seconds.
- ``ROTATE_HISTORY_DAILY``
+ ``ROTATE_HISTORY_DAILY`` :index:` <single: ROTATE_HISTORY_DAILY>`
     A boolean value that defaults to ``False``. When ``True``, the
     history file will be rotated daily, in addition to the rotations
     that occur due to the definition of ``MAX_HISTORY_LOG`` that rotate
     due to size.
- ``ROTATE_HISTORY_MONTHLY``
+ ``ROTATE_HISTORY_MONTHLY`` :index:` <single: ROTATE_HISTORY_MONTHLY>`
     A boolean value that defaults to ``False``. When ``True``, the
     history file will be rotated monthly, in addition to the rotations
     that occur due to the definition of ``MAX_HISTORY_LOG`` that rotate
     due to size.
  ``SCHEDD_COLLECT_STATS_FOR_<Name>``
+:index:` <single: SCHEDD_COLLECT_STATS_FOR_<Name>>`
     A boolean expression that when ``True`` creates a set of
     *condor\_schedd* ClassAd attributes of statistics collected for a
     particular set. These attributes are named using the prefix of
@@ -5048,6 +5253,7 @@ These macros control the *condor\_schedd*.
     such as ``EinsteinJobsCompleted`` and ``EinsteinJobsCoredumped``.
 
  ``SCHEDD_COLLECT_STATS_BY_<Name>``
+:index:` <single: SCHEDD_COLLECT_STATS_BY_<Name>>`
     Defines a string expression. The evaluated string is used in the
     naming of a set of *condor\_schedd* statistics ClassAd attributes.
     The naming begins with ``<Name>``, an underscore character, and the
@@ -5065,13 +5271,14 @@ These macros control the *condor\_schedd*.
     ``Host_storm_04_cs_wisc_edu_JobsCoredumped``.
 
  ``SCHEDD_EXPIRE_STATS_BY_<Name>``
+:index:` <single: SCHEDD_EXPIRE_STATS_BY_<Name>>`
     The number of seconds after which the *condor\_schedd* daemon will
     stop collecting and discard the statistics for a subset identified
     by ``<Name>``, if no event has occurred to cause any counter or
     statistic for the subset to be updated. If this variable is not
     defined for a particular ``<Name>``, then the default value will be
     ``60*60*24*7``, which is one week’s time.
- ``SIGNIFICANT_ATTRIBUTES``
+ ``SIGNIFICANT_ATTRIBUTES`` :index:` <single: SIGNIFICANT_ATTRIBUTES>`
     A comma and/or space separated list of job ClassAd attributes that
     are to be added to the list of attributes for determining the sets
     of jobs considered as a unit (an auto cluster) in negotiation, when
@@ -5079,22 +5286,24 @@ These macros control the *condor\_schedd*.
     list that the *condor\_negotiator* would define based upon machine
     ClassAds.
  ``ADD_SIGNIFICANT_ATTRIBUTES``
+:index:` <single: ADD_SIGNIFICANT_ATTRIBUTES>`
     A comma and/or space separated list of job ClassAd attributes that
     will always be added to the list of attributes that the
     *condor\_negotiator* defines based upon machine ClassAds, for
     determining the sets of jobs considered as a unit (an auto cluster)
     in negotiation, when auto clustering is enabled.
  ``REMOVE_SIGNIFICANT_ATTRIBUTES``
+:index:` <single: REMOVE_SIGNIFICANT_ATTRIBUTES>`
     A comma and/or space separated list of job ClassAd attributes that
     are removed from the list of attributes that the
     *condor\_negotiator* defines based upon machine ClassAds, for
     determining the sets of jobs considered as a unit (an auto cluster)
     in negotiation, when auto clustering is enabled.
- ``SCHEDD_AUDIT_LOG``
+ ``SCHEDD_AUDIT_LOG`` :index:` <single: SCHEDD_AUDIT_LOG>`
     The path and file name of the *condor\_schedd* log that records
     user-initiated commands that modify the job queue. If not defined,
     there will be no *condor\_schedd* audit log.
- ``MAX_SCHEDD_AUDIT_LOG``
+ ``MAX_SCHEDD_AUDIT_LOG`` :index:` <single: MAX_SCHEDD_AUDIT_LOG>`
     Controls the maximum amount of time that a log will be allowed to
     grow. When it is time to rotate a log file, it will be saved to a
     file with an ISO timestamp suffix. The oldest rotated file receives
@@ -5110,15 +5319,15 @@ These macros control the *condor\_schedd*.
         ``Day`` for days
         ``Wk`` for weeks
 
- ``MAX_NUM_SCHEDD_AUDIT_LOG``
+ ``MAX_NUM_SCHEDD_AUDIT_LOG`` :index:` <single: MAX_NUM_SCHEDD_AUDIT_LOG>`
     The integer that controls the maximum number of rotations that the
     *condor\_schedd* audit log is allowed to perform, before the oldest
     one will be rotated away. The default value is 1.
- ``SCHEDD_USE_SLOT_WEIGHT``
+ ``SCHEDD_USE_SLOT_WEIGHT`` :index:` <single: SCHEDD_USE_SLOT_WEIGHT>`
     A boolean that defaults to ``False``. When ``True``, the
     *condor\_schedd* does use configuration variable ``SLOT_WEIGHT`` to
     weight running and idle job counts in the submitter ClassAd.
- ``JOB_TRANSFORM_NAMES``
+ ``JOB_TRANSFORM_NAMES`` :index:` <single: JOB_TRANSFORM_NAMES>`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
     contain a set of rules governing the transformation of jobs during
@@ -5126,20 +5335,20 @@ These macros control the *condor\_schedd*.
     configuration variable ``JOB_TRANSFORM_<Name>``. Transforms are
     applied in the order in which names appear in this list. Names are
     not case-sensitive. There is no default value.
- ``JOB_TRANSFORM_<Name>``
+ ``JOB_TRANSFORM_<Name>`` :index:` <single: JOB_TRANSFORM_<Name>>`
     A single job transform specified as a set of transform rules in new
     classad syntax. The transform rules are applied to jobs that match
     the transform’s ``Requirements`` expression as they are submitted.
     ``<Name>`` corresponds to a name listed in ``JOB_TRANSFORM_NAMES``.
     Names are not case-sensitive. There is no default value.
- ``SUBMIT_REQUIREMENT_NAMES``
+ ``SUBMIT_REQUIREMENT_NAMES`` :index:` <single: SUBMIT_REQUIREMENT_NAMES>`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
     represent an expression evaluated to decide whether or not to reject
     a job submission. Each name in the list will be used in the name of
     configuration variable ``SUBMIT_REQUIREMENT_<Name>``. There is no
     default value.
- ``SUBMIT_REQUIREMENT_<Name>``
+ ``SUBMIT_REQUIREMENT_<Name>`` :index:` <single: SUBMIT_REQUIREMENT_<Name>>`
     A boolean expression evaluated in the context of the
     *condor\_schedd* daemon ClassAd, which is the ``SCHEDD.`` or ``MY.``
     name space and the job ClassAd, which is the ``JOB.`` or ``TARGET.``
@@ -5148,10 +5357,11 @@ These macros control the *condor\_schedd*.
     to a name listed in ``SUBMIT_REQUIREMENT_NAMES``. There is no
     default value.
  ``SUBMIT_REQUIREMENT_<Name>_REASON``
+:index:` <single: SUBMIT_REQUIREMENT_<Name>_REASON>`
     An expression that evaluates to a string, to be printed for the job
     submitter when ``SUBMIT_REQUIREMENT_<Name>`` evaluates to ``False``
     and the *condor\_schedd* rejects the job. There is no default value.
- ``SCHEDD_RESTART_REPORT``
+ ``SCHEDD_RESTART_REPORT`` :index:` <single: SCHEDD_RESTART_REPORT>`
     The complete path to a file that will be written with report
     information. The report is written when the *condor\_schedd* starts.
     It contains statistics about its attempts to reconnect to the
@@ -5161,38 +5371,40 @@ These macros control the *condor\_schedd*.
     emailed to address specified by ``CONDOR_ADMIN``. The default value
     is ``$(LOG)/ScheddRestartReport``. If a blank value is set, then no
     report is written or emailed.
- ``JOB_SPOOL_PERMISSIONS``
+ ``JOB_SPOOL_PERMISSIONS`` :index:` <single: JOB_SPOOL_PERMISSIONS>`
     Control the permissions on the job’s spool directory. Defaults to
     ``user`` which sets permissions to 0700. Possible values are
     ``user``, ``group``, and ``world``. If set to ``group``, then the
     directory is group-accessible, with permissions set to 0750. If set
     to ``world``, then the directory is created with permissions set to
     0755.
- ``CHOWN_JOB_SPOOL_FILES``
+ ``CHOWN_JOB_SPOOL_FILES`` :index:` <single: CHOWN_JOB_SPOOL_FILES>`
     Prior to HTCondor 8.5.0 on unix, the condor\_schedd would chown job
     files in the SPOOL directory between the condor account and the
     account of the job submitter. Now, these job files are always owned
     by the job submitter by default. To restore the older behavior, set
     this parameter to ``True``. The default value is ``False``.
- ``IMMUTABLE_JOB_ATTRS``
+ ``IMMUTABLE_JOB_ATTRS`` :index:` <single: IMMUTABLE_JOB_ATTRS>`
     A comma and/or space separated list of attributes provided by the
     administrator that cannot be changed, once they have committed
     values. No attributes are in this list by default.
  ``SYSTEM_IMMUTABLE_JOB_ATTRS``
+:index:` <single: SYSTEM_IMMUTABLE_JOB_ATTRS>`
     A predefined comma and/or space separated list of attributes that
     cannot be changed, once they have committed values. The hard-coded
     value is: ``Owner`` ``ClusterId`` ``ProcId`` ``MyType``
     ``TargetType``.
- ``PROTECTED_JOB_ATTRS``
+ ``PROTECTED_JOB_ATTRS`` :index:` <single: PROTECTED_JOB_ATTRS>`
     A comma and/or space separated list of attributes provided by the
     administrator that can only be altered by the queue super-user, once
     they have committed values. No attributes are in this list by
     default.
  ``SYSTEM_PROTECTED_JOB_ATTRS``
+:index:` <single: SYSTEM_PROTECTED_JOB_ATTRS>`
     A predefined comma and/or space separated list of attributes that
     can only be altered by the queue super-user, once they have
     committed values. The hard-code value is empty.
- ``ALTERNATE_JOB_SPOOL``
+ ``ALTERNATE_JOB_SPOOL`` :index:` <single: ALTERNATE_JOB_SPOOL>`
     A ClassAd expression evaluated in the context of the job ad. If the
     result is a string, the value is used an an alternate spool
     directory under which the job’s files will be stored. This alternate
@@ -5203,23 +5415,26 @@ These macros control the *condor\_schedd*.
 condor\_shadow Configuration File Entries
 -----------------------------------------
 
+:index:` <single: condor_shadow configuration variables;configuration>`
+
 These settings affect the *condor\_shadow*.
 
- ``SHADOW_LOCK``
+ ``SHADOW_LOCK`` :index:` <single: SHADOW_LOCK>`
     This macro specifies the lock file to be used for access to the
     ``ShadowLog`` file. It must be a separate file from the
     ``ShadowLog``, since the ``ShadowLog`` may be rotated and you want
     to synchronize access across log file rotations. This macro is
     defined relative to the ``$(LOCK)`` macro.
- ``SHADOW_DEBUG``
+ ``SHADOW_DEBUG`` :index:` <single: SHADOW_DEBUG>`
     This macro (and other settings related to debug logging in the
     shadow) is described in section \ `3.5.2 <#x33-1890003.5.2>`__ as
     ``<SUBSYS>_DEBUG``.
  ``SHADOW_QUEUE_UPDATE_INTERVAL``
+:index:` <single: SHADOW_QUEUE_UPDATE_INTERVAL>`
     The amount of time (in seconds) between ClassAd updates that the
     *condor\_shadow* daemon sends to the *condor\_schedd* daemon.
     Defaults to 900 (15 minutes).
- ``SHADOW_LAZY_QUEUE_UPDATE``
+ ``SHADOW_LAZY_QUEUE_UPDATE`` :index:` <single: SHADOW_LAZY_QUEUE_UPDATE>`
     This boolean macro specifies if the *condor\_shadow* should
     immediately update the job queue for certain attributes (at this
     time, it only effects the ``NumJobStarts`` and ``NumJobReconnects``
@@ -5244,55 +5459,62 @@ These settings affect the *condor\_shadow*.
     cost for aggressive updates to a busy *condor\_schedd* could
     potentially cause major problems, the default is ``True`` to do
     lazy, periodic updates.
- ``SHADOW_WORKLIFE``
+ ``SHADOW_WORKLIFE`` :index:` <single: SHADOW_WORKLIFE>`
     The integer number of seconds after which the *condor\_shadow* will
     exit when the current job finishes, instead of fetching a new job to
     manage. Having the *condor\_shadow* continue managing jobs helps
     reduce overhead and can allow the *condor\_schedd* to achieve higher
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor\_shadow* to exit after running a single job.
- ``COMPRESS_PERIODIC_CKPT``
+ ``COMPRESS_PERIODIC_CKPT`` :index:` <single: COMPRESS_PERIODIC_CKPT>`
     A boolean value that when ``True``, directs the *condor\_shadow* to
     instruct applications to compress periodic checkpoints when
     possible. The default is ``False``.
- ``COMPRESS_VACATE_CKPT``
+ ``COMPRESS_VACATE_CKPT`` :index:` <single: COMPRESS_VACATE_CKPT>`
     A boolean value that when ``True``, directs the *condor\_shadow* to
     instruct applications to compress vacate checkpoints when possible.
     The default is ``False``.
- ``PERIODIC_MEMORY_SYNC``
+ ``PERIODIC_MEMORY_SYNC`` :index:` <single: PERIODIC_MEMORY_SYNC>`
     This boolean value specifies whether the *condor\_shadow* should
     instruct applications to commit dirty memory pages to swap space
     during a periodic checkpoint. The default is ``False``. This
     potentially reduces the number of dirty memory pages at vacate time,
     thereby reducing swapping activity on the remote machine.
- ``SLOW_CKPT_SPEED``
+ ``SLOW_CKPT_SPEED`` :index:` <single: SLOW_CKPT_SPEED>`
     This macro specifies the speed at which vacate checkpoints should be
     written, in kilobytes per second. If zero (the default), vacate
     checkpoints are written as fast as possible. Writing vacate
     checkpoints slowly can avoid overwhelming the remote machine with
     swapping activity.
  ``SHADOW_JOB_CLEANUP_RETRY_DELAY``
+:index:` <single: SHADOW_JOB_CLEANUP_RETRY_DELAY>`
     This integer specifies the number of seconds to wait between tries
     to commit the final update to the job ClassAd in the
     *condor\_schedd*\ ’s job queue. The default is 30.
  ``SHADOW_MAX_JOB_CLEANUP_RETRIES``
+:index:` <single: SHADOW_MAX_JOB_CLEANUP_RETRIES>`
     This integer specifies the number of times to try committing the
     final update to the job ClassAd in the *condor\_schedd*\ ’s job
     queue. The default is 5.
  ``SHADOW_CHECKPROXY_INTERVAL``
+:index:` <single: SHADOW_CHECKPROXY_INTERVAL>`
     The number of seconds between tests to see if the job proxy has been
     updated or should be refreshed. The default is 600 seconds (10
     minutes). This variable’s value should be small in comparison to the
     refresh interval required to keep delegated credentials from
     expiring (configured via ``DELEGATE_JOB_GSI_CREDENTIALS_REFRESH``
-    and ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`` ). If this variable’s
-    value is too small, proxy updates could happen very frequently,
-    potentially creating a lot of load on the submit machine.
+    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_REFRESH>` and
+    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
+    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>`). If this
+    variable’s value is too small, proxy updates could happen very
+    frequently, potentially creating a lot of load on the submit
+    machine.
  ``SHADOW_RUN_UNKNOWN_USER_JOBS``
+:index:` <single: SHADOW_RUN_UNKNOWN_USER_JOBS>`
     A boolean that defaults to ``False``. When ``True``, it allows the
     *condor\_shadow* daemon to run jobs as user nobody when remotely
     submitted and from users not in the local password file.
- ``SHADOW_STATS_LOG``
+ ``SHADOW_STATS_LOG`` :index:` <single: SHADOW_STATS_LOG>`
     The full path and file name of a file that stores TCP statistics for
     shadow file transfers. (Note that the shadow logs TCP statistics to
     this file by default. Adding ``D_STATS`` to the ``SHADOW_DEBUG``
@@ -5301,7 +5523,7 @@ These settings affect the *condor\_shadow*.
     defaults to ``$(LOG)/XferStatsLog``. Setting ``SHADOW_STATS_LOG`` to
     ``/dev/null`` disables logging of shadow TCP file transfer
     statistics.
- ``MAX_SHADOW_STATS_LOG``
+ ``MAX_SHADOW_STATS_LOG`` :index:` <single: MAX_SHADOW_STATS_LOG>`
     Controls the maximum size in bytes or amount of time that the shadow
     TCP statistics log will be allowed to grow. If not defined,
     ``MAX_SHADOW_STATS_LOG`` defaults to ``$(MAX_DEFAULT_LOG)``, which
@@ -5311,9 +5533,11 @@ These settings affect the *condor\_shadow*.
 condor\_starter Configuration File Entries
 ------------------------------------------
 
+:index:` <single: condor_starter configuration variables;configuration>`
+
 These settings affect the *condor\_starter*.
 
- ``EXEC_TRANSFER_ATTEMPTS``
+ ``EXEC_TRANSFER_ATTEMPTS`` :index:` <single: EXEC_TRANSFER_ATTEMPTS>`
     Sometimes due to a router misconfiguration, kernel bug, or other
     network problem, the transfer of the initial checkpoint from the
     submit machine to the execute machine will fail midway through. This
@@ -5326,7 +5550,7 @@ These settings affect the *condor\_starter*.
 
     NOTE: : This parameter does not exist in the NT starter.
 
- ``JOB_RENICE_INCREMENT``
+ ``JOB_RENICE_INCREMENT`` :index:` <single: JOB_RENICE_INCREMENT>`
     When the *condor\_starter* spawns an HTCondor job, it can do so with
     a nice-level. A nice-level is a Unix mechanism that allows users to
     assign their own processes a lower priority, such that these
@@ -5352,12 +5576,12 @@ These settings affect the *condor\_starter*.
     uses the default instead. The default value is 0, on Unix, and the
     idle priority class on a Windows machine.
 
- ``STARTER_LOCAL_LOGGING``
+ ``STARTER_LOCAL_LOGGING`` :index:` <single: STARTER_LOCAL_LOGGING>`
     This macro determines whether the starter should do local logging to
     its own log file, or send debug information back to the
     *condor\_shadow* where it will end up in the ShadowLog. It defaults
     to ``True``.
- ``STARTER_LOG_NAME_APPEND``
+ ``STARTER_LOG_NAME_APPEND`` :index:` <single: STARTER_LOG_NAME_APPEND>`
     A fixed value that sets the file name extension of the local log
     file used by the *condor\_starter* daemon. Permitted values are
     ``true``, ``false``, ``slot``, ``cluster`` and ``jobid``. A value of
@@ -5370,23 +5594,24 @@ These settings affect the *condor\_starter*.
     log files will persist until deleted by the user, so these two
     options should only be used to assist in debugging, not as permanent
     options.
- ``STARTER_DEBUG``
+ ``STARTER_DEBUG`` :index:` <single: STARTER_DEBUG>`
     This setting (and other settings related to debug logging in the
     starter) is described above in
     section \ `3.5.2 <#x33-1890003.5.2>`__ as ``$(<SUBSYS>_DEBUG)``.
- ``STARTER_UPDATE_INTERVAL``
+ ``STARTER_UPDATE_INTERVAL`` :index:` <single: STARTER_UPDATE_INTERVAL>`
     An integer value representing the number of seconds between ClassAd
     updates that the *condor\_starter* daemon sends to the
     *condor\_shadow* and *condor\_startd* daemons. Defaults to 300 (5
     minutes).
  ``STARTER_UPDATE_INTERVAL_TIMESLICE``
+:index:` <single: STARTER_UPDATE_INTERVAL_TIMESLICE>`
     A floating point value, specifying the highest fraction of time that
     the *condor\_starter* daemon should spend collecting monitoring
     information about the job, such as disk usage. The default value is
     0.1. If monitoring, such as checking disk usage takes a long time,
     the *condor\_starter* will monitor less frequently than specified by
     ``STARTER_UPDATE_INTERVAL``.
- ``USER_JOB_WRAPPER``
+ ``USER_JOB_WRAPPER`` :index:` <single: USER_JOB_WRAPPER>`
     The full path and file name of an executable or script. If
     specified, HTCondor never directly executes a job, but instead
     invokes this executable, allowing an administrator to specify the
@@ -5466,6 +5691,7 @@ These settings affect the *condor\_starter*.
                 cmd = /bin/sleep
 
  ``CGROUP_MEMORY_LIMIT_POLICY``
+:index:` <single: CGROUP_MEMORY_LIMIT_POLICY>`
     A string with possible values of ``hard``, ``soft`` and ``none``.
     The default value is ``none``. If set to ``hard``, the cgroup-based
     limit on the total amount of physical memory used by the sum of all
@@ -5479,7 +5705,7 @@ These settings affect the *condor\_starter*.
     to go over the limit, if there is free memory available on the
     system. If set to ``none``, no limit will be enforced, but the
     memory usage of the job will be accurately measured by a cgroup.
- ``USE_VISIBLE_DESKTOP``
+ ``USE_VISIBLE_DESKTOP`` :index:` <single: USE_VISIBLE_DESKTOP>`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the
     desktop of the execute machine and interact with the job. This is
@@ -5488,7 +5714,7 @@ These settings affect the *condor\_starter*.
     creating a new, non-visible desktop to run the job on. See
     section \ `8.2 <MicrosoftWindows.html#x76-5730008.2>`__ for details
     on how HTCondor interacts with the desktop.
- ``STARTER_JOB_ENVIRONMENT``
+ ``STARTER_JOB_ENVIRONMENT`` :index:` <single: STARTER_JOB_ENVIRONMENT>`
     This macro sets the default environment inherited by jobs. The
     syntax is the same as the syntax for environment settings in the job
     submit file (see
@@ -5496,6 +5722,7 @@ These settings affect the *condor\_starter*.
     environment variable is assigned by this macro and by the user in
     the submit file, the user’s setting takes precedence.
  ``JOB_INHERITS_STARTER_ENVIRONMENT``
+:index:` <single: JOB_INHERITS_STARTER_ENVIRONMENT>`
     A boolean value that defaults to ``False``. When ``True``, it causes
     jobs to inherit all environment variables from the
     *condor\_starter*. When the user job and/or
@@ -5503,21 +5730,21 @@ These settings affect the *condor\_starter*.
     in the *condor\_starter*\ ’s environment, the setting from the
     *condor\_starter*\ ’s environment is overridden. This variable does
     not apply to standard universe jobs.
- ``NAMED_CHROOT``
+ ``NAMED_CHROOT`` :index:` <single: NAMED_CHROOT>`
     A comma and/or space separated list of full paths to one or more
     directories, under which the *condor\_starter* may run a chroot-ed
     job. This allows HTCondor to invoke chroot() before launching a job,
     if the job requests such by defining the job ClassAd attribute
     ``RequestedChroot`` with a directory that matches one in this list.
     There is no default value for this variable.
- ``STARTER_UPLOAD_TIMEOUT``
+ ``STARTER_UPLOAD_TIMEOUT`` :index:` <single: STARTER_UPLOAD_TIMEOUT>`
     An integer value that specifies the network communication timeout to
     use when transferring files back to the submit machine. The default
     value is set by the *condor\_shadow* daemon to 300. Increase this
     value if the disk on the submit machine cannot keep up with large
     bursts of activity, such as many jobs all completing at the same
     time.
- ``ASSIGN_CPU_AFFINITY``
+ ``ASSIGN_CPU_AFFINITY`` :index:` <single: ASSIGN_CPU_AFFINITY>`
     A boolean expression that defaults to ``False``. When it evaluates
     to ``True``, each job under this *condor\_startd* is confined to
     using only as many cores as the configured number of slots. When
@@ -5526,7 +5753,7 @@ These settings affect the *condor\_starter*.
     configuration variable overrides any specification of
     ``ENFORCE_CPU_AFFINITY``. The expression is evaluated in the context
     of the Job ClassAd.
- ``ENFORCE_CPU_AFFINITY``
+ ``ENFORCE_CPU_AFFINITY`` :index:` <single: ENFORCE_CPU_AFFINITY>`
     This configuration variable is replaced by ``ASSIGN_CPU_AFFINITY``.
     Do not enable this configuration variable unless using glidein or
     another unusual setup.
@@ -5545,7 +5772,7 @@ These settings affect the *condor\_starter*.
     When ``True``, more fine grained affinities may be specified with
     ``SLOT<N>_CPU_AFFINITY``.
 
- ``SLOT<N>_CPU_AFFINITY``
+ ``SLOT<N>_CPU_AFFINITY`` :index:` <single: SLOT<N>_CPU_AFFINITY>`
     This configuration variable is replaced by ``ASSIGN_CPU_AFFINITY``.
     Do not enable this configuration variable unless using glidein or
     another unusual setup.
@@ -5556,14 +5783,14 @@ These settings affect the *condor\_starter*.
     are numbered beginning with the value 0. This affinity list only
     takes effect when ``ENFORCE_CPU_AFFINITY = True``.
 
- ``ENABLE_URL_TRANSFERS``
+ ``ENABLE_URL_TRANSFERS`` :index:` <single: ENABLE_URL_TRANSFERS>`
     A boolean value that when ``True`` causes the *condor\_starter* for
     a job to invoke all plug-ins defined by ``FILETRANSFER_PLUGINS`` to
     determine their capabilities for handling protocols to be used in
     file transfer specified with a URL. When ``False``, a URL transfer
     specified in a job’s submit description file will cause an error
     issued by *condor\_submit*. The default value is ``True``.
- ``FILETRANSFER_PLUGINS``
+ ``FILETRANSFER_PLUGINS`` :index:` <single: FILETRANSFER_PLUGINS>`
     A comma separated list of full and absolute path and executable
     names for plug-ins that will accomplish the task of doing file
     transfer when a job requests the transfer of an input file by
@@ -5571,6 +5798,7 @@ These settings affect the *condor\_starter*.
     section \ `3.14.2 <SettingUpforSpecialEnvironments.html#x42-3480003.14.2>`__
     for a description of the functionality required of a plug-in.
  ``RUN_FILETRANSFER_PLUGINS_WITH_ROOT``
+:index:` <single: RUN_FILETRANSFER_PLUGINS_WITH_ROOT>`
     A boolean value that affects only Unix platforms and defaults to
     ``False``, causing file transfer plug-ins invoked for a job to run
     with both the real and the effective UID set to user that the job
@@ -5588,25 +5816,27 @@ These settings affect the *condor\_starter*.
     permissions. The default value is recommended unless privileged
     operations are required.
 
- ``ENABLE_CHIRP``
+ ``ENABLE_CHIRP`` :index:` <single: ENABLE_CHIRP>`
     A boolean value that defaults to ``True``. An administrator would
     set the value to ``False`` to disable Chirp remote file access from
     execute machines.
- ``ENABLE_CHIRP_UPDATES``
-    A boolean value that defaults to ``True``. If ``ENABLE_CHIRP`` is
-    ``True``, and ``ENABLE_CHIRP_UPDATES`` is ``False``, then the user
-    job can only read job attributes from the submit side; it cannot
-    change them or write to the job event log. If ``ENABLE_CHIRP`` is
-    ``False``, the setting of this variable does not matter, as no Chirp
-    updates are allowed in that case.
- ``ENABLE_CHIRP_IO``
+ ``ENABLE_CHIRP_UPDATES`` :index:` <single: ENABLE_CHIRP_UPDATES>`
+    A boolean value that defaults to ``True``. If ``ENABLE_CHIRP``
+    :index:` <single: ENABLE_CHIRP>` is ``True``, and
+    ``ENABLE_CHIRP_UPDATES`` is ``False``, then the user job can only
+    read job attributes from the submit side; it cannot change them or
+    write to the job event log. If ``ENABLE_CHIRP`` is ``False``, the
+    setting of this variable does not matter, as no Chirp updates are
+    allowed in that case.
+ ``ENABLE_CHIRP_IO`` :index:` <single: ENABLE_CHIRP_IO>`
     A boolean value that defaults to ``True``. If ``False``, the file
     I/O *condor\_chirp* commands are prohibited.
- ``ENABLE_CHIRP_DELAYED``
+ ``ENABLE_CHIRP_DELAYED`` :index:` <single: ENABLE_CHIRP_DELAYED>`
     A boolean value that defaults to ``True``. If ``False``, the
     *condor\_chirp* commands **get\_job\_attr\_delayed** and
     **set\_job\_attr\_delayed** are prohibited.
  ``CHIRP_DELAYED_UPDATE_PREFIX``
+:index:` <single: CHIRP_DELAYED_UPDATE_PREFIX>`
     This string-valued parameter, which defaults to ``"Chirp"``, defines
     the allowed prefixes for attribute names which can be used with the
     *condor\_chirp* commands **set\_job\_attribute\_delayed** and
@@ -5614,25 +5844,26 @@ These settings affect the *condor\_starter*.
     value on both the submit and execute nodes, it is advised that this
     parameter not be changed from its built-in default.
  ``CHIRP_DELAYED_UPDATE_MAX_ATTRS``
+:index:` <single: CHIRP_DELAYED_UPDATE_MAX_ATTRS>`
     This integer-valued parameter, which defaults to 100, represents the
     maximum number of pending delayed chirp updates buffered by the
     *condor\_starter*. If the number of unique attributes updated by the
     *condor\_chirp* command **set\_job\_attr\_delayed** exceeds this
     parameter, it is possible for these updates to be ignored.
- ``USE_PSS``
+ ``USE_PSS`` :index:` <single: USE_PSS>`
     A boolean value, that when ``True`` causes the *condor\_starter* to
     measure the PSS (Proportional Set Size) of each HTCondor job. The
     default value is ``False``. When running many short lived jobs,
     performance problems in the *condor\_procd* have been observed, and
     a setting of ``False`` may relieve these problems.
- ``MEMORY_USAGE_METRIC``
+ ``MEMORY_USAGE_METRIC`` :index:` <single: MEMORY_USAGE_METRIC>`
     A ClassAd expression that produces an initial value for the job
     ClassAd attribute ``MemoryUsage`` in jobs that are not standard
     universe and not vm universe.
- ``MEMORY_USAGE_METRIC_VM``
+ ``MEMORY_USAGE_METRIC_VM`` :index:` <single: MEMORY_USAGE_METRIC_VM>`
     A ClassAd expression that produces an initial value for the job
     ClassAd attribute ``MemoryUsage`` in vm universe jobs.
- ``STARTER_RLIMIT_AS``
+ ``STARTER_RLIMIT_AS`` :index:` <single: STARTER_RLIMIT_AS>`
     An integer ClassAd expression, expressed in MiB, evaluated by the
     *condor\_starter* to set the ``RLIMIT_AS`` parameter of the
     setrlimit() system call. This limits the virtual memory size of each
@@ -5642,11 +5873,11 @@ These settings affect the *condor\_starter*.
     There is no default value for this variable. Since values larger
     than 2047 have no real meaning on 32-bit platforms, values larger
     than 2047 result in no limit set on 32-bit platforms.
- ``USE_PID_NAMESPACES``
+ ``USE_PID_NAMESPACES`` :index:` <single: USE_PID_NAMESPACES>`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to
     ``False``.
- ``PER_JOB_NAMESPACES``
+ ``PER_JOB_NAMESPACES`` :index:` <single: PER_JOB_NAMESPACES>`
     A boolean value that defaults to ``False``. Relevant only for Linux
     platforms using file system namespaces. The default value of
     ``False`` ensures that there will be no private mount points,
@@ -5654,17 +5885,18 @@ These settings affect the *condor\_starter*.
     private file system mounts. A ``True`` value is useful when private
     file system mounts are permitted and *autofs* (for NFS) is not used.
  ``DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP``
+:index:` <single: DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP>`
     For Windows platforms, a value that sets the local group to a group
     other than the default ``Users`` for the ``condor-slot<X>`` run
     account. Do not place the local group name within quotation marks.
- ``JOB_EXECDIR_PERMISSIONS``
+ ``JOB_EXECDIR_PERMISSIONS`` :index:` <single: JOB_EXECDIR_PERMISSIONS>`
     Control the permissions on the job’s scratch directory. Defaults to
     ``user`` which sets permissions to 0700. Possible values are
     ``user``, ``group``, and ``world``. If set to ``group``, then the
     directory is group-accessible, with permissions set to 0750. If set
     to ``world``, then the directory is created with permissions set to
     0755.
- ``STARTER_STATS_LOG``
+ ``STARTER_STATS_LOG`` :index:` <single: STARTER_STATS_LOG>`
     The full path and file name of a file that stores TCP statistics for
     starter file transfers. (Note that the starter logs TCP statistics
     to this file by default. Adding ``D_STATS`` to the ``STARTER_DEBUG``
@@ -5673,43 +5905,46 @@ These settings affect the *condor\_starter*.
     ``STARTER_STATS_LOG`` defaults to ``$(LOG)/XferStatsLog``. Setting
     ``STARTER_STATS_LOG`` to ``/dev/null`` disables logging of starter
     TCP file transfer statistics.
- ``MAX_STARTER_STATS_LOG``
+ ``MAX_STARTER_STATS_LOG`` :index:` <single: MAX_STARTER_STATS_LOG>`
     Controls the maximum size in bytes or amount of time that the
     starter TCP statistics log will be allowed to grow. If not defined,
     ``MAX_STARTER_STATS_LOG`` defaults to ``$(MAX_DEFAULT_LOG)``, which
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as ``MAX_DEFAULT_LOG``.
- ``SINGULARITY``
+ ``SINGULARITY`` :index:` <single: SINGULARITY>`
     The path to the Singularity binary. The default value is
     ``/usr/bin/singularity``.
- ``SINGULARITY_JOB``
+ ``SINGULARITY_JOB`` :index:` <single: SINGULARITY_JOB>`
     A boolean value specifying whether this startd should run jobs under
     Singularity. The default value is ``False``.
- ``SINGULARITY_IMAGE_EXPR``
+ ``SINGULARITY_IMAGE_EXPR`` :index:` <single: SINGULARITY_IMAGE_EXPR>`
     The path to the Singularity container image file. The default value
     is ``"SingularityImage"``.
- ``SINGULARITY_TARGET_DIR``
+ ``SINGULARITY_TARGET_DIR`` :index:` <single: SINGULARITY_TARGET_DIR>`
     A directory within the Singularity image to which
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
- ``SINGULARITY_BIND_EXPR``
+ ``SINGULARITY_BIND_EXPR`` :index:` <single: SINGULARITY_BIND_EXPR>`
     A string value containing a list of bind mount specifications to be
     passed to Singularity. The default value is ``"SingularityBind"``.
  ``SINGULARITY_EXTRA_ARGUMENTS``
+:index:` <single: SINGULARITY_EXTRA_ARGUMENTS>`
     A string value containing a list of extra arguments to be appended
     to the Singularity command line.
 
 condor\_submit Configuration File Entries
 -----------------------------------------
 
- ``DEFAULT_UNIVERSE``
+:index:` <single: condor_submit configuration variables;configuration>`
+
+ ``DEFAULT_UNIVERSE`` :index:` <single: DEFAULT_UNIVERSE>`
     The universe under which a job is executed may be specified in the
     submit description file. If it is not specified in the submit
     description file, then this variable specifies the universe (when
     defined). If the universe is not specified in the submit description
     file, and if this variable is not defined, then the default universe
     for a job will be the vanilla universe.
- ``JOB_DEFAULT_NOTIFICATION``
+ ``JOB_DEFAULT_NOTIFICATION`` :index:` <single: JOB_DEFAULT_NOTIFICATION>`
     The default that sets email notification for jobs. This variable
     defaults to ``NEVER``, such that HTCondor will not send email about
     events for jobs. Possible values are ``NEVER``, ``ERROR``,
@@ -5721,31 +5956,36 @@ condor\_submit Configuration File Entries
     of a failure, and not by user request. If ``NEVER``, the owner will
     not receive email.
  ``JOB_DEFAULT_LEASE_DURATION``
-    The default value for the **job\_lease\_duration** submit command
-    when the submit file does not specify a value. The default value is
-    2400, which is 40 minutes.
- ``JOB_DEFAULT_REQUESTMEMORY``
+:index:` <single: JOB_DEFAULT_LEASE_DURATION>`
+    The default value for the
+    **job\_lease\_duration**\ :index:` <single: job_lease_duration;submit commands>`
+    submit command when the submit file does not specify a value. The
+    default value is 2400, which is 40 minutes.
+ ``JOB_DEFAULT_REQUESTMEMORY`` :index:` <single: JOB_DEFAULT_REQUESTMEMORY>`
     The amount of memory in MiB to acquire for a job, if the job does
-    not specify how much it needs using the **request\_memory** submit
-    command. If this variable is not defined, then the default is
+    not specify how much it needs using the
+    **request\_memory**\ :index:` <single: request_memory;submit commands>`
+    submit command. If this variable is not defined, then the default is
     defined by the expression
 
     ::
 
           ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 
- ``JOB_DEFAULT_REQUESTDISK``
+ ``JOB_DEFAULT_REQUESTDISK`` :index:` <single: JOB_DEFAULT_REQUESTDISK>`
     The amount of disk in KiB to acquire for a job, if the job does not
-    specify how much it needs using the **request\_disk** submit
-    command. If the job defines the value, then that value takes
+    specify how much it needs using the
+    **request\_disk**\ :index:` <single: request_disk;submit commands>`
+    submit command. If the job defines the value, then that value takes
     precedence. If not set, then then the default is defined as
     ``DiskUsage``.
- ``JOB_DEFAULT_REQUESTCPUS``
+ ``JOB_DEFAULT_REQUESTCPUS`` :index:` <single: JOB_DEFAULT_REQUESTCPUS>`
     The number of CPUs to acquire for a job, if the job does not specify
-    how many it needs using the **request\_cpus** submit command. If the
-    job defines the value, then that value takes precedence. If not set,
-    then then the default is 1.
- ``DEFAULT_JOB_MAX_RETRIES``
+    how many it needs using the
+    **request\_cpus**\ :index:` <single: request_cpus;submit commands>`
+    submit command. If the job defines the value, then that value takes
+    precedence. If not set, then then the default is 1.
+ ``DEFAULT_JOB_MAX_RETRIES`` :index:` <single: DEFAULT_JOB_MAX_RETRIES>`
     The default value for the maximum number of job retries, if the
     *condor\_submit* retry feature is used. (Note that this value is
     only relevant if either **retry\_until** or **success\_exit\_code**
@@ -5757,45 +5997,47 @@ If you want *condor\_submit* to automatically append an expression to
 the ``Requirements`` expression or ``Rank`` expression of jobs at your
 site use the following macros:
 
- ``APPEND_REQ_VANILLA``
+ ``APPEND_REQ_VANILLA`` :index:` <single: APPEND_REQ_VANILLA>`
     Expression to be appended to vanilla job requirements.
- ``APPEND_REQ_STANDARD``
+ ``APPEND_REQ_STANDARD`` :index:` <single: APPEND_REQ_STANDARD>`
     Expression to be appended to standard job requirements.
- ``APPEND_REQUIREMENTS``
+ ``APPEND_REQUIREMENTS`` :index:` <single: APPEND_REQUIREMENTS>`
     Expression to be appended to any type of universe jobs. However, if
     ``APPEND_REQ_VANILLA`` or ``APPEND_REQ_STANDARD`` is defined, then
     ignore the ``APPEND_REQUIREMENTS`` for those universes.
- ``APPEND_RANK``
+ ``APPEND_RANK`` :index:` <single: APPEND_RANK>`
     Expression to be appended to job rank. ``APPEND_RANK_STANDARD`` or
     ``APPEND_RANK_VANILLA`` will override this setting if defined.
- ``APPEND_RANK_STANDARD``
+ ``APPEND_RANK_STANDARD`` :index:` <single: APPEND_RANK_STANDARD>`
     Expression to be appended to standard job rank.
- ``APPEND_RANK_VANILLA``
+ ``APPEND_RANK_VANILLA`` :index:` <single: APPEND_RANK_VANILLA>`
     Expression to append to vanilla job rank.
 
-NOTE: The ``APPEND_RANK_STANDARD`` and ``APPEND_RANK_VANILLA`` macros
-were called ``APPEND_PREF_STANDARD`` and ``APPEND_PREF_VANILLA`` in
+NOTE: The ``APPEND_RANK_STANDARD`` :index:` <single: APPEND_RANK_STANDARD>`
+and ``APPEND_RANK_VANILLA`` :index:` <single: APPEND_RANK_VANILLA>` macros
+were called ``APPEND_PREF_STANDARD`` :index:` <single: APPEND_PREF_STANDARD>`
+and ``APPEND_PREF_VANILLA`` :index:` <single: APPEND_PREF_VANILLA>` in
 previous versions of HTCondor.
 
 In addition, you may provide default ``Rank`` expressions if your users
 do not specify their own with:
 
- ``DEFAULT_RANK``
+ ``DEFAULT_RANK`` :index:` <single: DEFAULT_RANK>`
     Default rank expression for any job that does not specify its own
     rank expression in the submit description file. There is no default
     value, such that when undefined, the value used will be 0.0.
- ``DEFAULT_RANK_VANILLA``
+ ``DEFAULT_RANK_VANILLA`` :index:` <single: DEFAULT_RANK_VANILLA>`
     Default rank for vanilla universe jobs. There is no default value,
     such that when undefined, the value used will be 0.0. When both
     ``DEFAULT_RANK`` and ``DEFAULT_RANK_VANILLA`` are defined, the value
     for ``DEFAULT_RANK_VANILLA`` is used for vanilla universe jobs.
- ``DEFAULT_RANK_STANDARD``
+ ``DEFAULT_RANK_STANDARD`` :index:` <single: DEFAULT_RANK_STANDARD>`
     Default rank for standard universe jobs. There is no default value,
     such that when undefined, the value used will be 0.0. When both
     ``DEFAULT_RANK`` and ``DEFAULT_RANK_STANDARD`` are defined, the
     value for ``DEFAULT_RANK_STANDARD`` is used for standard universe
     jobs.
- ``DEFAULT_IO_BUFFER_SIZE``
+ ``DEFAULT_IO_BUFFER_SIZE`` :index:` <single: DEFAULT_IO_BUFFER_SIZE>`
     HTCondor keeps a buffer of recently-used data for each file an
     application opens. This macro specifies the default maximum number
     of bytes to be buffered for each open file at the executing machine.
@@ -5803,24 +6045,31 @@ do not specify their own with:
     default. If this macro is undefined, a default size of 512 KB will
     be used.
  ``DEFAULT_IO_BUFFER_BLOCK_SIZE``
+:index:` <single: DEFAULT_IO_BUFFER_BLOCK_SIZE>`
     When buffering is enabled, HTCondor will attempt to consolidate
     small read and write operations into large blocks. This macro
     specifies the default block size HTCondor will use. The
     *condor\_status* ``buffer_block_size`` command will override this
     default. If this macro is undefined, a default size of 32 KB will be
     used.
- ``SUBMIT_SKIP_FILECHECKS``
+ ``SUBMIT_SKIP_FILECHECKS`` :index:` <single: SUBMIT_SKIP_FILECHECKS>`
     If ``True``, *condor\_submit* behaves as if the **-disable**
     command-line option is used. This tells *condor\_submit* to disable
     file permission checks when submitting a job for read permissions on
-    all input files, such as those defined by commands **input** and
-    **transfer\_input\_files**, as well as write permission to output
-    files, such as a log file defined by **log** and output files
-    defined with **output** or **transfer\_output\_files**. This can
-    significantly decrease the amount of time required to submit a large
-    group of jobs. For standard universe, the setting is ignored and
-    file checks are always performed. The default value is ``True``.
+    all input files, such as those defined by commands
+    **input**\ :index:` <single: input;submit commands>` and
+    **transfer\_input\_files**\ :index:` <single: transfer_input_files;submit commands>`,
+    as well as write permission to output files, such as a log file
+    defined by **log**\ :index:` <single: log;submit commands>` and output
+    files defined with
+    **output**\ :index:` <single: output;submit commands>` or
+    **transfer\_output\_files**\ :index:` <single: transfer_output_files;submit commands>`.
+    This can significantly decrease the amount of time required to
+    submit a large group of jobs. For standard universe, the setting is
+    ignored and file checks are always performed. The default value is
+    ``True``.
  ``WARN_ON_UNUSED_SUBMIT_FILE_MACROS``
+:index:` <single: WARN_ON_UNUSED_SUBMIT_FILE_MACROS>`
     A boolean variable that defaults to ``True``. When ``True``,
     *condor\_submit* performs checks on the job’s submit description
     file contents for commands that define a macro, but do not use the
@@ -5829,13 +6078,15 @@ do not specify their own with:
     command is not a known submit command. This check may help spot
     spelling errors of known submit commands.
  ``SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES``
+:index:` <single: SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES>`
     Provides a default value for the submit command
-    **should\_transfer\_files** if the submit file does not supply a
-    value and when the value is not forced by some other command in the
-    submit file, such as the universe. Valid values are YES, TRUE,
-    ALWAYS, NO, FALSE, NEVER and IF\_NEEDED. If the value is not one of
-    these, then IF\_NEEDED will be used.
- ``SUBMIT_SEND_RESCHEDULE``
+    **should\_transfer\_files**\ :index:` <single: should_transfer_files;submit commands>`
+    if the submit file does not supply a value and when the value is not
+    forced by some other command in the submit file, such as the
+    universe. Valid values are YES, TRUE, ALWAYS, NO, FALSE, NEVER and
+    IF\_NEEDED. If the value is not one of these, then IF\_NEEDED will
+    be used.
+ ``SUBMIT_SEND_RESCHEDULE`` :index:` <single: SUBMIT_SEND_RESCHEDULE>`
     A boolean expression that when False, prevents *condor\_submit* from
     automatically sending a *condor\_reschedule* command as it
     completes. The *condor\_reschedule* command causes the
@@ -5845,7 +6096,7 @@ do not specify their own with:
     a huge number of jobs (thousands or tens of thousands), this step
     would hurt performance in such a way that it became an obstacle to
     scalability. The default value is True.
- ``SUBMIT_ATTRS``
+ ``SUBMIT_ATTRS`` :index:` <single: SUBMIT_ATTRS>`
     A comma-separated and/or space-separated list of ClassAd attribute
     names for which the attribute and value will be inserted into all
     the job ClassAds that *condor\_submit* creates. In this way, it is
@@ -5860,7 +6111,7 @@ do not specify their own with:
     later point in time. ``SUBMIT_EXPRS`` is a historic setting that
     functions identically to ``SUBMIT_ATTRS``. It may be removed in the
     future, so use ``SUBMIT_ATTRS``.
- ``LOG_ON_NFS_IS_ERROR``
+ ``LOG_ON_NFS_IS_ERROR`` :index:` <single: LOG_ON_NFS_IS_ERROR>`
     A boolean value that controls whether *condor\_submit* prohibits job
     submit description files with job event log files on NFS. If
     ``LOG_ON_NFS_IS_ERROR`` is set to ``True``, such submit files will
@@ -5868,21 +6119,23 @@ do not specify their own with:
     will be submitted. If not defined, ``LOG_ON_NFS_IS_ERROR`` defaults
     to ``False``.
  ``SUBMIT_MAX_PROCS_IN_CLUSTER``
+:index:` <single: SUBMIT_MAX_PROCS_IN_CLUSTER>`
     An integer value that limits the maximum number of jobs that would
     be assigned within a single cluster. Job submissions that would
     exceed the defined value fail, issuing an error message, and with no
     jobs submitted. The default value is 0, which does not limit the
     number of jobs assigned a single cluster number.
  ``ENABLE_DEPRECATION_WARNINGS``
+:index:` <single: ENABLE_DEPRECATION_WARNINGS>`
     A boolean value that defaults to ``False``. When ``True``,
     *condor\_submit* issues warnings when a job requests features that
     are no longer supported.
- ``INTERACTIVE_SUBMIT_FILE``
+ ``INTERACTIVE_SUBMIT_FILE`` :index:` <single: INTERACTIVE_SUBMIT_FILE>`
     The path and file name of a submit description file that
     *condor\_submit* will use in the specification of an interactive
     job. The default is ``$(RELEASE_DIR)``/libexec/interactive.sub when
     not defined.
- ``CRED_MIN_TIME_LEFT``
+ ``CRED_MIN_TIME_LEFT`` :index:` <single: CRED_MIN_TIME_LEFT>`
     When a job uses an X509 user proxy, condor\_submit will refuse to
     submit a job whose x509 expiration time is less than this many
     seconds in the future. The default is to only refuse jobs whose
@@ -5891,13 +6144,15 @@ do not specify their own with:
 condor\_preen Configuration File Entries
 ----------------------------------------
 
+:index:` <single: condor_preen configuration variables;configuration>`
+
 These macros affect *condor\_preen*.
 
- ``PREEN_ADMIN``
+ ``PREEN_ADMIN`` :index:` <single: PREEN_ADMIN>`
     This macro sets the e-mail address where *condor\_preen* will send
     e-mail (if it is configured to send email at all; see the entry for
     ``PREEN``). Defaults to ``$(CONDOR_ADMIN)``.
- ``VALID_SPOOL_FILES``
+ ``VALID_SPOOL_FILES`` :index:` <single: VALID_SPOOL_FILES>`
     A comma or space separated list of files that *condor\_preen*
     considers valid files to find in the ``$(SPOOL)`` directory, such
     that *condor\_preen* will not remove these files. There is no
@@ -5905,7 +6160,7 @@ These macros affect *condor\_preen*.
     directories that are normally present in the ``$(SPOOL)`` directory.
     A single asterisk (\*) wild card character is permitted in each file
     item within the list.
- ``SYSTEM_VALID_SPOOL_FILES``
+ ``SYSTEM_VALID_SPOOL_FILES`` :index:` <single: SYSTEM_VALID_SPOOL_FILES>`
     A comma or space separated list of files that *condor\_preen*
     considers valid files to find in the ``$(SPOOL)`` directory. The
     default value is all files known by HTCondor to be valid. This
@@ -5914,7 +6169,7 @@ These macros affect *condor\_preen*.
     directories that are normally present in the ``$(SPOOL)`` directory.
     A single asterisk (\*) wild card character is permitted in each file
     item within the list.
- ``INVALID_LOG_FILES``
+ ``INVALID_LOG_FILES`` :index:` <single: INVALID_LOG_FILES>`
     This macro contains a (comma or space separated) list of files that
     *condor\_preen* considers invalid files to find in the ``$(LOG)``
     directory. There is no default value.
@@ -5922,9 +6177,11 @@ These macros affect *condor\_preen*.
 condor\_collector Configuration File Entries
 --------------------------------------------
 
+:index:` <single: condor_collector configuration variables;configuration>`
+
 These macros affect the *condor\_collector*.
 
- ``CLASSAD_LIFETIME``
+ ``CLASSAD_LIFETIME`` :index:` <single: CLASSAD_LIFETIME>`
     The default maximum age in seconds for ClassAds collected by the
     *condor\_collector*. ClassAds older than the maximum age are
     discarded by the *condor\_collector* as stale.
@@ -5948,12 +6205,12 @@ These macros affect the *condor\_collector*.
     -  ``DEFRAG_UPDATE_INTERVAL``
     -  ``HAD_UPDATE_INTERVAL``
 
- ``MASTER_CHECK_INTERVAL``
+ ``MASTER_CHECK_INTERVAL`` :index:` <single: MASTER_CHECK_INTERVAL>`
     This macro defines how often the collector should check for machines
     that have ClassAds from some daemons, but not from the
     *condor\_master* (orphaned daemons) and send e-mail about it. It is
     defined in seconds and defaults to 10800 (3 hours).
- ``COLLECTOR_REQUIREMENTS``
+ ``COLLECTOR_REQUIREMENTS`` :index:` <single: COLLECTOR_REQUIREMENTS>`
     A boolean expression that filters out unwanted ClassAd updates. The
     expression is evaluated for ClassAd updates that have passed through
     enabled security authorization checks. The default behavior when
@@ -5974,14 +6231,14 @@ These macros affect the *condor\_collector*.
     are consistent. To validate this information, the attribute to check
     is ``TARGET.MyAddress``.
 
- ``CLIENT_TIMEOUT``
+ ``CLIENT_TIMEOUT`` :index:` <single: CLIENT_TIMEOUT>`
     Network timeout that the *condor\_collector* uses when talking to
     any daemons or tools that are sending it a ClassAd update. It is
     defined in seconds and defaults to 30.
- ``QUERY_TIMEOUT``
+ ``QUERY_TIMEOUT`` :index:` <single: QUERY_TIMEOUT>`
     Network timeout when talking to anyone doing a query. It is defined
     in seconds and defaults to 60.
- ``CONDOR_DEVELOPERS``
+ ``CONDOR_DEVELOPERS`` :index:` <single: CONDOR_DEVELOPERS>`
     By default, HTCondor will send e-mail once per week to this address
     with the output of the *condor\_status* command, which lists how
     many machines are in the pool and how many are running jobs. The
@@ -5998,7 +6255,7 @@ These macros affect the *condor\_collector*.
     disable this feature, or replace the address with a desired
     location. If undefined (commented out) in the configuration file,
     HTCondor follows its default behavior.
- ``COLLECTOR_NAME``
+ ``COLLECTOR_NAME`` :index:` <single: COLLECTOR_NAME>`
     This macro is used to specify a short description of your pool. It
     should be about 20 characters long. For example, the name of the
     UW-Madison Computer Science HTCondor Pool is ``"UW-Madison CS"``.
@@ -6010,6 +6267,7 @@ These macros affect the *condor\_collector*.
     to describe the pool, which is included in the updates sent to the
     ``CONDOR_DEVELOPERS_COLLECTOR``.
  ``CONDOR_DEVELOPERS_COLLECTOR``
+:index:` <single: CONDOR_DEVELOPERS_COLLECTOR>`
     By default, every pool sends periodic updates to a central
     *condor\_collector* at UW-Madison with basic information about the
     status of the pool. Updates include only the number of total
@@ -6021,12 +6279,12 @@ These macros affect the *condor\_collector*.
     discontinue sending updates, explicitly set this macro to ``NONE``.
     If undefined or commented out in the configuration file, HTCondor
     follows its default behavior.
- ``COLLECTOR_UPDATE_INTERVAL``
+ ``COLLECTOR_UPDATE_INTERVAL`` :index:` <single: COLLECTOR_UPDATE_INTERVAL>`
     This variable is defined in seconds and defaults to 900 (every 15
     minutes). It controls the frequency of the periodic updates sent to
     a central *condor\_collector* at UW-Madison as defined by
     ``CONDOR_DEVELOPERS_COLLECTOR``.
- ``COLLECTOR_SOCKET_BUFSIZE``
+ ``COLLECTOR_SOCKET_BUFSIZE`` :index:` <single: COLLECTOR_SOCKET_BUFSIZE>`
     This specifies the buffer size, in bytes, reserved for
     *condor\_collector* network UDP sockets. The default is 10240000, or
     a ten megabyte buffer. This is a healthy size, even for a large
@@ -6049,6 +6307,7 @@ These macros affect the *condor\_collector*.
     must be restarted.
 
  ``COLLECTOR_TCP_SOCKET_BUFSIZE``
+:index:` <single: COLLECTOR_TCP_SOCKET_BUFSIZE>`
     This specifies the TCP buffer size, in bytes, reserved for
     *condor\_collector* network sockets. The default is 131072, or a 128
     kilobyte buffer. This is a healthy size, even for a large pool. The
@@ -6058,24 +6317,26 @@ These macros affect the *condor\_collector*.
     considering setting this parameter to a lower value (perhaps 65536
     or 32768).
 
-    NOTE: See the note for ``COLLECTOR_SOCKET_BUFSIZE`` .
+    NOTE: See the note for ``COLLECTOR_SOCKET_BUFSIZE``
+    :index:` <single: COLLECTOR_SOCKET_BUFSIZE>`.
 
- ``KEEP_POOL_HISTORY``
+ ``KEEP_POOL_HISTORY`` :index:` <single: KEEP_POOL_HISTORY>`
     This boolean macro is used to decide if the collector will write out
     statistical information about the pool to history files. The default
     is ``False``. The location, size, and frequency of history logging
     is controlled by the other macros.
- ``POOL_HISTORY_DIR``
+ ``POOL_HISTORY_DIR`` :index:` <single: POOL_HISTORY_DIR>`
     This macro sets the name of the directory where the history files
     reside (if history logging is enabled). The default is the ``SPOOL``
     directory.
- ``POOL_HISTORY_MAX_STORAGE``
+ ``POOL_HISTORY_MAX_STORAGE`` :index:` <single: POOL_HISTORY_MAX_STORAGE>`
     This macro sets the maximum combined size of the history files. When
     the size of the history files is close to this limit, the oldest
     information will be discarded. Thus, the larger this parameter’s
     value is, the larger the time range for which history will be
     available. The default value is 10000000 (10 MB).
  ``POOL_HISTORY_SAMPLING_INTERVAL``
+:index:` <single: POOL_HISTORY_SAMPLING_INTERVAL>`
     This macro sets the interval, in seconds, between samples for
     history logging purposes. When a sample is taken, the collector goes
     through the information it holds, and summarizes it. The information
@@ -6083,7 +6344,7 @@ These macros affect the *condor\_collector*.
     (and recommended) value is 60 seconds. Setting this macro’s value
     too low will increase the load on the collector, while setting it to
     high will produce less precise statistical information.
- ``COLLECTOR_DAEMON_STATS``
+ ``COLLECTOR_DAEMON_STATS`` :index:` <single: COLLECTOR_DAEMON_STATS>`
     A boolean value that controls whether or not the *condor\_collector*
     daemon keeps update statistics on incoming updates. The default
     value is ``True``. If enabled, the *condor\_collector* will insert
@@ -6092,6 +6353,9 @@ These macros affect the *condor\_collector*.
     ``DaemonStartTime`` attributes will not be counted, and will not
     have attributes inserted (all modern HTCondor daemons which publish
     ClassAds publish these attributes).
+    :index:` <single: UpdatesTotal;ClassAd attribute added by the condor_collector>`
+    :index:` <single: UpdatesSequenced;ClassAd attribute added by the condor_collector>`
+    :index:` <single: UpdatesLost;ClassAd attribute added by the condor_collector>`
 
     The attributes inserted are ``UpdatesTotal``, ``UpdatesSequenced``,
     and ``UpdatesLost``. ``UpdatesTotal`` is the total number of updates
@@ -6104,28 +6368,31 @@ These macros affect the *condor\_collector*.
     page \ `2469 <ClassAdAttributesAddedbytheCondorcollector.html#x178-1242000A.10>`__
     for more information on the added attributes.
 
- ``COLLECTOR_STATS_SWEEP``
+ ``COLLECTOR_STATS_SWEEP`` :index:` <single: COLLECTOR_STATS_SWEEP>`
     This value specifies the number of seconds between sweeps of the
     *condor\_collector*\ ’s per-daemon update statistics. Records for
     daemons which have not reported in this amount of time are purged in
     order to save memory. The default is two days. It is unlikely that
     you would ever need to adjust this.
+    :index:` <single: UpdatesHistory;ClassAd attribute added by the condor_collector>`
  ``COLLECTOR_DAEMON_HISTORY_SIZE``
+:index:` <single: COLLECTOR_DAEMON_HISTORY_SIZE>`
     This variable controls the size of the published update history that
     the *condor\_collector* inserts into the ClassAds it stores and
     sends. The default value is 128, which means that history is stored
     and published for the latest 128 updates. This variable’s value is
-    ignored, if ``COLLECTOR_DAEMON_STATS`` is not enabled.
+    ignored, if ``COLLECTOR_DAEMON_STATS``
+    :index:` <single: COLLECTOR_DAEMON_STATS>` is not enabled.
 
     If the value is a non-zero one, the *condor\_collector* will insert
     attribute ``UpdatesHistory`` into the ClassAd (similar to
     ``UpdatesTotal``). AttrUpdatesHistory is a hexadecimal string which
     represents a bitmap of the last ``COLLECTOR_DAEMON_HISTORY_SIZE``
-    updates. The most significant bit (MSB) of the bitmap represents the
-    most recent update, and the least significant bit (LSB) represents
-    the least recent. A value of zero means that the update was not
-    lost, and a value of 1 indicates that the update was detected as
-    lost.
+    :index:` <single: COLLECTOR_DAEMON_HISTORY_SIZE>` updates. The most
+    significant bit (MSB) of the bitmap represents the most recent
+    update, and the least significant bit (LSB) represents the least
+    recent. A value of zero means that the update was not lost, and a
+    value of 1 indicates that the update was detected as lost.
 
     For example, if the last update was not lost, the previous was lost,
     and the previous two not, the bitmap would be 0100, and the matching
@@ -6142,6 +6409,7 @@ These macros affect the *condor\_collector*.
     for more information on the added attribute.
 
  ``COLLECTOR_CLASS_HISTORY_SIZE``
+:index:` <single: COLLECTOR_CLASS_HISTORY_SIZE>`
     This variable controls the size of the published update history that
     the *condor\_collector* inserts into the *condor\_collector*
     ClassAds it produces. The default value is zero.
@@ -6155,9 +6423,10 @@ These macros affect the *condor\_collector*.
 
     Note that the *condor\_collector* always publishes Lost, Total and
     Sequenced counts for all ClassAd classes. This is similar to the
-    statistics gathered if ``COLLECTOR_DAEMON_STATS`` is enabled.
+    statistics gathered if ``COLLECTOR_DAEMON_STATS``
+    :index:` <single: COLLECTOR_DAEMON_STATS>` is enabled.
 
- ``COLLECTOR_QUERY_WORKERS``
+ ``COLLECTOR_QUERY_WORKERS`` :index:` <single: COLLECTOR_QUERY_WORKERS>`
     This macro sets the maximum number of child worker processes that
     the *condor\_collector* can have, and defaults to a value of 4 on
     Linux and MacOS platforms. When receiving a large query request, the
@@ -6173,16 +6442,20 @@ These macros affect the *condor\_collector*.
     Windows platforms, this macro has a value of zero and cannot be
     changed.
  ``COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO``
-    This macro defines the number of ``COLLECTOR_QUERY_WORKERS`` slots
-    will be held in reserve to only service high priority query
-    requests. Currently, high priority queries are defined as those
-    coming from the *condor\_negotiator* during the course of
-    matchmaking, or via a “condor\_sos condor\_status” command. The idea
-    here is the critical operation of matchmaking machines to jobs will
-    take precedence over user condor\_status invocations. Defaults to a
-    value of 1. The maximum allowable value for this macro is equal to
-    ``COLLECTOR_QUERY_WORKERS`` minus 1.
+:index:` <single: COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO>`
+    This macro defines the number of ``COLLECTOR_QUERY_WORKERS``
+    :index:` <single: COLLECTOR_QUERY_WORKERS>` slots will be held in reserve
+    to only service high priority query requests. Currently, high
+    priority queries are defined as those coming from the
+    *condor\_negotiator* during the course of matchmaking, or via a
+    “condor\_sos condor\_status” command. The idea here is the critical
+    operation of matchmaking machines to jobs will take precedence over
+    user condor\_status invocations. Defaults to a value of 1. The
+    maximum allowable value for this macro is equal to
+    ``COLLECTOR_QUERY_WORKERS`` :index:` <single: COLLECTOR_QUERY_WORKERS>`
+    minus 1.
  ``COLLECTOR_QUERY_WORKERS_PENDING``
+:index:` <single: COLLECTOR_QUERY_WORKERS_PENDING>`
     This macro sets the maximum of collector pending query requests that
     can be queued waiting for child workers to exit. Queries that would
     exceed this maximum are immediately aborted. When a forked child
@@ -6192,6 +6465,7 @@ These macros affect the *condor\_collector*.
     through all the work of actually forking a child and starting to
     service the query. Defaults to a value of 50.
  ``COLLECTOR_QUERY_MAX_WORKTIME``
+:index:` <single: COLLECTOR_QUERY_MAX_WORKTIME>`
     This macro defines the maximum amount of time in seconds that a
     query has to complete before it is aborted. Queries that wait in the
     pending queue longer than this period of time will be aborted before
@@ -6200,6 +6474,7 @@ These macros affect the *condor\_collector*.
     network connection. If set to 0, then there is no timeout. The
     default is 0.
  ``HANDLE_QUERY_IN_PROC_POLICY``
+:index:` <single: HANDLE_QUERY_IN_PROC_POLICY>`
     This variable sets the policy for which queries the
     *condor\_collector* should handle in process rather than by forking
     a worker. It should be set to one of the following values
@@ -6218,11 +6493,11 @@ These macros affect the *condor\_collector*.
     or any query with both a projection and a result limit that is
     smaller than 10. The default value is ``small_table_or_query``.
 
- ``COLLECTOR_DEBUG``
+ ``COLLECTOR_DEBUG`` :index:` <single: COLLECTOR_DEBUG>`
     This macro (and other macros related to debug logging in the
     *condor\_collector* is described in
     section \ `3.5.2 <#x33-1890003.5.2>`__ as ``<SUBSYS>_DEBUG``.
- ``CONDOR_VIEW_CLASSAD_TYPES``
+ ``CONDOR_VIEW_CLASSAD_TYPES`` :index:` <single: CONDOR_VIEW_CLASSAD_TYPES>`
     Provides the ClassAd types that will be forwarded to the
     ``CONDOR_VIEW_HOST``. The ClassAd types can be found with
     *condor\_status* **-any**. The default forwarding behavior of the
@@ -6235,11 +6510,13 @@ These macros affect the *condor\_collector*.
     There is no default value for this variable.
 
  ``COLLECTOR_FORWARD_FILTERING``
+:index:` <single: COLLECTOR_FORWARD_FILTERING>`
     When this boolean variable is set to ``True``, Machine and Submitter
     ad updates are not forwarded to the ``CONDOR_VIEW_HOST`` if certain
     attributes are unchanged from the previous update of the ad. The
     default is ``False``, meaning all updates are forwarded.
  ``COLLECTOR_FORWARD_WATCH_LIST``
+:index:` <single: COLLECTOR_FORWARD_WATCH_LIST>`
     When ``COLLECTOR_FORWARD_FILTERING`` is set to ``True``, this
     variable provides the list of attributes that controls whether a
     Machine or Submitter ad update is forwarded to the
@@ -6247,6 +6524,7 @@ These macros affect the *condor\_collector*.
     from the previous update, then the new update is not forwarded. The
     default value is ``State,Cpus,Memory,IdleJobs``.
  ``COLLECTOR_FORWARD_INTERVAL``
+:index:` <single: COLLECTOR_FORWARD_INTERVAL>`
     When ``COLLECTOR_FORWARD_FILTERING`` is set to ``True``, this
     variable limits how long forwarding of updates for a given ad can be
     filtered before an update must be forwarded. The default is one
@@ -6257,16 +6535,17 @@ persistently stores absent ClassAds. See
 section \ `3.12.2 <Monitoring.html#x40-3350003.12.2>`__ on
 page \ `1133 <Monitoring.html#x40-3350003.12.2>`__ for more details.
 
- ``ABSENT_REQUIREMENTS``
+ ``ABSENT_REQUIREMENTS`` :index:` <single: ABSENT_REQUIREMENTS>`
     A boolean expression evaluated by the *condor\_collector* when a
     machine ClassAd would otherwise expire. If ``True``, the ClassAd
     instead becomes absent. If not defined, the implementation will
     behave as if ``False``, and no absent ClassAds will be stored.
- ``ABSENT_EXPIRE_ADS_AFTER``
+ ``ABSENT_EXPIRE_ADS_AFTER`` :index:` <single: ABSENT_EXPIRE_ADS_AFTER>`
     The integer number of seconds after which the *condor\_collector*
     forgets about an absent ClassAd. If 0, the ClassAds persist forever.
     Defaults to 30 days.
  ``COLLECTOR_PERSISTENT_AD_LOG``
+:index:` <single: COLLECTOR_PERSISTENT_AD_LOG>`
     The full path and file name of a file that stores machine ClassAds
     for every hibernating or absent machine. This forms a persistent
     storage of these ClassAds, in case the *condor\_collector* daemon
@@ -6280,7 +6559,7 @@ page \ `1133 <Monitoring.html#x40-3350003.12.2>`__ for more details.
     This configuration variable replaces ``OFFLINE_LOG``, which is no
     longer used.
 
- ``EXPIRE_INVALIDATED_ADS``
+ ``EXPIRE_INVALIDATED_ADS`` :index:` <single: EXPIRE_INVALIDATED_ADS>`
     A boolean value that defaults to ``False``. When ``True``, causes
     all invalidated ClassAds to be treated as if they expired. This
     permits invalidated ClassAds to be marked absent, as defined in
@@ -6289,9 +6568,11 @@ page \ `1133 <Monitoring.html#x40-3350003.12.2>`__ for more details.
 condor\_negotiator Configuration File Entries
 ---------------------------------------------
 
+:index:` <single: condor_negotiator configuration variables;configuration>`
+
 These macros affect the *condor\_negotiator*.
 
- ``NEGOTIATOR_NAME``
+ ``NEGOTIATOR_NAME`` :index:` <single: NEGOTIATOR_NAME>`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor\_negotiator*\ ’s ClassAd and the ``NegotiatorName``
     attribute of its accounting ClassAds. This configuration macro is
@@ -6305,23 +6586,25 @@ These macros affect the *condor\_negotiator*.
     page \ `646 <#x33-1940003.5.7>`__ for defaults and composition of
     valid HTCondor daemon names.
 
- ``NEGOTIATOR_INTERVAL``
+ ``NEGOTIATOR_INTERVAL`` :index:` <single: NEGOTIATOR_INTERVAL>`
     Sets how often the *condor\_negotiator* starts a negotiation cycle.
     It is defined in seconds and defaults to 60 (1 minute).
  ``NEGOTIATOR_UPDATE_INTERVAL``
+:index:` <single: NEGOTIATOR_UPDATE_INTERVAL>`
     This macro determines how often the *condor\_negotiator* daemon
     sends a ClassAd update to the *condor\_collector*. It is defined in
     seconds and defaults to 300 (every 5 minutes).
- ``NEGOTIATOR_CYCLE_DELAY``
+ ``NEGOTIATOR_CYCLE_DELAY`` :index:` <single: NEGOTIATOR_CYCLE_DELAY>`
     An integer value that represents the minimum number of seconds that
     must pass before a new negotiation cycle may start. The default
     value is 20. ``NEGOTIATOR_CYCLE_DELAY`` is intended only for use by
     HTCondor experts.
- ``NEGOTIATOR_TIMEOUT``
+ ``NEGOTIATOR_TIMEOUT`` :index:` <single: NEGOTIATOR_TIMEOUT>`
     Sets the timeout that the negotiator uses on its network connections
     to the *condor\_schedd* and *condor\_startd*\ s. It is defined in
     seconds and defaults to 30.
  ``NEGOTIATION_CYCLE_STATS_LENGTH``
+:index:` <single: NEGOTIATION_CYCLE_STATS_LENGTH>`
     Specifies how many recent negotiation cycles should be included in
     the history that is published in the *condor\_negotiator*\ ’s ad.
     The default is 3 and the maximum allowed value is 100. Setting this
@@ -6336,32 +6619,33 @@ These macros affect the *condor\_negotiator*.
     1 applies to the next most recent negotiation cycle, and so on. See
     page \ `2448 <NegotiatorClassAdAttributes.html#x174-1238000A.6>`__
     for a list of attributes that are published.
- ``PRIORITY_HALFLIFE``
+ ``PRIORITY_HALFLIFE`` :index:` <single: PRIORITY_HALFLIFE>`
     This macro defines the half-life of the user priorities. See
     section \ `2.7.2 <PrioritiesandPreemption.html#x19-640002.7.2>`__ on
     User Priorities for details. It is defined in seconds and defaults
     to 86400 (1 day).
- ``DEFAULT_PRIO_FACTOR``
+ ``DEFAULT_PRIO_FACTOR`` :index:` <single: DEFAULT_PRIO_FACTOR>`
     Sets the priority factor for local users as they first submit jobs,
     as described in
     section \ `3.6 <UserPrioritiesandNegotiation.html#x34-2320003.6>`__.
     Defaults to 1000.
- ``NICE_USER_PRIO_FACTOR``
+ ``NICE_USER_PRIO_FACTOR`` :index:` <single: NICE_USER_PRIO_FACTOR>`
     Sets the priority factor for nice users, as described in
     section \ `3.6 <UserPrioritiesandNegotiation.html#x34-2320003.6>`__.
     Defaults to 10000000000.
- ``REMOTE_PRIO_FACTOR``
+ ``REMOTE_PRIO_FACTOR`` :index:` <single: REMOTE_PRIO_FACTOR>`
     Defines the priority factor for remote users, which are those users
     who who do not belong to the local domain. See
     section \ `3.6 <UserPrioritiesandNegotiation.html#x34-2320003.6>`__
     for details. Defaults to 10000000.
- ``ACCOUNTANT_LOCAL_DOMAIN``
+ ``ACCOUNTANT_LOCAL_DOMAIN`` :index:` <single: ACCOUNTANT_LOCAL_DOMAIN>`
     Describes the local UID domain. This variable is used to decide if a
     user is local or remote. A user is considered to be in the local
     domain if their UID domain matches the value of this variable.
     Usually, this variable is set to the local UID domain. If not
     defined, all users are considered local.
  ``MAX_ACCOUNTANT_DATABASE_SIZE``
+:index:` <single: MAX_ACCOUNTANT_DATABASE_SIZE>`
     This macro defines the maximum size (in bytes) that the accountant
     database log file can reach before it is truncated (which re-writes
     the file in a more compact format). If, after truncating, the file
@@ -6369,11 +6653,13 @@ These macros affect the *condor\_negotiator*.
     the maximum size will be automatically expanded. The default is 1
     megabyte (1000000).
  ``NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES``
+:index:` <single: NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES>`
     This macro tells the negotiator to not count resources that are
     suspended when calculating the number of resources a user is using.
     Defaults to false, that is, a user is still charged for a resource
     even when that resource has suspended the job.
  ``NEGOTIATOR_SOCKET_CACHE_SIZE``
+:index:` <single: NEGOTIATOR_SOCKET_CACHE_SIZE>`
     This macro defines the maximum number of sockets that the
     *condor\_negotiator* keeps in its open socket cache. Caching open
     sockets makes the negotiation protocol more efficient by eliminating
@@ -6383,7 +6669,7 @@ These macros affect the *condor\_negotiator*.
     *condor\_schedd*\ s submitting jobs to the negotiator at any time.
     If you lower this number, you must run *condor\_restart* and not
     just *condor\_reconfig* for the change to take effect.
- ``NEGOTIATOR_INFORM_STARTD``
+ ``NEGOTIATOR_INFORM_STARTD`` :index:` <single: NEGOTIATOR_INFORM_STARTD>`
     Boolean setting that controls if the *condor\_negotiator* should
     inform the *condor\_startd* when it has been matched with a job. The
     default is ``False``. When this is set to the default value of
@@ -6391,12 +6677,12 @@ These macros affect the *condor\_negotiator*.
     and will go directly from Unclaimed to Claimed. Because this
     notification is done via UDP, if a pool is configured so that the
     execute hosts do not create UDP command sockets (see the
-    ``WANT_UDP_COMMAND_SOCKET`` setting described in
-    section \ `3.5.1 <#x33-1880003.5.1>`__ on
+    ``WANT_UDP_COMMAND_SOCKET`` :index:` <single: WANT_UDP_COMMAND_SOCKET>`
+    setting described in section \ `3.5.1 <#x33-1880003.5.1>`__ on
     page \ `599 <#x33-1880003.5.1>`__ for details), the
     *condor\_negotiator* should be configured not to attempt to contact
     these *condor\_startd* daemons by using the default value.
- ``NEGOTIATOR_PRE_JOB_RANK``
+ ``NEGOTIATOR_PRE_JOB_RANK`` :index:` <single: NEGOTIATOR_PRE_JOB_RANK>`
     Resources that match a request are first sorted by this expression.
     If there are any ties in the rank of the top choice, the top
     resources are sorted by the user-supplied rank in the job ClassAd,
@@ -6416,7 +6702,7 @@ These macros affect the *condor\_negotiator*.
           NEGOTIATOR_PRE_JOB_RANK = (10000000 * My.Rank) + \ 
            (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 
- ``NEGOTIATOR_POST_JOB_RANK``
+ ``NEGOTIATOR_POST_JOB_RANK`` :index:` <single: NEGOTIATOR_POST_JOB_RANK>`
     Resources that match a request are first sorted by
     ``NEGOTIATOR_PRE_JOB_RANK``. If there are any ties in the rank of
     the top choice, the top resources are sorted by the user-supplied
@@ -6435,7 +6721,7 @@ These macros affect the *condor\_negotiator*.
            (ifThenElse(isUndefined(KFlops), 1000, Kflops) - \ 
            SlotID - 1.0e10*(Offline=?=True))
 
- ``PREEMPTION_REQUIREMENTS``
+ ``PREEMPTION_REQUIREMENTS`` :index:` <single: PREEMPTION_REQUIREMENTS>`
     When considering user priorities, the negotiator will not preempt a
     job running on a given machine unless this expression evaluates to
     ``True``, and the owner of the idle job has a better priority than
@@ -6446,23 +6732,24 @@ These macros affect the *condor\_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS`` . If
-    not explicitly set in the HTCondor configuration file, the default
-    value for this expression is ``False``. ``PREEMPTION_REQUIREMENTS``
-    should include the term ``(SubmitterGroup =?= RemoteGroup)``, if a
-    preemption policy that respects group quotas is desired. Note that
-    this variable does not influence other potential causes of
-    preemption, such as the ``RANK`` of the *condor\_startd*, or
-    ``PREEMPT`` expressions. See section
+    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS``
+    :index:` <single: STARTD_JOB_EXPRS>`. If not explicitly set in the
+    HTCondor configuration file, the default value for this expression
+    is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
+    ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that
+    respects group quotas is desired. Note that this variable does not
+    influence other potential causes of preemption, such as the ``RANK``
+    of the *condor\_startd*, or ``PREEMPT`` expressions. See section
     `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2520003.7.1>`__
     for a general discussion of limiting preemption.
  ``PREEMPTION_REQUIREMENTS_STABLE``
+:index:` <single: PREEMPTION_REQUIREMENTS_STABLE>`
     A boolean value that defaults to ``True``, implying that all
     attributes utilized to define the ``PREEMPTION_REQUIREMENTS``
     variable will not change within a negotiation period time interval.
     If utilized attributes will change during the negotiation period
     time interval, then set this variable to ``False``.
- ``PREEMPTION_RANK``
+ ``PREEMPTION_RANK`` :index:` <single: PREEMPTION_RANK>`
     Resources that match a request are first sorted by
     ``NEGOTIATOR_PRE_JOB_RANK``. If there are any ties in the rank of
     the top choice, the top resources are sorted by the user-supplied
@@ -6483,17 +6770,18 @@ These macros affect the *condor\_negotiator*.
           PREEMPTION_RANK = (RemoteUserPrio * 1000000) - \ 
            ifThenElse(isUndefined(TotalJobRunTime), 0, TotalJobRunTime)
 
- ``PREEMPTION_RANK_STABLE``
+ ``PREEMPTION_RANK_STABLE`` :index:` <single: PREEMPTION_RANK_STABLE>`
     A boolean value that defaults to ``True``, implying that all
     attributes utilized to define the ``PREEMPTION_RANK`` variable will
     not change within a negotiation period time interval. If utilized
     attributes will change during the negotiation period time interval,
     then set this variable to ``False``.
  ``NEGOTIATOR_SLOT_CONSTRAINT``
+:index:` <single: NEGOTIATOR_SLOT_CONSTRAINT>`
     An expression which constrains which machine ClassAds are fetched
     from the *condor\_collector* by the *condor\_negotiator* during a
     negotiation cycle.
- ``NEGOTIATOR_JOB_CONSTRAINT``
+ ``NEGOTIATOR_JOB_CONSTRAINT`` :index:` <single: NEGOTIATOR_JOB_CONSTRAINT>`
     An expression which constrains which job ClassAds are considered for
     matchmaking by the *condor\_negotiator*. This parameter is read by
     the *condor\_negotiator* and sent to the *condor\_schedd* for
@@ -6501,6 +6789,7 @@ These macros affect the *condor\_negotiator*.
     this expression and so will continue to send all jobs to the
     *condor\_negotiator*.
  ``NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD``
+:index:` <single: NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD>`
     This setting is not likely to be customized, except perhaps within a
     glidein setting. An integer expression that evaluates to a value
     within the context of the *condor\_negotiator* ClassAd, with a
@@ -6511,8 +6800,10 @@ These macros affect the *condor\_negotiator*.
     the future. The idea here is a mechanism to prevent matching with
     machines that are quite close to shutting down, since the match
     would likely be a waste of time.
- ``NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`` or
+ ``NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT``
+:index:` <single: NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT>` or
 ``GROUP_DYNAMIC_MACH_CONSTRAINT``
+:index:` <single: GROUP_DYNAMIC_MACH_CONSTRAINT>`
     This optional expression specifies which machine ClassAds should be
     counted when computing the size of the pool. It applies both for
     group quota allocation and when there are no groups. The default is
@@ -6527,29 +6818,33 @@ These macros affect the *condor\_negotiator*.
     Using the older name causes a warning to be logged, although the
     behavior is unchanged.
 
- ``NEGOTIATOR_DEBUG``
+ ``NEGOTIATOR_DEBUG`` :index:` <single: NEGOTIATOR_DEBUG>`
     This macro (and other settings related to debug logging in the
     negotiator) is described in section \ `3.5.2 <#x33-1890003.5.2>`__
     as ``<SUBSYS>_DEBUG``.
  ``NEGOTIATOR_MAX_TIME_PER_SUBMITTER``
+:index:` <single: NEGOTIATOR_MAX_TIME_PER_SUBMITTER>`
     The maximum number of seconds the *condor\_negotiator* will spend
     with each individual submitter during one negotiation cycle. Once
     this time limit has been reached, the *condor\_negotiator* will skip
     over requests from this submitter until the next negotiation cycle.
     It defaults to 60 seconds.
  ``NEGOTIATOR_MAX_TIME_PER_SCHEDD``
+:index:` <single: NEGOTIATOR_MAX_TIME_PER_SCHEDD>`
     The maximum number of seconds the *condor\_negotiator* will spend
     with each individual *condor\_schedd* during one negotiation cycle.
     Once this time limit has been reached, the *condor\_negotiator* will
     skip over requests from this *condor\_schedd* until the next
     negotiation cycle. It defaults to 120 seconds.
  ``NEGOTIATOR_MAX_TIME_PER_CYCLE``
+:index:` <single: NEGOTIATOR_MAX_TIME_PER_CYCLE>`
     The maximum number of seconds the *condor\_negotiator* will spend in
     total across all submitters during one negotiation cycle. Once this
     time limit has been reached, the *condor\_negotiator* will skip over
     requests from all submitters until the next negotiation cycle. It
     defaults to 1200 seconds.
  ``NEGOTIATOR_MAX_TIME_PER_PIESPIN``
+:index:` <single: NEGOTIATOR_MAX_TIME_PER_PIESPIN>`
     The maximum number of seconds the *condor\_negotiator* will spend
     with a submitter in one pie spin. A negotiation cycle is composed of
     at least one pie spin, possibly more, depending on whether there are
@@ -6565,6 +6860,7 @@ These macros affect the *condor\_negotiator*.
     page \ `838 <UserPrioritiesandNegotiation.html#x34-2380003.6.6>`__
     for a description of a pie slice. It defaults to 120 seconds.
  ``USE_RESOURCE_REQUEST_COUNTS``
+:index:` <single: USE_RESOURCE_REQUEST_COUNTS>`
     A boolean value that defaults to ``True``. When ``True``, the
     latency of negotiation will be reduced when there are many jobs next
     to each other in the queue with the same auto cluster, and many
@@ -6573,6 +6869,7 @@ These macros affect the *condor\_negotiator*.
     number of consecutive jobs in the queue within the same auto
     cluster.
  ``NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE``
+:index:` <single: NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE>`
     An integer tuning parameter used by the *condor\_negotiator* to
     control the number of resource requests fetched from a
     *condor\_schedd* per network round-trip. With higher values, the
@@ -6583,7 +6880,7 @@ These macros affect the *condor\_negotiator*.
     unnecessarily block on network I/O. The default value is 200. If
     ``USE_RESOURCE_REQUEST_COUNTS`` is set to ``False``, then this
     variable will be unconditionally set to a value of 1.
- ``NEGOTIATOR_MATCH_EXPRS``
+ ``NEGOTIATOR_MATCH_EXPRS`` :index:` <single: NEGOTIATOR_MATCH_EXPRS>`
     A comma-separated list of macro names that are inserted as ClassAd
     attributes into matched job ClassAds. The attribute name in the
     ClassAd will be given the prefix ``NegotiatorMatchExpr``, if the
@@ -6607,6 +6904,7 @@ These macros affect the *condor\_negotiator*.
     belongs to multiple HTCondor pools.
 
  ``NEGOTIATOR_MATCHLIST_CACHING``
+:index:` <single: NEGOTIATOR_MATCHLIST_CACHING>`
     A boolean value that defaults to ``True``. When ``True``, it enables
     an optimization in the *condor\_negotiator* that works with auto
     clustering. In determining the sorted list of machines that a job
@@ -6624,22 +6922,26 @@ These macros affect the *condor\_negotiator*.
     subsection on Advertising Grid Resources to HTCondor for an example.
 
  ``NEGOTIATOR_CONSIDER_PREEMPTION``
+:index:` <single: NEGOTIATOR_CONSIDER_PREEMPTION>`
     For expert users only. A boolean value that defaults to ``True``.
     When ``False``, it can cause the *condor\_negotiator* to run faster
     and also have better spinning pie accuracy. Only set this to
-    ``False`` if ``PREEMPTION_REQUIREMENTS`` is ``False``, and if all
+    ``False`` if ``PREEMPTION_REQUIREMENTS``
+    :index:` <single: PREEMPTION_REQUIREMENTS>` is ``False``, and if all
     *condor\_startd* rank expressions are ``False``.
  ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
+:index:` <single: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION>`
     A boolean value that when ``False`` (the default), prevents the
     *condor\_negotiator* from matching jobs to claimed slots that cannot
-    immediately be preempted due to ``MAXJOBRETIREMENTTIME`` .
- ``ALLOW_PSLOT_PREEMPTION``
+    immediately be preempted due to ``MAXJOBRETIREMENTTIME``
+    :index:` <single: MAXJOBRETIREMENTTIME>`.
+ ``ALLOW_PSLOT_PREEMPTION`` :index:` <single: ALLOW_PSLOT_PREEMPTION>`
     A boolean value that defaults to ``False``. When set to ``True`` for
     the *condor\_negotiator*, it enables a new matchmaking mode in which
     one or more dynamic slots can be preempted in order to make enough
     resources available in their parent partitionable slot for a job to
     successfully match to the partitionable slot.
- ``STARTD_AD_REEVAL_EXPR``
+ ``STARTD_AD_REEVAL_EXPR`` :index:` <single: STARTD_AD_REEVAL_EXPR>`
     A boolean value evaluated in the context of each machine ClassAd
     within a negotiation cycle that determines whether the ClassAd from
     the *condor\_collector* is to replace the stashed ClassAd utilized
@@ -6649,11 +6951,13 @@ These macros affect the *condor\_negotiator*.
     stashed ClassAd’s sequence number is older than its potential
     replacement.
  ``NEGOTIATOR_UPDATE_AFTER_CYCLE``
+:index:` <single: NEGOTIATOR_UPDATE_AFTER_CYCLE>`
     A boolean value that defaults to ``False``. When ``True``, it will
     force the *condor\_negotiator* daemon to publish an update to the
     *condor\_collector* at the end of every negotiation cycle. This is
     useful if monitoring statistics for the previous negotiation cycle.
  ``NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE``
+:index:` <single: NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE>`
     A boolean value that defaults to ``False``. When ``True``, the
     *condor\_negotiator* will re-read the configuration prior to
     beginning each negotiation cycle. Note that this operation will
@@ -6663,25 +6967,26 @@ These macros affect the *condor\_negotiator*.
     accomplished with *condor\_reconfig*, remains the best way to
     guarantee that all *condor\_negotiator* configuration is completely
     updated.
- ``<NAME>_LIMIT``
+ ``<NAME>_LIMIT`` :index:` <single: <NAME>_LIMIT>`
     An integer value that defines the amount of resources available for
     jobs which declare that they use some consumable resource as
     described in
     section \ `3.14.16 <SettingUpforSpecialEnvironments.html#x42-3820003.14.16>`__.
     ``<Name>`` is a string invented to uniquely describe the resource.
- ``CONCURRENCY_LIMIT_DEFAULT``
+ ``CONCURRENCY_LIMIT_DEFAULT`` :index:` <single: CONCURRENCY_LIMIT_DEFAULT>`
     An integer value that describes the number of resources available
     for any resources that are not explicitly named defined with the
     configuration variable ``<NAME>_LIMIT``. If not defined, no limits
     are set for resources not explicitly identified using
     ``<NAME>_LIMIT``.
  ``CONCURRENCY_LIMIT_DEFAULT_<NAME>``
+:index:` <single: CONCURRENCY_LIMIT_DEFAULT_<NAME>>`
     If set, this defines a default concurrency limit for all resources
     that start with ``<NAME>.``
 
 The following configuration macros affect negotiation for group users.
 
- ``GROUP_NAMES``
+ ``GROUP_NAMES`` :index:` <single: GROUP_NAMES>`
     A comma-separated list of the recognized group names, case
     insensitive. If undefined (the default), group support is disabled.
     Group names must not conflict with any user names. That is, if there
@@ -6694,7 +6999,7 @@ The following configuration macros affect negotiation for group users.
             GROUP_NAMES = group_physics, group_chemistry 
           
 
- ``GROUP_QUOTA_<groupname>``
+ ``GROUP_QUOTA_<groupname>`` :index:` <single: GROUP_QUOTA_<groupname>>`
     A floating point value to represent a static quota specifying an
     integral number of machines for the hierarchical group identified by
     ``<groupname>``. It is meaningless to specify a non integer value,
@@ -6710,6 +7015,7 @@ The following configuration macros affect negotiation for group users.
     group, the static quota is used and the dynamic quota is ignored.
 
  ``GROUP_QUOTA_DYNAMIC_<groupname>``
+:index:` <single: GROUP_QUOTA_DYNAMIC_<groupname>>`
     A floating point value in the range 0.0 to 1.0, inclusive,
     representing a fraction of a pool’s machines (slots) set as a
     dynamic quota for the hierarchical group identified by
@@ -6722,11 +7028,13 @@ The following configuration macros affect negotiation for group users.
            GROUP_QUOTA_DYNAMIC_group_biology = 0.25 
           
 
-    The group name must be specified in the ``GROUP_NAMES`` list.
+    The group name must be specified in the ``GROUP_NAMES``
+    :index:` <single: GROUP_NAMES>` list.
 
     This section has not yet been completed
 
  ``GROUP_PRIO_FACTOR_<groupname>``
+:index:` <single: GROUP_PRIO_FACTOR_<groupname>>`
     A floating point value greater than or equal to 1.0 to specify the
     default user priority factor for <groupname>. The group name must
     also be specified in the ``GROUP_NAMES`` list.
@@ -6742,7 +7050,7 @@ The following configuration macros affect negotiation for group users.
             GROUP_PRIO_FACTOR_group_physics = 2.0 
           
 
- ``GROUP_AUTOREGROUP``
+ ``GROUP_AUTOREGROUP`` :index:` <single: GROUP_AUTOREGROUP>`
     A boolean value (defaults to ``False``) that when ``True``, causes
     users who submitted to a specific group to also negotiate a second
     time with the ``<none>`` group, to be considered with the
@@ -6752,20 +7060,23 @@ The following configuration macros affect negotiation for group users.
     still the group user as specified by ``AccountingGroup`` in the job
     ClassAd.
  ``GROUP_AUTOREGROUP_<groupname>``
+:index:` <single: GROUP_AUTOREGROUP_<groupname>>`
     This is the same as ``GROUP_AUTOREGROUP``, but it is settable on a
     per-group basis. If no value is specified for a given group, the
     default behavior is determined by ``GROUP_AUTOREGROUP``, which in
     turn defaults to ``False``.
- ``GROUP_ACCEPT_SURPLUS``
+ ``GROUP_ACCEPT_SURPLUS`` :index:` <single: GROUP_ACCEPT_SURPLUS>`
     A boolean value that, when ``True``, specifies that groups should be
     allowed to use more than their configured quota when there is not
     enough demand from other groups to use all of the available
     machines. The default value is ``False``.
  ``GROUP_ACCEPT_SURPLUS_<groupname>``
+:index:` <single: GROUP_ACCEPT_SURPLUS_<groupname>>`
     A boolean value applied as a group-specific version of
     ``GROUP_ACCEPT_SURPLUS``. When not specified, the value of
     ``GROUP_ACCEPT_SURPLUS`` applies to the named group.
  ``GROUP_QUOTA_ROUND_ROBIN_RATE``
+:index:` <single: GROUP_QUOTA_ROUND_ROBIN_RATE>`
     The maximum sum of weighted slots that should be handed out to an
     individual submitter in each iteration within a negotiation cycle.
     If slot weights are not being used by the *condor\_negotiator*, as
@@ -6786,6 +7097,7 @@ The following configuration macros affect negotiation for group users.
     cost of possibly slowing down the rate at which resources are
     allocated.
  ``GROUP_QUOTA_MAX_ALLOCATION_ROUNDS``
+:index:` <single: GROUP_QUOTA_MAX_ALLOCATION_ROUNDS>`
     An integer that specifies the maximum number of times within one
     negotiation cycle the *condor\_negotiator* will calculate how many
     slots each group deserves and attempt to allocate them. The default
@@ -6794,11 +7106,13 @@ The following configuration macros affect negotiation for group users.
     so some of the slots that were withheld for those groups may not get
     allocated in any given round.
  ``NEGOTIATOR_USE_SLOT_WEIGHTS``
+:index:` <single: NEGOTIATOR_USE_SLOT_WEIGHTS>`
     A boolean value with a default of ``True``. When ``True``, the
     *condor\_negotiator* pays attention to the machine ClassAd attribute
     ``SlotWeight``. When ``False``, each slot effectively has a weight
     of 1.
  ``NEGOTIATOR_USE_WEIGHTED_DEMAND``
+:index:` <single: NEGOTIATOR_USE_WEIGHTED_DEMAND>`
     A boolean value that defaults to ``True``. When ``False``, the
     behavior is the same as for HTCondor versions prior to 7.9.6. If
     ``True``, when the *condor\_schedd* advertises ``IdleJobs`` in the
@@ -6807,12 +7121,13 @@ The following configuration macros affect negotiation for group users.
     requested cores across all idle jobs from that submitter,
     ``WeightedIdleJobs``. If partitionable slots are being used, and if
     hierarchical group quotas are used, and if any hierarchical group
-    quotas set ``GROUP_ACCEPT_SURPLUS`` to ``True``, and if
-    configuration variable ``SlotWeight`` is set to the number of cores,
-    then setting this configuration variable to ``True`` allows the
-    amount of surplus allocated to each group to be calculated
-    correctly.
- ``GROUP_SORT_EXPR``
+    quotas set ``GROUP_ACCEPT_SURPLUS``
+    :index:` <single: GROUP_ACCEPT_SURPLUS>` to ``True``, and if
+    configuration variable ``SlotWeight`` :index:` <single: SlotWeight>` is
+    set to the number of cores, then setting this configuration variable
+    to ``True`` allows the amount of surplus allocated to each group to
+    be calculated correctly.
+ ``GROUP_SORT_EXPR`` :index:` <single: GROUP_SORT_EXPR>`
     A floating point ClassAd expression that controls the order in which
     the *condor\_negotiator* considers groups when allocating resources.
     The smallest magnitude positive value goes first. The default value
@@ -6821,6 +7136,7 @@ The following configuration macros affect negotiation for group users.
     group using the smallest fraction of its resource quota is
     considered first).
  ``NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION``
+:index:` <single: NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION>`
     A boolean value that defaults to ``True``. When ``True``, the
     behavior of resource allocation when considering groups is more like
     it was in the 7.4 stable series of HTCondor. In implementation, when
@@ -6834,7 +7150,7 @@ The following configuration macros affect negotiation for group users.
 condor\_procd Configuration File Macros
 ---------------------------------------
 
- ``USE_PROCD``
+ ``USE_PROCD`` :index:` <single: USE_PROCD>`
     This boolean variable determines whether the *condor\_procd* will be
     used for managing process families. If the *condor\_procd* is not
     used, each daemon will run the process family tracking logic on its
@@ -6850,10 +7166,11 @@ condor\_procd Configuration File Macros
     *condor\_procd* will start a *condor\_procd* for use by itself and
     all of its child daemons.
  ``PROCD_MAX_SNAPSHOT_INTERVAL``
+:index:` <single: PROCD_MAX_SNAPSHOT_INTERVAL>`
     This setting determines the maximum time that the *condor\_procd*
     will wait between probes of the system for information about the
     process families it is tracking.
- ``PROCD_LOG``
+ ``PROCD_LOG`` :index:` <single: PROCD_LOG>`
     Specifies a log file for the *condor\_procd* to use. Note that by
     design, the *condor\_procd* does not include most of the other logic
     that is shared amongst the various HTCondor daemons. This means that
@@ -6862,7 +7179,7 @@ condor\_procd Configuration File Macros
     ``PROCD_LOG`` defaults to ``$(LOG)/ProcLog``. Note that enabling
     ``D_PROCFAMILY`` in the debug level for any other daemon will cause
     it to log all interactions with the *condor\_procd*.
- ``MAX_PROCD_LOG``
+ ``MAX_PROCD_LOG`` :index:` <single: MAX_PROCD_LOG>`
     Controls the maximum length in bytes to which the *condor\_procd*
     log will be allowed to grow. The log file will grow to the specified
     length, then be saved to a file with the suffix ``.old``. The
@@ -6870,7 +7187,7 @@ condor\_procd Configuration File Macros
     maximum space devoted to logging will be twice the maximum length of
     this log file. A value of 0 specifies that the file may grow without
     bounds. The default is 10 MiB.
- ``PROCD_ADDRESS``
+ ``PROCD_ADDRESS`` :index:` <single: PROCD_ADDRESS>`
     This specifies the address that the *condor\_procd* will use to
     receive requests from other HTCondor daemons. On Unix, this should
     point to a file system location that can be used for a named pipe.
@@ -6878,7 +7195,7 @@ condor\_procd Configuration File Macros
     file system. The default setting therefore depends on the platform
     and distribution: $(LOCK)/procd\_pipe or $(RUN)/procd\_pipe on Unix
     and \\\\.\\pipe\\procd\_pipe on Windows.
- ``USE_GID_PROCESS_TRACKING``
+ ``USE_GID_PROCESS_TRACKING`` :index:` <single: USE_GID_PROCESS_TRACKING>`
     A boolean value that defaults to ``False``. When ``True``, a job’s
     initial process is assigned a dedicated GID which is further used by
     the *condor\_procd* to reliably track all processes associated with
@@ -6889,7 +7206,7 @@ condor\_procd Configuration File Macros
     on
     page \ `1208 <SettingUpforSpecialEnvironments.html#x42-3780003.14.12>`__
     for a detailed description.
- ``MIN_TRACKING_GID``
+ ``MIN_TRACKING_GID`` :index:` <single: MIN_TRACKING_GID>`
     An integer value, that together with ``MAX_TRACKING_GID`` specify a
     range of GIDs to be assigned on a per slot basis for use by the
     *condor\_procd* in tracking processes associated with a job. See
@@ -6897,7 +7214,7 @@ condor\_procd Configuration File Macros
     on
     page \ `1208 <SettingUpforSpecialEnvironments.html#x42-3780003.14.12>`__
     for a detailed description.
- ``MAX_TRACKING_GID``
+ ``MAX_TRACKING_GID`` :index:` <single: MAX_TRACKING_GID>`
     An integer value, that together with ``MIN_TRACKING_GID`` specify a
     range of GIDs to be assigned on a per slot basis for use by the
     *condor\_procd* in tracking processes associated with a job. See
@@ -6905,7 +7222,7 @@ condor\_procd Configuration File Macros
     on
     page \ `1208 <SettingUpforSpecialEnvironments.html#x42-3780003.14.12>`__
     for a detailed description.
- ``BASE_CGROUP``
+ ``BASE_CGROUP`` :index:` <single: BASE_CGROUP>`
     The path to the directory used as the virtual file system for the
     implementation of Linux kernel cgroups. This variable defaults to
     the string ``htcondor``, and is only used on Linux systems. To
@@ -6918,20 +7235,23 @@ condor\_procd Configuration File Macros
 condor\_credd Configuration File Macros
 ---------------------------------------
 
+:index:` <single: condor_credd daemon>`
+:index:` <single: condor_credd configuration variables;configuration>`
+
 These macros affect the *condor\_credd*.
 
- ``CREDD_HOST``
+ ``CREDD_HOST`` :index:` <single: CREDD_HOST>`
     The host name of the machine running the *condor\_credd* daemon.
- ``CREDD_POLLING_TIMEOUT``
+ ``CREDD_POLLING_TIMEOUT`` :index:` <single: CREDD_POLLING_TIMEOUT>`
     An integer value that determines how long the *condor\_credd* daemon
     will poll for credentials in seconds. The default value is 20.
- ``CREDD_CACHE_LOCALLY``
+ ``CREDD_CACHE_LOCALLY`` :index:` <single: CREDD_CACHE_LOCALLY>`
     A boolean value that defaults to ``False``. When ``True``, the first
     successful password fetch operation to the *condor\_credd* daemon
     causes the password to be stashed in a local, secure password store.
     Subsequent uses of that password do not require communication with
     the *condor\_credd* daemon.
- ``CRED_SUPER_USERS``
+ ``CRED_SUPER_USERS`` :index:` <single: CRED_SUPER_USERS>`
     A comma and/or space separated list of user names on a given machine
     that are permitted to store credentials for any user when using the
     *condor\_store\_cred* command. When not on this list, users can only
@@ -6939,6 +7259,7 @@ These macros affect the *condor\_credd*.
     single ’\*’ wildcard character, which matches any sequence of
     characters.
  ``SKIP_WINDOWS_LOGON_NETWORK``
+:index:` <single: SKIP_WINDOWS_LOGON_NETWORK>`
     A boolean value that defaults to ``False``. When ``True``, Windows
     authentication skips trying authentication with the
     ``LOGON_NETWORK`` method first, and attempts authentication with
@@ -6949,26 +7270,32 @@ These macros affect the *condor\_credd*.
 condor\_gridmanager Configuration File Entries
 ----------------------------------------------
 
+:index:` <single: condor_gridmanager configuration variables;configuration>`
+
 These macros affect the *condor\_gridmanager*.
 
- ``GRIDMANAGER_LOG``
+ ``GRIDMANAGER_LOG`` :index:` <single: GRIDMANAGER_LOG>`
     Defines the path and file name for the log of the
     *condor\_gridmanager*. The owner of the file is the condor user.
  ``GRIDMANAGER_CHECKPROXY_INTERVAL``
+:index:` <single: GRIDMANAGER_CHECKPROXY_INTERVAL>`
     The number of seconds between checks for an updated X509 proxy
     credential. The default is 10 minutes (600 seconds).
  ``GRIDMANAGER_PROXY_REFRESH_TIME``
+:index:` <single: GRIDMANAGER_PROXY_REFRESH_TIME>`
     For GRAM jobs, the *condor\_gridmanager* will not forward a
     refreshed proxy until the lifetime left for the proxy on the remote
     machine falls below this value. The value is in seconds and the
     default is 21600 (6 hours).
  ``GRIDMANAGER_MINIMUM_PROXY_TIME``
+:index:` <single: GRIDMANAGER_MINIMUM_PROXY_TIME>`
     The minimum number of seconds before expiration of the X509 proxy
     credential for the gridmanager to continue operation. If seconds
     until expiration is less than this number, the gridmanager will
     shutdown and wait for a refreshed proxy credential. The default is 3
     minutes (180 seconds).
  ``HOLD_JOB_IF_CREDENTIAL_EXPIRES``
+:index:` <single: HOLD_JOB_IF_CREDENTIAL_EXPIRES>`
     True or False. Defaults to True. If True, and for grid universe jobs
     only, HTCondor-G will place a job on hold
     ``GRIDMANAGER_MINIMUM_PROXY_TIME`` seconds before the proxy expires.
@@ -6976,9 +7303,11 @@ These macros affect the *condor\_gridmanager*.
     will periodically check to see if the job’s proxy has been
     refreshed, at which point management of the job will resume.
  ``GRIDMANAGER_CONTACT_SCHEDD_DELAY``
+:index:` <single: GRIDMANAGER_CONTACT_SCHEDD_DELAY>`
     The minimum number of seconds between connections to the
     *condor\_schedd*. The default is 5 seconds.
  ``GRIDMANAGER_JOB_PROBE_INTERVAL``
+:index:` <single: GRIDMANAGER_JOB_PROBE_INTERVAL>`
     The number of seconds between active probes for the status of a
     submitted job. The default is 1 minute (60 seconds). Intervals
     specific to grid types can be set by appending the name of the grid
@@ -6990,13 +7319,15 @@ These macros affect the *condor\_gridmanager*.
           
 
  ``GRIDMANAGER_JOB_PROBE_RATE``
+:index:` <single: GRIDMANAGER_JOB_PROBE_RATE>`
     The maximum number of job status probes per second that will be
     issued to a given remote resource. The time between status probes
     for individual jobs may be lengthened beyond
-    ``GRIDMANAGER_JOB_PROBE_INTERVAL`` to enforce this rate. The default
-    is 5 probes per second. Rates specific to grid types can be set by
-    appending the name of the grid type to the configuration variable
-    name, as the example
+    ``GRIDMANAGER_JOB_PROBE_INTERVAL``
+    :index:` <single: GRIDMANAGER_JOB_PROBE_INTERVAL>` to enforce this rate.
+    The default is 5 probes per second. Rates specific to grid types can
+    be set by appending the name of the grid type to the configuration
+    variable name, as the example
 
     ::
 
@@ -7004,18 +7335,22 @@ These macros affect the *condor\_gridmanager*.
           
 
  ``GRIDMANAGER_RESOURCE_PROBE_INTERVAL``
+:index:` <single: GRIDMANAGER_RESOURCE_PROBE_INTERVAL>`
     When a resource appears to be down, how often (in seconds) the
     *condor\_gridmanager* should ping it to test if it is up again.
  ``GRIDMANAGER_RESOURCE_PROBE_DELAY``
+:index:` <single: GRIDMANAGER_RESOURCE_PROBE_DELAY>`
     The number of seconds between pings of a remote resource that is
     currently down. The default is 5 minutes (300 seconds).
  ``GRIDMANAGER_EMPTY_RESOURCE_DELAY``
+:index:` <single: GRIDMANAGER_EMPTY_RESOURCE_DELAY>`
     The number of seconds that the *condor\_gridmanager* retains
     information about a grid resource, once the *condor\_gridmanager*
     has no active jobs on that resource. An active job is a grid
     universe job that is in the queue, for which ``JobStatus`` is
     anything other than Held. Defaults to 300 seconds.
  ``GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE``
+:index:` <single: GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE>`
     An integer value that limits the number of jobs that a
     *condor\_gridmanager* daemon will submit to a resource. A
     comma-separated list of pairs that follows this integer limit will
@@ -7043,6 +7378,7 @@ These macros affect the *condor\_gridmanager*.
     Defaults to 1000.
 
  ``GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE``
+:index:` <single: GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE>`
     For grid jobs of type **gt2**, limits the number of
     globus-job-manager processes that the *condor\_gridmanager* lets run
     at a time on the remote head node. Allowing too many
@@ -7052,47 +7388,53 @@ These macros affect the *condor\_gridmanager*.
     *condor\_gridmanager* is running, or if some globus-job-managers
     take a few extra seconds to exit. The value 0 means there is no
     limit. The default value is 10.
- ``GAHP``
+ ``GAHP`` :index:` <single: GAHP>`
     The full path to the binary of the GAHP server. This configuration
     variable is no longer used. Use ``GT2_GAHP`` at
     section \ `3.5.18 <#x33-2050003.5.18>`__ instead.
- ``GAHP_ARGS``
+ ``GAHP_ARGS`` :index:` <single: GAHP_ARGS>`
     Arguments to be passed to the GAHP server. This configuration
     variable is no longer used.
  ``GAHP_DEBUG_HIDE_SENSITIVE_DATA``
+:index:` <single: GAHP_DEBUG_HIDE_SENSITIVE_DATA>`
     A boolean value that determines when sensitive data such as security
     keys and passwords are hidden, when communication to or from a GAHP
     server is written to a daemon log. The default is ``True``, hiding
     sensitive data.
  ``GRIDMANAGER_GAHP_CALL_TIMEOUT``
+:index:` <single: GRIDMANAGER_GAHP_CALL_TIMEOUT>`
     The number of seconds after which a pending GAHP command should time
     out. The default is 5 minutes (300 seconds).
  ``GRIDMANAGER_GAHP_RESPONSE_TIMEOUT``
+:index:` <single: GRIDMANAGER_GAHP_RESPONSE_TIMEOUT>`
     The *condor\_gridmanager* will assume a GAHP is hung if this many
     seconds pass without a response. The default is 20.
  ``GRIDMANAGER_MAX_PENDING_REQUESTS``
+:index:` <single: GRIDMANAGER_MAX_PENDING_REQUESTS>`
     The maximum number of GAHP commands that can be pending at any time.
     The default is 50.
  ``GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT``
+:index:` <single: GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT>`
     The number of times to retry a command that failed due to a timeout
     or a failed connection. The default is 3.
  ``GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT``
+:index:` <single: GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT>`
     The duration, in seconds, of the two phase commit timeout to Globus
     for gt2 jobs only. This maps directly to the ``two_phase`` setting
     in the Globus RSL.
- ``GLOBUS_GATEKEEPER_TIMEOUT``
+ ``GLOBUS_GATEKEEPER_TIMEOUT`` :index:` <single: GLOBUS_GATEKEEPER_TIMEOUT>`
     The number of seconds after which if a gt2 grid universe job fails
     to ping the gatekeeper, the job will be put on hold. Defaults to 5
     days (in seconds).
- ``EC2_RESOURCE_TIMEOUT``
+ ``EC2_RESOURCE_TIMEOUT`` :index:` <single: EC2_RESOURCE_TIMEOUT>`
     The number of seconds after which if an EC2 grid universe job fails
     to ping the EC2 service, the job will be put on hold. Defaults to
     -1, which implements an infinite length, such that a failure to ping
     the service will never put the job on hold.
- ``EC2_GAHP_RATE_LIMIT``
+ ``EC2_GAHP_RATE_LIMIT`` :index:` <single: EC2_GAHP_RATE_LIMIT>`
     The minimum interval, in whole milliseconds, between requests to the
     same EC2 service with the same credentials. Defaults to 100.
- ``GRAM_VERSION_DETECTION``
+ ``GRAM_VERSION_DETECTION`` :index:` <single: GRAM_VERSION_DETECTION>`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor\_gridmanager* treats grid types ``gt2`` and ``gt5``
     identically, and queries each server to determine which protocol it
@@ -7102,50 +7444,52 @@ These macros affect the *condor\_gridmanager*.
     ``gt5`` can result in overloading the server, if a large number of
     jobs are submitted.
  ``BATCH_GAHP_CHECK_STATUS_ATTEMPTS``
+:index:` <single: BATCH_GAHP_CHECK_STATUS_ATTEMPTS>`
     The number of times a failed status command issued to the
     *batch\_gahp* should be retried. These retries allow the
     *condor\_gridmanager* to tolerate short-lived failures of the
     underlying batch system. The default value is 5.
- ``C_GAHP_LOG``
+ ``C_GAHP_LOG`` :index:` <single: C_GAHP_LOG>`
     The complete path and file name of the HTCondor GAHP server’s log.
     The default value is ``/tmp/CGAHPLog.$(USERNAME)``.
- ``MAX_C_GAHP_LOG``
+ ``MAX_C_GAHP_LOG`` :index:` <single: MAX_C_GAHP_LOG>`
     The maximum size of the ``C_GAHP_LOG``.
- ``C_GAHP_WORKER_THREAD_LOG``
+ ``C_GAHP_WORKER_THREAD_LOG`` :index:` <single: C_GAHP_WORKER_THREAD_LOG>`
     The complete path and file name of the HTCondor GAHP worker process’
     log. The default value is ``/temp/CGAHPWorkerLog.$(USERNAME)``.
  ``C_GAHP_CONTACT_SCHEDD_DELAY``
+:index:` <single: C_GAHP_CONTACT_SCHEDD_DELAY>`
     The number of seconds that the *condor\_C-gahp* daemon waits between
     consecutive connections to the remote *condor\_schedd* in order to
     send batched sets of commands to be executed on that remote
     *condor\_schedd* daemon. The default value is 5.
- ``GLITE_LOCATION``
+ ``GLITE_LOCATION`` :index:` <single: GLITE_LOCATION>`
     The complete path to the directory containing the Glite software.
     The default value is ``$(LIBEXEC)``/glite. The necessary Glite
     software is included with HTCondor, and is required for grid-type
     batch jobs.
- ``GAHP_SSL_CADIR``
+ ``GAHP_SSL_CADIR`` :index:` <single: GAHP_SSL_CADIR>`
     The path to a directory that may contain the certificates (each in
     its own file) for multiple trusted CAs to be used by GAHP servers
     when authenticating with remote services.
- ``GAHP_SSL_CAFILE``
+ ``GAHP_SSL_CAFILE`` :index:` <single: GAHP_SSL_CAFILE>`
     The path and file name of a file containing one or more trusted CA’s
     certificates to be used by GAHP servers when authenticating with
     remote services.
- ``CONDOR_GAHP``
+ ``CONDOR_GAHP`` :index:` <single: CONDOR_GAHP>`
     The complete path and file name of the HTCondor GAHP executable. The
     default value is ``$(SBIN)``/condor\_c-gahp.
- ``EC2_GAHP``
+ ``EC2_GAHP`` :index:` <single: EC2_GAHP>`
     The complete path and file name of the EC2 GAHP executable. The
     default value is ``$(SBIN)``/ec2\_gahp.
- ``GT2_GAHP``
+ ``GT2_GAHP`` :index:` <single: GT2_GAHP>`
     The complete path and file name of the GT2 GAHP executable. The
     default value is ``$(SBIN)``/gahp\_server.
- ``BATCH_GAHP``
+ ``BATCH_GAHP`` :index:` <single: BATCH_GAHP>`
     The complete path and file name of the batch GAHP executable, to be
     used for PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(GLITE_LOCATION)``/bin/batch\_gahp.
- ``PBS_GAHP``
+ ``PBS_GAHP`` :index:` <single: PBS_GAHP>`
     The complete path and file name of the PBS GAHP executable. The use
     of the configuration variable ``BATCH_GAHP`` is preferred and
     encouraged, as this variable may no longer be supported in a future
@@ -7153,7 +7497,7 @@ These macros affect the *condor\_gridmanager*.
     will override a value specified by ``BATCH_GAHP``, and the value
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
- ``LSF_GAHP``
+ ``LSF_GAHP`` :index:` <single: LSF_GAHP>`
     The complete path and file name of the LSF GAHP executable. The use
     of the configuration variable ``BATCH_GAHP`` is preferred and
     encouraged, as this variable may no longer be supported in a future
@@ -7161,18 +7505,18 @@ These macros affect the *condor\_gridmanager*.
     will override a value specified by ``BATCH_GAHP``, and the value
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
- ``UNICORE_GAHP``
+ ``UNICORE_GAHP`` :index:` <single: UNICORE_GAHP>`
     The complete path and file name of the wrapper script that invokes
     the Unicore GAHP executable. The default value is
     ``$(SBIN)``/unicore\_gahp.
- ``NORDUGRID_GAHP``
+ ``NORDUGRID_GAHP`` :index:` <single: NORDUGRID_GAHP>`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid\_gahp.
- ``CREAM_GAHP``
+ ``CREAM_GAHP`` :index:` <single: CREAM_GAHP>`
     The complete path and file name of the CREAM GAHP executable. The
     default value is ``$(SBIN)``/cream\_gahp.
- ``SGE_GAHP``
+ ``SGE_GAHP`` :index:` <single: SGE_GAHP>`
     The complete path and file name of the SGE GAHP executable. The use
     of the configuration variable ``BATCH_GAHP`` is preferred and
     encouraged, as this variable may no longer be supported in a future
@@ -7180,29 +7524,31 @@ These macros affect the *condor\_gridmanager*.
     will override a value specified by ``BATCH_GAHP``, and the value
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
- ``GCE_GAHP``
+ ``GCE_GAHP`` :index:` <single: GCE_GAHP>`
     The complete path and file name of the GCE GAHP executable. The
     default value is ``$(SBIN)``/gce\_gahp.
- ``AZURE_GAHP``
+ ``AZURE_GAHP`` :index:` <single: AZURE_GAHP>`
     The complete path and file name of the Azure GAHP executable. The
     default value is ``$(SBIN)``/AzureGAHPServer.py on Windows and
     ``$(SBIN)``/AzureGAHPServer on other platforms.
- ``BOINC_GAHP``
+ ``BOINC_GAHP`` :index:` <single: BOINC_GAHP>`
     The complete path and file name of the BOINC GAHP executable. The
     default value is ``$(SBIN)``/boinc\_gahp.
 
 condor\_job\_router Configuration File Entries
 ----------------------------------------------
 
+:index:` <single: condor_job_router configuration variables;configuration>`
+
 These macros affect the *condor\_job\_router* daemon.
 
- ``JOB_ROUTER_DEFAULTS``
+ ``JOB_ROUTER_DEFAULTS`` :index:` <single: JOB_ROUTER_DEFAULTS>`
     Defined by a single ClassAd in New ClassAd syntax, used to provide
     default values for all routes in the *condor\_job\_router* daemon’s
     routing table. Where an attribute is set outside of these defaults,
     that attribute value takes precedence. The enclosing square brackets
     are optional.
- ``JOB_ROUTER_ENTRIES``
+ ``JOB_ROUTER_ENTRIES`` :index:` <single: JOB_ROUTER_ENTRIES>`
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -7221,12 +7567,12 @@ These macros affect the *condor\_job\_router* daemon.
     external program via the ``JOB_ROUTER_ENTRIES_CMD`` configuration
     variable.
 
- ``JOB_ROUTER_ENTRIES_FILE``
+ ``JOB_ROUTER_ENTRIES_FILE`` :index:` <single: JOB_ROUTER_ENTRIES_FILE>`
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
- ``JOB_ROUTER_ENTRIES_CMD``
+ ``JOB_ROUTER_ENTRIES_CMD`` :index:` <single: JOB_ROUTER_ENTRIES_CMD>`
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is
@@ -7241,32 +7587,34 @@ These macros affect the *condor\_job\_router* daemon.
     when dealing with spaces within job arguments in an HTCondor submit
     description file.
  ``JOB_ROUTER_ENTRIES_REFRESH``
+:index:` <single: JOB_ROUTER_ENTRIES_REFRESH>`
     The number of seconds between updates to the routing table described
     by ``JOB_ROUTER_ENTRIES_FILE`` or ``JOB_ROUTER_ENTRIES_CMD``. The
     default value is 0, meaning no periodic updates occur. With the
     default value of 0, the routing table can be modified when a
     *condor\_reconfig* command is invoked or when the
     *condor\_job\_router* daemon restarts.
- ``JOB_ROUTER_LOCK``
+ ``JOB_ROUTER_LOCK`` :index:` <single: JOB_ROUTER_LOCK>`
     This specifies the name of a lock file that is used to ensure that
     multiple instances of condor\_job\_router never run with the same
     ``JOB_ROUTER_NAME``. Multiple instances running with the same name
     could lead to mismanagement of routed jobs. The default value is
     $(LOCK)/$(JOB\_ROUTER\_NAME)Lock.
  ``JOB_ROUTER_SOURCE_JOB_CONSTRAINT``
+:index:` <single: JOB_ROUTER_SOURCE_JOB_CONSTRAINT>`
     Specifies a global ``Requirements`` expression that must be true for
     all newly routed jobs, in addition to any ``Requirements`` specified
     within a routing table entry. In addition to the configurable
     constraints, the *condor\_job\_router* also has some hard-coded
     constraints. It avoids recursively routing jobs by requiring that
     the job’s attribute ``RoutedBy`` does not match ``JOB_ROUTER_NAME``
-    . When not running as root, it also avoids routing jobs belonging to
-    other users.
- ``JOB_ROUTER_MAX_JOBS``
+    :index:` <single: JOB_ROUTER_NAME>`. When not running as root, it also
+    avoids routing jobs belonging to other users.
+ ``JOB_ROUTER_MAX_JOBS`` :index:` <single: JOB_ROUTER_MAX_JOBS>`
     An integer value representing the maximum number of jobs that may be
     routed, summed over all routes. The default value is -1, which means
     an unlimited number of jobs may be routed.
- ``MAX_JOB_MIRROR_UPDATE_LAG``
+ ``MAX_JOB_MIRROR_UPDATE_LAG`` :index:` <single: MAX_JOB_MIRROR_UPDATE_LAG>`
     An integer value that administrators will rarely consider changing,
     representing the maximum number of seconds the *condor\_job\_router*
     daemon waits, before it decides that routed copies have gone awry,
@@ -7277,7 +7625,7 @@ These macros affect the *condor\_job\_router* daemon.
     expected log file event fails to appear after this wait period, the
     *condor\_job\_router* daemon acts presuming the expected event will
     never occur.
- ``JOB_ROUTER_POLLING_PERIOD``
+ ``JOB_ROUTER_POLLING_PERIOD`` :index:` <single: JOB_ROUTER_POLLING_PERIOD>`
     An integer value representing the number of seconds between cycles
     in the *condor\_job\_router* daemon’s task loop. The default is 10
     seconds. A small value makes the *condor\_job\_router* daemon quick
@@ -7286,7 +7634,7 @@ These macros affect the *condor\_job\_router* daemon.
     being slower to see new candidates for routing. For very large job
     queues where a few minutes of routing latency is no problem,
     increasing this value to a few hundred seconds would be reasonable.
- ``JOB_ROUTER_NAME``
+ ``JOB_ROUTER_NAME`` :index:` <single: JOB_ROUTER_NAME>`
     A unique identifier utilized to name multiple instances of the
     *condor\_job\_router* daemon on the same machine. Each instance must
     have a different name, or all but the first to start up will refuse
@@ -7307,19 +7655,20 @@ These macros affect the *condor\_job\_router* daemon.
           RoutedBy '"insert_new_name"'
 
  ``JOB_ROUTER_RELEASE_ON_HOLD``
+:index:` <single: JOB_ROUTER_RELEASE_ON_HOLD>`
     A boolean value that defaults to ``True``. It controls how the
     *condor\_job\_router* handles the routed copy when it goes on hold.
     When ``True``, the *condor\_job\_router* leaves the original job
     ClassAd in the same state as when claimed. When ``False``, the
     *condor\_job\_router* does not attempt to reset the original job
     ClassAd to a pre-claimed state upon yielding control of the job.
- ``JOB_ROUTER_SCHEDD1_SPOOL``
+ ``JOB_ROUTER_SCHEDD1_SPOOL`` :index:` <single: JOB_ROUTER_SCHEDD1_SPOOL>`
     The path to the spool directory for the *condor\_schedd* serving as
     the source of jobs for routing. If not specified, this defaults to
     ``$(SPOOL)``. If specified, this parameter must point to the spool
     directory of the *condor\_schedd* identified by
     ``JOB_ROUTER_SCHEDD1_NAME``.
- ``JOB_ROUTER_SCHEDD2_SPOOL``
+ ``JOB_ROUTER_SCHEDD2_SPOOL`` :index:` <single: JOB_ROUTER_SCHEDD2_SPOOL>`
     The path to the spool directory for the *condor\_schedd* to which
     the routed copy of the jobs are submitted. If not specified, this
     defaults to ``$(SPOOL)``. If specified, this parameter must point to
@@ -7329,39 +7678,43 @@ These macros affect the *condor\_job\_router* daemon.
     *condor\_schedd* than the source *condor\_schedd*, it is required
     that *condor\_job\_router* have permission to impersonate the job
     owners of the routed jobs. It is therefore usually necessary to
-    configure ``QUEUE_SUPER_USER_MAY_IMPERSONATE`` in the configuration
+    configure ``QUEUE_SUPER_USER_MAY_IMPERSONATE``
+    :index:` <single: QUEUE_SUPER_USER_MAY_IMPERSONATE>` in the configuration
     of the target *condor\_schedd*.
- ``JOB_ROUTER_SCHEDD1_NAME``
+ ``JOB_ROUTER_SCHEDD1_NAME`` :index:` <single: JOB_ROUTER_SCHEDD1_NAME>`
     The advertised daemon name of the *condor\_schedd* serving as the
     source of jobs for routing. If not specified, this defaults to the
     local *condor\_schedd*. If specified, this parameter must name the
     same *condor\_schedd* whose spool is configured in
     ``JOB_ROUTER_SCHEDD1_SPOOL``. If the named *condor\_schedd* is not
-    advertised in the local pool, ``JOB_ROUTER_SCHEDD1_POOL`` will also
-    need to be set.
- ``JOB_ROUTER_SCHEDD2_NAME``
+    advertised in the local pool, ``JOB_ROUTER_SCHEDD1_POOL``
+    :index:` <single: JOB_ROUTER_SCHEDD1_POOL>` will also need to be set.
+ ``JOB_ROUTER_SCHEDD2_NAME`` :index:` <single: JOB_ROUTER_SCHEDD2_NAME>`
     The advertised daemon name of the *condor\_schedd* to which the
     routed copy of the jobs are submitted. If not specified, this
     defaults to the local *condor\_schedd*. If specified, this parameter
     must name the same *condor\_schedd* whose spool is configured in
     ``JOB_ROUTER_SCHEDD2_SPOOL``. If the named *condor\_schedd* is not
-    advertised in the local pool, ``JOB_ROUTER_SCHEDD2_POOL`` will also
-    need to be set. Note that when *condor\_job\_router* is running as
-    root and is submitting routed jobs to a different *condor\_schedd*
-    than the source *condor\_schedd*, it is required that
-    *condor\_job\_router* have permission to impersonate the job owners
-    of the routed jobs. It is therefore usually necessary to configure
-    ``QUEUE_SUPER_USER_MAY_IMPERSONATE`` in the configuration of the
-    target *condor\_schedd*.
- ``JOB_ROUTER_SCHEDD1_POOL``
+    advertised in the local pool, ``JOB_ROUTER_SCHEDD2_POOL``
+    :index:` <single: JOB_ROUTER_SCHEDD2_POOL>` will also need to be set.
+    Note that when *condor\_job\_router* is running as root and is
+    submitting routed jobs to a different *condor\_schedd* than the
+    source *condor\_schedd*, it is required that *condor\_job\_router*
+    have permission to impersonate the job owners of the routed jobs. It
+    is therefore usually necessary to configure
+    ``QUEUE_SUPER_USER_MAY_IMPERSONATE``
+    :index:` <single: QUEUE_SUPER_USER_MAY_IMPERSONATE>` in the configuration
+    of the target *condor\_schedd*.
+ ``JOB_ROUTER_SCHEDD1_POOL`` :index:` <single: JOB_ROUTER_SCHEDD1_POOL>`
     The Condor pool (*condor\_collector* address) of the
     *condor\_schedd* serving as the source of jobs for routing. If not
     specified, defaults to the local pool.
- ``JOB_ROUTER_SCHEDD2_POOL``
+ ``JOB_ROUTER_SCHEDD2_POOL`` :index:` <single: JOB_ROUTER_SCHEDD2_POOL>`
     The Condor pool (*condor\_collector* address) of the
     *condor\_schedd* to which the routed copy of the jobs are submitted.
     If not specified, defaults to the local pool.
  ``JOB_ROUTER_ROUND_ROBIN_SELECTION``
+:index:` <single: JOB_ROUTER_ROUND_ROBIN_SELECTION>`
     A boolean value that controls which route is chosen for a candidate
     job that matches multiple routes. When set to ``False``, the
     default, the first matching route is awlays selected. When set to
@@ -7370,6 +7723,8 @@ These macros affect the *condor\_job\_router* daemon.
 
 condor\_lease\_manager Configuration File Entries
 -------------------------------------------------
+
+:index:` <single: condor_lease_manager configuration variables;configuration>`
 
 These macros affect the *condor\_lease\_manager*.
 
@@ -7387,26 +7742,30 @@ in configuration. This allows multiple instances of the
      <subsystem name>.<local name>.<parameter name>
 
  ``LeaseManager.GETADS_INTERVAL``
+:index:` <single: LeaseManager.GETADS_INTERVAL>`
     An integer value, given in seconds, that controls the frequency with
     which the *condor\_lease\_manager* pulls relevant resource ClassAds
     from the *condor\_collector*. The default value is 60 seconds, with
     a minimum value of 2 seconds.
  ``LeaseManager.UPDATE_INTERVAL``
+:index:` <single: LeaseManager.UPDATE_INTERVAL>`
     An integer value, given in seconds, that controls the frequency with
     which the *condor\_lease\_manager* sends its ClassAds to the
     *condor\_collector*. The default value is 60 seconds, with a minimum
     value of 5 seconds.
  ``LeaseManager.PRUNE_INTERVAL``
+:index:` <single: LeaseManager.PRUNE_INTERVAL>`
     An integer value, given in seconds, that controls the frequency with
     which the *condor\_lease\_manager* prunes its leases. This involves
     checking all leases to see if they have expired. The default value
     is 60 seconds, with no minimum value.
- ``LeaseManager.DEBUG_ADS``
+ ``LeaseManager.DEBUG_ADS`` :index:` <single: LeaseManager.DEBUG_ADS>`
     A boolean value that defaults to ``False``. When ``True``, it
     enables extra debugging information about the resource ClassAds that
     it retrieves from the *condor\_collector* and about the search
     ClassAds that it sends to the *condor\_collector*.
  ``LeaseManager.MAX_LEASE_DURATION``
+:index:` <single: LeaseManager.MAX_LEASE_DURATION>`
     An integer value representing seconds which determines the maximum
     duration of a lease. This can be used to provide a hard limit on
     lease durations. Normally, the *condor\_lease\_manager* honors the
@@ -7420,25 +7779,28 @@ in configuration. This allows multiple instances of the
     ``LeaseManager.MAX_TOTAL_LEASE_DURATION``.
 
  ``LeaseManager.MAX_TOTAL_LEASE_DURATION``
+:index:` <single: LeaseManager.MAX_TOTAL_LEASE_DURATION>`
     An integer value representing seconds used to limit the total
     duration of leases, over all its renewals. The default value is 3600
     seconds.
  ``LeaseManager.DEFAULT_MAX_LEASE_DURATION``
+:index:` <single: LeaseManager.DEFAULT_MAX_LEASE_DURATION>`
     The *condor\_lease\_manager* uses the ``MaxLeaseDuration`` attribute
     from the resource ClassAd to limit the lease duration. If this
     attribute is not present in a resource ClassAd, then this
     configuration variable is used instead. This integer value is given
     in units of seconds, with a default value of 60 seconds.
- ``LeaseManager.CLASSAD_LOG``
+ ``LeaseManager.CLASSAD_LOG`` :index:` <single: LeaseManager.CLASSAD_LOG>`
     This variable defines a full path and file name to the location
     where the *condor\_lease\_manager* keeps persistent state
     information. This variable has no default value.
- ``LeaseManager.QUERY_ADTYPE``
+ ``LeaseManager.QUERY_ADTYPE`` :index:` <single: LeaseManager.QUERY_ADTYPE>`
     This parameter controls the type of the query in the ClassAd sent to
     the *condor\_collector*, which will control the types of ClassAds
     returned by the *condor\_collector*. This parameter must be a valid
     ClassAd type name, with a default value of ``"Any"``.
  ``LeaseManager.QUERY_CONSTRAINTS``
+:index:` <single: LeaseManager.QUERY_CONSTRAINTS>`
     A ClassAd expression that controls the constraint in the query sent
     to the *condor\_collector*. It is used to further constrain the
     types of ClassAds from the *condor\_collector*. There is no default
@@ -7447,9 +7809,11 @@ in configuration. This allows multiple instances of the
 Grid Monitor Configuration File Entries
 ---------------------------------------
 
+:index:` <single: Grid Monitor configuration variables;configuration>`
+
 These macros affect the Grid Monitor.
 
- ``ENABLE_GRID_MONITOR``
+ ``ENABLE_GRID_MONITOR`` :index:` <single: ENABLE_GRID_MONITOR>`
     A boolean value that when ``True`` enables the Grid Monitor. The
     Grid Monitor is used to reduce load on Globus gatekeepers. This
     parameter only affects grid jobs of type **gt2**. The variable
@@ -7458,32 +7822,35 @@ These macros affect the Grid Monitor.
     section \ `5.3.2 <TheGridUniverse.html#x56-4640005.3.2>`__ on
     page \ `1445 <TheGridUniverse.html#x56-4640005.3.2>`__ for more
     information.
- ``GRID_MONITOR``
+ ``GRID_MONITOR`` :index:` <single: GRID_MONITOR>`
     The complete path name of the *grid\_monitor.sh* tool used to reduce
     the load on Globus gatekeepers. This parameter only affects grid
     jobs of type **gt2**. This parameter is not referenced unless
     ``ENABLE_GRID_MONITOR`` is set to ``True`` (the default value).
  ``GRID_MONITOR_HEARTBEAT_TIMEOUT``
+:index:` <single: GRID_MONITOR_HEARTBEAT_TIMEOUT>`
     The integer number of seconds that may pass without hearing from a
     working Grid Monitor before it is assumed to be dead. Defaults to
     300 (5 minutes). Increasing this number will improve the ability of
     the Grid Monitor to survive in the face of transient problems, but
     will also increase the time before HTCondor notices a problem.
  ``GRID_MONITOR_RETRY_DURATION``
+:index:` <single: GRID_MONITOR_RETRY_DURATION>`
     When HTCondor-G attempts to start the Grid Monitor at a particular
     site, it will wait this many seconds to start hearing from the Grid
     Monitor. Defaults to 900 (15 minutes). If this duration passes
     without success, the Grid Monitor will be disabled for the site in
     question for the period of time set by ``GRID_MONITOR_DISABLE_TIME``
-    .
+    :index:` <single: GRID_MONITOR_DISABLE_TIME>`.
  ``GRID_MONITOR_NO_STATUS_TIMEOUT``
+:index:` <single: GRID_MONITOR_NO_STATUS_TIMEOUT>`
     Jobs can disappear from the Grid Monitor’s status reports for short
     periods of time under normal circumstances, but a prolonged absence
     is often a sign of problems on the remote machine. This variable
     sets the amount of time (in seconds) that a job can be absent before
     the *condor\_gridmanager* reacts by restarting the GRAM
     *jobmanager*. The default is 900, which is 15 minutes.
- ``GRID_MONITOR_DISABLE_TIME``
+ ``GRID_MONITOR_DISABLE_TIME`` :index:` <single: GRID_MONITOR_DISABLE_TIME>`
     When an error occurs with a Grid Monitor job, this parameter
     controls how long the *condor\_gridmanager* will wait before
     attempting to start a new Grid Monitor job. The value is in seconds
@@ -7492,19 +7859,21 @@ These macros affect the Grid Monitor.
 Configuration File Entries Relating to Grid Usage
 -------------------------------------------------
 
+:index:` <single: grid configuration variables;configuration>`
+
 These macros affect the HTCondor’s usage of grid resources.
 
- ``GLEXEC_JOB``
+ ``GLEXEC_JOB`` :index:` <single: GLEXEC_JOB>`
     A boolean value that defaults to ``False``. When ``True``, it
     enables the use of *glexec* on the machine.
- ``GLEXEC``
+ ``GLEXEC`` :index:` <single: GLEXEC>`
     The full path and file name of the *glexec* executable.
- ``GLEXEC_RETRIES``
+ ``GLEXEC_RETRIES`` :index:` <single: GLEXEC_RETRIES>`
     An integer value that specifies the maximum number of times to retry
     a call to *glexec* when *glexec* exits with status 202 or 203, error
     codes that indicate a possible transient error condition. The
     default number of retries is 3.
- ``GLEXEC_RETRY_DELAY``
+ ``GLEXEC_RETRY_DELAY`` :index:` <single: GLEXEC_RETRY_DELAY>`
     An integer value that specifies the minimum number of seconds to
     wait between retries of a failed call to *glexec*. The default is 5
     seconds. The actual delay to be used is determined by a random
@@ -7512,6 +7881,7 @@ These macros affect the HTCondor’s usage of grid resources.
     the value of ``GLEXEC_RETRY_DELAY`` and a maximum of 100 times that
     value.
  ``GLEXEC_HOLD_ON_INITIAL_FAILURE``
+:index:` <single: GLEXEC_HOLD_ON_INITIAL_FAILURE>`
     A boolean value that when ``False`` prevents a job from being put on
     hold when a failure is encountered during the glexec setup phase of
     managing a job. The default is ``True``. *glexec* is invoked
@@ -7522,6 +7892,8 @@ These macros affect the HTCondor’s usage of grid resources.
 
 Configuration File Entries for DAGMan
 -------------------------------------
+
+:index:` <single: DAGMan configuration variables;configuration>`
 
 These macros affect the operation of DAGMan and DAGMan jobs within
 HTCondor.
@@ -7536,12 +7908,14 @@ not changed by doing a *condor\_reconfig*.
 General
 '''''''
 
- ``DAGMAN_CONFIG_FILE``
+:index:` <single: DAGMan configuration: general>`
+
+ ``DAGMAN_CONFIG_FILE`` :index:` <single: DAGMAN_CONFIG_FILE>`
     The path and name of the configuration file to be used by
     *condor\_dagman*. This configuration variable is set automatically
     by *condor\_submit\_dag*, and it should not be explicitly set by the
     user. Defaults to the empty string.
- ``DAGMAN_USE_STRICT``
+ ``DAGMAN_USE_STRICT`` :index:` <single: DAGMAN_USE_STRICT>`
     An integer defining the level of strictness *condor\_dagman* will
     apply when turning warnings into fatal errors, as follows:
 
@@ -7555,12 +7929,13 @@ General
     defined is 1.
 
  ``DAGMAN_STARTUP_CYCLE_DETECT``
+:index:` <single: DAGMAN_STARTUP_CYCLE_DETECT>`
     A boolean value that defaults to ``False``. When ``True``, causes
     *condor\_dagman* to check for cycles in the DAG before submitting
     DAG node jobs, in addition to its run time cycle detection. Note
     that setting this value to ``True`` will impose significant startup
     delays for large DAGs.
- ``DAGMAN_ABORT_DUPLICATES``
+ ``DAGMAN_ABORT_DUPLICATES`` :index:` <single: DAGMAN_ABORT_DUPLICATES>`
     A boolean value that controls whether to attempt to abort duplicate
     instances of *condor\_dagman* running the same DAG on the same
     machine. When *condor\_dagman* starts up, if no DAG lock file
@@ -7575,14 +7950,14 @@ General
     This should be quite rare, however. If not defined,
     ``DAGMAN_ABORT_DUPLICATES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
- ``DAGMAN_USE_OLD_DAG_READER``
+ ``DAGMAN_USE_OLD_DAG_READER`` :index:` <single: DAGMAN_USE_OLD_DAG_READER>`
     As of HTCondor version 8.3.3, this variable is no longer supported.
     Its value will always be ``False``. A setting of ``True`` will
     result in a warning, and the setting will have no effect on how a
     DAG input file is read. The variable was previously used to change
     the reading of DAG input files to that of HTCondor versions prior to
     8.0.6. **Note: users should never change this setting.**
- ``DAGMAN_USE_SHARED_PORT``
+ ``DAGMAN_USE_SHARED_PORT`` :index:` <single: DAGMAN_USE_SHARED_PORT>`
     A boolean value that controls whether *condor\_dagman* will attempt
     to connect to the shared port daemon. If not defined,
     ``DAGMAN_USE_SHARED_PORT`` defaults to ``False``. There is no reason
@@ -7593,7 +7968,9 @@ General
 Throttling
 ''''''''''
 
- ``DAGMAN_MAX_JOBS_IDLE``
+:index:` <single: DAGMan configuration: throttling>`
+
+ ``DAGMAN_MAX_JOBS_IDLE`` :index:` <single: DAGMAN_MAX_JOBS_IDLE>`
     An integer value that controls the maximum number of idle procs
     allowed within the DAG before *condor\_dagman* temporarily stops
     submitting jobs. *condor\_dagman* will resume submitting jobs once
@@ -7611,7 +7988,7 @@ Throttling
     This configuration option can be overridden by the
     *condor\_submit\_dag* **-maxidle **\ *c*\ ommand-line argument (see
      `12 <Condorsubmitdag.html#x150-109200012>`__).
- ``DAGMAN_MAX_JOBS_SUBMITTED``
+ ``DAGMAN_MAX_JOBS_SUBMITTED`` :index:` <single: DAGMAN_MAX_JOBS_SUBMITTED>`
     An integer value that controls the maximum number of node jobs
     (clusters) within the DAG that will be submitted to HTCondor at one
     time. A single invocation of *condor\_submit* by *condor\_dagman*
@@ -7620,13 +7997,13 @@ Throttling
     option can be overridden by the *condor\_submit\_dag*
     **-maxjobs **\ *c*\ ommand-line argument (see
      `12 <Condorsubmitdag.html#x150-109200012>`__).
- ``DAGMAN_MAX_PRE_SCRIPTS``
+ ``DAGMAN_MAX_PRE_SCRIPTS`` :index:` <single: DAGMAN_MAX_PRE_SCRIPTS>`
     An integer defining the maximum number of PRE scripts that any given
     *condor\_dagman* will run at the same time. The value 0 allows any
     number of PRE scripts to run. The default value if not defined is
     20. Note that the ``DAGMAN_MAX_PRE_SCRIPTS`` value can be overridden
     by the *condor\_submit\_dag* **-maxpre** command line option.
- ``DAGMAN_MAX_POST_SCRIPTS``
+ ``DAGMAN_MAX_POST_SCRIPTS`` :index:` <single: DAGMAN_MAX_POST_SCRIPTS>`
     An integer defining the maximum number of POST scripts that any
     given *condor\_dagman* will run at the same time. The value 0 allows
     any number of POST scripts to run. The default value if not defined
@@ -7637,10 +8014,12 @@ Throttling
 Priority, node semantics
 ''''''''''''''''''''''''
 
- ``DAGMAN_DEFAULT_PRIORITY``
+:index:` <single: DAGMan configuration: priority, node semantics>`
+
+ ``DAGMAN_DEFAULT_PRIORITY`` :index:` <single: DAGMAN_DEFAULT_PRIORITY>`
     An integer value defining the minimum priority of node jobs running
     under this *condor\_dagman* job. Defaults to 0.
- ``DAGMAN_SUBMIT_DEPTH_FIRST``
+ ``DAGMAN_SUBMIT_DEPTH_FIRST`` :index:` <single: DAGMAN_SUBMIT_DEPTH_FIRST>`
     A boolean value that controls whether to submit ready DAG node jobs
     in (more-or-less) depth first order, as opposed to breadth-first
     order. Setting ``DAGMAN_SUBMIT_DEPTH_FIRST`` to ``True`` does not
@@ -7652,9 +8031,10 @@ Priority, node semantics
     tend to favor depth rather than breadth in executing the DAG. If
     ``DAGMAN_SUBMIT_DEPTH_FIRST`` is set to ``True``, consider also
     setting ``DAGMAN_RETRY_SUBMIT_FIRST`` and
-    ``DAGMAN_RETRY_NODE_FIRST`` to ``True``. If not defined,
-    ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults to ``False``.
- ``DAGMAN_ALWAYS_RUN_POST``
+    ``DAGMAN_RETRY_NODE_FIRST`` :index:` <single: DAGMAN_RETRY_NODE_FIRST>`
+    to ``True``. If not defined, ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults
+    to ``False``.
+ ``DAGMAN_ALWAYS_RUN_POST`` :index:` <single: DAGMAN_ALWAYS_RUN_POST>`
     A boolean value defining whether *condor\_dagman* will ignore the
     return value of a PRE script when deciding whether to run a POST
     script. The default is ``False``, which means that the failure of a
@@ -7668,7 +8048,10 @@ Priority, node semantics
 Node job submission/removal
 '''''''''''''''''''''''''''
 
+:index:` <single: DAGMan configuration: submission/removal>`
+
  ``DAGMAN_USER_LOG_SCAN_INTERVAL``
+:index:` <single: DAGMAN_USER_LOG_SCAN_INTERVAL>`
     An integer value representing the number of seconds that
     *condor\_dagman* waits between checking the workflow log file for
     status updates. Setting this value lower than the default increases
@@ -7676,21 +8059,25 @@ Node job submission/removal
     fruitlessly, but increases responsiveness to nodes completing or
     failing. The legal range of values is 1 to INT\_MAX. If not defined,
     it defaults to 5 seconds. (As of version 8.4.2, the default may be
-    automatically decreased if ``DAGMAN_MAX_JOBS_IDLE`` is set to a
-    small value. If so, this will be noted in the ``dagman.out`` file.)
+    automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
+    :index:` <single: DAGMAN_MAX_JOBS_IDLE>` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.)
  ``DAGMAN_MAX_SUBMITS_PER_INTERVAL``
+:index:` <single: DAGMAN_MAX_SUBMITS_PER_INTERVAL>`
     An integer that controls how many individual jobs *condor\_dagman*
     will submit in a row before servicing other requests (such as a
     *condor\_rm*). The legal range of values is 1 to 1000. If defined
     with a value less than 1, the value 1 will be used. If defined with
     a value greater than 1000, the value 1000 will be used. If not
     defined, it defaults to 100. (As of version 8.4.2, the default may
-    be automatically decreased if ``DAGMAN_MAX_JOBS_IDLE`` is set to a
-    small value. If so, this will be noted in the ``dagman.out`` file.)
+    be automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
+    :index:` <single: DAGMAN_MAX_JOBS_IDLE>` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.)
 
     ****
 
  ``DAGMAN_MAX_SUBMIT_ATTEMPTS``
+:index:` <single: DAGMAN_MAX_SUBMIT_ATTEMPTS>`
     An integer that controls how many times in a row *condor\_dagman*
     will attempt to execute *condor\_submit* for a given job before
     giving up. Note that consecutive attempts use an exponential
@@ -7700,7 +8087,7 @@ Node job submission/removal
     Note that a value of 16 would result in *condor\_dagman* trying for
     approximately 36 hours before giving up. If not defined, it defaults
     to 6 (approximately two minutes before giving up).
- ``DAGMAN_MAX_JOB_HOLDS``
+ ``DAGMAN_MAX_JOB_HOLDS`` :index:` <single: DAGMAN_MAX_JOB_HOLDS>`
     An integer value defining the maximum number of times a node job is
     allowed to go on hold. As a job goes on hold this number of times,
     it is removed from the queue. For example, if the value is 2, as the
@@ -7711,25 +8098,27 @@ Node job submission/removal
     So, this setting should take that possibility into account, possibly
     using a larger value. A value of 0 allows a job to go on hold any
     number of times. The default value if not defined is 100.
- ``DAGMAN_HOLD_CLAIM_TIME``
+ ``DAGMAN_HOLD_CLAIM_TIME`` :index:` <single: DAGMAN_HOLD_CLAIM_TIME>`
     An integer defining the number of seconds that *condor\_dagman* will
     cause a hold on a claim after a job is finished, using the job
     ClassAd attribute ``KeepClaimIdle``. The default value is 20. A
     value of 0 causes *condor\_dagman* not to set the job ClassAd
     attribute.
- ``DAGMAN_SUBMIT_DELAY``
+ ``DAGMAN_SUBMIT_DELAY`` :index:` <single: DAGMAN_SUBMIT_DELAY>`
     An integer that controls the number of seconds that *condor\_dagman*
     will sleep before submitting consecutive jobs. It can be increased
     to help reduce the load on the *condor\_schedd* daemon. The legal
     range of values is any non negative integer. If defined with a value
     less than 0, the value 0 will be used.
  ``DAGMAN_PROHIBIT_MULTI_JOBS``
+:index:` <single: DAGMAN_PROHIBIT_MULTI_JOBS>`
     A boolean value that controls whether *condor\_dagman* prohibits
     node job submit description files that queue multiple job procs
     other than parallel universe. If a DAG references such a submit
     file, the DAG will abort during the initialization process. If not
     defined, ``DAGMAN_PROHIBIT_MULTI_JOBS`` defaults to ``False``.
  ``DAGMAN_GENERATE_SUBDAG_SUBMITS``
+:index:` <single: DAGMAN_GENERATE_SUBDAG_SUBMITS>`
     A boolean value specifying whether *condor\_dagman* itself should
     create the ``.condor.sub`` files for nested DAGs. If set to
     ``False``, nested DAGs will fail unless the ``.condor.sub`` files
@@ -7739,7 +8128,7 @@ Node job submission/removal
     specified with the ``SUBDAG EXTERNAL`` keyword or with submit
     description file names ending in ``.condor.sub`` are considered
     nested DAGs. The default value if not defined is ``True``.
- ``DAGMAN_REMOVE_NODE_JOBS``
+ ``DAGMAN_REMOVE_NODE_JOBS`` :index:` <single: DAGMAN_REMOVE_NODE_JOBS>`
     A boolean value that controls whether *condor\_dagman* removes its
     node jobs itself when it is removed (in addition to the
     *condor\_schedd* removing them). Note that setting
@@ -7752,7 +8141,7 @@ Node job submission/removal
     *condor\_dagman* will remove its node jobs in some cases, such as a
     DAG abort triggered by an *ABORT-DAG-ON* command. Defaults to
     ``True``.
- ``DAGMAN_MUNGE_NODE_NAMES``
+ ``DAGMAN_MUNGE_NODE_NAMES`` :index:` <single: DAGMAN_MUNGE_NODE_NAMES>`
     A boolean value that controls whether *condor\_dagman* automatically
     renames nodes when running multiple DAGs. The renaming is done to
     avoid possible name conflicts. If this value is set to ``True``, all
@@ -7763,27 +8152,29 @@ Node job submission/removal
     that node will internally be renamed to 2.B. If not defined,
     ``DAGMAN_MUNGE_NODE_NAMES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
- ``DAGMAN_SUPPRESS_JOB_LOGS``
+ ``DAGMAN_SUPPRESS_JOB_LOGS`` :index:` <single: DAGMAN_SUPPRESS_JOB_LOGS>`
     A boolean value specifying whether events should be written to a log
     file specified in a node job’s submit description file. The default
     value is ``False``, such that events are written to a log file
     specified by a node job.
  ``DAGMAN_SUPPRESS_NOTIFICATION``
+:index:` <single: DAGMAN_SUPPRESS_NOTIFICATION>`
     A boolean value defining whether jobs submitted by *condor\_dagman*
     will use email notification when certain events occur. If ``True``,
     all jobs submitted by *condor\_dagman* will have the equivalent of
     the submit command ``notification = never`` set. This does not
     affect the notification for events relating to the *condor\_dagman*
     job itself. Defaults to ``True``.
- ``DAGMAN_CONDOR_SUBMIT_EXE``
+ ``DAGMAN_CONDOR_SUBMIT_EXE`` :index:` <single: DAGMAN_CONDOR_SUBMIT_EXE>`
     The executable that *condor\_dagman* will use to submit HTCondor
     jobs. If not defined, *condor\_dagman* looks for *condor\_submit* in
     the path. **Note: users should rarely change this setting.**
- ``DAGMAN_CONDOR_RM_EXE``
+ ``DAGMAN_CONDOR_RM_EXE`` :index:` <single: DAGMAN_CONDOR_RM_EXE>`
     The executable that *condor\_dagman* will use to remove HTCondor
     jobs. If not defined, *condor\_dagman* looks for *condor\_rm* in the
     path. **Note: users should rarely change this setting.**
  ``DAGMAN_ABORT_ON_SCARY_SUBMIT``
+:index:` <single: DAGMAN_ABORT_ON_SCARY_SUBMIT>`
     A boolean value that controls whether to abort a DAG upon detection
     of a scary submit event. An example of a scary submit event is one
     in which the HTCondor ID does not match the expected value. Note
@@ -7797,14 +8188,16 @@ Node job submission/removal
 Rescue/retry
 ''''''''''''
 
- ``DAGMAN_AUTO_RESCUE``
+:index:` <single: DAGMan configuration: rescue/retry>`
+
+ ``DAGMAN_AUTO_RESCUE`` :index:` <single: DAGMAN_AUTO_RESCUE>`
     A boolean value that controls whether *condor\_dagman* automatically
     runs Rescue DAGs. If ``DAGMAN_AUTO_RESCUE`` is ``True`` and the DAG
     input file ``my.dag`` is submitted, and if a Rescue DAG such as the
     examples ``my.dag.rescue001`` or ``my.dag.rescue002`` exists, then
     the largest magnitude Rescue DAG will be run. If not defined,
     ``DAGMAN_AUTO_RESCUE`` defaults to ``True``.
- ``DAGMAN_MAX_RESCUE_NUM``
+ ``DAGMAN_MAX_RESCUE_NUM`` :index:` <single: DAGMAN_MAX_RESCUE_NUM>`
     An integer value that controls the maximum Rescue DAG number that
     will be written, in the case that ``DAGMAN_OLD_RESCUE`` is
     ``False``, or run if ``DAGMAN_AUTO_RESCUE`` is ``True``. The maximum
@@ -7812,6 +8205,7 @@ Rescue/retry
     DAG from being written at all, or automatically run. If not defined,
     ``DAGMAN_MAX_RESCUE_NUM`` defaults to 100.
  ``DAGMAN_RESET_RETRIES_UPON_RESCUE``
+:index:` <single: DAGMAN_RESET_RETRIES_UPON_RESCUE>`
     A boolean value that controls whether node retries are reset in a
     Rescue DAG. If this value is ``False``, the number of node retries
     written in a Rescue DAG is decreased, if any retries were used in
@@ -7819,12 +8213,13 @@ Rescue/retry
     retries is allowed when running the Rescue DAG. If not defined,
     ``DAGMAN_RESET_RETRIES_UPON_RESCUE`` defaults to ``True``.
  ``DAGMAN_WRITE_PARTIAL_RESCUE``
+:index:` <single: DAGMAN_WRITE_PARTIAL_RESCUE>`
     A boolean value that controls whether *condor\_dagman* writes a
     partial or a full DAG file as a Rescue DAG. As of HTCondor version
     7.2.2, writing a partial DAG is preferred. If not defined,
     ``DAGMAN_WRITE_PARTIAL_RESCUE`` defaults to ``True``. **Note: users
     should rarely change this setting.**
- ``DAGMAN_RETRY_SUBMIT_FIRST``
+ ``DAGMAN_RETRY_SUBMIT_FIRST`` :index:` <single: DAGMAN_RETRY_SUBMIT_FIRST>`
     A boolean value that controls whether a failed submit is retried
     first (before any other submits) or last (after all other ready jobs
     are submitted). If this value is set to ``True``, when a job submit
@@ -7833,7 +8228,7 @@ Rescue/retry
     This had been the behavior of *condor\_dagman*. If this value is set
     to ``False``, when a job submit fails, the job is placed at the tail
     of the queue of ready jobs. If not defined, it defaults to ``True``.
- ``DAGMAN_RETRY_NODE_FIRST``
+ ``DAGMAN_RETRY_NODE_FIRST`` :index:` <single: DAGMAN_RETRY_NODE_FIRST>`
     A boolean value that controls whether a failed node with retries is
     retried first (before any other ready nodes) or last (after all
     other ready nodes). If this value is set to ``True``, when a node
@@ -7843,14 +8238,16 @@ Rescue/retry
     ``False``, when a node with retries fails, the node is placed at the
     tail of the queue of ready nodes. This had been the behavior of
     *condor\_dagman*. If not defined, it defaults to ``False``.
- ``DAGMAN_OLD_RESCUE``
+ ``DAGMAN_OLD_RESCUE`` :index:` <single: DAGMAN_OLD_RESCUE>`
     This configuration variable is no longer used. **Note: users should
     never change this setting.**
 
 Log files
 '''''''''
 
- ``DAGMAN_DEFAULT_NODE_LOG``
+:index:` <single: DAGMan configuration: log files>`
+
+ ``DAGMAN_DEFAULT_NODE_LOG`` :index:` <single: DAGMAN_DEFAULT_NODE_LOG>`
     The default name of a file to be used as a job event log by all node
     jobs of a DAG.
 
@@ -7909,6 +8306,7 @@ Log files
        on a given submit machine.
 
  ``DAGMAN_LOG_ON_NFS_IS_ERROR``
+:index:` <single: DAGMAN_LOG_ON_NFS_IS_ERROR>`
     A boolean value that controls whether *condor\_dagman* prohibits a
     DAG workflow log from being on an NFS file system. This value is
     ignored if ``CREATE_LOCKS_ON_LOCAL_DISK`` and
@@ -7917,7 +8315,7 @@ Log files
     ``True`` (and not ignored), the DAG will abort during the
     initialization process. If not defined,
     ``DAGMAN_LOG_ON_NFS_IS_ERROR`` defaults to ``False``.
- ``DAGMAN_ALLOW_EVENTS``
+ ``DAGMAN_ALLOW_EVENTS`` :index:` <single: DAGMAN_ALLOW_EVENTS>`
     An integer that controls which bad events are considered fatal
     errors by *condor\_dagman*. This macro replaces and expands upon the
     functionality of the ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION``
@@ -7956,6 +8354,7 @@ Log files
     the DAG.
 
  ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION``
+:index:` <single: DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION>`
     This configuration variable is no longer used. The improved
     functionality of the ``DAGMAN_ALLOW_EVENTS`` macro eliminates the
     need for this variable. **Note: users should never change this
@@ -7982,6 +8381,7 @@ Log files
     twice contain the string "EVENT ERROR."
 
  ``DAGMAN_ALWAYS_USE_NODE_LOG``
+:index:` <single: DAGMAN_ALWAYS_USE_NODE_LOG>`
     As of HTCondor version 8.3.1, the value must always be the default
     value of ``True``. Attempting to set it to ``False`` results in an
     error. This causes incompatibility with using a *condor\_submit*
@@ -7991,20 +8391,23 @@ Log files
     For completeness, here is the definition for historical purposes: A
     boolean value that when ``True`` causes *condor\_dagman* to read
     events from its default node log file, as defined by
-    ``DAGMAN_DEFAULT_NODE_LOG`` , instead of from the log file(s)
-    defined in the node job submit description files. When ``True``,
-    *condor\_dagman* will read events only from the default log file,
-    and POST script terminated events will be written only to the
-    default log file, and not to the log file(s) defined in the node job
-    submit description files. The default value is ``True``.
+    ``DAGMAN_DEFAULT_NODE_LOG`` :index:` <single: DAGMAN_DEFAULT_NODE_LOG>`,
+    instead of from the log file(s) defined in the node job submit
+    description files. When ``True``, *condor\_dagman* will read events
+    only from the default log file, and POST script terminated events
+    will be written only to the default log file, and not to the log
+    file(s) defined in the node job submit description files. The
+    default value is ``True``.
 
 Debug output
 ''''''''''''
 
- ``DAGMAN_DEBUG``
+:index:` <single: DAGMan configuration: debug output>`
+
+ ``DAGMAN_DEBUG`` :index:` <single: DAGMAN_DEBUG>`
     This variable is described in section \ `3.5.2 <#x33-1890003.5.2>`__
     as ``<SUBSYS>_DEBUG``.
- ``DAGMAN_VERBOSITY``
+ ``DAGMAN_VERBOSITY`` :index:` <single: DAGMAN_VERBOSITY>`
     An integer value defining the verbosity of output to the
     ``dagman.out`` file, as follows (each level includes all output from
     lower debug levels):
@@ -8020,14 +8423,14 @@ Debug output
 
     The default value if not defined is 3.
 
- ``DAGMAN_DEBUG_CACHE_ENABLE``
+ ``DAGMAN_DEBUG_CACHE_ENABLE`` :index:` <single: DAGMAN_DEBUG_CACHE_ENABLE>`
     A boolean value that determines if log line caching for the
     ``dagman.out`` file should be enabled in the *condor\_dagman*
     process to increase performance (potentially by orders of magnitude)
     when writing the ``dagman.out`` file to an NFS server. Currently,
     this cache is only utilized in Recovery Mode. If not defined, it
     defaults to ``False``.
- ``DAGMAN_DEBUG_CACHE_SIZE``
+ ``DAGMAN_DEBUG_CACHE_SIZE`` :index:` <single: DAGMAN_DEBUG_CACHE_SIZE>`
     An integer value representing the number of bytes of log lines to be
     stored in the log line cache. When the cache surpasses this number,
     the entries are written out in one call to the logging subsystem. A
@@ -8037,6 +8440,7 @@ Debug output
     values is 0 to INT\_MAX. If defined with a value less than 0, the
     value 0 will be used. If not defined, it defaults to 5 Megabytes.
  ``DAGMAN_PENDING_REPORT_INTERVAL``
+:index:` <single: DAGMAN_PENDING_REPORT_INTERVAL>`
     An integer value representing the number of seconds that controls
     how often *condor\_dagman* will print a report of pending nodes to
     the ``dagman.out`` file. The report will only be printed if
@@ -8047,7 +8451,7 @@ Debug output
     processes that are stuck waiting indefinitely for a job to finish.
     If not defined, ``DAGMAN_PENDING_REPORT_INTERVAL`` defaults to 600
     seconds (10 minutes).
- ``MAX_DAGMAN_LOG``
+ ``MAX_DAGMAN_LOG`` :index:` <single: MAX_DAGMAN_LOG>`
     This variable is described in section \ `3.5.2 <#x33-1890003.5.2>`__
     as ``MAX_<SUBSYS>_LOG``. If not defined, ``MAX_DAGMAN_LOG`` defaults
     to 0 (unlimited size).
@@ -8055,7 +8459,9 @@ Debug output
 HTCondor attributes
 '''''''''''''''''''
 
- ``DAGMAN_COPY_TO_SPOOL``
+:index:` <single: DAGMan configuration: HTCondor attributes>`
+
+ ``DAGMAN_COPY_TO_SPOOL`` :index:` <single: DAGMAN_COPY_TO_SPOOL>`
     A boolean value that when ``True`` copies the *condor\_dagman*
     binary to the spool directory when a DAG is submitted. Setting this
     variable to ``True`` allows long-running DAGs to survive a DAGMan
@@ -8063,16 +8469,17 @@ HTCondor attributes
     variable unset or set it to ``False``. The default value if not
     defined is ``False``. **Note: users should rarely change this
     setting.**
- ``DAGMAN_INSERT_SUB_FILE``
+ ``DAGMAN_INSERT_SUB_FILE`` :index:` <single: DAGMAN_INSERT_SUB_FILE>`
     A file name of a file containing submit description file commands to
     be inserted into the ``.condor.sub`` file created by
     *condor\_submit\_dag*. The specified file is inserted into the
-    ``.condor.sub`` file before the **queue** command and before any
-    commands specified with the **-append** *condor\_submit\_dag*
+    ``.condor.sub`` file before the
+    **queue**\ :index:` <single: queue;submit commands>` command and before
+    any commands specified with the **-append** *condor\_submit\_dag*
     command line option. Note that the ``DAGMAN_INSERT_SUB_FILE`` value
     can be overridden by the *condor\_submit\_dag*
     **-insert\_sub\_file** command line option.
- ``DAGMAN_ON_EXIT_REMOVE``
+ ``DAGMAN_ON_EXIT_REMOVE`` :index:` <single: DAGMAN_ON_EXIT_REMOVE>`
     Defines the ``OnExitRemove`` ClassAd expression placed into the
     *condor\_dagman* submit description file by *condor\_submit\_dag*.
     The default expression is designed to ensure that *condor\_dagman*
@@ -8095,13 +8502,17 @@ HTCondor attributes
 Metrics
 '''''''
 
+:index:` <single: DAGMan configuration: metrics>`
+
  ``DAGMAN_PEGASUS_REPORT_METRICS``
+:index:` <single: DAGMAN_PEGASUS_REPORT_METRICS>`
     The path to the *condor\_dagman\_metrics\_reporter* executable,
     which is optionally used to anonymously report workflow metrics for
     Pegasus workflows. Defaults to
     ``$(LIBEXEC)/condor_dagman_metrics_reporter``. **Note: users should
     rarely change this setting.**
  ``DAGMAN_PEGASUS_REPORT_TIMEOUT``
+:index:` <single: DAGMAN_PEGASUS_REPORT_TIMEOUT>`
     An integer value specifying the maximum number of seconds that the
     *condor\_dagman\_metrics\_reporter* will spend attempting to report
     metrics to the Pegasus metrics server. Defaults to 100.
@@ -8109,71 +8520,78 @@ Metrics
 Configuration File Entries Relating to Security
 -----------------------------------------------
 
+:index:` <single: security configuration variables;configuration>`
+
 These macros affect the secure operation of HTCondor. Many of these
 macros are described in section \ `3.8 <Security.html#x36-2680003.8>`__
 on Security.
 
- ``SEC_*_AUTHENTICATION``
+ ``SEC_*_AUTHENTICATION`` :index:` <single: SEC_*_AUTHENTICATION>`
     This section has not yet been written
 
- ``SEC_*_ENCRYPTION``
+ ``SEC_*_ENCRYPTION`` :index:` <single: SEC_*_ENCRYPTION>`
     This section has not yet been written
 
- ``SEC_*_INTEGRITY``
+ ``SEC_*_INTEGRITY`` :index:` <single: SEC_*_INTEGRITY>`
     This section has not yet been written
 
- ``SEC_*_NEGOTIATION``
+ ``SEC_*_NEGOTIATION`` :index:` <single: SEC_*_NEGOTIATION>`
     This section has not yet been written
 
  ``SEC_*_AUTHENTICATION_METHODS``
+:index:` <single: SEC_*_AUTHENTICATION_METHODS>`
     This section has not yet been written
 
- ``SEC_*_CRYPTO_METHODS``
+ ``SEC_*_CRYPTO_METHODS`` :index:` <single: SEC_*_CRYPTO_METHODS>`
     This section has not yet been written
 
- ``GSI_DAEMON_NAME``
+ ``GSI_DAEMON_NAME`` :index:` <single: GSI_DAEMON_NAME>`
     This configuration variable is retired. Instead use ``ALLOW_CLIENT``
-    or ``DENY_CLIENT`` as appropriate. When used, this variable defined
-    a comma separated list of the subject name(s) of the certificate(s)
-    used by Condor daemons to which this configuration of Condor will
-    connect. The \* character may be used as a wild card character. When
-    ``GSI_DAEMON_NAME`` is defined, only certificates matching
-    ``GSI_DAEMON_NAME`` pass the authentication step, and no check is
-    performed to require that the host name of the daemon matches the
-    host name in the daemon’s certificate. When ``GSI_DAEMON_NAME`` is
-    not defined, the host name of the daemon and certificate must match
-    unless exempted by the use of ``GSI_SKIP_HOST_CHECK`` and/or
-    ``GSI_SKIP_HOST_CHECK_CERT_REGEX``.
- ``GSI_SKIP_HOST_CHECK``
+    :index:` <single: ALLOW_CLIENT>` or ``DENY_CLIENT``
+    :index:` <single: DENY_CLIENT>` as appropriate. When used, this variable
+    defined a comma separated list of the subject name(s) of the
+    certificate(s) used by Condor daemons to which this configuration of
+    Condor will connect. The \* character may be used as a wild card
+    character. When ``GSI_DAEMON_NAME`` is defined, only certificates
+    matching ``GSI_DAEMON_NAME`` pass the authentication step, and no
+    check is performed to require that the host name of the daemon
+    matches the host name in the daemon’s certificate. When
+    ``GSI_DAEMON_NAME`` is not defined, the host name of the daemon and
+    certificate must match unless exempted by the use of
+    ``GSI_SKIP_HOST_CHECK`` and/or ``GSI_SKIP_HOST_CHECK_CERT_REGEX``.
+ ``GSI_SKIP_HOST_CHECK`` :index:` <single: GSI_SKIP_HOST_CHECK>`
     A boolean variable that controls whether a check is performed during
     GSI authentication of a Condor daemon. When the default value of
     ``False``, the check is not skipped, so the daemon host name must
     match the host name in the daemon’s certificate, unless otherwise
-    exempted by the use of ``GSI_DAEMON_NAME`` or
+    exempted by the use of ``GSI_DAEMON_NAME``
+    :index:` <single: GSI_DAEMON_NAME>` or
     ``GSI_SKIP_HOST_CHECK_CERT_REGEX``. When ``True``, this check is
     skipped, and hosts will not be rejected due to a mismatch of
     certificate and host name.
  ``GSI_SKIP_HOST_CHECK_CERT_REGEX``
+:index:` <single: GSI_SKIP_HOST_CHECK_CERT_REGEX>`
     This may be set to a regular expression. GSI certificates of Condor
     daemons with a subject name that are matched in full by this regular
     expression are not required to have a matching daemon host name and
     certificate host name. The default is an empty regular expression,
     which will not match any certificates, even if they have an empty
     subject name.
- ``HOST_ALIAS``
+ ``HOST_ALIAS`` :index:` <single: HOST_ALIAS>`
     Specifies the fully qualified host name that clients authenticating
     this daemon with GSI should expect the daemon’s certificate to
     match. The alias is advertised to the *condor\_collector* as part of
     the address of the daemon. When this is not set, clients validate
     the daemon’s certificate host name by matching it against DNS A
     records for the host they are connected to. See
-    ``GSI_SKIP_HOST_CHECK`` for ways to disable this validation step.
- ``GSI_DAEMON_DIRECTORY``
+    ``GSI_SKIP_HOST_CHECK`` :index:` <single: GSI_SKIP_HOST_CHECK>` for ways
+    to disable this validation step.
+ ``GSI_DAEMON_DIRECTORY`` :index:` <single: GSI_DAEMON_DIRECTORY>`
     A directory name used in the construction of complete paths for the
     configuration variables ``GSI_DAEMON_CERT``, ``GSI_DAEMON_KEY``, and
     ``GSI_DAEMON_TRUSTED_CA_DIR``, for any of these configuration
     variables are not explicitly set. The value is unset by default.
- ``GSI_DAEMON_CERT``
+ ``GSI_DAEMON_CERT`` :index:` <single: GSI_DAEMON_CERT>`
     A complete path and file name to the X.509 certificate to be used in
     GSI authentication. If this configuration variable is not defined,
     and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
@@ -8184,7 +8602,7 @@ on Security.
           GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem 
           
 
- ``GSI_DAEMON_KEY``
+ ``GSI_DAEMON_KEY`` :index:` <single: GSI_DAEMON_KEY>`
     A complete path and file name to the X.509 private key to be used in
     GSI authentication. If this configuration variable is not defined,
     and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
@@ -8195,7 +8613,7 @@ on Security.
           GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem 
           
 
- ``GSI_DAEMON_TRUSTED_CA_DIR``
+ ``GSI_DAEMON_TRUSTED_CA_DIR`` :index:` <single: GSI_DAEMON_TRUSTED_CA_DIR>`
     The directory that contains the list of trusted certification
     authorities to be used in GSI authentication. The files in this
     directory are the public keys and signing policies of the trusted
@@ -8211,17 +8629,18 @@ on Security.
     The EC2 GAHP may use this directory in the specification a trusted
     CA.
 
- ``GSI_DAEMON_PROXY``
+ ``GSI_DAEMON_PROXY`` :index:` <single: GSI_DAEMON_PROXY>`
     A complete path and file name to the X.509 proxy to be used in GSI
     authentication. When this configuration variable is defined, use of
     this proxy takes precedence over use of a certificate and key.
- ``GSI_AUTHZ_CONF``
+ ``GSI_AUTHZ_CONF`` :index:` <single: GSI_AUTHZ_CONF>`
     A complete path and file name of the Globus mapping library that
     looks for the mapping call out configuration. There is no default
     value; as such, HTCondor uses the environment variable
     ``GSI_AUTHZ_CONF`` when this variable is not defined. Setting this
     variable to ``/dev/null`` disables callouts.
  ``GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION``
+:index:` <single: GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION>`
     The length of time, in seconds, to cache the result of the Globus
     mapping lookup result when using Globus to map certificates to
     HTCondor user names. The lookup only occurs when the canonical name
@@ -8232,53 +8651,63 @@ on Security.
     the mapping may cause the cache to return a different user than
     Globus.
  ``DELEGATE_JOB_GSI_CREDENTIALS``
+:index:` <single: DELEGATE_JOB_GSI_CREDENTIALS>`
     A boolean value that defaults to ``True`` for HTCondor version
     6.7.19 and more recent versions. When ``True``, a job’s GSI X.509
     credentials are delegated, instead of being copied. This results in
     a more secure communication when not encrypted.
  ``DELEGATE_FULL_JOB_GSI_CREDENTIALS``
+:index:` <single: DELEGATE_FULL_JOB_GSI_CREDENTIALS>`
     A boolean value that controls whether HTCondor will delegate a full
     or limited GSI X.509 proxy. The default value of ``False`` indicates
     the limited GSI X.509 proxy.
  ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
+:index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>`
     An integer value that specifies the maximum number of seconds for
     which delegated proxies should be valid. The default value is one
     day. A value of 0 indicates that the delegated proxy should be valid
     for as long as allowed by the credential used to create the proxy.
     The job may override this configuration setting by using the
-    **delegate\_job\_GSI\_credentials\_lifetime** submit file command.
-    This configuration variable currently only applies to proxies
-    delegated for non-grid jobs and HTCondor-C jobs. It does not
-    currently apply to globus grid jobs, which always behave as though
-    the value is 0. This variable has no effect if
-    ``DELEGATE_JOB_GSI_CREDENTIALS`` is ``False``.
+    **delegate\_job\_GSI\_credentials\_lifetime**\ :index:` <single: delegate_job_GSI_credentials_lifetime;submit commands>`
+    submit file command. This configuration variable currently only
+    applies to proxies delegated for non-grid jobs and HTCondor-C jobs.
+    It does not currently apply to globus grid jobs, which always behave
+    as though the value is 0. This variable has no effect if
+    ``DELEGATE_JOB_GSI_CREDENTIALS``
+    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS>` is ``False``.
  ``DELEGATE_JOB_GSI_CREDENTIALS_REFRESH``
+:index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_REFRESH>`
     A floating point number between 0 and 1 that indicates the fraction
     of a proxy’s lifetime at which point delegated credentials with a
     limited lifetime should be renewed. The renewal is attempted
     periodically at or near the specified fraction of the lifetime of
     the delegated credential. The default value is 0.25. This setting
-    has no effect if ``DELEGATE_JOB_GSI_CREDENTIALS`` is ``False`` or if
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`` is 0. For non-grid jobs,
-    the precise timing of the proxy refresh depends on
-    ``SHADOW_CHECKPROXY_INTERVAL`` . To ensure that the delegated proxy
-    remains valid, the interval for checking the proxy should be, at
-    most, half of the interval for refreshing it.
- ``GSI_DELEGATION_KEYBITS``
+    has no effect if ``DELEGATE_JOB_GSI_CREDENTIALS``
+    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS>` is ``False`` or if
+    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
+    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>` is 0. For
+    non-grid jobs, the precise timing of the proxy refresh depends on
+    ``SHADOW_CHECKPROXY_INTERVAL``
+    :index:` <single: SHADOW_CHECKPROXY_INTERVAL>`. To ensure that the
+    delegated proxy remains valid, the interval for checking the proxy
+    should be, at most, half of the interval for refreshing it.
+ ``GSI_DELEGATION_KEYBITS`` :index:` <single: GSI_DELEGATION_KEYBITS>`
     The integer number of bits in the GSI key. If set to 0, the number
     of bits will be that preferred by the GSI library. If set to less
     than 1024, the value will be ignored, and the key size will be the
     default size of 1024 bits. Setting the value greater than 4096 is
     likely to cause long compute times.
  ``GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE``
+:index:` <single: GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE>`
     The number of seconds of clock skew permitted for delegated proxies.
     The default value is 300 (5 minutes). This default value is also
     used if this variable is set to 0.
- ``GRIDMAP``
+ ``GRIDMAP`` :index:` <single: GRIDMAP>`
     The complete path and file name of the Globus Gridmap file. The
     Gridmap file is used to map X.509 distinguished names to HTCondor
-    user ids.
+    user ids. :index:` <single: SEC_DEFAULT_SESSION_DURATION>`
  ``SEC_<access-level>_SESSION_DURATION``
+` <index://SEC_<access-level>_SESSION_DURATION>`__
     The amount of time in seconds before a communication session
     expires. A session is a record of necessary information to do
     communication between a client and daemon, and is protected by a
@@ -8314,35 +8743,40 @@ on Security.
 
         COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 
+    :index:` <single: SEC_DEFAULT_SESSION_LEASE>`
+
  ``SEC_<access-level>_SESSION_LEASE``
+` <index://SEC_<access-level>_SESSION_LEASE>`__
     The maximum number of seconds an unused security session will be
     kept in a daemon’s session cache before being removed to save
     memory. The default is 3600. If the server and client have different
     configurations, the smaller one will be used.
  ``SEC_INVALIDATE_SESSIONS_VIA_TCP``
+:index:` <single: SEC_INVALIDATE_SESSIONS_VIA_TCP>`
     Use TCP (if True) or UDP (if False) for responding to attempts to
     use an invalid security session. This happens, for example, if a
     daemon restarts and receives incoming commands from other daemons
     that are still using a previously established security session. The
     default is True.
- ``FS_REMOTE_DIR``
+ ``FS_REMOTE_DIR`` :index:` <single: FS_REMOTE_DIR>`
     The location of a file visible to both server and client in Remote
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
- ``ENCRYPT_EXECUTE_DIRECTORY``
+ ``ENCRYPT_EXECUTE_DIRECTORY`` :index:` <single: ENCRYPT_EXECUTE_DIRECTORY>`
     A boolean value that, when ``True``, causes the execute directory
     for jobs on Linux or Windows platforms to be encrypted. Defaults to
     ``False``. Note that even if ``False``, the user can require
     encryption of the execute directory on a per-job basis by setting
-    **encrypt\_execute\_directory** to ``True`` in the job submit
-    description file. Enabling this functionality requires that the
-    HTCondor service is run as user root on Linux platforms, or as a
-    system service on Windows platforms. On Linux platforms, the
-    encryption method is *ecryptfs*, and therefore requires an
-    installation of the ``ecryptfs-utils`` package. On Windows
-    platforms, the encryption method is the EFS (Encrypted File System)
-    feature of NTFS.
+    **encrypt\_execute\_directory**\ :index:` <single: encrypt_execute_directory;submit commands>`
+    to ``True`` in the job submit description file. Enabling this
+    functionality requires that the HTCondor service is run as user root
+    on Linux platforms, or as a system service on Windows platforms. On
+    Linux platforms, the encryption method is *ecryptfs*, and therefore
+    requires an installation of the ``ecryptfs-utils`` package. On
+    Windows platforms, the encryption method is the EFS (Encrypted File
+    System) feature of NTFS.
  ``ENCRYPT_EXECUTE_DIRECTORY_FILENAMES``
+:index:` <single: ENCRYPT_EXECUTE_DIRECTORY_FILENAMES>`
     A boolean value relevant on Linux platforms only. Defaults to
     ``False``. On Windows platforms, file names are not encrypted, so
     this variable has no effect. When using an encrypted execute
@@ -8353,33 +8787,34 @@ on Security.
     not encrypt file names on Linux platforms, and the administrator may
     choose to enable encryption behavior by setting this configuration
     variable to ``True``.
- ``ECRYPTFS_ADD_PASSPHRASE``
+ ``ECRYPTFS_ADD_PASSPHRASE`` :index:` <single: ECRYPTFS_ADD_PASSPHRASE>`
     The path to the *ecryptfs-add-passphrase* command-line utility. If
     the path is not fully-qualified, then safe system path
     subdirectories such as ``/bin`` and ``/usr/bin`` will be searched.
     The default value is ``ecryptfs-add-passphrase``, causing the search
     to be within the safe system path subdirectories. This configuration
     variable is used on Linux platforms when a job sets
-    **encrypt\_execute\_directory** to ``True`` in the submit
-    description file.
- ``SEC_TCP_SESSION_TIMEOUT``
+    **encrypt\_execute\_directory**\ :index:` <single: encrypt_execute_directory;submit commands>`
+    to ``True`` in the submit description file.
+ ``SEC_TCP_SESSION_TIMEOUT`` :index:` <single: SEC_TCP_SESSION_TIMEOUT>`
     The length of time in seconds until the timeout on individual
     network operations when establishing a UDP security session via TCP.
     The default value is 20 seconds. Scalability issues with a large
     pool would be the only basis for a change from the default value.
- ``SEC_TCP_SESSION_DEADLINE``
+ ``SEC_TCP_SESSION_DEADLINE`` :index:` <single: SEC_TCP_SESSION_DEADLINE>`
     An integer representing the total length of time in seconds until
     giving up when establishing a security session. Whereas
-    ``SEC_TCP_SESSION_TIMEOUT`` specifies the timeout for individual
-    blocking operations (connect, read, write), this setting specifies
-    the total time across all operations, including non-blocking
-    operations that have little cost other than holding open the socket.
-    The default value is 120 seconds. The intention of this setting is
-    to avoid waiting for hours for a response in the rare event that the
-    other side freezes up and the socket remains in a connected state.
-    This problem has been observed in some types of operating system
-    crashes.
+    ``SEC_TCP_SESSION_TIMEOUT`` :index:` <single: SEC_TCP_SESSION_TIMEOUT>`
+    specifies the timeout for individual blocking operations (connect,
+    read, write), this setting specifies the total time across all
+    operations, including non-blocking operations that have little cost
+    other than holding open the socket. The default value is 120
+    seconds. The intention of this setting is to avoid waiting for hours
+    for a response in the rare event that the other side freezes up and
+    the socket remains in a connected state. This problem has been
+    observed in some types of operating system crashes.
  ``SEC_DEFAULT_AUTHENTICATION_TIMEOUT``
+:index:` <single: SEC_DEFAULT_AUTHENTICATION_TIMEOUT>`
     The length of time in seconds that HTCondor should attempt
     authenticating network connections before giving up. The default
     imposes no time limit, so the attempt never gives up. Like other
@@ -8387,48 +8822,51 @@ on Security.
     ``DEFAULT``, may be replaced by a different access level to specify
     the timeout to use for different types of commands, for example
     ``SEC_CLIENT_AUTHENTICATION_TIMEOUT``.
- ``SEC_PASSWORD_FILE``
+ ``SEC_PASSWORD_FILE`` :index:` <single: SEC_PASSWORD_FILE>`
     For Unix machines, the path and file name of the file containing the
     pool password for password authentication.
- ``AUTH_SSL_SERVER_CAFILE``
+ ``AUTH_SSL_SERVER_CAFILE`` :index:` <single: AUTH_SSL_SERVER_CAFILE>`
     The path and file name of a file containing one or more trusted CA’s
     certificates for the server side of a communication authenticating
     with SSL.
- ``AUTH_SSL_CLIENT_CAFILE``
+ ``AUTH_SSL_CLIENT_CAFILE`` :index:` <single: AUTH_SSL_CLIENT_CAFILE>`
     The path and file name of a file containing one or more trusted CA’s
     certificates for the client side of a communication authenticating
     with SSL.
- ``AUTH_SSL_SERVER_CADIR``
+ ``AUTH_SSL_SERVER_CADIR`` :index:` <single: AUTH_SSL_SERVER_CADIR>`
     The path to a directory that may contain the certificates (each in
     its own file) for multiple trusted CAs for the server side of a
     communication authenticating with SSL. When defined, the
     authenticating entity’s certificate is utilized to identify the
     trusted CA’s certificate within the directory.
- ``AUTH_SSL_CLIENT_CADIR``
+ ``AUTH_SSL_CLIENT_CADIR`` :index:` <single: AUTH_SSL_CLIENT_CADIR>`
     The path to a directory that may contain the certificates (each in
     its own file) for multiple trusted CAs for the client side of a
     communication authenticating with SSL. When defined, the
     authenticating entity’s certificate is utilized to identify the
     trusted CA’s certificate within the directory.
- ``AUTH_SSL_SERVER_CERTFILE``
+ ``AUTH_SSL_SERVER_CERTFILE`` :index:` <single: AUTH_SSL_SERVER_CERTFILE>`
     The path and file name of the file containing the public certificate
     for the server side of a communication authenticating with SSL.
- ``AUTH_SSL_CLIENT_CERTFILE``
+ ``AUTH_SSL_CLIENT_CERTFILE`` :index:` <single: AUTH_SSL_CLIENT_CERTFILE>`
     The path and file name of the file containing the public certificate
     for the client side of a communication authenticating with SSL.
- ``AUTH_SSL_SERVER_KEYFILE``
+ ``AUTH_SSL_SERVER_KEYFILE`` :index:` <single: AUTH_SSL_SERVER_KEYFILE>`
     The path and file name of the file containing the private key for
     the server side of a communication authenticating with SSL.
- ``AUTH_SSL_CLIENT_KEYFILE``
+ ``AUTH_SSL_CLIENT_KEYFILE`` :index:` <single: AUTH_SSL_CLIENT_KEYFILE>`
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
- ``CERTIFICATE_MAPFILE``
+ ``CERTIFICATE_MAPFILE`` :index:` <single: CERTIFICATE_MAPFILE>`
     A path and file name of the unified map file.
  ``CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS``
+:index:` <single: CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS>`
     For HTCondor version 8.5.8 and later. When this is true, the second
-    field of the ``CERTIFICATE_MAPFILE`` is not interpreted as a regular
+    field of the ``CERTIFICATE_MAPFILE``
+    :index:` <single: CERTIFICATE_MAPFILE>` is not interpreted as a regular
     expression unless it begins and ends with the slash / character.
  ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+:index:` <single: SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION>`
     This is a special authentication mechanism designed to minimize
     overhead in the *condor\_schedd* when communicating with the execute
     machine. Essentially, matchmaking results in a secret being shared
@@ -8465,19 +8903,19 @@ on Security.
     automatically added to the DAEMON, READ, and CLIENT authorization
     levels in these daemons when needed.
 
- ``KERBEROS_SERVER_KEYTAB``
+ ``KERBEROS_SERVER_KEYTAB`` :index:` <single: KERBEROS_SERVER_KEYTAB>`
     The path and file name of the keytab file that holds the necessary
     Kerberos principals. If not defined, this variable’s value is set by
     the installed Kerberos; it is ``/etc/v5srvtab`` on most systems.
- ``KERBEROS_SERVER_PRINCIPAL``
+ ``KERBEROS_SERVER_PRINCIPAL`` :index:` <single: KERBEROS_SERVER_PRINCIPAL>`
     An exact Kerberos principal to use. The default value is
     host/<hostname>@<realm>, as set by the installed Kerberos. Where
     both ``KERBEROS_SERVER_PRINCIPAL`` and ``KERBEROS_SERVER_SERVICE``
     are defined, this value takes precedence.
- ``KERBEROS_SERVER_USER``
+ ``KERBEROS_SERVER_USER`` :index:` <single: KERBEROS_SERVER_USER>`
     The user name that the Kerberos server principal will map to after
     authentication. The default value is condor.
- ``KERBEROS_SERVER_SERVICE``
+ ``KERBEROS_SERVER_SERVICE`` :index:` <single: KERBEROS_SERVER_SERVICE>`
     A string representing the Kerberos service name. This string is
     prepended with a slash character (/) and the host name in order to
     form the Kerberos server principal. This value defaults to host,
@@ -8486,74 +8924,76 @@ on Security.
     ``KERBEROS_SERVER_PRINCIPAL`` and ``KERBEROS_SERVER_SERVICE`` are
     defined, the value of ``KERBEROS_SERVER_PRINCIPAL`` takes
     precedence.
- ``KERBEROS_CLIENT_KEYTAB``
+ ``KERBEROS_CLIENT_KEYTAB`` :index:` <single: KERBEROS_CLIENT_KEYTAB>`
     The path and file name of the keytab file for the client in Kerberos
     authentication. This variable has no default value.
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------
 
+:index:` <single: virtual machine configuration variables;configuration>`
+
 These macros affect how HTCondor runs **vm** universe jobs on a matched
 machine within the pool. They specify items related to the
 *condor\_vm-gahp*.
 
- ``VM_GAHP_SERVER``
+ ``VM_GAHP_SERVER`` :index:` <single: VM_GAHP_SERVER>`
     The complete path and file name of the *condor\_vm-gahp*. The
     default value is ``$(SBIN)``/condor\_vm-gahp.
- ``VM_GAHP_LOG``
+ ``VM_GAHP_LOG`` :index:` <single: VM_GAHP_LOG>`
     The complete path and file name of the *condor\_vm-gahp* log. If not
     specified on a Unix platform, the *condor\_starter* log will be used
     for *condor\_vm-gahp* log items. There is no default value for this
     required configuration variable on Windows platforms.
- ``MAX_VM_GAHP_LOG``
+ ``MAX_VM_GAHP_LOG`` :index:` <single: MAX_VM_GAHP_LOG>`
     Controls the maximum length (in bytes) to which the
     *condor\_vm-gahp* log will be allowed to grow.
- ``VM_TYPE``
+ ``VM_TYPE`` :index:` <single: VM_TYPE>`
     Specifies the type of supported virtual machine software. It will be
     the value kvm, xen or vmware. There is no default value for this
     required configuration variable.
- ``VM_MEMORY``
+ ``VM_MEMORY`` :index:` <single: VM_MEMORY>`
     An integer specifying the maximum amount of memory in MiB to be
     shared among the VM universe jobs run on this machine.
- ``VM_MAX_NUMBER``
+ ``VM_MAX_NUMBER`` :index:` <single: VM_MAX_NUMBER>`
     An integer limit on the number of executing virtual machines. When
     not defined, the default value is the same ``NUM_CPUS``. When it
     evaluates to ``Undefined``, as is the case when not defined with a
     numeric value, no meaningful limit is imposed.
- ``VM_STATUS_INTERVAL``
+ ``VM_STATUS_INTERVAL`` :index:` <single: VM_STATUS_INTERVAL>`
     An integer number of seconds that defaults to 60, representing the
     interval between job status checks by the *condor\_starter* to see
     if the job has finished. A minimum value of 30 seconds is enforced.
- ``VM_GAHP_REQ_TIMEOUT``
+ ``VM_GAHP_REQ_TIMEOUT`` :index:` <single: VM_GAHP_REQ_TIMEOUT>`
     An integer number of seconds that defaults to 300 (five minutes),
     representing the amount of time HTCondor will wait for a command
     issued from the *condor\_starter* to the *condor\_vm-gahp* to be
     completed. When a command times out, an error is reported to the
     *condor\_startd*.
- ``VM_RECHECK_INTERVAL``
+ ``VM_RECHECK_INTERVAL`` :index:` <single: VM_RECHECK_INTERVAL>`
     An integer number of seconds that defaults to 600 (ten minutes),
     representing the amount of time the *condor\_startd* waits after a
     virtual machine error as reported by the *condor\_starter*, and
     before checking a final time on the status of the virtual machine.
     If the check fails, HTCondor disables starting any new vm universe
     jobs by removing the ``VM_Type`` attribute from the machine ClassAd.
- ``VM_SOFT_SUSPEND``
+ ``VM_SOFT_SUSPEND`` :index:` <single: VM_SOFT_SUSPEND>`
     A boolean value that defaults to ``False``, causing HTCondor to free
     the memory of a vm universe job when the job is suspended. When
     ``True``, the memory is not freed.
- ``VM_UNIV_NOBODY_USER``
+ ``VM_UNIV_NOBODY_USER`` :index:` <single: VM_UNIV_NOBODY_USER>`
     Identifies a login name of a user with a home directory that may be
     used for job owner of a vm universe job. The nobody user normally
     utilized when the job arrives from a different UID domain will not
     be allowed to invoke a VMware virtual machine.
- ``ALWAYS_VM_UNIV_USE_NOBODY``
+ ``ALWAYS_VM_UNIV_USE_NOBODY`` :index:` <single: ALWAYS_VM_UNIV_USE_NOBODY>`
     A boolean value that defaults to ``False``. When ``True``, all vm
     universe jobs (independent of their UID domain) will run as the user
     defined in ``VM_UNIV_NOBODY_USER``.
- ``VM_NETWORKING``
+ ``VM_NETWORKING`` :index:` <single: VM_NETWORKING>`
     A boolean variable describing if networking is supported. When not
     defined, the default value is ``False``.
- ``VM_NETWORKING_TYPE``
+ ``VM_NETWORKING_TYPE`` :index:` <single: VM_NETWORKING_TYPE>`
     A string describing the type of networking, required and relevant
     only when ``VM_NETWORKING`` is ``True``. Defined strings are
 
@@ -8565,6 +9005,7 @@ machine within the pool. They specify items related to the
           
 
  ``VM_NETWORKING_DEFAULT_TYPE``
+:index:` <single: VM_NETWORKING_DEFAULT_TYPE>`
     Where multiple networking types are given in ``VM_NETWORKING_TYPE``,
     this optional configuration variable identifies which to use.
     Therefore, for
@@ -8579,10 +9020,11 @@ machine within the pool. They specify items related to the
     this variable is not defined, a default of ``nat`` is used.
 
  ``VM_NETWORKING_BRIDGE_INTERFACE``
+:index:` <single: VM_NETWORKING_BRIDGE_INTERFACE>`
     For Xen and KVM only, a required string if bridge networking is to
     be enabled. It specifies the networking interface that vm universe
     jobs will use.
- ``LIBVIRT_XML_SCRIPT``
+ ``LIBVIRT_XML_SCRIPT`` :index:` <single: LIBVIRT_XML_SCRIPT>`
     For Xen and KVM only, a path and executable specifying a program.
     When the *condor\_vm-gahp* is ready to start a Xen or KVM **vm**
     universe job, it will invoke this program to generate the XML
@@ -8593,35 +9035,38 @@ machine within the pool. They specify items related to the
     *condor\_vm-gahp* will generate the XML itself. The provided script
     in ``$(LIBEXEC)``/libvirt\_simple\_script.awk will generate the same
     XML that the *condor\_vm-gahp* would.
- ``LIBVIRT_XML_SCRIPT_ARGS``
+ ``LIBVIRT_XML_SCRIPT_ARGS`` :index:` <single: LIBVIRT_XML_SCRIPT_ARGS>`
     For Xen and KVM only, the command-line arguments to be given to the
     program specified by ``LIBVIRT_XML_SCRIPT``.
 
 The following configuration variables are specific to the VMware virtual
 machine software.
 
- ``VMWARE_PERL``
+ ``VMWARE_PERL`` :index:` <single: VMWARE_PERL>`
     The complete path and file name to *Perl*. There is no default value
     for this required variable.
- ``VMWARE_SCRIPT``
+ ``VMWARE_SCRIPT`` :index:` <single: VMWARE_SCRIPT>`
     The complete path and file name of the script that controls VMware.
     There is no default value for this required variable.
- ``VMWARE_NETWORKING_TYPE``
+ ``VMWARE_NETWORKING_TYPE`` :index:` <single: VMWARE_NETWORKING_TYPE>`
     An optional string used in networking that the *condor\_vm-gahp*
     inserts into the VMware configuration file to define a networking
     type. Defined types are ``nat`` or ``bridged``. If a default value
     is needed, the inserted string will be ``nat``.
  ``VMWARE_NAT_NETWORKING_TYPE``
+:index:` <single: VMWARE_NAT_NETWORKING_TYPE>`
     An optional string used in networking that the *condor\_vm-gahp*
     inserts into the VMware configuration file to define a networking
     type. If nat networking is used, this variable’s definition takes
     precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
  ``VMWARE_BRIDGE_NETWORKING_TYPE``
+:index:` <single: VMWARE_BRIDGE_NETWORKING_TYPE>`
     An optional string used in networking that the *condor\_vm-gahp*
     inserts into the VMware configuration file to define a networking
     type. If bridge networking is used, this variable’s definition takes
     precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
  ``VMWARE_LOCAL_SETTINGS_FILE``
+:index:` <single: VMWARE_LOCAL_SETTINGS_FILE>`
     The complete path and file name to a file, whose contents will be
     inserted into the VMware description file (i.e., the .vmx file)
     before HTCondor starts the virtual machine. This parameter is
@@ -8630,7 +9075,7 @@ machine software.
 The following configuration variables are specific to the Xen virtual
 machine software.
 
- ``XEN_BOOTLOADER``
+ ``XEN_BOOTLOADER`` :index:` <single: XEN_BOOTLOADER>`
     A required full path and executable for the Xen bootloader, if the
     kernel image includes a disk image.
 
@@ -8640,19 +9085,21 @@ inner virtual machine, and HTCondor is also running on that inner
 virtual machine. These two variables have nothing to do with the **vm**
 universe.
 
- ``VMP_HOST_MACHINE``
+ ``VMP_HOST_MACHINE`` :index:` <single: VMP_HOST_MACHINE>`
     A configuration variable for the inner virtual machine, which
     specifies the host name.
- ``VMP_VM_LIST``
+ ``VMP_VM_LIST`` :index:` <single: VMP_VM_LIST>`
     For the host, a comma separated list of the host names or IP
     addresses for machines running inner virtual machines on a host.
 
 Configuration File Entries Relating to High Availability
 --------------------------------------------------------
 
+:index:` <single: high availability configuration variables;configuration>`
+
 These macros affect the high availability operation of HTCondor.
 
- ``MASTER_HA_LIST``
+ ``MASTER_HA_LIST`` :index:` <single: MASTER_HA_LIST>`
     Similar to ``DAEMON_LIST``, this macro defines a list of daemons
     that the *condor\_master* starts and keeps its watchful eyes on.
     However, the ``MASTER_HA_LIST`` daemons are run in a High
@@ -8678,7 +9125,7 @@ These macros affect the high availability operation of HTCondor.
     default value for ``MASTER_HA_LIST`` is the empty string, which
     disables the feature.
 
- ``HA_LOCK_URL``
+ ``HA_LOCK_URL`` :index:` <single: HA_LOCK_URL>`
     This macro specifies the URL that the *condor\_master* processes use
     to synchronize for the High Availability service. Currently, only
     file URLs are supported; for example, ``file:/share/spool``. Note
@@ -8702,15 +9149,16 @@ These macros affect the high availability operation of HTCondor.
     Lock files are in the form <SUBSYS>.lock. *condor\_preen* is not
     currently aware of the lock files and will delete them if they are
     placed in the ``SPOOL`` directory, so be sure to add <SUBSYS>.lock
-    to ``VALID_SPOOL_FILES`` for each High Availability daemon.
+    to ``VALID_SPOOL_FILES`` :index:` <single: VALID_SPOOL_FILES>` for each
+    High Availability daemon.
 
- ``HA_<SUBSYS>_LOCK_URL``
+ ``HA_<SUBSYS>_LOCK_URL`` :index:` <single: HA_<SUBSYS>_LOCK_URL>`
     This macro controls the High Availability lock URL for a specific
     subsystem as specified in the configuration variable name, and it
     overrides the system-wide lock URL specified by ``HA_LOCK_URL``. If
     not defined for each subsystem, ``HA_<SUBSYS>_LOCK_URL`` is ignored,
     and the value of ``HA_LOCK_URL`` is used.
- ``HA_LOCK_HOLD_TIME``
+ ``HA_LOCK_HOLD_TIME`` :index:` <single: HA_LOCK_HOLD_TIME>`
     This macro specifies the number of seconds that the *condor\_master*
     will hold the lock for each High Availability daemon. Upon gaining
     the shared lock, the *condor\_master* will hold the lock for this
@@ -8723,13 +9171,14 @@ These macros affect the high availability operation of HTCondor.
     ``HA_LOCK_HOLD_TIME`` defaults to 3600 seconds (one hour).
 
  ``HA_<SUBSYS>_LOCK_HOLD_TIME``
+:index:` <single: HA_<SUBSYS>_LOCK_HOLD_TIME>`
     This macro controls the High Availability lock hold time for a
     specific subsystem as specified in the configuration variable name,
     and it overrides the system wide poll period specified by
     ``HA_LOCK_HOLD_TIME``. If not defined for each subsystem,
     ``HA_<SUBSYS>_LOCK_HOLD_TIME`` is ignored, and the value of
     ``HA_LOCK_HOLD_TIME`` is used.
- ``HA_POLL_PERIOD``
+ ``HA_POLL_PERIOD`` :index:` <single: HA_POLL_PERIOD>`
     This macro specifies how often the *condor\_master* polls the High
     Availability locks to see if any locks are either stale (meaning not
     updated for ``HA_LOCK_HOLD_TIME`` seconds), or have been released by
@@ -8738,7 +9187,7 @@ These macros affect the high availability operation of HTCondor.
 
     ``HA_POLL_PERIOD`` defaults to 300 seconds (five minutes).
 
- ``HA_<SUBSYS>_POLL_PERIOD``
+ ``HA_<SUBSYS>_POLL_PERIOD`` :index:` <single: HA_<SUBSYS>_POLL_PERIOD>`
     This macro controls the High Availability poll period for a specific
     subsystem as specified in the configuration variable name, and it
     overrides the system wide poll period specified by
@@ -8746,6 +9195,7 @@ These macros affect the high availability operation of HTCondor.
     ``HA_<SUBSYS>_POLL_PERIOD`` is ignored, and the value of
     ``HA_POLL_PERIOD`` is used.
  ``MASTER_<SUBSYS>_CONTROLLER``
+:index:` <single: MASTER_<SUBSYS>_CONTROLLER>`
     Used only in HA configurations involving the *condor\_had*.
 
     The *condor\_master* has the concept of a controlling and controlled
@@ -8769,7 +9219,7 @@ These macros affect the high availability operation of HTCondor.
     subsystem string as defined in
     section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__.
 
- ``HAD_LIST``
+ ``HAD_LIST`` :index:` <single: HAD_LIST>`
     A comma-separated list of all *condor\_had* daemons in the form
     ``IP:port`` or ``hostname:port``. Each central manager machine that
     runs the *condor\_had* daemon should appear in this list. If
@@ -8781,16 +9231,16 @@ These macros affect the high availability operation of HTCondor.
     ``HAD_LIST``. The machine addresses are identical to the addresses
     defined in ``COLLECTOR_HOST``.
 
- ``HAD_USE_PRIMARY``
+ ``HAD_USE_PRIMARY`` :index:` <single: HAD_USE_PRIMARY>`
     Boolean value to determine if the first machine in the ``HAD_LIST``
     configuration variable is a primary central manager. Defaults to
     ``False``.
- ``HAD_CONTROLLEE``
+ ``HAD_CONTROLLEE`` :index:` <single: HAD_CONTROLLEE>`
     This variable is used to specify the name of the daemon which the
     *condor\_had* daemon controls. This name should match the daemon
     name in the *condor\_master* daemon’s ``DAEMON_LIST`` definition.
     The default value is ``NEGOTIATOR``.
- ``HAD_CONNECTION_TIMEOUT``
+ ``HAD_CONNECTION_TIMEOUT`` :index:` <single: HAD_CONNECTION_TIMEOUT>`
     The time (in seconds) that the *condor\_had* daemon waits before
     giving up on the establishment of a TCP connection. The failure of
     the communication connection is the detection mechanism for the
@@ -8799,7 +9249,7 @@ These macros affect the high availability operation of HTCondor.
     connection time. The default value is 5 seconds. If this value is
     set too low, *condor\_had* daemons will incorrectly assume the
     failure of other machines.
- ``HAD_ARGS``
+ ``HAD_ARGS`` :index:` <single: HAD_ARGS>`
     Command line arguments passed by the *condor\_master* daemon as it
     invokes the *condor\_had* daemon. To make high availability work,
     the *condor\_had* daemon requires the port number it is to use. This
@@ -8814,11 +9264,11 @@ These macros affect the high availability operation of HTCondor.
     with the desired port number. Note that this port number must be the
     same value here as used in ``HAD_LIST``. There is no default value.
 
- ``HAD``
+ ``HAD`` :index:` <single: HAD>`
     The path to the *condor\_had* executable. Normally it is defined
     relative to ``$(SBIN)``. This configuration variable has no default
     value.
- ``MAX_HAD_LOG``
+ ``MAX_HAD_LOG`` :index:` <single: MAX_HAD_LOG>`
     Controls the maximum length in bytes to which the *condor\_had*
     daemon log will be allowed to grow. It will grow to the specified
     length, then be saved to a file with the suffix ``.old``. The
@@ -8826,19 +9276,19 @@ These macros affect the high availability operation of HTCondor.
     maximum space devoted to logging is twice the maximum length of this
     log file. A value of 0 specifies that this file may grow without
     bounds. The default is 1 MiB.
- ``HAD_DEBUG``
+ ``HAD_DEBUG`` :index:` <single: HAD_DEBUG>`
     Logging level for the *condor\_had* daemon. See ``<SUBSYS>_DEBUG``
     for values.
- ``HAD_LOG``
+ ``HAD_LOG`` :index:` <single: HAD_LOG>`
     Full path and file name of the log file. The default value is
     ``$(LOG)``/HADLog.
- ``REPLICATION_LIST``
+ ``REPLICATION_LIST`` :index:` <single: REPLICATION_LIST>`
     A comma-separated list of all *condor\_replication* daemons in the
     form ``IP:port`` or ``hostname:port``. Each central manager machine
     that runs the *condor\_had* daemon should appear in this list. All
     potential central manager machines must be configured with an
     identical ``REPLICATION_LIST``.
- ``STATE_FILE``
+ ``STATE_FILE`` :index:` <single: STATE_FILE>`
     A full path and file name of the file protected by the replication
     mechanism. When not defined, the default path and file used is
 
@@ -8847,24 +9297,24 @@ These macros affect the high availability operation of HTCondor.
           $(SPOOL)/Accountantnew.log 
           
 
- ``REPLICATION_INTERVAL``
+ ``REPLICATION_INTERVAL`` :index:` <single: REPLICATION_INTERVAL>`
     Sets how often the *condor\_replication* daemon initiates its tasks
     of replicating the ``$(STATE_FILE)``. It is defined in seconds and
     defaults to 300 (5 minutes).
- ``MAX_TRANSFER_LIFETIME``
+ ``MAX_TRANSFER_LIFETIME`` :index:` <single: MAX_TRANSFER_LIFETIME>`
     A timeout period within which the process that transfers the state
     file must complete its transfer. The recommended value is
     ``2 * average size of state file / network rate``. It is defined in
     seconds and defaults to 300 (5 minutes).
- ``HAD_UPDATE_INTERVAL``
+ ``HAD_UPDATE_INTERVAL`` :index:` <single: HAD_UPDATE_INTERVAL>`
     Like ``UPDATE_INTERVAL``, determines how often the *condor\_had* is
     to send a ClassAd update to the *condor\_collector*. Updates are
     also sent at each and every change in state. It is defined in
     seconds and defaults to 300 (5 minutes).
- ``HAD_USE_REPLICATION``
+ ``HAD_USE_REPLICATION`` :index:` <single: HAD_USE_REPLICATION>`
     A boolean value that defaults to ``False``. When ``True``, the use
     of *condor\_replication* daemons is enabled.
- ``REPLICATION_ARGS``
+ ``REPLICATION_ARGS`` :index:` <single: REPLICATION_ARGS>`
     Command line arguments passed by the *condor\_master* daemon as it
     invokes the *condor\_replication* daemon. To make high availability
     work, the *condor\_replication* daemon requires the port number it
@@ -8880,11 +9330,11 @@ These macros affect the high availability operation of HTCondor.
     must be the same value as used in ``REPLICATION_LIST``. There is no
     default value.
 
- ``REPLICATION``
+ ``REPLICATION`` :index:` <single: REPLICATION>`
     The full path and file name of the *condor\_replication* executable.
     It is normally defined relative to ``$(SBIN)``. There is no default
     value.
- ``MAX_REPLICATION_LOG``
+ ``MAX_REPLICATION_LOG`` :index:` <single: MAX_REPLICATION_LOG>`
     Controls the maximum length in bytes to which the
     *condor\_replication* daemon log will be allowed to grow. It will
     grow to the specified length, then be saved to a file with the
@@ -8892,22 +9342,22 @@ These macros affect the high availability operation of HTCondor.
     is saved, thus the maximum space devoted to logging is twice the
     maximum length of this log file. A value of 0 specifies that this
     file may grow without bounds. The default is 1 MiB.
- ``REPLICATION_DEBUG``
+ ``REPLICATION_DEBUG`` :index:` <single: REPLICATION_DEBUG>`
     Logging level for the *condor\_replication* daemon. See
     ``<SUBSYS>_DEBUG`` for values.
- ``REPLICATION_LOG``
+ ``REPLICATION_LOG`` :index:` <single: REPLICATION_LOG>`
     Full path and file name to the log file. The default value is
     ``$(LOG)``/ReplicationLog.
- ``TRANSFERER``
+ ``TRANSFERER`` :index:` <single: TRANSFERER>`
     The full path and file name of the *condor\_transferer* executable.
     The default value is ``$(LIBEXEC)``/condor\_transferer.
- ``TRANSFERER_LOG``
+ ``TRANSFERER_LOG`` :index:` <single: TRANSFERER_LOG>`
     Full path and file name to the log file. The default value is
     ``$(LOG)``/TransfererLog.
- ``TRANSFERER_DEBUG``
+ ``TRANSFERER_DEBUG`` :index:` <single: TRANSFERER_DEBUG>`
     Logging level for the *condor\_transferer* daemon. See
     ``<SUBSYS>_DEBUG`` for values.
- ``MAX_TRANSFERER_LOG``
+ ``MAX_TRANSFERER_LOG`` :index:` <single: MAX_TRANSFERER_LOG>`
     Controls the maximum length in bytes to which the
     *condor\_transferer* daemon log will be allowed to grow. A value of
     0 specifies that this file may grow without bounds. The default is 1
@@ -8920,7 +9370,7 @@ In some cases, HTCondor can autonomously refresh GSI certificate proxies
 via *MyProxy*, available from
 `http://myproxy.ncsa.uiuc.edu/ <http://myproxy.ncsa.uiuc.edu/>`__.
 
- ``MYPROXY_GET_DELEGATION``
+ ``MYPROXY_GET_DELEGATION`` :index:` <single: MYPROXY_GET_DELEGATION>`
     The full path name to the *myproxy-get-delegation* executable,
     installed as part of the *MyProxy* software. Often, it is necessary
     to wrap the actual executable with a script that sets the
@@ -8932,6 +9382,8 @@ via *MyProxy*, available from
 Configuration File Entries Relating to condor\_ssh\_to\_job
 -----------------------------------------------------------
 
+:index:` <single: condor_ssh_to_job configuration variables;configuration>`
+
 These macros affect how HTCondor deals with *condor\_ssh\_to\_job*, a
 tool that allows users to interactively debug jobs. With these
 configuration variables, the administrator can control who can use the
@@ -8939,7 +9391,7 @@ tool, and how the *ssh* programs are invoked. The manual page for
 *condor\_ssh\_to\_job* is at
 section \ `12 <Condorsshtojob.html#x144-103900012>`__.
 
- ``ENABLE_SSH_TO_JOB``
+ ``ENABLE_SSH_TO_JOB`` :index:` <single: ENABLE_SSH_TO_JOB>`
     A boolean expression read by the *condor\_starter*, that when
     ``True`` allows the owner of the job or a queue super user on the
     *condor\_schedd* where the job was submitted to connect to the job
@@ -8949,7 +9401,7 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
     attributes may be referenced by using the prefix ``MY.``. When
     ``False``, it prevents *condor\_ssh\_to\_job* from starting an *ssh*
     session. The default value is ``True``.
- ``SCHEDD_ENABLE_SSH_TO_JOB``
+ ``SCHEDD_ENABLE_SSH_TO_JOB`` :index:` <single: SCHEDD_ENABLE_SSH_TO_JOB>`
     A boolean expression read by the *condor\_schedd*, that when
     ``True`` allows the owner of the job or a queue super user to
     connect to the job via *ssh* if the execute machine also allows
@@ -8959,6 +9411,7 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
     session for all jobs managed by the *condor\_schedd*. The default
     value is ``True``.
  ``SSH_TO_JOB_<SSH-CLIENT>_CMD``
+` <index://SSH_TO_JOB_<SSH-CLIENT>_CMD>`__
     A string read by the *condor\_ssh\_to\_job* tool. It specifies the
     command and arguments to use when invoking the program specified by
     ``<SSH-CLIENT>``. Values substituted for the placeholder
@@ -8982,10 +9435,10 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
 
     When the ``<SSH-CLIENT>`` is *scp*, %h is omitted.
 
- ``SSH_TO_JOB_SSHD``
+ ``SSH_TO_JOB_SSHD`` :index:` <single: SSH_TO_JOB_SSHD>`
     The path and executable name of the *ssh* daemon. The value is read
     by the *condor\_starter*. The default value is ``/usr/sbin/sshd``.
- ``SSH_TO_JOB_SSHD_ARGS``
+ ``SSH_TO_JOB_SSHD_ARGS`` :index:` <single: SSH_TO_JOB_SSHD_ARGS>`
     A string, read by the *condor\_starter* that specifies the
     command-line arguments to be passed to the *sshd* to handle an
     incoming ssh connection on its ``stdin`` or ``stdout`` streams in
@@ -8997,6 +9450,7 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
     by a single percent character. The default value is the string
     "-i -e -f %f".
  ``SSH_TO_JOB_SSHD_CONFIG_TEMPLATE``
+:index:` <single: SSH_TO_JOB_SSHD_CONFIG_TEMPLATE>`
     A string, read by the *condor\_starter* that specifies the path and
     file name of an *sshd* configuration template file. The template is
     turned into an *sshd* configuration file by replacing macros within
@@ -9004,10 +9458,11 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
     macro replacement is done by the script
     ``$(LIBEXEC)/condor_ssh_to_job_sshd_setup``. The default value is
     ``$(LIB)/condor_ssh_to_job_sshd_config_template``.
- ``SSH_TO_JOB_SSH_KEYGEN``
+ ``SSH_TO_JOB_SSH_KEYGEN`` :index:` <single: SSH_TO_JOB_SSH_KEYGEN>`
     A string, read by the *condor\_starter* that specifies the path to
     *ssh\_keygen*, the program used to create ssh keys.
  ``SSH_TO_JOB_SSH_KEYGEN_ARGS``
+:index:` <single: SSH_TO_JOB_SSH_KEYGEN_ARGS>`
     A string, read by the *condor\_starter* that specifies the
     command-line arguments to be passed to the *ssh\_keygen* to generate
     an ssh key. Enclose the entire arguments string in double quotes.
@@ -9024,63 +9479,72 @@ section \ `12 <Condorsshtojob.html#x144-103900012>`__.
 condor\_rooster Configuration File Macros
 -----------------------------------------
 
+:index:` <single: condor_rooster configuration variables;configuration>`
+
 *condor\_rooster* is an optional daemon that may be added to the
 *condor\_master* daemon’s ``DAEMON_LIST``. It is responsible for waking
-up hibernating machines when their ``UNHIBERNATE`` expression becomes
-``True``. In the typical case, a pool runs a single instance of
-*condor\_rooster* on the central manager. However, if the network
-topology requires that Wake On LAN packets be sent to specific machines
-from different locations, *condor\_rooster* can be run on any machine(s)
-that can read from the pool’s *condor\_collector* daemon.
+up hibernating machines when their ``UNHIBERNATE``
+:index:` <single: UNHIBERNATE>` expression becomes ``True``. In the typical
+case, a pool runs a single instance of *condor\_rooster* on the central
+manager. However, if the network topology requires that Wake On LAN
+packets be sent to specific machines from different locations,
+*condor\_rooster* can be run on any machine(s) that can read from the
+pool’s *condor\_collector* daemon.
 
 For *condor\_rooster* to wake up hibernating machines, the collecting of
 offline machine ClassAds must be enabled. See variable
-``COLLECTOR_PERSISTENT_AD_LOG`` on page \ `736 <#x33-2010003.5.14>`__
-for details on how to do this.
+``COLLECTOR_PERSISTENT_AD_LOG``
+:index:` <single: COLLECTOR_PERSISTENT_AD_LOG>` on
+page \ `736 <#x33-2010003.5.14>`__ for details on how to do this.
 
- ``ROOSTER_INTERVAL``
+ ``ROOSTER_INTERVAL`` :index:` <single: ROOSTER_INTERVAL>`
     The integer number of seconds between checks for offline machines
     that should be woken. The default value is 300.
- ``ROOSTER_MAX_UNHIBERNATE``
+ ``ROOSTER_MAX_UNHIBERNATE`` :index:` <single: ROOSTER_MAX_UNHIBERNATE>`
     An integer specifying the maximum number of machines to wake up per
     cycle. The default value of 0 means no limit.
- ``ROOSTER_UNHIBERNATE``
+ ``ROOSTER_UNHIBERNATE`` :index:` <single: ROOSTER_UNHIBERNATE>`
     A boolean expression that specifies which machines should be woken
     up. The default expression is ``Offline && Unhibernate``. If network
     topology or other considerations demand that some machines in a pool
     be woken up by one instance of *condor\_rooster*, while others be
-    woken up by a different instance, ``ROOSTER_UNHIBERNATE`` may be set
-    locally such that it is different for the two instances of
-    *condor\_rooster*. In this way, the different instances will only
-    try to wake up their respective subset of the pool.
- ``ROOSTER_UNHIBERNATE_RANK``
+    woken up by a different instance, ``ROOSTER_UNHIBERNATE``
+    :index:` <single: ROOSTER_UNHIBERNATE>` may be set locally such that it
+    is different for the two instances of *condor\_rooster*. In this
+    way, the different instances will only try to wake up their
+    respective subset of the pool.
+ ``ROOSTER_UNHIBERNATE_RANK`` :index:` <single: ROOSTER_UNHIBERNATE_RANK>`
     A ClassAd expression specifying which machines should be woken up
     first in a given cycle. Higher ranked machines are woken first. If
     the number of machines to be woken up is limited by
-    ``ROOSTER_MAX_UNHIBERNATE`` , the rank may be used for determining
-    which machines are woken before reaching the limit.
- ``ROOSTER_WAKEUP_CMD``
+    ``ROOSTER_MAX_UNHIBERNATE`` :index:` <single: ROOSTER_MAX_UNHIBERNATE>`,
+    the rank may be used for determining which machines are woken before
+    reaching the limit.
+ ``ROOSTER_WAKEUP_CMD`` :index:` <single: ROOSTER_WAKEUP_CMD>`
     A string representing the command line invoked by *condor\_rooster*
     that is to wake up a machine. The command and any arguments should
-    be enclosed in double quote marks, the same as **arguments** syntax
-    in an HTCondor submit description file. The default value is
+    be enclosed in double quote marks, the same as
+    **arguments**\ :index:` <single: arguments;submit commands>` syntax in
+    an HTCondor submit description file. The default value is
     "$(BIN)/condor\_power -d -i". The command is expected to read from
     its standard input a ClassAd representing the offline machine.
 
 condor\_shared\_port Configuration File Macros
 ----------------------------------------------
 
+:index:` <single: condor_shared_port configuration variables;configuration>`
+
 These configuration variables affect the *condor\_shared\_port* daemon.
 For general discussion of the *condor\_shared\_port* daemon,
 see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`__.
 
- ``USE_SHARED_PORT``
+ ``USE_SHARED_PORT`` :index:` <single: USE_SHARED_PORT>`
     A boolean value that specifies whether HTCondor daemons should rely
     on the *condor\_shared\_port* daemon for receiving incoming
     connections. Under Unix, write access to the location defined by
-    ``DAEMON_SOCKET_DIR`` is required for this to take effect. The
-    default is ``True``.
- ``SHARED_PORT_PORT``
+    ``DAEMON_SOCKET_DIR`` :index:` <single: DAEMON_SOCKET_DIR>` is required
+    for this to take effect. The default is ``True``.
+ ``SHARED_PORT_PORT`` :index:` <single: SHARED_PORT_PORT>`
     The default TCP port used by the *condor\_shared\_port* daemon. If
     ``COLLECTOR_USES_SHARED_PORT`` is the default value of ``True``, and
     the *condor\_master* launches a *condor\_collector* daemon, then the
@@ -9099,16 +9563,17 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
     `3.9.1 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3060003.9.1>`__.
 
  ``SHARED_PORT_DAEMON_AD_FILE``
+:index:` <single: SHARED_PORT_DAEMON_AD_FILE>`
     This specifies the full path and name of a file used to publish the
     address of *condor\_shared\_port*. This file is read by the other
     daemons that have ``USE_SHARED_PORT=True`` and which are therefore
     sharing the same port. The default typically does not need to be
     changed.
- ``SHARED_PORT_MAX_WORKERS``
+ ``SHARED_PORT_MAX_WORKERS`` :index:` <single: SHARED_PORT_MAX_WORKERS>`
     An integer that specifies the maximum number of sub-processes
     created by *condor\_shared\_port* while servicing requests to
     connect to the daemons that are sharing the port. The default is 50.
- ``DAEMON_SOCKET_DIR``
+ ``DAEMON_SOCKET_DIR`` :index:` <single: DAEMON_SOCKET_DIR>`
     This specifies the directory where Unix versions of HTCondor daemons
     will create named sockets so that incoming connections can be
     forwarded to them by *condor\_shared\_port*. If this directory does
@@ -9141,12 +9606,13 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
     socket allows command-line tools such as *condor\_ssh\_to\_job* to
     use *condor\_shared\_port* as described.
 
-    On Linux platforms, setting ``SHARED_PORT_AUDIT_LOG`` causes
-    HTCondor to log the following information about each connection made
-    through the ``DAEMON_SOCKET_DIR``: the source address, the socket
-    file name, and the target process’s PID, UID, GID, executable path,
-    and command line. An administrator may use this logged information
-    to deter abuse.
+    On Linux platforms, setting ``SHARED_PORT_AUDIT_LOG``
+    :index:` <single: SHARED_PORT_AUDIT_LOG>` causes HTCondor to log the
+    following information about each connection made through the
+    ``DAEMON_SOCKET_DIR``: the source address, the socket file name, and
+    the target process’s PID, UID, GID, executable path, and command
+    line. An administrator may use this logged information to deter
+    abuse.
 
     The default value is ``auto``, causing the use of the directory
     ``$(LOCK)/daemon_sock``. On Unix platforms other than Linux, if that
@@ -9161,7 +9627,7 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
     directory is used, without regard for the length of the path name.
     Ensure that the length is not longer than 90 characters.
 
- ``SHARED_PORT_ARGS``
+ ``SHARED_PORT_ARGS`` :index:` <single: SHARED_PORT_ARGS>`
     Like all daemons started by the *condor\_master* daemon, the command
     line arguments to the invocation of the *condor\_shared\_port*
     daemon can be customized. The arguments can be used to specify a
@@ -9176,12 +9642,12 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
     to set a non-default port number, instead of using this
     configuration variable.
 
- ``SHARED_PORT_AUDIT_LOG``
+ ``SHARED_PORT_AUDIT_LOG`` :index:` <single: SHARED_PORT_AUDIT_LOG>`
     On Linux platforms, the path and file name of the
     *condor\_shared\_port* log that records connections made via the
     ``DAEMON_SOCKET_DIR``. If not defined, there will be no
     *condor\_shared\_port* audit log.
- ``MAX_SHARED_PORT_AUDIT_LOG``
+ ``MAX_SHARED_PORT_AUDIT_LOG`` :index:` <single: MAX_SHARED_PORT_AUDIT_LOG>`
     On Linux platforms, controls the maximum amount of time that the
     *condor\_shared\_port* audit log will be allowed to grow. When it is
     time to rotate a log file, the log file will be saved to a file
@@ -9199,6 +9665,7 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
         ``Wk`` for weeks
 
  ``MAX_NUM_SHARED_PORT_AUDIT_LOG``
+:index:` <single: MAX_NUM_SHARED_PORT_AUDIT_LOG>`
     On Linux platforms, the integer that controls the maximum number of
     rotations that the *condor\_shared\_port* audit log is allowed to
     perform, before the oldest one will be rotated away. The default
@@ -9206,6 +9673,9 @@ see \ `1090 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3090003.9.2>`
 
 Configuration File Entries Relating to Hooks
 --------------------------------------------
+
+:index:` <single: hook configuration variables;configuration>`
+:index:` <single: Job Router>`
 
 These macros control the various hooks that interact with HTCondor.
 Currently, there are two independent sets of hooks. One is a set of
@@ -9219,32 +9689,34 @@ details. The other set replace functionality of the
 section \ `5.4 <TheHTCondorJobRouter.html#x57-4910005.4>`__ on
 page \ `1496 <TheHTCondorJobRouter.html#x57-4910005.4>`__.
 
- ``SLOT<N>_JOB_HOOK_KEYWORD``
+ ``SLOT<N>_JOB_HOOK_KEYWORD`` :index:` <single: SLOT<N>_JOB_HOOK_KEYWORD>`
     For the fetch work hooks, the keyword used to define which set of
     hooks a particular compute slot should invoke. The value of <N> is
     replaced by the slot identification number. For example, on slot 1,
     the variable name will be called ``[SLOT1_JOB_HOOK_KEYWORD``. There
     is no default keyword. Sites that wish to use these job hooks must
     explicitly define the keyword and the corresponding hook paths.
- ``STARTD_JOB_HOOK_KEYWORD``
+ ``STARTD_JOB_HOOK_KEYWORD`` :index:` <single: STARTD_JOB_HOOK_KEYWORD>`
     For the fetch work hooks, the keyword used to define which set of
     hooks a particular *condor\_startd* should invoke. This setting is
     only used if a slot-specific keyword is not defined for a given
     compute slot. There is no default keyword. Sites that wish to use
     job hooks must explicitly define the keyword and the corresponding
     hook paths.
- ``<Keyword>_HOOK_FETCH_WORK``
+ ``<Keyword>_HOOK_FETCH_WORK`` :index:` <single: <Keyword>_HOOK_FETCH_WORK>`
     For the fetch work hooks, the full path to the program to invoke
     whenever the *condor\_startd* wants to fetch work. ``<Keyword>`` is
     the hook keyword defined to distinguish between sets of hooks. There
     is no default.
  ``<Keyword>_HOOK_REPLY_FETCH``
+:index:` <single: <Keyword>_HOOK_REPLY_FETCH>`
     For the fetch work hooks, the full path to the program to invoke
     when the hook defined by ``<Keyword>_HOOK_FETCH_WORK`` returns data
     and the the *condor\_startd* decides if it is going to accept the
     fetched job or not. ``<Keyword>`` is the hook keyword defined to
     distinguish between sets of hooks.
  ``<Keyword>_HOOK_REPLY_CLAIM``
+:index:` <single: <Keyword>_HOOK_REPLY_CLAIM>`
     For the fetch work hooks, the full path to the program to invoke
     whenever the *condor\_startd* finishes fetching a job and decides
     what to do with it. ``<Keyword>`` is the hook keyword defined to
@@ -9253,10 +9725,12 @@ page \ `1496 <TheHTCondorJobRouter.html#x57-4910005.4>`__.
     between sets of hooks. There is no default.
 
  ``<Keyword>_HOOK_PREPARE_JOB``
+:index:` <single: <Keyword>_HOOK_PREPARE_JOB>`
     For the fetch work hooks, the full path to the program invoked by
     the *condor\_starter* before it runs the job. ``<Keyword>`` is the
     hook keyword defined to distinguish between sets of hooks.
  ``<Keyword>_HOOK_UPDATE_JOB_INFO``
+:index:` <single: <Keyword>_HOOK_UPDATE_JOB_INFO>`
     This configuration variable is used by both fetch work hooks and by
     *condor\_job\_router* hooks.
 
@@ -9278,50 +9752,56 @@ page \ `1496 <TheHTCondorJobRouter.html#x57-4910005.4>`__.
     defined by ``JOB_ROUTER_HOOK_KEYWORD`` to identify the hooks.
 
  ``<Keyword>_HOOK_EVICT_CLAIM``
+:index:` <single: <Keyword>_HOOK_EVICT_CLAIM>`
     For the fetch work hooks, the full path to the program to invoke
     whenever the *condor\_startd* needs to evict a fetched claim.
     ``<Keyword>`` is the hook keyword defined to distinguish between
     sets of hooks. There is no default.
- ``<Keyword>_HOOK_JOB_EXIT``
+ ``<Keyword>_HOOK_JOB_EXIT`` :index:` <single: <Keyword>_HOOK_JOB_EXIT>`
     For the fetch work hooks, the full path to the program invoked by
     the *condor\_starter* whenever a job exits, either on its own or
     when being evicted from an execution slot. ``<Keyword>`` is the hook
     keyword defined to distinguish between sets of hooks.
  ``<Keyword>_HOOK_JOB_EXIT_TIMEOUT``
+:index:` <single: <Keyword>_HOOK_JOB_EXIT_TIMEOUT>`
     For the fetch work hooks, the number of seconds the
     *condor\_starter* will wait for the hook defined by
     ``<Keyword>_HOOK_JOB_EXIT`` hook to exit, before continuing with job
     clean up. Defaults to 30 seconds. ``<Keyword>`` is the hook keyword
     defined to distinguish between sets of hooks.
- ``FetchWorkDelay``
+ ``FetchWorkDelay`` :index:` <single: FetchWorkDelay>`
     An expression that defines the number of seconds that the
     *condor\_startd* should wait after an invocation of
-    ``<Keyword>_HOOK_FETCH_WORK`` completes before the hook should be
-    invoked again. The expression is evaluated in the context of the
-    slot ClassAd, and the ClassAd of the currently running job (if any).
-    The expression must evaluate to an integer. If not defined, the
-    *condor\_startd* will wait 300 seconds (five minutes) between
-    attempts to fetch work. For more information about this expression,
-    see section \ `4.4.1 <Hooks.html#x51-4410004.4.1>`__ on
+    ``<Keyword>_HOOK_FETCH_WORK``
+    :index:` <single: <Keyword>_HOOK_FETCH_WORK>` completes before the hook
+    should be invoked again. The expression is evaluated in the context
+    of the slot ClassAd, and the ClassAd of the currently running job
+    (if any). The expression must evaluate to an integer. If not
+    defined, the *condor\_startd* will wait 300 seconds (five minutes)
+    between attempts to fetch work. For more information about this
+    expression, see section \ `4.4.1 <Hooks.html#x51-4410004.4.1>`__ on
     page \ `1371 <Hooks.html#x51-4410004.4.1>`__.
- ``JOB_ROUTER_HOOK_KEYWORD``
+ ``JOB_ROUTER_HOOK_KEYWORD`` :index:` <single: JOB_ROUTER_HOOK_KEYWORD>`
     For the Job Router hooks, the keyword used to define the set of
     hooks the *condor\_job\_router* is to invoke to replace
     functionality of routing translation. There is no default keyword.
     Use of these hooks requires the explicit definition of the keyword
     and the corresponding hook paths.
  ``<Keyword>_HOOK_TRANSLATE_JOB``
+:index:` <single: <Keyword>_HOOK_TRANSLATE_JOB>`
     A Job Router hook, the full path to the program invoked when the Job
     Router has determined that a job meets the definition for a route.
     This hook is responsible for doing the transformation of the job.
     ``<Keyword>`` is the hook keyword defined by
     ``JOB_ROUTER_HOOK_KEYWORD`` to identify the hooks.
  ``<Keyword>_HOOK_JOB_FINALIZE``
+:index:` <single: <Keyword>_HOOK_JOB_FINALIZE>`
     A Job Router hook, the full path to the program invoked when the Job
     Router has determined that the job completed. ``<Keyword>`` is the
     hook keyword defined by ``JOB_ROUTER_HOOK_KEYWORD`` to identify the
     hooks.
  ``<Keyword>_HOOK_JOB_CLEANUP``
+:index:` <single: <Keyword>_HOOK_JOB_CLEANUP>`
     A Job Router hook, the full path to the program invoked when the Job
     Router finishes managing the job. ``<Keyword>`` is the hook keyword
     defined by ``JOB_ROUTER_HOOK_KEYWORD`` to identify the hooks.
@@ -9334,7 +9814,8 @@ ClassAd generated by the respective daemon. The mechanism is described
 in section \ `4.4.3 <Hooks.html#x51-4450004.4.3>`__ on
 page \ `1383 <Hooks.html#x51-4450004.4.3>`__.
 
- ``STARTD_CRON_NAME`` and ``SCHEDD_CRON_NAME``
+ ``STARTD_CRON_NAME`` :index:` <single: STARTD_CRON_NAME>` and
+``SCHEDD_CRON_NAME`` :index:` <single: SCHEDD_CRON_NAME>`
     These variables will be honored through HTCondor versions 7.6, and
     support will be removed in HTCondor version 7.7. They are no longer
     documented as to their usage.
@@ -9354,14 +9835,15 @@ page \ `1383 <Hooks.html#x51-4450004.4.3>`__.
     ClassAd Hook mechanism is used to implement a set of provided hooks
     that provide benchmark attributes.
 
- ``STARTD_CRON_CONFIG_VAL`` and ``SCHEDD_CRON_CONFIG_VAL`` and
-``BENCHMARKS_CONFIG_VAL``
+ ``STARTD_CRON_CONFIG_VAL`` :index:` <single: STARTD_CRON_CONFIG_VAL>` and
+``SCHEDD_CRON_CONFIG_VAL`` :index:` <single: SCHEDD_CRON_CONFIG_VAL>` and
+``BENCHMARKS_CONFIG_VAL`` :index:` <single: BENCHMARKS_CONFIG_VAL>`
     This configuration variable can be used to specify the path and
     executable name of the *condor\_config\_val* program which the jobs
     (hooks) should use to get configuration information from the daemon.
     If defined, an environment variable by the same name with the same
     value will be passed to all jobs.
- ``STARTD_CRON_AUTOPUBLISH``
+ ``STARTD_CRON_AUTOPUBLISH`` :index:` <single: STARTD_CRON_AUTOPUBLISH>`
     Optional setting that determines if the *condor\_startd* should
     automatically publish a new update to the *condor\_collector* after
     any of the jobs produce output. Beware that enabling this setting
@@ -9374,8 +9856,9 @@ page \ `1383 <Hooks.html#x51-4450004.4.3>`__.
         This default value causes the *condor\_startd* to not
         automatically publish updates based on any jobs. Instead,
         updates rely on the usual behavior for sending updates, which is
-        periodic, based on the ``UPDATE_INTERVAL`` configuration
-        variable, or whenever a given slot changes state.
+        periodic, based on the ``UPDATE_INTERVAL``
+        :index:` <single: UPDATE_INTERVAL>` configuration variable, or
+        whenever a given slot changes state.
      ``Always``
         Causes the *condor\_startd* to always send a new update to the
         *condor\_collector* whenever any job exits.
@@ -9388,14 +9871,19 @@ page \ `1383 <Hooks.html#x51-4450004.4.3>`__.
         last ran. It is ignored when ``STARTD_CRON_AUTOPUBLISH`` is set
         to ``If_Changed``.
 
- ``STARTD_CRON_JOBLIST`` and ``SCHEDD_CRON_JOBLIST`` and
-``BENCHMARKS_JOBLIST``
+ ``STARTD_CRON_JOBLIST`` :index:` <single: STARTD_CRON_JOBLIST>` and
+``SCHEDD_CRON_JOBLIST`` :index:` <single: SCHEDD_CRON_JOBLIST>` and
+``BENCHMARKS_JOBLIST`` :index:` <single: BENCHMARKS_JOBLIST>`
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
     of a job. This name must be unique; no two jobs may have the same
     name.
- ``STARTD_CRON_<JobName>_PREFIX`` and ``SCHEDD_CRON_<JobName>_PREFIX``
-and ``BENCHMARKS_<JobName>_PREFIX``
+ ``STARTD_CRON_<JobName>_PREFIX``
+:index:` <single: STARTD_CRON_<JobName>_PREFIX>` and
+``SCHEDD_CRON_<JobName>_PREFIX``
+:index:` <single: SCHEDD_CRON_<JobName>_PREFIX>` and
+``BENCHMARKS_<JobName>_PREFIX``
+:index:` <single: BENCHMARKS_<JobName>_PREFIX>`
     Specifies a string which is prepended by HTCondor to all attribute
     names that the job generates. The use of prefixes avoids the
     conflicts that would be caused by attributes of the same name
@@ -9409,7 +9897,9 @@ and ``BENCHMARKS_<JobName>_PREFIX``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_SLOTS`` and ``BENCHMARKS_<JobName>_SLOTS``
+ ``STARTD_CRON_<JobName>_SLOTS``
+:index:` <single: STARTD_CRON_<JobName>_SLOTS>` and
+``BENCHMARKS_<JobName>_SLOTS`` :index:` <single: BENCHMARKS_<JobName>_SLOTS>`
     Only the slots specified in this comma-separated list may
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot
@@ -9420,9 +9910,12 @@ and ``BENCHMARKS_<JobName>_PREFIX``
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_EXECUTABLE`` and
-``SCHEDD_CRON_<JobName>_EXECUTABLE`` and
+ ``STARTD_CRON_<JobName>_EXECUTABLE``
+:index:` <single: STARTD_CRON_<JobName>_EXECUTABLE>` and
+``SCHEDD_CRON_<JobName>_EXECUTABLE``
+:index:` <single: SCHEDD_CRON_<JobName>_EXECUTABLE>` and
 ``BENCHMARKS_<JobName>_EXECUTABLE``
+:index:` <single: BENCHMARKS_<JobName>_EXECUTABLE>`
     The full path and executable to run for this job. Note that multiple
     jobs may specify the same executable, although the jobs need to have
     different logical names.
@@ -9431,8 +9924,12 @@ and ``BENCHMARKS_<JobName>_PREFIX``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_PERIOD`` and ``SCHEDD_CRON_<JobName>_PERIOD``
-and ``BENCHMARKS_<JobName>_PERIOD``
+ ``STARTD_CRON_<JobName>_PERIOD``
+:index:` <single: STARTD_CRON_<JobName>_PERIOD>` and
+``SCHEDD_CRON_<JobName>_PERIOD``
+:index:` <single: SCHEDD_CRON_<JobName>_PERIOD>` and
+``BENCHMARKS_<JobName>_PERIOD``
+:index:` <single: BENCHMARKS_<JobName>_PERIOD>`
     The period specifies time intervals at which the job should be run.
     For periodic jobs, this is the time interval that passes between
     starting the execution of the job. The value may be specified in
@@ -9450,6 +9947,7 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
  ``STARTD_CRON_<JobName>_METRICS``
+:index:` <single: STARTD_CRON_<JobName>_METRICS>`
     A space or comma -separated list. Each element in the list is a
     metric type, either ``SUM`` or ``PEAK``; a colon; and a metric name.
 
@@ -9517,8 +10015,11 @@ and ``BENCHMARKS_<JobName>_PERIOD``
         STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = /usr/local/bin/cmr-squid-monitor 
         STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
 
- ``STARTD_CRON_<JobName>_MODE`` and ``SCHEDD_CRON_<JobName>_MODE`` and
-``BENCHMARKS_<JobName>_MODE``
+ ``STARTD_CRON_<JobName>_MODE``
+:index:` <single: STARTD_CRON_<JobName>_MODE>` and
+``SCHEDD_CRON_<JobName>_MODE`` :index:` <single: SCHEDD_CRON_<JobName>_MODE>`
+and ``BENCHMARKS_<JobName>_MODE``
+:index:` <single: BENCHMARKS_<JobName>_MODE>`
     A string that specifies a mode within which the job operates. Legal
     values are
 
@@ -9557,8 +10058,10 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 
- ``STARTD_CRON_<JobName>_RECONFIG`` and
+ ``STARTD_CRON_<JobName>_RECONFIG``
+:index:` <single: STARTD_CRON_<JobName>_RECONFIG>` and
 ``SCHEDD_CRON_<JobName>_RECONFIG``
+:index:` <single: SCHEDD_CRON_<JobName>_RECONFIG>`
     A boolean value that when ``True``, causes the daemon to send an HUP
     signal to the job when the daemon is reconfigured. The job is
     expected to reread its configuration at that time.
@@ -9567,8 +10070,10 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_RECONFIG_RERUN`` and
+ ``STARTD_CRON_<JobName>_RECONFIG_RERUN``
+:index:` <single: STARTD_CRON_<JobName>_RECONFIG_RERUN>` and
 ``SCHEDD_CRON_<JobName>_RECONFIG_RERUN``
+:index:` <single: SCHEDD_CRON_<JobName>_RECONFIG_RERUN>`
     A boolean value that when ``True``, causes the daemon ClassAd hooks
     mechanism to re-run the specified job when the daemon is
     reconfigured via *condor\_reconfig*. The default value is ``False``.
@@ -9577,8 +10082,12 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_JOB_LOAD`` and
-``SCHEDD_CRON_<JobName>_JOB_LOAD`` and ``BENCHMARKS_<JobName>_JOB_LOAD``
+ ``STARTD_CRON_<JobName>_JOB_LOAD``
+:index:` <single: STARTD_CRON_<JobName>_JOB_LOAD>` and
+``SCHEDD_CRON_<JobName>_JOB_LOAD``
+:index:` <single: SCHEDD_CRON_<JobName>_JOB_LOAD>` and
+``BENCHMARKS_<JobName>_JOB_LOAD``
+:index:` <single: BENCHMARKS_<JobName>_JOB_LOAD>`
     A floating point value that represents the assumed and therefore
     expected CPU load that a job induces on the system. This job load is
     then used to limit the total number of jobs that run concurrently,
@@ -9591,8 +10100,9 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_MAX_JOB_LOAD`` and ``SCHEDD_CRON_MAX_JOB_LOAD`` and
-``BENCHMARKS_MAX_JOB_LOAD``
+ ``STARTD_CRON_MAX_JOB_LOAD`` :index:` <single: STARTD_CRON_MAX_JOB_LOAD>`
+and ``SCHEDD_CRON_MAX_JOB_LOAD`` :index:` <single: SCHEDD_CRON_MAX_JOB_LOAD>`
+and ``BENCHMARKS_MAX_JOB_LOAD`` :index:` <single: BENCHMARKS_MAX_JOB_LOAD>`
     A floating point value representing a threshold for CPU load, such
     that if starting another job would cause the sum of assumed loads
     for all running jobs to exceed this value, no further jobs will be
@@ -9602,8 +10112,11 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     default value for the ``BENCHMARKS`` hook manager is 1.0. This
     implies that only 1 ``BENCHMARKS`` job (at the default, assumed
     load) may be running.
- ``STARTD_CRON_<JobName>_KILL`` and ``SCHEDD_CRON_<JobName>_KILL`` and
-``BENCHMARKS_<JobName>_KILL``
+ ``STARTD_CRON_<JobName>_KILL``
+:index:` <single: STARTD_CRON_<JobName>_KILL>` and
+``SCHEDD_CRON_<JobName>_KILL`` :index:` <single: SCHEDD_CRON_<JobName>_KILL>`
+and ``BENCHMARKS_<JobName>_KILL``
+:index:` <single: BENCHMARKS_<JobName>_KILL>`
     A boolean value applicable only for jobs with a ``MODE`` of anything
     other than ``WaitForExit``. The default value is ``False``.
 
@@ -9618,8 +10131,11 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_ARGS`` and ``SCHEDD_CRON_<JobName>_ARGS`` and
-``BENCHMARKS_<JobName>_ARGS``
+ ``STARTD_CRON_<JobName>_ARGS``
+:index:` <single: STARTD_CRON_<JobName>_ARGS>` and
+``SCHEDD_CRON_<JobName>_ARGS`` :index:` <single: SCHEDD_CRON_<JobName>_ARGS>`
+and ``BENCHMARKS_<JobName>_ARGS``
+:index:` <single: BENCHMARKS_<JobName>_ARGS>`
     The command line arguments to pass to the job as it is invoked. The
     first argument will be ``<JobName>``.
 
@@ -9627,8 +10143,10 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_ENV`` and ``SCHEDD_CRON_<JobName>_ENV`` and
-``BENCHMARKS_<JobName>_ENV``
+ ``STARTD_CRON_<JobName>_ENV`` :index:` <single: STARTD_CRON_<JobName>_ENV>`
+and ``SCHEDD_CRON_<JobName>_ENV``
+:index:` <single: SCHEDD_CRON_<JobName>_ENV>` and
+``BENCHMARKS_<JobName>_ENV`` :index:` <single: BENCHMARKS_<JobName>_ENV>`
     The environment string to pass to the job. The syntax is the same as
     that of ``<DaemonName>_ENVIRONMENT`` as defined at
      `3.5.7 <#x33-1940003.5.7>`__.
@@ -9637,8 +10155,10 @@ and ``BENCHMARKS_<JobName>_PERIOD``
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
- ``STARTD_CRON_<JobName>_CWD`` and ``SCHEDD_CRON_<JobName>_CWD`` and
-``BENCHMARKS_<JobName>_CWD``
+ ``STARTD_CRON_<JobName>_CWD`` :index:` <single: STARTD_CRON_<JobName>_CWD>`
+and ``SCHEDD_CRON_<JobName>_CWD``
+:index:` <single: SCHEDD_CRON_<JobName>_CWD>` and
+``BENCHMARKS_<JobName>_CWD`` :index:` <single: BENCHMARKS_<JobName>_CWD>`
     The working directory in which to start the job.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
@@ -9648,16 +10168,19 @@ and ``BENCHMARKS_<JobName>_PERIOD``
 Configuration File Entries Only for Windows Platforms
 -----------------------------------------------------
 
+:index:` <single: Windows platform configuration variables;configuration>`
+
 These macros are utilized only on Windows platforms.
 
- ``WINDOWS_RMDIR``
+ ``WINDOWS_RMDIR`` :index:` <single: WINDOWS_RMDIR>`
     The complete path and executable name of the HTCondor version of the
     built-in *rmdir* program. The HTCondor version will not fail when
     the directory contains files that have ACLs that deny the SYSTEM
     process delete access. If not defined, the built-in Windows *rmdir*
     program is invoked, and a value defined for
-    ``WINDOWS_RMDIR_OPTIONS`` is ignored.
- ``WINDOWS_RMDIR_OPTIONS``
+    ``WINDOWS_RMDIR_OPTIONS`` :index:` <single: WINDOWS_RMDIR_OPTIONS>` is
+    ignored.
+ ``WINDOWS_RMDIR_OPTIONS`` :index:` <single: WINDOWS_RMDIR_OPTIONS>`
     Command line options to be specified when configuration variable
     ``WINDOWS_RMDIR`` is defined. Defaults to **/S** **/C** when
     configuration variable ``WINDOWS_RMDIR`` is defined and its
@@ -9666,11 +10189,13 @@ These macros are utilized only on Windows platforms.
 condor\_defrag Configuration File Macros
 ----------------------------------------
 
+:index:` <single: condor_defrag configuration variables;configuration>`
+
 These configuration variables affect the *condor\_defrag* daemon. A
 general discussion of *condor\_defrag* may be found in
 section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2630003.7.1>`__.
 
- ``DEFRAG_NAME``
+ ``DEFRAG_NAME`` :index:` <single: DEFRAG_NAME>`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor\_defrag*\ ’s ClassAd. This esoteric configuration macro
     might be used in the situation where there are two *condor\_defrag*
@@ -9681,32 +10206,35 @@ section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-
     page \ `646 <#x33-1940003.5.7>`__ for defaults and composition of
     valid HTCondor daemon names.
  ``DEFRAG_DRAINING_MACHINES_PER_HOUR``
+:index:` <single: DEFRAG_DRAINING_MACHINES_PER_HOUR>`
     A floating point number that specifies how many machines should be
     drained per hour. The default is 0, so no draining will happen
     unless this setting is changed. Each *condor\_startd* is considered
     to be one machine. The actual number of machines drained per hour
     may be less than this if draining is halted by one of the other
     defragmentation policy controls. The granularity in timing of
-    draining initiation is controlled by ``DEFRAG_INTERVAL`` . The
-    lowest rate of draining that is supported is one machine per day or
-    one machine per ``DEFRAG_INTERVAL`` , whichever is lower. A
-    fractional number of machines contributing to the value of
+    draining initiation is controlled by ``DEFRAG_INTERVAL``
+    :index:` <single: DEFRAG_INTERVAL>`. The lowest rate of draining that is
+    supported is one machine per day or one machine per
+    ``DEFRAG_INTERVAL`` :index:` <single: DEFRAG_INTERVAL>`, whichever is
+    lower. A fractional number of machines contributing to the value of
     ``DEFRAG_DRAINING_MACHINES_PER_HOUR`` is rounded to the nearest
     whole number of machines on a per day basis.
  ``DEFRAG_DRAINING_START_EXPR``
+:index:` <single: DEFRAG_DRAINING_START_EXPR>`
     A ClassAd expression that replaces the machine’s ``START``
-    expression while it’s draining. Slots which accepted a job after the
-    machine begain draining set the machine ad attribute
-    ``AcceptedWhileDraining`` to ``true``. When the last job which was
-    not accepted while draining exits, all other jobs are immediately
-    evicted with a ``MaxJobRetirementTime`` of 0; job vacate times are
-    still respected. While the jobs which were accepted while draining
-    are vacating, the ``START`` expression is ``false``. Using
+    :index:` <single: START>` expression while it’s draining. Slots which
+    accepted a job after the machine begain draining set the machine ad
+    attribute ``AcceptedWhileDraining`` to ``true``. When the last job
+    which was not accepted while draining exits, all other jobs are
+    immediately evicted with a ``MaxJobRetirementTime`` of 0; job vacate
+    times are still respected. While the jobs which were accepted while
+    draining are vacating, the ``START`` expression is ``false``. Using
     ``$(START)`` in this expression is usually a mistake: it will be
     replaced by the defrag daemon’s ``START`` expression, not the value
     of the target machine’s ``START`` expression (and especially not the
     value of its ``START`` expression at the time draining begins).
- ``DEFRAG_REQUIREMENTS``
+ ``DEFRAG_REQUIREMENTS`` :index:` <single: DEFRAG_REQUIREMENTS>`
     An expression that specifies which machines to drain. The default is
 
     ::
@@ -9716,14 +10244,16 @@ section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-
     A machine, meaning a *condor\_startd*, is matched if any of its
     slots match this expression. Machines are automatically excluded if
     they are already draining, or if they match
-    ``DEFRAG_WHOLE_MACHINE_EXPR`` .
+    ``DEFRAG_WHOLE_MACHINE_EXPR``
+    :index:` <single: DEFRAG_WHOLE_MACHINE_EXPR>`.
 
  ``DEFRAG_CANCEL_REQUIREMENTS``
+:index:` <single: DEFRAG_CANCEL_REQUIREMENTS>`
     An expression that specifies which draining machines should have
     draining be canceled. This defaults to
-    ``$(DEFRAG_WHOLE_MACHINE_EXPR)``. This could be used to drain
-    partial rather than whole machines.
- ``DEFRAG_RANK``
+    ``$(DEFRAG_WHOLE_MACHINE_EXPR)``\ :index:` <single: DEFRAG_WHOLE_MACHINE_EXPR>`.
+    This could be used to drain partial rather than whole machines.
+ ``DEFRAG_RANK`` :index:` <single: DEFRAG_RANK>`
     An expression that specifies which machines are more desirable to
     drain. The expression should evaluate to a number for each candidate
     machine to be drained. If the number of machines to be drained is
@@ -9731,7 +10261,7 @@ section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-
     will be chosen. The rank of a machine, meaning a *condor\_startd*,
     is the rank of its highest ranked slot. The default rank is
     ``-ExpectedMachineGracefulDrainingBadput``.
- ``DEFRAG_WHOLE_MACHINE_EXPR``
+ ``DEFRAG_WHOLE_MACHINE_EXPR`` :index:` <single: DEFRAG_WHOLE_MACHINE_EXPR>`
     An expression that specifies which machines are already operating as
     whole machines. The default is
 
@@ -9742,33 +10272,35 @@ section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-
     A machine is matched if any slot on the machine matches this
     expression. Each *condor\_startd* is considered to be one machine.
     Whole machines are excluded when selecting machines to drain. They
-    are also counted against ``DEFRAG_MAX_WHOLE_MACHINES`` .
+    are also counted against ``DEFRAG_MAX_WHOLE_MACHINES``
+    :index:` <single: DEFRAG_MAX_WHOLE_MACHINES>`.
 
- ``DEFRAG_MAX_WHOLE_MACHINES``
+ ``DEFRAG_MAX_WHOLE_MACHINES`` :index:` <single: DEFRAG_MAX_WHOLE_MACHINES>`
     An integer that specifies the maximum number of whole machines. When
     the number of whole machines is greater than or equal to this, no
     new machines will be selected for draining. Each *condor\_startd* is
     counted as one machine. The special value -1 indicates that there is
     no limit. The default is -1.
  ``DEFRAG_MAX_CONCURRENT_DRAINING``
+:index:` <single: DEFRAG_MAX_CONCURRENT_DRAINING>`
     An integer that specifies the maximum number of draining machines.
     When the number of machines that are draining is greater than or
     equal to this, no new machines will be selected for draining. Each
     draining *condor\_startd* is counted as one machine. The special
     value -1 indicates that there is no limit. The default is -1.
- ``DEFRAG_INTERVAL``
+ ``DEFRAG_INTERVAL`` :index:` <single: DEFRAG_INTERVAL>`
     An integer that specifies the number of seconds between evaluations
     of the defragmentation policy. In each cycle, the state of the pool
     is observed and machines are drained, if specified by the policy.
     The default is 600 seconds. Very small intervals could create
     excessive load on the *condor\_collector*.
- ``DEFRAG_UPDATE_INTERVAL``
+ ``DEFRAG_UPDATE_INTERVAL`` :index:` <single: DEFRAG_UPDATE_INTERVAL>`
     An integer that specifies the number of seconds between times that
     the *condor\_defrag* daemon sends updates to the collector. (See
     section \ `A.8 <DefragClassAdAttributes.html#x176-1240000A.8>`__ for
     information about the attributes in these updates.) The default is
     300 seconds.
- ``DEFRAG_SCHEDULE``
+ ``DEFRAG_SCHEDULE`` :index:` <single: DEFRAG_SCHEDULE>`
     A setting that specifies the draining schedule to use when draining
     machines. Possible values are ``graceful``, ``quick``, and ``fast``.
     The default is ``graceful``.
@@ -9790,18 +10322,21 @@ section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-
         Jobs are immediately hard-killed, with no chance to gracefully
         shut down or produce a checkpoint.
 
- ``DEFRAG_STATE_FILE``
+ ``DEFRAG_STATE_FILE`` :index:` <single: DEFRAG_STATE_FILE>`
     The path to a file used to record information used by
     *condor\_defrag* when it is restarted. This should only need to be
     modified if there will be multiple instances of the *condor\_defrag*
     daemon running on the same machine. The default is
     ``$(LOCK)/defrag_state``.
- ``DEFRAG_LOG``
+ ``DEFRAG_LOG`` :index:` <single: DEFRAG_LOG>`
     The path to the *condor\_defrag* daemon’s log file. The default log
     location is ``$(LOG)/DefragLog``.
 
 *condor\_gangliad* Configuration File Macros
 --------------------------------------------
+
+:index:` <single: condor_gangliad configuration variables;configuration>`
+:index:` <single: condor_gangliad daemon>`
 
 *condor\_gangliad* is an optional daemon responsible for publishing
 information about HTCondor daemons to the Ganglia\ :sup:`™` monitoring
@@ -9812,14 +10347,14 @@ sent. Additional metrics may be defined, in order to publish any
 information available in ClassAds that the *condor\_collector* daemon
 has.
 
- ``GANGLIAD_INTERVAL``
+ ``GANGLIAD_INTERVAL`` :index:` <single: GANGLIAD_INTERVAL>`
     The integer number of seconds between consecutive sending of metrics
     to Ganglia. Daemons update the *condor\_collector* every 300
     seconds, and the Ganglia heartbeat interval is 20 seconds.
     Therefore, multiples of 20 between 20 and 300 makes sense for this
     value. Negative values inhibit sending data to Ganglia. The default
     value is 60.
- ``GANGLIAD_VERBOSITY``
+ ``GANGLIAD_VERBOSITY`` :index:` <single: GANGLIAD_VERBOSITY>`
     An integer that specifies the maximum verbosity level of metrics to
     be published to Ganglia. Basic metrics have a verbosity level of 0,
     which is the default. Additional metrics can be enabled by
@@ -9827,14 +10362,14 @@ has.
     are no metrics with verbosity levels higher than 1. Some metrics
     depend on attributes that are not published to the
     *condor\_collector* when using the default value of
-    ``STATISTICS_TO_PUBLISH`` . For example, per-user file transfer
-    statistics will only be published to Ganglia if
-    ``GANGLIA_VERBOSITY`` is set to 1 or higher in the
+    ``STATISTICS_TO_PUBLISH`` :index:` <single: STATISTICS_TO_PUBLISH>`. For
+    example, per-user file transfer statistics will only be published to
+    Ganglia if ``GANGLIA_VERBOSITY`` is set to 1 or higher in the
     *condor\_gangliad* configuration and ``STATISTICS_TO_PUBLISH`` in
     the *condor\_schedd* configuration contains ``TRANSFER:2``, or if
     the ``STATISTICS_TO_PUBLISH_LIST`` contains the desired attributes
     explicitly.
- ``GANGLIAD_REQUIREMENTS``
+ ``GANGLIAD_REQUIREMENTS`` :index:` <single: GANGLIAD_REQUIREMENTS>`
     An optional boolean ClassAd expression that may restrict the set of
     daemon ClassAds to be monitored. This could be used to monitor a
     subset of a pool’s daemons or machines. The default is an empty
@@ -9842,15 +10377,16 @@ has.
     monitored ClassAds. Keep in mind that this expression is applied to
     all types of monitored ClassAds, not just machine ClassAds.
  ``GANGLIAD_PER_EXECUTE_NODE_METRICS``
+:index:` <single: GANGLIAD_PER_EXECUTE_NODE_METRICS>`
     A boolean value that, when ``False``, causes metrics from execute
     node daemons to not be published. Aggregate values from these
     machines will still be published. The default value is ``True``.
     This option is useful for pools such that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
- ``GANGLIA_CONFIG``
+ ``GANGLIA_CONFIG`` :index:` <single: GANGLIA_CONFIG>`
     The path and file name of the Ganglia configuration file. The
     default is ``/etc/ganglia/gmond.conf``.
- ``GANGLIA_GMETRIC``
+ ``GANGLIA_GMETRIC`` :index:` <single: GANGLIA_GMETRIC>`
     The full path of the *gmetric* executable to use. If none is
     specified, ``libganglia`` will be used instead when possible,
     because the library interface is more efficient than invoking
@@ -9858,7 +10394,7 @@ has.
     a failure to use ``libganglia`` is detected, *gmetric* will be used,
     if *gmetric* can be found in HTCondor’s ``PATH`` environment
     variable.
- ``GANGLIA_GSTAT_COMMAND``
+ ``GANGLIA_GSTAT_COMMAND`` :index:` <single: GANGLIA_GSTAT_COMMAND>`
     The full *gstat* command used to determine which hosts are monitored
     by Ganglia. For a *condor\_gangliad* running on a host whose local
     *gmond* does not know the list of monitored hosts, change
@@ -9870,39 +10406,45 @@ has.
           gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 
  ``GANGLIA_SEND_DATA_FOR_ALL_HOSTS``
+:index:` <single: GANGLIA_SEND_DATA_FOR_ALL_HOSTS>`
     A boolean value that when ``True`` causes data to be sent to Ganglia
     for hosts that it is not currently monitoring. The default is
     ``False``.
- ``GANGLIA_LIB``
+ ``GANGLIA_LIB`` :index:` <single: GANGLIA_LIB>`
     The full path and file name of the ``libganglia`` shared library to
     use. If none is specified, and if configuration variable
-    ``GANGLIA_GMETRIC`` is also not specified, then a search for
-    ``libganglia`` will be performed in the directories listed in
-    configuration variable ``GANGLIA_LIB_PATH`` or
-    ``GANGLIA_LIB64_PATH`` . The special value ``NOOP`` indicates that
-    *condor\_gangliad* should not publish statistics to Ganglia, but
-    should otherwise go through all the motions it normally does.
- ``GANGLIA_LIB_PATH``
+    ``GANGLIA_GMETRIC`` :index:` <single: GANGLIA_GMETRIC>` is also not
+    specified, then a search for ``libganglia`` will be performed in the
+    directories listed in configuration variable ``GANGLIA_LIB_PATH``
+    :index:` <single: GANGLIA_LIB_PATH>` or ``GANGLIA_LIB64_PATH``
+    :index:` <single: GANGLIA_LIB64_PATH>`. The special value ``NOOP``
+    indicates that *condor\_gangliad* should not publish statistics to
+    Ganglia, but should otherwise go through all the motions it normally
+    does.
+ ``GANGLIA_LIB_PATH`` :index:` <single: GANGLIA_LIB_PATH>`
     A comma-separated list of directories within which to search for the
-    ``libganglia`` executable, if ``GANGLIA_LIB`` is not configured.
-    This is used in 32-bit versions of HTCondor.
- ``GANGLIA_LIB64_PATH``
+    ``libganglia`` executable, if ``GANGLIA_LIB``
+    :index:` <single: GANGLIA_LIB>` is not configured. This is used in 32-bit
+    versions of HTCondor.
+ ``GANGLIA_LIB64_PATH`` :index:` <single: GANGLIA_LIB64_PATH>`
     A comma-separated list of directories within which to search for the
-    ``libganglia`` executable, if ``GANGLIA_LIB`` is not configured.
-    This is used in 64-bit versions of HTCondor.
- ``GANGLIAD_DEFAULT_CLUSTER``
+    ``libganglia`` executable, if ``GANGLIA_LIB``
+    :index:` <single: GANGLIA_LIB>` is not configured. This is used in 64-bit
+    versions of HTCondor.
+ ``GANGLIAD_DEFAULT_CLUSTER`` :index:` <single: GANGLIAD_DEFAULT_CLUSTER>`
     An expression specifying the default name of the Ganglia cluster for
     all metrics. The expression may refer to attributes of the machine.
- ``GANGLIAD_DEFAULT_MACHINE``
+ ``GANGLIAD_DEFAULT_MACHINE`` :index:` <single: GANGLIAD_DEFAULT_MACHINE>`
     An expression specifying the default machine name of Ganglia
     metrics. The expression may refer to attributes of the machine.
- ``GANGLIAD_DEFAULT_IP``
+ ``GANGLIAD_DEFAULT_IP`` :index:` <single: GANGLIAD_DEFAULT_IP>`
     An expression specifying the default IP address of Ganglia metrics.
     The expression may refer to attributes of the machine.
- ``GANGLIAD_LOG``
+ ``GANGLIAD_LOG`` :index:` <single: GANGLIAD_LOG>`
     The path and file name of the *condor\_gangliad* daemon’s log file.
     The default log is ``$(LOG)/GangliadLog``.
  ``GANGLIAD_METRICS_CONFIG_DIR``
+:index:` <single: GANGLIAD_METRICS_CONFIG_DIR>`
     Path to the directory containing files which define Ganglia metrics
     in terms of HTCondor ClassAd attributes to be published. All files
     in this directory are read, to define the metrics. The default
@@ -9910,6 +10452,8 @@ has.
 
 *condor\_annex* Configuration File Macros
 -----------------------------------------
+
+:index:` <single: condor_annex configuration variables;configuration>`
 
 See section `6.5 <HTCondorAnnexConfiguration.html#x67-5420006.5>`__ for
 *condor\_annex* configuration file macros.

@@ -4,7 +4,7 @@ procd\_ctl
 ==========
 
 command line interface to the *condor\_procd*
-:index:`HTCondor commands<single: HTCondor commands; procd_ctl>`\ :index:`procd_ctl command<single: procd_ctl command>`
+:index:` <single: procd_ctl;HTCondor commands>`\ :index:` <single: procd_ctl command>`
 
 Synopsis
 --------

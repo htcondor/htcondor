@@ -327,7 +327,7 @@ Using Different or Multiple AWS Regions
 It sometimes advantageous to use multiple AWS regions, or convenient to
 use an AWS region other than the default, which is us-east-1). To change
 the default, set the configuration macro ANNEX\_DEFAULT\_AWS\_REGION
-:index:`ANNEX_DEFAULT_AWS_REGION<single: ANNEX_DEFAULT_AWS_REGION>` to the new default. (If you used
+:index:` <single: ANNEX_DEFAULT_AWS_REGION>` to the new default. (If you used
 the *condor\_annex* automatic setup, you can edit the user\_config file
 in .condor directory in your home directory.) Once you do this, you’ll
 have to re-do the setup, as setup is region-specific.
@@ -409,13 +409,13 @@ Spot Fleet request; please do so before running *condor\_annex*.
 You must select the instance role profile used by your on-demand
 instances for *condor\_annex* to work. This value will have been stored
 in the configuration macro ANNEX\_DEFAULT\_ODI\_INSTANCE\_PROFILE\_ARN
-:index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN<single: ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN>` by the setup
+:index:` <single: ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN>` by the setup
 procedure.
 
 Specify the JSON configuration file using
 **-aws-spot-fleet-config-file**, or set the configuration macro
 ANNEX\_DEFAULT\_SFR\_CONFIG\_FILE
-:index:`ANNEX_DEFAULT_SFR_CONFIG_FILE<single: ANNEX_DEFAULT_SFR_CONFIG_FILE>` to the full path of the
+:index:` <single: ANNEX_DEFAULT_SFR_CONFIG_FILE>` to the full path of the
 file you just downloaded, if you’d like it to become your default
 configuration for Spot annexes. Be aware that *condor\_annex* does not
 alter the validity period if one is set in the Spot Fleet configuration
@@ -479,7 +479,7 @@ Four of the “expert mode” options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**
 flag. You may change the CloudFormation URL by changing the HTCondor
 configuration macro ANNEX\_DEFAULT\_CF\_URL
-:index:`ANNEX_DEFAULT_CF_URL<single: ANNEX_DEFAULT_CF_URL>`, or by supplying the URL as the
+:index:` <single: ANNEX_DEFAULT_CF_URL>`, or by supplying the URL as the
 third parameter after the **-setup** flag. If you change any of the
 URLs, you may need to change all of the URLs – Lambda functions and
 CloudWatch events in one region don’t work with instances in another
