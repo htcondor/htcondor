@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If a job RequestGpus, and Singularity is enabled, HTCondor
+automatically passes the --nv flag to Singularity to tell it to mount
+the nvidia gpus.
+\Ticket{6858}
+
 \item When jobs are run without file transfer on, usually because there is a 
 shared filesytem, HTCondor used to unconditionally set the jobs argv[0]
 to the string condor\_exe.exe.  This breaks jobs that look at their own
