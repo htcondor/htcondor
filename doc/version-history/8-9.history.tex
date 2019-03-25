@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If a job RequestGpus and is a Docker Universe job , HTCondor
+automatically mounts the nvidia gpu devices.
+\Ticket{6910}
+
 \item If a job RequestGpus, and Singularity is enabled, HTCondor
 automatically passes the --nv flag to Singularity to tell it to mount
 the nvidia gpus.
