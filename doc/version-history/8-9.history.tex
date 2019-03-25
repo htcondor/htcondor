@@ -59,6 +59,22 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If a job RequestGpus and is a Docker Universe job , HTCondor
+automatically mounts the nvidia gpu devices.
+\Ticket{6910}
+
+\item If a job RequestGpus, and Singularity is enabled, HTCondor
+automatically passes the --nv flag to Singularity to tell it to mount
+the nvidia gpus.
+\Ticket{6858}
+
+\item When jobs are run without file transfer on, usually because there is a 
+shared filesytem, HTCondor used to unconditionally set the jobs argv[0]
+to the string condor\_exe.exe.  This breaks jobs that look at their own
+argv[0], in ways that are very hard to debug.  In this release of HTCondor, 
+we no longer do this.
+\Ticket{6943}
+
 \item The performance of HTCondor's File Transfer mechanism has improved when
 	sending multiple files, especially in wide-area network settings.
 \Ticket{6884}
