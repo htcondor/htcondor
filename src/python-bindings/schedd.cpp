@@ -188,7 +188,7 @@ make_requirements(const ClassAd &jobAd, ExprTree *reqs, ShouldTransferFiles_t st
 	if (jobAd.Lookup(ATTR_REQUEST_DISK)) {
 		ADD_REQUIREMENT(REQUEST_DISK, "TARGET.Disk >= " ATTR_REQUEST_DISK);
 	}
-    
+
 	if (jobAd.Lookup(ATTR_REQUEST_MEMORY)) {
 		ADD_REQUIREMENT(REQUEST_MEMORY, "TARGET.Memory >= " ATTR_REQUEST_MEMORY);
 	}
@@ -200,7 +200,7 @@ make_requirements(const ClassAd &jobAd, ExprTree *reqs, ShouldTransferFiles_t st
 	if (jobAd.Lookup(ATTR_REQUEST_GPUS)) {
 		ADD_REQUIREMENT(REQUEST_GPUS, "TARGET.Gpus >= " ATTR_REQUEST_GPUS);
 	}
-    
+
 	return result;
 }
 
@@ -576,7 +576,7 @@ struct SubmitStepFromPyIter {
 		step = iter_index % step_size;
 
 		if (0 == step) { // have we started a new row?
-			if (m_items) { 
+			if (m_items) {
 				int rval = next_rowdata();
 				if (rval <= 0) {
 					// no more row data, we are done
@@ -603,7 +603,7 @@ struct SubmitStepFromPyIter {
 	StringList & vars() { return m_fea.vars; }
 	SubmitForeachArgs & fea() { return m_fea; }
 
-	// 
+	//
 	void set_live_vars()
 	{
 		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
@@ -675,7 +675,7 @@ struct SubmitStepFromPyIter {
 
 			// if there are NO vars, then create a single Item var and store the whole string
 			// if there are vars, then split the string in the same way that the QUEUE statement would
-			if (no_vars_yet) { 
+			if (no_vars_yet) {
 				const char * key = "Item";
 				m_fea.vars.append(key);
 				m_livevars[key] = item_extract();
@@ -1326,7 +1326,7 @@ struct Schedd {
     owner_from_sock(std::string &result) const
     {
         MyString cmd_map_ent;
-        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD); 
+        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
         MyString session_id;
         KeyCacheEntry *k = NULL;
@@ -2125,7 +2125,7 @@ ConnectionSentry::schedd_version()
 
 void
 ConnectionSentry::abort()
-{ 
+{
     if (m_transaction)
     {
         m_transaction = false;
@@ -2229,9 +2229,9 @@ ConnectionSentry::~ConnectionSentry()
 
 struct Submit
 {
-	static MACRO_SOURCE EmptyMacroSrc; 
+	static MACRO_SOURCE EmptyMacroSrc;
 public:
-    Submit() 
+    Submit()
        : m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
@@ -2518,7 +2518,7 @@ public:
 		return factory_submit;
 	}
 
-    int 
+    int
     queue(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object ad_results)
     {
         if (!txn.get() || !txn->transaction())
@@ -2574,7 +2574,7 @@ public:
 			}
 
 			// begin the iterator for QUEUE foreach data. we only allow multiple queue statements
-			// if there is NOT any foreach data.  so we will only get here when 
+			// if there is NOT any foreach data.  so we will only get here when
 			if (m_qargs.empty()) {
 				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
 			} else {
@@ -3069,7 +3069,7 @@ private:
 };
 
 // shared source for all instances of MacroStreamMemoryFile that have an empty stream
-MACRO_SOURCE Submit::EmptyMacroSrc = { false, false, 3, -2, -1, -2 }; 
+MACRO_SOURCE Submit::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
 
 
 
@@ -3080,7 +3080,49 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2)
 
 void export_schedd()
 {
-    enum_<JobAction>("JobAction")
+    enum_<JobAction>("JobAction",
+            R"C0ND0R(
+            An enumeration describing the actions that may be performed on a job in queue.
+
+            The values of the enumeration are:
+
+            .. attribute:: Hold
+
+                Put a job on hold, vacating a running job if necessary.  A job will stay in the hold state
+                until explicitly acted upon by the admin or owner.
+
+            .. attribute:: Release
+
+                Release a job from the hold state, returning it to ``Idle``.
+
+            .. attribute:: Suspend
+
+                Suspend the processes of a running job (on Unix platforms, this triggers a ``SIGSTOP``).
+                The job's processes stay in memory but no longer get scheduled on the CPU.
+
+            .. attribute:: Continue
+
+                Continue a suspended jobs (on Unix, ``SIGCONT``).
+                The processes in a previously suspended job will be scheduled to get CPU time again.
+
+            .. attribute:: Remove
+
+                Remove a job from the Schedd's queue, cleaning it up first on the remote host (if running).
+                This requires the remote host to acknowledge it has successfully vacated the job, meaning ``Remove`` may not be instantaneous.
+
+            .. attribute:: RemoveX
+
+                Immediately remove a job from the schedd queue, even if it means the job is left running on the remote resource.
+
+            .. attribute:: Vacate
+
+                Cause a running job to be killed on the remote resource and return to idle state.
+                With ``Vacate``, jobs may be given significant time to cleanly shut down.
+
+            .. attribute:: VacateFast
+
+                Vacate a running job as quickly as possible, without providing time for the job to cleanly terminate.
+            )C0ND0R")
         .value("Hold", JA_HOLD_JOBS)
         .value("Release", JA_RELEASE_JOBS)
         .value("Remove", JA_REMOVE_JOBS)
@@ -3091,14 +3133,54 @@ void export_schedd()
         .value("Continue", JA_CONTINUE_JOBS)
         ;
 
-    enum_<SetAttributeFlags_t>("TransactionFlags")
+    enum_<SetAttributeFlags_t>("TransactionFlags",
+            R"C0ND0R(
+            Enumerated flags affecting the characteristics of a transaction.
+
+            The values of the enumeration are:
+
+            .. attribute:: NonDurable
+
+                Non-durable transactions are changes that may be lost when the ``condor_schedd``
+                crashes.  ``NonDurable`` is used for performance, as it eliminates extra ``fsync()`` calls.
+
+            .. attribute:: SetDirty
+
+                This marks the changed ClassAds as dirty, causing an update notification to be sent
+                to the ``condor_shadow`` and the ``condor_gridmanager``, if they are managing the job.
+
+            .. attribute:: ShouldLog
+
+                Causes any changes to the job queue to be logged in the relevant job event log.
+            )C0ND0R")
         .value("None", 0)
         .value("NonDurable", NONDURABLE)
         .value("SetDirty", SETDIRTY)
         .value("ShouldLog", SHOULDLOG)
         ;
 
-    enum_<CondorQ::QueryFetchOpts>("QueryOpts")
+    enum_<CondorQ::QueryFetchOpts>("QueryOpts",
+            R"C0ND0R(
+            Enumerated flags sent to the ``condor_schedd`` during a query to alter its behavior.
+
+            The values of the enumeration are:
+
+            .. attribute:: Default
+
+                Queries should use all default behaviors.
+
+            .. attribute:: AutoCluster
+
+                Instead of returning job ads, return an ad per auto-cluster.
+
+            .. attribute:: GroupBy
+
+            .. attribute:: DefaultMyJobsOnly
+
+            .. attribute:: SummaryOnly
+
+            .. attribute:: IncludeClusterAd
+            )C0ND0R")
         .value("Default", CondorQ::fetch_Jobs)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
         .value("GroupBy", CondorQ::fetch_GroupBy)
@@ -3107,7 +3189,20 @@ void export_schedd()
         .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
         ;
 
-    enum_<BlockingMode>("BlockingMode")
+    enum_<BlockingMode>("BlockingMode",
+            R"C0ND0R(
+            An enumeration that controls the behavior of query iterators once they are out of data.
+
+            The values of the enumeration are:
+
+            .. attribute:: Blocking
+
+                Sets the iterator to block until more data is available.
+
+            .. attribute:: NonBlocking
+
+                Sets the iterator to return immediately if additional data is not available.
+            )C0ND0R")
         .value("Blocking", Blocking)
         .value("NonBlocking", NonBlocking)
         ;
@@ -3119,94 +3214,235 @@ void export_schedd()
     register_ptr_to_python< boost::shared_ptr<ConnectionSentry> >();
 
 #if BOOST_VERSION >= 103400
-    boost::python::docstring_options doc_options;
-    doc_options.disable_cpp_signatures();
+//    boost::python::docstring_options doc_options;
+//    doc_options.disable_cpp_signatures();
 #endif
-    class_<Schedd>("Schedd", "A client class for the HTCondor schedd")
-        .def(init<const ClassAdWrapper &>(":param ad: An ad containing the location of the schedd"))
-        .def("query", &Schedd::query, query_overloads("Query the HTCondor schedd for jobs.\n"
-            ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
-            ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
-            ":param callback: A callback function to be invoked for each ad; the return value (if not None) is added to the list.\n"
-            ":param limit: A limit on the number of matches to return.\n"
-            ":param opts: Any one of the QueryOpts enum.\n"
-            ":return: A list of matching jobs, containing the requested attributes.",
+    class_<Schedd>("Schedd",
+            R"C0ND0R(
+            Client object for a ``condor_schedd``.
+
+            :param location_ad: describes the location of the remote ``condor_schedd``
+                daemon, as returned by the :meth:`Collector.locate` method. If the parameter is omitted,
+                the local ``condor_schedd`` daemon is used.
+            :type location_ad: :class:`~classad.ClassAd`
+            )C0ND0R")
+        .def(init<const ClassAdWrapper &>())
+        .def("query", &Schedd::query, query_overloads(
+            R"C0ND0R(
+            Query the ``condor_schedd`` daemon for jobs.
+
+            .. warning:: This returns a *list* of :class:`~classad.ClassAd` objects, meaning all results must
+                be buffered in memory.  This may be memory-intensive for large responses; we strongly recommend
+                to utilize the :meth:`xquery`
+
+            :param constraint: Query constraint; only jobs matching this constraint will be returned; defaults to ``'true'``.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param attr_list: Attributes for the ``condor_schedd`` daemon to project along.
+                At least the attributes in this list will be returned.
+                The default behavior is to return all attributes.
+            :type attr_list: list[str]
+            :param callback: A callable object; if provided, it will be invoked for each ClassAd.
+                The return value (if not ``None``) will be added to the returned list instead of the ad.
+            :param int limit: The maximum number of ads to return; the default (``-1``) is to return all ads.
+            :param opts: Additional flags for the query; these may affect the behavior of the ``condor_schedd``.
+            :type opts: :class:`QueryOpts`.
+            :return: ClassAds representing the matching jobs.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
             (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #endif
             ))
+        .def("act", &Schedd::actOnJobs,
+            R"C0ND0R(
+            Change status of job(s) in the ``condor_schedd`` daemon. The return value is a ClassAd object
+            describing the number of jobs changed.
+
+            This will throw an exception if no jobs are matched by the constraint.
+
+            :param action: The action to perform; must be of the enum JobAction.
+            :type action: :class:`JobAction`
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str
+            )C0ND0R")
         .def("act", &Schedd::actOnJobs2)
-        .def("act", &Schedd::actOnJobs, "Change status of job(s) in the schedd.\n"
-            ":param action: Action to perform; must be from enum JobAction.\n"
-            ":param job_spec: Job specification; can either be a list of job IDs or a string specifying a constraint to match jobs.\n"
-            ":return: Number of jobs changed.")
-        .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
-            ":param ad: ClassAd describing job cluster.\n"
-            ":param count: Number of jobs to submit to cluster.\n"
-            ":param spool: Set to true to spool files separately.\n"
-            ":param ad_results: If set to a list, the resulting ClassAds will be added to the list post-submit.\n"
+        .def("submit", &Schedd::submit, submit_overloads(
+            R"C0ND0R(
+            Submit one or more jobs to the ``condor_schedd`` daemon.
+
+            This method requires the invoker to provide a ClassAd for the new job cluster;
+            such a ClassAd contains attributes with different names than the commands in a
+            submit description file. As an example, the stdout file is referred to as ``output``
+            in the submit description file, but ``Out`` in the ClassAd.
+
+            .. hint:: To generate an example ClassAd, take a sample submit description
+                file and invoke::
+
+                    condor_submit -dump <filename> [cmdfile]
+
+                Then, load the resulting contents of ``<filename>`` into Python.
+
+            :param ad: The ClassAd describing the job cluster.
+            :type ad: :class:`~classad.ClassAd`
+            :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
+            :param bool spool: If ``True``, the clinent inserts the necessary attributes
+                into the job for it to have the input files spooled to a remote
+                ``condor_schedd`` daemon. This parameter is necessary for jobs submitted
+                to a remote ``condor_schedd`` that use HTCondor file transfer.
+            :param ad_results: If set to a list, the list object will contain the job ads
+                resulting from the job submission.
+                These are needed for interacting with the job spool after submission.
+            :type ad_results: list[:class:`~classad.ClassAd`]
+            :return: The newly created cluster ID.
+            :rtype: int
+            )C0ND0R",
 #if BOOST_VERSION < 103400
-            ":return: Newly created cluster ID.", (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
+            (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #else
-            ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
+            (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #endif
-        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
-             ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
-             ":param proc_ads: A list of 2-tuples.  The tuples have the format (proc_ad, count).  This will result in 'count' jobs being submitted, inheriting from the proc_ad and cluster_ad.\n"
-             ":param spool: Set to true to spool files separately.\n"
-             ":param ad_results: A list object; the resulting job ads will be appended to this list.\n"
-             ":return: Newly created cluster ID.", (
+        .def("submitMany", &Schedd::submitMany,
+            R"C0ND0R(
+            Submit multiple jobs to the ``condor_schedd`` daemon, possibly including
+            several distinct processes.
+
+            :param cluster_ad: The base ad for the new job cluster; this is the same format
+                as in the :meth:`submit` method.
+            :type cluster_ad: :class:`~classad.ClassAd`
+            :param list proc_ads: A list of 2-tuples; each tuple has the format of ``(proc_ad, count)``.
+                For each list entry, this will result in count jobs being submitted inheriting from
+                both ``cluster_ad`` and ``proc_ad``.
+            :param bool spool: If ``True``, the clinent inserts the necessary attributes
+                into the job for it to have the input files spooled to a remote
+                ``condor_schedd`` daemon. This parameter is necessary for jobs submitted
+                to a remote ``condor_schedd`` that use HTCondor file transfer.
+            :param ad_results: If set to a list, the list object will contain the job ads
+                resulting from the job submission.
+                These are needed for interacting with the job spool after submission.
+            :type ad_results: list[:class:`~classad.ClassAd`]
+            :return: The newly created cluster ID.
+            :rtype: int
+            )C0ND0R", (
 #if BOOST_VERSION >= 103400
              boost::python::arg("self"),
 #endif
              boost::python::arg("cluster_ad"), boost::python::arg("proc_ads"), boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object()))
-        .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
-            ":param ads: A python list containing one or more ads to spool.\n")
-        .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"
-            ":param flags: Transaction flags from the htcondor.TransactionFlags enum.\n"
-            ":param continue_txn: Defaults to false; set to true to extend an ongoing transaction if present.  Otherwise, starting a new transaction while one is ongoing is an error.\n"
+        .def("spool", &Schedd::spool,
+            R"C0ND0R(
+            Spools the files specified in a list of job ClassAds
+            to the ``condor_schedd``.
+
+            :param ad_list: A list of job descriptions; typically, this is the list
+                filled by the ``ad_results`` argument of the :meth:`submit` method call.
+            :type ad_list: list[:class:`~classad.ClassAds`]
+            :raises RuntimeError: if there are any errors.
+            )C0ND0R")
+        .def("transaction", &Schedd::transaction, transaction_overloads(
+            R"C0ND0R(
+            Start a transaction with the ``condor_schedd``.
+
+            Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
+            flag is set.
+
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
+            :param bool continue_txn: Set to ``True`` if you would like this transaction to extend any
+                pre-existing transaction; defaults to ``False``.  If this is not set, starting a transaction
+                inside a pre-existing transaction will cause an exception to be thrown.
+            :return: A transaction context manager object.
+            )C0ND0R",
 #if BOOST_VERSION < 103400
-            ":return: Transaction context manager.\n", (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
+            (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
 #else
-            ":return: Transaction context manager.\n", (boost::python::arg("self"), boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
+            (boost::python::arg("self"), boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
 #endif
-        .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
-            ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
-        .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"
-            ":param job_spec: Either a list of jobs (CLUSTER.PROC) or a string containing a constraint to match jobs against.\n"
-            ":param attr: Attribute name to edit.\n"
-            ":param value: The new value of the job attribute; should be a string (which will be converted to a ClassAds expression) or a ClassAds expression.")
-        .def("reschedule", &Schedd::reschedule, "Send reschedule command to the schedd.\n")
-        .def("history", &Schedd::history, "Request records from schedd's history\n"
-            ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
-            ":param projection: The attributes to return; an empty list signifies all attributes.\n"
-            ":param match: Number of matches to return.\n"
-            ":param since: optional job id or expression that will signal the end of records to return; the job that matches this will not be returned.\n"
-            ":return: An iterator for the matching job ads",
+        .def("retrieve", &Schedd::retrieve,
+            R"C0ND0R(
+            Retrieve the output sandbox from one or more jobs.
+
+            :param job_spec: An expression matching the list of job output sandboxes to retrieve.
+            :type job_spec: list[:class:`~classad.ClassAd`]
+            )C0ND0R")
+        .def("edit", &Schedd::edit,
+            R"C0ND0R(
+            Edit one or more jobs in the queue.
+
+            This will throw an exception if no jobs are matched by the ``job_spec`` constraint.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str
+            :param str attr: The name of the attribute to edit.
+            :param value: The new value of the attribute.  It should be a string, which will
+                be converted to a ClassAd expression, or an ExprTree object.  Be mindful of quoting
+                issues; to set the value to the string ``foo``, one would set the value to ``''foo''``
+            :type value: str or :class:`~classad.ExprTree`
+            )C0ND0R")
+        .def("reschedule", &Schedd::reschedule,
+            R"C0ND0R(
+            Send reschedule command to the schedd.
+            )C0ND0R")
+        .def("history", &Schedd::history,
+            R"C0ND0R(
+            Fetch history records from the ``condor_schedd`` daemon.
+
+            :param requirements: Query constraint; only jobs matching this constraint will be returned;
+                defaults to ``'true'``.
+            :type constraint: str or :class:`class.ExprTree`
+            :param projection: Attributes that are to be included for each returned job.
+                The empty list causes all attributes to be included.
+            :type projection: list[str]
+            :param int match: An limit on the number of jobs to include; the default (``-1``)
+                indicates to return all matching jobs.
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
 #if BOOST_VERSION >= 103400
              (boost::python::arg("self"),
 #endif
              boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
              boost::python::arg("since")=boost::python::object())
             )
-        .def("refreshGSIProxy", &Schedd::refreshGSIProxy, "Refresh the GSI proxy for a given job\n"
-            ":param cluster: Job cluster.\n"
-            ":param proc: Job proc.\n"
-            ":param filename: Filename of proxy to delegate or upload to job.\n"
-            ":param lifetime: Desired lifetime (in seconds) of delegated proxy; 0 indicates to not shorten"
-            " the proxy lifetime.  -1 indicates to use the value of parameter DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME."
-            " NOTE: depending on the lifetime of the proxy in `filename`, the resulting lifetime may be shorter"
-            " than the desired lifetime.\n"
-            ":return: Lifetime of the resulting job proxy in seconds.")
-        .def("xquery", &Schedd::xquery, "Query HTCondor schedd, returning an iterator.\n"
-            ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
-            ":param projection: The attributes to return; an empty list signifies all attributes.\n"
-            ":param limit: A limit on the number of matches to return.\n"
-            ":param opts: Any one of the QueryOpts enum.\n"
-            ":param name: A name to identify the query (defaults to the schedd name).\n"
-            ":return: An iterator for the matching job ads",
+        .def("refreshGSIProxy", &Schedd::refreshGSIProxy,
+            R"C0ND0R(
+            Refresh the GSI proxy of a job; the job's proxy will be replaced the contents
+            of the provided ``filename``.
+
+            .. note:: Depending on the lifetime of the proxy in filename, the resulting lifetime
+                may be shorter than the desired lifetime.
+
+            :param int cluster: Cluster ID of the job to alter.
+            :param int proc: Process ID of the job to alter.
+            :param int lifetime: Indicates the desired lifetime (in seconds) of the delegated proxy.
+                A value of ``0`` specifies to not shorten the proxy lifetime.
+                A value of ``-1`` specifies to use the value of configuration variable
+                ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``.
+            )C0ND0R")
+        .def("xquery", &Schedd::xquery,
+            R"C0ND0R(
+            Query the ``condor_schedd`` daemon for jobs.
+
+            As opposed to :meth:`query`, this returns an *iterator*, meaning only one ad is buffered in memory at a time.
+
+            :param requirements: provides a constraint for filtering out jobs. It defaults to ``'true'``.
+            :type requirements: str or :class:`~classad.ExprTree`
+            :param projection: The attributes to return; an empty list (the default) signifies all attributes.
+            :type projection: list[str]
+            :param int limit: A limit on the number of matches to return.  The default (``-1``) indicates all
+                matching jobs should be returned.
+            :param opts: Additional flags for the query, from :class:`QueryOpts`.
+            :type opts: :class:`QueryOpts`
+            :param str name: A tag name for the returned query iterator. This string will always be
+                returned from the :meth:`QueryIterator.tag` method of the returned iterator.
+                The default value is the ``condor_schedd``'s name. This tag is useful to identify
+                different queries when using the :func:`poll` function.
+            :return: An iterator for the matching job ads
+            :rtype: :class:`~htcondor.QueryIterator`
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #else
@@ -3214,10 +3450,18 @@ void export_schedd()
 #endif
             )
         .def("negotiate", &Schedd::negotiate, boost::python::with_custodian_and_ward_postcall<1, 0>(),
-            "Start negotiation session with a remote schedd.\n"
-            ":param owner: The owner of the resource requests.\n"
-            ":param ad: Additional information for the negotiation ad.\n"
-            ":return: An iterator for the resource requests",
+            R"C0ND0R(
+            Begin a negotiation cycle with the remote schedd for a given user.
+
+            .. note:: The returned :class:`ScheddNegotiate` additionally serves as a context manager,
+                automatically destroying the negotiation session when the context is left.
+
+            :param str accounting_name: Determines which user the client will start negotiating with.
+            :return: An iterator which yields resource request ClassAds from the ``condor_schedd``.
+                Each resource request represents a set of jobs that are next in queue for the schedd
+                for this user.
+            :rtype: :class:`ScheddNegotiate`
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("owner"), boost::python::arg("ad")=boost::python::object)
 #else
@@ -3226,12 +3470,27 @@ void export_schedd()
             )
         ;
 
-    class_<ScheddNegotiate>("ScheddNegotiate", no_init)
+    class_<ScheddNegotiate>("ScheddNegotiate",
+            R"C0ND0R(
+            The :class:`ScheddNegotiate` class represents an ongoing negotiation session
+            with a schedd.  It is a context manager, returned by the :meth:`~htcondor.Schedd.negotiate`
+            method.
+            )C0ND0R",
+            no_init)
         .def("__iter__", &ScheddNegotiate::getRequests, "Get resource requests from schedd.", boost::python::with_custodian_and_ward_postcall<1, 0>())
-        .def("sendClaim", &ScheddNegotiate::sendClaim, "Send a claim to the schedd.\n"
-          ":param claim: A string containing the claim ID.\n"
-          ":param offer: A ClassAd object containing a description of the resource claimed (the machine's ClassAd).\n"
-          ":param request: A ClassAd object corresponding to the schedd resource request (optional).",
+        .def("sendClaim", &ScheddNegotiate::sendClaim,
+            R"C0ND0R(
+                Send a claim to the schedd; if possible, the schedd will activate this and run
+                one or more jobs.
+
+                :param str claim: The claim ID, typically from the ``Capability`` attribute in the
+                    corresponding Startd's private ad.
+                :param offer: A description of the resource claimed (typically, the machine's ClassAd).
+                :type offer: :class:`~classad.ClassAd`
+                :param request: The resource request this claim is responding to; if not provided
+                    (default), the Schedd will decide which job receives this resource.
+                :type request: :class:`~classad.ClassAd`
+            )C0ND0R",
 #if BOOST_VERSION < 103400
           (boost::python::arg("claim"), boost::python::arg("offer"), boost::python::arg("request")=boost::python::dict())
 #else
@@ -3240,86 +3499,202 @@ void export_schedd()
           )
         .def("__enter__", &ScheddNegotiate::enter)
         .def("__exit__", &ScheddNegotiate::exit)
-        .def("disconnect", &ScheddNegotiate::disconnect, "Disconnect from negotiation session.");
+        .def("disconnect", &ScheddNegotiate::disconnect,
+            R"C0ND0R(
+            Disconnect from this negotiation session.  This can also be achieved by exiting
+            the context.
+            )C0ND0R")
         ;
 
-    class_<Submit>("Submit")
+    class_<Submit>("Submit",
+            R"C0ND0R(
+            An object representing a job submit description.  It uses the same submit
+            language as ``condor_submit``.
+
+            The submit description contains ``key = value`` pairs and implements the python
+            dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
+            ``items``, and ``values`` methods.
+
+            :param input: ``Key = value`` pairs for initializing the submit description.
+                If omitted, the submit class is initially empty.
+            :type input: dict
+            )C0ND0R")
         .def(init<boost::python::dict>())
         .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
-        .def("expand", &Submit::expand, "Expand all macros for a given attribute")
-        .def("queue", &Submit::queue, "Submit the current object to the remote queue\n"
-             ":param txn: An active transaction object\n"
-             ":return: Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
-             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
+        .def("expand", &Submit::expand,
+            R"C0ND0R(
+            Expand all macros for the given attribute.
+
+            :param str attr: The name of the relevant attribute.
+            :return: The value of the given attribute; all macros are expanded.
+            :rtype: str
+            )C0ND0R")
+        .def("queue", &Submit::queue,
+            R"C0ND0R(
+            Submit the current object to a remote queue.
+
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
+            :type txn: :class:`Transaction`
+            :param int count: The number of jobs to create (defaults to ``1``).
+            :param ad_results: A list to receive the ClassAd resulting from this submit.
+                As with :meth:`Schedd.submit`, this is often used to later spool the input
+                files.
+            :return: The ClusterID of the submitted job(s).
+            :rtype: int
+            :raises RuntimeError: if the submission fails.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
             )
-        .def("queue_with_itemdata", &Submit::queue_from_iter, "Submit the current object to the remote queue\n"
-             ":param txn: An active transaction object\n"
-             ":param count: a queue count for each item from the iterator, defaults to 1\n"	 // set to 0 in prototype, treated as 1 by queue method.
-             ":param from: an iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
-             ":return: a SubmitResult class, containing cluster ID, cluster ClassAd and range of Job ids Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
-             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
+        .def("queue_with_itemdata", &Submit::queue_from_iter,
+            R"C0ND0R(
+            Submit the current object to a remote queue.
+
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
+            :type txn: :class:`Transaction`
+            :param int count: A queue count for each item from the iterator, defaults to 1.
+            :param from: an iterator of strings or dictionaries containing the itemdata
+                for each job as in ``queue in`` or ``queue from``.
+            :return: a :class:`SubmitResult``, containing the cluster ID, cluster ClassAd and
+                range of Job ids Cluster ID of the submitted job(s).
+            :rtype: :class:`SubmitResult``
+            :raises RuntimeError: if the submission fails.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
             )
-        .def("jobs", &Submit::iterjobs, "Turn the current object into sequence of simulated job ClassAds\n"
-             ":param count: the queue count for each item in the from list, defaults to 1\n"
-             ":param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
-             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
-             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
-             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
-             ":param owner: a string value for the Owner attribute of the job\n"
-             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
-             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+        .def("jobs", &Submit::iterjobs,
+            R"C0ND0R(
+            Turn the current object into a sequence of simulated job ClassAds
+
+            :param int count: the queue count for each item in the from list, defaults to 1
+            :param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
+            :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
+            :param int procid: the initial value for ProcId when making job ads, defaults to 0
+            :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
+            :param str owner: a string value for the Owner attribute of the job
+            :return: An iterator for the resulting job ads.
+
+            :raises RuntimeError: if valid job ads cannot be made
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
-        .def("procs", &Submit::iterprocs, "Turn the current object into sequence of simulate job proc ClassAds. The first ClassAd will be the cluster ad plus a ProcId attribute\n"
-             ":param count: the queue count for each item in the from list, defaults to 1\n"
-             ":param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'\n"
-             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
-             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
-             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
-             ":param owner: a string value for the Owner attribute of the job\n"
-             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
-             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+        .def("procs", &Submit::iterprocs,
+            R"C0ND0R(
+            Turn the current object into a sequence of simulated job proc ClassAds.
+            The first ClassAd will be the cluster ad plus a ProcId attribute
+
+            :param int count: the queue count for each item in the from list, defaults to 1
+            :param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
+            :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
+            :param int procid: the initial value for ProcId when making job ads, defaults to 0
+            :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
+            :param str owner: a string value for the Owner attribute of the job
+            :return: An iterator for the resulting job ads.
+
+            :raises RuntimeError: if valid job ads cannot be made
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
-        .def("itemdata", &Submit::iterqitems, "Iterate the itemdata from the queue statement\n"
-             ":param queue: a submit queue statement, or the arguments to a submit queue statement, defaults to QArgs\n"
-             ":return: An iterator for the resulting items\n",
-             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
+        .def("itemdata", &Submit::iterqitems,
+            R"C0ND0R(
+            Create an iterator over itemdata derived from a queue statement.
+
+            For example ``itemdata("matching *.dat")`` would return an iterator
+            of filenames that end in ``.dat`` from the current directory.
+            This is the same iterator used by ``condor_submit`` when processing
+            ``QUEUE`` statements.
+
+            :param str queue: a submit queue statement, or the arguments to a submit queue statement.
+            :return: An iterator for the resulting items
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
             )
-        .def("getQArgs", &Submit::getQArgs, "get the arguments of Queue statement passed to the constructor\n")
-        .def("setQArgs", &Submit::setQArgs, "set the arguments for the Queue statement\n")
+        .def("getQArgs", &Submit::getQArgs,
+            R"C0ND0R(
+            Returns arguments specified in the ``QUEUE`` statement passed to the contructor.
+            These are the arguments that will be used by the :meth:`Submit.queue`
+            and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
+            )C0ND0R")
+        .def("setQArgs", &Submit::setQArgs,
+            R"C0ND0R(
+            Sets the arguments to be used by
+            subsequent calls to the :meth:`Submit.queue`
+            and :meth:`Submit.queue_with_itemdata` methods.
+            )C0ND0R")
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)
         .def("__str__", &Submit::toString)
         .def("__repr__", &Submit::toRepr)
         .def("__iter__", &Submit::iter)
-        .def("keys", &Submit::keys)
-        .def("values", &Submit::values)
-        .def("items", &Submit::items)
+        .def("keys", &Submit::keys,
+            R"C0ND0R(
+            As :meth:`dict.keys`.
+            )C0ND0R")
+        .def("values", &Submit::values,
+            R"C0ND0R(
+            As :meth:`dict.values`.
+            )C0ND0R")
+        .def("items", &Submit::items,
+            R"C0ND0R(
+            As :meth:`dict.items`.
+            )C0ND0R")
         .def("__len__", &Submit::size)
-        .def("get", &Submit::get, "Retrieve a value from the submit description",
-             (boost::python::arg("self"), boost::python::arg("default")=boost::python::object())
+        .def("get", &Submit::get,
+            R"C0ND0R(
+            As :meth:`dict.get`.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("default")=boost::python::object())
             )
-        .def("setdefault", &Submit::setDefault, "Set a default value for a command")
-        .def("update", &Submit::update, "Copy the contents of a given Submit object into the current object")
+        .def("setdefault", &Submit::setDefault,
+            R"C0ND0R(
+            As :meth:`dict.setdefault`.
+            )C0ND0R")
+        .def("update", &Submit::update,
+            R"C0ND0R(
+            As :meth:`dict.update`.
+            )C0ND0R")
         ;
 
     class_<SubmitResult>("SubmitResult", no_init)
         .def("__str__", &SubmitResult::toString)
-        .def("cluster", &SubmitResult::cluster, "return the clusterid from the submitted jobs")
-        .def("clusterad", &SubmitResult::clusterad, "return the Cluster ad from the submitted jobs")
-        .def("first_proc", &SubmitResult::first_procid, "return the first ProcId from the submitted jobs")
-        .def("num_procs", &SubmitResult::num_procs, "return the number of submitted jobs")
+        .def("cluster", &SubmitResult::cluster,
+            R"C0ND0R(
+            :return: the ClusterID of the submitted jobs.
+            :rtype: int
+            )C0ND0R")
+        .def("clusterad", &SubmitResult::clusterad,
+            R"C0ND0R(
+            :return: the cluster Ad of the submitted jobs.
+            :rtype:
+            )C0ND0R")
+        .def("first_proc", &SubmitResult::first_procid,
+            R"C0ND0R(
+            :return: the first ProcID of the submitted jobs.
+            :rtype: int
+            )C0ND0R")
+        .def("num_procs", &SubmitResult::num_procs,
+            R"C0ND0R(
+            :return: the number of submitted jobs.
+            :rtype: int
+            )C0ND0R")
         ;
-    register_ptr_to_python< boost::shared_ptr<SubmitResult> >();
+    register_ptr_to_python< boost::shared_ptr<SubmitResult>>();
 
     class_<SubmitJobsIterator>("SubmitJobsIterator", no_init)
         .def(NEXT_FN, &SubmitJobsIterator::next, "return the next ad from Submit.jobs.")
         .def("__iter__", &SubmitJobsIterator::pass_through)
-        .def("clusterad", &SubmitJobsIterator::clusterad, "return the Cluster ad that proc ads should be chained to")
+        .def("clusterad", &SubmitJobsIterator::clusterad,
+            R"C0ND0R(
+            Return the Cluster ad that proc ads should be chained to.
+            )C0ND0R""")
         ;
 
-    class_<QueueItemsIterator>("QueueItemsIterator", no_init)
+    class_<QueueItemsIterator>("QueueItemsIterator",
+            R"C0ND0R(
+            An iterator over itemdata produced by :meth:`Submit.itemdata`.
+            )C0ND0R",
+            no_init)
         .def(NEXT_FN, &QueueItemsIterator::next, "return the next item from a submit queue statement.")
         .def("__iter__", &QueueItemsIterator::pass_through)
         ;
@@ -3328,29 +3703,69 @@ void export_schedd()
         .def(NEXT_FN, &RequestIterator::next, "Get next resource request.")
         ;
 
-    class_<HistoryIterator>("HistoryIterator", no_init)
+    class_<HistoryIterator>("HistoryIterator",
+        R"C0ND0R(
+        An iterator over ads in the history produced by :meth:`Schedd.history`.
+        )C0ND0R",
+     no_init)
         .def(NEXT_FN, &HistoryIterator::next)
         .def("__iter__", &HistoryIterator::pass_through)
         ;
 
-    class_<QueryIterator>("QueryIterator", no_init)
-        .def(NEXT_FN, &QueryIterator::next, "Return the next ad from the query results.\n"
-            ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
-            ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
-            "Throws a StopIterator exception if no results are available..\n",
+    class_<QueryIterator>("QueryIterator",
+            R"C0ND0R(
+            An iterator class for managing results of the :meth:`Schedd.query` and
+            :meth:`Schedd.xquery` methods.
+            )C0ND0R",
+            no_init)
+        .def(NEXT_FN, &QueryIterator::next,
+            R"C0ND0R(
+            :param mode: The blocking mode for this call to :meth:`next`; defaults
+                to :attr:`~BlockingMode.Blocking`.
+            :type mode: :class:`BlockingMode`
+            :return: the next available job ad.
+            :rtype: :class:`~classad.ClassAd`
+            :raises StopIteration: when no additional ads are available.
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("mode") = Blocking)
 #else
             (boost::python::arg("self"), boost::python::arg("mode") = Blocking)
 #endif
             )
-        .def("nextAdsNonBlocking", &QueryIterator::nextAds, "Return any available ads.\n"
-            ":return: A list of ads.  If no ads are available, returns an empty list.\n"
-            "Does not throw an exception if no ads are available or the iterator is finished.\n"
-            )
-        .def("tag", &QueryIterator::tag, "Return the query's tag.")
-        .def("done", &QueryIterator::done, "Returns True if the iterator is finished; False otherwise.")
-        .def("watch", &QueryIterator::watch, "Returns a file descriptor associated with this query.")
+        .def("nextAdsNonBlocking", &QueryIterator::nextAds,
+            R"C0ND0R(
+            Retrieve as many ads are available to the iterator object.
+
+            If no ads are available, returns an empty list.  Does not throw
+            an exception if no ads are available or the iterator is finished.
+
+            :return: Zero-or-more job ads.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R")
+        .def("tag", &QueryIterator::tag,
+            R"C0ND0R(
+            Retrieve the tag associated with this iterator; when using the :func:`poll` method,
+            this is useful to distinguish multiple iterators.
+
+            :return: The query's tag.
+            )C0ND0R")
+        .def("done", &QueryIterator::done,
+            R"C0ND0R(
+            :return: ``True`` if the iterator is finished; ``False`` otherwise.
+            :rtype: bool
+            )C0ND0R")
+        .def("watch", &QueryIterator::watch,
+            R"C0ND0R(
+            Returns an ``inotify``-based file descriptor; if this descriptor is given
+            to a ``select()`` instance, ``select`` will indicate this file descriptor is ready
+            to read whenever there are more jobs ready on the iterator.
+
+            If ``inotify`` is not available on this platform, this will return ``-1``.
+
+            :return: A file descriptor associated with this query.
+            :rtype: int
+            )C0ND0R")
         .def("__iter__", &QueryIterator::pass_through)
         ;
 
