@@ -30,8 +30,8 @@ def main():
     # Use ASCII character 255 for the "title" of these index roles.
     # This will allow the index entries to link to a blank space in the content pages.
     rst_data = re.sub(r'%20', r' ', rst_data)
-    rst_data = re.sub(r'`[\s]*<index://([\w\s\.\(\)\[\]\\*\/-=,<>:$%]*)>[\s]*`[_]*', r':index:` <single: \1>`', rst_data)
-    rst_data = re.sub(r'`[\s]*<index://([\w\s\.\(\)\[\]\\*\/-=,<>:$%]*);([\w\s\.\(\)\[\]\\*\/-=,<>:$%]*)>[\s]*`[_]*', r':index:` <single: \2; \1>`', rst_data)
+    rst_data = re.sub(r'`[\s]*<index://([\w\s\.\(\)\[\]\*\\\/\-=,<>:$%]*)>[\s]*`[_]*', r':index:`\1<single: \1>`', rst_data)
+    rst_data = re.sub(r'`[\s]*<index://([\w\s\.\(\)\[\]\*\\\/\-=,<>:$%]*);([\w\s\.\(\)\[\]\*\\\/\-=,<>:$%]*)>[\s]*`[_]*', r':index:`\2<single: \2; \1>`', rst_data)
     
     # Replace all our ticket links with :ticket:`####` syntax.
     rst_data = re.sub(r'`\(Ticket[\s]*#([\d]*)\). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview\?tn=([\d]*)>`__', r':ticket:`\1`', rst_data)
