@@ -5,7 +5,7 @@
 
 Manage and queue jobs within a specified DAG for execution on remote
 machines
-:index:` <single: condor_submit_dag;HTCondor commands>`\ :index:` <single: condor_submit_dag command>`
+:index:`condor_submit_dag;HTCondor commands<single: condor_submit_dag;HTCondor commands>`\ :index:`condor_submit_dag command<single: condor_submit_dag command>`
 
 Synopsis
 --------
@@ -41,7 +41,7 @@ enforces the job dependencies defined in one or more *DAGInputFile*\ s.
 Each *DAGInputFile* contains commands to direct the submission of jobs
 implied by the nodes of a DAG to HTCondor. Extensive documentation is in
 the HTCondor User Manual section on DAGMan.
-:index:` <single: in DAGs;email notification>`
+:index:`in DAGs;email notification<single: in DAGs;email notification>`
 ` <index://e-mail in DAGs;notification>`__
 
 Some options may be specified on the command line or in the
@@ -49,7 +49,7 @@ configuration or in a node job’s submit description file. Precedence is
 given to command line options or configuration over settings from a
 submit description file. An example is e-mail notifications. When
 configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
-:index:` <single: DAGMAN_SUPPRESS_NOTIFICATION>` is its default value of
+:index:`DAGMAN_SUPPRESS_NOTIFICATION<single: DAGMAN_SUPPRESS_NOTIFICATION>` is its default value of
 ``True``, and a node job’s submit description file contains
 
 ::
@@ -89,7 +89,7 @@ Options
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
-    :index:` <single: DAGMAN_MAX_JOBS_IDLE>` (see  `Configuration
+    :index:`DAGMAN_MAX_JOBS_IDLE<single: DAGMAN_MAX_JOBS_IDLE>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
@@ -106,7 +106,7 @@ Options
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
-    :index:` <single: DAGMAN_MAX_JOBS_SUBMITTED>` (see  `Configuration
+    :index:`DAGMAN_MAX_JOBS_SUBMITTED<single: DAGMAN_MAX_JOBS_SUBMITTED>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 0 (unlimited).
  **-dagman **\ *DagmanExecutable*
@@ -118,7 +118,7 @@ Options
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
     the configuration variable
-    ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:` <single: DAGMAN_MAX_PRE_SCRIPTS>`
+    ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS<single: DAGMAN_MAX_PRE_SCRIPTS>`
     (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
@@ -127,14 +127,14 @@ Options
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    :index:` <single: DAGMAN_MAX_POST_SCRIPTS>` (see  `Configuration
+    :index:`DAGMAN_MAX_POST_SCRIPTS<single: DAGMAN_MAX_POST_SCRIPTS>` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-notification **\ *value*
     Sets the e-mail notification for DAGMan itself. This information
     will be used within the HTCondor submit description file for DAGMan.
     This file is produced by *condor\_submit\_dag*. See the description
-    of **notification**\ :index:` <single: notification;submit commands>`
+    of **notification**\ :index:`notification;submit commands<single: notification;submit commands>`
     within *condor\_submit* manual page for a specification of *value*.
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
@@ -318,7 +318,7 @@ Options
     Causes jobs submitted by *condor\_dagman* to not send email
     notification for events. The same effect can be achieved by setting
     configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
-    :index:` <single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``True``. This
+    :index:`DAGMAN_SUPPRESS_NOTIFICATION<single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``True``. This
     command line option is independent of the **-notification** command
     line option, which controls notification for the *condor\_dagman*
     job itself.
@@ -327,7 +327,7 @@ Options
     the submit description file when deciding to send email notification
     for events. The same effect can be achieved by setting configuration
     variable ``DAGMAN_SUPPRESS_NOTIFICATION``
-    :index:` <single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``False``. This
+    :index:`DAGMAN_SUPPRESS_NOTIFICATION<single: DAGMAN_SUPPRESS_NOTIFICATION>` to ``False``. This
     command line flag is independent of the **-notification** command
     line option, which controls notification for the *condor\_dagman*
     job itself. If both **-dont\_suppress\_notification** and

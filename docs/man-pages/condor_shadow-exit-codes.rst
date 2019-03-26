@@ -3,7 +3,7 @@
 *condor\_shadow* Exit Codes
 ===========================
 
-:index:` <single: of condor_shadow;exit codes>`
+:index:`of condor_shadow;exit codes<single: of condor_shadow;exit codes>`
 
 When a *condor\_shadow* daemon exits, the *condor\_shadow* exit code is
 recorded in the *condor\_schedd* log, and it identifies why the job

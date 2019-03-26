@@ -4,7 +4,7 @@
 =============
 
 Submit a shell command-line as an HTCondor job
-:index:` <single: condor_run;HTCondor commands>`\ :index:` <single: condor_run command>`
+:index:`condor_run;HTCondor commands<single: condor_run;HTCondor commands>`\ :index:`condor_run command<single: condor_run command>`
 
 Synopsis
 --------
@@ -152,7 +152,7 @@ distribute multiple processes of a command line pipe across multiple
 machines.
 
 *condor\_run* will use the shell specified in the ``SHELL``
-:index:` <single: SHELL>` environment variable, if one exists. Otherwise, it
+:index:`SHELL<single: SHELL>` environment variable, if one exists. Otherwise, it
 will use */bin/sh* to execute the shell command-line.
 
 By default, *condor\_run* expects Perl to be installed in

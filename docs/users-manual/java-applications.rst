@@ -3,11 +3,11 @@
 Java Applications
 =================
 
-:index:` <single: Java>`
+:index:`Java<single: Java>`
 
 HTCondor allows users to access a wide variety of machines distributed
 around the world. The Java Virtual Machine (JVM)
-:index:` <single: Java Virtual Machine>`\ :index:` <single: JVM>` provides a
+:index:`Java Virtual Machine<single: Java Virtual Machine>`\ :index:`JVM<single: JVM>` provides a
 uniform platform on any machine, regardless of the machine’s
 architecture or operating system. The HTCondor Java universe brings
 together these two features to create a distributed, homogeneous
@@ -42,7 +42,7 @@ for more information on getting HTCondor to work together with Java.
 A Simple Example Java Application
 ---------------------------------
 
-:index:` <single: job example;Java>`
+:index:`job example;Java<single: job example;Java>`
 
 Here is a complete, if simple, example. Start with a simple Java
 program, ``Hello.java``:
@@ -85,7 +85,7 @@ submit description file works:
 The Java universe must be explicitly selected.
 
 The main class of the program is given in the
-**executable**\ :index:` <single: executable;submit commands>` statement.
+**executable**\ :index:`executable;submit commands<single: executable;submit commands>` statement.
 This is a file name which contains the entry point of the program. The
 name of the main class (not a file name) must be specified as the first
 argument to the program.
@@ -130,7 +130,7 @@ Less Simple Java Specifications
 -------------------------------
 
  Specifying more than 1 class file.
-    :index:` <single: multiple class files;Java>` For programs that
+    :index:`multiple class files;Java<single: multiple class files;Java>` For programs that
     consist of more than one ``.class`` file, identify the files in the
     submit description file:
 
@@ -139,12 +139,12 @@ Less Simple Java Specifications
         executable = Stooges.class 
         transfer_input_files = Larry.class,Curly.class,Moe.class
 
-    The **executable**\ :index:` <single: executable;submit commands>`
+    The **executable**\ :index:`executable;submit commands<single: executable;submit commands>`
     command does not change. It still identifies the class file that
     contains the program’s entry point.
 
  JAR files.
-    :index:` <single: using JAR files;Java>` If the program consists of a
+    :index:`using JAR files;Java<single: using JAR files;Java>` If the program consists of a
     large number of class files, it may be easier to collect them all
     together into a single Java Archive (JAR) file. A JAR can be created
     with:
@@ -155,9 +155,9 @@ Less Simple Java Specifications
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
-    with the **executable**\ :index:` <single: executable;submit commands>`
+    with the **executable**\ :index:`executable;submit commands<single: executable;submit commands>`
     command. All JAR files are specified with the
-    **jar\_files**\ :index:` <single: jar_files;submit commands>` command.
+    **jar\_files**\ :index:`jar_files;submit commands<single: jar_files;submit commands>` command.
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
@@ -171,8 +171,8 @@ Less Simple Java Specifications
     pass the information on to the JVM. That is why there is a
     difference in submit description file commands for the two ways of
     specifying files
-    (**transfer\_input\_files**\ :index:` <single: transfer_input_files;submit commands>`
-    and **jar\_files**\ :index:` <single: jar_files;submit commands>`).
+    (**transfer\_input\_files**\ :index:`transfer_input_files;submit commands<single: transfer_input_files;submit commands>`
+    and **jar\_files**\ :index:`jar_files;submit commands<single: jar_files;submit commands>`).
 
     If there are multiple JAR files, the **executable** command
     specifies the JAR file that contains the program’s entry point. This
@@ -199,7 +199,7 @@ Less Simple Java Specifications
  An executable JAR file.
     When the JAR file is an executable, specify the program’s entry
     point in the
-    **arguments**\ :index:` <single: arguments;submit commands>` command:
+    **arguments**\ :index:`arguments;submit commands<single: arguments;submit commands>` command:
 
     ::
 
@@ -243,7 +243,7 @@ Less Simple Java Specifications
           queue
 
  Packages.
-    :index:` <single: using packages;Java>` An example of a Java class that
+    :index:`using packages;Java<single: using packages;Java>` An example of a Java class that
     is declared in a non-default package is
 
     ::
@@ -310,7 +310,7 @@ Less Simple Java Specifications
 Chirp I/O
 ---------
 
-:index:` <single: Chirp>`
+:index:`Chirp<single: Chirp>`
 
 If a job has more sophisticated I/O requirements that cannot be met by
 HTCondor’s file transfer mechanism, then the Chirp facility may provide
@@ -320,14 +320,14 @@ than submit time, and second, it permits partial-file I/O with results
 than can be seen as the program executes. However, small changes to the
 program are required in order to take advantage of Chirp. Depending on
 the style of the program, use either Chirp I/O streams or UNIX-like I/O
-functions. :index:` <single: ChirpInputStream;Chirp>`
-:index:` <single: ChirpOutputStream;Chirp>`
+functions. :index:`ChirpInputStream;Chirp<single: ChirpInputStream;Chirp>`
+:index:`ChirpOutputStream;Chirp<single: ChirpOutputStream;Chirp>`
 
 Chirp I/O streams are the easiest way to get started. Modify the program
 to use the objects ``ChirpInputStream`` and ``ChirpOutputStream``
 instead of ``FileInputStream`` and ``FileOutputStream``. These classes
 are completely documented
-:index:` <single: Chirp;Software Developers Kit>`\ :index:` <single: Chirp;SDK>`
+:index:`Chirp;Software Developers Kit<single: Chirp;Software Developers Kit>`\ :index:`Chirp;SDK<single: Chirp;SDK>`
 in the HTCondor Software Developer’s Kit (SDK). Here is a simple code
 example:
 
@@ -361,7 +361,7 @@ example:
        } 
     }
 
-:index:` <single: ChirpClient;Chirp>`
+:index:`ChirpClient;Chirp<single: ChirpClient;Chirp>`
 
 To perform UNIX-like I/O with Chirp, create a ``ChirpClient`` object.
 This object supports familiar operations such as ``open``, ``read``,
@@ -398,7 +398,7 @@ in the HTCondor SDK, but here is a brief example:
        } 
     }
 
-:index:` <single: Chirp.jar;Chirp>`
+:index:`Chirp.jar;Chirp<single: Chirp.jar;Chirp>`
 
 Regardless of which I/O style, the Chirp library must be specified and
 included with the job. The Chirp JAR (``Chirp.jar``) is found in the

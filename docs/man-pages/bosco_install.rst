@@ -3,8 +3,8 @@
 *bosco\_install*
 ================
 
-:index:` <single: bosco_install;Bosco commands>`
-:index:` <single: bosco_install command>`
+:index:`bosco_install;Bosco commands<single: bosco_install;Bosco commands>`
+:index:`bosco_install command<single: bosco_install command>`
 
 Synopsis
 --------

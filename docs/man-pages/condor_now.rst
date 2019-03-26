@@ -4,7 +4,7 @@
 =============
 
 Start a job now.
-:index:` <single: condor_now;HTCondor commands>`\ :index:` <single: condor_now ommand>`
+:index:`condor_now;HTCondor commands<single: condor_now;HTCondor commands>`\ :index:`condor_now ommand<single: condor_now ommand>`
 
 Synopsis
 --------

@@ -4,7 +4,7 @@
 ==============
 
 Attempt a security negotiation to determine if it succeeds
-:index:` <single: condor_ping;HTCondor commands>`\ :index:` <single: condor_ping command>`
+:index:`condor_ping;HTCondor commands<single: condor_ping;HTCondor commands>`\ :index:`condor_ping command<single: condor_ping command>`
 
 Synopsis
 --------

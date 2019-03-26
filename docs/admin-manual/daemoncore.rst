@@ -3,8 +3,8 @@
 DaemonCore
 ==========
 
-:index:` <single: daemoncore>`
-:index:` <single: shared functionality in daemons;HTCondor>`
+:index:`daemoncore<single: daemoncore>`
+:index:`shared functionality in daemons;HTCondor<single: shared functionality in daemons;HTCondor>`
 
 This section is a brief description of DaemonCore. DaemonCore is a
 library that is shared among most of the HTCondor daemons which provides
@@ -45,7 +45,7 @@ that can be used to start up each daemon.
 DaemonCore and Unix signals
 ---------------------------
 
-:index:` <single: Unix signals;daemoncore>`
+:index:`Unix signals;daemoncore<single: Unix signals;daemoncore>`
 
 One of the most visible features that DaemonCore provides for
 administrators is that all daemons which use it behave the same way on
@@ -92,8 +92,8 @@ configuration files and what they do.
 DaemonCore and Command-line Arguments
 -------------------------------------
 
-:index:` <single: command line arguments;daemoncore>`
-:index:` <single: command line arguments;HTCondor daemon>`
+:index:`command line arguments;daemoncore<single: command line arguments;daemoncore>`
+:index:`command line arguments;HTCondor daemon<single: command line arguments;HTCondor daemon>`
 
 The second visible feature that DaemonCore provides to administrators is
 a common set of command-line arguments that all daemons understand.
@@ -148,7 +148,7 @@ These arguments and what they do are described below:
     process. The daemon started with this optional argument waits until
     the daemon it is attempting to kill has exited.
  -l directory
-    Overrides the value of ``LOG`` :index:` <single: LOG>` as specified in
+    Overrides the value of ``LOG`` :index:`LOG<single: LOG>` as specified in
     the configuration files. Primarily, this option is used with the
     *condor\_kbdd* when it needs to run as the individual user logged
     into the machine, instead of running as root. Regular users would
@@ -192,6 +192,6 @@ These arguments and what they do are described below:
  -v
     Causes the daemon to print out version information and exit.
 
-:index:` <single: daemoncore>`
+:index:`daemoncore<single: daemoncore>`
 
       

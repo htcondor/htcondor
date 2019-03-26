@@ -4,7 +4,7 @@
 =====================
 
 Query or set a given HTCondor configuration variable
-:index:` <single: condor_config_val;HTCondor commands>`\ :index:` <single: condor_config_val command>`
+:index:`condor_config_val;HTCondor commands<single: condor_config_val;HTCondor commands>`\ :index:`condor_config_val command<single: condor_config_val command>`
 
 Synopsis
 --------
@@ -64,10 +64,10 @@ settings of configuration variables
 ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
 ` <index://SETTABLE_ATTRS_<PERMISSION-LEVEL>>`__ (see `Configuration
 Macros <../admin-manual/configuration-macros.html>`__),
-``ENABLE_PERSISTENT_CONFIG`` :index:` <single: ENABLE_PERSISTENT_CONFIG>`
+``ENABLE_PERSISTENT_CONFIG`` :index:`ENABLE_PERSISTENT_CONFIG<single: ENABLE_PERSISTENT_CONFIG>`
 (see `Configuration
 Macros <../admin-manual/configuration-macros.html>`__), and
-``HOSTALLOW…`` :index:` <single: HOSTALLOW>` (see `Configuration
+``HOSTALLOW…`` :index:`HOSTALLOW<single: HOSTALLOW>` (see `Configuration
 Macros <../admin-manual/configuration-macros.html>`__) in order to use
 *condor\_config\_val* to change any configuration variable.
 

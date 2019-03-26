@@ -3,7 +3,7 @@
 High-Throughput Computing (HTC) and its Requirements
 ====================================================
 
-:index:` <single: overview;HTCondor>` :index:` <single: overview>`
+:index:`overview;HTCondor<single: overview;HTCondor>` :index:`overview<single: overview>`
 
 For many research and engineering projects, the quality of the research
 or the product is heavily dependent upon the quantity of computing
@@ -40,7 +40,7 @@ than the large centralized machine, but it provides exclusive access.
 Now, instead of one giant computer for a large institution, there may be
 hundreds or thousands of personal computers. This is an environment of
 distributed ownership,
-:index:` <single: of machines;distributed ownership>`\ where individuals
+:index:`of machines;distributed ownership<single: of machines;distributed ownership>`\ where individuals
 throughout an organization own their own resources. The total
 computational power of the institution as a whole may rise dramatically
 as the result of such a change, but because of distributed ownership,

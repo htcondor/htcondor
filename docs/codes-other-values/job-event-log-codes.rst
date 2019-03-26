@@ -3,7 +3,7 @@
 Job Event Log Codes
 ===================
 
-:index:` <single: event codes for jobs;log files>`
+:index:`event codes for jobs;log files<single: event codes for jobs;log files>`
 
 Table \ `B.2 <#x182-12460022>`__ lists codes that appear as the first
 field within a job event log file. See more detailed descriptions of

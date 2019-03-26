@@ -8,15 +8,15 @@ Exceptional Features
     HTCondor may be assured that their jobs will eventually complete,
     even in the ever changing environment that HTCondor utilizes. As a
     machine running a job submitted to HTCondor becomes unavailable, the
-    job can be check pointed. :index:` <single: checkpoint>`\ The job may
-    continue after migrating :index:` <single: migration>`\ to another
+    job can be check pointed. :index:`checkpoint<single: checkpoint>`\ The job may
+    continue after migrating :index:`migration<single: migration>`\ to another
     machine. HTCondor’s checkpoint feature
-    :index:` <single: periodic;checkpoint>`\ periodically checkpoints a job
+    :index:`periodic;checkpoint<single: periodic;checkpoint>`\ periodically checkpoints a job
     even in lieu of migration in order to safeguard the accumulated
     computation time on a job from being lost in the event of a system
     failure, such as the machine being shutdown or a crash.
  Remote System Calls.
-    :index:` <single: remote system call>` Despite running jobs on remote
+    :index:`remote system call<single: remote system call>` Despite running jobs on remote
     machines, the HTCondor standard universe execution mode preserves
     the local execution environment via remote system calls. Users do
     not have to worry about making data files available to remote
@@ -58,7 +58,7 @@ Exceptional Features
     The owner does not want to take special action to regain control.
     HTCondor handles this automatically.
  ClassAds.
-    The ClassAd mechanism :index:` <single: ClassAd>`\ in HTCondor provides
+    The ClassAd mechanism :index:`ClassAd<single: ClassAd>`\ in HTCondor provides
     an extremely flexible, expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
     requirements and job desires. For example, a user can require that a
@@ -72,6 +72,6 @@ Exceptional Features
     expressions, resulting in HTCondor’s adaptation to nearly any
     desired policy.
 
-:index:` <single: overview;HTCondor>` :index:` <single: overview>`
+:index:`overview;HTCondor<single: overview;HTCondor>` :index:`overview<single: overview>`
 
       

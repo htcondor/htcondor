@@ -4,7 +4,7 @@
 ===============
 
 Add cloud resources to the pool.
-:index:` <single: condor_annex;HTCondor commands>`\ :index:` <single: condor_annex command>`
+:index:`condor_annex;HTCondor commands<single: condor_annex;HTCondor commands>`\ :index:`condor_annex command<single: condor_annex command>`
 
 Synopsis
 --------

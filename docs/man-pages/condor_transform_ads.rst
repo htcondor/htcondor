@@ -5,7 +5,7 @@
 
 Transform ClassAds according to specified rules, and output the
 transformed ClassAds.
-:index:` <single: condor_transform_ads;HTCondor commands>`\ :index:` <single: condor_transform_ads command>`
+:index:`condor_transform_ads;HTCondor commands<single: condor_transform_ads;HTCondor commands>`\ :index:`condor_transform_ads command<single: condor_transform_ads command>`
 
 Synopsis
 --------

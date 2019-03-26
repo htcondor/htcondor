@@ -33,7 +33,7 @@ Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.h
 Limitations under Windows
 -------------------------
 
-:index:` <single: release notes;Windows>`
+:index:`release notes;Windows<single: release notes;Windows>`
 
 In general, this release for Windows works the same as the release of
 HTCondor for Unix. However, the following items are not supported in
@@ -109,12 +109,12 @@ Windows registry. When HTCondor needs to perform an action as or on
 behalf of a particular user, it uses the securely stored password to do
 so. This implies that a password is stored for every user that will
 submit jobs from the Windows submit machine.
-:index:` <single: condor_credd daemon>`
-:index:` <single: run_as_owner;submit commands>`
+:index:`condor_credd daemon<single: condor_credd daemon>`
+:index:`run_as_owner;submit commands<single: run_as_owner;submit commands>`
 
 A further feature permits HTCondor to execute the job itself under the
 security context of its submitting user, specifying the
-**run\_as\_owner**\ :index:` <single: run_as_owner;submit commands>`
+**run\_as\_owner**\ :index:`run_as_owner;submit commands<single: run_as_owner;submit commands>`
 command in the job’s submit description file. With this feature, it is
 necessary to configure and run a centralized *condor\_credd* daemon to
 manage the secure password storage. This makes each user’s password
@@ -129,7 +129,7 @@ on the submit machine.
 Executing Jobs as the Submitting User
 -------------------------------------
 
-:index:` <single: run_as_owner;submit commands>`
+:index:`run_as_owner;submit commands<single: run_as_owner;submit commands>`
 
 By default, HTCondor executes jobs on Windows using dedicated run
 accounts that have minimal access rights and privileges, and which are
@@ -152,7 +152,7 @@ places into the job’s submit description file
 The condor\_credd Daemon
 ------------------------
 
-:index:` <single: condor_credd daemon>`
+:index:`condor_credd daemon<single: condor_credd daemon>`
 
 The *condor\_credd* daemon manages secure password storage. A single
 running instance of the *condor\_credd* within an HTCondor pool is
@@ -179,9 +179,9 @@ all machines in the pool. The following example settings are in the
 comments contained in the etc\\condor\_config.local.credd example file.
 These sample settings rely on the ``PASSWORD`` method for authentication
 among daemons, including communication with the *condor\_credd* daemon.
-The ``LOCAL_CREDD`` :index:` <single: LOCAL_CREDD>` variable must be
+The ``LOCAL_CREDD`` :index:`LOCAL_CREDD<single: LOCAL_CREDD>` variable must be
 customized to point to the machine hosting the *condor\_credd* and the
-``ALLOW_CONFIG`` :index:` <single: ALLOW_CONFIG>` variable will be
+``ALLOW_CONFIG`` :index:`ALLOW_CONFIG<single: ALLOW_CONFIG>` variable will be
 customized, if needed, to refer to an administrative account that exists
 on all HTCondor nodes.
 
@@ -275,7 +275,7 @@ method and following command:
 Executing Jobs with the User’s Profile Loaded
 ---------------------------------------------
 
-:index:` <single: loading account profile;Windows>`
+:index:`loading account profile;Windows<single: loading account profile;Windows>`
 
 HTCondor can be configured when using dedicated run accounts, to load
 the account’s profile. A user’s profile includes a set of personal
@@ -292,7 +292,7 @@ has done, nor sabotage the registry for future jobs. It also ensures the
 next job has a fresh registry hive.
 
 A job that is to run with a profile uses the
-**load\_profile**\ :index:` <single: load_profile;submit commands>` command
+**load\_profile**\ :index:`load_profile;submit commands<single: load_profile;submit commands>` command
 in the job’s submit description file:
 
 ::
@@ -300,7 +300,7 @@ in the job’s submit description file:
     load_profile = True
 
 This feature is currently not compatible with
-**run\_as\_owner**\ :index:` <single: run_as_owner;submit commands>`, and
+**run\_as\_owner**\ :index:`run_as_owner;submit commands<single: run_as_owner;submit commands>`, and
 will be ignored if both are specified.
 
 Using Windows Scripts as Job Executables
@@ -374,7 +374,7 @@ fail. The failure error message appears as:
 
 The fix for this error is to give explicit access to the submitting
 user’s registry hive. This can be accomplished with the addition of the
-**load\_profile**\ :index:` <single: load_profile;submit commands>` command
+**load\_profile**\ :index:`load_profile;submit commands<single: load_profile;submit commands>` command
 in the job’s submit description file:
 
 ::
@@ -389,7 +389,7 @@ default require access to the user’s registry hive.
 How HTCondor for Windows Starts and Stops a Job
 -----------------------------------------------
 
-:index:` <single: starting and stopping a job>`
+:index:`starting and stopping a job<single: starting and stopping a job>`
 
 This section provides some details on how HTCondor starts and stops
 jobs. This discussion is geared for the HTCondor administrator or
@@ -406,7 +406,7 @@ execute machine spawns a *condor\_starter* process. The
    account is added to group ``Users`` by default. The default group may
    be changed by setting configuration variable
    ``DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP``
-   :index:` <single: DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP>`. This step is skipped
+   :index:`DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP<single: DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP>`. This step is skipped
    if the job is to be run using the submitting user’s account, as
    specified in section `8.2.4 <#x76-5770008.2.4>`__.
 #. a new temporary working directory for the job on the execute machine.
@@ -419,7 +419,7 @@ execute machine spawns a *condor\_starter* process. The
    Permissions are set so that only the account that will run the job
    has access rights to this Desktop. Any windows created by this job
    are not seen by anyone; the job is run in the background. Setting
-   ``USE_VISIBLE_DESKTOP`` :index:` <single: USE_VISIBLE_DESKTOP>` to
+   ``USE_VISIBLE_DESKTOP`` :index:`USE_VISIBLE_DESKTOP<single: USE_VISIBLE_DESKTOP>` to
    ``True`` will allow the job to access the default desktop instead of
    a newly created one.
 
@@ -445,7 +445,7 @@ The *condor\_starter* examines the job’s temporary working directory for
 any files which have been created or modified and sends these files back
 to the *condor\_shadow* running on the submit machine. The
 *condor\_shadow* places these files into the
-**initialdir**\ :index:` <single: initialdir;submit commands>` specified in
+**initialdir**\ :index:`initialdir;submit commands<single: initialdir;submit commands>` specified in
 the submit description file; if no **initialdir** was specified, the
 files go into the directory where the user invoked *condor\_submit*.
 Once all the output files are safely transferred back, the job is
@@ -461,14 +461,14 @@ The WM\_CLOSE message is the preferred way to terminate a process on
 Windows, since this method allows the job to clean up and free any
 resources it may have allocated. When the job exits, the
 *condor\_starter* cleans up any processes left behind. At this point, if
-**when\_to\_transfer\_output**\ :index:` <single: when_to_transfer_output;submit commands>`
+**when\_to\_transfer\_output**\ :index:`when_to_transfer_output;submit commands<single: when_to_transfer_output;submit commands>`
 is set to ``ON_EXIT`` (the default) in the job’s submit description
 file, the job switches states, from Running to Idle, and no files are
 transferred back. If **when\_to\_transfer\_output** is set to
 ``ON_EXIT_OR_EVICT``, then files in the job’s temporary working
 directory which were changed or modified are first sent back to the
 submitting machine. If exactly which files to transfer is specified with
-**transfer\_output\_files**\ :index:` <single: transfer_output_files;submit commands>`,
+**transfer\_output\_files**\ :index:`transfer_output_files;submit commands<single: transfer_output_files;submit commands>`,
 then this modifies the files transferred and can affect the state of the
 job if the specified files do not exist. On an eviction, the
 *condor\_shadow* places these intermediate files into a subdirectory
@@ -699,7 +699,7 @@ Unix machines and Windows machines running HTCondor can happily co-exist
 in the same HTCondor pool without any problems. Jobs submitted on
 Windows can run on Windows or Unix, and jobs submitted on Unix can run
 on Unix or Windows. Without any specification using the
-**Requirements**\ :index:` <single: Requirements;submit commands>` command
+**Requirements**\ :index:`Requirements;submit commands<single: Requirements;submit commands>` command
 in the submit description file, the default behavior will be to require
 the execute machine to be of the same architecture and operating system
 as the submit machine.

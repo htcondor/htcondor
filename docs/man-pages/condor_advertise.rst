@@ -4,7 +4,7 @@
 ===================
 
 Send a ClassAd to the *condor\_collector* daemon
-:index:` <single: condor_advertise;HTCondor commands>`\ :index:` <single: condor_advertise command>`
+:index:`condor_advertise;HTCondor commands<single: condor_advertise;HTCondor commands>`\ :index:`condor_advertise command<single: condor_advertise command>`
 
 Synopsis
 --------
@@ -133,7 +133,7 @@ automatically include the following attributes:
  ``UpdatesSequenced``
  ``UpdatesHistory``
     Affected by ``COLLECTOR_DAEMON_HISTORY_SIZE``
-    :index:` <single: COLLECTOR_DAEMON_HISTORY_SIZE>`.
+    :index:`COLLECTOR_DAEMON_HISTORY_SIZE<single: COLLECTOR_DAEMON_HISTORY_SIZE>`.
 
 Examples
 --------

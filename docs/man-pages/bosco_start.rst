@@ -4,8 +4,8 @@
 ==============
 
 start up the Personal HTCondor installation specific to Bosco
-:index:` <single: bosco_start;Bosco commands>`
-:index:` <single: bosco_start command>`
+:index:`bosco_start;Bosco commands<single: bosco_start;Bosco commands>`
+:index:`bosco_start command<single: bosco_start command>`
 
 Synopsis
 --------

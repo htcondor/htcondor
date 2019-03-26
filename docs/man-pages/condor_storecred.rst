@@ -4,7 +4,7 @@
 =====================
 
 securely stash a password
-:index:` <single: condor_store_cred;HTCondor commands>`\ :index:` <single: condor_store_cred command>`
+:index:`condor_store_cred;HTCondor commands<single: condor_store_cred;HTCondor commands>`\ :index:`condor_store_cred command<single: condor_store_cred command>`
 
 Synopsis
 --------
@@ -39,7 +39,7 @@ separate uses of *condor\_store\_cred*:
 
 #. In order to submit a job from a Windows platform machine, or to
    execute a job on a Windows platform machine utilizing the
-   **run\_as\_owner**\ :index:` <single: run_as_owner;submit commands>`
+   **run\_as\_owner**\ :index:`run_as_owner;submit commands<single: run_as_owner;submit commands>`
    functionality, *condor\_store\_cred* stores the password of a
    user/domain pair securely in the Windows registry. Using this stored
    password, HTCondor may act on behalf of the submitting user to access

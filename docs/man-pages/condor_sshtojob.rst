@@ -4,7 +4,7 @@
 ======================
 
 create an ssh session to a running job
-:index:` <single: condor_ssh_to_job;HTCondor commands>`\ :index:` <single: condor_ssh_to_job command>`
+:index:`condor_ssh_to_job;HTCondor commands<single: condor_ssh_to_job;HTCondor commands>`\ :index:`condor_ssh_to_job command<single: condor_ssh_to_job command>`
 
 Synopsis
 --------
@@ -107,7 +107,7 @@ used by the *condor\_starter* to set up *sshd*.
 For jobs in the grid universe which use EC2 resources, a request that
 HTCondor have the EC2 service create a new key pair for the job by
 specifying
-**ec2\_keypair\_file**\ :index:` <single: ec2_keypair_file;submit commands>`
+**ec2\_keypair\_file**\ :index:`ec2_keypair_file;submit commands<single: ec2_keypair_file;submit commands>`
 causes *condor\_ssh\_to\_job* to attempt to connect to the corresponding
 instance via *ssh*. This attempts invokes *ssh* directly, bypassing the
 HTCondor networking layer. It supplies *ssh* with the public DNS name of

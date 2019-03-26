@@ -3,14 +3,14 @@
 The HTCondor User and Job Log Reader API
 ========================================
 
-:index:` <single: ReadUserLog class;API>`
-:index:` <single: User Log Reader API>`
-:index:` <single: Event Log Reader API>` :index:` <single: ReadUserLog>`
-:index:` <single: Job Log Reader API>`
+:index:`ReadUserLog class;API<single: ReadUserLog class;API>`
+:index:`User Log Reader API<single: User Log Reader API>`
+:index:`Event Log Reader API<single: Event Log Reader API>` :index:`ReadUserLog<single: ReadUserLog>`
+:index:`Job Log Reader API<single: Job Log Reader API>`
 
 HTCondor has the ability to log an HTCondor job’s significant events
 during its lifetime. This is enabled in the job’s submit description
-file with the **Log**\ :index:` <single: Log;submit commands>` command.
+file with the **Log**\ :index:`Log;submit commands<single: Log;submit commands>` command.
 
 This section describes the API defined by the C++ ``ReadUserLog`` class,
 which provides a programming interface for applications to read and

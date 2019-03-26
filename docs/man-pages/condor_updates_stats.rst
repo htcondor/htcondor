@@ -4,8 +4,8 @@
 ========================
 
 Display output from *condor\_status*
-:index:` <single: condor_updates_stats;HTCondor commands>`
-:index:` <single: condor_updates_stats command>`
+:index:`condor_updates_stats;HTCondor commands<single: condor_updates_stats;HTCondor commands>`
+:index:`condor_updates_stats command<single: condor_updates_stats command>`
 
 Synopsis
 --------
@@ -27,7 +27,7 @@ the most recent update is numbered with the smallest value.
 The number of historic points that represent updates is configurable on
 a per-source basis by configuration variable
 ``COLLECTOR_DAEMON_HISTORY_SIZE``
-:index:` <single: COLLECTOR_DAEMON_HISTORY_SIZE>`.
+:index:`COLLECTOR_DAEMON_HISTORY_SIZE<single: COLLECTOR_DAEMON_HISTORY_SIZE>`.
 
 Options
 -------

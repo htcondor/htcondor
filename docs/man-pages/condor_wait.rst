@@ -3,8 +3,8 @@
 *condor\_wait*
 ==============
 
-Wait for jobs to finish :index:` <single: condor_wait;HTCondor commands>`
-:index:` <single: condor_wait command>`
+Wait for jobs to finish :index:`condor_wait;HTCondor commands<single: condor_wait;HTCondor commands>`
+:index:`condor_wait command<single: condor_wait command>`
 
 Synopsis
 --------
@@ -52,7 +52,7 @@ Options
     The name of the log file to watch for information about the job.
  job ID
     A specific job or set of jobs to watch.
-    :index:` <single: use in;job ID>`\ If the **job ID** is only the job
+    :index:`use in;job ID<single: use in;job ID>`\ If the **job ID** is only the job
     ClassAd attribute ``ClusterId``, then *condor\_wait* waits for all
     jobs with the given ``ClusterId``. If the **job ID** is a pair of
     the job ClassAd attributes, given by ``ClusterId``.\ ``ProcId``,

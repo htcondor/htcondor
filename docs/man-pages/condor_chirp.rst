@@ -4,7 +4,7 @@
 ===============
 
 Access files or job ClassAd from an executing job
-:index:` <single: condor_chirp;HTCondor commands>`\ :index:` <single: condor_chirp>`
+:index:`condor_chirp;HTCondor commands<single: condor_chirp;HTCondor commands>`\ :index:`condor_chirp<single: condor_chirp>`
 
 Synopsis
 --------

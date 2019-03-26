@@ -4,8 +4,8 @@
 ===============
 
 Display historical information about the HTCondor pool
-:index:` <single: condor_stats;HTCondor commands>`
-:index:` <single: condor_stats command>`
+:index:`condor_stats;HTCondor commands<single: condor_stats;HTCondor commands>`
+:index:`condor_stats command<single: condor_stats command>`
 
 Synopsis
 --------

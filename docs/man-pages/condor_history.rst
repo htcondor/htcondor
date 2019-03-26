@@ -4,7 +4,7 @@
 =================
 
 View log of HTCondor jobs completed to date
-:index:` <single: condor_history;HTCondor commands>`\ :index:` <single: condor_history command>`
+:index:`condor_history;HTCondor commands<single: condor_history;HTCondor commands>`\ :index:`condor_history command<single: condor_history command>`
 
 Synopsis
 --------

@@ -3,7 +3,7 @@
 Singularity Support
 ===================
 
-:index:` <single: Singularity;installation>` :index:` <single: Singularity>`
+:index:`Singularity;installation<single: Singularity;installation>` :index:`Singularity<single: Singularity>`
 
 Note: This documentation is very basic and needs improvement!
 

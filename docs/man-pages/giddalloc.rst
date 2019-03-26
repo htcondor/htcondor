@@ -4,7 +4,7 @@ gidd\_alloc
 ===========
 
 find a GID within the specified range which is not used by any process
-:index:` <single: gidd_alloc;HTCondor commands>`\ :index:` <single: gidd_alloc command>`
+:index:`gidd_alloc;HTCondor commands<single: gidd_alloc;HTCondor commands>`\ :index:`gidd_alloc command<single: gidd_alloc command>`
 
 Synopsis
 --------

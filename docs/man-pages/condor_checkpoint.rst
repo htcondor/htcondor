@@ -4,7 +4,7 @@
 ====================
 
 send a checkpoint command to jobs running on specified hosts
-:index:` <single: condor_checkpoint;HTCondor commands>`\ :index:` <single: condor_checkpoint command>`
+:index:`condor_checkpoint;HTCondor commands<single: condor_checkpoint;HTCondor commands>`\ :index:`condor_checkpoint command<single: condor_checkpoint command>`
 
 Synopsis
 --------

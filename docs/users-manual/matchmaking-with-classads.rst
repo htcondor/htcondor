@@ -5,12 +5,12 @@ Matchmaking with ClassAds
 
 Before you learn about how to submit a job, it is important to
 understand how HTCondor allocates resources.
-:index:` <single: resource allocation;HTCondor>`\ Understanding the unique
+:index:`resource allocation;HTCondor<single: resource allocation;HTCondor>`\ Understanding the unique
 framework by which HTCondor matches submitted jobs with machines is the
 key to getting the most from HTCondor’s scheduling algorithm.
 
 HTCondor simplifies job submission by acting as a matchmaker of
-ClassAds. HTCondor’s ClassAds :index:` <single: ClassAd>`\ are analogous to
+ClassAds. HTCondor’s ClassAds :index:`ClassAd<single: ClassAd>`\ are analogous to
 the classified advertising section of the newspaper. Sellers advertise
 specifics about what they have to sell, hoping to attract a buyer.
 Buyers may advertise specifics about what they wish to purchase. Both
@@ -23,10 +23,10 @@ can be thought of as buyers of compute resources and machine owners are
 sellers.
 
 All machines in a HTCondor pool advertise their attributes,
-:index:` <single: attributes;ClassAd>`\ such as available memory, CPU type
+:index:`attributes;ClassAd<single: attributes;ClassAd>`\ such as available memory, CPU type
 and speed, virtual memory size, current load average, along with other
 static and dynamic properties. This machine ClassAd
-:index:` <single: machine;ClassAd>`\ also advertises under what conditions it
+:index:`machine;ClassAd<single: machine;ClassAd>`\ also advertises under what conditions it
 is willing to run a HTCondor job and what type of job it would prefer.
 These policy attributes can reflect the individual terms and preferences
 by which all the different owners have graciously allowed their machine
@@ -37,7 +37,7 @@ running jobs submitted by you or one of your co-workers.
 
 Likewise, when submitting a job, you specify a ClassAd with your
 requirements and preferences. The ClassAd
-:index:` <single: job;ClassAd>`\ includes the type of machine you wish to
+:index:`job;ClassAd<single: job;ClassAd>`\ includes the type of machine you wish to
 use. For instance, perhaps you are looking for the fastest floating
 point performance available. You want HTCondor to rank available
 machines based upon floating point performance. Or, perhaps you care
@@ -53,7 +53,7 @@ ClassAds are satisfied.
 Inspecting Machine ClassAds with condor\_status
 -----------------------------------------------
 
-:index:` <single: condor_status;HTCondor commands>`
+:index:`condor_status;HTCondor commands<single: condor_status;HTCondor commands>`
 
 Once HTCondor is installed, you will get a feel for what a machine
 ClassAd does by trying the *condor\_status* command. Try the
@@ -91,7 +91,7 @@ page \ `condor\_status <../man-pages/condor_status.html>`__ for a
 complete description of the *condor\_status* command.
 
 The following shows a portion of a machine ClassAd
-:index:` <single: machine example;ClassAd>`\ :index:` <single: machine ClassAd>`
+:index:`machine example;ClassAd<single: machine example;ClassAd>`\ :index:`machine ClassAd<single: machine ClassAd>`
 for a single machine: turunmaa.cs.wisc.edu. Some of the listed
 attributes are used by HTCondor for scheduling. Other attributes are for
 information purposes. An important point is that any of the attributes

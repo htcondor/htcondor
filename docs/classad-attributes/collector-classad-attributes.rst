@@ -3,52 +3,52 @@
 Collector ClassAd Attributes
 ============================
 
-:index:` <single: Collector attributes;ClassAd>`
-:index:` <single: ActiveQueryWorkers;ClassAd Collector attribute>`
+:index:`Collector attributes;ClassAd<single: Collector attributes;ClassAd>`
+:index:`ActiveQueryWorkers;ClassAd Collector attribute<single: ActiveQueryWorkers;ClassAd Collector attribute>`
 
  ``ActiveQueryWorkers``:
     Current number of forked child processes handling queries.
-    :index:` <single: ActiveQueryWorkersPeak;ClassAd Collector attribute>`
+    :index:`ActiveQueryWorkersPeak;ClassAd Collector attribute<single: ActiveQueryWorkersPeak;ClassAd Collector attribute>`
  ``ActiveQueryWorkersPeak``:
     Peak number of forked child processes handling queries since
     collector startup or statistics reset.
-    :index:` <single: PendingQueries;ClassAd Collector attribute>`
+    :index:`PendingQueries;ClassAd Collector attribute<single: PendingQueries;ClassAd Collector attribute>`
  ``PendingQueries``:
     Number of queries pending that are waiting to fork.
-    :index:` <single: PendingQueriesPeak;ClassAd Collector attribute>`
+    :index:`PendingQueriesPeak;ClassAd Collector attribute<single: PendingQueriesPeak;ClassAd Collector attribute>`
  ``PendingQueriesPeak``:
     Peak number of queries pending that are waiting to fork since
     collector startup or statistics reset.
-    :index:` <single: RecentDroppedQueries;ClassAd Collector attribute>`
-    :index:` <single: DroppedQueries;ClassAd Collector attribute>`
+    :index:`RecentDroppedQueries;ClassAd Collector attribute<single: RecentDroppedQueries;ClassAd Collector attribute>`
+    :index:`DroppedQueries;ClassAd Collector attribute<single: DroppedQueries;ClassAd Collector attribute>`
  ``DroppedQueries``:
     Total number of queries aborted since collector startup (or
     statistics reset) because ``COLLECTOR_QUERY_WORKERS_PENDING``
-    :index:` <single: COLLECTOR_QUERY_WORKERS_PENDING>` exceeded, or
+    :index:`COLLECTOR_QUERY_WORKERS_PENDING<single: COLLECTOR_QUERY_WORKERS_PENDING>` exceeded, or
     ``COLLECTOR_QUERY_MAX_WORKTIME``
-    :index:` <single: COLLECTOR_QUERY_MAX_WORKTIME>` exceeded, or client
+    :index:`COLLECTOR_QUERY_MAX_WORKTIME<single: COLLECTOR_QUERY_MAX_WORKTIME>` exceeded, or client
     closed TCP socket while request was pending. This statistic is also
     available as ``RecentDroppedQueries`` which represents a count of
     recently dropped queries that occured within a recent time window
     (default of 20 minutes).
-    :index:` <single: CollectorIpAddr;ClassAd Collector attribute>`
+    :index:`CollectorIpAddr;ClassAd Collector attribute<single: CollectorIpAddr;ClassAd Collector attribute>`
  ``CollectorIpAddr``:
     String with the IP and port address of the *condor\_collector*
     daemon which is publishing this ClassAd.
-    :index:` <single: CondorVersion;ClassAd Collector attribute>`
+    :index:`CondorVersion;ClassAd Collector attribute<single: CondorVersion;ClassAd Collector attribute>`
  ``CondorVersion``:
     A string containing the HTCondor version number, the release date,
     and the build identification number.
-    :index:` <single: CurrentForkWorkers;ClassAd Collector attribute>`
+    :index:`CurrentForkWorkers;ClassAd Collector attribute<single: CurrentForkWorkers;ClassAd Collector attribute>`
  ``CondorVersion``:
     The current number of active forks of the Collector. The Windows
     version of the Collector does not fork and will not have this
     statistic.
-    :index:` <single: CurrentJobsRunningAll;ClassAd Collector attribute>`
+    :index:`CurrentJobsRunningAll;ClassAd Collector attribute<single: CurrentJobsRunningAll;ClassAd Collector attribute>`
  ``CurrentJobsRunningAll``:
     An integer value representing the sum of all jobs running under all
     universes.
-    :index:` <single: CurrentJobsRunning<universe>;ClassAd Collector attribute>`
+    :index:`CurrentJobsRunning<universe>;ClassAd Collector attribute<single: CurrentJobsRunning<universe>;ClassAd Collector attribute>`
  ``CurrentJobsRunning<universe>``:
     An integer value representing the current number of jobs running
     under the universe which forms the attribute name. For example
@@ -63,56 +63,56 @@ Collector ClassAd Attributes
     ``VM``, or ``Local``. There are other universes, but they are not
     listed here, as they represent ones that are no longer used in
     Condor.
-    :index:` <single: DaemonStartTime;ClassAd Collector attribute>`
+    :index:`DaemonStartTime;ClassAd Collector attribute<single: DaemonStartTime;ClassAd Collector attribute>`
 
  ``DaemonStartTime``:
     The time that this daemon was started, represented as the number of
     second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:` <single: DaemonLastReconfigTime;ClassAd Collector attribute>`
+    :index:`DaemonLastReconfigTime;ClassAd Collector attribute<single: DaemonLastReconfigTime;ClassAd Collector attribute>`
  ``DaemonLastReconfigTime``:
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:` <single: HandleLocate;ClassAd Collector attribute>`
+    :index:`HandleLocate;ClassAd Collector attribute<single: HandleLocate;ClassAd Collector attribute>`
  ``HandleLocate``:
     Number of locate queries the Collector has handled without forking
     since it started.
-    :index:` <single: HandleLocateRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateRuntime;ClassAd Collector attribute>`
+    :index:`HandleLocateRuntimeAvg;ClassAd Collector attribute<single: HandleLocateRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleLocateRuntimeMax;ClassAd Collector attribute<single: HandleLocateRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleLocateRuntimeMin;ClassAd Collector attribute<single: HandleLocateRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleLocateRuntimeStd;ClassAd Collector attribute<single: HandleLocateRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleLocateRuntime;ClassAd Collector attribute<single: HandleLocateRuntime;ClassAd Collector attribute>`
  ``HandleLocateRuntime``:
     Total time spent handling locate queries without forking since the
     Collector started. This attribute also has minimum, maximum, average
     and standard deviation statistics with Min, Max, Avg and Std
     suffixes respectively.
-    :index:` <single: HandleLocateForked;ClassAd Collector attribute>`
+    :index:`HandleLocateForked;ClassAd Collector attribute<single: HandleLocateForked;ClassAd Collector attribute>`
  ``HandleLocateForked``:
     Number of locate queries the Collector has handled by forking since
     it started. The Windows operating system does not fork and will not
     have this statistic.
-    :index:` <single: HandleLocateForkedRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateForkedRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateForkedRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateForkedRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateForkedRuntime;ClassAd Collector attribute>`
+    :index:`HandleLocateForkedRuntimeAvg;ClassAd Collector attribute<single: HandleLocateForkedRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleLocateForkedRuntimeMax;ClassAd Collector attribute<single: HandleLocateForkedRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleLocateForkedRuntimeMin;ClassAd Collector attribute<single: HandleLocateForkedRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleLocateForkedRuntimeStd;ClassAd Collector attribute<single: HandleLocateForkedRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleLocateForkedRuntime;ClassAd Collector attribute<single: HandleLocateForkedRuntime;ClassAd Collector attribute>`
  ``HandleLocateForkedRuntime``:
     Total time spent forking to handle locate queries since the
     Collector started. This attribute also has minimum, maximum, average
     and standard deviation statistics with Min, Max, Avg and Std
     suffixes respectively. The Windows operating system does not fork
     and will not have this statistic.
-    :index:` <single: HandleLocateMissedFork;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedFork;ClassAd Collector attribute<single: HandleLocateMissedFork;ClassAd Collector attribute>`
  ``HandleLocateMissedFork``:
     Number of locate queries the Collector recieved since the Collector
     started that could not be handled immediately because there were
     already too many forked child processes. The Windows operating
     system does not fork and will not have this statistic.
-    :index:` <single: HandleLocateMissedForkRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateMissedForkRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateMissedForkRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateMissedForkRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleLocateMissedForkRuntime;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedForkRuntimeAvg;ClassAd Collector attribute<single: HandleLocateMissedForkRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedForkRuntimeMax;ClassAd Collector attribute<single: HandleLocateMissedForkRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedForkRuntimeMin;ClassAd Collector attribute<single: HandleLocateMissedForkRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedForkRuntimeStd;ClassAd Collector attribute<single: HandleLocateMissedForkRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleLocateMissedForkRuntime;ClassAd Collector attribute<single: HandleLocateMissedForkRuntime;ClassAd Collector attribute>`
  ``HandleLocateMissedForkRuntime``:
     Total time spent queueing pending locate queries that could not be
     immediately handled by forking since the Collector started. This
@@ -120,48 +120,48 @@ Collector ClassAd Attributes
     statistics with Min, Max, Avg and Std suffixes respectively. The
     Windows operating system does not fork and will not have this
     statistic.
-    :index:` <single: HandleQuery;ClassAd Collector attribute>`
+    :index:`HandleQuery;ClassAd Collector attribute<single: HandleQuery;ClassAd Collector attribute>`
  ``HandleQuery``:
     Number of queries that are not locate queries the Collector has
     handled without forking since it started.
-    :index:` <single: HandleQueryRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryRuntime;ClassAd Collector attribute>`
+    :index:`HandleQueryRuntimeAvg;ClassAd Collector attribute<single: HandleQueryRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleQueryRuntimeMax;ClassAd Collector attribute<single: HandleQueryRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleQueryRuntimeMin;ClassAd Collector attribute<single: HandleQueryRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleQueryRuntimeStd;ClassAd Collector attribute<single: HandleQueryRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleQueryRuntime;ClassAd Collector attribute<single: HandleQueryRuntime;ClassAd Collector attribute>`
  ``HandleQueryRuntime``:
     Total time spent handling queries that are not locate queries
     without forking since the Collector started. This attribute also has
     minimum, maximum, average and standard deviation statistics with
     Min, Max, Avg and Std suffixes respectively.
-    :index:` <single: HandleQueryForked;ClassAd Collector attribute>`
+    :index:`HandleQueryForked;ClassAd Collector attribute<single: HandleQueryForked;ClassAd Collector attribute>`
  ``HandleQueryForked``:
     Number of queries that are not locate queries the Collector has
     handled by forking since it started. The Windows operating system
     does not fork and will not have this statistic.
-    :index:` <single: HandleQueryForkedRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryForkedRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryForkedRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryForkedRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryForkedRuntime;ClassAd Collector attribute>`
+    :index:`HandleQueryForkedRuntimeAvg;ClassAd Collector attribute<single: HandleQueryForkedRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleQueryForkedRuntimeMax;ClassAd Collector attribute<single: HandleQueryForkedRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleQueryForkedRuntimeMin;ClassAd Collector attribute<single: HandleQueryForkedRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleQueryForkedRuntimeStd;ClassAd Collector attribute<single: HandleQueryForkedRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleQueryForkedRuntime;ClassAd Collector attribute<single: HandleQueryForkedRuntime;ClassAd Collector attribute>`
  ``HandleQueryForkedRuntime``:
     Total time spent forking to handle queries that are not locate
     queries since the Collector started. This attribute also has
     minimum, maximum, average and standard deviation statistics with
     Min, Max, Avg and Std suffixes respectively. The Windows operating
     system does not fork and will not have this statistic.
-    :index:` <single: HandleQueryMissedFork;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedFork;ClassAd Collector attribute<single: HandleQueryMissedFork;ClassAd Collector attribute>`
  ``HandleQueryMissedFork``:
     Number of queries that are not locate queries the Collector recieved
     since the Collector started that could not be handled immediately
     because there were already too many forked child processes. The
     Windows operating system does not fork and will not have this
     statistic.
-    :index:` <single: HandleQueryMissedForkRuntimeAvg;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryMissedForkRuntimeMax;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryMissedForkRuntimeMin;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryMissedForkRuntimeStd;ClassAd Collector attribute>`
-    :index:` <single: HandleQueryMissedForkRuntime;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedForkRuntimeAvg;ClassAd Collector attribute<single: HandleQueryMissedForkRuntimeAvg;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedForkRuntimeMax;ClassAd Collector attribute<single: HandleQueryMissedForkRuntimeMax;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedForkRuntimeMin;ClassAd Collector attribute<single: HandleQueryMissedForkRuntimeMin;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedForkRuntimeStd;ClassAd Collector attribute<single: HandleQueryMissedForkRuntimeStd;ClassAd Collector attribute>`
+    :index:`HandleQueryMissedForkRuntime;ClassAd Collector attribute<single: HandleQueryMissedForkRuntime;ClassAd Collector attribute>`
  ``HandleQueryMissedForkRuntime``:
     Total time spent queueing pending non-locate queries that could not
     be immediately handled by forking since the Collector started. This
@@ -169,29 +169,29 @@ Collector ClassAd Attributes
     statistics with Min, Max, Avg and Std suffixes respectively. The
     Windows operating system does not fork and will not have this
     statistic.
-    :index:` <single: HostsClaimed;ClassAd Collector attribute>`
+    :index:`HostsClaimed;ClassAd Collector attribute<single: HostsClaimed;ClassAd Collector attribute>`
  ``HostsClaimed``:
     Description is not yet written.
-    :index:` <single: HostsOwner;ClassAd Collector attribute>`
+    :index:`HostsOwner;ClassAd Collector attribute<single: HostsOwner;ClassAd Collector attribute>`
  ``HostsOwner``:
     Description is not yet written.
-    :index:` <single: HostsTotal;ClassAd Collector attribute>`
+    :index:`HostsTotal;ClassAd Collector attribute<single: HostsTotal;ClassAd Collector attribute>`
  ``HostsTotal``:
     Description is not yet written.
-    :index:` <single: HostsUnclaimed;ClassAd Collector attribute>`
+    :index:`HostsUnclaimed;ClassAd Collector attribute<single: HostsUnclaimed;ClassAd Collector attribute>`
  ``HostsUnclaimed``:
     Description is not yet written.
-    :index:` <single: IdleJobs;ClassAd Collector attribute>`
+    :index:`IdleJobs;ClassAd Collector attribute<single: IdleJobs;ClassAd Collector attribute>`
  ``IdleJobs``:
     Description is not yet written.
-    :index:` <single: Machine;ClassAd Collector attribute>`
+    :index:`Machine;ClassAd Collector attribute<single: Machine;ClassAd Collector attribute>`
  ``Machine``:
     A string with the machine’s fully qualified host name.
-    :index:` <single: MaxJobsRunningAll;ClassAd Collector attribute>`
+    :index:`MaxJobsRunningAll;ClassAd Collector attribute<single: MaxJobsRunningAll;ClassAd Collector attribute>`
  ``MaxJobsRunning<universe``:
     An integer value representing the sum of all
     ``MaxJobsRunning<universe>`` values.
-    :index:` <single: MaxJobsRunning<universe>;ClassAd Collector attribute>`
+    :index:`MaxJobsRunning<universe>;ClassAd Collector attribute<single: MaxJobsRunning<universe>;ClassAd Collector attribute>`
  ``MaxJobsRunning<universe>``:
     An integer value representing largest number of currently running
     jobs ever seen under the universe which forms the attribute name,
@@ -208,17 +208,17 @@ Collector ClassAd Attributes
     ``Parallel``, ``VM``, or ``Local``. There are other universes, but
     they are not listed here, as they represent ones that are no longer
     used in Condor.
-    :index:` <single: MyAddress;ClassAd Collector attribute>`
+    :index:`MyAddress;ClassAd Collector attribute<single: MyAddress;ClassAd Collector attribute>`
 
  ``MyAddress``:
     String with the IP and port address of the *condor\_collector*
     daemon which is publishing this ClassAd.
-    :index:` <single: MyCurrentTime;ClassAd Collector attribute>`
+    :index:`MyCurrentTime;ClassAd Collector attribute<single: MyCurrentTime;ClassAd Collector attribute>`
  ``MyCurrentTime``:
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor\_schedd*
     daemon last sent a ClassAd update to the *condor\_collector*.
-    :index:` <single: Name;ClassAd Collector attribute>`
+    :index:`Name;ClassAd Collector attribute<single: Name;ClassAd Collector attribute>`
  ``Name``:
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
@@ -227,40 +227,40 @@ Collector ClassAd Attributes
     names will be of the form “slot#@full.hostname”, for example,
     “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
     vulture.cs.wisc.edu.
-    :index:` <single: PeakForkWorkers;ClassAd Collector attribute>`
+    :index:`PeakForkWorkers;ClassAd Collector attribute<single: PeakForkWorkers;ClassAd Collector attribute>`
  ``CondorVersion``:
     The maximum number of active forks of the Collector at any time
     since the Collector started. The Windows version of the Collector
     does not fork and will not have this statistic.
-    :index:` <single: RunningJobs;ClassAd Collector attribute>`
+    :index:`RunningJobs;ClassAd Collector attribute<single: RunningJobs;ClassAd Collector attribute>`
  ``RunningJobs``:
     Definition not yet written.
-    :index:` <single: StartdAds;ClassAd Collector attribute>`
+    :index:`StartdAds;ClassAd Collector attribute<single: StartdAds;ClassAd Collector attribute>`
  ``StartdAds``:
     The integer number of unique *condor\_startd* daemon ClassAds
     counted at the most recent time the *condor\_collector* updated its
     own ClassAd.
-    :index:` <single: StartdAdsPeak;ClassAd Collector attribute>`
+    :index:`StartdAdsPeak;ClassAd Collector attribute<single: StartdAdsPeak;ClassAd Collector attribute>`
  ``StartdAdsPeak``:
     The largest integer number of unique *condor\_startd* daemon
     ClassAds seen at any one time, since the *condor\_collector* began
     executing.
-    :index:` <single: SubmitterAds;ClassAd Collector attribute>`
+    :index:`SubmitterAds;ClassAd Collector attribute<single: SubmitterAds;ClassAd Collector attribute>`
  ``SubmitterAds``:
     The integer number of unique submitters counted at the most recent
     time the *condor\_collector* updated its own ClassAd.
-    :index:` <single: SubmitterAdsPeak;ClassAd Collector attribute>`
+    :index:`SubmitterAdsPeak;ClassAd Collector attribute<single: SubmitterAdsPeak;ClassAd Collector attribute>`
  ``SubmitterAdsPeak``:
     The largest integer number of unique submitters seen at any one
     time, since the *condor\_collector* began executing.
-    :index:` <single: UpdateInterval;ClassAd Collector attribute>`
+    :index:`UpdateInterval;ClassAd Collector attribute<single: UpdateInterval;ClassAd Collector attribute>`
  ``UpdateInterval``:
     Description is not yet written.
-    :index:` <single: UpdateSequenceNumber;ClassAd Collector attribute>`
+    :index:`UpdateSequenceNumber;ClassAd Collector attribute<single: UpdateSequenceNumber;ClassAd Collector attribute>`
  ``UpdateSequenceNumber``:
     An integer that begins at 0, and increments by one each time the
     same ClassAd is again advertised.
-    :index:` <single: UpdatesInitial;ClassAd Collector attribute>`
+    :index:`UpdatesInitial;ClassAd Collector attribute<single: UpdatesInitial;ClassAd Collector attribute>`
     ` <index://UpdatesInitial_<ClassAd-Name>;ClassAd Collector attribute>`__
  ``UpdatesInitial``:
     A Statistics attribute representing a count of unique ClassAds seen,
@@ -269,7 +269,7 @@ Collector ClassAd Attributes
     ``UpdatesInitial_<ClassAd-Name>``. ``<ClassAd-Name>`` is each of
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
     ``Start``, ``StartdPvt``, and ``Submittor``.
-    :index:` <single: UpdatesLost;ClassAd Collector attribute>`
+    :index:`UpdatesLost;ClassAd Collector attribute<single: UpdatesLost;ClassAd Collector attribute>`
     ` <index://UpdatesLost_<ClassAd-Name>;ClassAd Collector attribute>`__
  ``UpdatesLost``:
     A Statistics attribute representing the count of updates lost, over
@@ -278,19 +278,19 @@ Collector ClassAd Attributes
     ``UpdatesLost_<ClassAd-Name>``. ``<ClassAd-Name>`` is each of
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
     ``Start``, ``StartdPvt``, and ``Submittor``.
-    :index:` <single: UpdatesLostMax;ClassAd Collector attribute>`
+    :index:`UpdatesLostMax;ClassAd Collector attribute<single: UpdatesLostMax;ClassAd Collector attribute>`
  ``UpdatesLostMax``:
     A Statistics attribute defining the largest number of updates lost
     at any point in time, over the lifetime of this *condor\_collector*.
     ClassAd sequence numbers are used to detect lost ClassAds.
-    :index:` <single: UpdatesLostRatio;ClassAd Collector attribute>`
+    :index:`UpdatesLostRatio;ClassAd Collector attribute<single: UpdatesLostRatio;ClassAd Collector attribute>`
  ``UpdatesLostRatio``:
     A Statistics attribute defining the floating point ratio of the
     total number of updates to the number of updates lost over the
     lifetime of this *condor\_collector*. ClassAd sequence numbers are
     used to detect lost ClassAds. A value of 1 indicates that all
     ClassAds have been lost.
-    :index:` <single: UpdatesTotal;ClassAd Collector attribute>`
+    :index:`UpdatesTotal;ClassAd Collector attribute<single: UpdatesTotal;ClassAd Collector attribute>`
     ` <index://UpdatesTotal_<ClassAd-Name>;ClassAd Collector attribute>`__
  ``UpdatesTotal``:
     A Statistics attribute representing the count of the number of

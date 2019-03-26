@@ -3,7 +3,7 @@
 Running a Job: the Steps To Take
 ================================
 
-:index:` <single: preparation;job>`
+:index:`preparation;job<single: preparation;job>`
 
 The road to using HTCondor effectively is a short one. The basics are
 quickly and easily learned.
@@ -12,7 +12,7 @@ Here are all the steps needed to run a job using HTCondor.
 
  Code Preparation.
     A job run under HTCondor must be able to run as a background batch
-    job. :index:` <single: batch ready;job>`\ HTCondor runs the program
+    job. :index:`batch ready;job<single: batch ready;job>`\ HTCondor runs the program
     unattended and in the background. A program that runs in the
     background will not be able to do interactive input and output.
     HTCondor can redirect console output (``stdout`` and ``stderr``) and
@@ -58,12 +58,12 @@ Here are all the steps needed to run a job using HTCondor.
 
  Submit the Job.
     Submit the program to HTCondor with the *condor\_submit* command.
-    :index:` <single: condor_submit;HTCondor commands>`
+    :index:`condor_submit;HTCondor commands<single: condor_submit;HTCondor commands>`
 
 Once submitted, HTCondor does the rest toward running the job. Monitor
 the job’s progress with the *condor\_q*
-:index:` <single: condor_q;HTCondor commands>`\ and *condor\_status*
-commands. :index:` <single: condor_status;HTCondor commands>`\ You may
+:index:`condor_q;HTCondor commands<single: condor_q;HTCondor commands>`\ and *condor\_status*
+commands. :index:`condor_status;HTCondor commands<single: condor_status;HTCondor commands>`\ You may
 modify the order in which HTCondor will run your jobs with
 *condor\_prio*. If desired, HTCondor can even inform you in a log file
 every time your job is checkpointed and/or migrated to a different
@@ -75,13 +75,13 @@ its performances, including time used and I/O performed. If you are
 using a log file for the job (which is recommended) the exit status will
 be recorded in the log file. You can remove a job from the queue
 prematurely with *condor\_rm*.
-:index:` <single: condor_rm;HTCondor commands>`
+:index:`condor_rm;HTCondor commands<single: condor_rm;HTCondor commands>`
 
 Choosing an HTCondor Universe
 -----------------------------
 
 A universe in HTCondor
-:index:` <single: universe>`\ :index:` <single: universe;HTCondor>` defines an
+:index:`universe<single: universe>`\ :index:`universe;HTCondor<single: universe;HTCondor>` defines an
 execution environment. HTCondor Version 8.9.1 supports several different
 universes for user jobs:
 
@@ -95,30 +95,30 @@ universes for user jobs:
 -  vm
 -  docker
 
-The **universe**\ :index:` <single: universe;submit commands>` under which
+The **universe**\ :index:`universe;submit commands<single: universe;submit commands>` under which
 a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla, unless your HTCondor
 administrator has changed the default. However, we strongly encourage
 you to specify the universe, since the default can be changed by your
 HTCondor administrator, and the default that ships with HTCondor has
-changed. :index:` <single: standard;universe>`
+changed. :index:`standard;universe<single: standard;universe>`
 
 The standard universe provides migration and reliability, but has some
 restrictions on the programs that can be run.
-:index:` <single: vanilla;universe>`\ The vanilla universe provides fewer
+:index:`vanilla;universe<single: vanilla;universe>`\ The vanilla universe provides fewer
 services, but has very few restrictions.
-:index:` <single: Grid;universe>`\ The grid universe allows users to submit
+:index:`Grid;universe<single: Grid;universe>`\ The grid universe allows users to submit
 jobs using HTCondor’s interface. These jobs are submitted for execution
-on grid resources. :index:` <single: java;universe>`\ :index:` <single: Java>`
-:index:` <single: Java Virtual Machine>`\ :index:` <single: JVM>` The java
+on grid resources. :index:`java;universe<single: java;universe>`\ :index:`Java<single: Java>`
+:index:`Java Virtual Machine<single: Java Virtual Machine>`\ :index:`JVM<single: JVM>` The java
 universe allows users to run jobs written for the Java Virtual Machine
 (JVM). The scheduler universe allows users to submit lightweight jobs to
 be spawned by the program known as a daemon on the submit host itself.
-:index:` <single: parallel;universe>`\ The parallel universe is for programs
+:index:`parallel;universe<single: parallel;universe>`\ The parallel universe is for programs
 that require multiple machines for one job. See section \ `Parallel
 Applications (Including MPI
 Applications) <../users-manual/parallel-applications.html>`__ for more
-about the Parallel universe. :index:` <single: vm;universe>`\ The vm universe
+about the Parallel universe. :index:`vm;universe<single: vm;universe>`\ The vm universe
 allows users to run jobs where the job is no longer a simple executable,
 but a disk image, facilitating the execution of a virtual machine. The
 docker universe runs a Docker container as an HTCondor job.
@@ -126,15 +126,15 @@ docker universe runs a Docker container as an HTCondor job.
 Standard Universe
 '''''''''''''''''
 
-:index:` <single: standard;universe>`
+:index:`standard;universe<single: standard;universe>`
 
 In the standard universe, HTCondor provides checkpointing and remote
 system calls. These features make a job more reliable and allow it
 uniform access to resources from anywhere in the pool. To prepare a
 program as a standard universe job, it must be relinked with
 *condor\_compile*. Most programs can be prepared as a standard universe
-job, but there are a few restrictions. :index:` <single: checkpoint>`
-:index:` <single: checkpoint image>`
+job, but there are a few restrictions. :index:`checkpoint<single: checkpoint>`
+:index:`checkpoint image<single: checkpoint image>`
 
 HTCondor checkpoints a job at regular intervals. A checkpoint image is
 essentially a snapshot of the current state of a job. If a job must be
@@ -144,15 +144,15 @@ job from where it left off. If a machine should crash or fail while it
 is running a job, HTCondor can restart the job on a new machine using
 the most recent checkpoint image. In this way, jobs can run for months
 or years even in the face of occasional computer failures.
-:index:` <single: remote system call>` :index:` <single: shadow>`
+:index:`remote system call<single: remote system call>` :index:`shadow<single: shadow>`
 
 Remote system calls make a job perceive that it is executing on its home
 machine, even though the job may execute on many different machines over
 its lifetime. When a job runs on a remote machine, a second process,
 called a *condor\_shadow* runs on the machine where the job was
 submitted.
-:index:` <single: condor_shadow>`\ :index:` <single: condor_shadow;agents>`
-:index:` <single: condor_shadow;HTCondor daemon>`\ :index:` <single: condor_shadow;remote system call>`
+:index:`condor_shadow<single: condor_shadow>`\ :index:`condor_shadow;agents<single: condor_shadow;agents>`
+:index:`condor_shadow;HTCondor daemon<single: condor_shadow;HTCondor daemon>`\ :index:`condor_shadow;remote system call<single: condor_shadow;remote system call>`
 When the job attempts a system call, the *condor\_shadow* performs the
 system call instead and sends the results to the remote machine. For
 example, if a job attempts to open a file that is stored on the
@@ -180,35 +180,35 @@ Then, relink the job for HTCondor with:
 
 There are a few restrictions on standard universe jobs:
 
-:index:` <single: fork;Unix>` :index:` <single: exec;Unix>`
-:index:` <single: system;Unix>`
+:index:`fork;Unix<single: fork;Unix>` :index:`exec;Unix<single: exec;Unix>`
+:index:`system;Unix<single: system;Unix>`
 
 #. Multi-process jobs are not allowed. This includes system calls such
-   as ``fork()``, ``exec()``, and ``system()``. :index:` <single: pipe;Unix>`
-   :index:` <single: semaphore;Unix>` :index:` <single: shared memory;Unix>`
+   as ``fork()``, ``exec()``, and ``system()``. :index:`pipe;Unix<single: pipe;Unix>`
+   :index:`semaphore;Unix<single: semaphore;Unix>` :index:`shared memory;Unix<single: shared memory;Unix>`
 #. Interprocess communication is not allowed. This includes pipes,
-   semaphores, and shared memory. :index:` <single: socket;Unix>`
-   :index:` <single: network>`
+   semaphores, and shared memory. :index:`socket;Unix<single: socket;Unix>`
+   :index:`network<single: network>`
 #. Network communication must be brief. A job may make network
    connections using system calls such as ``socket()``, but a network
    connection left open for long periods will delay checkpointing and
-   migration. :index:` <single: signal>` :index:` <single: SIGUSR2;signal>`
-   :index:` <single: SIGTSTP;signal>`
+   migration. :index:`signal<single: signal>` :index:`SIGUSR2;signal<single: SIGUSR2;signal>`
+   :index:`SIGTSTP;signal<single: SIGTSTP;signal>`
 #. Sending or receiving the SIGUSR2 or SIGTSTP signals is not allowed.
    HTCondor reserves these signals for its own use. Sending or receiving
-   all other signals is allowed. :index:` <single: alarm;Unix>`
-   :index:` <single: timer;Unix>` :index:` <single: sleep;Unix>`
+   all other signals is allowed. :index:`alarm;Unix<single: alarm;Unix>`
+   :index:`timer;Unix<single: timer;Unix>` :index:`sleep;Unix<single: sleep;Unix>`
 #. Alarms, timers, and sleeping are not allowed. This includes system
    calls such as ``alarm()``, ``getitimer()``, and ``sleep()``.
    ` <index://kernel-level;thread>`__ ` <index://user-level;thread>`__
 #. Multiple kernel-level threads are not allowed. However, multiple
    user-level threads are allowed. ` <index://memory-mapped;file>`__
-   :index:` <single: mmap;Unix>`
+   :index:`mmap;Unix<single: mmap;Unix>`
 #. Memory mapped files are not allowed. This includes system calls such
-   as ``mmap()`` and ``munmap()``. :index:` <single: locking;file>`
-   :index:` <single: flock;Unix>` :index:` <single: lockf;Unix>`
+   as ``mmap()`` and ``munmap()``. :index:`locking;file<single: locking;file>`
+   :index:`flock;Unix<single: flock;Unix>` :index:`lockf;Unix<single: lockf;Unix>`
 #. File locks are allowed, but not retained between checkpoints.
-   :index:` <single: read only;file>` :index:` <single: write only;file>`
+   :index:`read only;file<single: read only;file>` :index:`write only;file<single: write only;file>`
 #. All files must be opened read-only or write-only. A file opened for
    both reading and writing will cause trouble if a job must be rolled
    back to an old checkpoint image. For compatibility reasons, a file
@@ -219,9 +219,9 @@ There are a few restrictions on standard universe jobs:
    approximately equal to the virtual memory consumed by a job while it
    runs. If disk space is short, a special checkpoint server can be
    designated for storing all the checkpoint images for a pool.
-   :index:` <single: dynamic;linking>` :index:` <single: static;linking>`
+   :index:`dynamic;linking<single: dynamic;linking>` :index:`static;linking<single: static;linking>`
 #. On Linux, the job must be statically linked. *condor\_compile* does
-   this by default. :index:` <single: large files;Unix>`
+   this by default. :index:`large files;Unix<single: large files;Unix>`
 #. Reading to or writing from files larger than 2 GBytes is only
    supported when the submit side *condor\_shadow* and the standard
    universe user job application itself are both 64-bit executables.
@@ -229,7 +229,7 @@ There are a few restrictions on standard universe jobs:
 Vanilla Universe
 ''''''''''''''''
 
-:index:` <single: vanilla;universe>`
+:index:`vanilla;universe<single: vanilla;universe>`
 
 The vanilla universe in HTCondor is intended for programs which cannot
 be successfully re-linked. Shell scripts are another case where the
@@ -263,7 +263,7 @@ Job <../users-manual/submitting-a-job.html>`__.
 Grid Universe
 '''''''''''''
 
-:index:` <single: Grid;universe>`
+:index:`Grid;universe<single: Grid;universe>`
 
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
@@ -277,7 +277,7 @@ descriptions of the grid-related attributes.
 Java Universe
 '''''''''''''
 
-:index:` <single: Java;universe>`
+:index:`Java;universe<single: Java;universe>`
 
 A program submitted to the Java universe may run on any sort of machine
 with a JVM regardless of its location, owner, or JVM version. HTCondor
@@ -287,7 +287,7 @@ setting the classpath.
 Scheduler Universe
 ''''''''''''''''''
 
-:index:` <single: scheduler;universe>` :index:` <single: scheduler universe>`
+:index:`scheduler;universe<single: scheduler;universe>` :index:`scheduler universe<single: scheduler universe>`
 
 The scheduler universe allows users to submit lightweight jobs to be run
 immediately, alongside the *condor\_schedd* daemon on the submit host
@@ -310,7 +310,7 @@ the future, in favor of the newer local universe.
 Local Universe
 ''''''''''''''
 
-:index:` <single: local;universe>` :index:` <single: local universe>`
+:index:`local;universe<single: local;universe>` :index:`local universe<single: local universe>`
 
 The local universe allows an HTCondor job to be submitted and executed
 with different assumptions for the execution conditions of the job. The
@@ -322,7 +322,7 @@ against the *condor\_schedd*\ ’s ClassAd.
 Parallel Universe
 '''''''''''''''''
 
-:index:` <single: parallel;universe>` :index:` <single: parallel universe>`
+:index:`parallel;universe<single: parallel;universe>` :index:`parallel universe<single: parallel universe>`
 
 The parallel universe allows parallel programs, such as MPI jobs, to be
 run within the opportunistic HTCondor environment. Please see
@@ -333,7 +333,7 @@ details.
 VM Universe
 '''''''''''
 
-:index:` <single: vm;universe>` :index:` <single: vm universe>`
+:index:`vm;universe<single: vm;universe>` :index:`vm universe<single: vm universe>`
 
 HTCondor facilitates the execution of VMware and Xen virtual machines
 with the vm universe.
@@ -345,7 +345,7 @@ details.
 Docker Universe
 '''''''''''''''
 
-:index:` <single: docker;universe>` :index:` <single: docker universe>`
+:index:`docker;universe<single: docker;universe>` :index:`docker universe<single: docker universe>`
 
 The docker universe runs a docker container on an execute host as a job.
 Please see section \ `Docker Universe

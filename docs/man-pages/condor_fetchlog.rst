@@ -4,8 +4,8 @@
 ==================
 
 Retrieve a daemon’s log file that is located on another computer
-:index:` <single: condor_fetchlog;HTCondor commands>`
-:index:` <single: condor_fetchlog command>`
+:index:`condor_fetchlog;HTCondor commands<single: condor_fetchlog;HTCondor commands>`
+:index:`condor_fetchlog command<single: condor_fetchlog command>`
 
 Synopsis
 --------

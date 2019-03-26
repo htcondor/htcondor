@@ -3,10 +3,10 @@
 Availability
 ============
 
-:index:` <single: platforms available;HTCondor>`
-:index:` <single: available platforms>`
-:index:` <single: supported platforms>`
-:index:` <single: platforms supported>`
+:index:`platforms available;HTCondor<single: platforms available;HTCondor>`
+:index:`available platforms<single: available platforms>`
+:index:`supported platforms<single: supported platforms>`
+:index:`platforms supported<single: platforms supported>`
 
 HTCondor is currently available as a free download from the Internet via
 the World Wide Web at URL
@@ -14,8 +14,8 @@ the World Wide Web at URL
 Binary distributions of this HTCondor Version 8.9.1 release are
 available for the platforms detailed in Table \ `1.1 <#x8-80071>`__. A
 platform is an architecture/operating system combination.
-:index:` <single: definition of;clipped platform>`
-:index:` <single: availability;clipped platform>`
+:index:`definition of;clipped platform<single: definition of;clipped platform>`
+:index:`availability;clipped platform<single: availability;clipped platform>`
 
 In the table, clipped means that HTCondor does not support checkpointing
 or remote system calls on the given platform. This means that standard
@@ -82,9 +82,9 @@ Jobs submitted to the standard universe utilize *condor\_compile* to
 relink programs with libraries provided by HTCondor.
 Table \ `1.2 <#x8-80112>`__ lists supported compilers by platform for
 this Version 8.9.1 release. Other compilers may work, but are not
-supported. :index:` <single: list of supported compilers>`
-:index:` <single: list of supported compilers;condor_compile command>`
-:index:` <single: supported with condor_compile;compilers>`
+supported. :index:`list of supported compilers<single: list of supported compilers>`
+:index:`list of supported compilers;condor_compile command<single: list of supported compilers;condor_compile command>`
+:index:`supported with condor_compile;compilers<single: supported with condor_compile;compilers>`
 
 --------------
 

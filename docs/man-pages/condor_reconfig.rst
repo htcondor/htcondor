@@ -4,7 +4,7 @@
 ==================
 
 Reconfigure HTCondor daemons
-:index:` <single: condor_reconfig;HTCondor commands>`\ :index:` <single: condor_reconfig command>`
+:index:`condor_reconfig;HTCondor commands<single: condor_reconfig;HTCondor commands>`\ :index:`condor_reconfig command<single: condor_reconfig command>`
 
 Synopsis
 --------

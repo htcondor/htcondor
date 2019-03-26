@@ -3,13 +3,13 @@
 Contact Information
 ===================
 
-:index:` <single: contact information;HTCondor>`
+:index:`contact information;HTCondor<single: contact information;HTCondor>`
 
 The latest software releases, publications/papers regarding HTCondor and
 other High-Throughput Computing research can be found at the official
 web site for HTCondor at
 `http://htcondor.org/ <http://htcondor.org/>`__.
-:index:` <single: mailing lists;HTCondor>` :index:` <single: mailing lists>`
+:index:`mailing lists;HTCondor<single: mailing lists;HTCondor>` :index:`mailing lists<single: mailing lists>`
 
 In addition, there is an e-mail list at **htcondor-world@cs.wisc.edu**.
 The HTCondor Team uses this e-mail list to announce new releases of

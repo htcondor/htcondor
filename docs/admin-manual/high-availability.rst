@@ -3,7 +3,7 @@
 The High Availability of Daemons
 ================================
 
-:index:` <single: High Availability>`
+:index:`High Availability<single: High Availability>`
 
 In the case that a key machine no longer functions, HTCondor can be
 configured such that another machine takes on the key functions. This is
@@ -17,7 +17,7 @@ unavailable.
 High Availability of the Job Queue
 ----------------------------------
 
-:index:` <single: of job queue;High Availability>`
+:index:`of job queue;High Availability<single: of job queue;High Availability>`
 
 For a pool where all jobs are submitted through a single machine in the
 pool, and there are lots of jobs, this machine becoming nonfunctional
@@ -63,7 +63,7 @@ point):
     HA_LOCK_URL = file:/share/spool 
     VALID_SPOOL_FILES = $(VALID_SPOOL_FILES) SCHEDD.lock
 
-Configuration macro ``MASTER_HA_LIST`` :index:` <single: MASTER_HA_LIST>`
+Configuration macro ``MASTER_HA_LIST`` :index:`MASTER_HA_LIST<single: MASTER_HA_LIST>`
 identifies the *condor\_schedd* daemon as the daemon that is to be
 watched to make sure that it is running. Each machine with this
 configuration must have access to the lock (the job queue) which
@@ -74,7 +74,7 @@ specifies the shared space (``SPOOL``), and the URL of the lock.
 *condor\_preen* is not currently aware of the lock file and will delete
 it if it is placed in the ``SPOOL`` directory, so be sure to add file
 ``SCHEDD.lock`` to ``VALID_SPOOL_FILES``
-:index:` <single: VALID_SPOOL_FILES>`.
+:index:`VALID_SPOOL_FILES<single: VALID_SPOOL_FILES>`.
 
 As HTCondor starts on machines that are configured to run the single
 *condor\_schedd* daemon, the *condor\_master* daemon of the first
@@ -106,7 +106,7 @@ configuration variables used to set timing and polling intervals.
 Working with Remote Job Submission
 ''''''''''''''''''''''''''''''''''
 
-:index:` <single: of job queue, with remote job submission;High Availability>`
+:index:`of job queue, with remote job submission;High Availability<single: of job queue, with remote job submission;High Availability>`
 
 Remote job submission requires identification of the job queue,
 submitting with a command similar to:
@@ -120,7 +120,7 @@ running on a single machine. With the high availability of the job
 queue, there are multiple *condor\_schedd* daemons, of which only one at
 a time is acting as the single submission point. To make remote
 submission of jobs work properly, set the configuration variable
-``SCHEDD_NAME`` :index:` <single: SCHEDD_NAME>` in the local configuration to
+``SCHEDD_NAME`` :index:`SCHEDD_NAME<single: SCHEDD_NAME>` in the local configuration to
 have the same value for each potentially running *condor\_schedd*
 daemon. In addition, the value chosen for the variable ``SCHEDD_NAME``
 will need to include the at symbol (@), such that HTCondor will not
@@ -145,7 +145,7 @@ Then, with this sample configuration, the submit command appears as:
 High Availability of the Central Manager
 ----------------------------------------
 
-:index:` <single: of central manager;High Availability>`
+:index:`of central manager;High Availability<single: of central manager;High Availability>`
 
 Interaction with Flocking
 '''''''''''''''''''''''''
@@ -190,7 +190,7 @@ managers each have a *condor\_collector* daemon running; these are the
 idle central managers.
 
 All submit and execute machines are configured to report to all
-potential central manager machines. :index:` <single: condor_had daemon>`
+potential central manager machines. :index:`condor_had daemon<single: condor_had daemon>`
 
 Each potential central manager machine runs the high availability
 daemon, *condor\_had*. These daemons communicate with each other,
@@ -241,8 +241,8 @@ re-initialized priorities). Therefore, the *condor\_replication* daemon
 exists to replicate this file on all potential central manager machines.
 This daemon promulgates the file in a way that is safe from error, and
 more secure than dependence on a shared file system copy.
-:index:` <single: condor_replication daemon>`
-:index:` <single: condor_transferer daemon>`
+:index:`condor_replication daemon<single: condor_replication daemon>`
+:index:`condor_transferer daemon<single: condor_transferer daemon>`
 
 The *condor\_replication* daemon runs on each potential central manager
 machine as well as on the active central manager machine. There is a
@@ -314,13 +314,13 @@ restarted, only to exit again. If this happens too quickly, neither
 *condor\_negotiator* will run long enough to complete a negotiation
 cycle, resulting in no jobs getting started. Increasing this value via
 ``MASTER_HAD_BACKOFF_CONSTANT``
-:index:` <single: MASTER_HAD_BACKOFF_CONSTANT>` to be larger than a typical
+:index:`MASTER_HAD_BACKOFF_CONSTANT<single: MASTER_HAD_BACKOFF_CONSTANT>` to be larger than a typical
 negotiation cycle can help solve this problem.
 
 To run a high availability pool without the replication feature, do the
 following operations:
 
-#. Set the ``HAD_USE_REPLICATION`` :index:` <single: HAD_USE_REPLICATION>`
+#. Set the ``HAD_USE_REPLICATION`` :index:`HAD_USE_REPLICATION<single: HAD_USE_REPLICATION>`
    configuration variable to ``False``, and thus disable the replication
    on configuration level.
 #. Remove ``REPLICATION`` from both ``DAEMON_LIST`` and
@@ -329,7 +329,7 @@ following operations:
 Sample Configuration
 ''''''''''''''''''''
 
-:index:` <single: sample configuration;High Availability>`
+:index:`sample configuration;High Availability<single: sample configuration;High Availability>`
 
 This section provides sample configurations for high availability.
 

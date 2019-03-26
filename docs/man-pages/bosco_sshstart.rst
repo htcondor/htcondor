@@ -3,8 +3,8 @@
 *bosco\_ssh\_start*
 ===================
 
-:index:` <single: bosco_ssh_start;Bosco commands>`
-:index:` <single: bosco_ssh_start command>`
+:index:`bosco_ssh_start;Bosco commands<single: bosco_ssh_start;Bosco commands>`
+:index:`bosco_ssh_start command<single: bosco_ssh_start command>`
 
 Synopsis
 --------

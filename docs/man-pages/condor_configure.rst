@@ -4,10 +4,10 @@
 ===================
 
 Configure or install HTCondor
-:index:` <single: condor_configure;HTCondor commands>`
-:index:` <single: condor_install;HTCondor commands>`
-:index:` <single: condor_configure command>`
-:index:` <single: condor_install command>`
+:index:`condor_configure;HTCondor commands<single: condor_configure;HTCondor commands>`
+:index:`condor_install;HTCondor commands<single: condor_install;HTCondor commands>`
+:index:`condor_configure command<single: condor_configure command>`
+:index:`condor_install command<single: condor_install command>`
 
 Synopsis
 --------

@@ -3,8 +3,8 @@
 User Priorities and Negotiation
 ===============================
 
-:index:` <single: in machine allocation;priority>`
-:index:` <single: user priority>`
+:index:`in machine allocation;priority<single: in machine allocation;priority>`
+:index:`user priority<single: user priority>`
 
 HTCondor uses priorities to determine machine allocation for jobs. This
 section details the priorities and the allocation of machines
@@ -32,8 +32,8 @@ Macros <../admin-manual/configuration-macros.html>`__.
 Real User Priority (RUP)
 ------------------------
 
-:index:` <single: real user priority (RUP)>`
-:index:` <single: real (RUP);user priority>`
+:index:`real user priority (RUP)<single: real user priority (RUP)>`
+:index:`real (RUP);user priority<single: real (RUP);user priority>`
 
 A user’s RUP measures the resource usage of the user through time. Every
 user begins with a RUP of one half (0.5), and at steady state, the RUP
@@ -43,24 +43,24 @@ for a long period of time, the RUP of that user stabilizes at ten.
 
 However, if the user decreases the number of resources used, the RUP
 gets better. The rate at which the priority value decays can be set by
-the macro ``PRIORITY_HALFLIFE`` :index:` <single: PRIORITY_HALFLIFE>`, a time
+the macro ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE<single: PRIORITY_HALFLIFE>`, a time
 period defined in seconds. Intuitively, if the ``PRIORITY_HALFLIFE``
-:index:` <single: PRIORITY_HALFLIFE>` in a pool is set to 86400 (one day),
+:index:`PRIORITY_HALFLIFE<single: PRIORITY_HALFLIFE>` in a pool is set to 86400 (one day),
 and if a user whose RUP was 10 has no running jobs, that user’s RUP
 would be 5 one day later, 2.5 two days later, and so on.
 
 Effective User Priority (EUP)
 -----------------------------
 
-:index:` <single: effective user priority (EUP)>`
-:index:` <single: effective (EUP);user priority>`
+:index:`effective user priority (EUP)<single: effective user priority (EUP)>`
+:index:`effective (EUP);user priority<single: effective (EUP);user priority>`
 
 The effective user priority (EUP) of a user is used to determine how
 many resources that user may receive. The EUP is linearly related to the
 RUP by a priority factor which may be defined on a per-user basis.
 Unless otherwise configured, an initial priority factor for all users as
 they first submit jobs is set by the configuration variable
-``DEFAULT_PRIO_FACTOR`` :index:` <single: DEFAULT_PRIO_FACTOR>`, and defaults
+``DEFAULT_PRIO_FACTOR`` :index:`DEFAULT_PRIO_FACTOR<single: DEFAULT_PRIO_FACTOR>`, and defaults
 to the value 1000.0. If desired, the priority factors of specific users
 can be increased using *condor\_userprio*, so that some are served
 preferentially.
@@ -78,9 +78,9 @@ EUP may be useful:
 
  Nice users
     A job may be submitted with the submit command
-    **nice\_user**\ :index:` <single: nice_user;submit commands>` set to
+    **nice\_user**\ :index:`nice_user;submit commands<single: nice_user;submit commands>` set to
     ``True``. This nice user job will have its RUP boosted by the
-    ``NICE_USER_PRIO_FACTOR``\ :index:` <single: NICE_USER_PRIO_FACTOR>`
+    ``NICE_USER_PRIO_FACTOR``\ :index:`NICE_USER_PRIO_FACTOR<single: NICE_USER_PRIO_FACTOR>`
     priority factor specified in the configuration, leading to a very
     large EUP. This corresponds to a low priority for resources,
     therefore using resources not used by other HTCondor users.
@@ -94,7 +94,7 @@ EUP may be useful:
     to the local pool. It may be desirable to have HTCondor treat local
     users preferentially over these remote users. If configured,
     HTCondor will boost the RUPs of remote users by
-    ``REMOTE_PRIO_FACTOR`` :index:` <single: REMOTE_PRIO_FACTOR>` specified
+    ``REMOTE_PRIO_FACTOR`` :index:`REMOTE_PRIO_FACTOR<single: REMOTE_PRIO_FACTOR>` specified
     in the configuration, thereby lowering their priority for resources.
 
 The priority boost factors for individual users can be set with the
@@ -105,8 +105,8 @@ page \ `condor\_userprio <../man-pages/condor_userprio.html>`__.
 Priorities in Negotiation and Preemption
 ----------------------------------------
 
-:index:` <single: priority;negotiation>` :index:` <single: priority;matchmaking>`
-:index:` <single: priority;preemption>`
+:index:`priority;negotiation<single: priority;negotiation>` :index:`priority;matchmaking<single: priority;matchmaking>`
+:index:`priority;preemption<single: priority;preemption>`
 
 Priorities are used to ensure that users get their fair share of
 resources. The priority values are used at allocation time, meaning
@@ -119,7 +119,7 @@ Too many preemptions lead to thrashing, a condition in which negotiation
 for a machine identifies a new job with a better priority most every
 cycle. Each job is, in turn, preempted, and no job finishes. To avoid
 this situation, the ``PREEMPTION_REQUIREMENTS``
-:index:` <single: PREEMPTION_REQUIREMENTS>` configuration variable is defined
+:index:`PREEMPTION_REQUIREMENTS<single: PREEMPTION_REQUIREMENTS>` configuration variable is defined
 for and used only by the *condor\_negotiator* daemon to specify the
 conditions that must be met for a preemption to occur. When preemption
 is enabled, it is usually defined to deny preemption if a current
@@ -152,8 +152,8 @@ those with names that end with the string ``ResourcesInUse`` have values
 that may change within the time period associated with a single
 negotiation cycle. Therefore, the configuration variables
 ``PREEMPTION_REQUIREMENTS_STABLE``
-:index:` <single: PREEMPTION_REQUIREMENTS_STABLE>` and and
-``PREEMPTION_RANK_STABLE`` :index:` <single: PREEMPTION_RANK_STABLE>` exist
+:index:`PREEMPTION_REQUIREMENTS_STABLE<single: PREEMPTION_REQUIREMENTS_STABLE>` and and
+``PREEMPTION_RANK_STABLE`` :index:`PREEMPTION_RANK_STABLE<single: PREEMPTION_RANK_STABLE>` exist
 to inform the *condor\_negotiator* daemon that values may change. See
 section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
@@ -162,68 +162,68 @@ Macros <../admin-manual/configuration-macros.html>`__ for definitions of
 these configuration variables.
 
 
-:index:` <single: SubmitterUserPrio;ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``:
+:index:`SubmitterUserPrio;ClassAd attribute, ephemeral<single: SubmitterUserPrio;ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``:
     A floating point value representing the user priority of the
     candidate job.
 
-:index:` <single: SubmitterUserResourcesInUse;ClassAd attribute, ephemeral>`\ ``SubmitterUserResourcesInUse``:
+:index:`SubmitterUserResourcesInUse;ClassAd attribute, ephemeral<single: SubmitterUserResourcesInUse;ClassAd attribute, ephemeral>`\ ``SubmitterUserResourcesInUse``:
     The integer number of slots currently utilized by the user
     submitting the candidate job.
 
-:index:` <single: RemoteUserPrio;ClassAd attribute, ephemeral>`\ ``RemoteUserPrio``:
+:index:`RemoteUserPrio;ClassAd attribute, ephemeral<single: RemoteUserPrio;ClassAd attribute, ephemeral>`\ ``RemoteUserPrio``:
     A floating point value representing the user priority of the job
     currently running on the machine. This version of the attribute,
     with no slot represented in the attribute name, refers to the
     current slot being evaluated.
 
-:index:` <single: Slot<N>_RemoteUserPrio;ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``:
+:index:`Slot<N>_RemoteUserPrio;ClassAd attribute, ephemeral<single: Slot<N>_RemoteUserPrio;ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``:
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
     machine.
 
-:index:` <single: RemoteUserResourcesInUse;ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``:
+:index:`RemoteUserResourcesInUse;ClassAd attribute, ephemeral<single: RemoteUserResourcesInUse;ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``:
     The integer number of slots currently utilized by the user of the
     job currently running on the machine.
 
-:index:` <single: SubmitterGroupResourcesInUse;ClassAd attribute, ephemeral>`\ ``SubmitterGroupResourcesInUse``:
+:index:`SubmitterGroupResourcesInUse;ClassAd attribute, ephemeral<single: SubmitterGroupResourcesInUse;ClassAd attribute, ephemeral>`\ ``SubmitterGroupResourcesInUse``:
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots currently utilized by the group.
 
-:index:` <single: SubmitterGroup;ClassAd attribute, ephemeral>`\ ``SubmitterGroup``:
+:index:`SubmitterGroup;ClassAd attribute, ephemeral<single: SubmitterGroup;ClassAd attribute, ephemeral>`\ ``SubmitterGroup``:
     The accounting group name of the requesting submitter.
 
-:index:` <single: SubmitterGroupQuota;ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``:
+:index:`SubmitterGroupQuota;ClassAd attribute, ephemeral<single: SubmitterGroupQuota;ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``:
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots defined as the group’s quota.
 
-:index:` <single: RemoteGroupResourcesInUse;ClassAd attribute, ephemeral>`\ ``RemoteGroupResourcesInUse``:
+:index:`RemoteGroupResourcesInUse;ClassAd attribute, ephemeral<single: RemoteGroupResourcesInUse;ClassAd attribute, ephemeral>`\ ``RemoteGroupResourcesInUse``:
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots currently utilized by the group.
 
-:index:` <single: RemoteGroup;ClassAd attribute, ephemeral>`\ ``RemoteGroup``:
+:index:`RemoteGroup;ClassAd attribute, ephemeral<single: RemoteGroup;ClassAd attribute, ephemeral>`\ ``RemoteGroup``:
     The accounting group name of the owner of the currently running job.
 
-:index:` <single: RemoteGroupQuota;ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``:
+:index:`RemoteGroupQuota;ClassAd attribute, ephemeral<single: RemoteGroupQuota;ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``:
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots defined as the group’s quota.
 
-:index:` <single: SubmitterNegotiatingGroup;ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``:
+:index:`SubmitterNegotiatingGroup;ClassAd attribute, ephemeral<single: SubmitterNegotiatingGroup;ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``:
     The accounting group name that the candidate job is negotiating
     under.
 
-:index:` <single: RemoteNegotiatingGroup;ClassAd attribute, ephemeral>`\ ``RemoteNegotiatingGroup``:
+:index:`RemoteNegotiatingGroup;ClassAd attribute, ephemeral<single: RemoteNegotiatingGroup;ClassAd attribute, ephemeral>`\ ``RemoteNegotiatingGroup``:
     The accounting group name that the currently running job negotiated
     under.
 
-:index:` <single: SubmitterAutoregroup;ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``:
+:index:`SubmitterAutoregroup;ClassAd attribute, ephemeral<single: SubmitterAutoregroup;ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``:
     Boolean attribute is ``True`` if candidate job is negotiated via
     autoregoup.
 
-:index:` <single: RemoteAutoregroup;ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``:
+:index:`RemoteAutoregroup;ClassAd attribute, ephemeral<single: RemoteAutoregroup;ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``:
     Boolean attribute is ``True`` if currently running job negotiated
     via autoregoup.
 
@@ -240,7 +240,7 @@ time interval δt using the formula
 
 where ρ(u,t) is the number of resources used by user u at time t, and β
 = 0.5\ :sup:`δt∕h`. h is the half life period set by
-``PRIORITY_HALFLIFE`` :index:` <single: PRIORITY_HALFLIFE>`.
+``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE<single: PRIORITY_HALFLIFE>`.
 
 The EUP of user u at time t, π\ :sub:`e`\ (u,t) is calculated by
 
@@ -260,8 +260,8 @@ to this variance.
 Negotiation
 -----------
 
-:index:` <single: negotiation>`
-:index:` <single: negotiation algorithm;matchmaking>`
+:index:`negotiation<single: negotiation>`
+:index:`negotiation algorithm;matchmaking<single: negotiation algorithm;matchmaking>`
 
 Negotiation is the method HTCondor undergoes periodically to match
 queued jobs with resources capable of running jobs. The
@@ -328,9 +328,9 @@ procs in it and one of the jobs cannot be matched, the *condor\_schedd*
 will not return any more jobs in that cluster on that negotiation pass.
 This is an optimization based on the theory that the cluster jobs are
 similar. The configuration variable ``NEGOTIATE_ALL_JOBS_IN_CLUSTER``
-:index:` <single: NEGOTIATE_ALL_JOBS_IN_CLUSTER>` disables the
+:index:`NEGOTIATE_ALL_JOBS_IN_CLUSTER<single: NEGOTIATE_ALL_JOBS_IN_CLUSTER>` disables the
 cluster-skipping optimization. Use of the configuration variable
-``SIGNIFICANT_ATTRIBUTES`` :index:` <single: SIGNIFICANT_ATTRIBUTES>` will
+``SIGNIFICANT_ATTRIBUTES`` :index:`SIGNIFICANT_ATTRIBUTES<single: SIGNIFICANT_ATTRIBUTES>` will
 change the definition of what the *condor\_schedd* considers a cluster
 from the default definition of all jobs that share the same
 ``ClusterId``.
@@ -338,9 +338,9 @@ from the default definition of all jobs that share the same
 The Layperson’s Description of the Pie Spin and Pie Slice
 ---------------------------------------------------------
 
-:index:` <single: pie slice>` :index:` <single: pie spin>`
-:index:` <single: pie slice;scheduling>`
-:index:` <single: pie spin;scheduling>`
+:index:`pie slice<single: pie slice>` :index:`pie spin<single: pie spin>`
+:index:`pie slice;scheduling<single: pie slice;scheduling>`
+:index:`pie spin;scheduling<single: pie spin;scheduling>`
 
 HTCondor schedules in a variety of ways. First, it takes all users who
 have submitted jobs and calculates their priority. Then, it totals the
@@ -375,8 +375,8 @@ continues spinning the pie until it runs out of machines or all the
 Group Accounting
 ----------------
 
-:index:` <single: accounting;groups>` :index:` <single: by group;accounting>`
-:index:` <single: by group;priority>`
+:index:`accounting;groups<single: accounting;groups>` :index:`by group;accounting<single: by group;accounting>`
+:index:`by group;priority<single: by group;priority>`
 
 By default, HTCondor does all accounting on a per-user basis, and this
 accounting is primarily used to compute priorities for HTCondor’s
@@ -389,8 +389,8 @@ identified by the job ClassAd attribute ``Owner``. Jobs that do specify
 an accounting group have all accounting and priority based on the
 specified accounting group. Therefore, accounting based on groups only
 works when the jobs correctly identify their group membership.
-:index:` <single: AcctGroup;ClassAd job attribute>`
-:index:` <single: AcctGroupUser;ClassAd job attribute>`
+:index:`AcctGroup;ClassAd job attribute<single: AcctGroup;ClassAd job attribute>`
+:index:`AcctGroupUser;ClassAd job attribute<single: AcctGroupUser;ClassAd job attribute>`
 
 The preferred method for having a job associate itself with an
 accounting group adds a command to the submit description file that
@@ -412,7 +412,7 @@ job ClassAd attribute, an additional command specifies the user name:
 
 This command causes the job ClassAd attribute ``AcctGroupUser`` to be
 set with this user name.
-:index:` <single: AccountingGroup;ClassAd job attribute>`
+:index:`AccountingGroup;ClassAd job attribute<single: AccountingGroup;ClassAd job attribute>`
 
 The previous method for defining accounting groups is no longer
 recommended. It inserted the job ClassAd attribute ``AccountingGroup``
@@ -471,9 +471,9 @@ scalability issues.
 Accounting Groups with Hierarchical Group Quotas
 ------------------------------------------------
 
-:index:` <single: hierarchical group quotas>`
-:index:` <single: by group;negotiation>` :index:` <single: quotas;groups>`
-:index:` <single: hierarchical quotas for a group;quotas>`
+:index:`hierarchical group quotas<single: hierarchical group quotas>`
+:index:`by group;negotiation<single: by group;negotiation>` :index:`quotas;groups<single: quotas;groups>`
+:index:`hierarchical quotas for a group;quotas<single: hierarchical quotas for a group;quotas>`
 
 An upper limit on the number of slots allocated to a group of users can
 be specified with group quotas. This policy may be desired when
@@ -516,8 +516,8 @@ is the convention, which helps to avoid naming conflicts between groups
 and subgroups. The hierarchy is identified by using the period (’.’)
 character to separate a group name from a subgroup name from a sub
 subgroup name, etc. Group names are case-insensitive for negotiation.
-:index:` <single: <none> group>`
-:index:` <single: <none> group;group accounting>`
+:index:`<none> group<single: <none> group>`
+:index:`<none> group;group accounting<single: <none> group;group accounting>`
 
 At the root of the tree that defines the hierarchical groups is the
 invented "<none>" group. The implied quota of the "<none>" group will be
@@ -531,7 +531,7 @@ power failure removed half of the original 30, leaving fifteen slots,
 physics would be scaled back to a quota of ten, and chemistry to five.
 This scaling can be disabled by setting the *condor\_negotiator*
 configuration variable ``NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION``
-:index:` <single: NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION>` to ``True``. If
+:index:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION<single: NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION>` to ``True``. If
 the sum of the child quotas is less than that of the parent, the child
 quotas remain intact; they are not scaled up. That is, if somehow the
 number of slots doubled from thirty to sixty, physics would still be
@@ -545,9 +545,9 @@ description file. Jobs that do not identify themselves as a group member
 are negotiated for as part of the "<none>" group. Note that this
 requirement is per job, not per user. A given user may be a member of
 many groups. Jobs identify which group they are in by setting the
-**accounting\_group**\ :index:` <single: accounting_group;submit commands>`
+**accounting\_group**\ :index:`accounting_group;submit commands<single: accounting_group;submit commands>`
 and
-**accounting\_group\_user**\ :index:` <single: accounting_group_user;submit commands>`
+**accounting\_group\_user**\ :index:`accounting_group_user;submit commands<single: accounting_group_user;submit commands>`
 commands within the submit description file, as specified in
 section \ `3.6.7 <#x34-2390003.6.7>`__. For example:
 
@@ -628,10 +628,10 @@ If a given group or sub-group accepts surplus, then that given group is
 allowed to exceed its configured quota, by using the leftover, unused
 quota of other groups. Surplus is disabled for all groups by default.
 Accepting surplus may be enabled for all groups by setting
-``GROUP_ACCEPT_SURPLUS`` :index:` <single: GROUP_ACCEPT_SURPLUS>` to
+``GROUP_ACCEPT_SURPLUS`` :index:`GROUP_ACCEPT_SURPLUS<single: GROUP_ACCEPT_SURPLUS>` to
 ``True``. Surplus may be enabled for individual groups by setting
 ``GROUP_ACCEPT_SURPLUS_<groupname>``
-:index:` <single: GROUP_ACCEPT_SURPLUS_<groupname>>` to ``True``. Consider
+:index:`GROUP_ACCEPT_SURPLUS_<groupname><single: GROUP_ACCEPT_SURPLUS_<groupname>>` to ``True``. Consider
 the following example:
 
 ::
@@ -671,12 +671,12 @@ group. It does this one group at a time. By default, it goes in
 smallest fraction of its quota goes first, then the next, and so on. The
 "<none>" group implicitly at the root of the tree goes last. This
 ordering can be replaced by defining configuration variable
-``GROUP_SORT_EXPR`` :index:` <single: GROUP_SORT_EXPR>`. The
+``GROUP_SORT_EXPR`` :index:`GROUP_SORT_EXPR<single: GROUP_SORT_EXPR>`. The
 *condor\_negotiator* evaluates this ClassAd expression for each group
 ClassAd, sorts the groups by the floating point result, and then
 negotiates with the smallest positive value going first. Available
 attributes for sorting with ``GROUP_SORT_EXPR``
-:index:` <single: GROUP_SORT_EXPR>` include:
+:index:`GROUP_SORT_EXPR<single: GROUP_SORT_EXPR>` include:
 
 --------------
 
@@ -702,7 +702,7 @@ all the physics jobs are running, and idle slots remain, are chemistry
 jobs allowed to run. The default "starvation group order" can be used to
 implement this. By setting configuration variable
 ``NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION``
-:index:` <single: NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION>` to ``True``, and
+:index:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION<single: NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION>` to ``True``, and
 setting the physics quota to a number so large that it cannot ever be
 met, such as one million, the physics group will always be the "most
 starving" group, will always negotiate first, and will always be unable

@@ -4,7 +4,7 @@
 =================
 
 Display and summarize job statistics from job log files.
-:index:` <single: condor_userlog;HTCondor commands>`\ :index:` <single: condor_userlog command>`
+:index:`condor_userlog;HTCondor commands<single: condor_userlog;HTCondor commands>`\ :index:`condor_userlog command<single: condor_userlog command>`
 
 Synopsis
 --------

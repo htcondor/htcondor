@@ -3,7 +3,7 @@
 Welcome to HTCondor
 ===================
 
-:index:` <single: user manual;HTCondor>` :index:` <single: user manual>`
+:index:`user manual;HTCondor<single: user manual;HTCondor>` :index:`user manual<single: user manual>`
 
 HTCondor is developed by the Center for High Throughput Computing at the
 University of Wisconsin-Madison (UW-Madison), and was first installed as

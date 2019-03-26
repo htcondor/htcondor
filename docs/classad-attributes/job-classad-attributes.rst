@@ -3,103 +3,103 @@
 Job ClassAd Attributes
 ======================
 
-:index:` <single: job attributes;ClassAd>`
-:index:` <single: Absent;ClassAd job attribute>`
-:index:` <single: job ClassAd attribute;Absent>`
+:index:`job attributes;ClassAd<single: job attributes;ClassAd>`
+:index:`Absent;ClassAd job attribute<single: Absent;ClassAd job attribute>`
+:index:`job ClassAd attribute;Absent<single: job ClassAd attribute;Absent>`
 
  ``Absent``:
     Boolean set to true ``True`` if the ad is absent.
-    :index:` <single: AcctGroup;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;AcctGroup>`
+    :index:`AcctGroup;ClassAd job attribute<single: AcctGroup;ClassAd job attribute>`
+    :index:`job ClassAd attribute;AcctGroup<single: job ClassAd attribute;AcctGroup>`
  ``AcctGroup``:
     The accounting group name, as set in the submit description file via
     the
-    **accounting\_group**\ :index:` <single: accounting_group;submit commands>`
+    **accounting\_group**\ :index:`accounting_group;submit commands<single: accounting_group;submit commands>`
     command. This attribute is only present if an accounting group was
     requested by the submission. See section \ `User Priorities and
     Negotiation <../admin-manual/user-priorities-negotiation.html>`__
     for more information about accounting groups.
-    :index:` <single: AcctGroupUser;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;AcctGroupUser>`
+    :index:`AcctGroupUser;ClassAd job attribute<single: AcctGroupUser;ClassAd job attribute>`
+    :index:`job ClassAd attribute;AcctGroupUser<single: job ClassAd attribute;AcctGroupUser>`
  ``AcctGroupUser``:
     The user name associated with the accounting group. This attribute
     is only present if an accounting group was requested by the
-    submission. :index:` <single: AllRemoteHosts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;AllRemoteHosts>`
+    submission. :index:`AllRemoteHosts;ClassAd job attribute<single: AllRemoteHosts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;AllRemoteHosts<single: job ClassAd attribute;AllRemoteHosts>`
  ``AllRemoteHosts``:
     String containing a comma-separated list of all the remote machines
     running a parallel or mpi universe job.
-    :index:` <single: Args;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Args>`
+    :index:`Args;ClassAd job attribute<single: Args;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Args<single: job ClassAd attribute;Args>`
  ``Args``:
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the old syntax, as
     specified in
     section \ `condor\_submit <../man-pages/condor_submit.html>`__.
-    :index:` <single: Arguments;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Arguments>`
+    :index:`Arguments;ClassAd job attribute<single: Arguments;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Arguments<single: job ClassAd attribute;Arguments>`
  ``Arguments``:
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the new syntax, as
     specified in
     section \ `condor\_submit <../man-pages/condor_submit.html>`__.
-    :index:` <single: BatchQueue;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BatchQueue>`
+    :index:`BatchQueue;ClassAd job attribute<single: BatchQueue;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BatchQueue<single: job ClassAd attribute;BatchQueue>`
  ``BatchQueue``:
     For grid universe jobs destined for PBS, LSF or SGE, the name of the
     queue in the remote batch system.
-    :index:` <single: BlockReadKbytes;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BlockReadKbytes>`
+    :index:`BlockReadKbytes;ClassAd job attribute<single: BlockReadKbytes;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BlockReadKbytes<single: job ClassAd attribute;BlockReadKbytes>`
  ``BlockReadKbytes``:
     The integer number of KiB read from disk for this job.
-    :index:` <single: BlockReads;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BlockReads>`
+    :index:`BlockReads;ClassAd job attribute<single: BlockReads;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BlockReads<single: job ClassAd attribute;BlockReads>`
  ``BlockReads``:
     The integer number of disk blocks read for this job.
-    :index:` <single: BlockWriteKbytes;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BlockWriteKbytes>`
+    :index:`BlockWriteKbytes;ClassAd job attribute<single: BlockWriteKbytes;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BlockWriteKbytes<single: job ClassAd attribute;BlockWriteKbytes>`
  ``BlockWriteKbytes``:
     The integer number of KiB written to disk for this job.
-    :index:` <single: BlockWrites;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BlockWrites>`
+    :index:`BlockWrites;ClassAd job attribute<single: BlockWrites;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BlockWrites<single: job ClassAd attribute;BlockWrites>`
  ``BlockWrites``:
     The integer number of blocks written to disk for this job.
-    :index:` <single: BoincAuthenticatorFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;BoincAuthenticatorFile>`
+    :index:`BoincAuthenticatorFile;ClassAd job attribute<single: BoincAuthenticatorFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;BoincAuthenticatorFile<single: job ClassAd attribute;BoincAuthenticatorFile>`
  ``BoincAuthenticatorFile``:
     Used for grid type boinc jobs; a string taken from the definition of
     the submit description file command
-    **boinc\_authenticator\_file**\ :index:` <single: boinc_authenticator_file;submit commands>`.
+    **boinc\_authenticator\_file**\ :index:`boinc_authenticator_file;submit commands<single: boinc_authenticator_file;submit commands>`.
     Defines the path and file name of the file containing the
     authenticator string to use to authenticate to the BOINC service.
-    :index:` <single: CkptArch;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CkptArch>`
+    :index:`CkptArch;ClassAd job attribute<single: CkptArch;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CkptArch<single: job ClassAd attribute;CkptArch>`
  ``CkptArch``:
     String describing the architecture of the machine this job executed
     on at the time it last produced a checkpoint. If the job has never
     produced a checkpoint, this attribute is ``undefined``.
-    :index:` <single: CkptOpSys;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CkptOpSys>`
+    :index:`CkptOpSys;ClassAd job attribute<single: CkptOpSys;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CkptOpSys<single: job ClassAd attribute;CkptOpSys>`
  ``CkptOpSys``:
     String describing the operating system of the machine this job
     executed on at the time it last produced a checkpoint. If the job
     has never produced a checkpoint, this attribute is ``undefined``.
-    :index:` <single: ClusterId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ClusterId>`
-    :index:` <single: definition;cluster>`
-    :index:` <single: cluster identifier;job ID>`
+    :index:`ClusterId;ClassAd job attribute<single: ClusterId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ClusterId<single: job ClassAd attribute;ClusterId>`
+    :index:`definition;cluster<single: definition;cluster>`
+    :index:`cluster identifier;job ID<single: cluster identifier;job ID>`
  ``ClusterId``:
     Integer cluster identifier for this job. A cluster is a group of
     jobs that were submitted together. Each job has its own unique job
     identifier within the cluster, but shares a common cluster
     identifier. The value changes each time a job or set of jobs are
     queued for execution under HTCondor.
-    :index:` <single: Cmd;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Cmd>`
+    :index:`Cmd;ClassAd job attribute<single: Cmd;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Cmd<single: job ClassAd attribute;Cmd>`
  ``Cmd``:
     The path to and the file name of the job to be executed.
-    :index:` <single: CommittedTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CommittedTime>`
+    :index:`CommittedTime;ClassAd job attribute<single: CommittedTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CommittedTime<single: job ClassAd attribute;CommittedTime>`
  ``CommittedTime``:
     The number of seconds of wall clock time that the job has been
     allocated a machine, excluding the time spent on run attempts that
@@ -111,67 +111,67 @@ Job ClassAd Attributes
 
         CommittedTime - CommittedSuspensionTime
 
-    :index:` <single: CommittedSlotTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CommittedSlotTime>`
+    :index:`CommittedSlotTime;ClassAd job attribute<single: CommittedSlotTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CommittedSlotTime<single: job ClassAd attribute;CommittedSlotTime>`
 
  ``CommittedSlotTime``:
     This attribute is identical to ``CommittedTime`` except that the
     time is multiplied by the ``SlotWeight`` of the machine(s) that ran
     the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
-    :index:` <single: SYSTEM_JOB_MACHINE_ATTRS>`.
-    :index:` <single: CommittedSuspensionTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CommittedSuspensionTime>`
+    :index:`SYSTEM_JOB_MACHINE_ATTRS<single: SYSTEM_JOB_MACHINE_ATTRS>`.
+    :index:`CommittedSuspensionTime;ClassAd job attribute<single: CommittedSuspensionTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CommittedSuspensionTime<single: job ClassAd attribute;CommittedSuspensionTime>`
  ``CommittedSuspensionTime``:
     A running total of the number of seconds the job has spent in
     suspension during time in which the job was not evicted without a
     checkpoint. This number is updated when the job is checkpointed and
     when it exits.
-    :index:` <single: CompletionDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CompletionDate>`
+    :index:`CompletionDate;ClassAd job attribute<single: CompletionDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CompletionDate<single: job ClassAd attribute;CompletionDate>`
  ``CompletionDate``:
     The time when the job completed, or the value 0 if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
-    :index:` <single: ConcurrencyLimits;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ConcurrencyLimits>`
+    :index:`ConcurrencyLimits;ClassAd job attribute<single: ConcurrencyLimits;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ConcurrencyLimits<single: job ClassAd attribute;ConcurrencyLimits>`
  ``ConcurrencyLimits``:
     A string list, delimited by commas and space characters. The items
     in the list identify named resources that the job requires. The
     value can be a ClassAd expression which, when evaluated in the
     context of the job ClassAd and a matching machine ClassAd, results
     in a string list.
-    :index:` <single: CumulativeSlotTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CumulativeSlotTime>`
+    :index:`CumulativeSlotTime;ClassAd job attribute<single: CumulativeSlotTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CumulativeSlotTime<single: job ClassAd attribute;CumulativeSlotTime>`
  ``CumulativeSlotTime``:
     This attribute is identical to ``RemoteWallClockTime`` except that
     the time is multiplied by the ``SlotWeight`` of the machine(s) that
     ran the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
-    :index:` <single: SYSTEM_JOB_MACHINE_ATTRS>`.
-    :index:` <single: CumulativeSuspensionTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CumulativeSuspensionTime>`
+    :index:`SYSTEM_JOB_MACHINE_ATTRS<single: SYSTEM_JOB_MACHINE_ATTRS>`.
+    :index:`CumulativeSuspensionTime;ClassAd job attribute<single: CumulativeSuspensionTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CumulativeSuspensionTime<single: job ClassAd attribute;CumulativeSuspensionTime>`
  ``CumulativeSuspensionTime``:
     A running total of the number of seconds the job has spent in
     suspension for the life of the job.
-    :index:` <single: CumulativeTransferTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CumulativeTransferTime>`
+    :index:`CumulativeTransferTime;ClassAd job attribute<single: CumulativeTransferTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CumulativeTransferTime<single: job ClassAd attribute;CumulativeTransferTime>`
  ``CumulativeTransferTime``:
     The total time, in seconds, that condor has spent transferring the
     input and output sandboxes for the life of the job.
-    :index:` <single: CurrentHosts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CurrentHosts>`
+    :index:`CurrentHosts;ClassAd job attribute<single: CurrentHosts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CurrentHosts<single: job ClassAd attribute;CurrentHosts>`
  ``CurrentHosts``:
     The number of hosts in the claimed state, due to this job.
-    :index:` <single: DAGManJobId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAGManJobId>`
+    :index:`DAGManJobId;ClassAd job attribute<single: DAGManJobId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAGManJobId<single: job ClassAd attribute;DAGManJobId>`
  ``DAGManJobId``:
     For a DAGMan node job only, the ``ClusterId`` job ClassAd attribute
     of the *condor\_dagman* job which is the parent of this node job.
     For nested DAGs, this attribute holds only the ``ClusterId`` of the
     job’s immediate parent.
-    :index:` <single: DAGParentNodeNames;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAGParentNodeNames>`
+    :index:`DAGParentNodeNames;ClassAd job attribute<single: DAGParentNodeNames;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAGParentNodeNames<single: job ClassAd attribute;DAGParentNodeNames>`
  ``DAGParentNodeNames``:
     For a DAGMan node job only, a comma separated list of each *JobName*
     which is a parent node of this job’s node. This attribute is passed
@@ -184,16 +184,16 @@ Job ClassAd Attributes
 
           -append +DAGParentNodeNames=B,C
 
-    :index:` <single: DAGManNodesLog;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAGManNodesLog>`
+    :index:`DAGManNodesLog;ClassAd job attribute<single: DAGManNodesLog;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAGManNodesLog<single: job ClassAd attribute;DAGManNodesLog>`
 
  ``DAGManNodesLog``:
     For a DAGMan node job only, gives the path to an event log used
     exclusively by DAGMan to monitor the state of the DAG’s jobs. Events
     are written to this log file in addition to any log file specified
     in the job’s submit description file.
-    :index:` <single: DAGManNodesMask;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAGManNodesMask>`
+    :index:`DAGManNodesMask;ClassAd job attribute<single: DAGManNodesMask;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAGManNodesMask<single: job ClassAd attribute;DAGManNodesMask>`
  ``DAGManNodesMask``:
     For a DAGMan node job only, a comma-separated list of the event
     codes that should be written to the log specified by
@@ -222,15 +222,15 @@ Job ClassAd Attributes
     If ``DAGManNodesLog`` is not defined, it has no effect. The value of
     ``DAGManNodesMask`` does not affect events recorded in the job event
     log file referred to by ``UserLog``.
-    :index:` <single: DelegateJobGSICredentialsLifetime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DelegateJobGSICredentialsLifetime>`
+    :index:`DelegateJobGSICredentialsLifetime;ClassAd job attribute<single: DelegateJobGSICredentialsLifetime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DelegateJobGSICredentialsLifetime<single: job ClassAd attribute;DelegateJobGSICredentialsLifetime>`
 
  ``DelegateJobGSICredentialsLifetime``:
     An integer that specifies the maximum number of seconds for which
     delegated proxies should be valid. The default behavior is
     determined by the configuration setting
     ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>`, which defaults
+    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME<single: DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME>`, which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
@@ -238,10 +238,10 @@ Job ClassAd Attributes
     globus grid jobs, which always behave as though this setting were 0.
     This setting has no effect if the configuration setting
     ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:` <single: DELEGATE_JOB_GSI_CREDENTIALS>` is false, because in
+    :index:`DELEGATE_JOB_GSI_CREDENTIALS<single: DELEGATE_JOB_GSI_CREDENTIALS>` is false, because in
     that case the job proxy is copied rather than delegated.
-    :index:` <single: DiskUsage;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DiskUsage>`
+    :index:`DiskUsage;ClassAd job attribute<single: DiskUsage;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DiskUsage<single: job ClassAd attribute;DiskUsage>`
  ``DiskUsage``:
     Amount of disk space (KiB) in the HTCondor execute directory on the
     execute machine that this job has used. An initial value may be set
@@ -257,178 +257,178 @@ Job ClassAd Attributes
     image size. If not initialized by the job, non-**vm** universe jobs
     will default to an initial value of the sum of the job’s executable
     and all input files.
-    :index:` <single: EC2AccessKeyId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2AccessKeyId>`
+    :index:`EC2AccessKeyId;ClassAd job attribute<single: EC2AccessKeyId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2AccessKeyId<single: job ClassAd attribute;EC2AccessKeyId>`
 
  ``EC2AccessKeyId``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_access\_key\_id**\ :index:` <single: ec2_access_key_id;submit commands>`.
+    **ec2\_access\_key\_id**\ :index:`ec2_access_key_id;submit commands<single: ec2_access_key_id;submit commands>`.
     Defines the path and file name of the file containing the EC2 Query
-    API’s access key. :index:` <single: EC2AmiID;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2AmiID>`
+    API’s access key. :index:`EC2AmiID;ClassAd job attribute<single: EC2AmiID;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2AmiID<single: job ClassAd attribute;EC2AmiID>`
  ``EC2AmiID``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_ami\_id**\ :index:` <single: ec2_ami_id;submit commands>`.
+    **ec2\_ami\_id**\ :index:`ec2_ami_id;submit commands<single: ec2_ami_id;submit commands>`.
     Identifies the machine image of the instance.
-    :index:` <single: EC2BlockDeviceMapping;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2BlockDeviceMapping>`
+    :index:`EC2BlockDeviceMapping;ClassAd job attribute<single: EC2BlockDeviceMapping;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2BlockDeviceMapping<single: job ClassAd attribute;EC2BlockDeviceMapping>`
  ``EC2BlockDeviceMapping``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_block\_device\_mapping**\ :index:` <single: ec2_block_device_mapping;submit commands>`.
+    **ec2\_block\_device\_mapping**\ :index:`ec2_block_device_mapping;submit commands<single: ec2_block_device_mapping;submit commands>`.
     Defines the map from block device names to kernel device names for
-    the instance. :index:` <single: EC2ElasticIp;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2ElasticIp>`
+    the instance. :index:`EC2ElasticIp;ClassAd job attribute<single: EC2ElasticIp;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2ElasticIp<single: job ClassAd attribute;EC2ElasticIp>`
  ``EC2ElasticIp``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_elastic\_ip**\ :index:` <single: ec2_elastic_ip;submit commands>`.
+    **ec2\_elastic\_ip**\ :index:`ec2_elastic_ip;submit commands<single: ec2_elastic_ip;submit commands>`.
     Specifies an Elastic IP address to associate with the instance.
-    :index:` <single: EC2IamProfileArn;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2IamProfileArn>`
+    :index:`EC2IamProfileArn;ClassAd job attribute<single: EC2IamProfileArn;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2IamProfileArn<single: job ClassAd attribute;EC2IamProfileArn>`
  ``EC2IamProfileArn``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_iam\_profile\_arn**\ :index:` <single: ec2_iam_profile_arn;submit commands>`.
+    **ec2\_iam\_profile\_arn**\ :index:`ec2_iam_profile_arn;submit commands<single: ec2_iam_profile_arn;submit commands>`.
     Specifies the IAM (instance) profile to associate with this
-    instance. :index:` <single: EC2IamProfileName;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2IamProfileName>`
+    instance. :index:`EC2IamProfileName;ClassAd job attribute<single: EC2IamProfileName;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2IamProfileName<single: job ClassAd attribute;EC2IamProfileName>`
  ``EC2IamProfileName``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_iam\_profile\_name**\ :index:` <single: ec2_iam_profile_name;submit commands>`.
+    **ec2\_iam\_profile\_name**\ :index:`ec2_iam_profile_name;submit commands<single: ec2_iam_profile_name;submit commands>`.
     Specifies the IAM (instance) profile to associate with this
-    instance. :index:` <single: EC2InstanceName;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2InstanceName>`
+    instance. :index:`EC2InstanceName;ClassAd job attribute<single: EC2InstanceName;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2InstanceName<single: job ClassAd attribute;EC2InstanceName>`
  ``EC2InstanceName``:
     Used for grid type ec2 jobs; a string set for the job once the
     instance starts running, as assigned by the EC2 service, that
     represents the unique ID assigned to the instance by the EC2
-    service. :index:` <single: EC2InstanceName;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2InstanceName>`
+    service. :index:`EC2InstanceName;ClassAd job attribute<single: EC2InstanceName;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2InstanceName<single: job ClassAd attribute;EC2InstanceName>`
  ``EC2InstanceName``:
     Used for grid type ec2 jobs; a string set for the job once the
     instance starts running, as assigned by the EC2 service, that
     represents the unique ID assigned to the instance by the EC2
-    service. :index:` <single: EC2InstanceType;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2InstanceType>`
+    service. :index:`EC2InstanceType;ClassAd job attribute<single: EC2InstanceType;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2InstanceType<single: job ClassAd attribute;EC2InstanceType>`
  ``EC2InstanceType``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_instance\_type**\ :index:` <single: ec2_instance_type;submit commands>`.
+    **ec2\_instance\_type**\ :index:`ec2_instance_type;submit commands<single: ec2_instance_type;submit commands>`.
     Specifies a service-specific instance type.
-    :index:` <single: EC2KeyPair;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2KeyPair>`
+    :index:`EC2KeyPair;ClassAd job attribute<single: EC2KeyPair;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2KeyPair<single: job ClassAd attribute;EC2KeyPair>`
  ``EC2KeyPair``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_keypair**\ :index:` <single: ec2_keypair;submit commands>`.
+    **ec2\_keypair**\ :index:`ec2_keypair;submit commands<single: ec2_keypair;submit commands>`.
     Defines the key pair associated with the EC2 instance.
-    :index:` <single: EC2ParameterNames;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2ParameterNames>`
+    :index:`EC2ParameterNames;ClassAd job attribute<single: EC2ParameterNames;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2ParameterNames<single: job ClassAd attribute;EC2ParameterNames>`
  ``EC2ParameterNames``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_parameter\_names**\ :index:` <single: ec2_parameter_names;submit commands>`.
+    **ec2\_parameter\_names**\ :index:`ec2_parameter_names;submit commands<single: ec2_parameter_names;submit commands>`.
     Contains a space or comma separated list of the names of additional
     parameters to pass when instantiating an instance.
-    :index:` <single: EC2SpotPrice;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2SpotPrice>`
+    :index:`EC2SpotPrice;ClassAd job attribute<single: EC2SpotPrice;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2SpotPrice<single: job ClassAd attribute;EC2SpotPrice>`
  ``EC2SpotPrice``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_spot\_price**\ :index:` <single: ec2_spot_price;submit commands>`.
+    **ec2\_spot\_price**\ :index:`ec2_spot_price;submit commands<single: ec2_spot_price;submit commands>`.
     Defines the maximum amount per hour a job submitter is willing to
     pay to run this job.
-    :index:` <single: EC2SpotRequestID;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2SpotRequestID>`
+    :index:`EC2SpotRequestID;ClassAd job attribute<single: EC2SpotRequestID;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2SpotRequestID<single: job ClassAd attribute;EC2SpotRequestID>`
  ``EC2SpotRequestID``:
     Used for grid type ec2 jobs; identifies the spot request HTCondor
     made on behalf of this job.
-    :index:` <single: EC2StatusReasonCode;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2StatusReasonCode>`
+    :index:`EC2StatusReasonCode;ClassAd job attribute<single: EC2StatusReasonCode;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2StatusReasonCode<single: job ClassAd attribute;EC2StatusReasonCode>`
  ``EC2StatusReasonCode``:
     Used for grid type ec2 jobs; reports the reason for the most recent
     EC2-level state transition. Can be used to determine if a spot
     request was terminated due to a rise in the spot price.
-    :index:` <single: EC2TagNames;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2TagNames>`
+    :index:`EC2TagNames;ClassAd job attribute<single: EC2TagNames;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2TagNames<single: job ClassAd attribute;EC2TagNames>`
  ``EC2TagNames``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_tag\_names**\ :index:` <single: ec2_tag_names;submit commands>`.
+    **ec2\_tag\_names**\ :index:`ec2_tag_names;submit commands<single: ec2_tag_names;submit commands>`.
     Defines the set, and case, of tags associated with the EC2 instance.
-    :index:` <single: EC2KeyPairFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2KeyPairFile>`
+    :index:`EC2KeyPairFile;ClassAd job attribute<single: EC2KeyPairFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2KeyPairFile<single: job ClassAd attribute;EC2KeyPairFile>`
  ``EC2KeyPairFile``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_keypair\_file**\ :index:` <single: ec2_keypair_file;submit commands>`.
+    **ec2\_keypair\_file**\ :index:`ec2_keypair_file;submit commands<single: ec2_keypair_file;submit commands>`.
     Defines the path and file name of the file into which to write the
     SSH key used to access the image, once it is running.
-    :index:` <single: EC2RemoteVirtualMachineName;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2RemoteVirtualMachineName>`
+    :index:`EC2RemoteVirtualMachineName;ClassAd job attribute<single: EC2RemoteVirtualMachineName;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2RemoteVirtualMachineName<single: job ClassAd attribute;EC2RemoteVirtualMachineName>`
  ``EC2RemoteVirtualMachineName``:
     Used for grid type ec2 jobs; a string set for the job once the
     instance starts running, as assigned by the EC2 service, that
     represents the host name upon which the instance runs, such that the
     user can communicate with the running instance.
-    :index:` <single: EC2SecretAccessKey;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2SecretAccessKey>`
+    :index:`EC2SecretAccessKey;ClassAd job attribute<single: EC2SecretAccessKey;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2SecretAccessKey<single: job ClassAd attribute;EC2SecretAccessKey>`
  ``EC2SecretAccessKey``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_secret\_access\_key**\ :index:` <single: ec2_secret_access_key;submit commands>`.
+    **ec2\_secret\_access\_key**\ :index:`ec2_secret_access_key;submit commands<single: ec2_secret_access_key;submit commands>`.
     Defines that path and file name of the file containing the EC2 Query
     API’s secret access key.
-    :index:` <single: EC2SecurityGroups;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2SecurityGroups>`
+    :index:`EC2SecurityGroups;ClassAd job attribute<single: EC2SecurityGroups;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2SecurityGroups<single: job ClassAd attribute;EC2SecurityGroups>`
  ``EC2SecurityGroups``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_security\_groups**\ :index:` <single: ec2_security_groups;submit commands>`.
+    **ec2\_security\_groups**\ :index:`ec2_security_groups;submit commands<single: ec2_security_groups;submit commands>`.
     Defines the list of EC2 security groups which should be associated
     with the job.
-    :index:` <single: EC2SecurityIDs;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2SecurityIDs>`
+    :index:`EC2SecurityIDs;ClassAd job attribute<single: EC2SecurityIDs;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2SecurityIDs<single: job ClassAd attribute;EC2SecurityIDs>`
  ``EC2SecurityIDs``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_security\_ids**\ :index:` <single: ec2_security_ids;submit commands>`.
+    **ec2\_security\_ids**\ :index:`ec2_security_ids;submit commands<single: ec2_security_ids;submit commands>`.
     Defines the list of EC2 security group IDs which should be
     associated with the job.
-    :index:` <single: EC2UserData;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2UserData>`
+    :index:`EC2UserData;ClassAd job attribute<single: EC2UserData;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2UserData<single: job ClassAd attribute;EC2UserData>`
  ``EC2UserData``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_user\_data**\ :index:` <single: ec2_user_data;submit commands>`.
+    **ec2\_user\_data**\ :index:`ec2_user_data;submit commands<single: ec2_user_data;submit commands>`.
     Defines a block of data that can be accessed by the virtual machine.
-    :index:` <single: EC2UserDataFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EC2UserDataFile>`
+    :index:`EC2UserDataFile;ClassAd job attribute<single: EC2UserDataFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EC2UserDataFile<single: job ClassAd attribute;EC2UserDataFile>`
  ``EC2UserDataFile``:
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
-    **ec2\_user\_data\_file**\ :index:` <single: ec2_user_data_file;submit commands>`.
+    **ec2\_user\_data\_file**\ :index:`ec2_user_data_file;submit commands<single: ec2_user_data_file;submit commands>`.
     Specifies a path and file name of a file containing data that can be
     accessed by the virtual machine.
-    :index:` <single: EmailAttributes;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EmailAttributes>`
+    :index:`EmailAttributes;ClassAd job attribute<single: EmailAttributes;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EmailAttributes<single: job ClassAd attribute;EmailAttributes>`
  ``EmailAttributes``:
     A string containing a comma-separated list of job ClassAd
     attributes. For each attribute name in the list, its value will be
     included in the e-mail notification upon job completion.
-    :index:` <single: EncryptExecuteDirectory;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EncryptExecuteDirectory>`
+    :index:`EncryptExecuteDirectory;ClassAd job attribute<single: EncryptExecuteDirectory;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EncryptExecuteDirectory<single: job ClassAd attribute;EncryptExecuteDirectory>`
  ``EncryptExecuteDirectory``:
     A boolean value taken from the submit description file command
-    **encrypt\_execute\_directory**\ :index:` <single: encrypt_execute_directory;submit commands>`.
+    **encrypt\_execute\_directory**\ :index:`encrypt_execute_directory;submit commands<single: encrypt_execute_directory;submit commands>`.
     It specifies if HTCondor should encrypt the remote scratch directory
     on the machine where the job executes.
-    :index:` <single: EnteredCurrentStatus;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;EnteredCurrentStatus>`
+    :index:`EnteredCurrentStatus;ClassAd job attribute<single: EnteredCurrentStatus;ClassAd job attribute>`
+    :index:`job ClassAd attribute;EnteredCurrentStatus<single: job ClassAd attribute;EnteredCurrentStatus>`
  ``EnteredCurrentStatus``:
     An integer containing the epoch time of when the job entered into
     its current status So for example, if the job is on hold, the
@@ -439,107 +439,107 @@ Job ClassAd Attributes
             time() - EnteredCurrentStatus
 
     will equal the number of seconds that the job has been on hold.
-    :index:` <single: Env;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Env>`
+    :index:`Env;ClassAd job attribute<single: Env;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Env<single: job ClassAd attribute;Env>`
 
  ``Env``:
     A string representing the environment variables passed to the job,
     when those arguments are specified using the old syntax, as
     specified in
     section \ `condor\_submit <../man-pages/condor_submit.html>`__.
-    :index:` <single: Environment;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Environment>`
+    :index:`Environment;ClassAd job attribute<single: Environment;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Environment<single: job ClassAd attribute;Environment>`
  ``Environment``:
     A string representing the environment variables passed to the job,
     when those arguments are specified using the new syntax, as
     specified in
     section \ `condor\_submit <../man-pages/condor_submit.html>`__.
-    :index:` <single: ExecutableSize;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ExecutableSize>`
+    :index:`ExecutableSize;ClassAd job attribute<single: ExecutableSize;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ExecutableSize<single: job ClassAd attribute;ExecutableSize>`
  ``ExecutableSize``:
     Size of the executable in KiB.
-    :index:` <single: ExitBySignal;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ExitBySignal>`
+    :index:`ExitBySignal;ClassAd job attribute<single: ExitBySignal;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ExitBySignal<single: job ClassAd attribute;ExitBySignal>`
  ``ExitBySignal``:
     An attribute that is ``True`` when a user job exits via a signal and
     ``False`` otherwise. For some grid universe jobs, how the job exited
     is unavailable. In this case, ``ExitBySignal`` is set to ``False``.
-    :index:` <single: ExitCode;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ExitCode>`
+    :index:`ExitCode;ClassAd job attribute<single: ExitCode;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ExitCode<single: job ClassAd attribute;ExitCode>`
  ``ExitCode``:
     When a user job exits by means other than a signal, this is the exit
     return code of the user job. For some grid universe jobs, how the
     job exited is unavailable. In this case, ``ExitCode`` is set to 0.
-    :index:` <single: ExitSignal;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ExitSignal>`
+    :index:`ExitSignal;ClassAd job attribute<single: ExitSignal;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ExitSignal<single: job ClassAd attribute;ExitSignal>`
  ``ExitSignal``:
     When a user job exits by means of an unhandled signal, this
     attribute takes on the numeric value of the signal. For some grid
     universe jobs, how the job exited is unavailable. In this case,
     ``ExitSignal`` will be undefined.
-    :index:` <single: ExitStatus;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ExitStatus>`
+    :index:`ExitStatus;ClassAd job attribute<single: ExitStatus;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ExitStatus<single: job ClassAd attribute;ExitStatus>`
  ``ExitStatus``:
     The way that HTCondor previously dealt with a job’s exit status.
     This attribute should no longer be used. It is not always accurate
     in heterogeneous pools, or if the job exited with a signal. Instead,
     see the attributes: ``ExitBySignal``, ``ExitCode``, and
-    ``ExitSignal``. :index:` <single: GceAuthFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceAuthFile>`
+    ``ExitSignal``. :index:`GceAuthFile;ClassAd job attribute<single: GceAuthFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceAuthFile<single: job ClassAd attribute;GceAuthFile>`
  ``GceAuthFile``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_auth\_file**\ :index:` <single: gce_auth_file;submit commands>`.
+    **gce\_auth\_file**\ :index:`gce_auth_file;submit commands<single: gce_auth_file;submit commands>`.
     Defines the path and file name of the file containing authorization
     credentials to use the GCE service.
-    :index:` <single: GceImage;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceImage>`
+    :index:`GceImage;ClassAd job attribute<single: GceImage;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceImage<single: job ClassAd attribute;GceImage>`
  ``GceImage``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_image**\ :index:` <single: gce_image;submit commands>`.
+    **gce\_image**\ :index:`gce_image;submit commands<single: gce_image;submit commands>`.
     Identifies the machine image of the instance.
-    :index:` <single: GceJsonFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceJsonFile>`
+    :index:`GceJsonFile;ClassAd job attribute<single: GceJsonFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceJsonFile<single: job ClassAd attribute;GceJsonFile>`
  ``GceJsonFile``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_json\_file**\ :index:` <single: gce_json_file;submit commands>`.
+    **gce\_json\_file**\ :index:`gce_json_file;submit commands<single: gce_json_file;submit commands>`.
     Specifies the path and file name of a file containing a set of JSON
     object members that should be added to the instance description
     submitted to the GCE service.
-    :index:` <single: GceMachineType;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceMachineType>`
+    :index:`GceMachineType;ClassAd job attribute<single: GceMachineType;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceMachineType<single: job ClassAd attribute;GceMachineType>`
  ``GceMachineType``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_machine\_type**\ :index:` <single: gce_machine_type;submit commands>`.
+    **gce\_machine\_type**\ :index:`gce_machine_type;submit commands<single: gce_machine_type;submit commands>`.
     Specifies the hardware profile that should be used for a GCE
-    instance. :index:` <single: GceMetadata;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceMetadata>`
+    instance. :index:`GceMetadata;ClassAd job attribute<single: GceMetadata;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceMetadata<single: job ClassAd attribute;GceMetadata>`
  ``GceMetadata``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_metadata**\ :index:` <single: gce_metadata;submit commands>`.
+    **gce\_metadata**\ :index:`gce_metadata;submit commands<single: gce_metadata;submit commands>`.
     Defines a set of name/value pairs that can be accessed by the
     virtual machine.
-    :index:` <single: GceMetadataFile;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GceMetadataFile>`
+    :index:`GceMetadataFile;ClassAd job attribute<single: GceMetadataFile;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GceMetadataFile<single: job ClassAd attribute;GceMetadataFile>`
  ``GceMetadataFile``:
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
-    **gce\_metadata\_file**\ :index:` <single: gce_metadata_file;submit commands>`.
+    **gce\_metadata\_file**\ :index:`gce_metadata_file;submit commands<single: gce_metadata_file;submit commands>`.
     Specifies a path and file name of a file containing a set of
     name/value pairs that can be accessed by the virtual machine.
-    :index:` <single: GcePreemptible;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GcePreemptible>`
+    :index:`GcePreemptible;ClassAd job attribute<single: GcePreemptible;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GcePreemptible<single: job ClassAd attribute;GcePreemptible>`
  ``GcePreemptible``:
     Used for grid type gce jobs; a boolean taken from the definition of
     the submit description file command
-    **gce\_preemptible**\ :index:` <single: gce_preemptible;submit commands>`.
+    **gce\_preemptible**\ :index:`gce_preemptible;submit commands<single: gce_preemptible;submit commands>`.
     Specifies whether the virtual machine instance created in GCE should
-    be preemptible. :index:` <single: GlobalJobId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GlobalJobId>`
+    be preemptible. :index:`GlobalJobId;ClassAd job attribute<single: GlobalJobId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GlobalJobId<single: job ClassAd attribute;GlobalJobId>`
  ``GlobalJobId``:
     A string intended to be a unique job identifier within a pool. It
     currently contains the *condor\_schedd* daemon ``Name`` attribute, a
@@ -547,33 +547,33 @@ Job ClassAd Attributes
     separated by a period, and the job’s submission time in seconds
     since 1970-01-01 00:00:00 UTC, separated by # characters. The value
     submit.example.com#152.3#1358363336 is an example.
-    :index:` <single: GridJobStatus;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GridJobStatus>`
+    :index:`GridJobStatus;ClassAd job attribute<single: GridJobStatus;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GridJobStatus<single: job ClassAd attribute;GridJobStatus>`
  ``GridJobStatus``:
     A string containing the job’s status as reported by the remote job
     management system.
-    :index:` <single: GridResource;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;GridResource>`
+    :index:`GridResource;ClassAd job attribute<single: GridResource;ClassAd job attribute>`
+    :index:`job ClassAd attribute;GridResource<single: job ClassAd attribute;GridResource>`
  ``GridResource``:
     A string defined by the right hand side of the the submit
     description file command
-    **grid\_resource**\ :index:` <single: grid_resource;submit commands>`.
+    **grid\_resource**\ :index:`grid_resource;submit commands<single: grid_resource;submit commands>`.
     It specifies the target grid type, plus additional parameters
     specific to the grid type.
-    :index:` <single: HoldKillSig;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;HoldKillSig>`
+    :index:`HoldKillSig;ClassAd job attribute<single: HoldKillSig;ClassAd job attribute>`
+    :index:`job ClassAd attribute;HoldKillSig<single: job ClassAd attribute;HoldKillSig>`
  ``HoldKillSig``:
     Currently only for scheduler and local universe jobs, a string
     containing a name of a signal to be sent to the job if the job is
-    put on hold. :index:` <single: HoldReason;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;HoldReason>`
+    put on hold. :index:`HoldReason;ClassAd job attribute<single: HoldReason;ClassAd job attribute>`
+    :index:`job ClassAd attribute;HoldReason<single: job ClassAd attribute;HoldReason>`
  ``HoldReason``:
     A string containing a human-readable message about why a job is on
     hold. This is the message that will be displayed in response to the
     command condor\_q -hold. It can be used to determine if a job should
     be released or not.
-    :index:` <single: HoldReasonCode;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;HoldReasonCode>`
+    :index:`HoldReasonCode;ClassAd job attribute<single: HoldReasonCode;ClassAd job attribute>`
+    :index:`job ClassAd attribute;HoldReasonCode<single: job ClassAd attribute;HoldReasonCode>`
  ``HoldReasonCode``:
     An integer value that represents the reason that a job was put on
     hold.
@@ -827,19 +827,19 @@ Job ClassAd Attributes
     | 44                       | Post script failed.      |                          |
     +--------------------------+--------------------------+--------------------------+
 
-    :index:` <single: HoldReasonSubCode;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;HoldReasonSubCode>`
+    :index:`HoldReasonSubCode;ClassAd job attribute<single: HoldReasonSubCode;ClassAd job attribute>`
+    :index:`job ClassAd attribute;HoldReasonSubCode<single: job ClassAd attribute;HoldReasonSubCode>`
 
  ``HoldReasonSubCode``:
     An integer value that represents further information to go along
     with the ``HoldReasonCode``, for some values of ``HoldReasonCode``.
     See ``HoldReasonCode`` for the values.
-    :index:` <single: HookKeyword;ClassAd machine attribute>`
+    :index:`HookKeyword;ClassAd machine attribute<single: HookKeyword;ClassAd machine attribute>`
  ``HookKeyword``:
     A string that uniquely identifies a set of job hooks, and added to
     the ClassAd once a job is fetched.
-    :index:` <single: ImageSize;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ImageSize>`
+    :index:`ImageSize;ClassAd job attribute<single: ImageSize;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ImageSize<single: job ClassAd attribute;ImageSize>`
  ``ImageSize``:
     Maximum observed memory image size (i.e. virtual memory) of the job
     in KiB. The initial value is equal to the size of the executable for
@@ -856,21 +856,21 @@ Job ClassAd Attributes
     because ``ImageSize`` is simply the sum of virtual memory sizes
     across all of the processes in the job, which may count the same
     memory pages more than once.
-    :index:` <single: IOWait;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;IOWait>`
+    :index:`IOWait;ClassAd job attribute<single: IOWait;ClassAd job attribute>`
+    :index:`job ClassAd attribute;IOWait<single: job ClassAd attribute;IOWait>`
 
  ``IOWait``:
     I/O wait time of the job recorded by the cgroup controller in
-    seconds. :index:` <single: IwdFlushNFSCache;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;IwdFlushNFSCache>`
+    seconds. :index:`IwdFlushNFSCache;ClassAd job attribute<single: IwdFlushNFSCache;ClassAd job attribute>`
+    :index:`job ClassAd attribute;IwdFlushNFSCache<single: job ClassAd attribute;IwdFlushNFSCache>`
  ``IwdFlushNFSCache``:
     A boolean expression that controls whether or not HTCondor attempts
     to flush a submit machine’s NFS cache, in order to refresh an
     HTCondor job’s initial working directory. The value will be
     ``True``, unless a job explicitly adds this attribute, setting it to
     ``False``.
-    :index:` <single: JobAdInformationAttrs;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobAdInformationAttrs>`
+    :index:`JobAdInformationAttrs;ClassAd job attribute<single: JobAdInformationAttrs;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobAdInformationAttrs<single: job ClassAd attribute;JobAdInformationAttrs>`
  ``JobAdInformationAttrs``:
     A comma-separated list of attribute names. The named attributes and
     their values are written in the job event log whenever any event is
@@ -878,51 +878,51 @@ Job ClassAd Attributes
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
     page \ `617 <ConfigurationMacros.html#x33-1890003.5.2>`__) but it
     applies to the job event log instead of the system event log.
-    :index:` <single: JobDescription;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobDescription>`
+    :index:`JobDescription;ClassAd job attribute<single: JobDescription;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobDescription<single: job ClassAd attribute;JobDescription>`
  ``JobDescription``:
     A string that may be defined for a job by setting
-    **description**\ :index:` <single: description;submit commands>` in the
+    **description**\ :index:`description;submit commands<single: description;submit commands>` in the
     submit description file. When set, tools which display the
     executable such as *condor\_q* will instead use this string. For
     interactive jobs that do not have a submit description file, this
     string will default to ``"Interactive job"``.
-    :index:` <single: JobCurrentStartDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobCurrentStartDate>`
+    :index:`JobCurrentStartDate;ClassAd job attribute<single: JobCurrentStartDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobCurrentStartDate<single: job ClassAd attribute;JobCurrentStartDate>`
  ``JobCurrentStartDate``:
     Time at which the job most recently began running. Measured in the
     number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:` <single: JobCurrentStartExecutingDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobCurrentStartExecutingDate>`
+    :index:`JobCurrentStartExecutingDate;ClassAd job attribute<single: JobCurrentStartExecutingDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobCurrentStartExecutingDate<single: job ClassAd attribute;JobCurrentStartExecutingDate>`
  ``JobCurrentStartExecutingDate``:
     Time at which the job most recently finished transferring its input
     sandbox and began executing. Measured in the number of seconds since
     the epoch (00:00:00 UTC, Jan 1, 1970)
-    :index:` <single: JobCurrentStartTransferOutputDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobCurrentStartTransferOutputDate>`
+    :index:`JobCurrentStartTransferOutputDate;ClassAd job attribute<single: JobCurrentStartTransferOutputDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobCurrentStartTransferOutputDate<single: job ClassAd attribute;JobCurrentStartTransferOutputDate>`
  ``JobCurrentStartTransferOutputDate``:
     Time at which the job most recently finished executing and began
     transferring its output sandbox. Measured in the number of seconds
     since the epoch (00:00:00 UTC, Jan 1, 1970)
-    :index:` <single: JobLeaseDuration;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobLeaseDuration>`
+    :index:`JobLeaseDuration;ClassAd job attribute<single: JobLeaseDuration;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobLeaseDuration<single: job ClassAd attribute;JobLeaseDuration>`
  ``JobLeaseDuration``:
     The number of seconds set for a job lease, the amount of time that a
     job may continue running on a remote resource, despite its
     submitting machine’s lack of response. See
     section \ `2.14.4 <SpecialEnvironmentConsiderations.html#x26-1440002.14.4>`__
     for details on job leases.
-    :index:` <single: JobMaxVacateTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobMaxVacateTime>`
+    :index:`JobMaxVacateTime;ClassAd job attribute<single: JobMaxVacateTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobMaxVacateTime<single: job ClassAd attribute;JobMaxVacateTime>`
  ``JobMaxVacateTime``:
     An integer expression that specifies the time in seconds requested
     by the job for being allowed to gracefully shut down.
-    :index:` <single: JobNotification;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobNotification>`
+    :index:`JobNotification;ClassAd job attribute<single: JobNotification;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobNotification<single: job ClassAd attribute;JobNotification>`
  ``JobNotification``:
     An integer indicating what events should be emailed to the user. The
     integer values correspond to the user choices for the submit command
-    **notification**\ :index:` <single: notification;submit commands>`.
+    **notification**\ :index:`notification;submit commands<single: notification;submit commands>`.
 
     --------------
 
@@ -932,22 +932,22 @@ Job ClassAd Attributes
 
     --------------
 
-    :index:` <single: JobPrio;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobPrio>`
+    :index:`JobPrio;ClassAd job attribute<single: JobPrio;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobPrio<single: job ClassAd attribute;JobPrio>`
 
  ``JobPrio``:
     Integer priority for this job, set by *condor\_submit* or
     *condor\_prio*. The default value is 0. The higher the number, the
     greater (better) the priority.
-    :index:` <single: JobRunCount;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobRunCount>`
+    :index:`JobRunCount;ClassAd job attribute<single: JobRunCount;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobRunCount<single: job ClassAd attribute;JobRunCount>`
  ``JobRunCount``:
     This attribute is retained for backwards compatibility. It may go
     away in the future. It is equivalent to ``NumShadowStarts`` for all
     universes except **scheduler**. For the **scheduler** universe, this
     attribute is equivalent to ``NumJobStarts``.
-    :index:` <single: JobStartDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobStartDate>`
+    :index:`JobStartDate;ClassAd job attribute<single: JobStartDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobStartDate<single: job ClassAd attribute;JobStartDate>`
  ``JobStartDate``:
     Time at which the job first began running. Measured in the number of
     seconds since the epoch (00:00:00 UTC, Jan 1, 1970). Due to a long
@@ -955,9 +955,9 @@ Job ClassAd Attributes
     internal to the *condor\_startd* and *condor\_starter* sets this to
     the time that the job most recently began executing. This bug is
     scheduled to be fixed in the 8.7 series.
-    :index:` <single: JobStatus;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobStatus>`
-    :index:` <single: state;job>`
+    :index:`JobStatus;ClassAd job attribute<single: JobStatus;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobStatus<single: job ClassAd attribute;JobStatus>`
+    :index:`state;job<single: state;job>`
  ``JobStatus``:
     Integer which indicates the current status of the job.
 
@@ -973,18 +973,18 @@ Job ClassAd Attributes
 
     --------------
 
-    :index:` <single: JobUniverse;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;JobUniverse>`
-    :index:` <single: universe;job>` :index:` <single: standard = 1>`
-    :index:` <single: pipe = 2 (no longer used)>`
-    :index:` <single: linda = 3 (no longer used)>`
-    :index:` <single: pvm = 4 (no longer used)>`
-    :index:` <single: vanilla = 5, docker = 5>`
-    :index:` <single: pvmd = 6 (no longer used)>`
-    :index:` <single: scheduler = 7>` :index:` <single: mpi = 8>`
-    :index:` <single: grid = 9>` :index:` <single: parallel = 10>`
-    :index:` <single: java = 11>` :index:` <single: local = 12>`
-    :index:` <single: vm = 13>`
+    :index:`JobUniverse;ClassAd job attribute<single: JobUniverse;ClassAd job attribute>`
+    :index:`job ClassAd attribute;JobUniverse<single: job ClassAd attribute;JobUniverse>`
+    :index:`universe;job<single: universe;job>` :index:`standard = 1<single: standard = 1>`
+    :index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used)>`
+    :index:`linda = 3 (no longer used)<single: linda = 3 (no longer used)>`
+    :index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used)>`
+    :index:`vanilla = 5, docker = 5<single: vanilla = 5, docker = 5>`
+    :index:`pvmd = 6 (no longer used)<single: pvmd = 6 (no longer used)>`
+    :index:`scheduler = 7<single: scheduler = 7>` :index:`mpi = 8<single: mpi = 8>`
+    :index:`grid = 9<single: grid = 9>` :index:`parallel = 10<single: parallel = 10>`
+    :index:`java = 11<single: java = 11>` :index:`local = 12<single: local = 12>`
+    :index:`vm = 13<single: vm = 13>`
 
  ``JobUniverse``:
     Integer which indicates the job universe.
@@ -1001,8 +1001,8 @@ Job ClassAd Attributes
 
     --------------
 
-    :index:` <single: KeepClaimIdle;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;KeepClaimIdle>`
+    :index:`KeepClaimIdle;ClassAd job attribute<single: KeepClaimIdle;ClassAd job attribute>`
+    :index:`job ClassAd attribute;KeepClaimIdle<single: job ClassAd attribute;KeepClaimIdle>`
 
  ``KeepClaimIdle``:
     An integer value that represents the number of seconds that the
@@ -1014,13 +1014,13 @@ Job ClassAd Attributes
     Extending the claim on the machine may permit the dependent job to
     be scheduled with less delay than with waiting for the
     *condor\_negotiator* to match with a new machine.
-    :index:` <single: KillSig;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;KillSig>`
+    :index:`KillSig;ClassAd job attribute<single: KillSig;ClassAd job attribute>`
+    :index:`job ClassAd attribute;KillSig<single: job ClassAd attribute;KillSig>`
  ``KillSig``:
     The Unix signal number that the job wishes to be sent before being
     forcibly killed. It is relevant only for jobs running on Unix
-    machines. :index:` <single: KillSigTimeout;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;KillSigTimeout>`
+    machines. :index:`KillSigTimeout;ClassAd job attribute<single: KillSigTimeout;ClassAd job attribute>`
+    :index:`job ClassAd attribute;KillSigTimeout<single: job ClassAd attribute;KillSigTimeout>`
  ``KillSigTimeout``:
     This attribute is replaced by the functionality in
     ``JobMaxVacateTime`` as of HTCondor version 7.7.3. The number of
@@ -1029,76 +1029,76 @@ Job ClassAd Attributes
     ``KillSig`` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine’s
     configuration variable ``KILLING_TIMEOUT``
-    :index:` <single: KILLING_TIMEOUT>`.
-    :index:` <single: LastCheckpointPlatform;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastCheckpointPlatform>`
+    :index:`KILLING_TIMEOUT<single: KILLING_TIMEOUT>`.
+    :index:`LastCheckpointPlatform;ClassAd job attribute<single: LastCheckpointPlatform;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastCheckpointPlatform<single: job ClassAd attribute;LastCheckpointPlatform>`
  ``LastCheckpointPlatform``:
     An opaque string which is the ``CheckpointPlatform`` identifier from
     the last machine where this standard universe job had successfully
     produced a checkpoint.
-    :index:` <single: LastCkptServer;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastCkptServer>`
+    :index:`LastCkptServer;ClassAd job attribute<single: LastCkptServer;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastCkptServer<single: job ClassAd attribute;LastCkptServer>`
  ``LastCkptServer``:
     Host name of the last checkpoint server used by this job. When a
     pool is using multiple checkpoint servers, this tells the job where
     to find its checkpoint file.
-    :index:` <single: LastCkptTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastCkptTime>`
+    :index:`LastCkptTime;ClassAd job attribute<single: LastCkptTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastCkptTime<single: job ClassAd attribute;LastCkptTime>`
  ``LastCkptTime``:
     Time at which the job last performed a successful checkpoint.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
-    1, 1970). :index:` <single: LastMatchTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastMatchTime>`
+    1, 1970). :index:`LastMatchTime;ClassAd job attribute<single: LastMatchTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastMatchTime<single: job ClassAd attribute;LastMatchTime>`
  ``LastMatchTime``:
     An integer containing the epoch time when the job was last
     successfully matched with a resource (gatekeeper) Ad.
-    :index:` <single: LastRejMatchReason;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastRejMatchReason>`
+    :index:`LastRejMatchReason;ClassAd job attribute<single: LastRejMatchReason;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastRejMatchReason<single: job ClassAd attribute;LastRejMatchReason>`
  ``LastRejMatchReason``:
     If, at any point in the past, this job failed to match with a
     resource ad, this attribute will contain a string with a
     human-readable message about why the match failed.
-    :index:` <single: LastRejMatchTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastRejMatchTime>`
+    :index:`LastRejMatchTime;ClassAd job attribute<single: LastRejMatchTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastRejMatchTime<single: job ClassAd attribute;LastRejMatchTime>`
  ``LastRejMatchTime``:
     An integer containing the epoch time when HTCondor-G last tried to
     find a match for the job, but failed to do so.
-    :index:` <single: LastRemotePool;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastRemotePool>`
+    :index:`LastRemotePool;ClassAd job attribute<single: LastRemotePool;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastRemotePool<single: job ClassAd attribute;LastRemotePool>`
  ``LastRemotePool``:
     The name of the *condor\_collector* of the pool in which a job ran
     via flocking in the most recent run attempt. This attribute is not
     defined if the job did not run via flocking.
-    :index:` <single: LastSuspensionTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastSuspensionTime>`
+    :index:`LastSuspensionTime;ClassAd job attribute<single: LastSuspensionTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastSuspensionTime<single: job ClassAd attribute;LastSuspensionTime>`
  ``LastSuspensionTime``:
     Time at which the job last performed a successful suspension.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
-    1, 1970). :index:` <single: LastVacateTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LastVacateTime>`
+    1, 1970). :index:`LastVacateTime;ClassAd job attribute<single: LastVacateTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LastVacateTime<single: job ClassAd attribute;LastVacateTime>`
  ``LastVacateTime``:
     Time at which the job was last evicted from a remote workstation.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
-    1, 1970). :index:` <single: LeaveJobInQueue;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LeaveJobInQueue>`
+    1, 1970). :index:`LeaveJobInQueue;ClassAd job attribute<single: LeaveJobInQueue;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LeaveJobInQueue<single: job ClassAd attribute;LeaveJobInQueue>`
  ``LeaveJobInQueue``:
     A boolean expression that defaults to ``False``, causing the job to
     be removed from the queue upon completion. An exception is if the
     job is submitted using ``condor_submit -spool``. For this case, the
     default expression causes the job to be kept in the queue for 10
     days after completion.
-    :index:` <single: LocalSysCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LocalSysCpu>`
+    :index:`LocalSysCpu;ClassAd job attribute<single: LocalSysCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LocalSysCpu<single: job ClassAd attribute;LocalSysCpu>`
  ``LocalSysCpu``:
     An accumulated number of seconds of system CPU time that the job
     caused to the machine upon which the job was submitted.
-    :index:` <single: LocalUserCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;LocalUserCpu>`
+    :index:`LocalUserCpu;ClassAd job attribute<single: LocalUserCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;LocalUserCpu<single: job ClassAd attribute;LocalUserCpu>`
  ``LocalUserCpu``:
     An accumulated number of seconds of user CPU time that the job
     caused to the machine upon which the job was submitted.
-    :index:` <single: MachineAttr<X><N>;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MachineAttr<X><N>>`
+    :index:`MachineAttr<X><N>;ClassAd job attribute<single: MachineAttr<X><N>;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MachineAttr<X><N><single: job ClassAd attribute;MachineAttr<X><N>>`
  ``MachineAttr<X><N>``:
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable
@@ -1107,20 +1107,20 @@ Job ClassAd Attributes
     values of this machine attribute for multiple runs. The most recent
     run will have a value of ``<N>`` equal to ``0``. The next most
     recent run will have a value of ``<N>`` equal to ``1``.
-    :index:` <single: MaxHosts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MaxHosts>`
+    :index:`MaxHosts;ClassAd job attribute<single: MaxHosts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MaxHosts<single: job ClassAd attribute;MaxHosts>`
  ``MaxHosts``:
     The maximum number of hosts that this job would like to claim. As
     long as ``CurrentHosts`` is the same as ``MaxHosts``, no more hosts
     are negotiated for.
-    :index:` <single: MaxJobRetirementTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MaxJobRetirementTime>`
+    :index:`MaxJobRetirementTime;ClassAd job attribute<single: MaxJobRetirementTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MaxJobRetirementTime<single: job ClassAd attribute;MaxJobRetirementTime>`
  ``MaxJobRetirementTime``:
     Maximum time in seconds to let this job run uninterrupted before
     kicking it off when it is being preempted. This can only decrease
     the amount of time from what the corresponding startd expression
-    allows. :index:` <single: MaxTransferInputMB;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MaxTransferInputMB>`
+    allows. :index:`MaxTransferInputMB;ClassAd job attribute<single: MaxTransferInputMB;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MaxTransferInputMB<single: job ClassAd attribute;MaxTransferInputMB>`
  ``MaxTransferInputMB``:
     This integer expression specifies the maximum allowed total size in
     Mbytes of the input files that are transferred for a job. This
@@ -1128,15 +1128,15 @@ Job ClassAd Attributes
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
-    :index:` <single: MAX_TRANSFER_INPUT_MB>` is used. If the observed size
+    :index:`MAX_TRANSFER_INPUT_MB<single: MAX_TRANSFER_INPUT_MB>` is used. If the observed size
     of all input files at submit time is larger than the limit, the job
     will be immediately placed on hold with a ``HoldReasonCode`` value
     of 32. If the job passes this initial test, but the size of the
     input files increases or the limit decreases so that the limit is
     violated, the job will be placed on hold at the time when the file
     transfer is attempted.
-    :index:` <single: MaxTransferOutputMB;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MaxTransferOutputMB>`
+    :index:`MaxTransferOutputMB;ClassAd job attribute<single: MaxTransferOutputMB;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MaxTransferOutputMB<single: job ClassAd attribute;MaxTransferOutputMB>`
  ``MaxTransferOutputMB``:
     This integer expression specifies the maximum allowed total size in
     Mbytes of the output files that are transferred for a job. This
@@ -1144,40 +1144,40 @@ Job ClassAd Attributes
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
-    :index:` <single: MAX_TRANSFER_OUTPUT_MB>` is used. If the total size of
+    :index:`MAX_TRANSFER_OUTPUT_MB<single: MAX_TRANSFER_OUTPUT_MB>` is used. If the total size of
     the job’s output files to be transferred is larger than the limit,
     the job will be placed on hold with a ``HoldReasonCode`` value of
     33. The output will be transferred up to the point when the limit is
     hit, so some files may be fully transferred, some partially, and
     some not at all.
-    :index:` <single: MemoryUsage;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MemoryUsage>`
+    :index:`MemoryUsage;ClassAd job attribute<single: MemoryUsage;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MemoryUsage<single: job ClassAd attribute;MemoryUsage>`
  ``MemoryUsage``:
     An integer expression in units of Mbytes that represents the peak
     memory usage for the job. Its purpose is to be compared with the
     value defined by a job with the
-    **request\_memory**\ :index:` <single: request_memory;submit commands>`
+    **request\_memory**\ :index:`request_memory;submit commands<single: request_memory;submit commands>`
     submit command, for purposes of policy evaluation.
-    :index:` <single: MinHosts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MinHosts>`
+    :index:`MinHosts;ClassAd job attribute<single: MinHosts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MinHosts<single: job ClassAd attribute;MinHosts>`
  ``MinHosts``:
     The minimum number of hosts that must be in the claimed state for
     this job, before the job may enter the running state.
-    :index:` <single: NextJobStartDelay;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NextJobStartDelay>`
+    :index:`NextJobStartDelay;ClassAd job attribute<single: NextJobStartDelay;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NextJobStartDelay<single: job ClassAd attribute;NextJobStartDelay>`
  ``NextJobStartDelay``:
     An integer number of seconds delay time after this job starts until
     the next job is started. The value is limited by the configuration
     variable ``MAX_NEXT_JOB_START_DELAY``
-    :index:` <single: MAX_NEXT_JOB_START_DELAY>`.
-    :index:` <single: NiceUser;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NiceUser>`
+    :index:`MAX_NEXT_JOB_START_DELAY<single: MAX_NEXT_JOB_START_DELAY>`.
+    :index:`NiceUser;ClassAd job attribute<single: NiceUser;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NiceUser<single: job ClassAd attribute;NiceUser>`
  ``NiceUser``:
     Boolean value which when ``True`` indicates that this job is a nice
     job, raising its user priority value, thus causing it to run on a
     machine only when no other HTCondor jobs want the machine.
-    :index:` <single: Nonessential;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Nonessential>`
+    :index:`Nonessential;ClassAd job attribute<single: Nonessential;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Nonessential<single: job ClassAd attribute;Nonessential>`
  ``Nonessential``:
     A boolean value only relevant to grid universe jobs, which when
     ``True`` tells HTCondor to simply abort (remove) any problematic
@@ -1185,22 +1185,22 @@ Job ClassAd Attributes
     doing *condor\_rm* followed by *condor\_rm* **-forcex** any time the
     job would have otherwise gone on hold. If not explicitly set to
     ``True``, the default value will be ``False``.
-    :index:` <single: NTDomain;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NTDomain>`
+    :index:`NTDomain;ClassAd job attribute<single: NTDomain;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NTDomain<single: job ClassAd attribute;NTDomain>`
  ``NTDomain``:
     A string that identifies the NT domain under which a job’s owner
     authenticates on a platform running Windows.
-    :index:` <single: NumCkpts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumCkpts>`
+    :index:`NumCkpts;ClassAd job attribute<single: NumCkpts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumCkpts<single: job ClassAd attribute;NumCkpts>`
  ``NumCkpts``:
     A count of the number of checkpoints written by this job during its
-    lifetime. :index:` <single: NumGlobusSubmits;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumGlobusSubmits>`
+    lifetime. :index:`NumGlobusSubmits;ClassAd job attribute<single: NumGlobusSubmits;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumGlobusSubmits<single: job ClassAd attribute;NumGlobusSubmits>`
  ``NumGlobusSubmits``:
     An integer that is incremented each time the *condor\_gridmanager*
     receives confirmation of a successful job submission into Globus.
-    :index:` <single: NumJobCompletions;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumJobCompletions>`
+    :index:`NumJobCompletions;ClassAd job attribute<single: NumJobCompletions;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumJobCompletions<single: job ClassAd attribute;NumJobCompletions>`
  ``NumJobCompletions``:
     An integer, initialized to zero, that is incremented by the
     *condor\_shadow* each time the job’s executable exits of its own
@@ -1208,13 +1208,13 @@ Job ClassAd Attributes
     transfer (if requested). Jobs which have done so normally enter the
     completed state; this attribute is therefore normally only of use
     when, for example, ``on_exit_remove`` or ``on_exit_hold`` is set.
-    :index:` <single: NumJobMatches;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumJobMatches>`
+    :index:`NumJobMatches;ClassAd job attribute<single: NumJobMatches;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumJobMatches<single: job ClassAd attribute;NumJobMatches>`
  ``NumJobMatches``:
     An integer that is incremented by the *condor\_schedd* each time the
     job is matched with a resource ad by the negotiator.
-    :index:` <single: NumJobReconnects;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumJobReconnects>`
+    :index:`NumJobReconnects;ClassAd job attribute<single: NumJobReconnects;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumJobReconnects<single: job ClassAd attribute;NumJobReconnects>`
  ``NumJobReconnects``:
     An integer count of the number of times a job successfully
     reconnected after being disconnected. This occurs when the
@@ -1222,27 +1222,27 @@ Job ClassAd Attributes
     because of transient network failures or a *condor\_shadow* or
     *condor\_schedd* restart. This attribute is only defined for jobs
     that can reconnected: those in the **vanilla** and **java**
-    universes. :index:` <single: NumJobStarts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumJobStarts>`
+    universes. :index:`NumJobStarts;ClassAd job attribute<single: NumJobStarts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumJobStarts<single: job ClassAd attribute;NumJobStarts>`
  ``NumJobStarts``:
     An integer count of the number of times the job started executing.
     This is not (yet) defined for **standard** universe jobs.
-    :index:` <single: NumPids;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumPids>`
+    :index:`NumPids;ClassAd job attribute<single: NumPids;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumPids<single: job ClassAd attribute;NumPids>`
  ``NumPids``:
     A count of the number of child processes that this job has.
-    :index:` <single: NumRestarts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumRestarts>`
+    :index:`NumRestarts;ClassAd job attribute<single: NumRestarts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumRestarts<single: job ClassAd attribute;NumRestarts>`
  ``NumRestarts``:
     A count of the number of restarts from a checkpoint attempted by
     this job during its lifetime.
-    :index:` <single: NumShadowExceptions;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumShadowExceptions>`
+    :index:`NumShadowExceptions;ClassAd job attribute<single: NumShadowExceptions;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumShadowExceptions<single: job ClassAd attribute;NumShadowExceptions>`
  ``NumShadowExceptions``:
     An integer count of the number of times the *condor\_shadow* daemon
     had a fatal error for a given job.
-    :index:` <single: NumShadowStarts;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumShadowStarts>`
+    :index:`NumShadowStarts;ClassAd job attribute<single: NumShadowStarts;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumShadowStarts<single: job ClassAd attribute;NumShadowStarts>`
  ``NumShadowStarts``:
     An integer count of the number of times a *condor\_shadow* daemon
     was started for a given job. This attribute is not defined for
@@ -1256,16 +1256,16 @@ Job ClassAd Attributes
     match is rejected by the execute machine; in other words, the value
     of this attribute may be greater than the number of times the job
     actually ran.**
-    :index:` <single: NumSystemHolds;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;NumSystemHolds>`
+    :index:`NumSystemHolds;ClassAd job attribute<single: NumSystemHolds;ClassAd job attribute>`
+    :index:`job ClassAd attribute;NumSystemHolds<single: job ClassAd attribute;NumSystemHolds>`
  ``NumSystemHolds``:
     An integer that is incremented each time HTCondor-G places a job on
     hold due to some sort of error condition. This counter is useful,
     since HTCondor-G will always place a job on hold when it gives up on
     some error condition. Note that if the user places the job on hold
     using the *condor\_hold* command, this attribute is not incremented.
-    :index:` <single: OtherJobRemoveRequirements;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;OtherJobRemoveRequirements>`
+    :index:`OtherJobRemoveRequirements;ClassAd job attribute<single: OtherJobRemoveRequirements;ClassAd job attribute>`
+    :index:`job ClassAd attribute;OtherJobRemoveRequirements<single: job ClassAd attribute;OtherJobRemoveRequirements>`
  ``OtherJobRemoveRequirements``:
     A string that defines a list of jobs. When the job with this
     attribute defined is removed, all other jobs defined by the list are
@@ -1282,17 +1282,17 @@ Job ClassAd Attributes
     defined by this attribute must not form a cyclic removal of jobs, or
     the *condor\_schedd* will go into an infinite loop when any of the
     jobs is removed.
-    :index:` <single: OutputDestination;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;OutputDestination>`
+    :index:`OutputDestination;ClassAd job attribute<single: OutputDestination;ClassAd job attribute>`
+    :index:`job ClassAd attribute;OutputDestination<single: job ClassAd attribute;OutputDestination>`
 
  ``OutputDestination``:
     A URL, as defined by submit command **output\_destination**.
-    :index:` <single: Owner;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Owner>`
+    :index:`Owner;ClassAd job attribute<single: Owner;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Owner<single: job ClassAd attribute;Owner>`
  ``Owner``:
     String describing the user who submitted this job.
-    :index:` <single: ParallelShutdownPolicy;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ParallelShutdownPolicy>`
+    :index:`ParallelShutdownPolicy;ClassAd job attribute<single: ParallelShutdownPolicy;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ParallelShutdownPolicy<single: job ClassAd attribute;ParallelShutdownPolicy>`
  ``ParallelShutdownPolicy``:
     A string that is only relevant to parallel universe jobs. Without
     this attribute defined, the default policy applied to parallel
@@ -1304,36 +1304,36 @@ Job ClassAd Attributes
         HTCondor will wait until every node in the parallel job has
         completed to consider the job finished.
 
-    :index:` <single: Starter pre and post scripts>`
-    :index:` <single: PostArgs;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostArgs>`
+    :index:`Starter pre and post scripts<single: Starter pre and post scripts>`
+    :index:`PostArgs;ClassAd job attribute<single: PostArgs;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostArgs<single: ClassAd job attribute;PostArgs>`
  ``PostArgs``:
     Defines the command-line arguments for the post command using the
     old argument syntax, as specified in
     section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
     ``PostArgs`` and ``PostArguments`` exists, the former is ignored.
-    :index:` <single: PostArguments;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostArguments>`
+    :index:`PostArguments;ClassAd job attribute<single: PostArguments;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostArguments<single: ClassAd job attribute;PostArguments>`
  ``PostArguments``:
     Defines the command-line arguments for the post command using the
     new argument syntax, as specified in
     section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
     double quotes must be escaped with a backslash instead of another
     double quote. If both ``PostArgs`` and ``PostArguments`` exists, the
-    former is ignored. :index:` <single: PostCmd;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostCmd>`
+    former is ignored. :index:`PostCmd;ClassAd job attribute<single: PostCmd;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostCmd<single: ClassAd job attribute;PostCmd>`
  ``PostCmd``:
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after the
-    **Executable**\ :index:` <single: Executable;submit commands>` has
+    **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>` has
     exited, but before file transfer is started. Unlike a DAGMan POST
     script command, this command is run on the execute machine; however,
     it is not run in the same environment as the
-    **Executable**\ :index:` <single: Executable;submit commands>`.
+    **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>`.
     Instead, its environment is set by ``PostEnv`` or
     ``PostEnvironment``. Like the DAGMan POST script command, this
     command is not run in the same universe as the
-    **Executable**\ :index:` <single: Executable;submit commands>`; in
+    **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>`; in
     particular, this command is not run in a Docker container, nor in a
     virtual machine, nor in Java. This command is also not run with any
     of vanilla universe’s features active, including (but not limited
@@ -1341,79 +1341,79 @@ Job ClassAd Attributes
     Singularity, or job wrappers. This command is not automatically
     transferred with the job, so if you’re using file transfer, you must
     add it to the
-    **transfer\_input\_files**\ :index:` <single: transfer_input_files;submit commands>`
+    **transfer\_input\_files**\ :index:`transfer_input_files;submit commands<single: transfer_input_files;submit commands>`
     list.
 
     If the specified command is in the job’s execute directory, or any
     sub-directory, you should not set
-    **vm\_no\_output\_vm**\ :index:` <single: vm_no_output_vm;submit commands>`,
+    **vm\_no\_output\_vm**\ :index:`vm_no_output_vm;submit commands<single: vm_no_output_vm;submit commands>`,
     as that will delete all the files in the job’s execute directory
     before this command has a chance to run. If you don’t want any
     output back from your VM universe job, but you do want to run a post
     command, do not set
-    **vm\_no\_output\_vm**\ :index:` <single: vm_no_output_vm;submit commands>`
+    **vm\_no\_output\_vm**\ :index:`vm_no_output_vm;submit commands<single: vm_no_output_vm;submit commands>`
     and instead delete the job’s execute directory in your post command.
-    :index:` <single: PostCmdExitBySignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostCmdExitBySignal>`
+    :index:`PostCmdExitBySignal;ClassAd job attribute<single: PostCmdExitBySignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostCmdExitBySignal<single: ClassAd job attribute;PostCmdExitBySignal>`
 
  ``PostCmdExitBySignal``:
     If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
     and the post command has run, this attribute will true if the the
     post command exited on a signal and false if it did not. It is
     otherwise unset.
-    :index:` <single: PostCmdExitCode;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostCmdExitCode>`
+    :index:`PostCmdExitCode;ClassAd job attribute<single: PostCmdExitCode;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostCmdExitCode<single: ClassAd job attribute;PostCmdExitCode>`
  ``PostCmdExitCode``:
     If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
     the post command has run, and the post command did not exit on a
     signal, then this attribute will be set to the exit code. It is
     otherwise unset.
-    :index:` <single: PostCmdExitSignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostCmdExitSignal>`
+    :index:`PostCmdExitSignal;ClassAd job attribute<single: PostCmdExitSignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostCmdExitSignal<single: ClassAd job attribute;PostCmdExitSignal>`
  ``PostCmdExitSignal``:
     If ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` were set,
     the post command has run, and the post command exited on a signal,
     then this attribute will be set to that signal. It is otherwise
-    unset. :index:` <single: PostEnv;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostEnv>`
+    unset. :index:`PostEnv;ClassAd job attribute<single: PostEnv;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostEnv<single: ClassAd job attribute;PostEnv>`
  ``PostEnv``:
     Defines the environment for the Postscript using the Old environment
     syntax. If both ``PostEnv`` and ``PostEnvironment`` exist, the
     former is ignored.
-    :index:` <single: PostEnvironment;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PostEnvironment>`
+    :index:`PostEnvironment;ClassAd job attribute<single: PostEnvironment;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PostEnvironment<single: ClassAd job attribute;PostEnvironment>`
  ``PostEnvironment``:
     Defines the environment for the Postscript using the New environment
     syntax. If both ``PostEnv`` and ``PostEnvironment`` exist, the
-    former is ignored. :index:` <single: PreArgs;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreArgs>`
+    former is ignored. :index:`PreArgs;ClassAd job attribute<single: PreArgs;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreArgs<single: ClassAd job attribute;PreArgs>`
  ``PreArgs``:
     Defines the command-line arguments for the pre command using the old
     argument syntax, as specified in
     section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
     ``PreArgs`` and ``PreArguments`` exists, the former is ignored.
-    :index:` <single: PreArguments;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreArguments>`
+    :index:`PreArguments;ClassAd job attribute<single: PreArguments;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreArguments<single: ClassAd job attribute;PreArguments>`
  ``PreArguments``:
     Defines the command-line arguments for the pre command using the new
     argument syntax, as specified in
     section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
     double quotes must be escape with a backslash instead of another
     double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
-    former is ignored. :index:` <single: PreCmd;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreCmd>`
+    former is ignored. :index:`PreCmd;ClassAd job attribute<single: PreCmd;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreCmd<single: ClassAd job attribute;PreCmd>`
  ``PreCmd``:
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after file transfer (if any) completes but
     before the
-    **Executable**\ :index:` <single: Executable;submit commands>` is
+    **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>` is
     started. Unlike a DAGMan PRE script command, this command is run on
     the execute machine; however, it is not run in the same environment
-    as the **Executable**\ :index:` <single: Executable;submit commands>`.
+    as the **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>`.
     Instead, its environment is set by ``PreEnv`` or ``PreEnvironment``.
     Like the DAGMan POST script command, this command is not run in the
     same universe as the
-    **Executable**\ :index:` <single: Executable;submit commands>`; in
+    **Executable**\ :index:`Executable;submit commands<single: Executable;submit commands>`; in
     particular, this command is not run in a Docker container, nor in a
     virtual machine, nor in Java. This command is also not run with any
     of vanilla universe’s features active, including (but not limited
@@ -1421,37 +1421,37 @@ Job ClassAd Attributes
     Singularity, or job wrappers. This command is not automatically
     transferred with the job, so if you’re using file transfer, you must
     add it to the
-    **transfer\_input\_files**\ :index:` <single: transfer_input_files;submit commands>`
-    list. :index:` <single: PreCmdExitBySignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreCmdExitBySignal>`
+    **transfer\_input\_files**\ :index:`transfer_input_files;submit commands<single: transfer_input_files;submit commands>`
+    list. :index:`PreCmdExitBySignal;ClassAd job attribute<single: PreCmdExitBySignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreCmdExitBySignal<single: ClassAd job attribute;PreCmdExitBySignal>`
  ``PreCmdExitBySignal``:
     If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, and
     the pre command has run, this attribute will true if the the pre
     command exited on a signal and false if it did not. It is otherwise
-    unset. :index:` <single: PreCmdExitCode;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreCmdExitCode>`
+    unset. :index:`PreCmdExitCode;ClassAd job attribute<single: PreCmdExitCode;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreCmdExitCode<single: ClassAd job attribute;PreCmdExitCode>`
  ``PreCmdExitCode``:
     If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, the
     pre command has run, and the pre command did not exit on a signal,
     then this attribute will be set to the exit code. It is otherwise
-    unset. :index:` <single: PreCmdExitSignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreCmdExitSignal>`
+    unset. :index:`PreCmdExitSignal;ClassAd job attribute<single: PreCmdExitSignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreCmdExitSignal<single: ClassAd job attribute;PreCmdExitSignal>`
  ``PreCmdExitSignal``:
     If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, the
     pre command has run, and the pre command exited on a signal, then
     this attribute will be set to that signal. It is otherwise unset.
-    :index:` <single: PreEnv;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreEnv>`
+    :index:`PreEnv;ClassAd job attribute<single: PreEnv;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreEnv<single: ClassAd job attribute;PreEnv>`
  ``PreEnv``:
     Defines the environment for the prescript using the Old environment
     syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
-    is ignored. :index:` <single: PreEnvironment;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;PreEnvironment>`
+    is ignored. :index:`PreEnvironment;ClassAd job attribute<single: PreEnvironment;ClassAd job attribute>`
+    :index:`ClassAd job attribute;PreEnvironment<single: ClassAd job attribute;PreEnvironment>`
  ``PreEnvironment``:
     Defines the environment for the prescript using the New environment
     syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
-    is ignored. :index:` <single: PreJobPrio1;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;PreJobPrio1>`
+    is ignored. :index:`PreJobPrio1;ClassAd job attribute<single: PreJobPrio1;ClassAd job attribute>`
+    :index:`job ClassAd attribute;PreJobPrio1<single: job ClassAd attribute;PreJobPrio1>`
  ``PreJobPrio1``:
     An integer value representing a user’s priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
@@ -1459,8 +1459,8 @@ Job ClassAd Attributes
     attribute, when set, is considered first: before ``PreJobPrio2``,
     before ``JobPrio``, before ``PostJobPrio1``, before
     ``PostJobPrio2``, and before ``QDate``.
-    :index:` <single: PreJobPrio2;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;PreJobPrio2>`
+    :index:`PreJobPrio2;ClassAd job attribute<single: PreJobPrio2;ClassAd job attribute>`
+    :index:`job ClassAd attribute;PreJobPrio2<single: job ClassAd attribute;PreJobPrio2>`
  ``PreJobPrio2``:
     An integer value representing a user’s priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
@@ -1468,8 +1468,8 @@ Job ClassAd Attributes
     attribute, when set, is considered after ``PreJobPrio1``, but before
     ``JobPrio``, before ``PostJobPrio1``, before ``PostJobPrio2``, and
     before ``QDate``.
-    :index:` <single: PostJobPrio1;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;PostJobPrio1>`
+    :index:`PostJobPrio1;ClassAd job attribute<single: PostJobPrio1;ClassAd job attribute>`
+    :index:`job ClassAd attribute;PostJobPrio1<single: job ClassAd attribute;PostJobPrio1>`
  ``PostJobPrio1``:
     An integer value representing a user’s priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
@@ -1477,8 +1477,8 @@ Job ClassAd Attributes
     attribute, when set, is considered after ``PreJobPrio1``, after
     ``PreJobPrio1``, and after ``JobPrio``, but before ``PostJobPrio2``,
     and before ``QDate``.
-    :index:` <single: PostJobPrio2;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;PostJobPrio2>`
+    :index:`PostJobPrio2;ClassAd job attribute<single: PostJobPrio2;ClassAd job attribute>`
+    :index:`job ClassAd attribute;PostJobPrio2<single: job ClassAd attribute;PostJobPrio2>`
  ``PostJobPrio2``:
     An integer value representing a user’s priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
@@ -1486,8 +1486,8 @@ Job ClassAd Attributes
     attribute, when set, is considered after ``PreJobPrio1``, after
     ``PreJobPrio1``, after ``JobPrio``, and after ``PostJobPrio1``, but
     before ``QDate``.
-    :index:` <single: PreserveRelativeExecutable;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;PreserveRelativeExecutable>`
+    :index:`PreserveRelativeExecutable;ClassAd job attribute<single: PreserveRelativeExecutable;ClassAd job attribute>`
+    :index:`job ClassAd attribute;PreserveRelativeExecutable<single: job ClassAd attribute;PreserveRelativeExecutable>`
  ``PreserveRelativeExecutable``:
     When ``True``, the *condor\_starter* will not prepend ``Iwd`` to
     ``Cmd``, when ``Cmd`` is a relative path name and
@@ -1495,18 +1495,18 @@ Job ClassAd Attributes
     This attribute is primarily of interest for users of
     ``USER_JOB_WRAPPER`` for the purpose of allowing an executable’s
     location to be resolved by the user’s path in the job wrapper.
-    :index:` <single: ProcId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ProcId>`
-    :index:` <single: definition for a submitted job;process>`
-    :index:` <single: process identifier;job ID>`
+    :index:`ProcId;ClassAd job attribute<single: ProcId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ProcId<single: job ClassAd attribute;ProcId>`
+    :index:`definition for a submitted job;process<single: definition for a submitted job;process>`
+    :index:`process identifier;job ID<single: process identifier;job ID>`
  ``ProcId``:
     Integer process identifier for this job. Within a cluster of many
     jobs, each job has the same ``ClusterId``, but will have a unique
     ``ProcId``. Within a cluster, assignment of a ``ProcId`` value will
     start with the value 0. The job (process) identifier described here
     is unrelated to operating system PIDs.
-    :index:` <single: ProportionalSetSizeKb;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ProportionalSetSizeKb>`
+    :index:`ProportionalSetSizeKb;ClassAd job attribute<single: ProportionalSetSizeKb;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ProportionalSetSizeKb<single: job ClassAd attribute;ProportionalSetSizeKb>`
  ``ProportionalSetSizeKb``:
     On Linux execute machines with kernel version more recent than
     2.6.27, this is the maximum observed proportional set size (PSS) in
@@ -1517,75 +1517,75 @@ Job ClassAd Attributes
     process is the sum of that process’ memory pages divided by the
     number of processes sharing each of the pages. ``ImageSize`` is the
     same, except there is no division by the number of processes sharing
-    the pages. :index:` <single: QDate;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;QDate>`
+    the pages. :index:`QDate;ClassAd job attribute<single: QDate;ClassAd job attribute>`
+    :index:`job ClassAd attribute;QDate<single: job ClassAd attribute;QDate>`
  ``QDate``:
     Time at which the job was submitted to the job queue. Measured in
     the number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:` <single: RecentBlockReadKbytes;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RecentBlockReadKbytes>`
+    :index:`RecentBlockReadKbytes;ClassAd job attribute<single: RecentBlockReadKbytes;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RecentBlockReadKbytes<single: job ClassAd attribute;RecentBlockReadKbytes>`
  ``RecentBlockReadKbytes``:
     The integer number of KiB read from disk for this job over the
     previous time interval defined by configuration variable
     ``STATISTICS_WINDOW_SECONDS``.
-    :index:` <single: RecentBlockReads;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RecentBlockReads>`
+    :index:`RecentBlockReads;ClassAd job attribute<single: RecentBlockReads;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RecentBlockReads<single: job ClassAd attribute;RecentBlockReads>`
  ``RecentBlockReads``:
     The integer number of disk blocks read for this job over the
     previous time interval defined by configuration variable
     ``STATISTICS_WINDOW_SECONDS``.
-    :index:` <single: RecentBlockWriteKbytes;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RecentBlockWriteKbytes>`
+    :index:`RecentBlockWriteKbytes;ClassAd job attribute<single: RecentBlockWriteKbytes;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RecentBlockWriteKbytes<single: job ClassAd attribute;RecentBlockWriteKbytes>`
  ``RecentBlockWriteKbytes``:
     The integer number of KiB written to disk for this job over the
     previous time interval defined by configuration variable
     ``STATISTICS_WINDOW_SECONDS``.
-    :index:` <single: RecentBlockWrites;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RecentBlockWrites>`
+    :index:`RecentBlockWrites;ClassAd job attribute<single: RecentBlockWrites;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RecentBlockWrites<single: job ClassAd attribute;RecentBlockWrites>`
  ``RecentBlockWrites``:
     The integer number of blocks written to disk for this job over the
     previous time interval defined by configuration variable
     ``STATISTICS_WINDOW_SECONDS``.
-    :index:` <single: ReleaseReason;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ReleaseReason>`
+    :index:`ReleaseReason;ClassAd job attribute<single: ReleaseReason;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ReleaseReason<single: job ClassAd attribute;ReleaseReason>`
  ``ReleaseReason``:
     A string containing a human-readable message about why the job was
     released from hold.
-    :index:` <single: RemoteIwd;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemoteIwd>`
+    :index:`RemoteIwd;ClassAd job attribute<single: RemoteIwd;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemoteIwd<single: job ClassAd attribute;RemoteIwd>`
  ``RemoteIwd``:
     The path to the directory in which a job is to be executed on a
-    remote machine. :index:` <single: RemotePool;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemotePool>`
+    remote machine. :index:`RemotePool;ClassAd job attribute<single: RemotePool;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemotePool<single: job ClassAd attribute;RemotePool>`
  ``RemotePool``:
     The name of the *condor\_collector* of the pool in which a job is
     running via flocking. This attribute is not defined if the job is
     not running via flocking.
-    :index:` <single: RemoteSysCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemoteSysCpu>`
+    :index:`RemoteSysCpu;ClassAd job attribute<single: RemoteSysCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemoteSysCpu<single: job ClassAd attribute;RemoteSysCpu>`
  ``RemoteSysCpu``:
     The total number of seconds of system CPU time (the time spent at
     system calls) the job used on remote machines. This does not count
     time spent on run attempts that were evicted without a checkpoint.
-    :index:` <single: CumulativeRemoteSysCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CumulativeRemoteSysCpu>`
+    :index:`CumulativeRemoteSysCpu;ClassAd job attribute<single: CumulativeRemoteSysCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CumulativeRemoteSysCpu<single: job ClassAd attribute;CumulativeRemoteSysCpu>`
  ``CumulativeRemoteSysCpu``:
     The total number of seconds of system CPU time the job used on
     remote machines, summed over all execution attempts.
-    :index:` <single: RemoteUserCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemoteUserCpu>`
+    :index:`RemoteUserCpu;ClassAd job attribute<single: RemoteUserCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemoteUserCpu<single: job ClassAd attribute;RemoteUserCpu>`
  ``RemoteUserCpu``:
     The total number of seconds of user CPU time the job used on remote
     machines. This does not count time spent on run attempts that were
     evicted without a checkpoint. A job in the virtual machine universe
     will only report this attribute if run on a KVM hypervisor.
-    :index:` <single: CumulativeRemoteUserCpu;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;CumulativeRemoteUserCpu>`
+    :index:`CumulativeRemoteUserCpu;ClassAd job attribute<single: CumulativeRemoteUserCpu;ClassAd job attribute>`
+    :index:`job ClassAd attribute;CumulativeRemoteUserCpu<single: job ClassAd attribute;CumulativeRemoteUserCpu>`
  ``CumulativeRemoteUserCpu``:
     The total number of seconds of user CPU time the job used on remote
     machines, summed over all execution attempts.
-    :index:` <single: RemoteWallClockTime;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemoteWallClockTime>`
+    :index:`RemoteWallClockTime;ClassAd job attribute<single: RemoteWallClockTime;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemoteWallClockTime<single: job ClassAd attribute;RemoteWallClockTime>`
  ``RemoteWallClockTime``:
     Cumulative number of seconds the job has been allocated a machine.
     This also includes time spent in suspension (if any), so the total
@@ -1599,80 +1599,80 @@ Job ClassAd Attributes
     forced to migrate from one machine to another. ``CommittedTime``, on
     the other hand, is just like ``RemoteWallClockTime`` except it does
     get reset to 0 whenever the job is evicted without a checkpoint.
-    :index:` <single: RemoveKillSig;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RemoveKillSig>`
+    :index:`RemoveKillSig;ClassAd job attribute<single: RemoveKillSig;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RemoveKillSig<single: job ClassAd attribute;RemoveKillSig>`
 
  ``RemoveKillSig``:
     Currently only for scheduler universe jobs, a string containing a
     name of a signal to be sent to the job if the job is removed.
-    :index:` <single: RequestCpus;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RequestCpus>`
+    :index:`RequestCpus;ClassAd job attribute<single: RequestCpus;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RequestCpus<single: job ClassAd attribute;RequestCpus>`
  ``RequestCpus``:
     The number of CPUs requested for this job. If dynamic
     *condor\_startd* provisioning is enabled, it is the minimum number
     of CPUs that are needed in the created dynamic slot.
-    :index:` <single: RequestDisk;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RequestDisk>`
+    :index:`RequestDisk;ClassAd job attribute<single: RequestDisk;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RequestDisk<single: job ClassAd attribute;RequestDisk>`
  ``RequestDisk``:
     The amount of disk space in KiB requested for this job. If dynamic
     *condor\_startd* provisioning is enabled, it is the minimum amount
     of disk space needed in the created dynamic slot.
-    :index:` <single: RequestedChroot;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RequestedChroot>`
+    :index:`RequestedChroot;ClassAd job attribute<single: RequestedChroot;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RequestedChroot<single: job ClassAd attribute;RequestedChroot>`
  ``RequestedChroot``:
     A full path to the directory that the job requests the
     *condor\_starter* use as an argument to chroot().
-    :index:` <single: RequestMemory;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;RequestMemory>`
+    :index:`RequestMemory;ClassAd job attribute<single: RequestMemory;ClassAd job attribute>`
+    :index:`job ClassAd attribute;RequestMemory<single: job ClassAd attribute;RequestMemory>`
  ``RequestMemory``:
     The amount of memory space in MiB requested for this job. If dynamic
     *condor\_startd* provisioning is enabled, it is the minimum amount
     of memory needed in the created dynamic slot. If not set by the job,
     its definition is specified by configuration variable
     ``JOB_DEFAULT_REQUESTMEMORY``
-    :index:` <single: JOB_DEFAULT_REQUESTMEMORY>`.
-    :index:` <single: Requirements;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;Requirements>`
+    :index:`JOB_DEFAULT_REQUESTMEMORY<single: JOB_DEFAULT_REQUESTMEMORY>`.
+    :index:`Requirements;ClassAd job attribute<single: Requirements;ClassAd job attribute>`
+    :index:`job ClassAd attribute;Requirements<single: job ClassAd attribute;Requirements>`
  ``Requirements``:
     A classad expression evaluated by the *condor\_negotiator*,
     *condor\_schedd*, and {Condorstartd in the context of slot ad. If
     true, this job is eligible to run on that slot. If the job
     requirements does not mention the (startd) attribute ``OPSYS``
-    :index:` <single: OPSYS>`, the schedd will append a clause to
+    :index:`OPSYS<single: OPSYS>`, the schedd will append a clause to
     Requirements forcing the job to match the same ``OPSYS``
-    :index:` <single: OPSYS>` as the submit machine. The schedd appends a
-    simliar clause to match the ``ARCH`` :index:` <single: ARCH>`. The schedd
+    :index:`OPSYS<single: OPSYS>` as the submit machine. The schedd appends a
+    simliar clause to match the ``ARCH`` :index:`ARCH<single: ARCH>`. The schedd
     parameter ``APPEND_REQUIREMENTS``
-    :index:` <single: APPEND_REQUIREMENTS>`, will, if set, append that value
+    :index:`APPEND_REQUIREMENTS<single: APPEND_REQUIREMENTS>`, will, if set, append that value
     to every job’s requirements expression.
-    :index:` <single: ResidentSetSize;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;ResidentSetSize>`
+    :index:`ResidentSetSize;ClassAd job attribute<single: ResidentSetSize;ClassAd job attribute>`
+    :index:`job ClassAd attribute;ResidentSetSize<single: job ClassAd attribute;ResidentSetSize>`
  ``ResidentSetSize``:
     Maximum observed physical memory in use by the job in KiB while
-    running. :index:` <single: StackSize;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;StackSize>`
+    running. :index:`StackSize;ClassAd job attribute<single: StackSize;ClassAd job attribute>`
+    :index:`job ClassAd attribute;StackSize<single: job ClassAd attribute;StackSize>`
  ``StackSize``:
     Utilized for Linux jobs only, the number of bytes allocated for
     stack space for this job. This number of bytes replaces the default
     allocation of 512 Mbytes.
-    :index:` <single: StageOutFinish;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;StageOutFinish>`
+    :index:`StageOutFinish;ClassAd job attribute<single: StageOutFinish;ClassAd job attribute>`
+    :index:`job ClassAd attribute;StageOutFinish<single: job ClassAd attribute;StageOutFinish>`
  ``StageOutFinish``:
     An attribute representing a Unix epoch time that is defined for a
     job that is spooled to a remote site using ``condor_submit -spool``
     or HTCondor-C and causes HTCondor to hold the output in the spool
     while the job waits in the queue in the ``Completed`` state. This
     attribute is defined when retrieval of the output finishes.
-    :index:` <single: StageOutStart;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;StageOutStart>`
+    :index:`StageOutStart;ClassAd job attribute<single: StageOutStart;ClassAd job attribute>`
+    :index:`job ClassAd attribute;StageOutStart<single: job ClassAd attribute;StageOutStart>`
  ``StageOutStart``:
     An attribute representing a Unix epoch time that is defined for a
     job that is spooled to a remote site using ``condor_submit -spool``
     or HTCondor-C and causes HTCondor to hold the output in the spool
     while the job waits in the queue in the ``Completed`` state. This
     attribute is defined when retrieval of the output begins.
-    :index:` <single: StreamErr;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;StreamErr>`
+    :index:`StreamErr;ClassAd job attribute<single: StreamErr;ClassAd job attribute>`
+    :index:`job ClassAd attribute;StreamErr<single: job ClassAd attribute;StreamErr>`
  ``StreamErr``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, and ``TransferErr`` is ``True``, then
@@ -1681,8 +1681,8 @@ Job ClassAd Attributes
     ``False``, then standard error is transferred back to the submit
     machine (as a whole) after the job completes. If ``TransferErr`` is
     ``False``, then this job attribute is ignored.
-    :index:` <single: StreamOut;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;StreamOut>`
+    :index:`StreamOut;ClassAd job attribute<single: StreamOut;ClassAd job attribute>`
+    :index:`job ClassAd attribute;StreamOut<single: job ClassAd attribute;StreamOut>`
  ``StreamOut``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, and ``TransferOut`` is ``True``, then job
@@ -1691,36 +1691,36 @@ Job ClassAd Attributes
     job output is transferred back to the submit machine (as a whole)
     after the job completes. If ``TransferOut`` is ``False``, then this
     job attribute is ignored.
-    :index:` <single: SubmitterAutoregroup;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;SubmitterAutoregroup>`
+    :index:`SubmitterAutoregroup;ClassAd job attribute<single: SubmitterAutoregroup;ClassAd job attribute>`
+    :index:`job ClassAd attribute;SubmitterAutoregroup<single: job ClassAd attribute;SubmitterAutoregroup>`
  ``SubmitterAutoregroup``:
     A boolean attribute defined by the *condor\_negotiator* when it
     makes a match. It will be ``True`` if the resource was claimed via
     negotiation when the configuration variable ``GROUP_AUTOREGROUP``
-    :index:` <single: GROUP_AUTOREGROUP>` was ``True``. It will be ``False``
+    :index:`GROUP_AUTOREGROUP<single: GROUP_AUTOREGROUP>` was ``True``. It will be ``False``
     otherwise.
-    :index:` <single: SubmitterGlobalJobId;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;SubmitterGlobalJobId>`
+    :index:`SubmitterGlobalJobId;ClassAd job attribute<single: SubmitterGlobalJobId;ClassAd job attribute>`
+    :index:`job ClassAd attribute;SubmitterGlobalJobId<single: job ClassAd attribute;SubmitterGlobalJobId>`
  ``SubmitterGlobalJobId``:
     When HTCondor-C submits a job to a remote *condor\_schedd*, it sets
     this attribute in the remote job ad to match the ``GlobalJobId``
     attribute of the original, local job.
-    :index:` <single: SubmitterGroup;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;SubmitterGroup>`
+    :index:`SubmitterGroup;ClassAd job attribute<single: SubmitterGroup;ClassAd job attribute>`
+    :index:`job ClassAd attribute;SubmitterGroup<single: job ClassAd attribute;SubmitterGroup>`
  ``SubmitterGroup``:
     The accounting group name defined by the *condor\_negotiator* when
     it makes a match.
-    :index:` <single: SubmitterNegotiatingGroup;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;SubmitterNegotiatingGroup>`
+    :index:`SubmitterNegotiatingGroup;ClassAd job attribute<single: SubmitterNegotiatingGroup;ClassAd job attribute>`
+    :index:`job ClassAd attribute;SubmitterNegotiatingGroup<single: job ClassAd attribute;SubmitterNegotiatingGroup>`
  ``SubmitterNegotiatingGroup``:
     The accounting group name under which the resource negotiated when
     it was claimed, as set by the *condor\_negotiator*.
-    :index:` <single: SuccessPreExitBySignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPreExitBySignal>`
+    :index:`SuccessPreExitBySignal;ClassAd job attribute<single: SuccessPreExitBySignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPreExitBySignal<single: ClassAd job attribute;SuccessPreExitBySignal>`
  ``SuccessPreExitBySignal``:
     Specifies if a succesful pre command must exit with a signal.
-    :index:` <single: SuccessPreExitCode;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPreExitCode>`
+    :index:`SuccessPreExitCode;ClassAd job attribute<single: SuccessPreExitCode;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPreExitCode<single: ClassAd job attribute;SuccessPreExitCode>`
  ``SuccessPreExitCode``:
     Specifies the code with which the pre command must exit to be
     considered successful. Pre commands which are not successful cause
@@ -1728,8 +1728,8 @@ Job ClassAd Attributes
     The exit status of a pre command without one of
     ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` defined is
     ignored.
-    :index:` <single: SuccessPreExitSignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPreExitSignal>`
+    :index:`SuccessPreExitSignal;ClassAd job attribute<single: SuccessPreExitSignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPreExitSignal<single: ClassAd job attribute;SuccessPreExitSignal>`
  ``SuccessPreExitSignal``:
     Specifies the signal on which the pre command must exit be
     considered successful. Pre commands which are not successful cause
@@ -1737,12 +1737,12 @@ Job ClassAd Attributes
     ``PreCmdExitSignal``. The exit status of a pre command without one
     of ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` defined is
     ignored.
-    :index:` <single: SuccessPostExitBySignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPostExitBySignal>`
+    :index:`SuccessPostExitBySignal;ClassAd job attribute<single: SuccessPostExitBySignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPostExitBySignal<single: ClassAd job attribute;SuccessPostExitBySignal>`
  ``SuccessPostExitBySignal``:
     Specifies if a succesful post command must exit with a signal.
-    :index:` <single: SuccessPostExitCode;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPostExitCode>`
+    :index:`SuccessPostExitCode;ClassAd job attribute<single: SuccessPostExitCode;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPostExitCode<single: ClassAd job attribute;SuccessPostExitCode>`
  ``SuccessPostExitCode``:
     Specifies the code with which the post command must exit to be
     considered successful. Post commands which are not successful cause
@@ -1750,20 +1750,20 @@ Job ClassAd Attributes
     The exit status of a post command without one of
     ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
     ignored.
-    :index:` <single: SuccessPostExitSignal;ClassAd job attribute>`
-    :index:` <single: ClassAd job attribute;SuccessPostExitSignal>`
+    :index:`SuccessPostExitSignal;ClassAd job attribute<single: SuccessPostExitSignal;ClassAd job attribute>`
+    :index:`ClassAd job attribute;SuccessPostExitSignal<single: ClassAd job attribute;SuccessPostExitSignal>`
  ``SuccessPostExitSignal``:
     Specifies the signal on which the post command must exit be
     considered successful. Post commands which are not successful cause
     the job to go on hold with ``ExitSignal`` set to
     ``PostCmdExitSignal``. The exit status of a post command without one
     of ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
-    ignored. :index:` <single: TotalSuspensions;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TotalSuspensions>`
+    ignored. :index:`TotalSuspensions;ClassAd job attribute<single: TotalSuspensions;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TotalSuspensions<single: job ClassAd attribute;TotalSuspensions>`
  ``TotalSuspensions``:
     A count of the number of times this job has been suspended during
-    its lifetime. :index:` <single: TransferErr;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferErr>`
+    its lifetime. :index:`TransferErr;ClassAd job attribute<single: TransferErr;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferErr<single: job ClassAd attribute;TransferErr>`
  ``TransferErr``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the error output from the job is
@@ -1772,8 +1772,8 @@ Job ClassAd Attributes
     attribute ``Err``. If ``False``, no transfer takes place (remote to
     submit machine), and the name of the file is the file referred to by
     job attribute ``Err``.
-    :index:` <single: TransferExecutable;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferExecutable>`
+    :index:`TransferExecutable;ClassAd job attribute<single: TransferExecutable;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferExecutable<single: job ClassAd attribute;TransferExecutable>`
  ``TransferExecutable``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the job executable is transferred
@@ -1782,8 +1782,8 @@ Job ClassAd Attributes
     attribute ``Cmd``. If ``False``, no transfer takes place, and the
     name of the file used (on the remote machine) will be as given in
     the job attribute ``Cmd``.
-    :index:` <single: TransferIn;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferIn>`
+    :index:`TransferIn;ClassAd job attribute<single: TransferIn;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferIn<single: job ClassAd attribute;TransferIn>`
  ``TransferIn``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the job input is transferred from the
@@ -1791,15 +1791,15 @@ Job ClassAd Attributes
     transferred is given by the job attribute ``In``. If ``False``, then
     the job’s input is taken from a file on the remote machine
     (pre-staged), and the name of the file is given by the job attribute
-    ``In``. :index:` <single: TransferInputSizeMB;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferInputSizeMB>`
+    ``In``. :index:`TransferInputSizeMB;ClassAd job attribute<single: TransferInputSizeMB;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferInputSizeMB<single: job ClassAd attribute;TransferInputSizeMB>`
  ``TransferInputSizeMB``:
     The total size in Mbytes of input files to be transferred for the
     job. Files transferred via file transfer plug-ins are not included.
     This attribute is automatically set by *condor\_submit*; jobs
     submitted via other submission methods, such as SOAP, may not define
-    this attribute. :index:` <single: TransferOut;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferOut>`
+    this attribute. :index:`TransferOut;ClassAd job attribute<single: TransferOut;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferOut<single: job ClassAd attribute;TransferOut>`
  ``TransferOut``:
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the output from the job is
@@ -1808,112 +1808,112 @@ Job ClassAd Attributes
     attribute ``Out``. If ``False``, no transfer takes place (remote to
     submit machine), and the name of the file is the file referred to by
     job attribute ``Out``.
-    :index:` <single: TransferringInput;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferringInput>`
+    :index:`TransferringInput;ClassAd job attribute<single: TransferringInput;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferringInput<single: job ClassAd attribute;TransferringInput>`
  ``TransferringInput``:
     A boolean value that indicates whether the job is currently
     transferring input files. The value is ``Undefined`` if the job is
     not scheduled to run or has not yet attempted to start transferring
     input. When this value is ``True``, to see whether the transfer is
     active or queued, check ``TransferQueued``.
-    :index:` <single: TransferringOutput;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferringOutput>`
+    :index:`TransferringOutput;ClassAd job attribute<single: TransferringOutput;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferringOutput<single: job ClassAd attribute;TransferringOutput>`
  ``TransferringOutput``:
     A boolean value that indicates whether the job is currently
     transferring output files. The value is ``Undefined`` if the job is
     not scheduled to run or has not yet attempted to start transferring
     output. When this value is ``True``, to see whether the transfer is
     active or queued, check ``TransferQueued``.
-    :index:` <single: TransferQueued;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;TransferQueued>`
+    :index:`TransferQueued;ClassAd job attribute<single: TransferQueued;ClassAd job attribute>`
+    :index:`job ClassAd attribute;TransferQueued<single: job ClassAd attribute;TransferQueued>`
  ``TransferQueued``:
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
-    ``MAX_CONCURRENT_DOWNLOADS`` :index:` <single: MAX_CONCURRENT_DOWNLOADS>`
-    or ``MAX_CONCURRENT_UPLOADS`` :index:` <single: MAX_CONCURRENT_UPLOADS>`.
-    :index:` <single: UserLog;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;UserLog>`
+    ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS<single: MAX_CONCURRENT_DOWNLOADS>`
+    or ``MAX_CONCURRENT_UPLOADS`` :index:`MAX_CONCURRENT_UPLOADS<single: MAX_CONCURRENT_UPLOADS>`.
+    :index:`UserLog;ClassAd job attribute<single: UserLog;ClassAd job attribute>`
+    :index:`job ClassAd attribute;UserLog<single: job ClassAd attribute;UserLog>`
 
  ``UserLog``:
     The full path and file name on the submit machine of the log file of
     job events.
-    :index:` <single: WantGracefulRemoval;ClassAd job attribute>`
+    :index:`WantGracefulRemoval;ClassAd job attribute<single: WantGracefulRemoval;ClassAd job attribute>`
  ``WantGracefulRemoval``:
     A boolean expression that, when ``True``, specifies that a graceful
     shutdown of the job should be done when the job is removed or put on
-    hold. :index:` <single: WindowsBuildNumber;ClassAd job attribute>`
+    hold. :index:`WindowsBuildNumber;ClassAd job attribute<single: WindowsBuildNumber;ClassAd job attribute>`
  ``WindowsBuildNumber``:
     An integer, extracted from the platform type of the machine upon
     which this job is submitted, representing a build number for a
     Windows operating system. This attribute only exists for jobs
     submitted from Windows machines.
-    :index:` <single: WindowsMajorVersion;ClassAd job attribute>`
+    :index:`WindowsMajorVersion;ClassAd job attribute<single: WindowsMajorVersion;ClassAd job attribute>`
  ``WindowsMajorVersion``:
     An integer, extracted from the platform type of the machine upon
     which this job is submitted, representing a major version number
     (currently 5 or 6) for a Windows operating system. This attribute
     only exists for jobs submitted from Windows machines.
-    :index:` <single: WindowsMinorVersion;ClassAd job attribute>`
+    :index:`WindowsMinorVersion;ClassAd job attribute<single: WindowsMinorVersion;ClassAd job attribute>`
  ``WindowsMinorVersion``:
     An integer, extracted from the platform type of the machine upon
     which this job is submitted, representing a minor version number
     (currently 0, 1, or 2) for a Windows operating system. This
     attribute only exists for jobs submitted from Windows machines.
-    :index:` <single: X509UserProxy;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxy>`
+    :index:`X509UserProxy;ClassAd job attribute<single: X509UserProxy;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxy<single: job ClassAd attribute;X509UserProxy>`
  ``X509UserProxy``:
     The full path and file name of the file containing the X.509 user
-    proxy. :index:` <single: X509UserProxyEmail;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxyEmail>`
+    proxy. :index:`X509UserProxyEmail;ClassAd job attribute<single: X509UserProxyEmail;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxyEmail<single: job ClassAd attribute;X509UserProxyEmail>`
  ``X509UserProxyEmail``:
     For a job with an X.509 proxy credential, this is the email address
     extracted from the proxy.
-    :index:` <single: X509UserProxyExpiration;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxyExpiration>`
+    :index:`X509UserProxyExpiration;ClassAd job attribute<single: X509UserProxyExpiration;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxyExpiration<single: job ClassAd attribute;X509UserProxyExpiration>`
  ``X509UserProxyExpiration``:
     For a job that defines the submit description file command
-    **x509userproxy**\ :index:` <single: x509userproxy;submit commands>`,
+    **x509userproxy**\ :index:`x509userproxy;submit commands<single: x509userproxy;submit commands>`,
     this is the time at which the indicated X.509 proxy credential will
     expire, measured in the number of seconds since the epoch (00:00:00
     UTC, Jan 1, 1970).
-    :index:` <single: X509UserProxyFirstFQAN;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxyFirstFQAN>`
+    :index:`X509UserProxyFirstFQAN;ClassAd job attribute<single: X509UserProxyFirstFQAN;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxyFirstFQAN<single: job ClassAd attribute;X509UserProxyFirstFQAN>`
  ``X509UserProxyFirstFQAN``:
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy**\ :index:` <single: x509userproxy;submit commands>`,
+    **x509userproxy**\ :index:`x509userproxy;submit commands<single: x509userproxy;submit commands>`,
     this is the VOMS Fully Qualified Attribute Name (FQAN) of the
     primary role of the credential. A credential may have multiple roles
     defined, but by convention the one listed first is the primary role.
-    :index:` <single: X509UserProxyFQAN;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxyFQAN>`
+    :index:`X509UserProxyFQAN;ClassAd job attribute<single: X509UserProxyFQAN;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxyFQAN<single: job ClassAd attribute;X509UserProxyFQAN>`
  ``X509UserProxyFQAN``:
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy**\ :index:` <single: x509userproxy;submit commands>`,
+    **x509userproxy**\ :index:`x509userproxy;submit commands<single: x509userproxy;submit commands>`,
     this is a serialized list of the DN and all FQAN. A comma is used as
     a separator, and any existing commas in the DN or FQAN are replaced
     with the string ``&comma;``. Likewise, any ampersands in the DN or
     FQAN are replaced with ``&amp;``.
-    :index:` <single: X509UserProxySubject;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxySubject>`
+    :index:`X509UserProxySubject;ClassAd job attribute<single: X509UserProxySubject;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxySubject<single: job ClassAd attribute;X509UserProxySubject>`
  ``X509UserProxySubject``:
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy**\ :index:` <single: x509userproxy;submit commands>`,
+    **x509userproxy**\ :index:`x509userproxy;submit commands<single: x509userproxy;submit commands>`,
     this attribute contains the Distinguished Name (DN) of the
     credential used to submit the job.
-    :index:` <single: X509UserProxyVOName;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;X509UserProxyVOName>`
+    :index:`X509UserProxyVOName;ClassAd job attribute<single: X509UserProxyVOName;ClassAd job attribute>`
+    :index:`job ClassAd attribute;X509UserProxyVOName<single: job ClassAd attribute;X509UserProxyVOName>`
  ``X509UserProxyVOName``:
     For a vanilla or grid universe job that defines the submit
     description file command
-    **x509userproxy**\ :index:` <single: x509userproxy;submit commands>`,
+    **x509userproxy**\ :index:`x509userproxy;submit commands<single: x509userproxy;submit commands>`,
     this is the name of the VOMS virtual organization (VO) that the
     user’s credential is part of.
 
 The following job ClassAd attributes are relevant only for **vm**
-universe jobs. :index:` <single: VM_MACAddr;ClassAd job attribute>`
+universe jobs. :index:`VM_MACAddr;ClassAd job attribute<single: VM_MACAddr;ClassAd job attribute>`
 
  ``VM_MACAddr``:
     The MAC address of the virtual machine’s network interface, in the
@@ -1924,53 +1924,53 @@ universe jobs. :index:` <single: VM_MACAddr;ClassAd job attribute>`
 The following job ClassAd attributes appear in the job ClassAd only for
 the *condor\_dagman* job submitted under DAGMan. They represent status
 information for the DAG.
-:index:` <single: DAG_InRecovery;ClassAd job attribute>`
-:index:` <single: job ClassAd attribute;DAG_InRecovery>`
+:index:`DAG_InRecovery;ClassAd job attribute<single: DAG_InRecovery;ClassAd job attribute>`
+:index:`job ClassAd attribute;DAG_InRecovery<single: job ClassAd attribute;DAG_InRecovery>`
 
  ``DAG_InRecovery``:
     The value 1 if the DAG is in recovery mode, and The value 0
-    otherwise. :index:` <single: DAG_NodesDone;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesDone>`
+    otherwise. :index:`DAG_NodesDone;ClassAd job attribute<single: DAG_NodesDone;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesDone<single: job ClassAd attribute;DAG_NodesDone>`
  ``DAG_NodesDone``:
     The number of DAG nodes that have finished successfully. This means
     that the entire node has finished, not only an actual HTCondor job
-    or jobs. :index:` <single: DAG_NodesFailed;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesFailed>`
+    or jobs. :index:`DAG_NodesFailed;ClassAd job attribute<single: DAG_NodesFailed;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesFailed<single: job ClassAd attribute;DAG_NodesFailed>`
  ``DAG_NodesFailed``:
     The number of DAG nodes that have failed. This value includes all
     retries, if there are any.
-    :index:` <single: DAG_NodesPostrun;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesPostrun>`
+    :index:`DAG_NodesPostrun;ClassAd job attribute<single: DAG_NodesPostrun;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesPostrun<single: job ClassAd attribute;DAG_NodesPostrun>`
  ``DAG_NodesPostrun``:
     The number of DAG nodes for which a POST script is running or has
     been deferred because of a POST script throttle setting.
-    :index:` <single: DAG_NodesPrerun;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesPrerun>`
+    :index:`DAG_NodesPrerun;ClassAd job attribute<single: DAG_NodesPrerun;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesPrerun<single: job ClassAd attribute;DAG_NodesPrerun>`
  ``DAG_NodesPrerun``:
     The number of DAG nodes for which a PRE script is running or has
     been deferred because of a PRE script throttle setting.
-    :index:` <single: DAG_NodesQueued;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesQueued>`
+    :index:`DAG_NodesQueued;ClassAd job attribute<single: DAG_NodesQueued;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesQueued<single: job ClassAd attribute;DAG_NodesQueued>`
  ``DAG_NodesQueued``:
     The number of DAG nodes for which the actual HTCondor job or jobs
     are queued. The queued jobs may be in any state.
-    :index:` <single: DAG_NodesReady;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesReady>`
+    :index:`DAG_NodesReady;ClassAd job attribute<single: DAG_NodesReady;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesReady<single: job ClassAd attribute;DAG_NodesReady>`
  ``DAG_NodesReady``:
     The number of DAG nodes that are ready to run, but which have not
     yet started running.
-    :index:` <single: DAG_NodesTotal;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesTotal>`
+    :index:`DAG_NodesTotal;ClassAd job attribute<single: DAG_NodesTotal;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesTotal<single: job ClassAd attribute;DAG_NodesTotal>`
  ``DAG_NodesTotal``:
     The total number of nodes in the DAG, including the FINAL node, if
     there is a FINAL node.
-    :index:` <single: DAG_NodesUnready;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_NodesUnready>`
+    :index:`DAG_NodesUnready;ClassAd job attribute<single: DAG_NodesUnready;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_NodesUnready<single: job ClassAd attribute;DAG_NodesUnready>`
  ``DAG_NodesUnready``:
     The number of DAG nodes that are not ready to run. This is a node in
     which one or more of the parent nodes has not yet finished.
-    :index:` <single: DAG_Status;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DAG_Status>`
+    :index:`DAG_Status;ClassAd job attribute<single: DAG_Status;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DAG_Status<single: job ClassAd attribute;DAG_Status>`
  ``DAG_Status``:
     The overall status of the DAG, with the same values as the macro
     ``$DAG_STATUS`` used in DAGMan FINAL nodes.
@@ -1989,8 +1989,8 @@ information for the DAG.
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor\_schedd* daemon. They appear in the job ClassAd
 written to the job’s execute directory while the job is running.
-:index:` <single: CpusProvisioned;ClassAd job attribute>`
-:index:` <single: job ClassAd attribute;CpusProvisioned>`
+:index:`CpusProvisioned;ClassAd job attribute<single: CpusProvisioned;ClassAd job attribute>`
+:index:`job ClassAd attribute;CpusProvisioned<single: job ClassAd attribute;CpusProvisioned>`
 
  ``CpusProvisioned``:
     The number of Cpus allocated to the job. With statically-allocated
@@ -1998,24 +1998,24 @@ written to the job’s execute directory while the job is running.
     dynamically-allocated slots, it is based upon the job attribute
     ``RequestCpus``, but may be larger due to the minimum given to a
     dynamic slot.
-    :index:` <single: DiskProvisioned;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;DiskProvisioned>`
+    :index:`DiskProvisioned;ClassAd job attribute<single: DiskProvisioned;ClassAd job attribute>`
+    :index:`job ClassAd attribute;DiskProvisioned<single: job ClassAd attribute;DiskProvisioned>`
  ``DiskProvisioned``:
     The amount of disk space in KiB allocated to the job. With
     statically-allocated slots, it is the amount of disk space allocated
     to the slot. With dynamically-allocated slots, it is based upon the
     job attribute ``RequestDisk``, but may be larger due to the minimum
     given to a dynamic slot.
-    :index:` <single: MemoryProvisioned;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;MemoryProvisioned>`
+    :index:`MemoryProvisioned;ClassAd job attribute<single: MemoryProvisioned;ClassAd job attribute>`
+    :index:`job ClassAd attribute;MemoryProvisioned<single: job ClassAd attribute;MemoryProvisioned>`
  ``MemoryProvisioned``:
     The amount of memory in MiB allocated to the job. With
     statically-allocated slots, it is the amount of memory space
     allocated to the slot. With dynamically-allocated slots, it is based
     upon the job attribute ``RequestMemory``, but may be larger due to
     the minimum given to a dynamic slot.
-    :index:` <single: <Name>Provisioned;ClassAd job attribute>`
-    :index:` <single: job ClassAd attribute;<Name>Provisioned>`
+    :index:`<Name>Provisioned;ClassAd job attribute<single: <Name>Provisioned;ClassAd job attribute>`
+    :index:`job ClassAd attribute;<Name>Provisioned<single: job ClassAd attribute;<Name>Provisioned>`
  ``<Name>Provisioned``:
     The amount of the custom resource identified by ``<Name>`` allocated
     to the job. For jobs using GPUs, ``<Name>`` will be ``GPUs``. With
