@@ -46,7 +46,7 @@ automatically mounts the nvidia gpu devices.
 \item If a job RequestGpus, and Singularity is enabled, HTCondor
 automatically passes the --nv flag to Singularity to tell it to mount
 the nvidia gpus.
-\Ticket{6858}
+\Ticket{6898}
 
 \item When jobs are run without file transfer on, usually because there is a 
 shared filesytem, HTCondor used to unconditionally set the jobs argv[0]
@@ -87,6 +87,10 @@ the time they occur.
 \item Implemented a new version of the curl\_plugin with multi-file support,
 allowing it to transfer many files in a single invocation of the plugin.
 \Ticket{6499} \Ticket{6859}
+
+\item Added support for passing HTTPS authentication credentials to  
+file transfer plugins, using specially custozimed protocols.
+\Ticket{6858}
 
 \end{itemize}
 
