@@ -92,6 +92,13 @@ allowing it to transfer many files in a single invocation of the plugin.
 file transfer plugins, using specially custozimed protocols.
 \Ticket{6858}
 
+\item Added support for output file remaps for URLs. This allows users to 
+specify a URL where they want individual output files to go, and once a job 
+is complete, we automatically uploads the files there. We are preserving the 
+older implementation (OutputDestination), which puts all output files in the 
+same place, for backwareds compatibility.
+\Ticket{6876}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
