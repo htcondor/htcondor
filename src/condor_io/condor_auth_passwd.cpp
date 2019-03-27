@@ -121,7 +121,7 @@ bool findToken(const std::string &tokenfilename,
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
-				[](int ch) {return !isspace(ch) && (ch != '\n');}));
+				[](int ch) {return !isspace(ch);}));
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
