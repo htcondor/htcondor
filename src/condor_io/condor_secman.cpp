@@ -1133,6 +1133,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errst
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
 
+	// Initialize IpVerify, if necessary, before starting any network
+	// communications.
+	m_ipverify->Init();
+
 	// If this is nonblocking, we must create the following on the heap.
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.

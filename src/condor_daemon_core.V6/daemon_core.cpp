@@ -2980,6 +2980,7 @@ DaemonCore::reconfig(void) {
 
 	SecMan *secman = getSecMan();
 	secman->reconfig();
+	secman->getIpVerify()->Init();
 
 		// add a random offset to avoid pounding DNS
 	int dns_interval = param_integer("DNS_CACHE_REFRESH",
