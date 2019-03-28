@@ -295,6 +295,9 @@ int ipv6_getaddrinfo(const char *node, const char *service,
 	int e = getaddrinfo(node, service, &hint, &res );
 	double timediff = _condor_debug_get_time_double() - begin;
 	getaddrinfo_runtime += timediff;
+	if (timediff > getaddrinfo_slow_limit) {
+		dprintf(D_ALWAYS, "getaddrinfo(%s) took %f seconds.\n", node, timediff);
+	}
 	if (e!=0) {
 		getaddrinfo_fail_runtime += timediff;
 		return e;
