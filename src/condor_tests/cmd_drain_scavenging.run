@@ -98,18 +98,25 @@ my $testDescription = 'Test scavenging.';
 # terminate it and declare the test a success.
 #
 
-my $jobFile = cwd() . '/condition-sleep.pl';
+my $jobFile = cwd() . '/condition-sleep-cds.pl';
+if( CondorUtils::is_windows() ) {
+	$jobFile = cwd() . '/sleepw.exe';
+}
 my $jobContents = '#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
+#
+# We assume -u -k <killfile> <sleep time in seconds>.
+#
+
 # Ignore SIGTERM and force a hard-kill to test if MaxJobRetirementTime is
 # being altered appropriately.
 $SIG{"TERM"} = "IGNORE";
 
-my $killFile = $ARGV[0];
-my $maxSleep = $ARGV[1];
+my $killFile = $ARGV[2];
+my $maxSleep = $ARGV[3];
 
 for( my $i = 0; $i < $maxSleep; ++$i ) {
 	if( -e $killFile ) { exit( 0 ); }
@@ -118,8 +125,10 @@ for( my $i = 0; $i < $maxSleep; ++$i ) {
 
 exit( 0 );
 ';
-CondorTest::WriteFileOrDie( $jobFile, $jobContents );
-chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
+if(! CondorUtils::is_windows()) {
+	CondorTest::WriteFileOrDie( $jobFile, $jobContents );
+	chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
+}
 
 my $killFile = cwd() . "/killfile-cds";
 my $submitBody = "
@@ -128,19 +137,19 @@ executable				= ${jobFile}
 transfer_executable		= false
 should_transfer_files	= true
 universe				= vanilla
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
+arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
 
 log						= cmd_drain_scavenging.log
 
 queue 3
 
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
+arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
 +IsBackfill				= True
 MaxJobRetirementTime	= 60
 
 queue 1
 
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
+arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
 +IsBackfill				= False
 MaxJobRetirementTime	= 60
 
@@ -373,7 +382,7 @@ my $evicted = sub {
 		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
 		for( my $delay = 0; $delay <= 20; ++$delay ) {
 			if( $delay == 20 ) {
-				die( "... did not find all necessary state changes (found $progress of them) in log, aborting.\n" );
+				die( "... did not find all necessary state changes (found $progress of the 5) in log, aborting.\n" );
 			}
 
 			if( checkTiming( $logFileName, \$progress ) ) { last; }
