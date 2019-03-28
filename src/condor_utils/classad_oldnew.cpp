@@ -645,6 +645,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options)
 		haveChainedAd = true;
 	}
 
+	int private_count = 0;
 	for(int pass = 0; pass < 2; pass++){
 
 		/*
@@ -679,8 +680,14 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options)
 					}
 				}
 				else { numExprs++; }
+			} else {
+				private_count++;
 			}
 		}
+	}
+		// If we counted no private attributes, we don't need to test again later.
+	if (exclude_private && !private_count) {
+		//exclude_private = false;
 	}
 
 	if( publish_server_timeMangled ){
@@ -732,7 +739,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options)
 			buf += " = ";
 			unp.Unparse( buf, expr );
 
-			if( ! crypto_is_noop &&
+			if( ! crypto_is_noop && private_count &&
 				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				sock->put(SECRET_MARKER);
