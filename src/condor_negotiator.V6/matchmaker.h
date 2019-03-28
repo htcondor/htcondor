@@ -166,6 +166,8 @@ class Matchmaker : public Service
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds);
 
+		void SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds);
+
 		/**
 		 * Start the network communication necessary for a negotiation cycle.
 		 */
