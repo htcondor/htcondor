@@ -873,7 +873,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 		ClaimIdParser cidp(capability_pair.second.c_str());
 		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability_pair.second.c_str());
 		secman->CreateNonNegotiatedSecuritySession(
-			CLIENT,
+			CLIENT_PERM,
 			cidp.secSessionId(),
 			cidp.secSessionKey(),
 			cidp.secSessionInfo(),
