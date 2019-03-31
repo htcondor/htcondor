@@ -44,6 +44,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item In some situations, the GPU monitoring code could disagree with the
+GPU discovery code about the mapping between GPU device indices and actual
+devices.  Both now use PCI bus IDs to establish the mapping.  One consequence
+of this change is that we now prefer to use NVidia's management library,
+rather than the CUDA run-time library, when doing discovery.
+\Ticket{6903}
+\Ticket{6901}
+
 \item Corrected a problem where the only attribute Chirp could
 set via its \Expr{set\_job\_attr\_delayed} command was \Attr{Chirp}.
 \Ticket{6958}
@@ -60,8 +68,8 @@ shut down gracefully.
 
 \item Restored the old Python bindings for reading the job event log
 (\Code{EventIterator} and \Code{read\_events()}).
-These bindings are marked as deprecated and will likely be removed
-permanently in the 8.9 series.
+These bindings are marked as deprecated, are not available in
+Python 3, and will likely be removed permanently in the 8.9 series.
 Users should transition to the replacement bindings (\Code{JobEventLog})
 \Ticket{6939}
 
