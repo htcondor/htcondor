@@ -108,6 +108,12 @@ same place, for backwareds compatibility.
 \item Avoid killing jobs using between 90\% and 99\% of memory limit. 
 \Ticket{6925}
 
+\item Improved how \AdStr{Chirp} handles a network disconneciton between
+the \Condor{starter} and \Condor{shadow}.
+\AdStr{Chirp} commands now return a special error and no longer cause the
+\Condor{starter} to exit (killing the job).
+\Ticket{6873}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
