@@ -73,6 +73,10 @@ Python 3, and will likely be removed permanently in the 8.9 series.
 Users should transition to the replacement bindings (\Code{JobEventLog})
 \Ticket{6939}
 
+\item Fixed a bug that could cause the \File{job\_queue.log} file to
+be corrupted when the \Condor{schedd} compacts it.
+\Ticket{6929}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
