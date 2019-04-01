@@ -77,6 +77,11 @@ Users should transition to the replacement bindings (\Code{JobEventLog})
 be corrupted when the \Condor{schedd} compacts it.
 \Ticket{6929}
 
+\item Fixed a bug that could cause entries in the job event log to be
+written with the wrong job id when a \Condor{shadow} process is used to
+run multiplejobs.
+\Ticket{6919}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
