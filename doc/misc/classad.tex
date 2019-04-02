@@ -889,7 +889,14 @@ Inclusion of characters other than these as options are ignored.
     after each newline character.
     The dollar sign character matches before a newline character.
   \item[\Expr{S} or \Expr{s}]
-    The period matches any character, including the newline character. 
+    The period matches any character, including the newline character.
+  \item[\Expr{F} or \Expr{f}]
+    When doing substitution, return the full target string with
+    substitutions applied. Normally, only the substitute text is
+    returned.
+  \item[\Expr{G} or \Expr{g}]
+    When doing substitution, apply the substitution for every matching
+    portion of the target string (that doesn't overlap a previous match).
 %%% The X flag is not documented as it's basically useless without
 %%% the ability to have newlines in the regex.
 %  \item[\Expr{X} or \Expr{x}]
@@ -903,11 +910,11 @@ Inclusion of characters other than these as options are ignored.
 \begin{description}
   \index{ClassAd functions!regexp()}
   \item[\Code{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
-    Uses the description of a regular expression 
+    Uses the regular expression 
     given by string \Expr{pattern}
     to scan through the string \Expr{target}.
-    Returns \Expr{TRUE} when \Expr{target} is 
-    a regular expression as described by \Expr{pattern}.
+    Returns \Expr{TRUE} when \Expr{target} matches 
+    the regular expression given by \Expr{pattern}.
     Returns \Expr{FALSE} otherwise.
     If any argument is not a string, or if \Expr{pattern} does not describe
     a valid regular expression, returns \Expr{ERROR}.
@@ -917,13 +924,43 @@ Inclusion of characters other than these as options are ignored.
   \index{ClassAd functions!regexps()}
   \item[\Code{String regexps}] \Code{(String pattern, String target, 
    String substitute \Lbr\ , String options \Rbr) } 
-    Uses the description of a regular expression 
+    Uses the regular expression 
     given by string \Expr{pattern}
     to scan through the string \Expr{target}.
-    When \Expr{target} is a regular expression
-    as described by \Expr{pattern},
+    When \Expr{target} matches the regular expression
+    given by \Expr{pattern},
     the string \Expr{substitute} is returned,
     with backslash expansion performed.
+    If any argument is not a string, returns \Expr{ERROR}.
+
+% LaTeX can't get the right stuff on a single line, so break the item[]
+% early. Stupid solution, but if it works. . .
+  \index{ClassAd functions!replace()}
+  \item[\Code{String replace}] \Code{(String pattern, String target, 
+   String substitute \Lbr\ , String options \Rbr) } 
+    Uses the regular expression 
+    given by string \Expr{pattern}
+    to scan through the string \Expr{target}.
+    Returns a modified version of \Expr{target},
+    where the first substring that matches \Expr{pattern}
+    is replaced by the string \Expr{substitute}, with
+    backslash expansion performed.
+    Equivalent to \Code{regexps()} with the \Expr{f} option.
+    If any argument is not a string, returns \Expr{ERROR}.
+
+% LaTeX can't get the right stuff on a single line, so break the item[]
+% early. Stupid solution, but if it works. . .
+  \index{ClassAd functions!replaceall()}
+  \item[\Code{String replaceall}] \Code{(String pattern, String target, 
+   String substitute \Lbr\ , String options \Rbr) } 
+    Uses the regular expression 
+    given by string \Expr{pattern}
+    to scan through the string \Expr{target}.
+    Returns a modified version of \Expr{target},
+    where every substring that matches \Expr{pattern}
+    is replaced by the string \Expr{substitute}, with
+    backslash expansion performed.
+    Equivalent to \Code{regexps()} with the \Expr{fg} options.
     If any argument is not a string, returns \Expr{ERROR}.
 
 % LaTeX can't get the right stuff on a single line, so break the item[]

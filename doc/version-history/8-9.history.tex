@@ -99,6 +99,13 @@ older implementation (OutputDestination), which puts all output files in the
 same place, for backwareds compatibility.
 \Ticket{6876}
 
+\item Added options \Expr{f} (return full target string) and \Expr{g}
+(perform multiple substitutions) to ClassAd function \Code{regexps()}.
+Added new ClassAd functions \Code{replace()} (equivalent to
+\Code{regexps()} with \Expr{f} option) and \Code{replaceall()}
+(equivalent to \Code{regexps()} with \Expr{fg} options).
+\Ticket{6848}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
