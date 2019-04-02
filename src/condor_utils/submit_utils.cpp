@@ -456,7 +456,7 @@ SubmitHash::SubmitHash()
 	, TransferInputSizeKb(0)
 
 {
-	SubmitMacroSet.initialize();
+	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
 
 	mctx.init("SUBMIT", 3);
