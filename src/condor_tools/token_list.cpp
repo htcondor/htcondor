@@ -94,7 +94,7 @@ bool printToken(const std::string &tokenfilename) {
 	}
 
 */
-	FILE * f = safe_fopen_no_create( tokenfilename.c_str(), O_RDONLY );
+	FILE * f = safe_fopen_no_create( tokenfilename.c_str(), "r" );
 	if( f == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
 			tokenfilename.c_str(), errno, strerror(errno));
@@ -104,10 +104,11 @@ bool printToken(const std::string &tokenfilename) {
 	for (std::string line; std::getline(tokenfile, line); ) {
 */
     for( std::string line; readLine( line, f, false ); ) {
+	    line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
-				[](int ch) {return !isspace(ch) && (ch != '\n');}));
+				[](int ch) {return !isspace(ch);}));
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
@@ -118,7 +119,7 @@ bool printToken(const std::string &tokenfilename) {
 				decoded_jwt.get_payload().c_str(),
 				tokenfilename.c_str());
 		} catch (std::exception) {
-			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile; ignoring.\n");
+			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
 		}
 #endif
 	}
