@@ -1375,7 +1375,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
-			if (m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
 				StringList authz_limits(authz_policy.c_str());
 				authz_limits.rewind();
 				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
