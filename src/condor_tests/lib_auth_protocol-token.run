@@ -80,6 +80,7 @@ def main():
 
 	params = {
 		"DAEMON_LIST" : "MASTER",
+		"MASTER_DEBUG" : "D_SECURITY",
 
 		"SEC_DEFAULT_AUTHENTICATION_METHODS" : "TOKEN",
 		"SEC_DEFAULT_AUTHENTICATION" : "REQUIRED",
@@ -123,8 +124,6 @@ def main():
 	# Check if we authenticate with a correct master password and don't
 	# with an incorrect master password.
 	#
-	# TODO: Write a ticket to have HTCondor create the password file if
-	#       SEC_PASSWORD_FILE is set but doesn't exist.
 
 	# Test if shared master password properly fails.
 	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
