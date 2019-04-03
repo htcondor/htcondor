@@ -91,7 +91,7 @@ class CondorTest(object):
     # Exit handling.
     #
 
-    _exit_code = None
+    _exit_code = 0
 
     @staticmethod
     def ExitHandler():
@@ -123,7 +123,7 @@ class CondorTest(object):
         # but since we're in the exit handler, that probably doesn't matter.
         if sys.modules.get("threading") is not None:
         	del sys.modules["threading"]
-        sys.exit(0)
+        sys.exit(rv)
 
     # The 'early-out' method.  Records the intended exit code, because
     # Python doesn't.  We could skip using the atexit library, but this
