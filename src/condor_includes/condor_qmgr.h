@@ -36,7 +36,7 @@
 #endif
 
 
-typedef struct {
+typedef struct _Qmgr_connection {
 	bool dummy;
 } Qmgr_connection;
 
