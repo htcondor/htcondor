@@ -538,9 +538,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			return 0;
 		}
 			// Now, we've got a valid wrapper.  We want that to become
-			// "JobName" so we exec it directly, and we want to put
-			// what was the JobName (with the full path) as the first
-			// argument to the wrapper
+			// "JobName" so we exec it directly. We also insert the
+			// wrapper filename at the front of args. As a result,
+			// the executable being wrapped is now argv[1] and so forth.
 		args.InsertArg(wrapper.c_str(),0);
 		JobName = wrapper;
 	}
