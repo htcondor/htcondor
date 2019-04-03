@@ -107,7 +107,9 @@ GetToken(const std::string & cred_name, std::string & token) {
 
 MultiFileCurlPlugin::MultiFileCurlPlugin( bool diagnostic ) :
     _diagnostic ( diagnostic )
-{}
+{
+    ParseAds();
+}
 
 MultiFileCurlPlugin::~MultiFileCurlPlugin() {
     curl_easy_cleanup( _handle );
@@ -135,6 +137,13 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 {
     curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
     curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+
+    if (m_speed_limit > 0) {
+        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
+    }
+    if (m_speed_time > 0) {
+        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
+    }
 
     // Provide default read / write callback functions; note these
     // don't segfault if a nullptr is given as the read/write data.
@@ -695,6 +704,53 @@ size_t
 MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, void* stream ) {
     FILE* outfile = ( FILE* ) stream;
     return fwrite( buffer, size, nmemb, outfile); 
+}
+
+
+void
+MultiFileCurlPlugin::ParseAds() {
+    const char *job_ad = getenv("_CONDOR_JOB_AD");
+    const char *machine_ad = getenv("_CONDOR_MACHINE_AD");
+    FILE *fp = nullptr;
+    classad::ClassAd *ad = nullptr;
+    int error;
+    bool is_eof;
+    if (job_ad && (fp = fopen(job_ad, "r"))) {
+        ad = new classad::ClassAd();
+        if (InsertFromFile(fp, *ad, is_eof, error) < 0) {
+            delete ad;
+            ad = nullptr;
+        }
+    }
+    if (fp) {fclose(fp); fp = nullptr;}
+    classad::ClassAd *ad2 = nullptr;
+    if (machine_ad && (fp = fopen(machine_ad, "r"))) {
+        ad2 = new classad::ClassAd();
+        if (InsertFromFile(fp, *ad2, is_eof, error) < 0) {
+            delete ad2;
+            ad2 = nullptr;
+        }
+    }
+    if (fp) {fclose(fp); fp = nullptr;}
+    if (!ad) {
+        delete ad2;
+        return;
+    }
+    if (ad2) ad->ChainToAd(ad2);
+
+    classad::ClassAdUnParser unp;
+    std::string val;
+    unp.Unparse(val, ad);
+    int speed_limit;
+    if (ad->EvaluateAttrInt("LowSpeedLimit", speed_limit)) {
+        m_speed_limit = speed_limit;
+    }
+    int speed_time;
+    if (ad->EvaluateAttrInt("LowSpeedTime", speed_time)) {
+        m_speed_time = speed_time;
+    }
+    if (ad2) {ad->Unchain(); delete ad2;}
+    delete ad;
 }
 
 
