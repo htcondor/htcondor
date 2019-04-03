@@ -4807,6 +4807,14 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 		dprintf(D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n", proxy_filename);
 	}
 
+	if (!m_job_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+	}
+	if (!m_machine_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+	}
+	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
+
 	// prepare args for the plugin
 	ArgList plugin_args;
 	plugin_args.AppendArg(plugin.Value());
@@ -4906,6 +4914,14 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n",
 				proxy_filename );
 	}
+	if (!m_job_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+	}
+	if (!m_machine_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+	}
+	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
+
 
 	// Determine if we want to run the plugin with root priv (if available).
 	// If so, drop_privs should be false.  the default is to drop privs.

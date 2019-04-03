@@ -2401,6 +2401,16 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setCredsDir(cred_path);
 		}
 
+		std::string job_ad_path, machine_ad_path;
+		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+			DIR_DELIM_CHAR,
+			JOB_AD_FILENAME);
+		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+			DIR_DELIM_CHAR,
+			MACHINE_AD_FILENAME);
+		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
+		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
+
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
 			// output from the spool.  We always want to use
