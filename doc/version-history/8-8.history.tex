@@ -73,6 +73,20 @@ Python 3, and will likely be removed permanently in the 8.9 series.
 Users should transition to the replacement bindings (\Code{JobEventLog})
 \Ticket{6939}
 
+\item Fixed a bug that could cause the \File{job\_queue.log} file to
+be corrupted when the \Condor{schedd} compacts it.
+\Ticket{6929}
+
+\item Fixed a bug that could cause entries in the job event log to be
+written with the wrong job id when a \Condor{shadow} process is used to
+run multiplejobs.
+\Ticket{6919}
+
+\item Fixed a bug with parameter \MacroNI{CHIRP\_DELAYED\_UPDATE\_PREFIX}
+that caused the \AdStr{Chirp} commands \Opt{set\_job\_attr\_delayed} and 
+\Opt{get\_job\_attr\_delayed} to fail.
+\Ticket{6958}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
