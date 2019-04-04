@@ -209,9 +209,7 @@ do_REMOTE_syscall()
 				// reconnect.  happy day! :)
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 
-			const char* txt = "Socket between submit and execute hosts "
-				"closed unexpectedly";
-			Shadow->logDisconnectedEvent( txt ); 
+			Shadow->resourceDisconnected(thisRemoteResource);
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
