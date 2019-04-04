@@ -548,9 +548,12 @@ IsStringValue( int &size ) const
 inline bool Value::
 IsClassAdValue(const ClassAd *&ad) const
 {
-	if ( valueType == CLASSAD_VALUE || valueType == SCLASSAD_VALUE ) {
+	if ( valueType == CLASSAD_VALUE ) {
 		ad = classadValue;
 		return true;
+	} else if( valueType == SCLASSAD_VALUE ) {
+	    ad = sclassadValue->get();
+	    return true;
 	} else {
 		return false;
 	}
@@ -559,9 +562,12 @@ IsClassAdValue(const ClassAd *&ad) const
 inline bool Value::
 IsClassAdValue(ClassAd *&ad) const
 {
-	if ( valueType == CLASSAD_VALUE || valueType == SCLASSAD_VALUE ) {
+	if ( valueType == CLASSAD_VALUE ) {
 		ad = classadValue;
 		return true;
+	} else if( valueType == SCLASSAD_VALUE ) {
+	    ad = sclassadValue->get();
+	    return true;
 	} else {
 		return false;
 	}
