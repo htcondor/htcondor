@@ -903,6 +903,7 @@ GetIndexPrefix( Value::ValueType vt )
 			return 'u';
 		case Value::ERROR_VALUE:
 			return 'e';
+		case Value::SCLASSAD_VALUE:
 		case Value::CLASSAD_VALUE:
 			return 'c';
 		case Value::SLIST_VALUE:

@@ -135,6 +135,7 @@ Unparse( string &buffer, const Value &val )
 	  
 			return;
 		}
+		case Value::SCLASSAD_VALUE:
 		case Value::CLASSAD_VALUE: {
 			const ClassAd *ad = NULL;
 			val.IsClassAdValue( ad );
