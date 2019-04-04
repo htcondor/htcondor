@@ -38,7 +38,7 @@ setup(
     description="HTCondor Python bindings",
     long_description=long_description,
     distclass=BinaryDistribution,
-    packages=["htcondor", "classad"],
+    packages=["htcondor", "classad", "htcondor_basic"],
     package_data=package_data,
     zip_safe=False,
     maintainer="Brian Bockelman, Jason Patton, Tim Theisen",

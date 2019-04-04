@@ -15,7 +15,7 @@
 
 import pytest
 
-import htcondor.basic as htc
+import htcondor_basic as htc
 
 
 @pytest.fixture(scope="function")

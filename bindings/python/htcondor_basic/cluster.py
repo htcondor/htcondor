@@ -15,51 +15,11 @@
 
 import logging
 
-from . import htcondor as htc
+import htcondor
+
+from . import exceptions
 
 logger = logging.getLogger(__name__)
-
-
-class Submit(htc.Submit):
-    def queue(self, count):
-        """
-        Submit ``count`` jobs.
-
-        Parameters
-        ----------
-        count : int
-            The number of jobs to submit.
-
-        Returns
-        -------
-        handle : Cluster
-            A handle for the cluster of jobs that was submitted.
-        """
-        return self.queue_with_itemdata(count=count, itemdata=None)
-
-    def queue_with_itemdata(self, count=1, itemdata=None):
-        """
-        Submit ``count`` jobs for each element of ``itemdata``.
-
-        Parameters
-        ----------
-        count : Optional[int]
-            The number of jobs to submit **for each element of ``itemdata``**.
-            Most likely, you'll want to leave this on the default (``1``).
-        itemdata : Optional[List[Dict]]]
-            A list of dictionaries that describe the itemdata for this submission.
-
-        Returns
-        -------
-        handle : Cluster
-            A handle for the cluster of jobs that was submitted.
-        """
-        schedd = htc.Schedd()
-        txn = schedd.transaction()
-        with txn:
-            result = super(Submit, self).queue_with_itemdata(txn, count, itemdata)
-
-        return Cluster(id=result.cluster(), cluster_ad=result.clusterad())
 
 
 class _QueryActEdit(object):
@@ -103,11 +63,11 @@ class _QueryActEdit(object):
             projection = []
         constraint = self._constraint(constraint)
 
-        return htc.Schedd().xquery(constraint, projection=projection, limit=limit)
+        return htcondor.Schedd().xquery(constraint, projection=projection, limit=limit)
 
     def _act(self, action, constraint=None):
         req = self._constraint(constraint)
-        act_result = htc.Schedd().act(action, req)
+        act_result = htcondor.Schedd().act(action, req)
 
         return act_result
 
@@ -127,7 +87,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Remove, constraint=constraint)
+        return self._act(htcondor.JobAction.Remove, constraint=constraint)
 
     def hold(self, constraint=None):
         """
@@ -145,7 +105,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Hold, constraint=constraint)
+        return self._act(htcondor.JobAction.Hold, constraint=constraint)
 
     def release(self, constraint=None):
         """
@@ -164,7 +124,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Release, constraint=constraint)
+        return self._act(htcondor.JobAction.Release, constraint=constraint)
 
     def pause(self, constraint=None):
         """
@@ -183,7 +143,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Suspend, constraint=constraint)
+        return self._act(htcondor.JobAction.Suspend, constraint=constraint)
 
     def resume(self, constraint=None):
         """
@@ -201,7 +161,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Continue, constraint=constraint)
+        return self._act(htcondor.JobAction.Continue, constraint=constraint)
 
     def vacate(self, constraint=None):
         """
@@ -220,7 +180,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the action.
         """
-        return self._act(htc.JobAction.Vacate, constraint=constraint)
+        return self._act(htcondor.JobAction.Vacate, constraint=constraint)
 
     def edit(self, attr, value, constraint=None):
         """
@@ -250,7 +210,7 @@ class _QueryActEdit(object):
         ad : classad.ClassAd
             An ad describing the results of the edit.
         """
-        return htc.Schedd().edit(self._constraint(constraint), attr, value)
+        return htcondor.Schedd().edit(self._constraint(constraint), attr, value)
 
 
 class Cluster(_QueryActEdit):
@@ -285,10 +245,10 @@ class Cluster(_QueryActEdit):
 
         if cluster_ad is None:
             # try to get the clusterad from the schedd
-            schedd = htc.Schedd()
+            schedd = htcondor.Schedd()
             try:
                 cluster_ad = schedd.query(
-                    self._constraint(), opts=htc.QueryOpts(0x10), limit=1
+                    self._constraint(), opts=htcondor.QueryOpts(0x10), limit=1
                 )[0]
             except IndexError:
                 # try to get a jobad from the schedd's history
@@ -358,5 +318,9 @@ class Cluster(_QueryActEdit):
         events :
             An iterator of :class:`JobEvent` for this cluster of jobs.
         """
-        log_path = self.ad["UserLog"]
-        return htc.JobEventLog(log_path).events(timeout)
+        try:
+            log_path = self.ad["UserLog"]
+        except KeyError:
+            raise exceptions.NoEventLog('This cluster of jobs does not have an event log; specify "log = <path>" in Submit to get an event log')
+
+        return htcondor.JobEventLog(log_path).events(timeout)

@@ -17,7 +17,7 @@ import os
 
 import pytest
 
-import htcondor.basic as htc
+import htcondor_basic as htc
 
 
 @pytest.fixture(scope="function")
@@ -25,5 +25,7 @@ def cluster(tmpdir):
     log_file = os.path.join(tmpdir, "log")
     s = htc.Submit({"executable": r"foobar", "args": "hello world", "log": log_file})
     h = s.queue(count=1)
+
     yield h
+
     h.remove()
