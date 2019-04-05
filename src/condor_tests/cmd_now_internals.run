@@ -82,7 +82,7 @@ use feature : PartitionableSlot
 	# There's only three jobs in the queue right now, so at least one of the
 	# previous victim jobs must end up running.
 	if not victimCluster.WaitUntil( [ JobEventType.EXECUTE ],
-		[ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE ], 60, -1, 1 ):
+		[ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ], 60, -1, 1 ):
 		CondorTest.RegisterFailure( "pcccTest", "no job started executing" )
 		sys.exit(1)
 
