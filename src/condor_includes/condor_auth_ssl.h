@@ -74,14 +74,20 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // Perform one-time initialization, primarily dlopen()ing libssl
     // on linux. Returns true on success, false on failure.
 
-    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+    virtual int authenticate(const char * remoteHost, CondorError* errstack,
+		bool non_blocking) override;
+
+	// Continue an ongoing authentication.
+	virtual int authenticate_continue(CondorError* /*errstack*/,
+		bool /*non_blocking*/) override;
+
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
     // RETURNS:
     //------------------------------------------
 
-    int isValid() const;
+    virtual int isValid() const override;
     //------------------------------------------
     // PURPOSE: whether the authenticator is in
     //          valid state.
@@ -89,10 +95,19 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
-    int wrap(const char* input, int input_len, char*& output, int& output_len);
-    int unwrap(const char* input, int input_len, char*& output, int& output_len);
+    virtual int wrap(const char* input, int input_len, char*& output,
+		int& output_len) override;
+    virtual int unwrap(const char* input, int input_len, char*& output,
+		int& output_len) override;
 
  private:
+
+	enum class Phase {
+		Startup,
+		PreConnect,
+		Connect,
+		KeyExchange
+	};
 
 	enum class CondorAuthSSLRetval {
 		Fail = 0,
@@ -116,9 +131,13 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 	CondorAuthSSLRetval authenticate_finish(CondorError *errstack,
 		bool non_blocking);
 
+	// Common to both client and server: fail and release state.
+	CondorAuthSSLRetval authenticate_fail();
+
 	class AuthState {
 	public:
 		AuthState() {}
+		~AuthState();
 
 		long m_err{0};
 		char m_buffer[AUTH_SSL_BUF_SIZE];
@@ -133,6 +152,7 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 		SSL *m_ssl{nullptr};
 		SSL_CTX *m_ctx{nullptr};
 		unsigned char m_session_key[AUTH_SSL_SESSION_KEY_LEN];
+		Phase m_phase{Phase::Startup};
 	};
 
 	std::unique_ptr<AuthState> m_auth_state;
