@@ -94,7 +94,7 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 
  private:
 
-	enum CondorAuthSSLRetval {
+	enum class CondorAuthSSLRetval {
 		Fail = 0,
 		Success,
 		WouldBlock
@@ -143,21 +143,25 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     int init_OpenSSL(void);
     SSL_CTX *setup_ssl_ctx(bool is_server);
     int client_share_status(int client_status);
-    int receive_status(int &status);
+    CondorAuthSSLRetval receive_status(bool non_blocking, int &status);
     int send_status(int status);
-    int server_share_status(int server_status);
+    CondorAuthSSLRetval server_share_status(bool non_blocking, int server_status,
+	int &client_status);
     int send_message(int status, char *buf, int len);
-    int receive_message(int &status, int &len, char *buf);
+    CondorAuthSSLRetval receive_message(bool non_blocking, int &status, int &len,
+		char *buf);
     int server_send_message( int server_status, char *buf,
                              BIO *conn_in, BIO *conn_out );
-    int server_receive_message( int server_status, char *buf,
-                                BIO *conn_in, BIO *conn_out );
+    CondorAuthSSLRetval server_receive_message( bool non_blocking, int server_status,
+				char *buf, BIO *conn_in, BIO *conn_out,
+				int &client_status );
     int client_send_message( int server_status, char *buf,
                              BIO *conn_in, BIO *conn_out );
     int client_receive_message( int server_status, char *buf,
                                 BIO *conn_in, BIO *conn_out );
-    int server_exchange_messages(int server_status, char *buf,
-                                 BIO *conn_in, BIO *conn_out);
+    CondorAuthSSLRetval server_exchange_messages(bool non_blocking, int server_status,
+				char *buf, BIO *conn_in, BIO *conn_out,
+				int &client_status);
     int client_exchange_messages(int client_status, char *buf,
                                  BIO *conn_in, BIO *conn_out);
 //    int verify_callback(int ok, X509_STORE_CTX *store);
