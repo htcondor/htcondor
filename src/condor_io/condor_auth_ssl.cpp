@@ -237,7 +237,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             ouch( "SSL Authentication fails, terminating\n" );
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return static_cast<int>(CondorAuthSSLRetval::Fail);
         }
 
         m_auth_state->m_done = 0;
@@ -319,7 +319,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
                 ouch( "SSL Authentication failed\n" );
 				(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 				(*SSL_free_ptr)(m_auth_state->m_ssl);
-                return Fail;
+                return static_cast<int>(CondorAuthSSLRetval::Fail);
             }
         }
         dprintf(D_SECURITY,"Client trying post connection check.\n");
@@ -343,7 +343,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 			// Then tell it we're bailing, if it still thinks
 			// everything is ok.
 			int dummy;
-			if (AUTH_SSL_ERROR == receive_message(m_auth_state->m_server_status, dummy,
+			if (CondorAuthSSLRetval::Success != receive_message(false,
+				m_auth_state->m_server_status, dummy,
 				m_auth_state->m_buffer))
 			{
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
@@ -353,7 +354,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 			}
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return static_cast<int>(CondorAuthSSLRetval::Fail);
         }
 
         m_auth_state->m_client_status = m_auth_state->m_server_status = AUTH_SSL_RECEIVING;
@@ -418,7 +419,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             ouch( "SSL Authentication failed at session key exchange.\n" );
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return static_cast<int>(CondorAuthSSLRetval::Fail);
         }
         //dprintf(D_SECURITY, "Got session key: '%s'.\n", session_key);
         setup_crypto( m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN );
@@ -447,8 +448,10 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             (*SSL_set_bio_ptr)(m_auth_state->m_ssl, m_auth_state->m_conn_in,
 				m_auth_state->m_conn_out);
         }
+		// TODO: When we're ready for full non-blocking, remove the line below.
+		non_blocking = false;
 		CondorAuthSSLRetval tmp_status = authenticate_server_pre(errstack, non_blocking);
-		if ((tmp_status == Fail) || (tmp_status == WouldBlock)) {
+		if (tmp_status != CondorAuthSSLRetval::Success) {
 			return static_cast<int>(tmp_status);
 		}
 	}
@@ -458,13 +461,17 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 
 Condor_Auth_SSL::CondorAuthSSLRetval
 Condor_Auth_SSL::authenticate_server_pre(CondorError *errstack, bool non_blocking) {
-        m_auth_state->m_client_status = server_share_status( m_auth_state->m_server_status );
+        CondorAuthSSLRetval retval = server_share_status( non_blocking,
+			m_auth_state->m_server_status,
+			m_auth_state->m_client_status );
+		if (retval != CondorAuthSSLRetval::Success) {return retval;}
+
         if( m_auth_state->m_client_status != AUTH_SSL_A_OK
             || m_auth_state->m_server_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return CondorAuthSSLRetval::Fail;
         }
         m_auth_state->m_done = 0;
         m_auth_state->m_round_ctr = 0;
@@ -522,9 +529,13 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
             m_auth_state->m_round_ctr++;
             dprintf(D_SECURITY,"Round %d.\n", m_auth_state->m_round_ctr);
             if(m_auth_state->m_round_ctr % 2 == 1) {
-                m_auth_state->m_client_status = server_receive_message(
-                    m_auth_state->m_server_status, m_auth_state->m_buffer,
-					m_auth_state->m_conn_in, m_auth_state->m_conn_out );
+                auto retval = server_receive_message(non_blocking,
+					m_auth_state->m_server_status, m_auth_state->m_buffer,
+					m_auth_state->m_conn_in, m_auth_state->m_conn_out,
+					m_auth_state->m_client_status );
+				if (retval != CondorAuthSSLRetval::Success) {
+					return retval;
+				}
             } else {
                 if(AUTH_SSL_ERROR == server_send_message(
                        m_auth_state->m_server_status, m_auth_state->m_buffer,
@@ -551,7 +562,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
                 ouch( "SSL Authentication failed\n" );
 				(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 				(*SSL_free_ptr)(m_auth_state->m_ssl);
-                return Fail;
+                return CondorAuthSSLRetval::Fail;
             }
         }
         ouch("Server trying post connection check.\n");
@@ -575,7 +586,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
 			send_message(AUTH_SSL_QUITTING, m_auth_state->m_buffer, 0);
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return CondorAuthSSLRetval::Fail;
         }
         if(!RAND_bytes(m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN)) {
             ouch("Couldn't generate session key.\n");
@@ -584,7 +595,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
 			send_message(AUTH_SSL_QUITTING, m_auth_state->m_buffer, 0);
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-			return Fail;
+			return CondorAuthSSLRetval::Fail;
         }
         //dprintf(D_SECURITY,"Generated session key: '%s'\n", session_key);
 
@@ -641,9 +652,13 @@ Condor_Auth_SSL::authenticate_server_key(CondorError *errstack, bool non_blockin
                     m_auth_state->m_client_status = AUTH_SSL_QUITTING;
                 }
             } else {
-                m_auth_state->m_client_status = server_receive_message(
+                auto retval = server_receive_message(non_blocking,
                     m_auth_state->m_server_status, m_auth_state->m_buffer,
-					m_auth_state->m_conn_in, m_auth_state->m_conn_out );
+					m_auth_state->m_conn_in, m_auth_state->m_conn_out,
+					m_auth_state->m_client_status );
+				if (retval != CondorAuthSSLRetval::Success) {
+					return retval;
+				}
             }
             dprintf(D_SECURITY, "Status: c: %d, s: %d\n", m_auth_state->m_client_status,
 				m_auth_state->m_server_status);
@@ -660,7 +675,7 @@ Condor_Auth_SSL::authenticate_server_key(CondorError *errstack, bool non_blockin
             ouch( "SSL Authentication failed at key exchange.\n" );
 			(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 			(*SSL_free_ptr)(m_auth_state->m_ssl);
-            return Fail;
+            return CondorAuthSSLRetval::Fail;
         }
         setup_crypto( m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN );
 		return authenticate_finish(errstack, non_blocking);
@@ -680,7 +695,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 	(*SSL_CTX_free_ptr)(m_auth_state->m_ctx);
 	(*SSL_free_ptr)(m_auth_state->m_ssl);
 	m_auth_state.release();
-    return Success;
+    return CondorAuthSSLRetval::Success;
 }
 
 
@@ -867,23 +882,28 @@ int Condor_Auth_SSL :: send_status( int status )
     return AUTH_SSL_A_OK;
 }
 
-int Condor_Auth_SSL :: receive_status( int &status )
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL :: receive_status( bool non_blocking, int &status )
 {
+	if (non_blocking && !mySock_->readReady()) {
+		return CondorAuthSSLRetval::WouldBlock;
+	}
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating status\n" );
-        return AUTH_SSL_ERROR;
+        return CondorAuthSSLRetval::Fail;
     }
-    return AUTH_SSL_A_OK;
+    return CondorAuthSSLRetval::Success;
 }
     
 
 int Condor_Auth_SSL :: client_share_status( int client_status )
 {
     int server_status;
-    if( receive_status( server_status ) == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
+	CondorAuthSSLRetval retval = receive_status( false,  server_status );
+    if( retval != CondorAuthSSLRetval::Success ) {
+        return static_cast<int>(retval);
     }
     if( send_status( client_status ) == AUTH_SSL_ERROR ) {
         return AUTH_SSL_ERROR;
@@ -891,16 +911,14 @@ int Condor_Auth_SSL :: client_share_status( int client_status )
     return server_status;
 }
 
-int Condor_Auth_SSL :: server_share_status( int server_status )
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL :: server_share_status( bool non_blocking, int server_status,
+	int &client_status )
 {
-    int client_status;
     if( send_status( server_status ) == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
+        return CondorAuthSSLRetval::Fail;
     }
-    if( receive_status( client_status ) == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
-    }
-    return client_status;
+	return receive_status( non_blocking, client_status );
 }
 
 int Condor_Auth_SSL :: send_message( int status, char *buf, int len )
@@ -920,8 +938,13 @@ int Condor_Auth_SSL :: send_message( int status, char *buf, int len )
     return AUTH_SSL_A_OK;
 }
 
-int Condor_Auth_SSL :: receive_message( int &status, int &len, char *buf )
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL :: receive_message( bool non_blocking, int &status, int &len, char *buf )
 {
+	if (non_blocking && !mySock_->readReady()) {
+		ouch("Would block when trying to receive message\n");
+		return CondorAuthSSLRetval::WouldBlock;
+	}
     ouch("Receive message.\n");
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
@@ -930,20 +953,22 @@ int Condor_Auth_SSL :: receive_message( int &status, int &len, char *buf )
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
-        return AUTH_SSL_ERROR;
+        return CondorAuthSSLRetval::Fail;
     }
     dprintf(D_SECURITY,"Received message (%d).\n", status );
-    return AUTH_SSL_A_OK;
+    return CondorAuthSSLRetval::Success;
 }
 
-int Condor_Auth_SSL :: server_receive_message( int /* server_status */, char *buf, BIO *conn_in, BIO * /* conn_out */)
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL :: server_receive_message( bool non_blocking, int /* server_status */,
+	char *buf, BIO *conn_in, BIO * /* conn_out */, int &client_status)
 {
-    int client_status;
     int len;
     int rv;
     int written;
-    if( receive_message( client_status, len, buf ) == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
+	auto retval = receive_message( non_blocking, client_status, len, buf );
+    if( retval != CondorAuthSSLRetval::Success ) {
+        return CondorAuthSSLRetval::Fail;
     }
 //    if( client_status == AUTH_SSL_SENDING) {
         if( len > 0 ) {
@@ -952,14 +977,14 @@ int Condor_Auth_SSL :: server_receive_message( int /* server_status */, char *bu
                 rv =  BIO_write( conn_in, buf, len );
                 if( rv <= 0 ) {
                     ouch( "Couldn't write connection data into bio\n" );
-                    return AUTH_SSL_ERROR;
+                    return CondorAuthSSLRetval::Fail;
                     break;
                 }
                 written += rv;
             }
         }
 //    }
-    return client_status;
+    return CondorAuthSSLRetval::Success;
 }
 int Condor_Auth_SSL :: server_send_message( int server_status, char *buf, BIO * /* conn_in */, BIO *conn_out )
 {
@@ -977,14 +1002,17 @@ int Condor_Auth_SSL :: server_send_message( int server_status, char *buf, BIO * 
 }
 
 
-int Condor_Auth_SSL :: server_exchange_messages( int server_status, char *buf, BIO *conn_in, BIO *conn_out )
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL :: server_exchange_messages( bool non_blocking, int server_status, char *buf,
+	BIO *conn_in, BIO *conn_out, int &client_status )
 {
     ouch("Server exchange messages.\n");
     if(server_send_message( server_status, buf, conn_in, conn_out )
        == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
+        return CondorAuthSSLRetval::Fail;
     }
-    return server_receive_message( server_status, buf, conn_in, conn_out );
+    return server_receive_message( non_blocking, server_status, buf, conn_in, conn_out,
+		client_status );
 }
 
 int Condor_Auth_SSL :: client_send_message( int client_status, char *buf, BIO * /* conn_in */, BIO *conn_out )
@@ -1006,8 +1034,9 @@ int Condor_Auth_SSL :: client_receive_message( int /* client_status */, char *bu
     int len = 0;
     int rv;
     int written;
-    if( receive_message( server_status, len, buf ) == AUTH_SSL_ERROR ) {
-        return AUTH_SSL_ERROR;
+	auto retval = receive_message( false, server_status, len, buf );
+    if( retval != CondorAuthSSLRetval::Success ) {
+        return static_cast<int>(retval);
     }
 
     if( len > 0 ) {
