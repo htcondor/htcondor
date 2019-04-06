@@ -1295,6 +1295,59 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+
+static int
+handle_dc_start_token_request( Service*, int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_start_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	classad::ClassAd result_ad;
+	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
+	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_start_token_request: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_finish_token_request( Service*, int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_finish_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	classad::ClassAd result_ad;
+	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
+	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_finish_token_request: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
 static int
 handle_dc_session_token( Service*, int, Stream* stream)
 {
@@ -2913,6 +2966,20 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
 								"handle_dc_session_token()", 0, ALLOW );
+
+		//
+		// Start a token request workflow.
+		//
+	daemonCore->Register_Command( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
+								(CommandHandler)handle_dc_start_token_request,
+								"handle_dc_start_token_request()", 0, ALLOW );
+
+		//
+		// Poll for token request completion.
+		//
+	daemonCore->Register_Command( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
+								(CommandHandler)handle_dc_finish_token_request,
+								"handle_dc_finish_token_request()", 0, ALLOW );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

@@ -2548,3 +2548,227 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 
 	return true;
 }
+
+
+bool
+Daemon::startTokenRequest( const std::string identity,
+	const std::vector<std::string> &authz_bounding_set, int lifetime,
+	const std::string &client_id, std::string &token, std::string &request_id,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::startTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	std::stringstream ss;
+	for (const auto &authz : authz_bounding_set) {
+		ss << authz << ",";
+	}
+	const std::string &authz_limit_str = ss.str();
+	if (!authz_limit_str.empty() &&
+		!ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
+			authz_limit_str.substr(0, authz_limit_str.size()-1)))
+	{
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	if (identity.empty()) {
+		std::string domain;
+		if (!param(domain, "UID_DOMAIN")) {
+			if (err) err->pushf("DAEMON", 1, "No UID_DOMAIN set!");
+			dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+			return false;
+		}
+		if (!ad.InsertAttr(ATTR_USER, "condor@" + domain)) {
+			if (err) err->pushf("DAEMON", 1, "Failed to set the default username");
+			dprintf(D_FULLDEBUG, "Failed to set the default username\n");
+			return false;
+		}
+	} else {
+		auto at_sign = identity.find('@');
+		if (at_sign == std::string::npos) {
+			std::string domain;
+			if (!param(domain, "UID_DOMAIN")) {
+				if (err) err->pushf("DAEMON", 1, "No UID_DOMAIN set!");
+				dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+				return false;
+			}
+			if (!ad.InsertAttr(ATTR_USER, identity + "@" + domain)) {
+				if (err) err->pushf("DAEMON", 1, "Unable to set requested id.");
+				dprintf(D_FULLDEBUG, "Unable to set requested id.\n");
+				return false;
+			}
+		} else if (!ad.InsertAttr(ATTR_USER, identity)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set requested identity.");
+			dprintf(D_FULLDEBUG, "Unable to set requested identity.\n");
+			return false;
+		}
+	}
+	if (client_id.empty() || !ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set client ID.");
+		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_START_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to start command for "
+			"token request with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() Failed to send ClassAd to remote"
+			" daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to recieve response from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::startTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token) || token.empty()) {
+		if (result_ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id)
+			|| request_id.empty())
+		{
+			return true;
+		}
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::startTokenRequest() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		if (err) err->pushf("DAEMON", 1, "BUG!  Daemon::startTokenRequest() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+Daemon::finishTokenRequest(const std::string &client_id, const std::string &request_id,
+	std::string &token, CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::startTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (client_id.empty() || !ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set client ID.");
+		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+		return false;
+	}
+	if (request_id.empty() || !ad.InsertAttr(ATTR_SEC_REQUEST_ID, client_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set client ID.");
+		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_FINISH_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to start command for "
+			"token request with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to recieve response "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::finishTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	// We are successful regardless of whether the token has any content.
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::finishTokenRequest() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		if (err) err->pushf("DAEMON", 1, "BUG!  Daemon::finishTokenRequest() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+	return true;
+}

@@ -877,6 +877,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TOKEN "Token"
 #define ATTR_SEC_TOKEN_LIFETIME "TokenLifetime"
 #define ATTR_SEC_TRUST_DOMAIN "TrustDomain"
+#define ATTR_SEC_CLIENT_ID "ClientId"
+#define ATTR_SEC_REQUEST_ID "RequestId"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 
