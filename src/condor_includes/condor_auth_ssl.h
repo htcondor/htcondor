@@ -94,6 +94,49 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 
  private:
 
+	enum CondorAuthSSLRetval {
+		Fail = 0,
+		Success,
+		WouldBlock
+	};
+
+	// Step 1 of the server protocol: exchange status with the client.
+	CondorAuthSSLRetval authenticate_server_pre(CondorError *errstack,
+		bool non_blocking);
+
+	// Step 2 of the server protocol: connect with TLS.
+	CondorAuthSSLRetval authenticate_server_connect(CondorError *errstack,
+		bool non_blocking);
+
+	// Step 3: exchange the session key.
+	CondorAuthSSLRetval authenticate_server_key(CondorError *errstack,
+		bool non_blocking);
+
+	// Common to both client and server: successfully finish, tear down state.
+	CondorAuthSSLRetval authenticate_finish(CondorError *errstack,
+		bool non_blocking);
+
+	class AuthState {
+	public:
+		AuthState() {}
+
+		long m_err{0};
+		char m_buffer[AUTH_SSL_BUF_SIZE];
+		char m_err_buf[500];
+		int m_ssl_status{AUTH_SSL_A_OK};
+		int m_server_status{AUTH_SSL_A_OK};
+		int m_client_status{AUTH_SSL_A_OK};
+		int m_done{0};
+		int m_round_ctr{0};
+		BIO *m_conn_in{nullptr};
+		BIO *m_conn_out{nullptr};
+		SSL *m_ssl{nullptr};
+		SSL_CTX *m_ctx{nullptr};
+		unsigned char m_session_key[AUTH_SSL_SESSION_KEY_LEN];
+	};
+
+	std::unique_ptr<AuthState> m_auth_state;
+
 	static bool m_initTried;
 	static bool m_initSuccess;
 
