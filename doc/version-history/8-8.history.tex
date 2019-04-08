@@ -74,6 +74,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item In some situations, the GPU monitoring code could disagree with the
+GPU discovery code about the mapping between GPU device indices and actual
+devices.  Both now use PCI bus IDs to establish the mapping.  One consequence
+of this change is that we now prefer to use NVidia's management library,
+rather than the CUDA run-time library, when doing discovery.
+\Ticket{6903}
+\Ticket{6901}
+
 \item Corrected a problem where the only attribute Chirp could
 set via its \Expr{set\_job\_attr\_delayed} command was \Attr{Chirp}.
 \Ticket{6958}
@@ -90,10 +98,38 @@ shut down gracefully.
 
 \item Restored the old Python bindings for reading the job event log
 (\Code{EventIterator} and \Code{read\_events()}).
-These bindings are marked as deprecated and will likely be removed
-permanently in the 8.9 series.
+These bindings are marked as deprecated, are not available in
+Python 3, and will likely be removed permanently in the 8.9 series.
 Users should transition to the replacement bindings (\Code{JobEventLog})
 \Ticket{6939}
+
+\item Fixed a bug that could cause the \File{job\_queue.log} file to
+be corrupted when the \Condor{schedd} compacts it.
+\Ticket{6929}
+
+\item Fixed a bug that could cause entries in the job event log to be
+written with the wrong job id when a \Condor{shadow} process is used to
+run multiplejobs.
+\Ticket{6919}
+
+\item Fixed a bug with parameter \MacroNI{CHIRP\_DELAYED\_UPDATE\_PREFIX}
+that caused the \AdStr{Chirp} commands \Opt{set\_job\_attr\_delayed} and 
+\Opt{get\_job\_attr\_delayed} to fail.
+\Ticket{6958}
+
+\item Fixed a bug on Windows that could cause a delay of up to 2 minutes in responding
+to condor_reconfig, condor_restart or condor_off commands when using shared port.
+\Ticket{6960}
+
+\item Fixed a bug that could cause the \Condor{schedd} on Windows to to restart with the message
+"fd_set is full".  This change reduces that maxumum number of active connections that
+a \Condor{collector} or \Condor{schedd} on Windows will allow from 1023 to 1014.
+\Ticket{6957}
+
+\item The Condor{master} now waits until the \Condor{procd} has exited before exiting itself. This change
+helps to prevent problems on Windows with using the Service Control Manager to restart the Condor service.
+\Ticket{6952}
+
 
 \end{itemize}
 
