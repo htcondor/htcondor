@@ -52,8 +52,10 @@ rather than the CUDA run-time library, when doing discovery.
 \Ticket{6903}
 \Ticket{6901}
 
-\item Corrected a problem where the only attribute Chirp could
-set via its \Expr{set\_job\_attr\_delayed} command was \Attr{Chirp}.
+\item  Corrected documentation of \MacroNI{CHIRP\_DELAYED\_UPDATED\_PREFIX};
+it is neither singular nor a prefix.  Also resolved a problem where
+administrators had to specify each attribute in that list, rather than via
+prefices or via wildcards.
 \Ticket{6958}
 
 \item In some situations, the bytes sent and bytes received values in
@@ -82,17 +84,12 @@ written with the wrong job id when a \Condor{shadow} process is used to
 run multiplejobs.
 \Ticket{6919}
 
-\item Fixed a bug with parameter \MacroNI{CHIRP\_DELAYED\_UPDATE\_PREFIX}
-that caused the \AdStr{Chirp} commands \Opt{set\_job\_attr\_delayed} and 
-\Opt{get\_job\_attr\_delayed} to fail.
-\Ticket{6958}
-
 \item Fixed a bug on Windows that could cause a delay of up to 2 minutes in responding
-to condor_reconfig, condor_restart or condor_off commands when using shared port.
+to \Condor{reconfig}, \Condor{restart} or \Condor{off} commands when using shared port.
 \Ticket{6960}
 
 \item Fixed a bug that could cause the \Condor{schedd} on Windows to to restart with the message
-"fd_set is full".  This change reduces that maxumum number of active connections that
+"fd\_set is full".  This change reduces that maxumum number of active connections that
 a \Condor{collector} or \Condor{schedd} on Windows will allow from 1023 to 1014.
 \Ticket{6957}
 
