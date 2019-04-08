@@ -87,6 +87,20 @@ that caused the \AdStr{Chirp} commands \Opt{set\_job\_attr\_delayed} and
 \Opt{get\_job\_attr\_delayed} to fail.
 \Ticket{6958}
 
+\item Fixed a bug on Windows that could cause a delay of up to 2 minutes in responding
+to condor_reconfig, condor_restart or condor_off commands when using shared port.
+\Ticket{6960}
+
+\item Fixed a bug that could cause the \Condor{schedd} on Windows to to restart with the message
+"fd_set is full".  This change reduces that maxumum number of active connections that
+a \Condor{collector} or \Condor{schedd} on Windows will allow from 1023 to 1014.
+\Ticket{6957}
+
+\item The Condor{master} now waits until the \Condor{procd} has exited before exiting itself. This change
+helps to prevent problems on Windows with using the Service Control Manager to restart the Condor service.
+\Ticket{6952}
+
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
