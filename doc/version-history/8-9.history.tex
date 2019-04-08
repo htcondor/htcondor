@@ -121,6 +121,11 @@ the \Condor{starter} and \Condor{shadow}.
 \Condor{starter} to exit (killing the job).
 \Ticket{6873}
 
+\item Fixed a bug that coulld cause \Condor{submit} to send invalid job classads to
+the \Condor{schedd} when the executable attribute was not the same for all jobs in that
+submission.
+\Ticket{6719}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
