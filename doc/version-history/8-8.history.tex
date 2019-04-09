@@ -49,6 +49,9 @@ is configured to run without the setuid wrapper.
 
 \begin{itemize}
 
+\item Moved the execution of \Macro{USER\_JOB\_WRAPPER} with Singularity jobs
+to be executed outside the container, not inside the container.
+\Ticket{6904}
 \item Fixed a bug where local universe jobs where unable to run
 \Condor{submit} to their local schedd.
 \Ticket{6920}
