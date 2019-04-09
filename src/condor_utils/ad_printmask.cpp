@@ -767,7 +767,14 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 						classad_shared_ptr<classad::ExprList> lst( (classad::ExprList*)plist->Copy() );
 						pval->SetListValue(lst);
 					} else if( pval->IsClassAdValue( pclassad ) && pclassad ) {
-						classad_shared_ptr<classad::ClassAd> ca( (classad::ClassAd*)pclassad->Copy() );
+						classad::ClassAd * copy = (classad::ClassAd*)pclassad->Copy();
+						// Deep copies do NOT reset the parent pointer or the
+						// chained ad pointer; do so now, to prevent bad
+						// dereferences in the future.  There's a good chance
+						// that this is stupid and should fixed.
+						copy->ChainToAd(NULL);
+						copy->SetParentScope(NULL);
+						classad_shared_ptr<classad::ClassAd> ca( copy );
 						pval->SetClassAdValue(ca);
 					}
 				}
