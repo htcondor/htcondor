@@ -21,7 +21,12 @@ public:
 	virtual bool allows_late_materialize() = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
-	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text) = 0;
+
+	// helper function used as 3rd argument to SendMaterializeData.
+	// it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
+	// resulting rowdata for SendMaterializeData to use 
+	static int next_rowdata(void* pv /*SubmitForeachArgs*/, std::string & rowdata);
+
 protected:
 	AbstractScheddQ() {}
 };
@@ -29,7 +34,7 @@ protected:
 enum {
 	AbstractQ_TYPE_NONE = 0,
 	AbstractQ_TYPE_SCHEDD_RPC = 1,
-	AbstractQ_TYPE_SIM,
+	AbstractQ_TYPE_SIM,	 // used by submit -dry-run. see condor_submit.V6 directory
 	AbstractQ_TYPE_FILE,
 };
 
@@ -52,7 +57,6 @@ public:
 	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
-	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
 
 	bool Connect(DCSchedd & MySchedd, CondorError & errstack);
 private:

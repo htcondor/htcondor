@@ -70,6 +70,7 @@ const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
 const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
 #endif
 
+
 class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);
@@ -90,12 +91,17 @@ public:
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
 
+	// set a file that send_Itemdata should "echo" items into. If this file is not set
+	// items are sent but not echoed.
+	bool echo_Itemdata(const char * filename);
+
 	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
 private:
 	int cluster;
 	int proc;
 	bool close_file_on_disconnect;
 	bool log_all_communication;
+	MyString echo_itemdata_filepath;
 	FILE * fp;
 };
 
