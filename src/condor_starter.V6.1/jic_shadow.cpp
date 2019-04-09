@@ -2979,12 +2979,14 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	sandbox_dir_name += DIR_DELIM_CHAR;
 	sandbox_dir_name += ".condor_creds";
 
+	// from here on out, do everything as the user.
+	TemporaryPrivSentry mysentry(PRIV_USER);
+
 	// create dir to hold creds
 	int rc = 0;
 	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
-	priv_state p = set_user_priv();
 	rc = mkdir(sandbox_dir_name.Value(), 0700);
-	set_priv(p);
+
 	if(rc != 0) {
 		if(errno != 17) {
 			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
