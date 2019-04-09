@@ -412,6 +412,13 @@ export_classad()
             :return: The 'old ClassAd' representation of the ad.
             :rtype: str
             )C0ND0R")
+        .def("printJson", &ClassAdWrapper::toJsonString,
+            R"C0ND0R(
+            Serialize the ClassAd as a string in JSON format.
+
+            :return: The JSON representation of the ad.
+            :rtype: str
+            )C0ND0R")
         .def("get", &ClassAdWrapper::get, get_overloads(
             R"C0ND0R(
             As :meth:`dict.get`.
