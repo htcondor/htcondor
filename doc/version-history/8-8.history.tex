@@ -44,6 +44,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Support for the condor\_ssh\_to\_job command, when ssh'ing to a 
+singularity job, requires the nsenter command.  Previous versions of HTCondor
+relied on features of nsenter not universally available.  8.8.2 now
+works with all known versions of nsenter.
+\Ticket{6934}
 \item The \Condor{userprio} command, when given the -negotiator and -l options
 used to emit the value of the concurrency limits in the one large ClassAd it
 printed.  This was removed in 8.8.0, but has been restored in 8.8.2.
