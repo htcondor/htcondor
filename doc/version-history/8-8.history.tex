@@ -44,6 +44,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where condor\_ssh\_to\_job would not work to a Docker 
+universe job when file transfer was off.
+\Ticket{6945}
+
 \item Support for the condor\_ssh\_to\_job command, when ssh'ing to a 
 singularity job, requires the nsenter command.  Previous versions of HTCondor
 relied on features of nsenter not universally available.  8.8.2 now
