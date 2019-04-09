@@ -371,9 +371,9 @@ export_classad()
              .. note:: Where possible, we recommend using the dedicated parsing functions
                 (:func:`parseOne`, :func:`parseNext`, or :func:`parseAds`) instead of using
                 the constructor.
-            )C0ND0R")
-        .def(init<std::string>())
-        .def(init<boost::python::dict>())
+            )C0ND0R",
+            init<std::string>((boost::python::arg("self"), boost::python::arg("input"))))
+        .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input"))))
         .def_pickle(classad_pickle_suite())
         .def("__delitem__", &ClassAdWrapper::Delete)
         .def("__getitem__", &ClassAdWrapper::LookupWrap, condor::classad_expr_return_policy<>())
@@ -507,7 +507,7 @@ export_classad()
             The :class:`ExprTree` class represents an expression in the ClassAd language.
 
             The :class:`ExprTree` constructor takes a string, which it will attempt to
-            parse the string into a ClassAd expression.
+            parse into a ClassAd expression.
             ``str(expr)`` will turn the ``ExprTree`` back into its string representation.
             ``int``, ``float``, and ``bool`` behave similarly, evaluating as necessary.
 
@@ -520,7 +520,7 @@ export_classad()
                for ``e1 && e2`` cause ``e1`` to be evaluated.  In order to get the 'logical and' of the two expressions *without*
                evaluating, use ``e1.and_(e2)``.  Similarly, ``e1.or_(e2)`` results in the 'logical or'.
             )C0ND0R",
-            init<std::string>())
+            init<std::string>((boost::python::arg("self"), boost::python::arg("expr"))))
         .def_pickle(exprtree_pickle_suite())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
@@ -563,8 +563,8 @@ export_classad()
             R"C0ND0R(
             Return a new expression, formed by ``self && expr``.
 
-            :param expr2: Right-hand-side expression to 'and'
-            :type expr2: :class:`ExprTree`
+            :param expr: Right-hand-side expression to 'and'
+            :type expr: :class:`ExprTree`
             :return: A new expression, defined to be ``self && expr``.
             :rtype: :class:`ExprTree`
             )C0ND0R",
