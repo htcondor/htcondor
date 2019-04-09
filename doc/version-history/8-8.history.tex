@@ -44,6 +44,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where local universe jobs where unable to run
+\Condor{submit} to their local schedd.
+\Ticket{6920}
+
 \item Fixed a bug where condor\_ssh\_to\_job would not work to a Docker 
 universe job when file transfer was off.
 \Ticket{6945}
