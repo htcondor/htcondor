@@ -84,3 +84,10 @@ host to be visible inside the container, an administrator could set
 \begin{verbatim}
 SINGULARITY_EXTRA_ARGUMENTS = --nv
 \end{verbatim}
+
+If Singularity is installed as non-setuid, the following flag must be set
+for \Condor{ssh\_to\_job} to work.
+
+\begin{verbatim}
+SINGULARITY_IS_SETUID = false
+\end{verbatim}

@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new parameter \Macro{SINGULARITY\_IS\_SETUID}, which defaults
+to true.  If false, allows \Condor{ssh\_to\_job} to work when Singularity
+is configured to run without the setuid wrapper.
+\Ticket{6931}
+
 \item The Python bindings \Code{ClassAd} module has
 	a new \Procedure{printJson} method to serialize a ClassAd
 	into a string in JSON format.
