@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new parameter \Macro{SINGULARITY\_IS\_SETUID}, which defaults
+to true.  If false, allows \Condor{ssh\_to\_job} to work when Singularity
+is configured to run without the setuid wrapper.
+\Ticket{6931}
+
 \item The Python bindings \Code{ClassAd} module has
 	a new \Procedure{printJson} method to serialize a ClassAd
 	into a string in JSON format.
@@ -43,6 +48,33 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Included a patch from the development series that fixes problems that
+could crash \Condor{annex} to crash.
+\Ticket{6980}
+
+\item Moved the execution of \Macro{USER\_JOB\_WRAPPER} with Singularity jobs
+to be executed outside the container, not inside the container.
+\Ticket{6904}
+
+\item Fixed a bug where local universe jobs where unable to run
+\Condor{submit} to their local schedd.
+\Ticket{6920}
+
+\item Fixed a bug where condor\_ssh\_to\_job would not work to a Docker 
+universe job when file transfer was off.
+\Ticket{6945}
+
+\item Support for the condor\_ssh\_to\_job command, when ssh'ing to a 
+singularity job, requires the nsenter command.  Previous versions of HTCondor
+relied on features of nsenter not universally available.  8.8.2 now
+works with all known versions of nsenter.
+\Ticket{6934}
+
+\item The \Condor{userprio} command, when given the -negotiator and -l options
+used to emit the value of the concurrency limits in the one large ClassAd it
+printed.  This was removed in 8.8.0, but has been restored in 8.8.2.
+\Ticket{6948}
 
 \item In some situations, the GPU monitoring code could disagree with the
 GPU discovery code about the mapping between GPU device indices and actual
