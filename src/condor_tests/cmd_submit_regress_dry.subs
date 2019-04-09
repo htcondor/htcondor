@@ -246,8 +246,8 @@ arguments=10s
 hold_for_time = (time() - QDate) > 3600
 hold_for_size = MemoryUsage > RequestMemory
 periodic_hold = $(hold_for_time) || $(hold_for_size)
-periodic_hold_reason="exceeded 1 Hour in queue"
-periodic_hold_subcode = IfThenElse($(hold_for_time) ? 92 : 93)
+periodic_hold_reason = "exceeded 1 Hour in queue"
+periodic_hold_subcode = IfThenElse($(hold_for_time),92,93)
 
 periodic_release=HoldSubCode == 93
 
