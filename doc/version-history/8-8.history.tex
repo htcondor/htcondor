@@ -88,11 +88,11 @@ that caused the \AdStr{Chirp} commands \Opt{set\_job\_attr\_delayed} and
 \Ticket{6958}
 
 \item Fixed a bug on Windows that could cause a delay of up to 2 minutes in responding
-to condor_reconfig, condor_restart or condor_off commands when using shared port.
+to condor\_reconfig, condor\_restart or condor\_off commands when using shared port.
 \Ticket{6960}
 
 \item Fixed a bug that could cause the \Condor{schedd} on Windows to to restart with the message
-"fd_set is full".  This change reduces that maxumum number of active connections that
+"fd\_set is full".  This change reduces that maxumum number of active connections that
 a \Condor{collector} or \Condor{schedd} on Windows will allow from 1023 to 1014.
 \Ticket{6957}
 
