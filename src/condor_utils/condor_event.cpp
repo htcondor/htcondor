@@ -3537,6 +3537,8 @@ int TerminatedEvent::initUsageFromAd(const classad::ClassAd& ad)
 JobTerminatedEvent::JobTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_JOB_TERMINATED;
+	pusageAd = NULL;
+	toeTag = NULL;
 }
 
 
@@ -3548,10 +3550,45 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 bool
 JobTerminatedEvent::formatBody( std::string &out )
 {
-  if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
-	  return false;
-  }
-  return TerminatedEvent::formatBody( out, "Job" );
+	if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
+		return false;
+	}
+	bool rv = TerminatedEvent::formatBody( out, "Job" );
+	if( rv && toeTag != NULL ) {
+		std::string who;
+		toeTag->EvaluateAttrString( "Who", who );
+		std::string how;
+		toeTag->EvaluateAttrString( "How", how );
+		long long when;
+		toeTag->EvaluateAttrNumber( "When", when );
+		unsigned int howCode;
+		toeTag->EvaluateAttrNumber( "HowCode", (int &)howCode );
+
+		if( howCode == 0 ) {
+			if( formatstr_cat( out, "\tJob terminated of its own accord.\n" ) < 0 ) {
+				return false;
+			}
+		} else {
+			// Assuming this code ever actually runs, we should respect the
+			// time format flag once local times round-trip between machines.
+			char whenStr[ISO8601_DateAndTimeBufferMax];
+			struct tm eventTime;
+			// time_t a (signed!) long int on all Linux platforms.  We send
+			// it over the wire via ClassAds in a (signed) long long, which
+			// is 64 bits on all platforms.  This conversion should be a no
+			// op on 64-bit platforms, but will correctly preserve the sign
+			// bit on 32-bit platforms.
+			time_t ttWhen = (time_t)when;
+			gmtime_r( & ttWhen, & eventTime );
+			time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
+			ISO8601_DateAndTime, true );
+			if( formatstr_cat( out, "\tJob terminated by %s via %s at %s.\n",
+			  who.c_str(), how.c_str(), whenStr ) < 0 ) {
+				return false;
+			}
+		}
+	}
+	return rv;
 }
 
 
@@ -4636,6 +4673,8 @@ NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_NODE_TERMINATED;
 	node = -1;
+	pusageAd = NULL;
+	toeTag = NULL;
 }
 
 

@@ -997,6 +997,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
+		event.toeTag = (classad::ClassAd *)jobAd->Lookup( "ToE" );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1009,7 +1010,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
-	
+
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1076,7 +1077,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.pusageAd = puAd;
 	}
 #endif
-	
+
+	event.toeTag = (classad::ClassAd *)jobAd->Lookup( "ToE" );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

@@ -156,10 +156,10 @@ UserProc::JobReaper(int pid, int status)
 		if(! requested_exit) {
 			// Probably could use some #defines here.
 			classad::ClassAd * toeTag = new classad::ClassAd();
-			toeTag->InsertAttr( "Who", "job" );
-			toeTag->InsertAttr( "How", "NORMAL_TERMINATION" );
+			toeTag->InsertAttr( "Who", "itself" );
+			toeTag->InsertAttr( "How", "OF_ITS_OWN_ACCORD" );
 			toeTag->InsertAttr( "HowCode", 0 );
-			toeTag->InsertAttr( "When", job_exit_time.tv_sec );
+			toeTag->InsertAttr( "When", (long long)job_exit_time.tv_sec );
 
 			classad::ClassAd toe;
 			toe.Insert( "ToE", toeTag );

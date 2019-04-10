@@ -1463,12 +1463,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Required to actually update the schedd's copy.  (sigh)
 		shadow->watchJobAttr( "ToE" );
-
-		// Write the ticket of execution to the user log.
-		/* ToeEvent te( toeTag );
-		if(! writeULogEvent(&toeEvent)) {
-			dprintf( D_ALWAYS, "Unable to log ticket-of-execution event.\n" );
-		} */
 	}
 
     // these are headed for job ads in the scheduler, so rename them

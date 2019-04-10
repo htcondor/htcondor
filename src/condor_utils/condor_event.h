@@ -930,6 +930,7 @@ class TerminatedEvent : public ULogEvent
 	float total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
+	classad::ClassAd * toeTag;
 
  private:
 
