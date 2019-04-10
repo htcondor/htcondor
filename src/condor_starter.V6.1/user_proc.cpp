@@ -205,6 +205,11 @@ UserProc::JobReaper(int pid, int status)
 				fPrintAd( jobAdFile, toe );
 				fclose( jobAdFile );
 			}
+
+			// Update the schedd's copy of the job ad.
+			ClassAd updateAd( toe );
+			Starter->publishUpdateAd( & updateAd );
+			Starter->jic->periodicJobUpdate( & updateAd, true );
 		}
 	}
 	return m_proc_exited;
