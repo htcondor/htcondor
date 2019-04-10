@@ -2291,20 +2291,20 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 
 		// write temp file
 		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
-		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
+		// 4th param false means "as user"  (as opposed to as root)
+		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, false);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
 
 		if (rc != true) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.Value());
+			dprintf(D_ALWAYS, "REMOTE_CONDOR_getcreds: failed to write secure temp file %s\n", tmpname.Value());
 			EXCEPT("failure");
 		}
 
+		// do this as the user (no priv switching to root)
 		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
-		priv_state priv = set_root_priv();
 		rename(tmpname.Value(), full_name.Value());
-		set_priv (priv);
 	}
 
 	result = ( syscall_sock->end_of_message() );

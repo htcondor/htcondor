@@ -7156,10 +7156,17 @@ REM Run the actual job now
 
 \label{param:ChirpDelayedUpdatePrefix}
 \item[\Macro{CHIRP\_DELAYED\_UPDATE\_PREFIX}]
-  This string-valued parameter, which defaults to \AdStr{Chirp},
-  defines the allowed prefixes for attribute names which can be used with the
-  \Condor{chirp} commands \Opt{set\_job\_attr\_delayed} and 
-  \Opt{get\_job\_attr\_delayed}.  Because it must be set to the
+  This is a string-valued and case-insensitive parameter with the default
+  value of \AdStr{Chirp*}.  The
+  string is a list separated by spaces and/or commas.  Each attribute passed
+  to the either of the \Condor{chirp} commands \Opt{set\_job\_attr\_delayed} or
+  \Opt{get\_job\_attr\_delayed} must match against at least one element in
+  the list.  An attribute which does not match any list element fails.  A
+  list element may contain a wildcard character (\AdStr{Chirp*}), which marks
+  where any number of characters matches.  Thus, the default is to allow
+  reads from and writes to only attributes which start with \AdStr{Chirp}.
+
+  Because this parameter must be set to the
   same value on both the submit and execute nodes, it is advised that this
   parameter not be changed from its built-in default.
 
