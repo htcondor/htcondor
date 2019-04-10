@@ -29,7 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Add job ad attribute \Attr{JobDisconnectedDate}.
+When the \Condor{shadow} and \condor{starter} are disconnected from each
+other, this attribute is set to the time at which the disconnection
+happened.
+It is set to \Expr{Undefined} when a successful reconnect occurs.
+\Ticket{6978}
+
 
 \end{itemize}
 
@@ -135,14 +141,6 @@ Added new ClassAd functions \Code{replace()} (equivalent to
 \Code{regexps()} with \Expr{f} option) and \Code{replaceall()}
 (equivalent to \Code{regexps()} with \Expr{fg} options).
 \Ticket{6848}
-
-\item Add job ad attribute \Attr{JobDisconnectedDate}.
-When the \Condor{shadow} and \condor{starter} are disconnected from each
-other, this attribute is set to the time at which the disconnection
-happened.
-It is set to \Expr{Undefined} when a successful reconnect occurs.
-\Ticket{6978}
-
 
 \end{itemize}
 
