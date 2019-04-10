@@ -2188,11 +2188,16 @@ case CONDOR_getdir:
 		while((curr = services_list.next())) {
 			MyString fname,fullname;
 			fname.formatstr("%s.use", curr);
+
+			// change the '*' to an '_'.  These are stored that way
+			// so that the original service name can be cleanly
+			// separate if needed.  we don't care, so just change
+			// them all up front.
+			fname.replaceString("*", "_");
+
 			fullname.formatstr("%s%c%s", cred_dir_name.Value(), DIR_DELIM_CHAR, fname.Value());
 
-			dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
-
-			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
