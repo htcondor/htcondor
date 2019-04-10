@@ -459,7 +459,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
             else if( retry_count <= MAX_RETRY_ATTEMPTS &&
-                     ShouldRetryTransfer(retry_count) ) {
+                     ShouldRetryTransfer(file_rval) ) {
                 continue;
             }
             // On fatal errors, break out of the loop
@@ -540,7 +540,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
             else if( retry_count <= MAX_RETRY_ATTEMPTS && 
-                     ShouldRetryTransfer(retry_count) ) {
+                     ShouldRetryTransfer(rval) ) {
                 continue;
             }
             // On fatal errors, break out of the loop
