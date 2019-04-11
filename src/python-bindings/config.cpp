@@ -690,7 +690,7 @@ void export_config()
             boost::python::init<const ClassAdWrapper &>(
                 R"C0ND0R(
                 :param ad: An ad containing the location of the remote daemon.
-                :type ad: :class:`classad.ClassAd`
+                :type ad: :class:`~classad.ClassAd`
                 )C0ND0R",
                 args("self", "ad")))
         .def("__getitem__", &RemoteParam::getitem)
