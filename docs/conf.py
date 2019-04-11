@@ -321,6 +321,7 @@ remove_types_from_signatures = re.compile(r' \([^)]*\)')
 remove_trailing_brackets = re.compile(r']*\)$')
 cleanup_commas = re.compile(r'\s*,\s*')
 
+
 def modify_signature(app, what, name, obj, options, signature, return_annotation):
     """
     Hook function that has a chance to modify whatever comes out of autodoc.
@@ -350,9 +351,6 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
     (signature, return_annotation)
     """
     # todo: this checks for un-argument-named funcs, remove when done
-    if signature is not None and 'arg' in signature:
-        print(name)
-
     if signature is not None:
         signature = re.sub(remove_types_from_signatures, ' ', signature)
         signature = re.sub(remove_trailing_brackets, ')', signature)
@@ -361,6 +359,9 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
         signature = signature.replace('self', '')
         signature = signature.replace('( ', '(')
         signature = signature.replace('(, ', '(')
+
+    if signature is not None and re.search(r'arg\d', signature):
+        print(name)
 
     return signature, return_annotation
 
