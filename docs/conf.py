@@ -363,6 +363,9 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
     if signature is not None and re.search(r'arg\d', signature):
         print(name)
 
+    if return_annotation == 'None :' and what == 'class':
+        return_annotation = ''
+
     return signature, return_annotation
 
 
