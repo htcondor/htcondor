@@ -1220,7 +1220,7 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 		}
 		event.Reset( );
 
-		if ( !error && ( get_random_float() < m_options.getRandomProb() )  ) {
+		if ( !error && ( get_random_float_insecure() < m_options.getRandomProb() )  ) {
 			event.GenEventRandom( );
 			if ( event.WriteEvent( *this ) ) {
 				printf( "Error writing event type %d\n",
@@ -1327,7 +1327,7 @@ timestr( void )
 static unsigned
 randint( unsigned maxval )
 {
-	return get_random_uint() % maxval;
+	return get_random_uint_insecure() % maxval;
 }
 
 
@@ -1346,7 +1346,7 @@ ULogEvent *
 EventInfo::GenEvent( void )
 {
 	// Select the event type
-	double	randval = get_random_float( );
+	double	randval = get_random_float_insecure( );
 
 	// Special case: execute event
 	if ( randval < m_options.getRandomProb() ) {
@@ -1628,7 +1628,7 @@ EventInfo::GenEventGeneric( void )
 bool
 EventInfo::GenIsLarge( void )
 {
-	m_is_large = (get_random_float() >= 0.8);
+	m_is_large = (get_random_float_insecure() >= 0.8);
 	return m_is_large;
 }
 

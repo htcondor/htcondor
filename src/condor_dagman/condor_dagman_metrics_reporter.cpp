@@ -300,7 +300,7 @@ int main( int argc, char* argv[] )
 				srv != servers_to_contact.end(); ++srv ) {
 			if( srv->connected ) continue;
 			if( do_sleep ) {
-				sleep( 1 + ( get_random_int() % 10 ) );
+				sleep( 1 + ( get_random_int_insecure() % 10 ) );
 			}
 			try {
 				handle.setopt( CURLOPT_URL, srv->server.c_str() );

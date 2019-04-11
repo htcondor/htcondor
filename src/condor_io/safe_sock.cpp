@@ -124,7 +124,7 @@ void SafeSock::init()
 		_outMsgID.ip_addr = mt_random();
 		_outMsgID.pid = mt_random() % 65536; //(short)getpid();
 		_outMsgID.time = mt_random(); //(unsigned long)time(NULL);
-		_outMsgID.msgNo = (unsigned long)get_random_int();
+		_outMsgID.msgNo = (unsigned long)get_random_int_prng();
 	}
 
     mdChecker_     = NULL;

@@ -3194,7 +3194,7 @@ static const char * evaluate_macro_func (
 				}
 			}
 			if ( num_entries > 0 ) {
-				int rand_entry = (get_random_int() % num_entries) + 1;
+				int rand_entry = (get_random_int_insecure() % num_entries) + 1;
 				int i = 0;
 				entries.rewind();
 				while ( (i < rand_entry) && (tvalue=entries.next()) ) {
@@ -3244,7 +3244,7 @@ static const char * evaluate_macro_func (
 			long	range = step + max_value - min_value;
 			long 	num = range / step;
 			long	random_value =
-				min_value + (get_random_int() % num) * step;
+				min_value + (get_random_int_insecure() % num) * step;
 
 			// And, convert it to a string
 			const int cbuf = 20;
@@ -3934,7 +3934,7 @@ static ptrdiff_t evaluate_macro_func (
 
 			// find the bounds of the item we want, and substitute that into the output buffer
 			const char * p, *endp;
-			int rand_entry = (get_random_int() % num_entries);
+			int rand_entry = (get_random_int_insecure() % num_entries);
 			p = nth_list_item(items, ',', endp, rand_entry, true);
 			if ( ! p || endp <= p) {
 				retval = 0;
@@ -4047,7 +4047,7 @@ static ptrdiff_t evaluate_macro_func (
 			// Generate the random value
 			long range = step + max_value - min_value;
 			long num = range / step;
-			long random_value = min_value + (get_random_int() % num) * step;
+			long random_value = min_value + (get_random_int_insecure() % num) * step;
 
 			// convert it to a string and insert it into the output buffer
 			formatstr(argbuf, "%ld", random_value);

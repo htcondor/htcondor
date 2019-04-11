@@ -70,7 +70,7 @@ ExponentialBackoff::init(int minimum, int maximum, double b, int s){
 	this->prevBackoff = minimum;
 
 		// seed the PRNG
-	set_seed(s);
+	set_seed_insecure(s);
 }
 
 void
@@ -140,7 +140,7 @@ ExponentialBackoff::nextRandomBackoff(){
 	unsigned int max_mult = 2 << (tries - 1);
 	
 		// get a random number between 0 and max mult
-	unsigned int backoff_mult = get_random_int() % max_mult;
+	unsigned int backoff_mult = get_random_int_insecure() % max_mult;
 	
 	int result = (int)(base * backoff_mult);
 	

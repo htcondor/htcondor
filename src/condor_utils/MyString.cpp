@@ -856,7 +856,7 @@ MyString::RemoveAllWhitespace( void )
 
 // if len is 10, this means 10 random ascii characters from the set.
 void
-MyString::randomlyGenerate(const char *set, int len)
+MyString::randomlyGenerateInsecure(const char *set, int len)
 {
 	int i;
 	int idx;
@@ -887,24 +887,48 @@ MyString::randomlyGenerate(const char *set, int len)
 
 	// now pick randomly from the set and fill stuff in
 	for (i = 0; i < len ; i++) {
-		idx = get_random_int() % set_len;
+		idx = get_random_int_insecure() % set_len;
 		Data[i] = set[idx];
 	}
 }
 
 void
-MyString::randomlyGenerateHex(int len)
+MyString::randomlyGeneratePRNG(const char *set, int len)
 {
-	randomlyGenerate("0123456789abcdef", len);
+	if (!set || len <= 0) {
+		if (Data) {
+			Data[0] = '\0';
+		}
+		Len = 0;
+		return;
+	}
+	if (Data) delete[] Data;
+
+	Data = new char[len+1];
+	Data[len] = '\0';
+	Len = len;
+	capacity = len;
+
+	auto set_len = strlen(set);
+	for (int idx = 0; idx < len; idx++) {
+		auto rand_val = get_random_int_insecure() % set_len;
+		Data[idx] = set[rand_val];
+	}
 }
 
 void
-MyString::randomlyGeneratePassword(int len)
+MyString::randomlyGenerateInsecureHex(int len)
+{
+	randomlyGenerateInsecure("0123456789abcdef", len);
+}
+
+void
+MyString::randomlyGenerateShortLivedPassword(int len)
 {
 	// Create a randome password of alphanumerics
 	// and safe-to-print punctuation.
 	//
-	randomlyGenerate(
+	randomlyGeneratePRNG(
 				"abcdefghijklmnopqrstuvwxyz"
 				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 				"0123456789"

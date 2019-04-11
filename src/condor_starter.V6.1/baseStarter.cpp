@@ -53,8 +53,8 @@
 #include "my_username.h"
 #include <Regex.h>
 #include "starter_util.h"
+#include "condor_random_num.h"
 
-extern "C" int get_random_int();
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";

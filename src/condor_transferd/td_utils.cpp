@@ -35,7 +35,7 @@ TransferD::gen_capability(void)
 
 	// if this iterates for a long time, there is something very wrong.
 	do {
-		cap.randomlyGenerate("0123456789abcdefg", 64);
+		cap.randomlyGeneratePRNG("0123456789abcdefg", 64);
 	} while(m_treqs.lookup(cap, dummy) == 0);
 
 	return cap;
