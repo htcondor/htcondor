@@ -273,16 +273,17 @@ export_claim()
 
             This only stores the remote resource's location; it is not
             contacted until :meth:`requestCOD` is invoked.
-            )C0ND0R")
-        .def(boost::python::init<>())
-        .def(boost::python::init<boost::python::object>(
+            )C0ND0R",
+        boost::python::init<boost::python::object>(
             R"C0ND0R(
             :param ad: An ad describing the Claim (optionally) and a Startd location.
             :type ad: :class:`~classad.ClassAd`
-            )C0ND0R"))
+            )C0ND0R",
+            boost::python::args("self", "ad")))
+        .def(boost::python::init<>())
         .def("requestCOD", &Claim::requestCOD,
             R"C0ND0R(
-            Request a claim from the condor_startd represented by this object.
+            Request a claim from the ``condor_startd`` represented by this object.
 
             On success, the :class:`Claim` object will represent a valid claim on the
             remote startd; other methods, such as :meth:`activate` should now function.
@@ -303,7 +304,7 @@ export_claim()
             R"C0ND0R(
             Release the remote ``condor_startd`` from this claim; shut down any running job.
 
-            :param vacate_type: Indicates the type of vacate to perform for the
+            :param vacate_type: The type of vacate to perform for the
               running job.
             :type vacate_type: :class:`VacateTypes`
             )C0ND0R",
@@ -320,36 +321,43 @@ export_claim()
             :param ad: Description of the job to launch; this uses similar, *but not identical*
                 attribute names as ``condor_submit``.  See
                 the HTCondor manual for a description of the job language.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "ad"))
         .def("suspend", &Claim::suspend,
             R"C0ND0R(
             Temporarily suspend the remote execution of the COD application.
             On Unix systems, this is done using ``SIGSTOP``.
-            )C0ND0R"
-            )
+            )C0ND0R",
+            boost::python::args("self"))
         .def("renew", &Claim::renew,
             R"C0ND0R(
             Renew the lease on an existing claim.
-            The renewal should last for the value of ``lease_duration`` provided to
-            :meth:`__init__`.
-            )C0ND0R")
+            The renewal should last for the value of the ``lease_duration``.
+            )C0ND0R",
+            boost::python::args("self"))
         .def("resume", &Claim::resume,
             R"C0ND0R(
             Resume the temporarily suspended execution.
             On Unix systems, this is done using ``SIGCONT``.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("deactivate", &Claim::deactivate,
             R"C0ND0R(
             Deactivate a claim; shuts down the currently running job,
             but holds onto the claim for future activation.
-            )C0ND0R")
+
+            :param vacate_type: The type of vacate to perform for the
+              running job.
+            :type vacate_type: :class:`VacateTypes`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("vacate_type")=VACATE_GRACEFUL))
         .def("delegateGSIProxy", &Claim::delegateGSI,
             R"C0ND0R(
             Send an X509 proxy credential to an activated claim.
 
-            :param str fname: Filename of the X509 proxy to send to the active claim.
+            :param str filename: Filename of the X509 proxy to send to the active claim.
             )C0ND0R",
-            (boost::python::arg("filename")=boost::python::object()))
+            (boost::python::arg("self"), boost::python::arg("filename")=boost::python::object()))
         .def("__repr__", &Claim::toString)
         .def("__str__", &Claim::toString)
         ;
