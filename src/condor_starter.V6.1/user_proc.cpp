@@ -151,66 +151,6 @@ UserProc::JobReaper(int pid, int status)
 		m_proc_exited = true;
 		exit_status = status;
 		condor_gettimestamp( job_exit_time );
-
-		// Write the appropriate ToE tag if the process exited of its own accord.
-		if(! requested_exit) {
-			// Probably could use some #defines here.
-			classad::ClassAd * toeTag = new classad::ClassAd();
-			toeTag->InsertAttr( "Who", "itself" );
-			toeTag->InsertAttr( "How", "OF_ITS_OWN_ACCORD" );
-			toeTag->InsertAttr( "HowCode", 0 );
-			toeTag->InsertAttr( "When", (long long)job_exit_time.tv_sec );
-
-			classad::ClassAd toe;
-			toe.Insert( "ToE", toeTag );
-
-			// Append the toe ad to the .job.ad file.  This avoids a race
-			// condition where the startd replaces the .update.ad with a
-			// new after the ToE tag is written but before the post script
-			// gets a chance to look at it.  Using append mode means that
-			// we don't need locking to ensure the job ad file remains
-			// syntactically valid.  (The last writer will win, but the
-			// only case where that could be wrong is if the starter sees
-			// the job terminate of its own accord but the startd is
-			// ordered to terminate the job between when the starter writes
-			// this file and when the post-script runs.)
-
-			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
-			// On Windows, the C runtime library emulates append mode, which
-			// means it won't work for the purpose we're using it for.  We
-			// should probably wrap this knowledge up in a function somewhere
-			// if we aren't going to fixe safefile.
-#ifndef WIN32
-			FILE * jobAdFile = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "a" );
-#else
-			FILE * jobAdFile = NULL;
-			HANDLE hf = CreateFile( jobAdFileName.c_str(),
-				FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-				NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-			if( hf == INVALID_HANDLE_VALUE ) {
-				dprintf( D_ALWAYS, "Failed to open .job.ad file: %d\n", GetLastError() );
-				jobAdFile = NULL;
-			} else {
-				int fd = _open_osfhandle((intptr_t)hf, O_APPEND);
-				if( fd == -1 ) {
-					dprintf( D_ALWAYS, "Failed to _open .job.ad file: %d\n", _doserrno );
-				}
-				jobAdFile = fdopen( fd, "a" );
-			}
-#endif
-			if(! jobAdFile) {
-				dprintf( D_ALWAYS, "Failed to write ToE tag to .job.ad file (%d): %s\n", errno, strerror(errno) );
-			} else {
-				fPrintAd( jobAdFile, toe );
-				fclose( jobAdFile );
-			}
-
-			// Update the schedd's copy of the job ad.
-			ClassAd updateAd( toe );
-			Starter->publishUpdateAd( & updateAd );
-			Starter->jic->periodicJobUpdate( & updateAd, true );
-		}
 	}
 	return m_proc_exited;
 }
