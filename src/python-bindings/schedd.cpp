@@ -3419,19 +3419,20 @@ void export_schedd()
         .def("refreshGSIProxy", &Schedd::refreshGSIProxy,
             R"C0ND0R(
             Refresh the GSI proxy of a job; the job's proxy will be replaced the contents
-            of the provided ``filename``.
+            of the provided ``proxy_filename``.
 
-            .. note:: Depending on the lifetime of the proxy in filename, the resulting lifetime
+            .. note:: Depending on the lifetime of the proxy in ``proxy_filename``, the resulting lifetime
                 may be shorter than the desired lifetime.
 
             :param int cluster: Cluster ID of the job to alter.
             :param int proc: Process ID of the job to alter.
+            :param str proxy_filename: The name of the file containing the new proxy for the job.
             :param int lifetime: Indicates the desired lifetime (in seconds) of the delegated proxy.
                 A value of ``0`` specifies to not shorten the proxy lifetime.
                 A value of ``-1`` specifies to use the value of configuration variable
                 ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``.
             )C0ND0R",
-            boost::python::args("self", "cluster", "proc", "lifetime"))
+            boost::python::args("self", "cluster", "proc", "proxy_filename", "lifetime"))
         .def("xquery", &Schedd::xquery,
             R"C0ND0R(
             Query the ``condor_schedd`` daemon for jobs.
