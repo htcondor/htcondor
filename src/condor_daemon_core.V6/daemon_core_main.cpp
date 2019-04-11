@@ -129,6 +129,88 @@ static bool doAuthInit = true;
 // It can be set to false by calling the DC_Skip_Core_Init() function.
 static bool doCoreInit = true;
 
+namespace {
+
+class TokenRequest {
+public:
+
+	enum class State {
+		Pending,
+		Successful,
+		Failed,
+		Expired
+	};
+
+	TokenRequest(const std::string &identity,
+			const std::vector<std::string> &authz_bounding_set,
+			int lifetime, const std::string &client_id)
+	:
+		m_lifetime(lifetime),
+		m_identity(identity),
+		m_authz_bounding_set(authz_bounding_set),
+		m_client_id(client_id)
+	{
+		m_request_time = time(NULL);
+	}
+
+	void setToken(const std::string &token) {
+		m_token = token;
+		m_state = State::Successful;
+	}
+
+	void setFailed() {m_state = State::Failed;}
+
+	void setExpired() {
+		if (m_state == State::Pending) {
+			m_state = State::Expired;
+		}
+	}
+
+	std::string getToken() const {return m_token;}
+
+	std::string getClientId() const {return m_client_id;}
+
+	State getState() const {return m_state;}
+
+	bool isExpiredAt(time_t now, time_t max_lifetime) const {return m_request_time + max_lifetime > now;}
+
+private:
+	State m_state{State::Pending};
+	time_t m_request_time{-1};
+	time_t m_lifetime{-1};
+	std::string m_identity;
+	std::vector<std::string> m_authz_bounding_set;
+	std::string m_client_id;
+	std::string m_token;
+};
+
+typedef std::unordered_map<int, std::unique_ptr<TokenRequest>> TokenMap;
+
+TokenMap g_request_map;
+
+void cleanup_request_map() {
+	std::vector<int> requests_to_delete;
+	auto now = time(NULL);
+	auto lifetime = param_integer("SEC_TOKEN_REQUEST_LIFETIME", 3600);
+	auto max_lifetime = lifetime + 3600;
+
+	for (auto &entry : g_request_map) {
+		if (entry.second->isExpiredAt(now, lifetime)) {
+			entry.second->setExpired();
+		}
+		if (entry.second->isExpiredAt(now, max_lifetime)) {
+			requests_to_delete.push_back(entry.first);
+		}
+	}
+	for (auto request : requests_to_delete) {
+		auto iter = g_request_map.find(request);
+		if (iter != g_request_map.end()) {
+			g_request_map.erase(iter);
+		}
+	}
+}
+
+}
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -1307,9 +1389,69 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		return false;
 	}
 
+	int error_code = 0;
+	std::string error_string;
+
+	std::string client_id;
+	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+		error_code = 2;
+		error_string = "No client ID provided.";
+	}
+
+	std::string requested_identity;
+	if (!ad.EvaluateAttrString(ATTR_SEC_USER, requested_identity)) {
+		error_code = 2;
+		error_string = "No identity request.";
+	}
+
+	std::vector<std::string> authz_list;
+	std::string authz_list_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
+		StringList authz_str_list(authz_list_str.c_str());
+		authz_str_list.rewind();
+		const char *authz;
+		while ( (authz = authz_str_list.next()) ) {
+			authz_list.emplace_back(authz);
+		}
+	}
+	int requested_lifetime;
+	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+			requested_lifetime = max_lifetime;
+		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+			requested_lifetime = max_lifetime;
+		}
+	} else {
+		requested_lifetime = -1;
+	}
+
 	classad::ClassAd result_ad;
-	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+		// TODO: If this is an ADMINISTRATOR-level connection, why not authorize immediately?
+	} else {
+		unsigned request_id = get_random_uint();
+		auto iter = g_request_map.find(request_id);
+		int idx = 0;
+			// Try a few randomly generated request IDs; to avoid strange issues,
+			// bail out after a fixed limit.
+		while ((iter != g_request_map.end() && (idx++ < 5))) {
+			request_id = get_random_uint();
+			iter = g_request_map.find(request_id);
+		}
+		if (iter == g_request_map.end()) {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Unable to generate new request ID");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
+		} else {
+			g_request_map[request_id] = std::unique_ptr<TokenRequest>( 
+				new TokenRequest{requested_identity, authz_list, requested_lifetime, client_id});
+		}
+		std::string request_id_str;
+		formatstr(request_id_str, "%d", request_id);
+		result_ad.InsertAttr(ATTR_REQUEST_ID, request_id_str);
+	}
 
 	stream->encode();
 	if (!putClassAd(stream, result_ad) ||
@@ -1333,9 +1475,63 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 		return false;
 	}
 
+	int error_code;
+	std::string error_string;
+
+	std::string client_id;
+	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+		error_code = 2;
+		error_string = "No client ID provided.";
+	}
+
+	std::string request_id_str;
+	if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
+		error_code = 2;
+		error_string = "No request ID provided.";
+	}
+	int request_id = -1;
+	try {
+		request_id = std::stol(request_id_str);
+	} catch (...) {
+		error_code = 2;
+		error_string = "Unable to convert request ID to integer.";
+	}
+
+	std::string token;
+	auto iter = (request_id >= 0) ? g_request_map.find(request_id) : g_request_map.end();
+	if ((request_id >= 0) && (iter == g_request_map.end())) {
+		error_code = 3;
+		error_string = "Request ID is not known.";
+	} else if (iter->second->getClientId() != client_id) {
+		error_code = 3;
+		error_string = "Client ID is incorrect.";
+	} else if (iter != g_request_map.end()) {
+		const auto &req = *(iter->second);
+		switch (req.getState()) {
+		case TokenRequest::State::Pending:
+			break;
+		case TokenRequest::State::Successful:
+			token = req.getToken();
+			// Remove the token from the request list; no one else should be able to retrieve it.
+			g_request_map.erase(iter);
+			break;
+		case TokenRequest::State::Failed:
+			error_code = 4;
+			error_string = "Request failed.";
+			break;
+		case TokenRequest::State::Expired:
+			error_code = 5;
+			error_string = "Request has expired.";
+		};
+	}
+
 	classad::ClassAd result_ad;
-	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+	if (error_code) {	
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	} else {
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+	}
 
 	stream->encode();
 	if (!putClassAd(stream, result_ad) ||
