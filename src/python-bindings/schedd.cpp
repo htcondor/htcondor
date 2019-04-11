@@ -3220,13 +3220,15 @@ void export_schedd()
     class_<Schedd>("Schedd",
             R"C0ND0R(
             Client object for a ``condor_schedd``.
-
-            :param location_ad: describes the location of the remote ``condor_schedd``
+            )C0ND0R",
+        init<const ClassAdWrapper &>(
+            boost::python::args("self", "location_ad"),
+            R"C0ND0R(
+            :param location_ad: An Ad describing the location of the remote ``condor_schedd``
                 daemon, as returned by the :meth:`Collector.locate` method. If the parameter is omitted,
                 the local ``condor_schedd`` daemon is used.
             :type location_ad: :class:`~classad.ClassAd`
-            )C0ND0R")
-        .def(init<const ClassAdWrapper &>())
+            )C0ND0R"))
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
             Query the ``condor_schedd`` daemon for jobs.
@@ -3267,7 +3269,11 @@ void export_schedd()
             :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
                 Only jobs matching this description will be acted upon.
             :type job_spec: list[str] or str
-            )C0ND0R")
+            :param reason: The reason for the action.
+                If omitted, the reason will be "Python-initiated action".
+            :type reason: str
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("action"), boost::python::arg("job_spec"), boost::python::arg("reason")=boost::python::object()))
         .def("act", &Schedd::actOnJobs2)
         .def("submit", &Schedd::submit, submit_overloads(
             R"C0ND0R(
@@ -3339,7 +3345,8 @@ void export_schedd()
                 filled by the ``ad_results`` argument of the :meth:`submit` method call.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "ad_list"))
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
             Start a transaction with the ``condor_schedd``.
@@ -3380,11 +3387,13 @@ void export_schedd()
                 be converted to a ClassAd expression, or an ExprTree object.  Be mindful of quoting
                 issues; to set the value to the string ``foo``, one would set the value to ``''foo''``
             :type value: str or :class:`~classad.ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "job_spec", "attr", "value"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("history", &Schedd::history,
             R"C0ND0R(
             Fetch history records from the ``condor_schedd`` daemon.
@@ -3421,7 +3430,8 @@ void export_schedd()
                 A value of ``0`` specifies to not shorten the proxy lifetime.
                 A value of ``-1`` specifies to use the value of configuration variable
                 ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "cluster", "proc", "lifetime"))
         .def("xquery", &Schedd::xquery,
             R"C0ND0R(
             Query the ``condor_schedd`` daemon for jobs.
@@ -3503,7 +3513,8 @@ void export_schedd()
             R"C0ND0R(
             Disconnect from this negotiation session.  This can also be achieved by exiting
             the context.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         ;
 
     class_<Submit>("Submit",
@@ -3514,12 +3525,14 @@ void export_schedd()
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.
-
-            :param input: ``Key = value`` pairs for initializing the submit description.
-                If omitted, the submit class is initially empty.
-            :type input: dict
-            )C0ND0R")
-        .def(init<boost::python::dict>())
+            )C0ND0R",
+        init<boost::python::dict>(
+            R"C0ND0R(
+            :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description.
+                If omitted, the submit object is initially empty.
+            :type input: dict or str
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
         .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand,
@@ -3529,7 +3542,8 @@ void export_schedd()
             :param str attr: The name of the relevant attribute.
             :return: The value of the given attribute; all macros are expanded.
             :rtype: str
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "attr"))
         .def("queue", &Submit::queue,
             R"C0ND0R(
             Submit the current object to a remote queue.
@@ -3544,7 +3558,7 @@ void export_schedd()
             :rtype: int
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("ad_results")=boost::python::object())
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
@@ -3555,12 +3569,12 @@ void export_schedd()
             :param int count: A queue count for each item from the iterator, defaults to 1.
             :param from: an iterator of strings or dictionaries containing the itemdata
                 for each job as in ``queue in`` or ``queue from``.
-            :return: a :class:`SubmitResult``, containing the cluster ID, cluster ClassAd and
+            :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids Cluster ID of the submitted job(s).
-            :rtype: :class:`SubmitResult``
+            :rtype: :class:`SubmitResult`
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("from")=boost::python::object())
             )
         .def("jobs", &Submit::iterjobs,
             R"C0ND0R(
@@ -3614,13 +3628,18 @@ void export_schedd()
             Returns arguments specified in the ``QUEUE`` statement passed to the contructor.
             These are the arguments that will be used by the :meth:`Submit.queue`
             and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("setQArgs", &Submit::setQArgs,
             R"C0ND0R(
             Sets the arguments to be used by
             subsequent calls to the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods.
-            )C0ND0R")
+            and :meth:`Submit.queue_with_itemdata` methods
+            if not overridden by arguments to those methods.
+
+            :param str args: The arguments to pass to the ``QUEUE`` statement.
+            )C0ND0R",
+            boost::python::args("self", "args"))
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)
@@ -3662,22 +3681,26 @@ void export_schedd()
             R"C0ND0R(
             :return: the ClusterID of the submitted jobs.
             :rtype: int
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("clusterad", &SubmitResult::clusterad,
             R"C0ND0R(
             :return: the cluster Ad of the submitted jobs.
-            :rtype:
-            )C0ND0R")
+            :rtype: int
+            )C0ND0R",
+            boost::python::args("self"))
         .def("first_proc", &SubmitResult::first_procid,
             R"C0ND0R(
             :return: the first ProcID of the submitted jobs.
             :rtype: int
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("num_procs", &SubmitResult::num_procs,
             R"C0ND0R(
             :return: the number of submitted jobs.
             :rtype: int
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         ;
     register_ptr_to_python< boost::shared_ptr<SubmitResult>>();
 
@@ -3687,7 +3710,7 @@ void export_schedd()
         .def("clusterad", &SubmitJobsIterator::clusterad,
             R"C0ND0R(
             Return the Cluster ad that proc ads should be chained to.
-            )C0ND0R""")
+            )C0ND0R")
         ;
 
     class_<QueueItemsIterator>("QueueItemsIterator",
@@ -3742,19 +3765,22 @@ void export_schedd()
 
             :return: Zero-or-more job ads.
             :rtype: list[:class:`~classad.ClassAd`]
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("tag", &QueryIterator::tag,
             R"C0ND0R(
             Retrieve the tag associated with this iterator; when using the :func:`poll` method,
             this is useful to distinguish multiple iterators.
 
             :return: The query's tag.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("done", &QueryIterator::done,
             R"C0ND0R(
             :return: ``True`` if the iterator is finished; ``False`` otherwise.
             :rtype: bool
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("watch", &QueryIterator::watch,
             R"C0ND0R(
             Returns an ``inotify``-based file descriptor; if this descriptor is given
@@ -3765,7 +3791,8 @@ void export_schedd()
 
             :return: A file descriptor associated with this query.
             :rtype: int
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("__iter__", &QueryIterator::pass_through)
         ;
 
