@@ -3151,7 +3151,7 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 	for (const auto &xfer_result: result_ads) {
 		std::string filename;
 		if (!xfer_result->EvaluateAttrString("TransferFileName", filename)) {
-			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
+			dprintf(D_FULLDEBUG, "InvokeMultiUploadPlugin: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", pluginPath.c_str());
 			classad_contents_good = false;
 		}
