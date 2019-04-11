@@ -280,7 +280,7 @@ export_claim()
             :type ad: :class:`~classad.ClassAd`
             )C0ND0R",
             boost::python::args("self", "ad")))
-        .def(boost::python::init<>())
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("requestCOD", &Claim::requestCOD,
             R"C0ND0R(
             Request a claim from the ``condor_startd`` represented by this object.
