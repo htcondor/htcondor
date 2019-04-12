@@ -2838,7 +2838,9 @@ int process_job_credentials()
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
-					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+					char *my_un = my_username();
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.Value());
+					free(my_un);
 				} else {
 					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
 				}
