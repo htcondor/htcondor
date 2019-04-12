@@ -704,9 +704,14 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 {
     char subjectname[1024];
     X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
-    X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-    setAuthenticatedName( subjectname );
-    setRemoteUser( "ssl" );
+	if (peer) {
+		X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+		setRemoteUser( "ssl" );
+	} else {
+		strcpy(subjectname, "unauthenticated");
+		setRemoteUser( "unauthenticated" );
+	}
+	setAuthenticatedName( subjectname );
 	setRemoteDomain( UNMAPPED_DOMAIN );
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
@@ -1232,7 +1237,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if( cipherlist == NULL ) {
 		cipherlist = strdup(AUTH_SSL_DEFAULT_CIPHERLIST);
     }
-    if( !certfile || !keyfile ) {
+    if( is_server && (!certfile || !keyfile) ) {
         ouch( "Please specify path to server certificate and key\n" );
         dprintf(D_SECURITY, "in config file : '%s' and '%s'.\n",
                 AUTH_SSL_SERVER_CERTFILE_STR, AUTH_SSL_SERVER_KEYFILE_STR );
@@ -1258,15 +1263,16 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 #endif
 
     if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
-        ouch( "Error loading CA file and/or directory\n" );
-		goto setup_server_ctx_err;
+        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
+		 cafile, cadir);
+	goto setup_server_ctx_err;
     }
-    if( (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
+    if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
         ouch( "Error loading certificate from file" );
         goto setup_server_ctx_err;
     }
     priv = set_root_priv();
-    if( (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
+    if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
         set_priv(priv);
         ouch( "Error loading private key from file" );
         goto setup_server_ctx_err;
