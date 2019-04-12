@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug with singularity jobs where TMPDIR was set to the wrong
+value.  It is now set the the scratch directory inside the container.
+\Ticket{6991}
+
 \item Fixed a bug when pid namespaces where enabled and vanilla checkpointing
 was also enabled that caused one copy of the pid namespace wrapper to wrap
 the job per each checkpoint restart.
