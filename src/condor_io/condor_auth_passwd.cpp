@@ -107,8 +107,10 @@ bool findToken(const std::string &tokenfilename,
 	}
 
 */
-	FILE * f = safe_fopen_no_create( tokenfilename.c_str(), "r" );
-	if( f == NULL ) {
+	std::unique_ptr<FILE,decltype(&fclose)> 
+		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
+
+	if( f.get() == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
 		    tokenfilename.c_str(), errno, strerror(errno));
 		return false;
@@ -116,7 +118,7 @@ bool findToken(const std::string &tokenfilename,
 /*
 	for (std::string line; std::getline(tokenfile, line); ) {
 */
-    for( std::string line; readLine( line, f, false ); ) {
+    for( std::string line; readLine( line, f.get(), false ); ) {
         line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
