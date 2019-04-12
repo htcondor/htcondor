@@ -207,6 +207,7 @@ Singularity::setup(ClassAd &machineAd,
 		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
 		job_env.SetEnv("TEMP", target_dir.c_str());
 		job_env.SetEnv("TMP", target_dir.c_str());
+		job_env.SetEnv("TMPDIR", target_dir.c_str());
 		std::string chirp = target_dir + "/.chirp.config";
 		std::string machine_ad = target_dir + "/.machine.ad";
 		std::string job_ad = target_dir + "/.job.ad";
