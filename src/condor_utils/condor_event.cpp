@@ -3199,6 +3199,7 @@ TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
 	delete[] core_file;
+	if( toeTag ) { delete toeTag; }
 }
 
 
@@ -3564,26 +3565,30 @@ JobTerminatedEvent::formatBody( std::string &out )
 		unsigned int howCode;
 		toeTag->EvaluateAttrNumber( "HowCode", (int &)howCode );
 
+		// Convert when to a human-readable string.  Should probably be its
+		// own little helper function somewhere, especially since we should
+		// respect the time format flag once local times round-trip between
+		// different machines (that is, once we write timezone data).
+
+		char whenStr[ISO8601_DateAndTimeBufferMax];
+		struct tm eventTime;
+		// time_t is a signed long int on all Linux platforms.  We send
+		// it over the wire via ClassAds in a (signed) long long, which
+		// is 64 bits on all platforms.  This conversion should be a no
+		// op on 64-bit platforms, but will correctly preserve the sign
+		// bit on 32-bit platforms.
+		time_t ttWhen = (time_t)when;
+		gmtime_r( & ttWhen, & eventTime );
+		time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
+			ISO8601_DateAndTime, true );
+
 		if( howCode == 0 ) {
-			if( formatstr_cat( out, "\tJob terminated of its own accord.\n" ) < 0 ) {
+			if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", whenStr ) < 0 ) {
 				return false;
 			}
 		} else {
-			// Assuming this code ever actually runs, we should respect the
-			// time format flag once local times round-trip between machines.
-			char whenStr[ISO8601_DateAndTimeBufferMax];
-			struct tm eventTime;
-			// time_t a (signed!) long int on all Linux platforms.  We send
-			// it over the wire via ClassAds in a (signed) long long, which
-			// is 64 bits on all platforms.  This conversion should be a no
-			// op on 64-bit platforms, but will correctly preserve the sign
-			// bit on 32-bit platforms.
-			time_t ttWhen = (time_t)when;
-			gmtime_r( & ttWhen, & eventTime );
-			time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
-			ISO8601_DateAndTime, true );
-			if( formatstr_cat( out, "\tJob terminated by %s via %s at %s.\n",
-			  who.c_str(), how.c_str(), whenStr ) < 0 ) {
+			if( formatstr_cat( out, "\n\tJob terminated by %s at %s (using method %d: %s).\n",
+			  who.c_str(), whenStr, howCode, how.c_str() ) < 0 ) {
 				return false;
 			}
 		}
@@ -3605,7 +3610,76 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 #endif
-	return TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	if(! rv) { return rv; }
+
+	MyString line;
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if(line.empty()) {
+			if( read_optional_line( line, file, got_sync_line ) ) {
+				return 0;
+			}
+		}
+		if( line.remove_prefix( "\tJob terminated of its own accord at " ) ) {
+			if( toeTag != NULL ) {
+				delete toeTag;
+			}
+			toeTag = new classad::ClassAd();
+
+			// See line 697 of condor_starter.V6.1/os_proc.cpp, which implies
+			// that this should be its own little helper function somewhere.
+			toeTag->InsertAttr( "Who", "itself" );
+			toeTag->InsertAttr( "How", "OF_ITS_OWN_ACCORD" );
+			toeTag->InsertAttr( "HowCode", 0 );
+			// This code gets more complicated if we don't assume UTC i/o.
+			struct tm eventTime;
+			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
+			toeTag->InsertAttr( "When", timegm(&eventTime) );
+		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
+			if(toeTag != NULL) {
+				delete toeTag;
+			}
+			toeTag = new classad::ClassAd();
+
+			int endWho = line.find( " at " );
+			if( endWho == -1 ) { return 0; }
+			MyString whoStr = line.substr( 0, endWho );
+			toeTag->InsertAttr( "Who", whoStr );
+			line = line.substr( endWho + strlen(" at "), INT_MAX );
+
+			int endWhen = line.find( " (using method " );
+			if( endWhen == -1 ) { return 0; }
+			MyString whenStr = line.substr( 0, endWhen );
+			line = line.substr( endWhen + strlen(" (using method "), INT_MAX );
+			// This code gets more complicated if we don't assume UTC i/o.
+			struct tm eventTime;
+			iso8601_to_time( whenStr.Value(), & eventTime, NULL, NULL );
+			toeTag->InsertAttr( "When", timegm(&eventTime) );
+
+			int endHowCode = line.find( ": " );
+			if( endHowCode == -1 ) { return 0; }
+			MyString howCodeStr = line.substr( 0, endHowCode );
+			line = line.substr( endHowCode + strlen(": "), INT_MAX );
+			char * end = NULL;
+			long howCode = strtol( howCodeStr.Value(), & end, 10 );
+			if( end && *end == '\0' ) {
+				toeTag->InsertAttr( "HowCode", howCode );
+			} else {
+				return 0;
+			}
+
+			int endHow = line.find( ")." );
+			if( endHow == -1 ) { return 0; }
+			MyString how = line.substr( 0, endHow );
+			line = line.substr( endHow + strlen(")."), INT_MAX );
+			if(! line.empty()) { return 0; }
+			toeTag->InsertAttr( "How", how.Value() );
+		} else {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 ClassAd*
