@@ -2680,6 +2680,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 	if(! getClassAd( sock, commandAd )) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get command ad\n" );
+		delete requestAd;
 		return FALSE;
 	}
 
