@@ -42,6 +42,8 @@
 #include "historyFileFinder.h"
 #include "store_cred.h"
 
+#include <chrono>
+
 #ifdef LINUX
 #include <sys/prctl.h>
 #endif
@@ -187,6 +189,47 @@ private:
 typedef std::unordered_map<int, std::unique_ptr<TokenRequest>> TokenMap;
 
 TokenMap g_request_map;
+
+class RequestRateLimiter {
+public:
+	RequestRateLimiter(unsigned rate_limit)
+	: m_rate_limit(rate_limit),
+	m_last_update(std::chrono::steady_clock::now())
+	{
+		classy_counted_ptr<stats_ema_config> ema_config;
+		ema_config->add(10, "10s");
+		m_request_rate.ConfigureEMAHorizons(ema_config);
+		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		m_request_rate.Update(m_request_rate.recent_start_time);
+	}
+
+	RequestRateLimiter(const RequestRateLimiter &) = delete;
+
+	bool AllowIncomingRequest() {
+		auto now = std::chrono::steady_clock::now();
+		m_request_rate += 1;
+		auto duration = m_last_update - now;
+		auto seconds_elapsed = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+		if (seconds_elapsed > 0) {
+			auto since_epoch = now.time_since_epoch();
+			m_request_rate.Update(std::chrono::duration_cast<std::chrono::seconds>(since_epoch).count());
+			m_recent_rate = m_request_rate.EMAValue("10s");
+			m_last_update = now;
+		}
+		return (m_rate_limit <= 0) || (m_recent_rate <= m_rate_limit);
+	}
+
+	void SetLimit(unsigned rate_limit) {m_rate_limit = rate_limit;}
+
+private:
+
+	double m_rate_limit{0};
+	double m_recent_rate{0};
+	std::chrono::steady_clock::time_point m_last_update;
+	stats_entry_sum_ema_rate<uint64_t> m_request_rate;
+};
+
+RequestRateLimiter g_request_limit(50);
 
 void cleanup_request_map() {
 	std::vector<int> requests_to_delete;
@@ -1431,6 +1474,9 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 		// TODO: If this is an ADMINISTRATOR-level connection, why not authorize immediately?
+	} else if (g_request_map.size() > 1000) {
+		error_code = 3;
+		error_string = "Too many requests in the system.";
 	} else {
 		unsigned request_id = get_random_uint();
 		auto iter = g_request_map.find(request_id);
@@ -1499,7 +1545,10 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 
 	std::string token;
 	auto iter = (request_id >= 0) ? g_request_map.find(request_id) : g_request_map.end();
-	if ((request_id >= 0) && (iter == g_request_map.end())) {
+	if (!g_request_limit.AllowIncomingRequest()) {
+		error_code = 5;
+		error_string = "Request rate limit hit.";
+	} else if ((request_id >= 0) && (iter == g_request_map.end())) {
 		error_code = 3;
 		error_string = "Request ID is not known.";
 	} else if (iter->second->getClientId() != client_id) {
@@ -1520,6 +1569,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 			error_string = "Request failed.";
 			break;
 		case TokenRequest::State::Expired:
+			g_request_map.erase(iter);
 			error_code = 5;
 			error_string = "Request has expired.";
 		};
