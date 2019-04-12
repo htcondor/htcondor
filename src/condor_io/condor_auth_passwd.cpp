@@ -557,6 +557,8 @@ Condor_Auth_Passwd::fetchLogin()
 		free(m_k); m_k = nullptr;
 		if (!(m_k = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
 			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K\n");
+			free(ka);
+			free(kb);
 			return nullptr;
 		}
 		memcpy(m_k, &ka[0], key_strength_bytes_v2());
