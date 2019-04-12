@@ -5401,6 +5401,19 @@ int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
 					MyString &val )
 {
+	std::string strVal;
+	int rc = GetAttributeString(cluster_id, proc_id, attr_name, strVal);
+	val = strVal;
+	return rc;
+}
+
+// returns -1 if the lookup fails or if the value is not a string, 0 if
+// the lookup succeeds in the job queue, 1 if it succeeds in the current
+// transaction; val is set to the empty string on failure
+int
+GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
+                    std::string &val )
+{
 	ClassAd	*ad = NULL;
 	char	*attr_val;
 
