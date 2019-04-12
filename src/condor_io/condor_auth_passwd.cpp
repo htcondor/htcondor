@@ -541,6 +541,8 @@ Condor_Auth_Passwd::fetchLogin()
 			key_strength_bytes_v2()))
 		{
 			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K\n");
+			free(ka);
+			free(kb);
 			return nullptr;
 		}
 		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
@@ -550,6 +552,8 @@ Condor_Auth_Passwd::fetchLogin()
 			key_strength_bytes_v2()))
 		{
 			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K'\n");
+			free(ka);
+			free(kb);
 			return nullptr;
 		}
 
