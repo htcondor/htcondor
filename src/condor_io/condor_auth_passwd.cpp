@@ -765,6 +765,10 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 			(const unsigned char *)"master jwt", 10,
 			&jwt_key[0], key_strength_bytes_v2()))
 		{
+			free(seed_ka);
+			free(seed_kb);
+			free(ka);
+			free(kb);
 			return false;
 		}
 		std::string jwt_key_str(reinterpret_cast<char *>(&jwt_key[0]), key_strength_bytes_v2());
