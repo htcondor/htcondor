@@ -165,8 +165,6 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     int client_share_status(int client_status);
     CondorAuthSSLRetval receive_status(bool non_blocking, int &status);
     int send_status(int status);
-    CondorAuthSSLRetval server_share_status(bool non_blocking, int server_status,
-	int &client_status);
     int send_message(int status, char *buf, int len);
     CondorAuthSSLRetval receive_message(bool non_blocking, int &status, int &len,
 		char *buf);
