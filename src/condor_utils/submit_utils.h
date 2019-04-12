@@ -639,6 +639,8 @@ protected:
 	int (*FnCheckFile)(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 	void *CheckFileArg;
 
+	bool CheckProxyFile;
+
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables
 	// so that whatever is set here will be found by $(Key) macro expansion.
