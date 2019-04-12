@@ -1326,7 +1326,10 @@ case CONDOR_putfile:
 		ASSERT( result );
 		free((char*)path);
 
-        if (length <= 0) return 0;
+        if (length <= 0) {
+			if (fd >= 0) close(fd);
+			return 0;
+		}
 		
 		int num = -1;
 		if(fd >= 0) {
