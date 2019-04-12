@@ -500,6 +500,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
 		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
 		job_not_started = true;
+		free(affinity_mask);
 		return 0;
 	} else if( Starter->glexecPrivSepHelper() ) {
 			// TODO: if there is some way to figure out the final username,
