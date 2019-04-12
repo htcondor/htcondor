@@ -1291,6 +1291,7 @@ case CONDOR_getfile:
 		}
 		free( (char *)path );
 		free( buf );
+		close(fd);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
