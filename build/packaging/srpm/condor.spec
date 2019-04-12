@@ -1783,6 +1783,18 @@ fi
 %endif
 
 %changelog
+* Thu Apr 11 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.2-1
+- Fixed problems with condor_ssh_to_job and Singularity jobs
+- Fixed a problem that could cause condor_annex to crash
+- Fixed a problem where the job queue would very rarely be corrupted
+- condor_userprio can report concurrency limits again
+- Fixed the GPU discovery and monitoring code to map GPUs in the same way
+- Made the CHIRP_DELAYED_UPDATE_PREFIX configuration knob work again
+- Fixed restarting HTCondor from the Service Control Manager on Windows
+- Fixed a problem where local universe jobs could not use condor_submit
+- Restored a deprecated Python interface that is used to read the event log
+- Fixed a problem where condor_shadow reuse could confuse DAGMan
+
 * Thu Feb 28 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.0-1
 - Absent any configuration, HTCondor denies authorization to all users
 - All HTCondor daemons under a condor_master share a security session
