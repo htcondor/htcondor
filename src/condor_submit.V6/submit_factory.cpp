@@ -123,6 +123,7 @@ int write_factory_file(const char * filename, const void* data, int cb, mode_t a
 	int cbwrote = write(fd, data, cb);
 	if (cbwrote != cb) {
 		dprintf(D_ALWAYS, "ERROR: write_factory_file(%s): write() failed: %s (%d)\n", filename, strerror(errno), errno);
+		close(fd);
 		return -1;
 	}
 
