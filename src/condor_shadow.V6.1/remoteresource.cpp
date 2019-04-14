@@ -1457,7 +1457,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
-	classad::ClassAd * toeTag = (classad::ClassAd *)update_ad->Lookup( "ToE" );
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup( "ToE" ));
 	if( toeTag ) {
 		CopyAttribute( "ToE", *jobAd, *update_ad );
 

@@ -991,13 +991,13 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
-	
+
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
 			event.setCoreFile( corefile.Value() );
 		}
 
-		event.toeTag = (classad::ClassAd *)jobAd->Lookup( "ToE" );
+		event.toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1078,7 +1078,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	}
 #endif
 
-	event.toeTag = (classad::ClassAd *)jobAd->Lookup( "ToE" );
+	event.toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");
