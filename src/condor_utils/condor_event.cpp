@@ -3767,6 +3767,13 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
+	if( toeTag ) {
+		if(! myad->InsertAttr("ToE", toeTag)) {
+			delete myad;
+			return NULL;
+		}
+	}
+
 	return myad;
 }
 
@@ -3816,6 +3823,8 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
+
+	toeTag = (classad::ClassAd *)ad->Lookup( "ToE" );
 }
 
 JobImageSizeEvent::JobImageSizeEvent(void)
