@@ -3641,25 +3641,28 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 			}
 			toeTag = new classad::ClassAd();
 
-			int endWho = line.find( " at " );
+			const char * endWhoStr = " at ";
+			int endWho = line.find( endWhoStr );
 			if( endWho == -1 ) { return 0; }
 			MyString whoStr = line.substr( 0, endWho );
 			toeTag->InsertAttr( "Who", whoStr );
-			line = line.substr( endWho + strlen(" at "), INT_MAX );
+			line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
 
-			int endWhen = line.find( " (using method " );
+			const char * endWhenStr = " (using method ";
+			int endWhen = line.find( endWhenStr );
 			if( endWhen == -1 ) { return 0; }
 			MyString whenStr = line.substr( 0, endWhen );
-			line = line.substr( endWhen + strlen(" (using method "), INT_MAX );
+			line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
 			// This code gets more complicated if we don't assume UTC i/o.
 			struct tm eventTime;
 			iso8601_to_time( whenStr.Value(), & eventTime, NULL, NULL );
 			toeTag->InsertAttr( "When", timegm(&eventTime) );
 
-			int endHowCode = line.find( ": " );
+			const char * endHowCodeStr = ": ";
+			int endHowCode = line.find( endHowCodeStr );
 			if( endHowCode == -1 ) { return 0; }
 			MyString howCodeStr = line.substr( 0, endHowCode );
-			line = line.substr( endHowCode + strlen(": "), INT_MAX );
+			line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
 			char * end = NULL;
 			long howCode = strtol( howCodeStr.Value(), & end, 10 );
 			if( end && *end == '\0' ) {
@@ -3668,10 +3671,11 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 				return 0;
 			}
 
-			int endHow = line.find( ")." );
+			const char * endHowStr = ").";
+			int endHow = line.find( endHowStr );
 			if( endHow == -1 ) { return 0; }
 			MyString how = line.substr( 0, endHow );
-			line = line.substr( endHow + strlen(")."), INT_MAX );
+			line = line.substr( endHow + strlen(endHowStr), INT_MAX );
 			if(! line.empty()) { return 0; }
 			toeTag->InsertAttr( "How", how.Value() );
 		} else {
