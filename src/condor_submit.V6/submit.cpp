@@ -2599,7 +2599,11 @@ int SetSyscalls( int foo ) { return foo; }
 
 MyString credd_has_tokens(MyString m) {
 
-	dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), my_username());
+	if (IsDebugLevel(D_SECURITY)) {
+			char *myname = my_username();
+			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
+			free(myname);
+	}
 
 	// PHASE 1
 	//
