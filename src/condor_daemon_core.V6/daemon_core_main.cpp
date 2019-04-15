@@ -1526,7 +1526,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 		return false;
 	}
 
-	int error_code;
+	int error_code = 0;
 	std::string error_string;
 
 	std::string client_id;
@@ -3195,7 +3195,9 @@ int dc_main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 0, 5 * 60,
 				check_session_cache, "check_session_cache" );
-	
+
+	daemonCore->Register_Timer( 0, 60,
+				cleanup_request_map, "cleanup_request_map" );
 
 	// set the timer for half the session duration, 
 	// since we retain the old cookie. Also make sure
