@@ -280,7 +280,7 @@ StreamOut=true
 
 ==periodic.sub
 OnExitHold=ExitCode > 42
-OnExitHoldReason="job failed by succeeding to well"
+OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
 PeriodicHold=(time() - QDate) > 3600 || MemoryUsage > RequestMemory
 PeriodicHoldReason="exceeded 1 Hour in queue"
@@ -315,7 +315,7 @@ Arguments="-one The' 'Quicker,' 'Redder' 'Fox -two' 'other' 'stuff"
 ==retries.sub
 JobMaxRetries=3
 OnExitHold=ExitCode > 42
-OnExitHoldReason="job failed by succeeding to well"
+OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
 

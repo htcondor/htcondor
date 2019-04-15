@@ -370,6 +370,7 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg
 
 			// load the inline foreach data, and check to see if there is external foreach data
 			rval = load_inline_q_foreach_items(ms, fea, errmsg);
+			dprintf(D_MATERIALIZE | D_VERBOSE, "Digest for cluster %d has %d(%d) itemdata %s\n", cluster_id, fea.foreach_mode, rval, fea.items_filename.Value());
 			if (rval == 1) {
 				rval = 0;
 				// there is external foreach data.  it had better be from a file, because that's the only form we support
@@ -392,14 +393,17 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg
 						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
 							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
 						} else {
 							rval = reader.queue_next_read();
 							if (rval) {
 								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+								dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
 							} else {
 								fea.foreach_mode = foreach_from_async;
 							}
 						}
+						dprintf(rval ? D_ALWAYS : (D_MATERIALIZE|D_VERBOSE), "reader.open() returned %d, mode=%d\n", rval, fea.foreach_mode);
 					}
 					// failed to open or start the item reader, so just close it and free the internal buffers.
 					if (rval) { reader.clear(); }
@@ -418,6 +422,7 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg
 // item the next time this function is called.
 int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder)
 {
+	int num_rows = 0;
 	size_t off = 0;
 	for (size_t ix = off; ix < cbbuf; ++ix) {
 		if (buf[ix] == '\n') {
@@ -425,11 +430,14 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 			factory->fea.items.append(remainder.data(), (int)remainder.size());
 			remainder.clear();
 			off = ix + 1;
+			++num_rows;
 		}
 	}
 	if (off < cbbuf) {
 		remainder.append(buf + off, cbbuf - off);
 	}
+	dprintf(D_MATERIALIZE | D_VERBOSE, "Appended %d rows to factory from %d bytes. remain=%d, items=%d\n",
+		num_rows, (int)cbbuf, (int)remainder.size(), factory->fea.items.number());
 	return 0;
 }
 
@@ -684,6 +692,7 @@ int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_dela
 				return 0;
 			}
 			item_index = factory->FirstSelectedRow();
+			dprintf(D_MATERIALIZE | D_VERBOSE, "FirstSelectedRow returned %d\n", item_index);
 		}
 	}
 	if (item_index < 0) {
@@ -731,6 +740,7 @@ int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_dela
 	factory->get_cluster_ad()->Assign(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id + 1);
 	if (! no_items && (step + 1 == step_size)) {
 		int next_row = factory->NextSelectedRow(row);
+		dprintf(D_MATERIALIZE | D_VERBOSE, "NextSelectedRow returned %d\n", next_row);
 		if (next_row != item_index) {
 			factory->get_cluster_ad()->Assign(ATTR_JOB_MATERIALIZE_NEXT_ROW, next_row);
 		}
@@ -742,6 +752,7 @@ int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_dela
 	int total_procs = factory->TotalProcs(refresh_in_ad);
 	if (refresh_in_ad) {
 		factory->get_cluster_ad()->Assign(ATTR_TOTAL_SUBMIT_PROCS, total_procs);
+		dprintf(D_MATERIALIZE | D_VERBOSE, "setting " ATTR_TOTAL_SUBMIT_PROCS " to %d\n", total_procs);
 	}
 
 	// have the factory make a job and give us a pointer to it.
@@ -801,9 +812,12 @@ main( int argc, const char *argv[] )
 				digest_file = ptr[0];
 			} else if (is_dash_arg_prefix(ptr[0], "verbose", 1)) {
 				verbose = true;
-			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
+			} else if (is_dash_arg_colon_prefix(ptr[0], "debug", &pcolon, 3)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
+				if (pcolon && pcolon[1]) {
+					set_debug_flags(++pcolon, 0);
+				}
 			} else if (is_dash_arg_colon_prefix(ptr[0], "clusterad", &pcolon, 1)) {
 				if (!(--argc) || !(*(++ptr))) {
 					fprintf(stderr, "%s: -clusterad requires another argument\n", MyName);
@@ -995,6 +1009,7 @@ main( int argc, const char *argv[] )
 				break;
 			}
 			sleep(retry_delay);
+			continue;
 		} else {
 			if (verbose) { fprintf(stdout, "# no more jobs to materialize\n"); }
 			break;

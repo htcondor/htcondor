@@ -255,7 +255,7 @@ periodic_remove = $(hold_for_time) * 2
 
 on_exit_hold = ExitCode > 42
 on_exit_hold_subcode = 43
-on_exit_hold_reason = "job failed by succeeding to well"
+on_exit_hold_reason = "job fooled by succeeding to well"
 
 queue 2
 
@@ -312,7 +312,7 @@ arguments=10s
 max_retries = 3
 on_exit_hold = ExitCode > 42
 on_exit_hold_subcode = 43
-on_exit_hold_reason = "job failed by succeeding to well"
+on_exit_hold_reason = "job fooled by succeeding to well"
 
 queue
 

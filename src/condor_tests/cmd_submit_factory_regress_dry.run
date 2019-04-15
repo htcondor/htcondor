@@ -31,7 +31,7 @@ use strict;
 use warnings;
 #use Data::Dumper;
 
-my $verbose = 0;
+my $verbose = 2;
 my $result = 1;
 my $testname = "cmd_submit_factory_regress_dry";
 my $peername = "cmd_submit_regress_dry";
@@ -169,13 +169,27 @@ foreach my $sub (@subs) {
 		print "\n";
 	}
 	
+	my $logarg = "";
+	if ($verbose) {
+		$logarg = "-verbose";
+		if ( ! CondorUtils::is_windows()) {
+			# for some reason, turning on -debug on Windows causes this test to never exit...
+			$logarg = "-verbose -debug";
+			$ENV{'_CONDOR_TOOL_DEBUG'} = 'D_MATERIALIZE D_FULLDEBUG';
+		}
+	}
 
-	TLOG "$tag: test_job_factory.exe -cl $cad $digest\n";
+	my $itemsarg = "";
+	if (-f "$digest.items") {
+		$itemsarg = "-item $digest.items";
+	}
+
+	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest $itemsarg\n";
 	
 	# now materialize the proc ads from the cluster ad and digest
 	#
 	#
-	$hashref = runcmd( "test_job_factory.exe -cl $cad $digest", \%opts );
+	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest $itemsarg", \%opts );
 	@output =  @{${$hashref}{"stdout"}};
 	@error =  @{${$hashref}{"stderr"}};
 	$exitcode = ${$hashref}{"exitcode"};
@@ -474,7 +488,7 @@ sub emit_subs {
 		if ($_ =~ /^==(\S+)/) {
 			close (FHO);
 			$iter += 1;
-			my $fn = sprintf("%03d%s", $iter, $1);
+			my $fn = sprintf("%04d%s", $iter, $1);
 			push @subs, $fn;
 			open (FHO, ">$fn") || die "error writing to $fn: $!\n";
 			next;
