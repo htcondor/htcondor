@@ -43,6 +43,7 @@
 #include "store_cred.h"
 
 #include <chrono>
+#include <sstream>
 
 #ifdef LINUX
 #include <sys/prctl.h>
@@ -175,6 +176,10 @@ public:
 	State getState() const {return m_state;}
 
 	bool isExpiredAt(time_t now, time_t max_lifetime) const {return m_request_time + max_lifetime > now;}
+
+	const std::vector<std::string> &getBoundingSet() const {return m_authz_bounding_set;}
+
+	time_t getLifetime() const {return m_lifetime;}
 
 private:
 	State m_state{State::Pending};
@@ -1588,6 +1593,143 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 		!stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_finish_token_request: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_list_token_request( Service*, int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	std::string request_id_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
+		int request_id = -1;
+		try {
+			request_id = std::stol(request_id_str);
+		} catch (...) {
+			error_code = 2;
+			error_string = "Unable to convert request ID to integer.";
+		}
+	}
+
+	stream->encode();
+
+	classad::ClassAd result_ad;
+	for (const auto & iter : g_request_map) {
+		if (error_code) break;
+
+		const auto &request_id = iter.first;
+		const auto &token_request = iter.second;
+
+		std::string request_id_str = std::to_string(request_id);
+
+		std::stringstream ss;
+		auto bound_set = token_request->getBoundingSet();
+		for (const auto &authz : bound_set) {
+			ss << authz << ",";
+		}
+		std::string bounds = ss.str();
+		if (bounds.size() == 1) {
+			bounds = "";
+		} else {
+			bounds = bounds.substr(0, bounds.size()-1);
+		}
+
+		if (!result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str) ||
+			!result_ad.InsertAttr(ATTR_SEC_CLIENT_ID, token_request->getClientId()) ||
+			!result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, token_request->getLifetime()))
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+		if (bounds.size() && !result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, bounds))
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+		if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to send response ad to client\n");
+			return false;
+		}
+		result_ad.Clear();
+	}
+
+	result_ad.Clear();
+	int intVal = 0;
+	if (!result_ad.InsertAttr(ATTR_ERROR_CODE, error_code) ||
+		!result_ad.InsertAttr(ATTR_OWNER, intVal))
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create final response ad");
+		return false;
+	}
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+	}
+	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to send final response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_approve_token_request( Service*, int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_approve_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	std::string request_id_str;
+	if (request_id_str.empty() || !ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str))
+	{
+		error_code = 1;
+		error_string = "Request ID not provided.";
+	}
+	int request_id = -1;
+	try {
+		request_id = std::stol(request_id_str);
+	} catch (...) {
+		error_code = 2;
+		error_string = "Unable to convert request ID to integer.";
+	}
+
+	std::string client_id;
+	if (client_id.empty() || !ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id))
+	{
+		error_code = 1;
+		error_string = "Client ID not provided.";
+	}
+
+	stream->encode();
+	classad::ClassAd result_ad;
+	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
+	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+
+	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_approve_token_request: failed to send final response ad to client\n");
 		return false;
 	}
 	return true;
@@ -3226,6 +3368,21 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_finish_token_request,
 								"handle_dc_finish_token_request()", 0, ALLOW );
+
+		//
+		// List the outstanding token requests
+		//
+	daemonCore->Register_Command( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
+		(CommandHandler)handle_dc_list_token_request,
+		"handle_dc_list_token_request", 0, ADMINISTRATOR );
+
+		//
+		// Approve a token request.
+		//
+	daemonCore->Register_Command( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
+		(CommandHandler)handle_dc_approve_token_request,
+		"handle_dc_approve_token_request", 0, ADMINISTRATOR );
+
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
