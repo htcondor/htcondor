@@ -377,7 +377,7 @@ _condor_local_bind( int is_outgoing, int fd )
 			/*
 			  we don't want to honor BIND_ALL_INTERFACES == true in
 			  here.  this code is only used in the ckpt server (which
-			  isn't daemoncore, so the hostallow localhost stuff
+			  isn't daemoncore, so the allow localhost stuff
 			  doesn't matter) and for bind()ing outbound connections
 			  inside do_connect().  so, there's no harm in always
 			  binding to all interfaces in here...
