@@ -536,6 +536,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
 					 wrapper.c_str() );
 			job_not_started = true;
+			free(affinity_mask);
 			return 0;
 		}
 			// Now, we've got a valid wrapper.  We want that to become
