@@ -2776,3 +2776,173 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 	}
 	return true;
 }
+
+
+bool
+Daemon::listTokenRequest(const std::string &request_id, std::vector<classad::ClassAd> &results,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::listTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (!request_id.empty()) {
+		if (!ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set request ID.");
+				dprintf(D_FULLDEBUG, "Unable to set request ID.\n");
+			return false;
+		}
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_LIST_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to start command for "
+			"listing token requests with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	while (true) {
+		classad::ClassAd ad;
+		if (!getClassAd(&rSock, ad) || !rSock.end_of_message()) {
+			if (err) err->pushf("DAEMON", 2, "Failed to receive response ClassAd from remote"
+				" daemon at '%s'", _addr ? _addr : "(unknown)");
+			dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed to receive response ClassAd"
+				" from remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+			return false;
+		}
+
+		// The use of ATTR_OWNER here as an end-sentinel is arbitrary; I used this attribute and
+		// special value just to be similar to the condor_q protocol.
+		long long intVal;
+		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) {
+			std::string errorMsg;
+			if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal &&
+				ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (err) err->pushf("DAEMON", intVal, "%s", errorMsg.c_str());
+				dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed due to remote error:"
+					"%s (error code %lld)\n", errorMsg.c_str(), intVal);
+				return false;
+			}
+			break;
+		}
+
+		results.emplace_back();
+		results.back().CopyFrom(ad);
+		ad.Clear();
+	}
+	return true;
+}
+
+
+bool
+Daemon::approveTokenRequest( const std::string &client_id, const std::string &request_id,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::listTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (request_id.empty()) {
+		if (err) err->pushf("DAEMON", 1, "No request ID provided.");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest(): No request ID provided.");
+		return false;
+	} else if (!ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set request ID.");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest(): Unable to set request ID.\n");
+		return false;
+	}
+	if (client_id.empty()) {
+		if (err) err->pushf("DAEMON", 1, "No client ID provided.");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest(): No client ID provided.");
+		return false;
+	} else if (!ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set client ID.");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest(): Unable to set client ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to start command for "
+			"listing token requests with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to recieve response "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::approveTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	int error_code = 0;
+	if (!result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		if (err) err->pushf("DAEMON", 1, "Remote daemon at '%s' did not return a result.",
+			_addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::approveTokenRequest() - Remote daemon at '%s' did "
+			"not return a result", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+	if (error_code) {
+		std::string err_msg;
+		result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg);
+		if (err_msg.empty()) {err_msg = "Unknown error.";}
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+	return true;
+}
