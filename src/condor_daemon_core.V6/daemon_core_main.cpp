@@ -144,12 +144,16 @@ public:
 		Expired
 	};
 
-	TokenRequest(const std::string &identity,
+	TokenRequest(const std::string &requester_identity,
+			const std::string &requested_identity,
+			const std::string &peer_location,
 			const std::vector<std::string> &authz_bounding_set,
 			int lifetime, const std::string &client_id)
 	:
 		m_lifetime(lifetime),
-		m_identity(identity),
+		m_requested_identity(requested_identity),
+		m_requester_identity(requester_identity),
+		m_peer_location(peer_location),
 		m_authz_bounding_set(authz_bounding_set),
 		m_client_id(client_id)
 	{
@@ -169,9 +173,9 @@ public:
 		}
 	}
 
-	std::string getToken() const {return m_token;}
+	const std::string &getToken() const {return m_token;}
 
-	std::string getClientId() const {return m_client_id;}
+	const std::string &getClientId() const {return m_client_id;}
 
 	State getState() const {return m_state;}
 
@@ -181,11 +185,19 @@ public:
 
 	time_t getLifetime() const {return m_lifetime;}
 
+	const std::string &getRequestedIdentity() const {return m_requested_identity;}
+
+	const std::string &getRequesterIdentity() const {return m_requester_identity;}
+
+	const std::string &getPeerLocation() const {return m_peer_location;}
+
 private:
 	State m_state{State::Pending};
 	time_t m_request_time{-1};
 	time_t m_lifetime{-1};
-	std::string m_identity;
+	std::string m_requested_identity;
+	std::string m_requester_identity;
+	std::string m_peer_location;
 	std::vector<std::string> m_authz_bounding_set;
 	std::string m_client_id;
 	std::string m_token;
@@ -1451,6 +1463,14 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		error_code = 2;
 		error_string = "No identity request.";
 	}
+		// Note this allows unauthenticated users.
+	const char *fqu = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+	if (!fqu) {
+		error_code = 2;
+		error_string = "Missing requester identity.";
+	}
+
+	const char *peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
@@ -1497,7 +1517,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
 		} else {
 			g_request_map[request_id] = std::unique_ptr<TokenRequest>( 
-				new TokenRequest{requested_identity, authz_list, requested_lifetime, client_id});
+				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
 		}
 		std::string request_id_str;
 		formatstr(request_id_str, "%d", request_id);
@@ -1632,6 +1652,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 		const auto &request_id = iter.first;
 		const auto &token_request = iter.second;
 
+		if (token_request->getState() != TokenRequest::State::Pending) {continue;}
+
 		std::string request_id_str = std::to_string(request_id);
 
 		std::stringstream ss;
@@ -1648,7 +1670,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 
 		if (!result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str) ||
 			!result_ad.InsertAttr(ATTR_SEC_CLIENT_ID, token_request->getClientId()) ||
-			!result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, token_request->getLifetime()))
+			!result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, token_request->getLifetime()) ||
+			!result_ad.InsertAttr("PeerLocation", token_request->getPeerLocation()))
 		{
 			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
 				" token request ad listing.\n");
@@ -1660,6 +1683,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 				" token request ad listing.\n");
 			return false;
 		}
+
 		if (!putClassAd(stream, result_ad) || !stream->end_of_message())
 		{
 			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to send response ad to client\n");
@@ -1715,6 +1739,13 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 		error_string = "Unable to convert request ID to integer.";
 	}
 
+	auto iter = g_request_map.find(request_id);
+	if (iter == g_request_map.end()) {
+		error_code = 5;
+		error_string = "Request unknown.";
+		request_id = -1;
+	}
+
 	std::string client_id;
 	if (client_id.empty() || !ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id))
 	{
@@ -1722,10 +1753,68 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 		error_string = "Client ID not provided.";
 	}
 
+	if (request_id != -1 && client_id != iter->second->getClientId()) {
+		error_code = 5;
+		error_string = "Request unknown.";
+		request_id = -1;
+	}
+	if (request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
+		error_code = 5;
+		error_string = "Request in incorrect state.";
+		request_id = -1;
+	}
+
+	std::string key_name = "POOL";
+	param(key_name, "SEC_TOKEN_ISSUER_KEY");
+	std::string final_key_name;
+	std::vector<std::string> creds;
+	CondorError err;
+	if (!listNamedCredentials(creds, &err)) {
+		error_string = err.getFullText();
+		error_code = err.code();
+	}
+	for (const auto &cred : creds) {
+		if (cred == key_name) {
+			final_key_name = key_name;
+			break;
+		}
+	}
+	if (request_id != -1 && final_key_name.empty()) {
+		error_code = 4;
+		error_string = "Server does not have a signing key configured.";
+	}
+
 	stream->encode();
 	classad::ClassAd result_ad;
-	result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-	result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+	} else {
+#if defined(HAVE_EXT_OPENSSL)
+		auto &token_request = *(iter->second);
+		CondorError err;
+		std::string token;
+		if (!Condor_Auth_Passwd::generate_token(
+			token_request.getRequestedIdentity(),
+			final_key_name,
+			token_request.getBoundingSet(),
+			token_request.getLifetime(),
+			token,
+			&err))
+		{
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+			token_request.setFailed();
+		} else {
+			token_request.setToken(token);
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 0);
+		}
+#else
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Support for tokens not available");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+#endif
+	}
 
 	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
 	{
