@@ -571,11 +571,15 @@ Condor_Auth_Passwd::fetchLogin()
 		free(m_k_prime); m_k_prime = nullptr;
 		if (!(m_k_prime = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
 			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K'\n");
+			free(ka);
+			free(kb);
 			return nullptr;
 		}
 		memcpy(m_k_prime, &kb[0], key_strength_bytes_v2());
 		m_k_prime_len = key_strength_bytes_v2();
 		m_keyfile_token = token;
+		free(ka);
+		free(kb);
 		return strdup(username.c_str());
 	}
 
@@ -800,6 +804,10 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 				auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
 				if (expired_for > 0) {
 					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", expired_for);
+					free(ka);
+					free(kb);
+					free(seed_ka);
+					free(seed_kb);
 					return false;
 				}
 			}
