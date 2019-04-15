@@ -567,6 +567,8 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		return FALSE;
 	}
+
+	free( id );
 	
 	State s = rip->state();
 	switch( s ) {
