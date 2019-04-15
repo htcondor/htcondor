@@ -411,7 +411,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_GET_SESSION_TOKEN (DC_BASE+46) // Retrieve an authentication token for TOKEN that is at most equivalent to the current session.
 #define DC_START_TOKEN_REQUEST (DC_BASE+47) // Request a token from this daemon.
 #define DC_FINISH_TOKEN_REQUEST (DC_BASE+48) // Poll remote daemon for available token.
-
+#define DC_LIST_TOKEN_REQUEST (DC_BASE+49) // Poll for the existing token requests.
+#define DC_APPROVE_TOKEN_REQUEST (DC_BASE+50) // Approve a token request.
 
 /*
 *** Log type supported by DC_FETCH_LOG
