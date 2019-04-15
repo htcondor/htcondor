@@ -2654,6 +2654,8 @@ Daemon::startTokenRequest( const std::string identity,
 	}
 
 	if(!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
 		dprintf( D_FULLDEBUG, "Daemon::startTokenRequest() failed to read "
 			"end of message from remote daemon at '%s'\n", _addr );
 		return false;
@@ -2693,7 +2695,7 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 	std::string &token, CondorError *err ) noexcept
 {
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "Daemon::startTokenRequest() making connection to "
+		dprintf( D_COMMAND, "Daemon::finishTokenRequest() making connection to "
 			"'%s'\n", _addr ? _addr : "NULL" );
 	}
 
@@ -2703,9 +2705,9 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
 		return false;
 	}
-	if (request_id.empty() || !ad.InsertAttr(ATTR_SEC_REQUEST_ID, client_id)) {
-		if (err) err->pushf("DAEMON", 1, "Unable to set client ID.");
-		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+	if (request_id.empty() || !ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set request ID.");
+		dprintf(D_FULLDEBUG, "Unable to set request ID.\n");
 		return false;
 	}
 
@@ -2745,6 +2747,8 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 	}
 
 	if (!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
 		dprintf( D_FULLDEBUG, "Daemon::finishTokenRequest() failed to read "
 			"end of message from remote daemon at '%s'\n", _addr );
 		return false;
