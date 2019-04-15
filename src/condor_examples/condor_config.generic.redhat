@@ -248,17 +248,6 @@ ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS)
 #ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #DENY_WRITE = bad-machine.your.domain
 
-##  Are you upgrading to a new version of Condor and confused about
-##  why the above ALLOW_WRITE setting is causing Condor to refuse to
-##  start up?  If you are upgrading from a configuration that uses
-##  HOSTALLOW/HOSTDENY instead of ALLOW/DENY we recommend that you
-##  convert all uses of the former to the latter.  The syntax of the
-##  authorization settings is identical.  They both support
-##  unauthenticated IP-based authorization as well as authenticated
-##  user-based authorization.  To avoid confusion, the use of
-##  HOSTALLOW/HOSTDENY is discouraged.  Support for it may be removed
-##  in the future.
-
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
 ALLOW_NEGOTIATOR = $(CONDOR_HOST), $(IP_ADDRESS)

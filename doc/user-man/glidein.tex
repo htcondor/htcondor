@@ -52,12 +52,12 @@ given above.
 \item Be an authorized user of the local Condor pool.
 
 \item The local Condor pool configuration file(s) must 
-  give \Macro{HOSTALLOW\_WRITE} permission
+  give \Macro{ALLOW\_WRITE} permission
   to every resource that will be added using \Condor{glidein}. 
   Wildcards are permitted in this specification.
   An example is of adding every machine at
   cs.wisc.edu by adding *.cs.wisc.edu to the
-  \Macro{HOSTALLOW\_WRITE} list.
+  \Macro{ALLOW\_WRITE} list.
   Recall that the changes take effect when all machines
   in the local pool are sent a reconfigure command.
 
