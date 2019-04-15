@@ -615,9 +615,11 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 			break;
 		default:
 			rip->log_ignore( cmd, s, rip->activity() );
+			free(id);
 			return FALSE;
 	}		
 	
+	free(id);
 	return rval;
 }
 
