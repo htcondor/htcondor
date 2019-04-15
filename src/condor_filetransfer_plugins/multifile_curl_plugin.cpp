@@ -196,7 +196,7 @@ MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mo
     }
     else {
         if ( _diagnostic ) { fprintf( stderr, "Fetching to %s\n", local_file.c_str() ); }
-        file = fopen( local_file.c_str(), mode );
+        file = safe_fopen_wrapper( local_file.c_str(), mode );
     }
 
     if( !file ) {
@@ -494,6 +494,10 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     rval = BuildTransferRequests(input_filename, requested_files);
+    // If BuildTransferRequests failed, exit immediately
+    if ( rval != 0 ) {
+        return rval;
+    }
     classad::ClassAdUnParser unparser;
 
     // Iterate over the map of files to transfer.
