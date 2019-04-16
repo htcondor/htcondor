@@ -403,6 +403,10 @@ public:
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
 
+		// True if the socket failed to authenticate with the remote
+		// server but may succeed with a token request workflow.
+	bool shouldTryTokenRequest() const { return _should_try_token_request; }
+
 		/// Returns true if the fully qualified user name is
 		/// a non-anonymous user name (i.e. something not from
 		/// the unmapped domain)
@@ -553,6 +557,7 @@ protected:
 	std::string     _session;
 	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
+	bool            _should_try_token_request{false};
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
 
