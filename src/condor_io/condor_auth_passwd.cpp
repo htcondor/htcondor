@@ -528,6 +528,10 @@ Condor_Auth_Passwd::fetchLogin()
 		auto kb = (unsigned char *)malloc(key_strength_bytes());
 		if (!seed_ka || !seed_kb || !ka || !kb) {
 			dprintf(D_ALWAYS, "TOKEN: Failed to allocate memory buffers.\n");
+			if (seed_ka) free(seed_ka);
+			if (seed_kb) free(seed_kb);
+			if (ka) free(ka);
+			if (kb) free(kb);
 			return nullptr;
 		}
 		memcpy(seed_ka + AUTH_PW_KEY_LEN, token.c_str(), token.size());
