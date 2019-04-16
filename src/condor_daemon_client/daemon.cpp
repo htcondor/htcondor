@@ -540,7 +540,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -563,6 +563,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, i
 	}
 
 	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
+	should_try_token_request = sock->shouldTryTokenRequest();
 
 	return start_command_result;
 }
@@ -612,7 +613,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 		}
 	}
 
-	return startCommand (
+	return startCommand_internal (
 						 cmd,
 						 *sock,
 						 timeout,
@@ -624,7 +625,8 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 cmd_description,
 						 &_sec_man,
 						 raw_protocol,
-						 sec_session_id);
+						 sec_session_id,
+						 m_should_try_token_request);
 }
 
 
@@ -633,7 +635,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -714,7 +716,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 {
 	// This is the nonblocking version of startCommand().
 	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	return startCommand_internal(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
 }
 
 bool
@@ -722,7 +724,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;

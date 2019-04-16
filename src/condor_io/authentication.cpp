@@ -377,6 +377,11 @@ authenticate:
 		}
 
 		if( !auth_rc ) {
+			if (m_method_name == "TOKEN") {
+				// Our token auth did not work, but might work if the caller requests a
+				// token from the remote host.
+				m_should_try_token_request = mySock->isClient();
+			}
 			delete m_auth;
 			m_auth = NULL;
 

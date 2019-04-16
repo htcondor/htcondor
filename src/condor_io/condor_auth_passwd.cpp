@@ -201,7 +201,7 @@ findTokens(const std::string &issuer,
 
 	Directory dir(dirpath.c_str());
 	if (!dir.Rewind()) {
-		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)",
+		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)\n",
 			dirpath.c_str(), strerror(errno), errno);
 			return false;
 	}

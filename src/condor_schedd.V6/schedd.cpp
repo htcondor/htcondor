@@ -149,6 +149,8 @@ extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
 
+extern int write_out_token(const std::string &token_name, const std::string &token);
+
 // These functions are defined in qmgmt.cpp.
 // We don't have a good schedd-internal header file, so we declare them
 // here for use in this file.
@@ -1469,10 +1471,21 @@ Scheduler::count_jobs()
 #endif
 
 		// Update collectors
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
+	m_initial_update = false;
+
+		// Check to see if we need to perform a token request.
+	auto collector_list = daemonCore->getCollectorList();
+	if (collector_list && collector_list->shouldTryTokenRequest()) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd should perform a token request\n");
+		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
+			"Scheduler::try_token_request", this);
+	} else if (num_updates == 0) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
+	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -13769,6 +13782,13 @@ Scheduler::Register()
 	m_tdman.register_handlers();
 
 	m_xfer_queue_mgr.RegisterHandlers();
+
+	// Clear out any pending token requests.
+	m_token_client_id = "";
+	m_token_request_id = "";
+		// We don't own this memory - just clear the reference.
+	m_token_daemon = nullptr; 
+	m_initial_update = true;
 }
 
 void
@@ -17365,4 +17385,72 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		dprintf( D_ALWAYS, "failed to send success response.\n" );
 	}
 	return TRUE;
+}
+
+void
+Scheduler::try_token_request()
+{
+	dprintf(D_SECURITY, "Trying token request to remote host.\n");
+	std::string token;
+	if (m_token_client_id.empty()) {
+		m_token_daemon = nullptr;
+		m_token_request_id = "";
+		std::vector<char> hostname;
+		hostname.reserve(MAXHOSTNAMELEN);
+		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
+			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
+			return;
+		}
+		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
+			std::to_string(get_random_uint() % 1000);
+
+		auto collector_list = daemonCore->getCollectorList();
+		if (!collector_list || collector_list->IsEmpty()) {
+			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
+			m_token_client_id = "";
+			return;
+		}
+		Daemon *daemon = nullptr;
+		collector_list->Current(daemon);
+		//while (daemon && !daemon->shouldTryTokenRequest() && collector_list->Next(daemon)) {}
+
+		//if (!daemon || !daemon->shouldTryTokenRequest()) {
+		if (!daemon) {
+			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
+			m_token_client_id = "";
+			return;
+		}
+
+		std::string request_id;
+		std::vector<std::string> authz_list;
+		authz_list.push_back("ADVERTISE_SCHEDD");
+		int lifetime = -1;
+		CondorError err;
+		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
+			token, request_id, &err))
+		{
+			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		m_token_request_id = request_id;
+		m_token_daemon = daemon;
+		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
+			"Scheduler::try_token_request", this);
+	} else {
+		CondorError err;
+		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
+			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		if (token.empty()) {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
+				"Scheduler::try_token_request", this);
+			return;
+		}
+		m_token_client_id = "";
+	}
+	write_out_token("schedd_auto_generated_token", token);
 }
