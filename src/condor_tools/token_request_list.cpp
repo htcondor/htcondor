@@ -43,7 +43,7 @@ void print_usage(const char *argv0) {
 }
 
 int
-approve_token(const std::string &pool, const std::string &name, daemon_t dtype)
+approve_token(const std::string &pool, const std::string &name, daemon_t dtype, std::string request_id)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -70,20 +70,27 @@ approve_token(const std::string &pool, const std::string &name, daemon_t dtype)
 
 	std::vector<classad::ClassAd> results;
 	if (!daemon->listTokenRequest(request_id, results, &err)) {
-		fprintf(stderr, "Failed to locate request corresponding to ID %s: %s\n", request_id.c_str(),
-			err.getFullText().c_str());
+		if (request_id.empty()) {
+			fprintf(stderr, "Failed to list token requests: %s\n", err.getFullText().c_str());
+		} else {
+			fprintf(stderr, "Failed to locate request corresponding to ID %s: %s\n", request_id.c_str(),
+				err.getFullText().c_str());
+		}
 		exit(1);
 	}
-	if (results.size() != 1) {
+	if (!request_id.empty() && results.size() != 1) {
 		fprintf(stderr, "Remote daemon did not provide information for request ID %s.\n", request_id.c_str());
 		exit(1);
+	} else if (results.empty()) {
+		fprintf(stderr, "Remote daemon reports no requests pending.\n");
+		return 0;
 	}
 
 	for (const auto &request_ad : results) {
 		classad::ClassAdUnParser unp;
 		std::string req_contents_str;
 		unp.SetOldClassAd(true);
-		unp.Unparse(req_contents_str, &req_contents);
+		unp.Unparse(req_contents_str, &request_ad);
 
 		printf("%s\n", req_contents_str.c_str());
 	}

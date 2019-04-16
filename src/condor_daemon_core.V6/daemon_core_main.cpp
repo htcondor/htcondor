@@ -179,7 +179,7 @@ public:
 
 	State getState() const {return m_state;}
 
-	bool isExpiredAt(time_t now, time_t max_lifetime) const {return m_request_time + max_lifetime > now;}
+	bool isExpiredAt(time_t now, time_t max_lifetime) const {return m_request_time + max_lifetime < now;}
 
 	const std::vector<std::string> &getBoundingSet() const {return m_authz_bounding_set;}
 
@@ -213,7 +213,7 @@ public:
 	: m_rate_limit(rate_limit),
 	m_last_update(std::chrono::steady_clock::now())
 	{
-		classy_counted_ptr<stats_ema_config> ema_config;
+		classy_counted_ptr<stats_ema_config> ema_config(new stats_ema_config);
 		ema_config->add(10, "10s");
 		m_request_rate.ConfigureEMAHorizons(ema_config);
 		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -257,12 +257,14 @@ void cleanup_request_map() {
 	for (auto &entry : g_request_map) {
 		if (entry.second->isExpiredAt(now, lifetime)) {
 			entry.second->setExpired();
+			dprintf(D_SECURITY|D_FULLDEBUG, "Request %d has expired.\n", entry.first);
 		}
 		if (entry.second->isExpiredAt(now, max_lifetime)) {
 			requests_to_delete.push_back(entry.first);
 		}
 	}
 	for (auto request : requests_to_delete) {
+		dprintf(D_SECURITY|D_FULLDEBUG, "Cleaning up request %d.\n", request);
 		auto iter = g_request_map.find(request);
 		if (iter != g_request_map.end()) {
 			g_request_map.erase(iter);
@@ -1503,16 +1505,16 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		error_code = 3;
 		error_string = "Too many requests in the system.";
 	} else {
-		unsigned request_id = get_random_uint();
+		unsigned request_id = get_random_uint() % 1000000;
 		auto iter = g_request_map.find(request_id);
 		int idx = 0;
 			// Try a few randomly generated request IDs; to avoid strange issues,
 			// bail out after a fixed limit.
 		while ((iter != g_request_map.end() && (idx++ < 5))) {
-			request_id = get_random_uint();
+			request_id = get_random_uint() % 1000000;
 			iter = g_request_map.find(request_id);
 		}
-		if (iter == g_request_map.end()) {
+		if (iter != g_request_map.end()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Unable to generate new request ID");
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
 		} else {
@@ -1592,6 +1594,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 		case TokenRequest::State::Failed:
 			error_code = 4;
 			error_string = "Request failed.";
+			g_request_map.erase(iter);
 			break;
 		case TokenRequest::State::Expired:
 			g_request_map.erase(iter);
@@ -1632,11 +1635,10 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	std::string request_id_str;
-	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
-		int request_id = -1;
+	std::string request_filter_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str)) {
 		try {
-			request_id = std::stol(request_id_str);
+			std::stol(request_filter_str);
 		} catch (...) {
 			error_code = 2;
 			error_string = "Unable to convert request ID to integer.";
@@ -1646,7 +1648,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	stream->encode();
 
 	classad::ClassAd result_ad;
-	for (const auto & iter : g_request_map) {
+	if (!error_code) for (const auto & iter : g_request_map) {
 		if (error_code) break;
 
 		const auto &request_id = iter.first;
@@ -1655,6 +1657,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 		if (token_request->getState() != TokenRequest::State::Pending) {continue;}
 
 		std::string request_id_str = std::to_string(request_id);
+		if (!request_filter_str.empty() && (request_filter_str != request_id_str)) {continue;}
 
 		std::stringstream ss;
 		auto bound_set = token_request->getBoundingSet();
@@ -1670,7 +1673,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 
 		if (!result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str) ||
 			!result_ad.InsertAttr(ATTR_SEC_CLIENT_ID, token_request->getClientId()) ||
-			!result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, token_request->getLifetime()) ||
+			!result_ad.InsertAttr(ATTR_AUTHENTICATED_IDENTITY, token_request->getRequesterIdentity()) ||
+			!result_ad.InsertAttr("RequestedIdentity", token_request->getRequestedIdentity()) ||
 			!result_ad.InsertAttr("PeerLocation", token_request->getPeerLocation()))
 		{
 			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
@@ -1679,6 +1683,11 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 		}
 		if (bounds.size() && !result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, bounds))
 		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+		if (token_request->getLifetime() >= 0 && !result_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, token_request->getLifetime())) {
 			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
 				" token request ad listing.\n");
 			return false;
@@ -1726,7 +1735,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	std::string error_string;
 
 	std::string request_id_str;
-	if (request_id_str.empty() || !ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str))
+	if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty())
 	{
 		error_code = 1;
 		error_string = "Request ID not provided.";
@@ -1740,14 +1749,15 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	}
 
 	auto iter = g_request_map.find(request_id);
-	if (iter == g_request_map.end()) {
+	if (request_id != -1 && iter == g_request_map.end()) {
 		error_code = 5;
 		error_string = "Request unknown.";
 		request_id = -1;
+		dprintf(D_SECURITY, "Request ID (%d) unknown.\n", request_id);
 	}
 
 	std::string client_id;
-	if (client_id.empty() || !ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id))
+	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id) || client_id.empty())
 	{
 		error_code = 1;
 		error_string = "Client ID not provided.";
@@ -1757,6 +1767,8 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 		error_code = 5;
 		error_string = "Request unknown.";
 		request_id = -1;
+		dprintf(D_SECURITY, "Request ID (%s) correct but client ID (%s) incorrect.\n", request_id_str.c_str(),
+			client_id.c_str());
 	}
 	if (request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
 		error_code = 5;

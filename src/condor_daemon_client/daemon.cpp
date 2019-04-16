@@ -2634,7 +2634,7 @@ Daemon::startTokenRequest( const std::string identity,
 		return false;
 	}
 
-	if (!putClassAd(&rSock, ad)) {
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
 			" '%s'", _addr ? _addr : "(unknown)");
 		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() Failed to send ClassAd to remote"
@@ -2727,7 +2727,7 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 		return false;
 	}
 
-	if (!putClassAd(&rSock, ad)) {
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
 			" '%s'", _addr ? _addr : "(unknown)");
 		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() Failed to send ClassAd to "
@@ -2812,7 +2812,7 @@ Daemon::listTokenRequest(const std::string &request_id, std::vector<classad::Cla
 		return false;
 	}
 
-	if (!putClassAd(&rSock, ad)) {
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
 			" '%s'", _addr ? _addr : "(unknown)");
 		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed to send ClassAd to "
@@ -2901,7 +2901,7 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 		return false;
 	}
 
-	if (!putClassAd(&rSock, ad)) {
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
 			" '%s'", _addr ? _addr : "(unknown)");
 		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send ClassAd to "
