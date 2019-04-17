@@ -1,4 +1,4 @@
-condor (8.9.0-1) unstable; urgency=medium
+condor (8.9.1-1) unstable; urgency=medium
 
   * An efficient curl plugin that supports uploads and authentication tokens
   * HTCondor automatically supports GPU jobs in Docker and Singularity
