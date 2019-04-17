@@ -1,3 +1,11 @@
+condor (8.9.0-1) unstable; urgency=medium
+
+  * An efficient curl plugin that supports uploads and authentication tokens
+  * HTCondor automatically supports GPU jobs in Docker and Singularity
+  * File transfer times are now recorded in the user job log and the job ad
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 17 Apr 2019 06:50:37 -0600
+
 condor (8.8.2-1) stable; urgency=medium
 
   * Fixed problems with condor_ssh_to_job and Singularity jobs

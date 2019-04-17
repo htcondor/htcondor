@@ -1783,6 +1783,11 @@ fi
 %endif
 
 %changelog
+* Wed Apr 17 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.1-1
+- An efficient curl plugin that supports uploads and authentication tokens
+- HTCondor automatically supports GPU jobs in Docker and Singularity
+- File transfer times are now recorded in the user job log and the job ad
+
 * Thu Apr 11 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.2-1
 - Fixed problems with condor_ssh_to_job and Singularity jobs
 - Fixed a problem that could cause condor_annex to crash
