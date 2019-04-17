@@ -36,8 +36,8 @@ my $Usage = "$0 tarball TargetDir";
 my $TargetDir = "/home/hawkeye";
 my $TarBall = "";
 my $DataDir = ".";
-my $HostallowWriteLine = 0;
-my $HostallowWriteValue = "";
+my $AllowWriteLine = 0;
+my $AllowWriteValue = "";
 
 # Check command line..
 $TarBall = shift( @ARGV ) if ( $#ARGV >= 0 );
@@ -203,8 +203,8 @@ sub Main( )
 		  ( $ENV{HAWKEYE_CONFIG} ne $ConfigOut )  );
 	print "You should review the setting of the ALLOW_WRITE" .
 	    " parameter of your configuration\n".
-	    " $ConfigOut line $HostallowWriteLine\n" .
-	    " Current value is \"$HostallowWriteValue\"\n";
+	    " $ConfigOut line $AllowWriteLine\n" .
+	    " Current value is \"$AllowWriteValue\"\n";
     }
 }
 
@@ -266,8 +266,8 @@ sub DoConfig( $$$ )
 	    my $Domain = $Hostname;
 	    $Domain =~ s/^[^\.]*/\*/;
 	    print OUT "ALLOW_WRITE = $Domain\n";
-	    $HostallowWriteLine = $.;
-	    $HostallowWriteValue = $Domain;
+	    $AllowWriteLine = $.;
+	    $AllowWriteValue = $Domain;
 	    next;
 	}
 
