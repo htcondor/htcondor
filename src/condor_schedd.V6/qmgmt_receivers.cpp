@@ -763,7 +763,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		char *attr_name=NULL;
-		char *value = NULL;
+		std::string value;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -775,12 +775,14 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
+			rval = GetAttributeString( cluster_id, proc_id, attr_name, value );
 		}
 		else {
 			errno = EACCES;
 			rval = -1;
 		}
+
+		free((char *)attr_name);
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -790,11 +792,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value) );
+			assert( syscall_sock->code(value));
 		}
-		free( (char *)value );
-		free( (char *)attr_name );
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
 
