@@ -17435,6 +17435,7 @@ Scheduler::try_token_request()
 		}
 		m_token_request_id = request_id;
 		m_token_daemon = daemon;
+		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
 		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
 			"Scheduler::try_token_request", this);
 	} else {
@@ -17446,9 +17447,12 @@ Scheduler::try_token_request()
 		}
 		if (token.empty()) {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
 			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
 				"Scheduler::try_token_request", this);
 			return;
+		} else {
+			reconfig();
 		}
 		m_token_client_id = "";
 	}

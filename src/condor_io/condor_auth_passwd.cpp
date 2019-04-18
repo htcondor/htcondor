@@ -98,7 +98,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use examine tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
 /*
 	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
 	if (!tokenfile) {
