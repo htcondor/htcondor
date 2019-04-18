@@ -368,12 +368,18 @@ export_classad()
             the dictionary protocol.  The ``items``, ``keys``, ``values``, ``get``, ``setdefault``,
             and ``update`` methods have the same semantics as a dictionary.
 
-             .. note:: Where possible, we recommend using the dedicated parsing functions
+            .. note:: Where possible, we recommend using the dedicated parsing functions
                 (:func:`parseOne`, :func:`parseNext`, or :func:`parseAds`) instead of using
                 the constructor.
             )C0ND0R",
-            init<std::string>((boost::python::arg("self"), boost::python::arg("input"))))
-        .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input"))))
+        init<std::string>(
+            boost::python::args("self", "input"),
+            R"C0ND0R(
+            :param input: A string or dictionary which will be interpreted as a classad.
+            :type input: str or dict
+            )C0ND0R"))
+        .def(init<>(boost::python::args("self")))
+        .def(init<boost::python::dict>(boost::python::args("self", "input")))
         .def_pickle(classad_pickle_suite())
         .def("__delitem__", &ClassAdWrapper::Delete)
         .def("__getitem__", &ClassAdWrapper::LookupWrap, condor::classad_expr_return_policy<>())

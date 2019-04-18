@@ -311,6 +311,7 @@ void export_negotiator()
             :type ad: :class:`~classad.ClassAd`
             )C0ND0R",
             boost::python::args("self", "ad")))
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("setPriority", &Negotiator::setPriority,
             R"C0ND0R(
             Set the real priority of a specified user.

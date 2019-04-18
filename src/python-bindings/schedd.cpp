@@ -3229,6 +3229,7 @@ void export_schedd()
                 the local ``condor_schedd`` daemon is used.
             :type location_ad: :class:`~classad.ClassAd`
             )C0ND0R"))
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
             Query the ``condor_schedd`` daemon for jobs.

@@ -264,9 +264,8 @@ export_secman()
             The :class:`SecMan` can also behave as a context manager; when created, the object can
             be used to set temporary security configurations that only last during the lifetime
             of the security object.
-            )C0ND0R",
-        boost::python::init<>(
-            boost::python::args("self")))
+            )C0ND0R")
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("invalidateAllSessions", &SecManWrapper::invalidateAllCache,
             R"C0ND0R(
             Invalidate all security sessions. Any future connections to a daemon will

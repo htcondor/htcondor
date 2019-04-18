@@ -456,13 +456,15 @@ void export_collector()
             * Query the collector for one or more specific ClassAds.
             * Advertise a new ad to the ``condor_collector``.
             )C0ND0R",
-        init<boost::python::object>(boost::python::args("self", "pool"),
+        init<boost::python::object>(
+            boost::python::args("self", "pool"),
             R"C0ND0R(
             :param pool: A ``host:port`` pair specified for the remote collector
               (or a list of pairs for HA setups). If omitted, the value of
               configuration parameter ``COLLECTOR_HOST`` is used.
             :type pool: str or list[str]
             )C0ND0R"))
+        .def(init<>(boost::python::args("self")))
         .def("query", &Collector::query, query_overloads(
             R"C0ND0R(
             Query the contents of a condor_collector daemon. Returns a list of ClassAds that match the constraint parameter.

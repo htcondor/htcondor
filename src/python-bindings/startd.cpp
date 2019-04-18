@@ -144,7 +144,7 @@ export_startd()
             :type ad: :class:`~classad.ClassAd`
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("ad")=boost::python::object())))
-        .def(boost::python::init<>())
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("drainJobs", &Startd::drain_jobs,
             R"C0ND0R(
             Begin draining jobs from the startd.
