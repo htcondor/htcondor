@@ -276,7 +276,6 @@ CStarter::StarterExit( int code )
 
 void CStarter::FinalCleanup()
 {
-	removeCredentials();
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
 }
@@ -3624,45 +3623,6 @@ CStarter::updateX509Proxy( int cmd, Stream* s )
 	ASSERT(jic);
 	return jic->updateX509Proxy(cmd,rsock) ? TRUE : FALSE;
 }
-
-
-
-
-
-bool
-CStarter::removeCredentials( void )
-{
-	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
-		// nothing to do...  success?
-		return true;
-	}
-
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "CREDMON: removeCredentials doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return false;
-	}
-
-	Directory cred_dir( cred_dir_name.Value(), PRIV_ROOT );
-
-	MyString pid_name;
-	pid_name = IntToStr( daemonCore->getpid() );
-	if ( cred_dir.Find_Named_Entry( pid_name.Value() ) ) {
-		dprintf( D_FULLDEBUG, "CREDMON: Removing %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
-		if (!cred_dir.Remove_Current_File()) {
-			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
-			return false;
-		}
-	} else {
-		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", pid_name.Value(), cred_dir_name.Value());
-		return false;
-	}
-
-	// success
-	return true;
-}
-
-
 
 
 bool

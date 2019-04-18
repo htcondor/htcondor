@@ -279,6 +279,8 @@ int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 */
 int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
 						MyString &val );
+int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
+                        std::string &val );
 /** Get value of attr for job with specified cluster and proc.
 	Allocates new copy of the unparsed expression string.
 	@return -1 on failure; 0 on success

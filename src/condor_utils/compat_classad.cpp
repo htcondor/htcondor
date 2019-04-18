@@ -1212,18 +1212,14 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 		this->Reconfig();
 		m_initConfig = true;
 	}
-
-	CopyFrom( ad );
 }
 
-ClassAd::ClassAd( const classad::ClassAd &ad )
+ClassAd::ClassAd( const classad::ClassAd &ad ) : classad::ClassAd(ad)
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
 		m_initConfig = true;
 	}
-
-	CopyFrom( ad );
 }
 
 ClassAd::~ClassAd()

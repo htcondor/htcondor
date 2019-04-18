@@ -76,6 +76,11 @@ Or, if a trusted user is allowed to bind mount anything on the host, an expressi
   SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 \end{verbatim}
 
+Also, note that if the slot the job runs in is provisioned with GPUs, perhaps
+in response to a RequestGPU line in the submit file, the Singularity flag
+"--nv" will be passed to Singularity, which should make the appropriate
+nvidia devices visible inside the container.
+
 Finally, if an administrator wants to pass additional arguments to the singularity exec command that HTCondor
 does not currently support, the parameter SINGULARITY\_EXTRA\_ARGUMENTS allows arbitraty additional parameters
 to be passed to the singularity exec command.  For example, to pass the --nv argument, to allow the GPUs on the
@@ -83,4 +88,11 @@ host to be visible inside the container, an administrator could set
 
 \begin{verbatim}
 SINGULARITY_EXTRA_ARGUMENTS = --nv
+\end{verbatim}
+
+If Singularity is installed as non-setuid, the following flag must be set
+for \Condor{ssh\_to\_job} to work.
+
+\begin{verbatim}
+SINGULARITY_IS_SETUID = false
 \end{verbatim}

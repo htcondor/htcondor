@@ -395,6 +395,8 @@ class BaseShadow : public Service
 
 	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
 
+	virtual void resourceDisconnected( RemoteResource* rr ) = 0;
+
 	virtual void resourceReconnected( RemoteResource* rr ) = 0;
 
 		/** Start a timer to do periodic updates of the job queue for

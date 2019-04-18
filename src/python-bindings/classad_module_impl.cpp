@@ -432,6 +432,13 @@ export_classad()
             :rtype: str
             )C0ND0R",
             (boost::python::arg("self")))
+        .def("printJson", &ClassAdWrapper::toJsonString,
+            R"C0ND0R(
+            Serialize the ClassAd as a string in JSON format.
+
+            :return: The JSON representation of the ad.
+            :rtype: str
+            )C0ND0R")
         .def("get", &ClassAdWrapper::get, get_overloads(
             R"C0ND0R(
             As :meth:`dict.get`.

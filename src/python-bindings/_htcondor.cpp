@@ -23,7 +23,11 @@ BOOST_PYTHON_MODULE(_htcondor)
     export_dc_tool();
     export_secman();
     export_event_log();
+#if PY_MAJOR_VERSION >= 3
+	// The old event reader crashes in python 3 on windows, and
+	// isn't long for this world.
 	export_event_reader();
+#endif
 #if !defined(WIN32)
 	// omit for windows
     export_log_reader();

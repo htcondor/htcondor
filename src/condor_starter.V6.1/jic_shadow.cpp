@@ -1935,13 +1935,13 @@ bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
 {
 	std::string prefix;
-	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP");
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	if (!prefix.size())
 	{
 		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
 	}
 	StringList sl(prefix.c_str());
-	if (sl.prefix_anycase(name.c_str()))
+	if (sl.contains_anycase_withwildcard(name.c_str()))
 	{
 		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
 			m_delayed_update_attrs.end(), name);
@@ -2991,12 +2991,14 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	sandbox_dir_name += DIR_DELIM_CHAR;
 	sandbox_dir_name += ".condor_creds";
 
+	// from here on out, do everything as the user.
+	TemporaryPrivSentry mysentry(PRIV_USER);
+
 	// create dir to hold creds
 	int rc = 0;
 	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
-	priv_state p = set_user_priv();
 	rc = mkdir(sandbox_dir_name.Value(), 0700);
-	set_priv(p);
+
 	if(rc != 0) {
 		if(errno != 17) {
 			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);

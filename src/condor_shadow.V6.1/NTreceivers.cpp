@@ -209,9 +209,7 @@ do_REMOTE_syscall()
 				// reconnect.  happy day! :)
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 
-			const char* txt = "Socket between submit and execute hosts "
-				"closed unexpectedly";
-			Shadow->logDisconnectedEvent( txt ); 
+			Shadow->resourceDisconnected(thisRemoteResource);
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
@@ -1293,6 +1291,7 @@ case CONDOR_getfile:
 		}
 		free( (char *)path );
 		free( buf );
+		close(fd);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
@@ -1328,7 +1327,10 @@ case CONDOR_putfile:
 		ASSERT( result );
 		free((char*)path);
 
-        if (length <= 0) return 0;
+        if (length <= 0) {
+			if (fd >= 0) close(fd);
+			return 0;
+		}
 		
 		int num = -1;
 		if(fd >= 0) {
@@ -2190,11 +2192,16 @@ case CONDOR_getdir:
 		while((curr = services_list.next())) {
 			MyString fname,fullname;
 			fname.formatstr("%s.use", curr);
+
+			// change the '*' to an '_'.  These are stored that way
+			// so that the original service name can be cleanly
+			// separate if needed.  we don't care, so just change
+			// them all up front.
+			fname.replaceString("*", "_");
+
 			fullname.formatstr("%s%c%s", cred_dir_name.Value(), DIR_DELIM_CHAR, fname.Value());
 
-			dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
-
-			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;

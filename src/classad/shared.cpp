@@ -163,6 +163,7 @@ static bool doublenum(
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::STRING_VALUE:

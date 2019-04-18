@@ -25,6 +25,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ClassAd.eval
    .. automethod:: ClassAd.lookup
    .. automethod:: ClassAd.printOld
+   .. automethod:: ClassAd.printJson
    .. automethod:: ClassAd.flatten
    .. automethod:: ClassAd.matches
    .. automethod:: ClassAd.symmetricMatch

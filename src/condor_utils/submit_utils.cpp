@@ -439,6 +439,7 @@ SubmitHash::SubmitHash()
 	, IsRemoteJob(false)
 	, FnCheckFile(NULL)
 	, CheckFileArg(NULL)
+	, CheckProxyFile(true)
 	, LiveNodeString(NULL)
 	, LiveClusterString(NULL)
 	, LiveProcessString(NULL)
@@ -2554,93 +2555,95 @@ int SubmitHash::SetGSICredentials()
 // Exception: Checking the proxy lifetime and throwing an error if it's
 // too short should remain. - jfrey
 
-		// Starting in 8.5.8, schedd clients can't set X509-related attributes
-		// other than the name of the proxy file.
-		bool submit_sends_x509 = true;
-		CondorVersionInfo cvi(getScheddVersion());
-		if (cvi.built_since_version(8, 5, 8)) {
-			submit_sends_x509 = false;
-		}
+		if (CheckProxyFile) {
+			// Starting in 8.5.8, schedd clients can't set X509-related attributes
+			// other than the name of the proxy file.
+			bool submit_sends_x509 = true;
+			CondorVersionInfo cvi(getScheddVersion());
+			if (cvi.built_since_version(8, 5, 8)) {
+				submit_sends_x509 = false;
+			}
 
-		globus_gsi_cred_handle_t proxy_handle;
-		proxy_handle = x509_proxy_read( proxy_file );
-		if ( proxy_handle == NULL ) {
-			push_error(stderr, "%s\n", x509_error_string() );
-			ABORT_AND_RETURN( 1 );
-		}
-
-		/* Insert the proxy expiration time into the ad */
-		time_t proxy_expiration;
-		proxy_expiration = x509_proxy_expiration_time(proxy_handle);
-		if (proxy_expiration == -1) {
-			push_error(stderr, "%s\n", x509_error_string() );
-			x509_proxy_free( proxy_handle );
-			ABORT_AND_RETURN( 1 );
-		} else if ( proxy_expiration < submit_time ) {
-			push_error( stderr, "proxy has expired\n" );
-			x509_proxy_free( proxy_handle );
-			ABORT_AND_RETURN( 1 );
-		} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
-			push_error( stderr, "proxy lifetime too short\n" );
-			x509_proxy_free( proxy_handle );
-			ABORT_AND_RETURN( 1 );
-		}
-
-		if(submit_sends_x509) {
-
-			AssignJobVal(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
-
-			/* Insert the proxy subject name into the ad */
-			char *proxy_subject;
-			proxy_subject = x509_proxy_identity_name(proxy_handle);
-
-			if ( !proxy_subject ) {
+			globus_gsi_cred_handle_t proxy_handle;
+			proxy_handle = x509_proxy_read( proxy_file );
+			if ( proxy_handle == NULL ) {
 				push_error(stderr, "%s\n", x509_error_string() );
+				ABORT_AND_RETURN( 1 );
+			}
+
+			/* Insert the proxy expiration time into the ad */
+			time_t proxy_expiration;
+			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
+			if (proxy_expiration == -1) {
+				push_error(stderr, "%s\n", x509_error_string() );
+				x509_proxy_free( proxy_handle );
+				ABORT_AND_RETURN( 1 );
+			} else if ( proxy_expiration < submit_time ) {
+				push_error( stderr, "proxy has expired\n" );
+				x509_proxy_free( proxy_handle );
+				ABORT_AND_RETURN( 1 );
+			} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
+				push_error( stderr, "proxy lifetime too short\n" );
 				x509_proxy_free( proxy_handle );
 				ABORT_AND_RETURN( 1 );
 			}
 
-			(void) AssignJobString(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-			free( proxy_subject );
+			if(submit_sends_x509) {
 
-			/* Insert the proxy email into the ad */
-			char *proxy_email;
-			proxy_email = x509_proxy_email(proxy_handle);
+				AssignJobVal(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
 
-			if ( proxy_email ) {
-				AssignJobString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
-				free( proxy_email );
-			}
+				/* Insert the proxy subject name into the ad */
+				char *proxy_subject;
+				proxy_subject = x509_proxy_identity_name(proxy_handle);
 
-			/* Insert the VOMS attributes into the ad */
-			char *voname = NULL;
-			char *firstfqan = NULL;
-			char *quoted_DN_and_FQAN = NULL;
-
-			int error = extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
-			if ( error ) {
-				if (error == 1) {
-					// no attributes, skip silently.
-				} else {
-					// log all other errors
-					push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+				if ( !proxy_subject ) {
+					push_error(stderr, "%s\n", x509_error_string() );
+					x509_proxy_free( proxy_handle );
+					ABORT_AND_RETURN( 1 );
 				}
-			} else {
-				AssignJobString(ATTR_X509_USER_PROXY_VONAME, voname);
-				free( voname );
 
-				AssignJobString(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
-				free( firstfqan );
+				(void) AssignJobString(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
+				free( proxy_subject );
 
-				AssignJobString(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
-				free( quoted_DN_and_FQAN );
+				/* Insert the proxy email into the ad */
+				char *proxy_email;
+				proxy_email = x509_proxy_email(proxy_handle);
+
+				if ( proxy_email ) {
+					AssignJobString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
+					free( proxy_email );
+				}
+
+				/* Insert the VOMS attributes into the ad */
+				char *voname = NULL;
+				char *firstfqan = NULL;
+				char *quoted_DN_and_FQAN = NULL;
+
+				int error = extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
+				if ( error ) {
+					if (error == 1) {
+						// no attributes, skip silently.
+					} else {
+						// log all other errors
+						push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+					}
+				} else {
+					AssignJobString(ATTR_X509_USER_PROXY_VONAME, voname);
+					free( voname );
+
+					AssignJobString(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
+					free( firstfqan );
+
+					AssignJobString(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
+					free( quoted_DN_and_FQAN );
+				}
+
+				// When new classads arrive, all this should be replaced with a
+				// classad holding the VOMS atributes.  -zmiller
 			}
 
-			// When new classads arrive, all this should be replaced with a
-			// classad holding the VOMS atributes.  -zmiller
+			x509_proxy_free( proxy_handle );
 		}
-
-		x509_proxy_free( proxy_handle );
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
 // schedds.  at some point, probably 8.7.0, this entire block should be ripped
@@ -7984,8 +7987,23 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	if ( ! found)
 		return;
 
+	// Some universes don't have an actual executable, so we have to look deeper for that key
+	// TODO: capture pseudo-ness explicitly in SetExecutable? so we don't have to keep this in sync...
+	bool pseudo = false;
+	if (found->id == idKeyExecutable) {
+		MyString sub_type;
+		bool is_docker = false;
+		int uni = query_universe(sub_type, is_docker);
+		if (uni == CONDOR_UNIVERSE_VM) {
+			pseudo = true;
+		} else if (uni == CONDOR_UNIVERSE_GRID) {
+			YourStringNoCase gridType(sub_type.c_str());
+			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure" || sub_type == "boinc");
+		}
+	}
+
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
-	if (found->id == idKeyExecutable || found->id == idKeyInitialDir) {
+	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
 		if (rhs.empty()) return;
 		const char * path = rhs.c_str();
 		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
@@ -7993,6 +8011,56 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 		// Convert to a full path it not already a full path
 		rhs = full_path(path, false);
 	}
+}
+
+// returns the universe and grid type, either by looking at the cached values
+// or by querying the hashtable if the cached values haven't been set yet.
+int SubmitHash::query_universe(MyString & sub_type, bool &is_docker)
+{
+	is_docker = IsDockerJob;
+	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
+		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
+		else if (JobUniverse == CONDOR_UNIVERSE_VM) { sub_type == VMType; }
+		return JobUniverse;
+	}
+
+	auto_free_ptr univ(submit_param(SUBMIT_KEY_Universe, ATTR_JOB_UNIVERSE));
+	if (! univ) {
+		// get a default universe from the config file
+		univ.set(param("DEFAULT_UNIVERSE"));
+	}
+
+	int uni = CONDOR_UNIVERSE_MIN;
+	if (univ) {
+		uni = CondorUniverseNumberEx(univ.ptr());
+		if ( ! uni) {
+			// maybe it's a topping?
+			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
+				uni = CONDOR_UNIVERSE_VANILLA;
+				is_docker = true;
+			}
+		}
+	} else {
+		// if nothing else, it must be a vanilla universe
+		//  *changed from "standard" for 7.2.0*
+		uni = CONDOR_UNIVERSE_VANILLA;
+	}
+
+	if (uni == CONDOR_UNIVERSE_GRID) {
+		sub_type = submit_param_mystring(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
+		if (starts_with(sub_type.c_str(), "$$(")) {
+			sub_type.clear();
+		} else {
+			// truncate at the first space
+			int ix = sub_type.FindChar(' ', 0);
+			if (ix >= 0) { sub_type.truncate(ix); }
+		}
+	} else if (uni == CONDOR_UNIVERSE_VM) {
+		sub_type = submit_param_mystring(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
+		sub_type.lower_case();
+	}
+
+	return uni;
 }
 
 const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringList & vars, int options)

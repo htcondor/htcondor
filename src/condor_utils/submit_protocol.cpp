@@ -161,7 +161,12 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	return SetJobFactory(cluster, qnum, filename, text);
 }
 
-static int send_row(void* pv, std::string & rowdata) {
+// helper function used as 3rd argument to SendMaterializeData.
+// it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
+// resulting rowdata for SendMaterializeData to use.  This could be a free function
+// I made it part of the AbstractScheddQ just to put it in a namespace.
+//
+/*static*/ int AbstractScheddQ::next_rowdata(void* pv, std::string & rowdata) {
 	SubmitForeachArgs &fea = *((SubmitForeachArgs *)pv);
 
 	rowdata.clear();
@@ -198,12 +203,13 @@ int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 	if (o.items.number() > 0) {
 		int row_count = 0;
 		o.items.rewind();
-		int rval = SendMaterializeData(cluster_id, 0, send_row, &o, o.items_filename, &row_count);
+		int rval = SendMaterializeData(cluster_id, 0, AbstractScheddQ::next_rowdata, &o, o.items_filename, &row_count);
 		if (rval) return rval;
 		if (row_count != o.items.number()) {
 			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %d items\n", row_count, o.items.number());
 			return -1;
 		}
+		o.foreach_mode = foreach_from;
 	}
 	return 0;
 }
@@ -217,3 +223,4 @@ int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, 
 int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
 int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
 int ActualScheddQ::send_SpoolFileBytes(char const *filename) { return SendSpoolFileBytes(filename); }
+

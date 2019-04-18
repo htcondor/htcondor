@@ -29,7 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Add job ad attribute \Attr{JobDisconnectedDate}.
+When the \Condor{shadow} and \condor{starter} are disconnected from each
+other, this attribute is set to the time at which the disconnection
+happened.
+It is set to \Expr{Undefined} when a successful reconnect occurs.
+\Ticket{6978}
+
 
 \end{itemize}
 
@@ -76,7 +82,7 @@ automatically mounts the nvidia gpu devices.
 \item If a job RequestGpus, and Singularity is enabled, HTCondor
 automatically passes the --nv flag to Singularity to tell it to mount
 the nvidia gpus.
-\Ticket{6858}
+\Ticket{6898}
 
 \item When jobs are run without file transfer on, usually because there is a 
 shared filesytem, HTCondor used to unconditionally set the jobs argv[0]
@@ -114,6 +120,28 @@ the time they occur.
 
 \Ticket{6854}
 
+\item Implemented a new version of the curl\_plugin with multi-file support,
+allowing it to transfer many files in a single invocation of the plugin.
+\Ticket{6499} \Ticket{6859}
+
+\item Added support for passing HTTPS authentication credentials to  
+file transfer plugins, using specially custozimed protocols.
+\Ticket{6858}
+
+\item Added support for output file remaps for URLs. This allows users to 
+specify a URL where they want individual output files to go, and once a job 
+is complete, we automatically uploads the files there. We are preserving the 
+older implementation (OutputDestination), which puts all output files in the 
+same place, for backwareds compatibility.
+\Ticket{6876}
+
+\item Added options \Expr{f} (return full target string) and \Expr{g}
+(perform multiple substitutions) to ClassAd function \Code{regexps()}.
+Added new ClassAd functions \Code{replace()} (equivalent to
+\Code{regexps()} with \Expr{f} option) and \Code{replaceall()}
+(equivalent to \Code{regexps()} with \Expr{fg} options).
+\Ticket{6848}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -122,6 +150,17 @@ the time they occur.
 
 \item Avoid killing jobs using between 90\% and 99\% of memory limit. 
 \Ticket{6925}
+
+\item Improved how \AdStr{Chirp} handles a network disconneciton between
+the \Condor{starter} and \Condor{shadow}.
+\AdStr{Chirp} commands now return a special error and no longer cause the
+\Condor{starter} to exit (killing the job).
+\Ticket{6873}
+
+\item Fixed a bug that coulld cause \Condor{submit} to send invalid job classads to
+the \Condor{schedd} when the executable attribute was not the same for all jobs in that
+submission.
+\Ticket{6719}
 
 \end{itemize}
 
