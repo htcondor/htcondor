@@ -58,9 +58,9 @@ extern "C" {
 
 #define AUTH_SSL_DEFAULT_CIPHERLIST "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
 
-class Condor_Auth_SSL : public Condor_Auth_Base {
+class Condor_Auth_SSL final : public Condor_Auth_Base {
  public:
-    Condor_Auth_SSL(ReliSock * sock, int remote = 0);
+    Condor_Auth_SSL(ReliSock * sock, int remote, bool scitokens_mode);
     //------------------------------------------
     // Constructor
     //------------------------------------------
@@ -106,7 +106,8 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 		Startup,
 		PreConnect,
 		Connect,
-		KeyExchange
+		KeyExchange,
+		SciToken
 	};
 
 	enum class CondorAuthSSLRetval {
@@ -125,6 +126,10 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 
 	// Step 3: exchange the session key.
 	CondorAuthSSLRetval authenticate_server_key(CondorError *errstack,
+		bool non_blocking);
+
+	// Step 4 (SciToken mode only): exchange the scitoken
+	CondorAuthSSLRetval authenticate_server_scitoken(CondorError *errstack,
 		bool non_blocking);
 
 	// Common to both client and server: successfully finish, tear down state.
@@ -147,6 +152,7 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 		int m_client_status{AUTH_SSL_A_OK};
 		int m_done{0};
 		int m_round_ctr{0};
+		int32_t m_token_length{-1};
 		BIO *m_conn_in{nullptr};
 		BIO *m_conn_out{nullptr};
 		SSL *m_ssl{nullptr};
@@ -215,7 +221,10 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 							int              input_len,
 							unsigned char *& output,
 							int&             output_len);
-	
+
+	bool m_scitokens_mode{false};
+	std::string m_scitokens_file;
+	std::string m_client_scitoken;
 };
 
 #endif
