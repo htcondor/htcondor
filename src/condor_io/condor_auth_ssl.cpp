@@ -91,8 +91,9 @@ Condor_Auth_SSL::AuthState::~AuthState() {
 	if (m_conn_out) {BIO_free( m_conn_out );}
 }
 
-Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */)
-    : Condor_Auth_Base    ( sock, CAUTH_SSL )
+Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */, bool scitokens_mode)
+    : Condor_Auth_Base    ( sock, CAUTH_SSL ),
+	m_scitokens_mode(scitokens_mode)
 {
 	m_crypto = NULL;
 	ASSERT( Initialize() == true );
@@ -234,6 +235,8 @@ Condor_Auth_SSL::authenticate_continue(CondorError *errstack, bool non_blocking)
 		return static_cast<int>(authenticate_server_connect(errstack, non_blocking));
 	case Phase::KeyExchange:
 		return static_cast<int>(authenticate_server_key(errstack, non_blocking));
+	case Phase::SciToken:
+		return static_cast<int>(authenticate_server_scitoken(errstack, non_blocking));
 	};
 	return static_cast<int>(CondorAuthSSLRetval::Fail);
 }
@@ -246,6 +249,33 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 	}
 
     if( mySock_->isClient() ) {
+		std::string scitoken;
+		if (m_scitokens_mode) {
+			if (m_scitokens_file.empty()) {
+				ouch( "No SciToken file provided\n" );
+				m_auth_state->m_client_status = AUTH_SSL_ERROR;
+			} else {
+				FILE * f = safe_fopen_no_create( m_scitokens_file.c_str(), "r" );
+				if (f == nullptr) {
+					dprintf(D_ALWAYS, "Failed to open scitoken file '%s': %d (%s)\n",
+						m_scitokens_file.c_str(), errno, strerror(errno));
+					m_auth_state->m_client_status = AUTH_SSL_ERROR;
+				} else {
+					for (std::string line; readLine(line, f, false); ) {
+						// Strip out whitespace and ignore comments.
+						line.erase( line.length() - 1, 1 );
+						line.erase(line.begin(),
+						std::find_if(line.begin(), line.end(),
+							[](int ch) {return !isspace(ch);}));
+						if (line.empty() || line[0] == '#') { continue; }
+
+						scitoken = line;
+						ouch( "Found a SciToken to use for authentication" );
+						break;
+					}
+				}
+			}
+		}
         if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
             ouch( "Error initializing OpenSSL for authentication\n" );
             m_auth_state->m_client_status = AUTH_SSL_ERROR;
@@ -450,6 +480,81 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
         }
         //dprintf(D_SECURITY, "Got session key: '%s'.\n", session_key);
         setup_crypto( m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN );
+
+		if (m_scitokens_mode) {
+			m_auth_state->m_client_status = m_auth_state->m_server_status = AUTH_SSL_RECEIVING;
+			m_auth_state->m_done = 0;
+			m_auth_state->m_round_ctr = 0;
+			uint32_t network_size = htonl(scitoken.size());
+			std::vector<unsigned char> network_bytes;
+			network_bytes.reserve(sizeof(network_size) + scitoken.size());
+			memcpy(&network_bytes[0], static_cast<void*>(&network_size), sizeof(network_size));
+			memcpy(&network_bytes[0] + sizeof(network_size), scitoken.c_str(), scitoken.size());
+			while(!m_auth_state->m_done) {
+				dprintf(D_SECURITY,"Writing SciToken round %d.\n",++m_auth_state->m_round_ctr);
+
+				// Abort if the exchange has gone on for too long.
+				if(m_auth_state->m_round_ctr > 256) {
+					ouch("Too many rounds exchanging key: quitting.\n");
+					m_auth_state->m_done = 1;
+					m_auth_state->m_client_status = AUTH_SSL_QUITTING;
+					break;
+				}
+
+				if( m_auth_state->m_client_status != AUTH_SSL_HOLDING) {
+					m_auth_state->m_ssl_status = (*SSL_write_ptr)(m_auth_state->m_ssl,
+						&network_bytes[0], sizeof(network_size) + scitoken.size());
+				}
+				if(m_auth_state->m_ssl_status < 1) {
+					m_auth_state->m_err = (*SSL_get_error_ptr)( m_auth_state->m_ssl,
+						m_auth_state->m_ssl_status);
+					switch( m_auth_state->m_err ) {
+						case SSL_ERROR_WANT_READ:
+						case SSL_ERROR_WANT_WRITE:
+						ouch("SSL: continue read/write.\n");
+						m_auth_state->m_done = 0;
+						m_auth_state->m_client_status = AUTH_SSL_RECEIVING;
+						break;
+						default:
+							m_auth_state->m_client_status = AUTH_SSL_QUITTING;
+							m_auth_state->m_done = 1;
+							ouch("SSL: error on write.  Can't proceed.\n");
+							break;
+					}
+				} else {
+					dprintf(D_SECURITY,"SSL write is successful.\n");
+					m_auth_state->m_client_status = AUTH_SSL_HOLDING;
+				}
+				if(m_auth_state->m_round_ctr % 2 == 1) {
+					m_auth_state->m_server_status = client_receive_message(
+						m_auth_state->m_client_status, m_auth_state->m_buffer,
+						m_auth_state->m_conn_in, m_auth_state->m_conn_out );
+				} else {
+					if(AUTH_SSL_ERROR == client_send_message(
+						m_auth_state->m_client_status, m_auth_state->m_buffer,
+						m_auth_state->m_conn_in, m_auth_state->m_conn_out ))
+					{
+						m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+					}
+				}
+				dprintf(D_SECURITY, "SciToken exchange status: c: %d, s: %d\n", m_auth_state->m_client_status,
+					m_auth_state->m_server_status);
+				if(m_auth_state->m_server_status == AUTH_SSL_HOLDING
+					&& m_auth_state->m_client_status == AUTH_SSL_HOLDING)
+				{
+					m_auth_state->m_done = 1;
+				}
+				if(m_auth_state->m_server_status == AUTH_SSL_QUITTING) {
+					m_auth_state->m_done = 1;
+				}
+			}
+			if( m_auth_state->m_server_status == AUTH_SSL_QUITTING
+				|| m_auth_state->m_client_status == AUTH_SSL_QUITTING )
+			{
+				ouch( "SciToken Authentication while client was sending the token.\n" );
+				return static_cast<int>(CondorAuthSSLRetval::Fail);
+			}
+		}
     } else { // Server
         
         if( init_OpenSSL(  ) != AUTH_SSL_A_OK ) {
@@ -700,27 +805,142 @@ Condor_Auth_SSL::authenticate_server_key(CondorError *errstack, bool non_blockin
             return authenticate_fail();
         }
         setup_crypto( m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN );
+		if (m_scitokens_mode) {
+			return authenticate_server_scitoken(errstack, non_blocking);
+		}
 		return authenticate_finish(errstack, non_blocking);
 }
+
+
+Condor_Auth_SSL::CondorAuthSSLRetval
+Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_blocking)
+{
+	m_auth_state->m_phase = Phase::SciToken;
+	std::vector<char> token_contents;
+	while(!m_auth_state->m_done) {
+		dprintf(D_SECURITY,"Reading SciTokens round %d.\n", m_auth_state->m_round_ctr);
+		if(m_auth_state->m_round_ctr > 256) {
+			ouch("Too many rounds exchanging SciToken: quitting.\n");
+			m_auth_state->m_done = 1;
+			m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+			break;
+		}
+		uint32_t token_length = 0;
+		if( m_auth_state->m_server_status != AUTH_SSL_HOLDING ) {
+			if (m_auth_state->m_token_length == -1) {
+				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
+					static_cast<void*>(&token_length), sizeof(token_length));
+			} else {
+				token_contents.reserve(token_length);
+				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
+					static_cast<void*>(&token_contents), token_length);
+			}
+		}
+		if(m_auth_state->m_ssl_status < 1) {
+			m_auth_state->m_err = (*SSL_get_error_ptr)( m_auth_state->m_ssl,
+				m_auth_state->m_ssl_status);
+			switch( m_auth_state->m_err ) {
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+				ouch("SciToken: continue read/write.\n");
+				m_auth_state->m_done = 0;
+				m_auth_state->m_server_status = AUTH_SSL_RECEIVING;
+				break;
+			default:
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+				m_auth_state->m_done = 1;
+				ouch("SciToken: error on read.  Can't proceed.\n");
+				break;
+			}
+		} else {
+			if (m_auth_state->m_token_length == -1) {
+				dprintf(D_SECURITY|D_FULLDEBUG, "SciToken length SSL read is successful.\n");
+				m_auth_state->m_token_length = ntohl(token_length);
+					// We also expect the token itself in the same "round".
+				continue;
+			} else {
+				dprintf(D_SECURITY, "SciToken SSL read is successful.\n");
+				m_client_scitoken = std::string(&token_contents[0], token_length);
+				if(m_auth_state->m_client_status == AUTH_SSL_HOLDING) {
+					m_auth_state->m_done = 1;
+				}
+				m_auth_state->m_server_status = AUTH_SSL_HOLDING;
+			}
+		}
+		if(m_auth_state->m_round_ctr % 2 == 0) {
+			if(AUTH_SSL_ERROR == server_send_message(
+				m_auth_state->m_server_status, m_auth_state->m_buffer,
+				m_auth_state->m_conn_in, m_auth_state->m_conn_out ))
+			{
+				m_auth_state->m_client_status = AUTH_SSL_QUITTING;
+			}
+		} else {
+			auto retval = server_receive_message(non_blocking,
+				m_auth_state->m_server_status, m_auth_state->m_buffer,
+				m_auth_state->m_conn_in, m_auth_state->m_conn_out,
+				m_auth_state->m_client_status );
+			if (retval != CondorAuthSSLRetval::Success) {
+				return retval == CondorAuthSSLRetval::Fail ? authenticate_fail() : retval;
+			}
+		}
+		m_auth_state->m_round_ctr++;
+		dprintf(D_SECURITY, "SciToken exchange server status: c: %d, s: %d\n", m_auth_state->m_client_status,
+				m_auth_state->m_server_status);
+		if(m_auth_state->m_server_status == AUTH_SSL_HOLDING
+			&& m_auth_state->m_client_status == AUTH_SSL_HOLDING)
+		{
+			m_auth_state->m_done = 1;
+		}
+		if(m_auth_state->m_client_status == AUTH_SSL_QUITTING) {
+			m_auth_state->m_done = 1;
+		}
+	}
+	if( m_auth_state->m_server_status == AUTH_SSL_QUITTING
+		|| m_auth_state->m_client_status == AUTH_SSL_QUITTING )
+	{
+		ouch( "SciToken Authentication failed at token exchange.\n" );
+		return authenticate_fail();
+	}
+	return authenticate_finish(errstack, non_blocking);
+}
+
 
 Condor_Auth_SSL::CondorAuthSSLRetval
 Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_blocking*/)
 {
     char subjectname[1024];
-    X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
-	if (peer) {
-		X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-		setRemoteUser( "ssl" );
+	Condor_Auth_SSL::CondorAuthSSLRetval retval = CondorAuthSSLRetval::Success;
+	if (m_scitokens_mode) {
+		if (mySock_->isClient()) {
+			X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
+			if (peer) {
+				X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+				setRemoteUser( "ssl" );
+			} else {
+				ouch("Server subject name is unavailable.");
+				retval = CondorAuthSSLRetval::Fail;
+			}
+		} else {
+			// TODO: verify and authenticate the token.
+			dprintf(D_SECURITY, "SciToken authentication is not implemented.\n");
+			retval = CondorAuthSSLRetval::Fail;
+		}
 	} else {
-		strcpy(subjectname, "unauthenticated");
-		setRemoteUser( "unauthenticated" );
+    	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
+		if (peer) {
+			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+			setRemoteUser( "ssl" );
+		} else {
+			strcpy(subjectname, "unauthenticated");
+			setRemoteUser( "unauthenticated" );
+		}
+		setAuthenticatedName( subjectname );
+		setRemoteDomain( UNMAPPED_DOMAIN );
 	}
-	setAuthenticatedName( subjectname );
-	setRemoteDomain( UNMAPPED_DOMAIN );
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
 	m_auth_state.release();
-    return CondorAuthSSLRetval::Success;
+    return retval;
 }
 
 
@@ -1234,8 +1454,12 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	} else {
 		cafile     = param( AUTH_SSL_CLIENT_CAFILE_STR );
 		cadir      = param( AUTH_SSL_CLIENT_CADIR_STR );
-		certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
-		keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+		if (m_scitokens_mode) {
+			param( m_scitokens_file, "SCITOKENS_FILE" );
+		} else {
+			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
+			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+		}
 	}		
 	cipherlist = param( AUTH_SSL_CIPHERLIST_STR );
     if( cipherlist == NULL ) {
@@ -1253,6 +1477,8 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)   dprintf( D_SECURITY, "CERTFILE:   '%s'\n", certfile   );
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
     if(cipherlist) dprintf( D_SECURITY, "CIPHERLIST: '%s'\n", cipherlist );
+    if (!m_scitokens_file.empty())
+	dprintf( D_SECURITY, "SCITOKENSFILE:   '%s'\n", m_scitokens_file.c_str()   );
         
     ctx = (*SSL_CTX_new_ptr)( (*SSL_method_ptr)(  ) );
 	if(!ctx) {

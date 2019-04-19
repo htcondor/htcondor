@@ -231,9 +231,15 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 
 #ifdef HAVE_EXT_OPENSSL
 			case CAUTH_SSL:
-				m_auth = new Condor_Auth_SSL(mySock);
+				m_auth = new Condor_Auth_SSL(mySock, 0, false);
 				m_method_name = "SSL";
 				break;
+#ifdef HAVE_EXT_SCITOKENS
+			case CAUTH_SCITOKENS:
+				m_auth = new Condor_Auth_SSL(mySock, 0, true);
+				m_method_name = "SCITOKENS";
+				break;
+#endif
 #endif
 
 #if defined(HAVE_EXT_KRB5) 
