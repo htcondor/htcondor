@@ -35,6 +35,10 @@
 #include "condor_auth_kerberos.h"
 #endif
 
+#if defined(HAVE_EXT_SCITOKENS)
+#include <scitokens/scitokens.h>
+#endif
+
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
