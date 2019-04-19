@@ -677,6 +677,7 @@ parseArgs( int argc, char* argv [] )
 		free( job_stdin );
 		free( job_stdout );
 		free( job_stderr );
+		if (job_keyword) { free(job_keyword); }
 		return jic;
 	}
 
