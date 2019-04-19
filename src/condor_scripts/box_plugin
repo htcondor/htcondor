@@ -43,7 +43,7 @@ def print_capabilities():
          'SupportedMethods': 'box',
          'Version': BOX_PLUGIN_VERSION,
     }
-    sys.stdout.write(str(classad.ClassAd(capabilities)))
+    sys.stdout.write(classad.ClassAd(capabilities).printOld())
     
 def parse_args():
     '''The optparse library can't handle the types of arguments that the file
