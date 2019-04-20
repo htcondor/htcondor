@@ -1630,7 +1630,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	std_fname[2] = sshd_log_fname.Value();
 
 
-	SSHDProc *proc = new SSHDProc(sshd_ad, true);
+	SSHDProc *proc = new SSHDProc(sshd_ad, session_dir, true);
 	if( !proc ) {
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;
