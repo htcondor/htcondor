@@ -83,12 +83,11 @@ bool Condor_Auth_SSL::m_initSuccess = false;
 Condor_Auth_SSL::AuthState::~AuthState() {
 	if (m_ctx) {(*SSL_CTX_free_ptr)(m_ctx); m_ctx = nullptr;}
 	if (m_ssl) {
-		// Ensure that the SSL state doesn't own our BIO pointers
-		(*SSL_set_bio_ptr)( m_ssl, nullptr, nullptr );
 		(*SSL_free_ptr)(m_ssl); m_ssl = nullptr;
+	} else {
+		if (m_conn_in) {BIO_free( m_conn_in );}
+		if (m_conn_out) {BIO_free( m_conn_out );}
 	}
-	if (m_conn_in) {BIO_free( m_conn_in );}
-	if (m_conn_out) {BIO_free( m_conn_out );}
 }
 
 Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */, bool scitokens_mode)
