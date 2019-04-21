@@ -37,6 +37,8 @@
 
 #if defined(HAVE_EXT_SCITOKENS)
 #include <scitokens/scitokens.h>
+
+#include <algorithm>
 #endif
 
 // Symbols from libssl
@@ -248,6 +250,15 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 	}
 
     if( mySock_->isClient() ) {
+        if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
+            ouch( "Error initializing OpenSSL for authentication\n" );
+            m_auth_state->m_client_status = AUTH_SSL_ERROR;
+        }
+        if( !(m_auth_state->m_ctx = setup_ssl_ctx( false )) ) {
+            ouch( "Error initializing client security context\n" );
+            m_auth_state->m_client_status = AUTH_SSL_ERROR;
+        }
+
 		std::string scitoken;
 		if (m_scitokens_mode) {
 			if (m_scitokens_file.empty()) {
@@ -264,25 +275,18 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 						// Strip out whitespace and ignore comments.
 						line.erase( line.length() - 1, 1 );
 						line.erase(line.begin(),
-						std::find_if(line.begin(), line.end(),
-							[](int ch) {return !isspace(ch);}));
-						if (line.empty() || line[0] == '#') { continue; }
+							std::find_if(line.begin(), line.end(),
+								[](int ch) {return !isspace(ch);}));
+							if (line.empty() || line[0] == '#') { continue; }
 
 						scitoken = line;
-						ouch( "Found a SciToken to use for authentication" );
+						ouch( "Found a SciToken to use for authentication.\n" );
 						break;
 					}
 				}
 			}
 		}
-        if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
-            ouch( "Error initializing OpenSSL for authentication\n" );
-            m_auth_state->m_client_status = AUTH_SSL_ERROR;
-        }
-        if( !(m_auth_state->m_ctx = setup_ssl_ctx( false )) ) {
-            ouch( "Error initializing client security context\n" );
-            m_auth_state->m_client_status = AUTH_SSL_ERROR;
-        }
+
         if( !(m_auth_state->m_conn_in = BIO_new( BIO_s_mem( ) )) 
             || !(m_auth_state->m_conn_out = BIO_new( BIO_s_mem( ) )) ) {
             ouch( "Error creating buffer for SSL authentication\n" );
@@ -524,7 +528,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 					dprintf(D_SECURITY,"SSL write is successful.\n");
 					m_auth_state->m_client_status = AUTH_SSL_HOLDING;
 				}
-				if(m_auth_state->m_round_ctr % 2 == 1) {
+				if(m_auth_state->m_round_ctr % 2 == 0) {
 					m_auth_state->m_server_status = client_receive_message(
 						m_auth_state->m_client_status, m_auth_state->m_buffer,
 						m_auth_state->m_conn_in, m_auth_state->m_conn_out );
@@ -805,6 +809,10 @@ Condor_Auth_SSL::authenticate_server_key(CondorError *errstack, bool non_blockin
         }
         setup_crypto( m_auth_state->m_session_key, AUTH_SSL_SESSION_KEY_LEN );
 		if (m_scitokens_mode) {
+			m_auth_state->m_client_status = m_auth_state->m_server_status = AUTH_SSL_RECEIVING;
+			m_auth_state->m_done = 0;
+			m_auth_state->m_round_ctr = 0;
+
 			return authenticate_server_scitoken(errstack, non_blocking);
 		}
 		return authenticate_finish(errstack, non_blocking);
@@ -824,15 +832,23 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			m_auth_state->m_server_status = AUTH_SSL_QUITTING;
 			break;
 		}
-		uint32_t token_length = 0;
 		if( m_auth_state->m_server_status != AUTH_SSL_HOLDING ) {
 			if (m_auth_state->m_token_length == -1) {
-				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
+				uint32_t token_length = 0;
+				m_auth_state->m_ssl_status = SSL_peek(m_auth_state->m_ssl,
 					static_cast<void*>(&token_length), sizeof(token_length));
-			} else {
-				token_contents.reserve(token_length);
+				if (m_auth_state->m_ssl_status >= 1) {
+					m_auth_state->m_token_length = ntohl(token_length);
+					dprintf(D_SECURITY|D_FULLDEBUG, "Peeked at the sent token; "
+						"%u bytes long; SSL status %d.\n",
+						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
+				}
+			}
+			if (m_auth_state->m_token_length >= 0) {
+				token_contents.reserve(m_auth_state->m_token_length + sizeof(uint32_t));
 				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
-					static_cast<void*>(&token_contents), token_length);
+					static_cast<void*>(&token_contents[0]),
+					m_auth_state->m_token_length + sizeof(uint32_t));
 			}
 		}
 		if(m_auth_state->m_ssl_status < 1) {
@@ -848,25 +864,20 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			default:
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
 				m_auth_state->m_done = 1;
-				ouch("SciToken: error on read.  Can't proceed.\n");
+				dprintf(D_SECURITY, "SciToken: error on read (%ld).  Can't proceed.\n",
+					m_auth_state->m_err);
 				break;
 			}
 		} else {
-			if (m_auth_state->m_token_length == -1) {
-				dprintf(D_SECURITY|D_FULLDEBUG, "SciToken length SSL read is successful.\n");
-				m_auth_state->m_token_length = ntohl(token_length);
-					// We also expect the token itself in the same "round".
-				continue;
-			} else {
-				dprintf(D_SECURITY, "SciToken SSL read is successful.\n");
-				m_client_scitoken = std::string(&token_contents[0], token_length);
-				if(m_auth_state->m_client_status == AUTH_SSL_HOLDING) {
-					m_auth_state->m_done = 1;
-				}
-				m_auth_state->m_server_status = AUTH_SSL_HOLDING;
+			dprintf(D_SECURITY, "SciToken SSL read is successful.\n");
+			m_client_scitoken =
+				std::string(&token_contents[sizeof(uint32_t)], m_auth_state->m_token_length);
+			if(m_auth_state->m_client_status == AUTH_SSL_HOLDING) {
+				m_auth_state->m_done = 1;
 			}
+			m_auth_state->m_server_status = AUTH_SSL_HOLDING;
 		}
-		if(m_auth_state->m_round_ctr % 2 == 0) {
+		if(m_auth_state->m_round_ctr % 2 == 1) {
 			if(AUTH_SSL_ERROR == server_send_message(
 				m_auth_state->m_server_status, m_auth_state->m_buffer,
 				m_auth_state->m_conn_in, m_auth_state->m_conn_out ))
@@ -920,17 +931,19 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 				retval = CondorAuthSSLRetval::Fail;
 			}
 		} else {
+			setRemoteUser("unauthenticated");
+			setAuthenticatedName( "unauthenticated" );
+			setRemoteDomain( UNMAPPED_DOMAIN );
+#if defined(HAVE_EXT_SCITOKENS)
 			SciToken token = nullptr;
 			char *err_msg = nullptr;
 			char *issuer = nullptr;
+			char *sub = nullptr;
 			Enforcer enf = nullptr;
 			Acl *acls = nullptr;
 			std::vector<std::string> audiences;
 			std::vector<const char *> audience_ptr;
 			std::string audience_string;
-			setRemoteUser("unauthenticated");
-			setAuthenticatedName( "unauthenticated" );
-			setRemoteDomain( UNMAPPED_DOMAIN );
 			if (param(audience_string, "SCITOKENS_SERVER_AUDIENCE")) {
 				StringList audience_list(audience_string.c_str());
 				audience_list.rewind();
@@ -939,7 +952,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 					audiences.emplace_back(aud);
 					audience_ptr.push_back(audiences.back().c_str());
 				}
-			}
+		}
 			if (scitoken_deserialize(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
 					err_msg ? err_msg : "(unknown failure");
@@ -952,12 +965,21 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 				scitoken_destroy(token);
 				token = nullptr;
 				retval = CondorAuthSSLRetval::Fail;
+			} else if (scitoken_get_claim_string(token, "sub", &sub, &err_msg) || !sub) {
+				dprintf(D_SECURITY, "Unable to retrieve token subject: %s\n",
+					err_msg ? err_msg : "(unknown failure");
+				free(err_msg);
+				scitoken_destroy(token);
+				token = nullptr;
+				free(issuer);
+				retval = CondorAuthSSLRetval::Fail;
 			} else if (!(enf = enforcer_create(issuer, &audience_ptr[0], &err_msg))) {
 				dprintf(D_SECURITY, "Failed to create SciTokens enforcer: %s\n",
 					err_msg ? err_msg : "(unknown failure");
 				free(err_msg);
 				scitoken_destroy(token);
 				free(issuer);
+				free(sub);
 				retval = CondorAuthSSLRetval::Fail;
 			} else if (!enforcer_generate_acls(enf, token, &acls, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to verify token and generate ACLs: %s\n",
@@ -965,19 +987,32 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 				free(err_msg);
 				scitoken_destroy(token);
 				free(issuer);
+				free(sub);
 				enforcer_destroy(enf);
 				retval = CondorAuthSSLRetval::Fail;
 			} else {
-				int idx = 0;
-				Acl acl = acls[idx++];
-				while ( (acl.authz && acl.resource) ) {
-					dprintf(D_SECURITY, "Found SciToken ACL: %s\n",
-						err_msg ? err_msg : "(unknown failure");
-					acl = acls[idx++];
+				if (acls) {
+					int idx = 0;
+					Acl acl = acls[idx++];
+					while ( (acl.authz && acl.resource) ) {
+						dprintf(D_SECURITY, "Found SciToken ACL: %s\n",
+							err_msg ? err_msg : "(unknown failure");
+						acl = acls[idx++];
+					}
 				}
 				setRemoteUser("scitokens");
-				setAuthenticatedName( issuer );
+				std::string auth_name = std::string(issuer) + "," + sub;
+				setAuthenticatedName( auth_name.c_str() );
+				dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer);
+				scitoken_destroy(token);
+				free(issuer);
+				free(sub);
+				enforcer_destroy(enf);
 			}
+#else
+			dprintf(D_ALWAYS, "SciTokens auth used but support is not available.\n");
+			retval = CondorAuthSSLRetval::Fail;
+#endif
 		}
 	} else {
     	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
@@ -992,7 +1027,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		setRemoteDomain( UNMAPPED_DOMAIN );
 	}
 
-    dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
+    dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
 	m_auth_state.release();
     return retval;
 }
@@ -1391,9 +1426,14 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
      */
     cert = (*SSL_get_peer_certificate_ptr)(ssl);
     if( cert == NULL ) {
-        dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
-        goto err_occured;
-    }
+		if (mySock_->isClient()) {
+			dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
+			goto err_occured;
+		} else {
+			dprintf(D_SECURITY, "Peer is anonymous; not checking.\n");
+			return X509_V_OK;
+		}
+	}
     dprintf(D_SECURITY,"SSL_get_peer_certificate returned data.\n" );
 
     /* What follows is working code based on examples from the book
@@ -1477,10 +1517,10 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
         dprintf(D_SECURITY,"Client: Got non null cert.\n" );
     }
     */
-    ouch("Returning SSL_get_verify_result.\n");
+	ouch("Returning SSL_get_verify_result.\n");
     
-    X509_free(cert);
-    return (*SSL_get_verify_result_ptr)(ssl);
+	X509_free(cert);
+	return (*SSL_get_verify_result_ptr)(ssl);
  
 err_occured:
     if (cert)
