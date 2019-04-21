@@ -36,9 +36,11 @@
 #endif
 
 #if defined(HAVE_EXT_SCITOKENS)
+#include "condor_attributes.h"
 #include <scitokens/scitokens.h>
 
 #include <algorithm>
+#include <sstream>
 #endif
 
 // Symbols from libssl
@@ -955,19 +957,19 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		}
 			if (scitoken_deserialize(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
-					err_msg ? err_msg : "(unknown failure");
+					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				retval = CondorAuthSSLRetval::Fail;
 			} else if (scitoken_get_claim_string(token, "iss", &issuer, &err_msg)) {
 				dprintf(D_SECURITY, "Unable to retrieve token issuer: %s\n",
-					err_msg ? err_msg : "(unknown failure");
+					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				scitoken_destroy(token);
 				token = nullptr;
 				retval = CondorAuthSSLRetval::Fail;
 			} else if (scitoken_get_claim_string(token, "sub", &sub, &err_msg) || !sub) {
 				dprintf(D_SECURITY, "Unable to retrieve token subject: %s\n",
-					err_msg ? err_msg : "(unknown failure");
+					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				scitoken_destroy(token);
 				token = nullptr;
@@ -975,15 +977,15 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 				retval = CondorAuthSSLRetval::Fail;
 			} else if (!(enf = enforcer_create(issuer, &audience_ptr[0], &err_msg))) {
 				dprintf(D_SECURITY, "Failed to create SciTokens enforcer: %s\n",
-					err_msg ? err_msg : "(unknown failure");
+					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				scitoken_destroy(token);
 				free(issuer);
 				free(sub);
 				retval = CondorAuthSSLRetval::Fail;
-			} else if (!enforcer_generate_acls(enf, token, &acls, &err_msg)) {
+			} else if (enforcer_generate_acls(enf, token, &acls, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to verify token and generate ACLs: %s\n",
-					err_msg ? err_msg : "(unknown failure");
+					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				scitoken_destroy(token);
 				free(issuer);
@@ -994,11 +996,29 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 				if (acls) {
 					int idx = 0;
 					Acl acl = acls[idx++];
+					std::vector<std::string> authz;
 					while ( (acl.authz && acl.resource) ) {
-						dprintf(D_SECURITY, "Found SciToken ACL: %s\n",
-							err_msg ? err_msg : "(unknown failure");
+						if (!strcmp(acl.authz, "condor")) {
+							const char * condor_authz = acl.resource;
+							while (*condor_authz != '\0' && *condor_authz == '/') {condor_authz++;}
+							if (strlen(condor_authz)) {authz.emplace_back(condor_authz);}
+						}
 						acl = acls[idx++];
 					}
+					if (!authz.empty()) {
+						classad::ClassAd ad;
+						std::stringstream ss;
+						for (const auto &auth : authz) {
+							dprintf(D_SECURITY|D_FULLDEBUG,
+								"Found SciToken condor authorization: %s\n",
+								auth.c_str());
+							ss << auth << ",";
+						}
+						ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+						mySock_->setPolicyAd(ad);
+					}
+
+					enforcer_acl_free(acls);
 				}
 				setRemoteUser("scitokens");
 				std::string auth_name = std::string(issuer) + "," + sub;
