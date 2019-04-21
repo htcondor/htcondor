@@ -2678,6 +2678,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_PASSWORD;
 	} else if ( !strcasecmp( method, "TOKEN" ) ) {
 		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "SCITOKENS" ) ) {
+		return CAUTH_SCITOKENS;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
 	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {
