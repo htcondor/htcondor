@@ -2983,6 +2983,7 @@ union _jobid {
 };
 
 static union _jobid sequence_id = { 0, INT_MAX };
+static bool assume_cluster_ad_if_no_proc_id = false; // set to true when we expect to get clusterad ads that don't have a ProcId attribute
 
 // callback function for processing a job from the Q query that just adds the job into a IdToClassaAdMap.
 static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
@@ -3011,7 +3012,9 @@ static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
 		ad->LookupInteger(attr_id, jobid.id);
 	} else {
 		ad->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
-		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
+		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc ) && assume_cluster_ad_if_no_proc_id) {
+			jobid.proc = -1;
+		}
 	}
 
 	auto pp = pmap->insert(std::pair<long long, UniqueClassAdPtr>(jobid.id,UniqueClassAdPtr()));
@@ -4215,6 +4218,15 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	buffer_line_processor pfnProcess = NULL;
 	void *                pvProcess = NULL;
 	if (better_analyze || dash_unmatchable || (dash_long && ! g_stream_results)) {
+		if (dash_factory) {
+			// if we will be fetching clusterads, they will not have a ProcId attribute
+			// so we should treat that a ProcId == -1. 
+			// If NOT fetching factory ads, then we should use the sequence number as the sort key
+			// when the ProdId is missing. This means that -factory -job will potentially generate
+			// errors when the files being read have no ProcId attribute.
+			// we call that user error, not a bug.
+			assume_cluster_ad_if_no_proc_id = app.attrs.isEmpty() || app.attrs.contains_anycase(ATTR_PROC_ID);
+		}
 		pfnProcess = AddJobToClassAdCollection;
 		pvProcess = &ads;
 	} else if (g_stream_results) {
