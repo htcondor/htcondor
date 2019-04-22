@@ -141,6 +141,7 @@
 #define SUBMIT_KEY_TransferInput "transfer_input"
 #define SUBMIT_KEY_TransferOutput "transfer_output"
 #define SUBMIT_KEY_TransferError "transfer_error"
+#define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 

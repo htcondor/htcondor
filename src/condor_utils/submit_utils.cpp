@@ -47,6 +47,7 @@
 #include "condor_version.h"
 #include "NegotiationUtils.h"
 #include "param_info.h" // for BinaryLookup
+#include "classad_helpers.h"
 #include "submit_utils.h"
 
 #include "list.h"
@@ -4810,6 +4811,8 @@ int SubmitHash::SetSimpleJobExprs()
 				ATTR_JOB_AD_INFORMATION_ATTRS, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_JobMaterializeMaxIdle, SUBMIT_KEY_JobMaterializeMaxIdleAlt,
 				ATTR_JOB_MATERIALIZE_MAX_IDLE, NULL, false, true},
+		/*submit_param*/ {SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS,
+				ATTR_TRANSFER_PLUGINS, NULL, true, false},
 		{NULL,NULL,NULL,NULL,false, false}
 	};
 
@@ -5162,7 +5165,7 @@ int SubmitHash::SetRequirements()
 	}
 	if( mightTransfer(JobUniverse) ) { 
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
-		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER);
+		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
 		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
 	}
@@ -5340,11 +5343,12 @@ int SubmitHash::SetRequirements()
 			*/
 		const char * domain_check = "(TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN ")";
 		const char * xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER;
+		const char * crypt_check = "";
 		if (!checks_per_file_encryption &&
 				(job->Lookup(ATTR_ENCRYPT_INPUT_FILES) || job->Lookup(ATTR_ENCRYPT_OUTPUT_FILES) ||
 				job->Lookup(ATTR_DONT_ENCRYPT_INPUT_FILES) || job->Lookup(ATTR_DONT_ENCRYPT_OUTPUT_FILES))
 			) {
-			xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER " && TARGET." ATTR_HAS_PER_FILE_ENCRYPTION;
+			crypt_check = " && TARGET." ATTR_HAS_PER_FILE_ENCRYPTION;
 		}
 
 		ShouldTransferFiles_t should_transfer = STF_IF_NEEDED;
@@ -5371,25 +5375,52 @@ int SubmitHash::SetRequirements()
 				close_op = "))";
 			}
 
+
+			// if the job is supplying transfer plugins, then we need to use a different xfer_check
+			// expression, and we want to ignore plugin types that are supplied by the job when
+			// fixing up the transfer plugin methods expression.
+			std::string xferplugs;
+			if (job->LookupString(ATTR_TRANSFER_PLUGINS, xferplugs) && ! xferplugs.empty()) {
+				xfer_check = "TARGET." ATTR_HAS_JOB_TRANSFER_PLUGINS;
+			}
+
 			answer += join_op;
 			answer += xfer_check;
+			answer += crypt_check;
 
-			if (( ! checks_file_transfer_plugin_methods)) {
-				classad::References methods;
+
+			if ( ! checks_file_transfer_plugin_methods) {
+				classad::References methods;    // methods referened by TransferInputFiles that are not in TransferPlugins
+				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
+
+				// xferplugs is of the form "TAR:mytarplugin; HTTP,HTTPS:myhttplugin"
+				StringTokenIterator plugs(xferplugs.c_str(), 100, ";");
+				for (const char * plug = plugs.first(); plug != NULL; plug = plugs.next()) {
+					const char * colon = strchr(plug, ':');
+					if (colon) {
+						std::string methods(plug, colon - plug);
+						add_attrs_from_string_tokens(jobmethods, methods);
+					}
+				}
+
 				// check input
 				auto_free_ptr file_list(submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt));
 				if (file_list) {
 					StringList files(file_list.ptr(), ",");
 					for (const char * file = files.first(); file; file = files.next()) {
-						if (IsUrl(file)){ methods.insert(getURLType(file, true)); }
+						if (IsUrl(file)){
+							MyString tag = getURLType(file, true);
+							if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
+						}
 					}
 				}
 
 				// check output (only a single file this time)
 				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION));
 				if (file_list) {
-					if (IsUrl(file_list)){
-						methods.insert(getURLType(file_list, true));
+					if (IsUrl(file_list)) {
+						MyString tag = getURLType(file_list, true);
+						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
 

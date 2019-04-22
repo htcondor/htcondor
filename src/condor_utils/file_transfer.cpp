@@ -349,12 +349,13 @@ FileTransfer::~FileTransfer()
 }
 
 int
-FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
+FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
 						 bool use_file_catalog, bool is_spool) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	const bool allow_inline_plugins = true; // enable job TransferPlugins attribute
 
 	jobAd = *Ad;	// save job ad
 
@@ -367,7 +368,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");
 
-	/* in the case of SimpleINit being called inside of Init, this will
+	/* in the case of SimpleInit being called inside of Init, this will
 		simply assign the same value to itself. */
 	m_use_file_catalog = use_file_catalog;
 
@@ -716,6 +717,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
 	InitializePlugins(e);
+	if (allow_inline_plugins) {
+		InitializeJobPlugins(*Ad, e, *InputFiles);
+	}
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -800,8 +804,11 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 
 
 int
-FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
-	bool use_file_catalog) 
+FileTransfer::Init(
+	ClassAd *Ad,
+	bool want_check_perms /* false */,
+	priv_state priv /* PRIV_UNKNOWN */,
+	bool use_file_catalog /* = true */)
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -892,7 +899,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 
 		// Init all the file lists, etc.
 	if ( !SimpleInit(Ad, want_check_perms, IsServer(),
-			NULL, priv, m_use_file_catalog ) ) 
+			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
 	}
@@ -4910,6 +4917,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Determine if we want to run the plugin with root priv (if available).
 	// If so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
+	if (plugins_from_job.find(plugin_path) != plugins_from_job.end()) { drop_privs = true; }
 
 	// Lookup the initial working directory
 	std::string iwd;
@@ -5109,6 +5117,47 @@ MyString FileTransfer::GetSupportedMethods() {
 		}
 	}
 	return method_list;
+}
+
+int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles)
+{
+	if ( ! I_support_filetransfer_plugins || ! plugin_table) {
+		return 0;
+	}
+
+	std::string job_plugins;
+	if ( ! job.LookupString(ATTR_TRANSFER_PLUGINS, job_plugins)) {
+		return 0;
+	}
+
+	StringTokenIterator plugins(job_plugins, 100, ";");
+	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
+		const char * colon = strchr(plug, ':');
+		if (colon) {
+			MyString methods; methods.set(plug, colon - plug);
+
+			// add the plugin to the front of the input files list
+			MyString plugin_path(colon + 1);
+			plugin_path.trim();
+			if (! infiles.file_contains(plugin_path.c_str())) {
+				infiles.insert(plugin_path.c_str());
+			}
+			// use the file basename as the plugin name, so that when we invoke it
+			// we will invoke the copy in the input sandbox
+			MyString plugin(condor_basename(plugin_path.c_str()));
+
+			InsertPluginMappings(methods, plugin);
+			plugins_multifile_support[plugin] = true;
+			plugins_from_job[plugin.c_str()] = true;
+			multifile_plugins_enabled = true;
+			// add the plugin to the transfer list
+		} else {
+			dprintf(D_ALWAYS, "FILETRANSFER: no ':' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "no ':' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+		}
+	}
+
+	return 0;
 }
 
 
