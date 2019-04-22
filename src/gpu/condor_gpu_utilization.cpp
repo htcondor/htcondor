@@ -211,7 +211,7 @@ int main() {
 			minMaxSampleCount = maxSampleCounts[i];
 		}
 	}
-	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000)/6;
+	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000ull)/6;
 
 
 	time_t lastReport = time( NULL );
