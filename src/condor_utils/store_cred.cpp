@@ -1498,7 +1498,7 @@ get_password() {
 		
 	printf("Enter password: ");
 	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH + 1, false) ) {
-		delete[] buf;
+		free(buf);
 		return NULL;
 	}
 	

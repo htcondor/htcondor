@@ -1111,7 +1111,7 @@ Sinful::regenerateV1String() {
 				return;
 			}
 			v.push_back( * sr );
-			free( sr );
+			delete sr;
 		}
 	}
 
