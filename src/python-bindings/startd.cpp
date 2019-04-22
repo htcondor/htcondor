@@ -136,32 +136,36 @@ export_startd()
     boost::python::class_<Startd>("Startd",
             R"C0ND0R(
             A class that represents a Startd.
-            )C0ND0R")
-        .def(boost::python::init<>())
-        .def(boost::python::init<boost::python::object>(
+            )C0ND0R",
+        boost::python::init<boost::python::object>(
             R"C0ND0R(
             :param ad: A ClassAd describing the claim and the startd location.
                 If omitted, the local startd is assumed.
             :type ad: :class:`~classad.ClassAd`
-            )C0ND0R"))
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad")=boost::python::object())))
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("drainJobs", &Startd::drain_jobs,
             R"C0ND0R(
             Begin draining jobs from the startd.
 
-            :param drain_type: How fast to drain the jobs.  Defaults to Graceful if not specified.
+            :param drain_type: How fast to drain the jobs.  Defaults to ``DRAIN_GRACEFUL`` if not specified.
             :type drain_type: :class:`DrainTypes`
             :param bool resume_on_completion: Whether the startd should start accepting jobs again
                 once draining is complete.  Otherwise, it will remain in the drained state.
-                Defaults to False.
-            :param str check_expr: An expression string that must evaluate to ``true`` for all slots for
-                draining to begin. Defaults to ``'true'`` if not specified.
-            :return: An opaque request ID that can be used to cancel draining.
+                Defaults to ``False``.
+            :param check_expr: An expression string that must evaluate to ``true`` for all slots for
+                draining to begin. Defaults to ``'true'``.
+            :type check_expr: str or :class:`ExprTree`
+            :param start_expr: The expression that the startd should use while draining.
+            :type start_expr: str or :class:`ExprTree`
+            :return: An opaque request ID that can be used to cancel draining via :meth:`Startd.cancelDrainJobs`
             :rtype: str
             )C0ND0R",
                (SELFARG
                 boost::python::arg("drain_type")=DRAIN_GRACEFUL,
                 boost::python::arg("resume_on_completion")=false,
-                boost::python::arg("constraint")="true",
+                boost::python::arg("check_expr")="true",
                 boost::python::arg("start_expr")="false"
                )
             )

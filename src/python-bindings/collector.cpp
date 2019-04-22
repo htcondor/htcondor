@@ -455,14 +455,16 @@ void export_collector()
             * Locating a daemon.
             * Query the collector for one or more specific ClassAds.
             * Advertise a new ad to the ``condor_collector``.
-            )C0ND0R")
-        .def(init<boost::python::object>(
+            )C0ND0R",
+        init<boost::python::object>(
+            boost::python::args("self", "pool"),
             R"C0ND0R(
             :param pool: A ``host:port`` pair specified for the remote collector
               (or a list of pairs for HA setups). If omitted, the value of
               configuration parameter ``COLLECTOR_HOST`` is used.
             :type pool: str or list[str]
             )C0ND0R"))
+        .def(init<>(boost::python::args("self")))
         .def("query", &Collector::query, query_overloads(
             R"C0ND0R(
             Query the contents of a condor_collector daemon. Returns a list of ClassAds that match the constraint parameter.
@@ -507,6 +509,7 @@ void export_collector()
 #endif
             ))
         .def("locate", &Collector::locate, locate_overloads(
+            (boost::python::arg("self"), boost::python::arg("daemon_type"), boost::python::arg("name")),
             R"C0ND0R(
             Query the ``condor_collector`` for a particular daemon.
 
@@ -525,16 +528,19 @@ void export_collector()
             :type daemon_type: :class:`DaemonTypes`
             :return: Matching ClassAds
             :rtype: list[:class:`~classad.ClassAd`]
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("daemon_type")))
         .def("advertise", &Collector::advertise, advertise_overloads(
+            (boost::python::arg("self"), boost::python::arg("ad_list"), boost::python::arg("command")="UPDATE_AD_GENERIC", boost::python::arg("use_tcp")=true),
             R"C0ND0R(
             Advertise a list of ClassAds into the condor_collector.
 
             :param ad_list: :class:`~classad.ClassAds` to advertise.
             :type ad_list: list[:class:`~classad.ClassAds`]
-            :param str command: An advertise command for the remote ``condor_collector``. It defaults to ``UPDATE_AD_GENERIC``.
-              Other commands, such as ``UPDATE_STARTD_AD``, may require different authorization levels with the remote daemon.
-            :param bool use_tcp: When set to true, updates are sent via TCP.  Defaults to ``True``.
+            :param str command: An advertise command for the remote ``condor_collector``.
+                It defaults to ``UPDATE_AD_GENERIC``.
+                Other commands, such as ``UPDATE_STARTD_AD``, may require different authorization levels with the remote daemon.
+            :param bool use_tcp: When set to ``True``, updates are sent via TCP.  Defaults to ``True``.
             )C0ND0R"))
         ;
 }

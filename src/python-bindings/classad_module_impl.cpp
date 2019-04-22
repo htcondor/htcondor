@@ -203,7 +203,8 @@ export_classad()
         :type input: str or file
         :return: Corresponding :class:`ClassAd` object.
         :rtype: :class:`ClassAd`
-        )C0ND0R");
+        )C0ND0R",
+        (boost::python::arg("input")));
     def("parse", parseFile, return_value_policy<manage_new_object>());
     def("parseAds", parseAds, with_custodian_and_ward_postcall<0, 1>(),
         R"C0ND0R(
@@ -227,11 +228,17 @@ export_classad()
         :type input: str or file
         :return: Corresponding :class:`ClassAd` object.
         :rtype: :class:`ClassAd`
-        )C0ND0R");
-    def("parseOldAds", parseOldAds, "Parse a stream of old ClassAd format into \n"
-        "an iterator of ClassAd objects\n"
-        ":param input: A string or iterable object.\n"
-        ":return: An iterator of ClassAd objects.");
+        )C0ND0R",
+        (boost::python::arg("input")));
+    def("parseOldAds", parseOldAds,
+        R"C0ND0R(
+        Parse a stream of old ClassAd format into
+        an iterator of :class:`ClassAd` objects
+
+        :param input: A string or iterable object.
+        :return: An iterator of ClassAd objects.
+        )C0ND0R",
+        (boost::python::arg("input")));
     def("parseOne", parseOne,
         R"C0ND0R(
         Parse the entire input into a single :class:`ClassAd` object.
@@ -278,7 +285,8 @@ export_classad()
         :param str input: Input string to quote.
         :return: The corresponding string literal as a Python string.
         :rtype: str
-        )C0ND0R");
+        )C0ND0R",
+        (boost::python::arg("input")));
     def("unquote", unquote,
         R"C0ND0R(
         Converts a ClassAd string literal, formatted as a string, back into
@@ -287,7 +295,8 @@ export_classad()
         :param str input: Input string to unquote.
         :return: The corresponding Python string for a string literal.
         :rtype: str
-        )C0ND0R");
+        )C0ND0R",
+        (boost::python::arg("input")));
 
     def("Literal", literal,
         R"C0ND0R(
@@ -299,18 +308,19 @@ export_classad()
         :param obj: Python object to convert to an expression.
         :return: Corresponding expression consising of a literal.
         :rtype: :class:`ExprTree`
-        )C0ND0R");
+        )C0ND0R",
+        (boost::python::arg("obj")));
 
     auto _f = boost::python::raw_function(function, 1);
     def("Function", _f);
     setattr(_f, "__doc__",
         R"C0ND0R(
-        Given function name name, and zero-or-more arguments, construct an
+        Given function name ``name``, and zero-or-more arguments, construct an
         :class:`ExprTree` which is a function call expression. The function is
         not evaluated.
 
         For example, the ClassAd expression ``strcat('hello ', 'world')`` can
-        be constructed by the Python ``Function('strcat', 'hello ', 'world')``.
+        be constructed by the Python expression ``Function('strcat', 'hello ', 'world')``.
 
         :return: Corresponding expression consisting of a function call.
         :rtype: :class:`ExprTree`
@@ -328,7 +338,8 @@ export_classad()
         :param str name: Name of attribute to reference.
         :return: Corresponding expression consisting of an attribute reference.
         :rtype: :class:`ExprTree`
-        )C0ND0R");
+        )C0ND0R",
+        (boost::python::arg("name")));
 
     def("register", registerFunction,
         R"C0ND0R(
@@ -357,12 +368,18 @@ export_classad()
             the dictionary protocol.  The ``items``, ``keys``, ``values``, ``get``, ``setdefault``,
             and ``update`` methods have the same semantics as a dictionary.
 
-             .. note:: Where possible, we recommend using the dedicated parsing functions
+            .. note:: Where possible, we recommend using the dedicated parsing functions
                 (:func:`parseOne`, :func:`parseNext`, or :func:`parseAds`) instead of using
                 the constructor.
-            )C0ND0R")
-        .def(init<std::string>())
-        .def(init<boost::python::dict>())
+            )C0ND0R",
+        init<std::string>(
+            boost::python::args("self", "input"),
+            R"C0ND0R(
+            :param input: A string or dictionary which will be interpreted as a classad.
+            :type input: str or dict
+            )C0ND0R"))
+        .def(init<>(boost::python::args("self")))
+        .def(init<boost::python::dict>(boost::python::args("self", "input")))
         .def_pickle(classad_pickle_suite())
         .def("__delitem__", &ClassAdWrapper::Delete)
         .def("__getitem__", &ClassAdWrapper::LookupWrap, condor::classad_expr_return_policy<>())
@@ -374,7 +391,8 @@ export_classad()
             :param str attr: Attribute to evaluate.
             :return: The Python object corresponding to the evaluated ClassAd attribute
             :raises ValueError: if unable to evaluate the object.
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("attr")))
         .def("__setitem__", &ClassAdWrapper::InsertAttrObject)
         .def("__str__", &ClassAdWrapper::toString)
         .def("__repr__", &ClassAdWrapper::toRepr)
@@ -404,14 +422,16 @@ export_classad()
 
             :param str attr: Attribute to evaluate.
             :return: The :class:`ExprTree` object referenced by ``attr``.
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("attr")))
         .def("printOld", &ClassAdWrapper::toOldString,
             R"C0ND0R(
             Serialize the ClassAd in the old ClassAd format.
 
             :return: The 'old ClassAd' representation of the ad.
             :rtype: str
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self")))
         .def("printJson", &ClassAdWrapper::toJsonString,
             R"C0ND0R(
             Serialize the ClassAd as a string in JSON format.
@@ -438,11 +458,12 @@ export_classad()
             Any constant expressions, such as ``1 + 2``, are evaluated; undefined attributes
             are not evaluated.
 
-            :param expression: The expression to evaluate in the context of this ad.
-            :type expression: :class:`ExprTree`
+            :param expr: The expression to evaluate in the context of this ad.
+            :type expr: :class:`ExprTree`
             :return: The partially-evaluated expression.
             :rtype: :class:`ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("matches", &ClassAdWrapper::matches,
             R"C0ND0R(
             Lookup the ``Requirements`` attribute of given ``ad`` return ``True`` if the
@@ -452,7 +473,8 @@ export_classad()
             :type ad: :class:`ClassAd`
             :return: ``True`` if we satisfy ``ad``'s requirements; ``False`` otherwise.
             :rtype: bool
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad")))
         .def("symmetricMatch", &ClassAdWrapper::symmetricMatch,
             R"C0ND0R(
             Check for two-way matching between given ad and ourselves.
@@ -463,7 +485,8 @@ export_classad()
             :type ad: :class:`ClassAd`
             :return: ``True`` if both ads' requirements are satisfied.
             :rtype: bool
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad")))
         .def("externalRefs", &ClassAdWrapper::externalRefs,
             R"C0ND0R(
             Returns a Python list of external references found in ``expr``.
@@ -475,7 +498,8 @@ export_classad()
             :type expr: :class:`ExprTree`
             :return: A list of external attribute references.
             :rtype: list[str]
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("internalRefs", &ClassAdWrapper::internalRefs,
             R"C0ND0R(
             Returns a Python list of internal references found in ``expr``.
@@ -487,7 +511,8 @@ export_classad()
             :type expr: :class:`ExprTree`
             :return: A list of internal attribute references.
             :rtype: list[str]
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         ;
 
     class_<ExprTreeHolder>("ExprTree",
@@ -495,7 +520,7 @@ export_classad()
             The :class:`ExprTree` class represents an expression in the ClassAd language.
 
             The :class:`ExprTree` constructor takes a string, which it will attempt to
-            parse the string into a ClassAd expression.
+            parse into a ClassAd expression.
             ``str(expr)`` will turn the ``ExprTree`` back into its string representation.
             ``int``, ``float``, and ``bool`` behave similarly, evaluating as necessary.
 
@@ -508,17 +533,28 @@ export_classad()
                for ``e1 && e2`` cause ``e1`` to be evaluated.  In order to get the 'logical and' of the two expressions *without*
                evaluating, use ``e1.and_(e2)``.  Similarly, ``e1.or_(e2)`` results in the 'logical or'.
             )C0ND0R",
-            init<std::string>())
+            init<std::string>((boost::python::arg("self"), boost::python::arg("expr"))))
         .def_pickle(exprtree_pickle_suite())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads(
+            boost::python::args("self", "scope"),
             R"C0ND0R(
             Evaluate the expression and return as a ClassAd value,
             typically a Python object.
 
+            .. warning ::
+
+                If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
+                might belong to, this method is not thread-safe.
+
+            :param scope: Optionally, a ClassAd to evaluate the :class:`ExprTree` in the context of.
+                Unnecessary if the :class:`ExprTree` comes from its own :class:`ClassAd`,
+                in which case it will be evaluated in the scope of that ad,
+                or if the :class:`ExprTree` can be evaluated without a context.
+            :type scope: :class:`ClassAd`
             :return: The evaluated expression as a Python object.
             )C0ND0R"))
 #if PY_MAJOR_VERSION >= 3
@@ -530,47 +566,52 @@ export_classad()
             R"C0ND0R(
             Returns ``True`` if given :class:`ExprTree` is same as this one.
 
-            :param expr2: Expression to compare against.
-            :type expr2: :class:`ExprTree`
-            :return: ``True`` if and only if ``expr2`` is equivalent to this object.
+            :param expr: Expression to compare against.
+            :type expr: :class:`ExprTree`
+            :return: ``True`` if and only if ``expr`` is equivalent to this object.
             :rtype: bool
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("and_", &ExprTreeHolder::__land__,
             R"C0ND0R(
-            Return a new expression, formed by ``self && expr2``.
+            Return a new expression, formed by ``self && expr``.
 
-            :param expr2: Right-hand-side expression to 'and'
-            :type expr2: :class:`ExprTree`
-            :return: A new expression, defined to be ``self && expr2``.
+            :param expr: Right-hand-side expression to 'and'
+            :type expr: :class:`ExprTree`
+            :return: A new expression, defined to be ``self && expr``.
             :rtype: :class:`ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("or_", &ExprTreeHolder::__lor__,
             R"C0ND0R(
-            Return a new expression, formed by ``self || expr2``.
+            Return a new expression, formed by ``self || expr``.
 
-            :param expr2: Right-hand-side expression to 'or'
-            :type expr2: :class:`ExprTree`
-            :return: A new expression, defined to be ``self || expr2``.
+            :param expr: Right-hand-side expression to 'or'
+            :type expr: :class:`ExprTree`
+            :return: A new expression, defined to be ``self || expr``.
             :rtype: :class:`ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("is_", &ExprTreeHolder::__is__,
             R"C0ND0R(
             Logical comparison using the 'meta-equals' operator.
 
-            :param expr2: Right-hand-side expression to ``=?=`` operator.
-            :type expr2: :class:`ExprTree`
-            :return: A new expression, formed by ``self =?= expr2``.
+            :param expr: Right-hand-side expression to ``=?=`` operator.
+            :type expr: :class:`ExprTree`
+            :return: A new expression, formed by ``self =?= expr``.
             :rtype: :class:`ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("isnt_", &ExprTreeHolder::__isnt__,
             R"C0ND0R(
             Logical comparison using the 'meta-not-equals' operator.
 
-            :param expr2: Right-hand-side expression to ``=!=`` operator.
-            :type expr2: :class:`ExprTree`
-            :return: A new expression, formed by ``self =!= expr2``.
+            :param expr: Right-hand-side expression to ``=!=`` operator.
+            :type expr: :class:`ExprTree`
+            :return: A new expression, formed by ``self =!= expr``.
             :rtype: :class:`ExprTree`
-            )C0ND0R")
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("expr")))
         .def("__int__", &ExprTreeHolder::toLong, "Converts expression to an integer (evaluating as necessary).")
         .def("__float__", &ExprTreeHolder::toDouble, "Converts expression to a float (evaluating as necessary).")
         PYTHON_OPERATOR(ge)

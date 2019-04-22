@@ -371,14 +371,15 @@ export_dc_tool()
         R"C0ND0R(
         Send a command to an HTCondor daemon specified by a location ClassAd.
 
-        :param ad: Specifies the location of the daemon (typically, found by using :meth:`Collector.locate`.
+        :param ad: Specifies the location of the daemon (typically, found by using :meth:`Collector.locate`).
         :type ad: :class:`~classad.ClassAd`
         :param dc: A command type
         :type dc: :class:`DaemonCommands`
         :param str target: An additional command to send to a daemon. Some commands
             require additional arguments; for example, sending ``DaemonOff`` to a
             ``condor_master`` requires one to specify which subsystem to turn off.
-        )C0ND0R"))
+        )C0ND0R",
+        boost::python::args("ad", "dc", "target")))
         ;
 
     def("send_alive", send_alive,
@@ -433,7 +434,8 @@ export_dc_tool()
         :param level: The log category and formatting indicator. Multiple LogLevel enum attributes may be OR'd together.
         :type level: :class:`LogLevel`
         :param str msg: A message to log.
-        )C0ND0R")
+        )C0ND0R",
+        boost::python::args("level", "msg"))
         ;
 
     if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL); }
