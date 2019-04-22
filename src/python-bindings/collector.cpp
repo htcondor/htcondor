@@ -270,7 +270,7 @@ struct Collector {
 
 
     // TODO: this has crappy error handling when there are multiple collectors.
-    void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=false)
+    void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=true)
     {
         m_collectors->rewind();
         Daemon *collector;
