@@ -5393,10 +5393,10 @@ int SubmitHash::SetRequirements()
 				classad::References methods;    // methods referened by TransferInputFiles that are not in TransferPlugins
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
-				// xferplugs is of the form "TAR:mytarplugin; HTTP,HTTPS:myhttplugin"
+				// xferplugs is of the form "TAR=mytarplugin; HTTP,HTTPS=myhttplugin"
 				StringTokenIterator plugs(xferplugs.c_str(), 100, ";");
 				for (const char * plug = plugs.first(); plug != NULL; plug = plugs.next()) {
-					const char * colon = strchr(plug, ':');
+					const char * colon = strchr(plug, '=');
 					if (colon) {
 						std::string methods(plug, colon - plug);
 						add_attrs_from_string_tokens(jobmethods, methods);

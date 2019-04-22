@@ -5132,7 +5132,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 
 	StringTokenIterator plugins(job_plugins, 100, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
-		const char * colon = strchr(plug, ':');
+		const char * colon = strchr(plug, '=');
 		if (colon) {
 			MyString methods; methods.set(plug, colon - plug);
 
@@ -5152,8 +5152,8 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 			multifile_plugins_enabled = true;
 			// add the plugin to the transfer list
 		} else {
-			dprintf(D_ALWAYS, "FILETRANSFER: no ':' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
-			e.pushf("FILETRANSFER", 1, "no ':' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+			dprintf(D_ALWAYS, "FILETRANSFER: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
 		}
 	}
 
