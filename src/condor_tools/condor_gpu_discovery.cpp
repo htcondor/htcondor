@@ -1090,7 +1090,7 @@ main( int argc, const char** argv)
 			cudart_library = nvcuda_library;
 		} else {
 			if ( ! cuda_handle) {
-				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %d\n", nvcuda_library, dlerror());
+				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %s\n", nvcuda_library, dlerror());
 			} else {
 				dlclose(cuda_handle);
 				cuda_handle = NULL;
