@@ -768,6 +768,9 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				MyString stepStr( _temp );
 				stepStr.trim();
 				cur_step = atoi( stepStr.Value() );
+				if (cur_step == 0) {
+					return false;
+				}
 			}
 				//
 				// Now that we have the denominator, put the numerator back
@@ -873,7 +876,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		 		// Make sure this value isn't alreay added and 
 		 		// that it falls in our step listing for the range
 		 		//
-			if ( ( ( temp % cur_step ) == 0 ) && !this->contains( *list, temp ) ) {
+			if (((temp % cur_step) == 0) && !this->contains(*list, temp)) {
 				list->add( temp );
 		 	}
 		} // FOR
