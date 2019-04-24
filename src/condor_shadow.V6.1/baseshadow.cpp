@@ -981,7 +981,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.run_remote_rusage = run_remote_rusage;
 		event.total_remote_rusage = run_remote_rusage;
-	
+
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -997,7 +997,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
-		event.toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1078,7 +1079,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	}
 #endif
 
-	event.toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

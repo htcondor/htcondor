@@ -32,6 +32,7 @@
 
 #include "misc_utils.h"
 #include "utc_time.h"
+#include "ToE.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -3056,7 +3057,7 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 
 
 // ----- JobAbortedEvent class
-JobAbortedEvent::JobAbortedEvent (void)
+JobAbortedEvent::JobAbortedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_JOB_ABORTED;
 	reason = NULL;
@@ -3064,9 +3065,23 @@ JobAbortedEvent::JobAbortedEvent (void)
 
 JobAbortedEvent::~JobAbortedEvent(void)
 {
-	delete[] reason;
+	if( reason ) {
+		delete[] reason;
+	}
+	if( toeTag ) {
+		delete toeTag;
+	}
 }
 
+void
+JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
+	if(! tt) { return; }
+	toeTag = new ToE::Tag();
+	if(! ToE::decode( tt, * toeTag )) {
+		delete toeTag;
+		toeTag = NULL;
+	}
+}
 
 void
 JobAbortedEvent::setReason( const char* reason_str )
@@ -3098,6 +3113,15 @@ JobAbortedEvent::formatBody( std::string &out )
 	}
 	if( reason ) {
 		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+			return false;
+		}
+	}
+	if( toeTag ) {
+		if( formatstr_cat( out,
+		  "\n\tJob terminated by %s at %s (using method %d: %s).\n",
+		    toeTag->who.c_str(), toeTag->when.c_str(),
+		    toeTag->howCode, toeTag->how.c_str() )
+		  < 0 ) {
 			return false;
 		}
 	}
@@ -3202,6 +3226,14 @@ TerminatedEvent::~TerminatedEvent(void)
 	if( toeTag ) { delete toeTag; }
 }
 
+void
+TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
+	// We should eventually fix this so that it copies what it wants
+	// from the ClassAd to member variables, instead.
+	if( tt ) {
+		toeTag = new classad::ClassAd( * tt );
+	}
+}
 
 void
 TerminatedEvent::setCoreFile( const char* core_name )
@@ -3538,8 +3570,6 @@ int TerminatedEvent::initUsageFromAd(const classad::ClassAd& ad)
 JobTerminatedEvent::JobTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_JOB_TERMINATED;
-	pusageAd = NULL;
-	toeTag = NULL;
 }
 
 
@@ -3556,40 +3586,17 @@ JobTerminatedEvent::formatBody( std::string &out )
 	}
 	bool rv = TerminatedEvent::formatBody( out, "Job" );
 	if( rv && toeTag != NULL ) {
-		std::string who;
-		toeTag->EvaluateAttrString( "Who", who );
-		std::string how;
-		toeTag->EvaluateAttrString( "How", how );
-		long long when;
-		toeTag->EvaluateAttrNumber( "When", when );
-		unsigned int howCode;
-		toeTag->EvaluateAttrNumber( "HowCode", (int &)howCode );
-
-		// Convert when to a human-readable string.  Should probably be its
-		// own little helper function somewhere, especially since we should
-		// respect the time format flag once local times round-trip between
-		// different machines (that is, once we write timezone data).
-
-		char whenStr[ISO8601_DateAndTimeBufferMax];
-		struct tm eventTime;
-		// time_t is a signed long int on all Linux platforms.  We send
-		// it over the wire via ClassAds in a (signed) long long, which
-		// is 64 bits on all platforms.  This conversion should be a no
-		// op on 64-bit platforms, but will correctly preserve the sign
-		// bit on 32-bit platforms.
-		time_t ttWhen = (time_t)when;
-		gmtime_r( & ttWhen, & eventTime );
-		time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
-			ISO8601_DateAndTime, true );
-
-		if( howCode == 0 ) {
-			if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", whenStr ) < 0 ) {
-				return false;
-			}
-		} else {
-			if( formatstr_cat( out, "\n\tJob terminated by %s at %s (using method %d: %s).\n",
-			  who.c_str(), whenStr, howCode, how.c_str() ) < 0 ) {
-				return false;
+		ToE::Tag tag;
+		if( ToE::decode( toeTag, tag ) ) {
+			if( tag.howCode == 0 ) {
+				if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
+					return false;
+				}
+			} else {
+				if( formatstr_cat( out, "\n\tJob terminated by %s at %s (using method %d: %s).\n",
+					tag.who.c_str(), tag.when.c_str(), tag.howCode, tag.how.c_str() ) < 0 ) {
+					return false;
+				}
 			}
 		}
 	}
@@ -3626,11 +3633,10 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 			}
 			toeTag = new classad::ClassAd();
 
-			// See line 697 of condor_starter.V6.1/os_proc.cpp, which implies
-			// that this should be its own little helper function somewhere.
-			toeTag->InsertAttr( "Who", "itself" );
-			toeTag->InsertAttr( "How", "OF_ITS_OWN_ACCORD" );
-			toeTag->InsertAttr( "HowCode", 0 );
+			toeTag->InsertAttr( "Who", ToE::itself );
+			toeTag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+			toeTag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
+
 			// This code gets more complicated if we don't assume UTC i/o.
 			struct tm eventTime;
 			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
@@ -3768,6 +3774,8 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 	}
 
 	if( toeTag ) {
+	    // FIXME: does InserAttr() make a copy, or does it own the pointer
+	    // now, and we need to make a copy of toeTag?
 		if(! myad->InsertAttr("ToE", toeTag)) {
 			delete myad;
 			return NULL;

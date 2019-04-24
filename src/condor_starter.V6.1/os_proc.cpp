@@ -50,6 +50,7 @@
 #include "classad_oldnew.h"
 #include "singularity.h"
 #include "find_child_proc.h"
+#include "ToE.h"
 
 #include <sstream>
 
@@ -694,64 +695,56 @@ OsProc::JobReaper( int pid, int status )
 	if (JobPid == pid) {
 		// Write the appropriate ToE tag if the process exited of its own accord.
 		if(! requested_exit) {
-			// Probably could use some #defines here.
-			classad::ClassAd * toeTag = new classad::ClassAd();
-			toeTag->InsertAttr( "Who", "itself" );
-			toeTag->InsertAttr( "How", "OF_ITS_OWN_ACCORD" );
-			toeTag->InsertAttr( "HowCode", 0 );
+			// This ClassAd gets delete()d by toe when toe goes out of scope,
+			// because Insert() transfers ownership.
+			classad::ClassAd * tag = new classad::ClassAd();
+			tag->InsertAttr( "Who", ToE::itself );
+			tag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+			tag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
 			struct timeval exitTime;
-            condor_gettimestamp( exitTime );
-			toeTag->InsertAttr( "When", (long long)exitTime.tv_sec );
+			condor_gettimestamp( exitTime );
+			tag->InsertAttr( "When", (long long)exitTime.tv_sec );
 
 			classad::ClassAd toe;
-			toe.Insert( "ToE", toeTag );
-
-			// Append the toe ad to the .job.ad file.  This avoids a race
-			// condition where the startd replaces the .update.ad with a
-			// new after the ToE tag is written but before the post script
-			// gets a chance to look at it.  Using append mode means that
-			// we don't need locking to ensure the job ad file remains
-			// syntactically valid.  (The last writer will win, but the
-			// only case where that could be wrong is if the starter sees
-			// the job terminate of its own accord but the startd is
-			// ordered to terminate the job between when the starter writes
-			// this file and when the post-script runs.)
+			toe.Insert( "ToE", tag );
 
 			std::string jobAdFileName;
 			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
-			// On Windows, the C runtime library emulates append mode, which
-			// means it won't work for the purpose we're using it for.  We
-			// should probably wrap this knowledge up in a function somewhere
-			// if we aren't going to fixe safefile.
-#ifndef WIN32
-			FILE * jobAdFile = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "a" );
-#else
-			FILE * jobAdFile = NULL;
-			HANDLE hf = CreateFile( jobAdFileName.c_str(),
-				FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-				NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-			if( hf == INVALID_HANDLE_VALUE ) {
-				dprintf( D_ALWAYS, "Failed to open .job.ad file: %d\n", GetLastError() );
-				jobAdFile = NULL;
-			} else {
-				int fd = _open_osfhandle((intptr_t)hf, O_APPEND);
-				if( fd == -1 ) {
-					dprintf( D_ALWAYS, "Failed to _open .job.ad file: %d\n", _doserrno );
-				}
-				jobAdFile = fdopen( fd, "a" );
-			}
-#endif
-			if(! jobAdFile) {
-				dprintf( D_ALWAYS, "Failed to write ToE tag to .job.ad file (%d): %s\n", errno, strerror(errno) );
-			} else {
-				fPrintAd( jobAdFile, toe );
-				fclose( jobAdFile );
-			}
+			ToE::writeTag( & toe, jobAdFileName );
 
 			// Update the schedd's copy of the job ad.
 			ClassAd updateAd( toe );
 			Starter->publishUpdateAd( & updateAd );
 			Starter->jic->periodicJobUpdate( & updateAd, true );
+		} else {
+			// If we didn't write a ToE, check to see if the startd did.
+			std::string jobAdFileName;
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
+			FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
+			if(! f) {
+				dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
+			} else {
+				int error;
+				bool isEof;
+				classad::ClassAd jobAd;
+				if( InsertFromFile( f, jobAd, isEof, error ) ) {
+					classad::ClassAd * tag =
+						dynamic_cast<classad::ClassAd *>(jobAd.Lookup( "ToE" ));
+					if( tag ) {
+						// Don't let jobAd delete tag; toe will delete when it
+						// goes out of scope.
+						jobAd.Remove( "ToE" );
+
+						classad::ClassAd toe;
+						toe.Insert( "ToE", tag );
+
+						// Update the schedd's copy of the job ad.
+						ClassAd updateAd( toe );
+						Starter->publishUpdateAd( & updateAd );
+						Starter->jic->periodicJobUpdate( & updateAd, true );
+					}
+				}
+			}
 		}
 
 			// clear out num_pids... everything under this process
