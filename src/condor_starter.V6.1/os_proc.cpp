@@ -75,6 +75,7 @@ OsProc::OsProc( ClassAd* ad )
 	dumped_core = false;
 	job_not_started = false;
 	m_using_priv_sep = false;
+	singReaperId = -1;
 	UserProc::initialize();
 }
 
