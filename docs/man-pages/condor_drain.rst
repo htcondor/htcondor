@@ -4,7 +4,7 @@
 ===============
 
 Control draining of an execute machine
-:index:`condor_drain;HTCondor commands<single: condor_drain;HTCondor commands>`\ :index:`condor_drain command<single: condor_drain command>`
+:index:`condor_drain<single: condor_drain; HTCondor commands>`\ :index:`condor_drain command`
 
 Synopsis
 --------

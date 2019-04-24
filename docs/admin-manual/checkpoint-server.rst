@@ -3,9 +3,9 @@
 The Checkpoint Server
 =====================
 
-:index:`checkpoint server;installation<single: checkpoint server;installation>`
-:index:`installation;checkpoint server<single: installation;checkpoint server>`
-:index:`condor_ckpt_server daemon<single: condor_ckpt_server daemon>`
+:index:`checkpoint server<single: checkpoint server; installation>`
+:index:`installation<single: installation; checkpoint server>`
+:index:`condor_ckpt_server daemon`
 
 A Checkpoint Server maintains a repository for checkpoint files. Within
 HTCondor, checkpoints may be produced only for standard universe jobs.
@@ -42,7 +42,7 @@ are two problems that can and will occur:
    cannot be retrieved, and it will either have to be restarted from the
    beginning, or the job will wait for the server to come back on line.
    This behavior is controlled with the ``MAX_DISCARDED_RUN_TIME``
-   :index:`MAX_DISCARDED_RUN_TIME<single: MAX_DISCARDED_RUN_TIME>` configuration variable. This
+   :index:`MAX_DISCARDED_RUN_TIME` configuration variable. This
    variable represents the maximum amount of CPU time the job is willing
    to discard, by starting a job over from its beginning if the
    checkpoint server is not responding to requests.
@@ -76,6 +76,7 @@ The files relevant to a checkpoint server are
             etc/examples/condor_config.local.ckpt.server
 
 ``condor_ckpt_server`` is the checkpoint server binary.
+
 ``condor_condor_config.local.ckpt.server`` is an example configuration
 for a checkpoint server. The settings embodied in this file must be
 customized with site-specific information.
@@ -87,14 +88,14 @@ There are three steps necessary towards running a checkpoint server:
 #. Configure the pool to use the checkpoint server.
 
  Configure the Checkpoint Server
-    :index:`configuration of;checkpoint server<single: configuration of;checkpoint server>`
+    :index:`configuration of<single: configuration of; checkpoint server>`
 
     Place settings in the local configuration file of the checkpoint
     server. The file ``etc/examples/condor_config.local.ckpt.server``
     contains a template for the needed configuration. Insert these into
     the local configuration file of the checkpoint server machine.
 
-    The value of ``CKPT_SERVER_DIR`` :index:`CKPT_SERVER_DIR<single: CKPT_SERVER_DIR>` must
+    The value of ``CKPT_SERVER_DIR`` :index:`CKPT_SERVER_DIR` must
     be customized. This variable defines the location of checkpoint
     files. It is better if this location is within a very fast local
     file system, and preferably a RAID. The speed of this file system
@@ -103,7 +104,7 @@ There are three steps necessary towards running a checkpoint server:
 
     The other optional variables are:
 
-     ``DAEMON_LIST`` :index:`DAEMON_LIST<single: DAEMON_LIST>`
+     ``DAEMON_LIST`` :index:`DAEMON_LIST`
         Described in section \ `Configuration
         Macros <../admin-manual/configuration-macros.html>`__. To have
         the checkpoint server managed by the *condor\_master*, the
@@ -119,12 +120,12 @@ There are three steps necessary towards running a checkpoint server:
     page \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__.
 
-     ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG<single: CKPT_SERVER_LOG>`
+     ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG`
         The location of the checkpoint server log.
-     ``MAX_CKPT_SERVER_LOG`` :index:`MAX_CKPT_SERVER_LOG<single: MAX_CKPT_SERVER_LOG>`
+     ``MAX_CKPT_SERVER_LOG`` :index:`MAX_CKPT_SERVER_LOG`
         Sets the maximum size of the checkpoint server log, before it is
         saved and the log file restarted.
-     ``CKPT_SERVER_DEBUG`` :index:`CKPT_SERVER_DEBUG<single: CKPT_SERVER_DEBUG>`
+     ``CKPT_SERVER_DEBUG`` :index:`CKPT_SERVER_DEBUG`
         Regulates the amount of information printed in the log file.
         Currently, the only debug level supported is ``D_ALWAYS``.
 
@@ -135,7 +136,7 @@ There are three steps necessary towards running a checkpoint server:
     any machine with administrator access to the pool. See
     section \ `Security <../admin-manual/security.html>`__ on
     page \ `Security <../admin-manual/security.html>`__ for full details
-    about IP/host-based security in HTCondor.
+    about security in HTCondor.
 
     Note that when the *condor\_ckpt\_server* starts up, it will
     immediately inspect any checkpoint files in the location described
@@ -147,10 +148,10 @@ There are three steps necessary towards running a checkpoint server:
     variables to let the other machines in the pool know about the new
     server:
 
-     ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER<single: USE_CKPT_SERVER>`
+     ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER`
         A boolean value that should be set to ``True`` to enable the use
         of the checkpoint server.
-     ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST<single: CKPT_SERVER_HOST>`
+     ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST`
         Provides the full host name of the machine that is now running
         the checkpoint server.
 
@@ -173,7 +174,7 @@ There are three steps necessary towards running a checkpoint server:
 Configuring the Pool to Use Multiple Checkpoint Servers
 -------------------------------------------------------
 
-:index:`multiple servers;checkpoint server<single: multiple servers;checkpoint server>`
+:index:`multiple servers<single: multiple servers; checkpoint server>`
 
 An HTCondor pool may use multiple checkpoint servers. The deployment of
 checkpoint servers across the network improves the performance of
@@ -191,11 +192,11 @@ performance benefits to deploying multiple checkpoint servers:
 With multiple checkpoint servers running in the pool, the following
 configuration changes are required to make them active.
 
-Set ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER<single: USE_CKPT_SERVER>` to ``True`` (the
+Set ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER` to ``True`` (the
 default) on all submitting machines where HTCondor jobs should use a
 checkpoint server. Additionally, variable
 ``STARTER_CHOOSES_CKPT_SERVER``
-:index:`STARTER_CHOOSES_CKPT_SERVER<single: STARTER_CHOOSES_CKPT_SERVER>` should be set to ``True``
+:index:`STARTER_CHOOSES_CKPT_SERVER` should be set to ``True``
 (the default) on these submitting machines. When ``True``, this variable
 specifies that the checkpoint server specified by the machine running
 the job should be used instead of the checkpoint server specified by the
@@ -208,7 +209,7 @@ on which it is running, instead of the server closest to the submitting
 machine. For convenience, set these parameters in the global
 configuration file.
 
-Second, set ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST<single: CKPT_SERVER_HOST>` on each
+Second, set ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST` on each
 machine. This identifies the full host name of the checkpoint server
 machine, and should be the host name of the nearest server to the
 machine. In the case of multiple checkpoint servers, set this in the
@@ -322,6 +323,6 @@ the pool using the configuration variables ``APPEND_REQ_STANDARD`` or
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for more details.
-:index:`installation;checkpoint server<single: installation;checkpoint server>`
+:index:`installation<single: installation; checkpoint server>`
 
       

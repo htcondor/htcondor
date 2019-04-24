@@ -4,7 +4,7 @@
 ==================
 
 continue suspended jobs from the HTCondor queue
-:index:`condor_continue;HTCondor commands<single: condor_continue;HTCondor commands>`\ :index:`condor_continue command<single: condor_continue command>`
+:index:`condor_continue<single: condor_continue; HTCondor commands>`\ :index:`condor_continue command`
 
 Synopsis
 --------

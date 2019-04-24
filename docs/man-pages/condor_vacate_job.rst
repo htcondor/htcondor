@@ -4,7 +4,7 @@
 =====================
 
 vacate jobs in the HTCondor queue from the hosts where they are running
-:index:`condor_vacate_job;HTCondor commands<single: condor_vacate_job;HTCondor commands>`\ :index:`condor_vacate_job command<single: condor_vacate_job command>`
+:index:`condor_vacate_job<single: condor_vacate_job; HTCondor commands>`\ :index:`condor_vacate_job command`
 
 Synopsis
 --------

@@ -4,8 +4,8 @@
 ===================
 
 Display information about routed jobs in the queue
-:index:`condor_router_q;Job Router commands<single: condor_router_q;Job Router commands>`
-:index:`condor_router_q<single: condor_router_q>`
+:index:`condor_router_q<single: condor_router_q; Job Router commands>`
+:index:`condor_router_q`
 
 Synopsis
 --------

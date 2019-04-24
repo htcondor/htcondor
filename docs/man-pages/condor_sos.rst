@@ -4,7 +4,7 @@
 =============
 
 Issue a command that will be serviced with a higher priority
-:index:`condor_sos;HTCondor commands<single: condor_sos;HTCondor commands>`\ :index:`condor_sos command<single: condor_sos command>`
+:index:`condor_sos<single: condor_sos; HTCondor commands>`\ :index:`condor_sos command`
 
 Synopsis
 --------

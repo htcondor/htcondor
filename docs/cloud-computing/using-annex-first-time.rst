@@ -1,7 +1,5 @@
-      
-
-Using *condor\_annex* for the First Time
-========================================
+Using *condor_annex* for the First Time
+=======================================
 
 This guide assumes that you already have an AWS account, as well as a
 log-in account on a Linux machine with a public address and a system
@@ -11,12 +9,12 @@ with an emphasized title) take place on the Linux machine. You can
 perform the web-based steps from wherever is convenient, although it
 will save you some copying if you run the browser on the Linux machine.
 
-Before using *condor\_annex* for the first time, you’ll have to do three
+Before using *condor_annex* for the first time, you’ll have to do three
 things:
 
 #. install a personal HTCondor
 #. prepare your AWS account
-#. configure *condor\_annex*
+#. configure *condor_annex*
 
 Instructions for each follow.
 
@@ -24,7 +22,7 @@ Install a Personal HTCondor
 ---------------------------
 
 We recommend that you install a personal HTCondor to make use of
-*condor\_annex*; it’s simpler to configure that way. These instructions
+*condor_annex*; it’s simpler to configure that way. These instructions
 assume version 8.7.8 of HTCondor, but should work the 8.8.x series as
 well; change ‘8.7.8’ in the instructions wherever it appears.
 
@@ -91,11 +89,7 @@ You should also try to submit a job; create the following file. (We’ll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
-**
-
-::
-
-    ~/condor-annex/sleep.submit
+*~/condor-annex/sleep.submit*
 
 ::
 
@@ -130,15 +124,11 @@ Configure Public Interface
 
 The default personal HTCondor uses the “loopback” interface, which
 basically just means it won’t talk to anyone other than itself. For
-*condor\_annex* to work, your personal HTCondor needs to use the Linux
+*condor_annex* to work, your personal HTCondor needs to use the Linux
 machine’s public interface. In most cases, that’s as simple as adding
 the following lines:
 
-**
-
-::
-
-    ~/condor-8.7.8/local/condor_config.local
+*~/condor-8.7.8/local/condor_config.local*
 
 ::
 
@@ -164,11 +154,7 @@ communications to AWS.
 
 Add the following lines:
 
-**
-
-::
-
-    ~/condor-8.7.8/local/condor_config.local
+*~/condor-8.7.8/local/condor_config.local*
 
 ::
 
@@ -202,11 +188,7 @@ port, then you don’t have to do anything. Otherwise, you’ll need to add
 a line like the following, replacing ‘9618’ with whatever port the
 administrator opened for you.
 
-**
-
-::
-
-    ~/condor-8.7.8/local/condor_config.local
+*~/condor-8.7.8/local/condor_config.local*
 
 ::
 
@@ -224,13 +206,13 @@ Force HTCondor to read the new configuration by restarting it:
 Prepare your AWS account
 ------------------------
 
-Since v8.7.1, the *condor\_annex* tool has included a -setup command
+Since v8.7.1, the *condor_annex* tool has included a -setup command
 which will prepare your AWS account.
 
-If, and only if, you will be using *condor\_annex* from an EC2 instance
+If, and only if, you will be using *condor_annex* from an EC2 instance
 to which you have assigned an IAM role with sufficient
 privileges\ `:sup:`4` <ref65.html#fn4x7>`__ , you may skip down to the
-**** heading after running the following command.
+**Checking the Setup** heading after running the following command.
 
 ::
 
@@ -246,11 +228,11 @@ Otherwise, continue by obtaining an access key, as follows.
 Obtaining an Access Key
 '''''''''''''''''''''''
 
-In order to use AWS, *condor\_annex* needs a pair of security tokens
+In order to use AWS, *condor_annex* needs a pair of security tokens
 (like a user name and password). Like a user name, the “access key” is
 (more or less) public information; the corresponding “secret key” is
 like a password and must be kept a secret. To help keep both halves
-secret, *condor\_annex* (and HTCondor) are never told these keys
+secret, *condor_annex* (and HTCondor) are never told these keys
 directly; instead, you tell HTCondor which file to look in to find each
 one.
 
@@ -267,10 +249,12 @@ where the -setup command will store the rest of the data it needs.
 
 The last command ensures that only you can read or write to those files.
 
-| To donwload a new pair of security tokens for *condor\_annex* to use,
+To donwload a new pair of security tokens for *condor_annex* to use,
 go to the IAM console at the following URL; log in if you need to:
-| `https://console.aws.amazon.com/iam/home?region=us-east-1#/users <https://console.aws.amazon.com/iam/home?region=us-east-1#/users>`__
-| The following instructions assume you are logged in as a user with the
+
+`https://console.aws.amazon.com/iam/home?region=us-east-1#/users <https://console.aws.amazon.com/iam/home?region=us-east-1#/users>`__
+
+The following instructions assume you are logged in as a user with the
 privilege to create new users. (The ‘root’ user for any account has this
 privilege; other accounts may as well.)
 
@@ -293,13 +277,13 @@ privilege; other accounts may as well.)
 
 The ‘annex-user’ now has full privileges to your account.
 
-Configure *condor\_annex*
--------------------------
+Configure *condor_annex*
+------------------------
 
 The following command will setup your AWS account. It will create a
 number of persistent components, none of which will cost you anything to
 keep around. These components can take quite some time to create;
-*condor\_annex* checks each for completion every ten seconds and prints
+*condor_annex* checks each for completion every ten seconds and prints
 an additional dot (past the first three) when it does so, to let you
 know that everything’s still working.
 
@@ -326,23 +310,26 @@ procedure completed successfully by running the following command.
     Checking for instance profile... OK. 
     Checking for security group... OK. 
 
-You’re ready to run *condor\_annex*!
+You’re ready to run *condor_annex*!
 
 Undoing the Setup Command
 '''''''''''''''''''''''''
 
-| There is not as yet a way to undo the setup command automatically, but
+There is not as yet a way to undo the setup command automatically, but
 it won’t cost you anything extra to leave your account setup for
-*condor\_annex* indefinitely. If, however, you want to be tidy, you may
+*condor_annex* indefinitely. If, however, you want to be tidy, you may
 delete the components setup created by going to the CloudFormation
 console at the following URL and deleting the entries whose names begin
 with ‘HTCondorAnnex-’:
-| `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active <https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active>`__
-| The setup procedure also creates an SSH key pair which may be useful
+
+`https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active <https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active>`__
+
+The setup procedure also creates an SSH key pair which may be useful
 for debugging; the private key was stored in
 ~/.condor/HTCondorAnnex-KeyPair.pem. To remove the corresponding public
 key from your AWS account, go to the key pair console at the following
 URL and delete the ‘HTCondorAnnex-KeyPair’ key:
-| `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`__
+
+`https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`__
 
       

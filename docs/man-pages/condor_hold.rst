@@ -4,7 +4,7 @@
 ==============
 
 put jobs in the queue into the hold state
-:index:`condor_hold;HTCondor commands<single: condor_hold;HTCondor commands>`\ :index:`condor_hold command<single: condor_hold command>`
+:index:`condor_hold<single: condor_hold; HTCondor commands>`\ :index:`condor_hold command`
 
 Synopsis
 --------

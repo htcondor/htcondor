@@ -1,29 +1,29 @@
       
 
-*condor\_who*
-=============
+*condor_who*
+============
 
 Display information about owners of jobs and jobs running on an execute
 machine
-:index:`condor_who;HTCondor commands<single: condor_who;HTCondor commands>`\ :index:`condor_who command<single: condor_who command>`
+:index:`condor_who<single: condor_who; HTCondor commands>`\ :index:`condor_who command`
 
 Synopsis
 --------
 
-**condor\_who** [*help options*\ ] [*address options*\ ] [*display
+**condor_who** [*help options*\ ] [*address options*\ ] [*display
 options*\ ]
 
 Description
 -----------
 
-*condor\_who* queries and displays information about the user that owns
+*condor_who* queries and displays information about the user that owns
 the jobs running on a machine. It is intended to be run on an execute
 machine.
 
-The options that may be supplied to *condor\_who* belong to three
+The options that may be supplied to *condor_who* belong to three
 groups:
 
--  **Help options** provide information about the *condor\_who* tool.
+-  **Help options** provide information about the *condor_who* tool.
 -  **Address options** allow destination specification for query.
 -  **Display options** control the formatting and which of the queried
    information to display.
@@ -31,22 +31,22 @@ groups:
 At any time, only one **help option** and one **address option** may be
 specified. Any number of **display options** may be specified.
 
-*condor\_who* obtains its information about jobs by talking to one or
-more *condor\_startd* daemons. So, *condor\_who* must identify the
-command port of any *condor\_startd* daemons. An **address option**
+*condor_who* obtains its information about jobs by talking to one or
+more *condor_startd* daemons. So, *condor_who* must identify the
+command port of any *condor_startd* daemons. An **address option**
 provides this information. If no **address option** is given on the
-command line, then *condor\_who* searches using this ordering:
+command line, then *condor_who* searches using this ordering:
 
 #. A defined value of the environment variable ``CONDOR_CONFIG``
    specifies the directory where log and address files are to be scanned
    for needed information.
-#. With the aim of finding all *condor\_startd* daemons, *condor\_who*
+#. With the aim of finding all *condor_startd* daemons, *condor_who*
    utilizes the same algorithm it would using the **-allpids** option.
    The Linux *ps* or the Windows *tasklist* program obtains all PIDs. As
    Linux root or Windows administrator, the Linux *lsof* or the Windows
    *netstat* identifies open sockets and from there the PIDs of listen
    sockets. Correlating the two lists of PIDs results in identifying the
-   command ports of all *condor\_startd* daemons.
+   command ports of all *condor_startd* daemons.
 
 Options
 -------
@@ -62,16 +62,16 @@ Options
  **-verbose**
     (help option) Display PIDs and addresses of daemons
  **-address **\ *hostaddress*
-    (address option) Identify the *condor\_startd* host address to query
+    (address option) Identify the *condor_startd* host address to query
  **-allpids**
-    (address option) Query all local *condor\_startd* daemons
+    (address option) Query all local *condor_startd* daemons
  **-logdir **\ *directoryname*
     (address option) Specifies the directory containing log and address
-    files that *condor\_who* will scan to search for command ports of
-    *condor\_start* daemons to query
+    files that *condor_who* will scan to search for command ports of
+    *condor_start* daemons to query
  **-pid **\ *PID*
     (address option) Use the given *PID* to identify the
-    *condor\_startd* daemon to query
+    *condor_startd* daemon to query
  **-long**
     (display option) Display entire ClassAds
  **-wide**
@@ -102,8 +102,7 @@ Options
     conversion specifiers may be specified, but an attribute is still
     required. Include a backslash followed by an ‘n’ to specify a line
     break.
- **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or
-**-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
     (display option) Display attribute(s) or expression(s) formatted in
     a default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -140,7 +139,7 @@ Options
 
     Use **-af:lrng** to get -long equivalent format.
 
-    | The newline and comma characters may not be used together. The
+    The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
 Examples
@@ -190,7 +189,7 @@ Example 2 Verbose sample output.
 Exit Status
 -----------
 
-*condor\_who* will exit with a status value of 0 (zero) upon success,
+*condor_who* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
 Author

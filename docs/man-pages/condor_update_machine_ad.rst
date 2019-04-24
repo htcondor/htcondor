@@ -4,7 +4,7 @@
 =============================
 
 update a machine ClassAd
-:index:`condor_update_machine_ad;HTCondor commands<single: condor_update_machine_ad;HTCondor commands>`\ :index:`condor_update_machine_ad command<single: condor_update_machine_ad command>`
+:index:`condor_update_machine_ad<single: condor_update_machine_ad; HTCondor commands>`\ :index:`condor_update_machine_ad command`
 
 Synopsis
 --------

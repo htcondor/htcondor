@@ -3,7 +3,7 @@
 Contributions and Acknowledgments
 =================================
 
-:index:`contributions;HTCondor<single: contributions;HTCondor>`
+:index:`contributions<single: contributions; HTCondor>`
 
 The quality of the HTCondor project is enhanced by the contributions of
 external organizations. We gratefully acknowledge the following
@@ -48,7 +48,7 @@ wording:
    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
    EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-:index:`acknowledgments;HTCondor<single: acknowledgments;HTCondor>`
+:index:`acknowledgments<single: acknowledgments; HTCondor>`
 
 The HTCondor project wishes to acknowledge the following:
 

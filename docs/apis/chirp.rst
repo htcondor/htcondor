@@ -3,7 +3,7 @@
 Chirp
 =====
 
-:index:`Chirp;API<single: Chirp;API>` :index:`Chirp API<single: Chirp API>`
+:index:`Chirp<single: Chirp; API>` :index:`Chirp API`
 
 Chirp is a wire protocol and API that supports communication between a
 running job and a Chirp server. The HTCondor system provides a Chirp
@@ -23,7 +23,7 @@ submit description file:
 This places the needed attribute into the job ClassAd.
 
 The Chirp protocol is fully documented at
-`http://www3.nd.edu/ ccl/software/chirp <http://www3.nd.edu/~ccl/software/chirp>`__.
+`http://ccl.cse.nd.edu/software/chirp/ <http://ccl.cse.nd.edu/software/chirp/>`__.
 
 To provide easier access to this wire protocol, the *condor\_chirp*
 command line tool is shipped with HTCondor. This tool provides full

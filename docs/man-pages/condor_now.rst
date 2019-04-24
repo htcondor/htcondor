@@ -4,7 +4,7 @@
 =============
 
 Start a job now.
-:index:`condor_now;HTCondor commands<single: condor_now;HTCondor commands>`\ :index:`condor_now ommand<single: condor_now ommand>`
+:index:`condor_now<single: condor_now; HTCondor commands>`\ :index:`condor_now ommand`
 
 Synopsis
 --------
@@ -12,6 +12,7 @@ Synopsis
 **condor\_now** **-help**
 
 **condor\_now** [**-name  **\ **] [**-debug**\ ] *now-job* *vacate-job*
+[*vacate-job+*\ ]
 
 Description
 -----------
@@ -20,6 +21,11 @@ Description
 immediately vacated; after it terminates, if the schedd still has the
 claim to the vacated job’s slot – and it usually will – the schedd will
 immediately start the now-job on that slot.
+
+If you specify multiple *vacate-job*\ s, each will be immediately
+vacated; after they all terminate, the schedd will try to coalesce their
+slots into a single, larger, slot and then use that slot to run the
+now-job.
 
 You must specify each job using both the cluster and proc IDs.
 

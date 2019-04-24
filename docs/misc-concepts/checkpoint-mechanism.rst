@@ -3,7 +3,7 @@
 HTCondor’s Checkpoint Mechanism
 ===============================
 
-:index:`checkpoint<single: checkpoint>`
+:index:`checkpoint`
 
 A checkpoint is a snapshot of the current state of a program, taken in
 such a way that the program can be restarted from that state at a later
@@ -32,7 +32,7 @@ Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
 page \ `Running a Job: the Steps To
 Take <../users-manual/running-a-job-steps.html>`__ for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
-services. :index:`implementation;checkpoint<single: implementation;checkpoint>`
+services. :index:`implementation<single: implementation; checkpoint>`
 
 The taking of process checkpoints is implemented in the HTCondor system
 call library as a signal handler. When HTCondor sends a checkpoint
@@ -53,11 +53,11 @@ execution machine is found of the same architecture and operating
 system, the process is restored on this new machine using the
 checkpoint, and computation resumes from where it left off. Jobs that
 can not take checkpoints are preempted and restarted from the beginning.
-:index:`periodic;checkpoint<single: periodic;checkpoint>`
+:index:`periodic<single: periodic; checkpoint>`
 
 HTCondor’s taking of periodic checkpoints provides fault tolerance.
 Pools may be configured with the ``PERIODIC_CHECKPOINT``
-:index:`PERIODIC_CHECKPOINT<single: PERIODIC_CHECKPOINT>` variable, which controls when and how
+:index:`PERIODIC_CHECKPOINT` variable, which controls when and how
 often jobs which can take and use checkpoints do so periodically.
 Examples of when are never, and every three hours. When the time to take
 a periodic checkpoint occurs, the job suspends processing, takes the
@@ -80,7 +80,7 @@ When the network connection is closed, the checkpoint will be taken.
 The HTCondor checkpoint feature can also be used for any Unix process
 outside of the HTCondor batch environment. Standalone checkpoints are
 described in section \ `4.2.1 <#x49-4160004.2.1>`__.
-:index:`compression;checkpoint<single: compression;checkpoint>`
+:index:`compression<single: compression; checkpoint>`
 
 HTCondor can produce and use compressed checkpoints. Configuration
 variables (detailed in section \ `Configuration
@@ -103,7 +103,7 @@ checkpoints).
 Standalone Checkpoint Mechanism
 -------------------------------
 
-:index:`stand alone;checkpoint<single: stand alone;checkpoint>`
+:index:`stand alone<single: stand alone; checkpoint>`
 
 Using the HTCondor checkpoint library without the remote system call
 functionality and outside of the HTCondor system is known as the
@@ -218,7 +218,7 @@ function \_condor\_warning\_config().
 Checkpoint Library Interface
 ----------------------------
 
-:index:`library interface;checkpoint<single: library interface;checkpoint>`
+:index:`library interface<single: library interface; checkpoint>`
 
 A program need not be rewritten to take advantage of checkpoints.
 However, the checkpoint library provides several C entry points that

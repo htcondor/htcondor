@@ -1,5 +1,3 @@
-      
-
 Installation, Start Up, Shut Down, and Reconfiguration
 ======================================================
 
@@ -33,8 +31,8 @@ to work properly.**
 Obtaining the HTCondor Software
 -------------------------------
 
-:index:`download;installation<single: download;installation>`
-:index:`download;Unix installation<single: download;Unix installation>` :index:`download<single: download>`
+:index:`download<single: download; installation>`
+:index:`download<single: download; Unix installation>` :index:`download`
 
 The first step to installing HTCondor is to download it from the
 HTCondor web site, `http://htcondor.org/ <http://htcondor.org/>`__. The
@@ -54,30 +52,41 @@ directories:
     general information
  ``bin``
     directory which contains the distribution HTCondor user programs.
- ``bosco_install``
+
+``bosco_install``
     the Perl script used to install Bosco.
- ``condor_configure``
+
+``condor_configure``
     the Perl script used to install and configure HTCondor.
- ``condor_install``
+
+``condor_install``
     the Perl script used to install HTCondor.
- ``etc``
+
+``etc``
     directory which contains the distribution HTCondor configuration
     data.
- ``examples``
+
+``examples``
     directory containing C, Fortran and C++ example programs to run with
     HTCondor.
- ``include``
+
+``include``
     directory containing HTCondor header files.
- ``lib``
+
+``lib``
     directory which contains the distribution HTCondor libraries.
- ``libexec``
+
+``libexec``
     directory which contains the distribution HTCondor auxiliary
     programs for use internally by HTCondor.
- ``man``
+
+``man``
     directory which contains the distribution HTCondor manual pages.
- ``sbin``
+
+``sbin``
     directory containing HTCondor daemon binaries and admin tools.
- ``src``
+
+``src``
     directory containing source for some interfaces.
 
 Preparation
@@ -111,7 +120,7 @@ questions:
 
  1. What machine will be the central manager?
     One machine in your pool must be the central manager.
-    :index:`installation issues;central manager<single: installation issues;central manager>`\ Install
+    :index:`installation issues<single: installation issues; central manager>`\ Install
     HTCondor on this machine first. This is the centralized information
     repository for the HTCondor pool, and it is also the machine that
     does match-making between available machines and submitted jobs. If
@@ -142,14 +151,14 @@ questions:
     Alternatively, it can allow any machine the network allows to
     connect to a submit machine to submit jobs. If the HTCondor pool is
     behind a firewall, and all machines inside the firewall are trusted,
-    the ``ALLOW_WRITE`` :index:`ALLOW_WRITE<single: ALLOW_WRITE>` configuration entry
+    the ``ALLOW_WRITE`` :index:`ALLOW_WRITE` configuration entry
     can be set to \*/\*. Otherwise, it should be set to reflect the set
     of machines permitted to submit jobs to this pool. HTCondor tries to
     be secure by default: it is shipped with an invalid value that
     allows no machine to connect and submit jobs.
 
  3. Will HTCondor run as root or not?
-    :index:`running as root;installation<single: running as root;installation>`
+    :index:`running as root<single: running as root; installation>`
 
     We strongly recommend that the HTCondor daemons be installed and run
     as the Unix user root. Without this, HTCondor can do very little to
@@ -161,8 +170,8 @@ questions:
     as a Unix user other than root.
 
  4. Who will administer HTCondor?
-    :index:`Unix administrator;HTCondor<single: Unix administrator;HTCondor>`
-    :index:`Unix administrator<single: Unix administrator>` :index:`root;Unix user<single: root;Unix user>`
+    :index:`Unix administrator<single: Unix administrator; HTCondor>`
+    :index:`Unix administrator` :index:`root<single: root; Unix user>`
 
     Either root will be administering HTCondor directly, or someone else
     will be acting as the HTCondor administrator. If root has delegated
@@ -177,11 +186,9 @@ questions:
     policies of the HTCondor submit and execute nodes. This person will
     also receive information from HTCondor if something goes wrong with
     the pool, as described in the documentation of the ``CONDOR_ADMIN``
-    :index:`CONDOR_ADMIN<single: CONDOR_ADMIN>` configuration variable.
+    :index:`CONDOR_ADMIN` configuration variable.
 
- 5. Will you have a Unix user named condor, and will its home directory
-be shared?
-    :index:`condor;Unix user<single: condor;Unix user>`
+ 5. Will you have a Unix user named condor, and will its home directory be shared? :index:`condor<single: condor; Unix user>`
 
     To simplify installation of HTCondor, you should create a Unix user
     named condor on all machines in the pool. The HTCondor daemons will
@@ -206,9 +213,9 @@ be shared?
 
     If you choose not to create a user named condor, then you must
     specify either via the
-    :index:`CONDOR_IDS environment variable<single: CONDOR_IDS environment variable>`\ :index:`CONDOR_IDS;environment variables<single: CONDOR_IDS;environment variables>`
+    :index:`CONDOR_IDS environment variable`\ :index:`CONDOR_IDS<single: CONDOR_IDS; environment variables>`
     ``CONDOR_IDS`` environment variable or the ``CONDOR_IDS``
-    :index:`CONDOR_IDS<single: CONDOR_IDS>` config file setting which uid.gid pair
+    :index:`CONDOR_IDS` config file setting which uid.gid pair
     should be used for the ownership of various HTCondor files. See
     section \ `Security <../admin-manual/security.html>`__ on UIDs in
     HTCondor in the Administrator’s Manual for details.
@@ -218,8 +225,8 @@ be shared?
     your pool. These are ``execute``, ``spool``, ``log``, (and possibly
     ``lock``). Generally, all of them are subdirectories of a single
     machine specific directory called the local directory (specified by
-    the ``LOCAL_DIR`` :index:`LOCAL_DIR<single: LOCAL_DIR>` macro in the
-    configuration file). :index:`of directories;owner<single: of directories;owner>`\ Each
+    the ``LOCAL_DIR`` :index:`LOCAL_DIR` macro in the
+    configuration file). :index:`of directories<single: of directories; owner>`\ Each
     should be owned by the user that HTCondor is to be run as. Do not
     stage other files in any of these directories; any files not created
     by HTCondor in these directories are subject to removal.
@@ -286,10 +293,10 @@ be shared?
         are placed in the ``log`` directory. If you place your ``log``
         directory on a network file system partition, specify a local
         partition for the lock files with the ``LOCK``
-        :index:`LOCK<single: LOCK>` parameter in the configuration file (such as
+        :index:`LOCK` parameter in the configuration file (such as
         ``/var/lock/condor``).
 
-    :index:`HTCondor files;disk space requirement<single: HTCondor files;disk space requirement>`
+    :index:`HTCondor files<single: HTCondor files; disk space requirement>`
 
     Generally speaking, it is recommended that you do not put these
     directories (except ``lock``) on the same partition as ``/var``,
@@ -323,7 +330,7 @@ be shared?
         the pool. See section \ `Setting Up for Special
         Environments <../admin-manual/setting-up-special-environments.html>`__
         on about Configuring HTCondor for Multiple Platforms for
-        details. :index:`location;configuration files<single: location;configuration files>`
+        details. :index:`location<single: location; configuration files>`
 
         The location of configuration files is described in
         section \ `Introduction to
@@ -334,7 +341,7 @@ be shared?
         subdirectories: ``bin``, ``etc``, ``lib``, ``sbin``, and
         ``libexec``. Wherever you choose to install these five
         directories we call the release directory (specified by the
-        ``RELEASE_DIR`` :index:`RELEASE_DIR<single: RELEASE_DIR>` macro in the
+        ``RELEASE_DIR`` :index:`RELEASE_DIR` macro in the
         configuration file). Each release directory contains
         platform-dependent binaries and libraries, so you will need to
         install a separate one for each kind of machine in your pool.
@@ -372,11 +379,11 @@ be shared?
            The files in the ``lib`` directory are the HTCondor libraries
            that must be linked in with user jobs for all of HTCondor’s
            checkpointing and migration features to be used. ``lib`` also
-           contains scripts used by the *condor\_compile* program to
+           contains scripts used by the *condor_compile* program to
            help re-link jobs with the HTCondor libraries. These files
            should be placed in a location that is world-readable, but
            they do not need to be placed in anyone’s ``PATH``. The
-           *condor\_compile* script checks the configuration file for
+           *condor_compile* script checks the configuration file for
            the location of the ``lib`` directory.
 
         -  ``etc`` Directory:
@@ -403,7 +410,7 @@ be shared?
     in the manual. HTCondor does not currently have a way to
     authenticate itself to AFS. A solution is not ready for Version
     8.9.1. This implies that you are probably not going to want to have
-    the ``LOCAL_DIR`` :index:`LOCAL_DIR<single: LOCAL_DIR>` for HTCondor on AFS.
+    the ``LOCAL_DIR`` :index:`LOCAL_DIR` for HTCondor on AFS.
     However, you can (and probably should) have the HTCondor
     ``RELEASE_DIR`` on AFS, so that you can share one copy of those
     files and upgrade them in a centralized location. You will also have
@@ -414,7 +421,7 @@ be shared?
     for all the details.
 
  9. Do I have enough disk space for HTCondor?
-    :index:`all versions;disk space requirement<single: all versions;disk space requirement>`
+    :index:`all versions<single: all versions; disk space requirement>`
 
     The compressed downloads of HTCondor currently range from a low of
     about 13 Mbytes for 64-bit Ubuntu 12/Linux to about 115 Mbytes for
@@ -446,7 +453,7 @@ Debian package is recommended if available for your Unix version.**
 An overview of the tarball-based installation process is as follows:
 
 #. Untar the HTCondor software.
-#. Run *condor\_install* or *condor\_configure* to install the software.
+#. Run *condor_install* or *condor_configure* to install the software.
 
 Details are given below.
 
@@ -458,33 +465,33 @@ to be untarred, as
       tar xzf <completename>.tar.gz
 
 After untarring, the directory will have the Perl scripts
-*condor\_configure* and *condor\_install* (and *bosco\_install*), as
+*condor_configure* and *condor_install* (and *bosco_install*), as
 well as ``bin``, ``etc``, ``examples``, ``include``, ``lib``,
 ``libexec``, ``man``, ``sbin``, ``sql`` and ``src`` subdirectories.
-:index:`with;installation<single: with;installation>`
-:index:`condor_configure command<single: condor_configure command>`
+:index:`with<single: with; installation>`
+:index:`condor_configure command`
 
-The Perl script *condor\_configure* installs HTCondor. Command-line
+The Perl script *condor_configure* installs HTCondor. Command-line
 arguments specify all needed information to this script. The script can
 be executed multiple times, to modify or further set the configuration.
-*condor\_configure* has been tested using Perl 5.003. Use this or a more
+*condor_configure* has been tested using Perl 5.003. Use this or a more
 recent version of Perl.
 
-*condor\_configure* and *condor\_install* are the same program, but have
-different default behaviors. *condor\_install* is identical to running
+*condor_configure* and *condor_install* are the same program, but have
+different default behaviors. *condor_install* is identical to running
 
 ::
 
       condor_configure --install=.
 
-*condor\_configure* and *condor\_install* work on the named directories.
-As the names imply, *condor\_install* is used to install HTCondor,
-whereas *condor\_configure* is used to modify the configuration of an
+*condor_configure* and *condor_install* work on the named directories.
+As the names imply, *condor_install* is used to install HTCondor,
+whereas *condor_configure* is used to modify the configuration of an
 existing HTCondor install.
 
-*condor\_configure* and *condor\_install* are completely command-line
+*condor_configure* and *condor_install* are completely command-line
 driven and are not interactive. Several command-line arguments are
-always needed with *condor\_configure* and *condor\_install*. The
+always needed with *condor_configure* and *condor_install*. The
 argument
 
 ::
@@ -492,7 +499,7 @@ argument
       --install=/path/to/release
 
 specifies the path to the HTCondor release directories. The default
-command-line argument for *condor\_install* is
+command-line argument for *condor_install* is
 
 ::
 
@@ -520,7 +527,7 @@ The argument
 
 specifies the path to the local directory.
 
-The --**type** option to *condor\_configure* specifies one or more of
+The --**type** option to *condor_configure* specifies one or more of
 the roles that a machine can take on within the HTCondor pool: central
 manager, submit or execute. These options are given in a comma separated
 list. So, if a machine is both a submit and execute machine, the proper
@@ -531,9 +538,9 @@ command-line option is
       --type=submit,execute
 
 Install HTCondor on the central manager machine first. If HTCondor will
-run as root in this pool (Item 3 above), run *condor\_install* as root,
+run as root in this pool (Item 3 above), run *condor_install* as root,
 and it will install and set the file permissions correctly. On the
-central manager machine, run *condor\_install* as follows.
+central manager machine, run *condor_install* as follows.
 
 ::
 
@@ -563,14 +570,14 @@ pool, run
     % condor_install --prefix=~condor \ 
     --local-dir=/scratch/condor --type=execute,submit
 
-See the *condor\_configure* manual
-page \ `condor\_configure <../man-pages/condor_configure.html>`__ for
+See the *condor_configure* manual
+page \ `condor_configure <../man-pages/condor_configure.html>`__ for
 details.
 
 Starting HTCondor Under Unix After Installation
 '''''''''''''''''''''''''''''''''''''''''''''''
 
-:index:`Unix platforms;starting HTCondor<single: Unix platforms;starting HTCondor>`
+:index:`Unix platforms<single: Unix platforms; starting HTCondor>`
 
 Now that HTCondor has been installed on the machine(s), there are a few
 things to check before starting up HTCondor.
@@ -581,16 +588,16 @@ things to check before starting up HTCondor.
    particular, you might want to set up security for HTCondor. See the
    section \ `Security <../admin-manual/security.html>`__ to learn how
    to do this.
-#. For Linux platforms, run the *condor\_kbdd* to monitor keyboard and
+#. For Linux platforms, run the *condor_kbdd* to monitor keyboard and
    mouse activity on all machines within the pool that will run a
-   *condor\_startd*; these are machines that execute jobs. To do this,
+   *condor_startd*; these are machines that execute jobs. To do this,
    the subsystem ``KBDD`` will need to be added to the ``DAEMON_LIST``
    configuration variable definition.
 
    For Unix platforms other than Linux, HTCondor can monitor the
    activity of your mouse and keyboard, provided that you tell it where
    to look. You do this with the ``CONSOLE_DEVICES``
-   :index:`CONSOLE_DEVICES<single: CONSOLE_DEVICES>` entry in the condor\_startd section of
+   :index:`CONSOLE_DEVICES` entry in the condor_startd section of
    the configuration file. On most platforms, reasonable defaults are
    provided. For example, the default device for the mouse is ’mouse’,
    since most installations have a soft link from ``/dev/mouse`` that
@@ -600,7 +607,7 @@ things to check before starting up HTCondor.
    glad you did), or change the ``CONSOLE_DEVICES`` entry in HTCondor’s
    configuration file. This entry is a comma separated list, so you can
    have any devices in ``/dev`` count as ’console devices’ and activity
-   will be reported in the condor\_startd’s ClassAd as
+   will be reported in the condor_startd’s ClassAd as
    ``ConsoleIdleTime``.
 
 #. (Linux only) HTCondor needs to be able to find the ``utmp`` file.
@@ -637,37 +644,37 @@ or
 depending on your flavor of Unix. On a central manager machine that can
 submit jobs as well as execute them, there will be processes for:
 
--  condor\_master
--  condor\_collector
--  condor\_negotiator
--  condor\_startd
--  condor\_schedd
+-  condor_master
+-  condor_collector
+-  condor_negotiator
+-  condor_startd
+-  condor_schedd
 
 On a central manager machine that does not submit jobs nor execute them,
 there will be processes for:
 
--  condor\_master
--  condor\_collector
--  condor\_negotiator
+-  condor_master
+-  condor_collector
+-  condor_negotiator
 
 For a machine that only submits jobs, there will be processes for:
 
--  condor\_master
--  condor\_schedd
+-  condor_master
+-  condor_schedd
 
 For a machine that only executes jobs, there will be processes for:
 
--  condor\_master
--  condor\_startd
+-  condor_master
+-  condor_startd
 
 Once you are sure the HTCondor daemons are running, check to make sure
 that they are communicating with each other. You can run
-*condor\_status* to get a one line summary of the status of each machine
+*condor_status* to get a one line summary of the status of each machine
 in your pool.
 
 Once you are sure HTCondor is working properly, you should add
-*condor\_master* into your startup/bootup scripts (i.e. ``/etc/rc`` ) so
-that your machine runs *condor\_master* upon bootup. *condor\_master*
+*condor_master* into your startup/bootup scripts (i.e. ``/etc/rc`` ) so
+that your machine runs *condor_master* upon bootup. *condor_master*
 will then fire up the necessary HTCondor daemons whenever your machine
 is rebooted.
 
@@ -686,13 +693,13 @@ If your system uses BSD style boot scripts, you probably have an
 Now that the HTCondor daemons are running, there are a few things you
 can and should do:
 
-#. (Optional) Do a full install for the *condor\_compile* script.
-   condor\_compile assists in linking jobs with the HTCondor libraries
+#. (Optional) Do a full install for the *condor_compile* script.
+   condor_compile assists in linking jobs with the HTCondor libraries
    to take advantage of all of HTCondor’s features. As it is currently
    installed, it will work by placing it in front of any of the
    following commands that you would normally use to link your code:
    gcc, g++, g77, cc, acc, c89, CC, f77, fort77 and ld. If you complete
-   the full install, you will be able to use condor\_compile with any
+   the full install, you will be able to use condor_compile with any
    command whatsoever, in particular, make. See section \ `Setting Up
    for Special
    Environments <../admin-manual/setting-up-special-environments.html>`__
@@ -704,14 +711,14 @@ can and should do:
    Environments <../admin-manual/setting-up-special-environments.html>`__
    in the manual.
 #. We strongly recommend that you start up HTCondor (run the
-   *condor\_master* daemon) as user root. If you must start HTCondor as
+   *condor_master* daemon) as user root. If you must start HTCondor as
    some user other than root, see
    section \ `Security <../admin-manual/security.html>`__.
 
 Installation on Windows
 -----------------------
 
-:index:`Windows;installation<single: Windows;installation>` :index:`installation;Windows<single: installation;Windows>`
+:index:`Windows<single: Windows; installation>` :index:`installation<single: installation; Windows>`
 
 This section contains the instructions for installing the Windows
 version of HTCondor. The install program will set up a slightly
@@ -726,8 +733,9 @@ single file named similarly to:
 
       condor-8.4.11-390598-Windows-x86.msi
 
-:index:`initial file size<single: initial file size>`\ This file is approximately 107
-Mbytes in size, and it can be removed once HTCondor is fully installed.
+:index:`initial file size<single: initial file size; installation>`\ This file is
+approximately 107 Mbytes in size, and it can be removed once HTCondor is
+fully installed.
 
 For any installation, HTCondor services are installed and run as the
 Local System account. Running the HTCondor services as any other account
@@ -748,7 +756,7 @@ Installation Requirements
 Preparing to Install HTCondor under Windows
 '''''''''''''''''''''''''''''''''''''''''''
 
-:index:`preparation<single: preparation>`
+:index:`preparation<single: preparation; installation>`
 
 Before installing the Windows version of HTCondor, there are two major
 decisions to make about the basic layout of the pool.
@@ -782,7 +790,7 @@ section \ `3.2.3 <#x30-1610003.2.3>`__. If unsure, read on.
    manager machine.
 
 -  Is there enough disk space for HTCondor?
-   :index:`required disk space<single: required disk space>`
+   :index:`required disk space<single: required disk space; installation>`
 
    The HTCondor release directory takes up a fair amount of space. The
    size requirement for the release directory is approximately 250
@@ -846,12 +854,10 @@ and choosing options within the following steps.
     A set of radio buttons determines the ability and configuration of
     the ability to execute jobs. There are four choices:
 
-     Do not run jobs on this machine.
-        This machine will not execute HTCondor jobs.
-     Always run jobs and never suspend them.
-     Run jobs when the keyboard has been idle for 15 minutes.
-     Run jobs when the keyboard has been idle for 15 minutes, and the
-    CPU is idle.
+    - Do not run jobs on this machine. This machine will not execute HTCondor jobs.
+    - Always run jobs and never suspend them.
+    - Run jobs when the keyboard has been idle for 15 minutes.
+    - Run jobs when the keyboard has been idle for 15 minutes, and the CPU is idle.
 
     For testing purposes, it is often helpful to use the always run
     HTCondor jobs option.
@@ -860,9 +866,9 @@ and choosing options within the following steps.
     last two in the list, HTCondor needs to further know what to do with
     the currently running jobs. There are two choices:
 
-     Keep the job in memory and continue when the machine meets the
-    condition chosen for when to run jobs.
-     Restart the job on a different machine.
+     - Keep the job in memory and continue when the machine meets the 
+       condition chosen for when to run jobs.
+     - Restart the job on a different machine.
 
     This choice involves a trade off. Restarting the job on a different
     machine is less intrusive on the workstation owner than leaving the
@@ -922,7 +928,7 @@ and choosing options within the following steps.
 
     For more details on these access permissions, and others that can be
     manually changed in your configuration file, please see the section
-    titled Setting Up IP/Host-Based Security in HTCondor in section
+    titled Setting Up Security in HTCondor in section
     section \ `Security <../admin-manual/security.html>`__.
 
  STEP 8: VM Universe Setting.
@@ -954,7 +960,7 @@ and choosing options within the following steps.
         The path to the *Perl* executable.
 
  STEP 9: Choose Setup Type
-    :index:`location of files<single: location of files>`
+    :index:`location of files<single: location of files; installation>`
 
     The next step is where the destination of the HTCondor files will be
     decided. We recommend that HTCondor be installed in the location
@@ -983,7 +989,7 @@ and choosing options within the following steps.
 Unattended Installation Procedure Using the Included Setup Program
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-:index:`unattended install<single: unattended install>`
+:index:`unattended install<single: unattended install; installation>`
 
 This section details how to run the HTCondor for Windows installer in an
 unattended batch mode. This mode is one that occurs completely from the
@@ -1007,9 +1013,9 @@ properties necessary for an unattended install.
     set ARGS=%ARGS% SUBMITJOBS="Y" 
     set ARGS=%ARGS% CONDOREMAIL="you@yours.com" 
     set ARGS=%ARGS% SMTPSERVER="smtp.localhost" 
-    set ARGS=%ARGS% HOSTALLOWREAD="*" 
-    set ARGS=%ARGS% HOSTALLOWWRITE="*" 
-    set ARGS=%ARGS% HOSTALLOWADMINISTRATOR="$(IP_ADDRESS)" 
+    set ARGS=%ARGS% ALLOWREAD="*" 
+    set ARGS=%ARGS% ALLOWWRITE="*" 
+    set ARGS=%ARGS% ALLOWADMINISTRATOR="$(IP_ADDRESS)" 
     set ARGS=%ARGS% INSTALLDIR="C:\Condor" 
     set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)" 
     set ARGS=%ARGS% ACCOUNTINGDOMAIN="none" 
@@ -1053,24 +1059,23 @@ of each property as it applies to unattended installations:
  CONDOREMAIL
     sets the e-mail address of the HTCondor administrator. Possible
     values are an e-mail address or the empty string "".
- HOSTALLOWREAD
-    is a list of host names that are allowed to issue READ commands to
+ ALLOWREAD
+    is a list of names that are allowed to issue READ commands to
     HTCondor daemons. This value should be set in accordance with the
-    ``HOSTALLOW_READ`` :index:`HOSTALLOW_READ<single: HOSTALLOW_READ>` setting in the
+    ``ALLOW_READ`` :index:`ALLOW_READ` setting in the
     configuration file, as described in
     section \ `Security <../admin-manual/security.html>`__.
- HOSTALLOWWRITE
-    is a list of host names that are allowed to issue WRITE commands to
+ ALLOWWRITE
+    is a list of names that are allowed to issue WRITE commands to
     HTCondor daemons. This value should be set in accordance with the
-    ``HOSTALLOW_WRITE`` :index:`HOSTALLOW_WRITE<single: HOSTALLOW_WRITE>` setting in the
+    ``ALLOW_WRITE`` :index:`ALLOW_WRITE` setting in the
     configuration file, as described in
     section \ `Security <../admin-manual/security.html>`__.
- HOSTALLOWADMINISTRATOR
-    is a list of host names that are allowed to issue ADMINISTRATOR
-    commands to HTCondor daemons. This value should be set in accordance
-    with the ``HOSTALLOW_ADMINISTRATOR``
-    :index:`HOSTALLOW_ADMINISTRATOR<single: HOSTALLOW_ADMINISTRATOR>` setting in the configuration
-    file, as described in
+ ALLOWADMINISTRATOR
+    is a list of names that are allowed to issue ADMINISTRATOR commands
+    to HTCondor daemons. This value should be set in accordance with the
+    ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR` setting
+    in the configuration file, as described in
     section \ `Security <../admin-manual/security.html>`__.
  INSTALLDIR
     defines the path to the directory where HTCondor will be installed.
@@ -1105,7 +1110,7 @@ of each property as it applies to unattended installations:
     defines the location of the local configuration file. The value can
     be the path to a file on the local machine, or it can be a URL
     beginning with ``http``. If the value is a URL, then the
-    *condor\_urlfetch* tool is invoked to fetch configuration whenever
+    *condor_urlfetch* tool is invoked to fetch configuration whenever
     the configuration is read.
  PERLLOCATION
     defines the path to *Perl* on the target machine. This is required
@@ -1127,7 +1132,7 @@ Microsoft’s website at
 Manual Installation HTCondor on Windows
 '''''''''''''''''''''''''''''''''''''''
 
-:index:`manual install;Windows<single: manual install;Windows>`
+:index:`manual install<single: manual install; Windows>`
 
 If you are to install HTCondor on many different machines, you may wish
 to use some other mechanism to install HTCondor on additional machines
@@ -1143,7 +1148,7 @@ using the provided GUI-based setup program:
     The service that HTCondor will install is called "Condor". The
     Startup Type is Automatic. The service should log on as System
     Account, but **do not enable** "Allow Service to Interact with
-    Desktop". The program that is run is *condor\_master.exe*.
+    Desktop". The program that is run is *condor_master.exe*.
 
     The HTCondor service can be installed and removed using the
     ``sc.exe`` tool, which is included in Windows XP and Windows 2003
@@ -1164,16 +1169,16 @@ using the provided GUI-based setup program:
 
  The Registry
     HTCondor uses a few registry entries in its operation. The key that
-    HTCondor uses is HKEY\_LOCAL\_MACHINE/Software/Condor. The values
+    HTCondor uses is HKEY_LOCAL_MACHINE/Software/Condor. The values
     that HTCondor puts in this registry key serve two purposes.
 
-    #. The values of CONDOR\_CONFIG and RELEASE\_DIR are used for
+    #. The values of CONDOR_CONFIG and RELEASE_DIR are used for
        HTCondor to start its service.
 
-       CONDOR\_CONFIG should point to the ``condor_config`` file. In
+       CONDOR_CONFIG should point to the ``condor_config`` file. In
        this version of HTCondor, it **must** reside on the local disk.
 
-       RELEASE\_DIR should point to the directory where HTCondor is
+       RELEASE_DIR should point to the directory where HTCondor is
        installed. This is typically C:\\Condor, and again, this **must**
        reside on the local disk.
 
@@ -1204,8 +1209,8 @@ using the provided GUI-based setup program:
 Starting HTCondor Under Windows After Installation
 ''''''''''''''''''''''''''''''''''''''''''''''''''
 
-:index:`starting the HTCondor service;Windows<single: starting the HTCondor service;Windows>`
-:index:`Windows platforms;starting HTCondor<single: Windows platforms;starting HTCondor>`
+:index:`starting the HTCondor service<single: starting the HTCondor service; Windows>`
+:index:`Windows platforms<single: Windows platforms; starting HTCondor>`
 
 After the installation of HTCondor is completed, the HTCondor service
 must be started. If you used the GUI-based setup program to install
@@ -1228,23 +1233,23 @@ prompt:
 
              net start condor
 
-:index:`HTCondor daemon names;Windows<single: HTCondor daemon names;Windows>`
+:index:`HTCondor daemon names<single: HTCondor daemon names; Windows>`
 
 Run the Task Manager (Control-Shift-Escape) to check that HTCondor
 services are running. The following tasks should be running:
 
--  *condor\_master.exe*
--  *condor\_negotiator.exe*, if this machine is a central manager.
--  *condor\_collector.exe*, if this machine is a central manager.
--  *condor\_startd.exe*, if you indicated that this HTCondor node should
+-  *condor_master.exe*
+-  *condor_negotiator.exe*, if this machine is a central manager.
+-  *condor_collector.exe*, if this machine is a central manager.
+-  *condor_startd.exe*, if you indicated that this HTCondor node should
    start jobs
--  *condor\_schedd.exe*, if you indicated that this HTCondor node should
+-  *condor_schedd.exe*, if you indicated that this HTCondor node should
    submit jobs to the HTCondor pool.
 
 Also, you should now be able to open up a new cmd (DOS prompt) window,
 and the HTCondor bin directory should be in your path, so you can issue
-the normal HTCondor commands, such as *condor\_q* and *condor\_status*.
-:index:`Windows;installation<single: Windows;installation>` :index:`installation;Windows<single: installation;Windows>`
+the normal HTCondor commands, such as *condor_q* and *condor_status*.
+:index:`Windows<single: Windows; installation>` :index:`installation<single: installation; Windows>`
 
 HTCondor is Running Under Windows ... Now What?
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -1257,8 +1262,8 @@ universe job.
 Upgrading – Installing a New Version on an Existing Pool
 --------------------------------------------------------
 
-:index:`installing a new version on an existing pool;pool management<single: installing a new version on an existing pool;pool management>`
-:index:`installing a new version on an existing pool;installation<single: installing a new version on an existing pool;installation>`
+:index:`installing a new version on an existing pool<single: installing a new version on an existing pool; pool management>`
+:index:`installing a new version on an existing pool<single: installing a new version on an existing pool; installation>`
 
 An upgrade changes the running version of HTCondor from the current
 installation to a newer version. The safe method to install and start
@@ -1280,25 +1285,25 @@ version of HTCondor earlier than 8.2.0 to a more recent version, the
 option of reducing the size of the configuration file is an option. The
 goal is to identify and use only the configuration variable values that
 differ from the compile-time default values. This is facilitated by
-using *condor\_config\_val* with the
+using *condor_config_val* with the
 **-writeconfig:upgrade **\ *a*\ rgument, to create a file that behaves
 the same as the current configuration, but is much smaller, because
 values matching the default values (as well as some obsolete variables)
 have been removed. Items in the file created by running
-*condor\_config\_val* with the **-writeconfig:upgrade **\ *a*\ rgument
+*condor_config_val* with the **-writeconfig:upgrade **\ *a*\ rgument
 will be in the order that they were read from the original configuration
 files. This file is a convenient guide to stripping the cruft from old
 configuration files.
 
 When upgrading from a version of HTCondor earlier than 6.8 to more
 recent version, note that the configuration settings must be modified
-for security reasons. Specifically, the ``HOSTALLOW_WRITE``
-:index:`HOSTALLOW_WRITE<single: HOSTALLOW_WRITE>` configuration variable must be explicitly
+for security reasons. Specifically, the ``ALLOW_WRITE``
+:index:`ALLOW_WRITE` configuration variable must be explicitly
 changed, or no jobs can be submitted, and error messages will be issued
 by HTCondor tools.
 
 Another way to upgrade leaves HTCondor running. HTCondor will
-automatically restart itself if the *condor\_master* binary is updated,
+automatically restart itself if the *condor_master* binary is updated,
 and this method takes advantage of this. Download the newer version,
 placing it such that it does not overwrite the currently running
 version. With the download will be a new set of configuration files;
@@ -1310,12 +1315,12 @@ Unix) is to use a symbolic link that points to the current HTCondor
 installation directory (for example, ``/opt/condor``). Change the
 symbolic link to point to the new directory. If HTCondor is configured
 to locate its binaries via the symbolic link, then after the symbolic
-link changes, the *condor\_master* daemon notices the new binaries and
+link changes, the *condor_master* daemon notices the new binaries and
 restarts itself. How frequently it checks is controlled by the
 configuration variable ``MASTER_CHECK_NEW_EXEC_INTERVAL``
-:index:`MASTER_CHECK_NEW_EXEC_INTERVAL<single: MASTER_CHECK_NEW_EXEC_INTERVAL>`, which defaults 5 minutes.
+:index:`MASTER_CHECK_NEW_EXEC_INTERVAL`, which defaults 5 minutes.
 
-When the *condor\_master* notices new binaries, it begins a graceful
+When the *condor_master* notices new binaries, it begins a graceful
 restart. On an execute machine, a graceful restart means that running
 jobs are preempted. Standard universe jobs will attempt to take a
 checkpoint. This could be a bottleneck if all machines in a large pool
@@ -1347,8 +1352,8 @@ ensues. This causes jobs to be hard-killed.
 Shutting Down and Restarting an HTCondor Pool
 ---------------------------------------------
 
-:index:`shutting down HTCondor;pool management<single: shutting down HTCondor;pool management>`
-:index:`restarting HTCondor;pool management<single: restarting HTCondor;pool management>`
+:index:`shutting down HTCondor<single: shutting down HTCondor; pool management>`
+:index:`restarting HTCondor<single: restarting HTCondor; pool management>`
 
 All of the commands described in this section are subject to the
 security policy chosen for the HTCondor pool. As such, the commands must
@@ -1359,10 +1364,10 @@ implementation of security in HTCondor.
 
  Shutting Down HTCondor
     There are a variety of ways to shut down all or parts of an HTCondor
-    pool. All utilize the *condor\_off* tool.
+    pool. All utilize the *condor_off* tool.
 
     To stop a single execute machine from running jobs, the
-    *condor\_off* command specifies the machine by host name.
+    *condor_off* command specifies the machine by host name.
 
     ::
 
@@ -1379,7 +1384,7 @@ implementation of security in HTCondor.
           condor_off -startd -peaceful <hostname>
 
     Note that this waits indefinitely for the running job to finish,
-    before the *condor\_startd* daemon exits.
+    before the *condor_startd* daemon exits.
 
     Th shut down all execution machines within the pool,
 
@@ -1423,18 +1428,18 @@ implementation of security in HTCondor.
     machines in the pool are to be shut down.
 
  Restarting HTCondor, If HTCondor Daemons Are Not Running
-    If HTCondor is not running, perhaps because one of the *condor\_off*
+    If HTCondor is not running, perhaps because one of the *condor_off*
     commands was used, then starting HTCondor daemons back up depends on
     which part of HTCondor is currently not running.
 
     If no HTCondor daemons are running, then starting HTCondor is a
-    matter of executing the *condor\_master* daemon. The
-    *condor\_master* daemon will then invoke all other specified daemons
-    on that machine. The *condor\_master* daemon executes on every
+    matter of executing the *condor_master* daemon. The
+    *condor_master* daemon will then invoke all other specified daemons
+    on that machine. The *condor_master* daemon executes on every
     machine that is to run HTCondor.
 
     If a specific daemon needs to be started up, and the
-    *condor\_master* daemon is already running, then issue the command
+    *condor_master* daemon is already running, then issue the command
     on the specific machine with
 
     ::
@@ -1451,13 +1456,13 @@ implementation of security in HTCondor.
 
     where <subsystemname> is replaced by the daemon’s subsystem name,
     and <hostname> is replaced by the host name of the machine where
-    this *condor\_on* command is to be directed.
+    this *condor_on* command is to be directed.
 
  Restarting HTCondor, If HTCondor Daemons Are Running
     If HTCondor daemons are currently running, but need to be killed and
-    newly invoked, the *condor\_restart* tool does this. This would be
+    newly invoked, the *condor_restart* tool does this. This would be
     the case for a new value of a configuration variable for which using
-    *condor\_reconfig* is inadequate.
+    *condor_reconfig* is inadequate.
 
     To restart all daemons on all machines in the pool,
 
@@ -1477,11 +1482,11 @@ implementation of security in HTCondor.
 Reconfiguring an HTCondor Pool
 ------------------------------
 
-:index:`reconfiguration;pool management<single: reconfiguration;pool management>`
+:index:`reconfiguration<single: reconfiguration; pool management>`
 
 To change a global configuration variable and have all the machines
 start to use the new setting, change the value within the file, and send
-a *condor\_reconfig* command to each host. Do this with a single
+a *condor_reconfig* command to each host. Do this with a single
 command,
 
 ::
@@ -1491,14 +1496,14 @@ command,
 If the global configuration file is not shared among all the machines,
 as it will be if using a shared file system, the change must be made to
 each copy of the global configuration file before issuing the
-*condor\_reconfig* command.
+*condor_reconfig* command.
 
-Issuing a *condor\_reconfig* command is inadequate for some
+Issuing a *condor_reconfig* command is inadequate for some
 configuration variables. For those, a restart of HTCondor is required.
 Those configuration variables that require a restart are listed in
 section \ `Introduction to
 Configuration <../admin-manual/introduction-to-configuration.html>`__.
-The manual page for *condor\_restart* is at
- `condor\_restart <../man-pages/condor_restart.html>`__.
+The manual page for *condor_restart* is at
+ `condor_restart <../man-pages/condor_restart.html>`__.
 
       

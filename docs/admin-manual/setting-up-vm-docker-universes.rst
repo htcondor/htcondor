@@ -6,9 +6,9 @@ Setting Up the VM and Docker Universes
 The VM Universe
 ---------------
 
-:index:`virtual machines<single: virtual machines>`
-:index:`for the vm universe;installation<single: for the vm universe;installation>`
-:index:`set up for the vm universe;universe<single: set up for the vm universe;universe>`
+:index:`virtual machines`
+:index:`for the vm universe<single: for the vm universe; installation>`
+:index:`set up for the vm universe<single: set up for the vm universe; universe>`
 
 **vm** universe jobs may be executed on any execution site with VMware,
 Xen (via *libvirt*), or KVM. To do this, HTCondor must be informed of
@@ -54,7 +54,7 @@ fully support **vm** universe jobs.
 
 Configuration is required to enable the execution of **vm** universe
 jobs. The type of virtual machine that is installed on the execute
-machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE<single: VM_TYPE>`
+machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE`
 variable. For now, only one type can be utilized per machine. For
 instance, the following tells HTCondor to use VMware:
 
@@ -88,7 +88,7 @@ the *Perl* executable will be required.
 If using *VMware Player*, which does not support snapshots, configure
 the ``START`` expression to reject jobs which require snapshots. These
 are jobs that do not have
-**vmware\_snapshot\_disk**\ :index:`vmware_snapshot_disk;submit commands<single: vmware_snapshot_disk;submit commands>`
+**vmware\_snapshot\_disk**\ :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
 set to ``False``. Here is an example modification to the ``START``
 expression.
 
@@ -126,13 +126,13 @@ To work around this problem:
 
 -  If using file transfer (the submit description file contains
    **vmware\_should\_transfer\_files =
-   true**\ :index:`vmware_should_transfer_files = true;submit commands<single: vmware_should_transfer_files = true;submit commands>`),
+   true**\ :index:`vmware_should_transfer_files = true<single: vmware_should_transfer_files = true; submit commands>`),
    then modify any configuration variable ``EXECUTE``
-   :index:`EXECUTE<single: EXECUTE>` values on all execute machines, such that they
+   :index:`EXECUTE` values on all execute machines, such that they
    do not contain symbolic link path components.
 -  If using a shared file system, ensure that the submit description
    file command
-   **vmware\_dir**\ :index:`vmware_dir;submit commands<single: vmware_dir;submit commands>` does not
+   **vmware\_dir**\ :index:`vmware_dir<single: vmware_dir; submit commands>` does not
    use symbolic link path name components.
 
 Xen-Specific and KVM-Specific Configuration
@@ -215,21 +215,21 @@ jobs.
 The Docker Universe
 -------------------
 
-:index:`set up;docker universe<single: set up;docker universe>`
-:index:`for the docker universe;installation<single: for the docker universe;installation>`
-:index:`docker;universe<single: docker;universe>`
-:index:`set up for the docker universe;universe<single: set up for the docker universe;universe>`
+:index:`set up<single: set up; docker universe>`
+:index:`for the docker universe<single: for the docker universe; installation>`
+:index:`docker<single: docker; universe>`
+:index:`set up for the docker universe<single: set up for the docker universe; universe>`
 
 The execution of a docker universe job causes the instantiation of a
 Docker container on an execute host.
 
 The docker universe job is mapped to a vanilla universe job, and the
 submit description file must specify the submit command
-**docker\_image**\ :index:`docker_image;submit commands<single: docker_image;submit commands>` to
+**docker\_image**\ :index:`docker_image<single: docker_image; submit commands>` to
 identify the Docker image. The job’s ``requirement`` ClassAd attribute
 is automatically appended, such that the job will only match with an
 execute machine that has Docker installed.
-:index:`HasDocker;ClassAd machine attribute<single: HasDocker;ClassAd machine attribute>`
+:index:`HasDocker<single: HasDocker; ClassAd machine attribute>`
 
 The Docker service must be pre-installed on each execute machine that
 can execute a docker universe job. Upon start up of the *condor\_startd*
@@ -277,7 +277,7 @@ These directories will be bind-mounted unconditionally inside the
 container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
 setting ``DOCKER_VOLUME_DIR_xxx_MOUNT_IF``
-:index:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF<single: DOCKER_VOLUME_DIR_xxx_MOUNT_IF>` may be used. This is a
+:index:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
 class ad expression, evaluated in the context of the job ad and the
 machine ad. Only when it evaluted to TRUE, is the volume mounted.
 Extending the above example,
@@ -295,7 +295,7 @@ only for jobs owned by user "smith", and who set +WantSomeDirMounted =
 true in their submit file.
 
 In addition to installing the Docker service, the single configuration
-variable ``DOCKER`` :index:`DOCKER<single: DOCKER>` must be set. It defines the
+variable ``DOCKER`` :index:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor\_starter* daemon has been given a password-less sudo permission
 to start the container as root. Details of the ``DOCKER`` configuration
@@ -345,16 +345,24 @@ Enterprise Linux machine.
 By default, HTCondor will keep the 20 most recently used Docker images
 on the local machine. This number may be controlled with the
 configuration variable ``DOCKER_IMAGE_CACHE_SIZE``
-:index:`DOCKER_IMAGE_CACHE_SIZE<single: DOCKER_IMAGE_CACHE_SIZE>`, to increase or decrease the
+:index:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the
 number of images, and the corresponding disk space, used by Docker.
 
 By default, Docker containers will be run with all rootly capabilties
 dropped, and with setuid and setgid binaries disabled, for security
 reasons. If you need to run containers with root privilige, you may set
 the configuration parameter ``DOCKER_DROP_ALL_CAPABILITIES``
-:index:`DOCKER_DROP_ALL_CAPABILITIES<single: DOCKER_DROP_ALL_CAPABILITIES>` to an expression that
+:index:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that
 evalutes to false. This expression is evaluted in the context of the
 machine ad (my) and the job ad (target).
+
+Docker support an enormous number of command line options when creating
+containers. While HTCondor tries to map as many useful options from
+submit files and machine descriptions to command line options, an
+administrator may want additional options passed to the docker container
+create command. To do so, the parameter ``DOCKER_EXTRA_ARGUMENTS``
+:index:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will append
+these to the docker container create command.
 
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when

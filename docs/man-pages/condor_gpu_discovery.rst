@@ -1,22 +1,22 @@
       
 
-*condor\_gpu\_discovery*
+*condor_gpu_discovery*
 ========================
 
 Output GPU-related ClassAd attributes
-:index:`condor_gpu_discovery;HTCondor commands<single: condor_gpu_discovery;HTCondor commands>`\ :index:`condor_gpu_discovery command<single: condor_gpu_discovery command>`
+:index:`condor_gpu_discovery<single: condor_gpu_discovery; HTCondor commands>`\ :index:`condor_gpu_discovery command`
 
 Synopsis
 --------
 
-**condor\_gpu\_discovery** **-help**
+**condor_gpu_discovery** **-help**
 
-**condor\_gpu\_discovery** [**<options>**\ ]
+**condor_gpu_discovery** [**<options>**\ ]
 
 Description
 -----------
 
-*condor\_gpu\_discovery* outputs ClassAd attributes corresponding to a
+*condor_gpu_discovery* outputs ClassAd attributes corresponding to a
 host’s GPU capabilities. It can presently report CUDA and OpenCL
 devices; which type(s) of device(s) it reports is determined by which
 libraries, if any, it can find when it runs; this reflects what GPU jobs
@@ -25,7 +25,7 @@ configuration settings may cause the environment to differ between jobs
 and the HTCondor daemons in ways that change library discovery.)
 
 If ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL`` is set in the
-environment when *condor\_gpu\_discovery* is run, it will report only
+environment when *condor_gpu_discovery* is run, it will report only
 devices present in the those lists.
 
 This tool is not available for MAC OS platforms.
@@ -112,8 +112,8 @@ Options
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
     which is set to the number of GPUs detected.
  **-cron**
-    | This option suppresses the ``DetectedGpus`` attribute so that the
-    output is suitable for use with *condor\_startd* cron. Combine this
+    This option suppresses the ``DetectedGpus`` attribute so that the
+    output is suitable for use with *condor_startd* cron. Combine this
     option with the **-dynamic** option to periodically refresh the
     dynamic Gpu information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
@@ -132,7 +132,7 @@ Options
 Exit Status
 -----------
 
-*condor\_gpu\_discovery* will exit with a status value of 0 (zero) upon
+*condor_gpu_discovery* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Author

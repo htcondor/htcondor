@@ -4,7 +4,7 @@
 =================
 
 Restart a set of HTCondor daemons
-:index:`condor_restart;HTCondor commands<single: condor_restart;HTCondor commands>`\ :index:`condor_restart command<single: condor_restart command>`
+:index:`condor_restart<single: condor_restart; HTCondor commands>`\ :index:`condor_restart command`
 
 Synopsis
 --------

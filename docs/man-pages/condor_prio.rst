@@ -4,7 +4,7 @@
 ==============
 
 change priority of jobs in the HTCondor queue
-:index:`condor_prio;HTCondor commands<single: condor_prio;HTCondor commands>`\ :index:`condor_prio command<single: condor_prio command>`
+:index:`condor_prio<single: condor_prio; HTCondor commands>`\ :index:`condor_prio command`
 
 Synopsis
 --------

@@ -3,7 +3,7 @@
 Macintosh OS X
 ==============
 
-` <index://Macintosh OS X;platform-specific information>`__
+:index:`Macintosh OS X<single: Macintosh OS X; platform-specific information>`
 
 This section provides information specific to the Macintosh OS X port of
 HTCondor. The Macintosh port of HTCondor is more accurately a port of

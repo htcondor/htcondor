@@ -5,7 +5,7 @@
 
 generate report about all jobs that have run in the last 24 hours on all
 execute hosts
-:index:`condor_pool_job_report;HTCondor commands<single: condor_pool_job_report;HTCondor commands>`\ :index:`condor_pool_job_report command<single: condor_pool_job_report command>`
+:index:`condor_pool_job_report<single: condor_pool_job_report; HTCondor commands>`\ :index:`condor_pool_job_report command`
 
 Synopsis
 --------
@@ -22,7 +22,7 @@ able to fetch the *condor\_startd* history logs from all of the
 *condor\_startd* daemons in the pool. After fetching these logs,
 *condor\_pool\_job\_report* then generates a report about job run times
 and mails it to administrators, as defined by configuration variable
-``CONDOR_ADMIN`` :index:`CONDOR_ADMIN<single: CONDOR_ADMIN>`.
+``CONDOR_ADMIN`` :index:`CONDOR_ADMIN`.
 
 Exit Status
 -----------

@@ -4,7 +4,7 @@
 ================
 
 Vacate jobs that are running on the specified hosts
-:index:`condor_vacate;HTCondor commands<single: condor_vacate;HTCondor commands>`\ :index:`condor_vacate command<single: condor_vacate command>`
+:index:`condor_vacate<single: condor_vacate; HTCondor commands>`\ :index:`condor_vacate command`
 
 Synopsis
 --------

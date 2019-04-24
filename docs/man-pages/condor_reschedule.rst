@@ -4,8 +4,8 @@
 ====================
 
 Update scheduling information to the central manager
-:index:`condor_reschedule;HTCondor commands<single: condor_reschedule;HTCondor commands>`
-:index:`condor_reschedule command<single: condor_reschedule command>`
+:index:`condor_reschedule<single: condor_reschedule; HTCondor commands>`
+:index:`condor_reschedule command`
 
 Synopsis
 --------

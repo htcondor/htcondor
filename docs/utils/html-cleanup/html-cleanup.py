@@ -117,6 +117,19 @@ def create_index_entry(index_tag):
                                         except:
                                             print("Weird parsing error, skipping this one for now")
                                         break
+                    # If this record is a subsubitem, that's too bad -- Sphinx doesn't support these
+                    # Instead, just look for the closest subitem. That's good enough.
+                    elif a_tag.parent['class'][0] == "index-subsubitem":
+                        # Iterate backwards through siblings until we find it.
+                        for previous_sibling in a_tag.parent.previous_siblings:
+                            if type(previous_sibling) == bs4.element.Tag:
+                                if "class" in previous_sibling.attrs.keys():
+                                    if previous_sibling['class'][0] == "index-subitem":
+                                        try:
+                                            parent_name = previous_sibling.contents[0].strip().encode('ascii', 'ignore').decode('ascii')
+                                        except:
+                                            print("Weird parsing error, skipping this one for now")
+                                        break
                 break
 
     # Finish cleaning up the index name + parent name, and set them as the link href

@@ -1,29 +1,29 @@
       
 
-*condor\_stats*
-===============
+*condor_stats*
+==============
 
 Display historical information about the HTCondor pool
-:index:`condor_stats;HTCondor commands<single: condor_stats;HTCondor commands>`
-:index:`condor_stats command<single: condor_stats command>`
+:index:`condor_stats<single: condor_stats; HTCondor commands>`
+:index:`condor_stats command`
 
 Synopsis
 --------
 
-**condor\_stats** [**-f  **\ *filename*] [**-orgformat**\ ]
+**condor_stats** [**-f  **\ *filename*] [**-orgformat**\ ]
 [**-pool  **\ *centralmanagerhostname[:portnumber]*] [**time-range**\ ]
 *query-type*
 
 Description
 -----------
 
-*condor\_stats* displays historic information about an HTCondor pool.
+*condor_stats* displays historic information about an HTCondor pool.
 Based on the type of information requested, a query is sent to the
-*condor\_collector* daemon, and the information received is displayed
+*condor_collector* daemon, and the information received is displayed
 using the standard output. If the **-f** option is used, the information
 will be written to a file instead of to standard output. The **-pool**
 option can be used to get information from other pools, instead of from
-the local (default) pool. The *condor\_stats* tool is used to query
+the local (default) pool. The *condor_stats* tool is used to query
 resource information (single or by platform), submitter and user
 information, and checkpoint server information. If a time range is not
 specified, the default query provides information for the previous 24
@@ -39,7 +39,7 @@ time is displayed as number of seconds since the Unix epoch. The
 information in the remainder of the columns depends on the query type.
 
 Note that logging of pool history must be enabled in the
-*condor\_collector* daemon, otherwise no information will be available.
+*condor_collector* daemon, otherwise no information will be available.
 
 One query type is required. If multiple queries are specified, only the
 last one takes effect.
@@ -57,12 +57,12 @@ Time Range Options
     Get information for the n last hours.
  **-from **\ *m d y*
     Get information for the time since the beginning of the specified
-    date. A start date prior to the Unix epoch causes *condor\_stats* to
+    date. A start date prior to the Unix epoch causes *condor_stats* to
     print its usage information and quit.
  **-to **\ *m d y*
     Get information for the time up to the beginning of the specified
     date, instead of up to now. A finish date in the future causes
-    *condor\_stats* to print its usage information and quit.
+    *condor_stats* to print its usage information and quit.
 
 Query Type Arguments
 --------------------
@@ -76,7 +76,7 @@ specification as given by an argument.
     the load average, and the machine state.
  **-resourcelist**
     A query of a single list of resources to provide a list of all the
-    machines for which the *condor\_collector* daemon has historic
+    machines for which the *condor_collector* daemon has historic
     information within the query’s time range.
  **-resgroupquery **\ *arch/opsys \| “Total”*
     A query of a specified group to provide information about a group of
@@ -86,16 +86,16 @@ specification as given by an argument.
     ``OpSys``. The string “Total” ask for information about all
     platforms.
 
-    | The columns displayed are the number of machines that are
+    The columns displayed are the number of machines that are
     unclaimed, matched, claimed, preempting, owner, shutdown, delete,
     backfill, and drained state.
 
  **-resgrouplist**
     Queries for a list of all the group names for which the
-    *condor\_collector* has historic information within the query’s time
+    *condor_collector* has historic information within the query’s time
     range.
- **-userquery **\ *email\_address/submit\_machine*
-    | Query for a specific submitter on a specific machine. The
+ **-userquery **\ *email_address/submit_machine*
+    Query for a specific submitter on a specific machine. The
     information displayed includes the number of running jobs and the
     number of idle jobs. An example argument appears as
 
@@ -105,15 +105,15 @@ specification as given by an argument.
 
  **-userlist**
     Queries for the list of all submitters for which the
-    *condor\_collector* daemon has historic information within the
+    *condor_collector* daemon has historic information within the
     query’s time range.
- **-usergroupquery **\ *email\_address \| “Total”*
+ **-usergroupquery **\ *email_address \| “Total”*
     Query for all jobs submitted by the specific user, regardless of the
     machine they were submitted from, or all jobs. The information
     displayed includes the number of running jobs and the number of idle
     jobs.
  **-usergrouplist**
-    Queries for the list of all users for which the *condor\_collector*
+    Queries for the list of all users for which the *condor_collector*
     has historic information within the query’s time range.
  **-ckptquery **\ *hostname*
     Query about a checkpoint server given its host name. The information
@@ -122,7 +122,7 @@ specification as given by an argument.
     KiB/sec).
  **-ckptlist**
     Query for the entire list of checkpoint servers for which the
-    *condor\_collector* has historic information in the query’s time
+    *condor_collector* has historic information in the query’s time
     range.
 
 Options
@@ -141,7 +141,7 @@ Options
 Exit Status
 -----------
 
-*condor\_stats* will exit with a status value of 0 (zero) upon success,
+*condor_stats* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
 Author

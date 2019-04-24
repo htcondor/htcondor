@@ -22,50 +22,58 @@ to a list attributes relevant to that type.
     and described in the unnumbered subsection labeled Job ClassAd
     Attributes on page \ `Job ClassAd
     Attributes <../classad-attributes/job-classad-attributes.html>`__.
- ``Machine``
+
+``Machine``
     Each machine in the pool (and hence, the *condor\_startd* daemon
     running on that machine) describes its state. ClassAd attributes
     that appear in a machine ClassAd are listed and described in the
     unnumbered subsection labeled Machine ClassAd Attributes on
     page \ `Machine ClassAd
     Attributes <../classad-attributes/machine-classad-attributes.html>`__.
- ``DaemonMaster``
+
+``DaemonMaster``
     Each *condor\_master* daemon describes its state. ClassAd attributes
     that appear in a DaemonMaster ClassAd are listed and described in
     the unnumbered subsection labeled DaemonMaster ClassAd Attributes on
     page \ `Daemon Master ClassAd
     Attributes <../classad-attributes/daemon-master-classad-attributes.html>`__.
- ``Scheduler``
+
+``Scheduler``
     Each *condor\_schedd* daemon describes its state. ClassAd attributes
     that appear in a Scheduler ClassAd are listed and described in the
     unnumbered subsection labeled Scheduler ClassAd Attributes on
     page \ `Scheduler ClassAd
     Attributes <../classad-attributes/scheduler-classad-attributes.html>`__.
- ``Negotiator``
+
+``Negotiator``
     Each *condor\_negotiator* daemon describes its state. ClassAd
     attributes that appear in a Negotiator ClassAd are listed and
     described in the unnumbered subsection labeled Negotiator ClassAd
     Attributes on page \ `Negotiator ClassAd
     Attributes <../classad-attributes/negotiator-classad-attributes.html>`__.
- ``Submitter``
+
+``Submitter``
     Each submitter is described by a ClassAd. ClassAd attributes that
     appear in a Submitter ClassAd are listed and described in the
     unnumbered subsection labeled Submitter ClassAd Attributes on
     page \ `Submitter ClassAd
     Attributes <../classad-attributes/submitter-classad-attributes.html>`__.
- ``Defrag``
+
+``Defrag``
     Each *condor\_defrag* daemon describes its state. ClassAd attributes
     that appear in a Defrag ClassAd are listed and described in the
     unnumbered subsection labeled Defrag ClassAd Attributes on
     page \ `Defrag ClassAd
     Attributes <../classad-attributes/defrag-classad-attributes.html>`__.
- ``Collector``
+
+``Collector``
     Each *condor\_collector* daemon describes its state. ClassAd
     attributes that appear in a Collector ClassAd are listed and
     described in the unnumbered subsection labeled Collector ClassAd
     Attributes on page \ `Collector ClassAd
     Attributes <../classad-attributes/collector-classad-attributes.html>`__.
- ``Query``
+
+``Query``
     This section has not yet been written
 
 In addition, statistics are published for each DaemonCore daemon. These

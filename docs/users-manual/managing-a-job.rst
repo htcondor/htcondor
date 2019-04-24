@@ -14,7 +14,7 @@ pages) <../man-pages/index.html>`__) for more information.
 When jobs are submitted, HTCondor will attempt to find resources to run
 the jobs. A list of all those with jobs submitted may be obtained
 through *condor\_status*
-:index:`condor_status;HTCondor commands<single: condor_status;HTCondor commands>`\ with the *-submitters*
+:index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
 option. An example of this would yield output similar to:
 
 ::
@@ -41,7 +41,7 @@ Checking on the progress of jobs
 --------------------------------
 
 At any time, you can check on the status of your jobs with the
-*condor\_q* command. :index:`condor_q;HTCondor commands<single: condor_q;HTCondor commands>`\ This
+*condor\_q* command. :index:`condor_q<single: condor_q; HTCondor commands>`\ This
 command displays the status of all queued jobs. An example of the output
 from *condor\_q* is
 
@@ -69,7 +69,7 @@ from *condor\_q* is
     14 jobs; 4 idle, 8 running, 2 held 
 
 This output contains many columns of information about the queued jobs.
-:index:`of queued jobs;status<single: of queued jobs;status>`\ :index:`state;job<single: state;job>` The
+:index:`of queued jobs<single: of queued jobs; status>`\ :index:`state<single: state; job>` The
 ST column (for status) shows the status of current jobs in the queue:
 
     R: The job is currently running.
@@ -93,7 +93,7 @@ execution commencement, checkpoint, eviction and termination are logged
 in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor\_shadow* process
-:index:`condor_shadow<single: condor_shadow>`\ :index:`condor_shadow;remote system call<single: condor_shadow;remote system call>`
+:index:`condor_shadow`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 on the submit machine. The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.
@@ -103,12 +103,12 @@ hundreds of *condor\_shadow* processes running on the machine. Since the
 text segments of all these processes is the same, the load on the submit
 machine is usually not significant. If there is degraded performance,
 limit the number of jobs that can run simultaneously by reducing the
-``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING<single: MAX_JOBS_RUNNING>` configuration
+``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING` configuration
 variable.
 
 You can also find all the machines that are running your job through the
 *condor\_status* command.
-:index:`condor_status;HTCondor commands<single: condor_status;HTCondor commands>`\ For example, to find
+:index:`condor_status<single: condor_status; HTCondor commands>`\ For example, to find
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
 
@@ -152,7 +152,7 @@ Removing a job from the queue
 -----------------------------
 
 A job can be removed from the queue at any time by using the
-*condor\_rm* :index:`condor_rm;HTCondor commands<single: condor_rm;HTCondor commands>`\ command. If
+*condor\_rm* :index:`condor_rm<single: condor_rm; HTCondor commands>`\ command. If
 the job that is being removed is currently running, the job is killed
 without a checkpoint, and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
@@ -182,9 +182,9 @@ example shows the queue of jobs before and after a job is removed.
 Placing a job on hold
 ---------------------
 
-:index:`condor_hold;HTCondor commands<single: condor_hold;HTCondor commands>`
-:index:`condor_release;HTCondor commands<single: condor_release;HTCondor commands>`
-:index:`state;job<single: state;job>`
+:index:`condor_hold<single: condor_hold; HTCondor commands>`
+:index:`condor_release<single: condor_release; HTCondor commands>`
+:index:`state<single: state; job>`
 
 A job in the queue may be placed on hold by running the command
 *condor\_hold*. A job in the hold state remains in the hold state until
@@ -209,7 +209,7 @@ usage details.
 Changing the priority of jobs
 -----------------------------
 
-:index:`priority;job<single: priority;job>` :index:`of a job;priority<single: of a job;priority>`
+:index:`priority<single: priority; job>` :index:`of a job<single: of a job; priority>`
 
 In addition to the priorities assigned to each user, HTCondor also
 provides each user with the capability of assigning priorities to each
@@ -218,7 +218,7 @@ any integer value, with higher values meaning better priority.
 
 The default priority of a job is 0, but can be changed using the
 *condor\_prio* command.
-:index:`condor_prio;HTCondor commands<single: condor_prio;HTCondor commands>`\ For example, to change
+:index:`condor_prio<single: condor_prio; HTCondor commands>`\ For example, to change
 the priority of a job to -15,
 
 ::
@@ -250,7 +250,7 @@ the user to that specific queue.
 Why is the job not running?
 ---------------------------
 
-:index:`analysis;job<single: analysis;job>` :index:`not running;job<single: not running;job>`
+:index:`analysis<single: analysis; job>` :index:`not running<single: not running; job>`
 
 Users occasionally find that their jobs do not run. There are many
 possible reasons why a specific job is not running. The following prose
@@ -270,7 +270,7 @@ Further inquiries are dependent on whether the job has never run at all,
 or has run for at least a little bit.
 
 For jobs that have never run,
-:index:`condor_q;HTCondor commands<single: condor_q;HTCondor commands>`\ many problems can be
+:index:`condor_q<single: condor_q; HTCondor commands>`\ many problems can be
 diagnosed by using the **-analyze** option of the *condor\_q* command.
 Here is an example; running *condor\_q*\ ’s analyzer provided the
 following information:
@@ -317,7 +317,7 @@ following information:
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
 pool. Recall that unless informed otherwise in the
-**Requirements**\ :index:`Requirements;submit commands<single: Requirements;submit commands>`
+**Requirements**\ :index:`Requirements<single: Requirements; submit commands>`
 expression in the submit description file, the platform requested for an
 execute machine will be the same as the platform where *condor\_submit*
 is run to submit the job. And, while Mac OS X is a Unix-type operating
@@ -336,12 +336,12 @@ A second class of problems represents jobs that do or did run, for at
 least a short while, but are no longer running. The first issue is
 identifying whether the job is in this category. The *condor\_q* command
 is not enough; it only tells the current state of the job. The needed
-information will be in the **log**\ :index:`log;submit commands<single: log;submit commands>`
-file or the **error**\ :index:`error;submit commands<single: error;submit commands>` file, as
+information will be in the **log**\ :index:`log<single: log; submit commands>`
+file or the **error**\ :index:`error<single: error; submit commands>` file, as
 defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
-**log**\ :index:`log;submit commands<single: log;submit commands>` file will contain an event
+**log**\ :index:`log<single: log; submit commands>` file will contain an event
 of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
@@ -398,7 +398,7 @@ are two ways to fix the problem:
 #. Configure the machine with some real swap space.
 #. Disable this check within HTCondor. Define the amount of reserved
    swap space for the submit machine to 0. Set ``RESERVED_SWAP``
-   :index:`RESERVED_SWAP<single: RESERVED_SWAP>` to 0 in the configuration file:
+   :index:`RESERVED_SWAP` to 0 in the configuration file:
 
    ::
 
@@ -409,7 +409,7 @@ are two ways to fix the problem:
 Job in the Hold State
 ---------------------
 
-:index:`not running, on hold;job<single: not running, on hold;job>`
+:index:`not running, on hold<single: not running, on hold; job>`
 
 A variety of errors and unusual conditions may cause a job to be placed
 into the Hold state. The job will stay in this state and in the job
@@ -432,8 +432,8 @@ attribute ``HoldReason``.
 In the Job Event Log File
 -------------------------
 
-:index:`event log file;job<single: event log file;job>`
-:index:`job event codes and descriptions;log files<single: job event codes and descriptions;log files>`
+:index:`event log file<single: event log file; job>`
+:index:`job event codes and descriptions<single: job event codes and descriptions; log files>`
 
 In a job event log file are a listing of events in chronological order
 that occurred during the life of one or more jobs. The formatting of the
@@ -457,30 +457,30 @@ These are all of the events that can show up in a job log file:
 | **Event Number:** 000
 | **Event Name:** Job submitted
 | **Event Description:** This event occurs when a user submits a job. It
-is the first event you will see for a job, and it should only occur
-once.
+  is the first event you will see for a job, and it should only occur
+  once.
 
 | **Event Number:** 001
 | **Event Name:** Job executing
 | **Event Description:** This shows up when a job is running. It might
-occur more than once.
+  occur more than once.
 
 | **Event Number:** 002
 | **Event Name:** Error in executable
 | **Event Description:** The job could not be run because the executable
-was bad.
+  was bad.
 
 | **Event Number:** 003
 | **Event Name:** Job was checkpointed
 | **Event Description:** The job’s complete state was written to a
-checkpoint file. This might happen without the job being removed from a
-machine, because the checkpointing can happen periodically.
+  checkpoint file. This might happen without the job being removed from a
+  machine, because the checkpointing can happen periodically.
 
 | **Event Number:** 004
 | **Event Name:** Job evicted from machine
 | **Event Description:** A job was removed from a machine before it
-finished, usually for a policy reason. Perhaps an interactive user has
-claimed the computer, or perhaps another job is higher priority.
+  finished, usually for a policy reason. Perhaps an interactive user has
+  claimed the computer, or perhaps another job is higher priority.
 
 | **Event Number:** 005
 | **Event Name:** Job terminated
@@ -489,15 +489,15 @@ claimed the computer, or perhaps another job is higher priority.
 | **Event Number:** 006
 | **Event Name:** Image size of job updated
 | **Event Description:** An informational event, to update the amount of
-memory that the job is using while running. It does not reflect the
-state of the job.
+  memory that the job is using while running. It does not reflect the
+  state of the job.
 
 | **Event Number:** 007
 | **Event Name:** Shadow exception
 | **Event Description:** The *condor\_shadow*, a program on the submit
-computer that watches over the job and performs some services for the
-job, failed for some catastrophic reason. The job will leave the machine
-and go back into the queue.
+  computer that watches over the job and performs some services for the
+  job, failed for some catastrophic reason. The job will leave the machine
+  and go back into the queue.
 
 | **Event Number:** 008
 | **Event Name:** Generic log event
@@ -510,45 +510,45 @@ and go back into the queue.
 | **Event Number:** 010
 | **Event Name:** Job was suspended
 | **Event Description:** The job is still on the computer, but it is no
-longer executing. This is usually for a policy reason, such as an
-interactive user using the computer.
+  longer executing. This is usually for a policy reason, such as an
+  interactive user using the computer.
 
 | **Event Number:** 011
 | **Event Name:** Job was unsuspended
 | **Event Description:** The job has resumed execution, after being
-suspended earlier.
+  suspended earlier.
 
 | **Event Number:** 012
 | **Event Name:** Job was held
 | **Event Description:** The job has transitioned to the hold state.
-This might happen if the user applies the *condor\_hold* command to the
-job.
+  This might happen if the user applies the *condor\_hold* command to the
+  job.
 
 | **Event Number:** 013
 | **Event Name:** Job was released
 | **Event Description:** The job was in the hold state and is to be
-re-run.
+  re-run.
 
 | **Event Number:** 014
 | **Event Name:** Parallel node executed
 | **Event Description:** A parallel universe program is running on a
-node.
+  node.
 
 | **Event Number:** 015
 | **Event Name:** Parallel node terminated
 | **Event Description:** A parallel universe program has completed on a
-node.
+  node.
 
 | **Event Number:** 016
 | **Event Name:** POST script terminated
 | **Event Description:** A node in a DAGMan work flow has a script that
-should be run after a job. The script is run on the submit host. This
-event signals that the post script has completed.
+  should be run after a job. The script is run on the submit host. This
+  event signals that the post script has completed.
 
 | **Event Number:** 017
 | **Event Name:** Job submitted to Globus
 | **Event Description:** A grid job has been delegated to Globus
-(version 2, 3, or 4). This event is no longer used.
+  (version 2, 3, or 4). This event is no longer used.
 
 | **Event Number:** 018
 | **Event Name:** Globus submit failed
@@ -557,124 +557,130 @@ event signals that the post script has completed.
 | **Event Number:** 019
 | **Event Name:** Globus resource up
 | **Event Description:** The Globus resource that a job wants to run on
-was unavailable, but is now available. This event is no longer used.
+  was unavailable, but is now available. This event is no longer used.
 
 | **Event Number:** 020
 | **Event Name:** Detected Down Globus Resource
 | **Event Description:** The Globus resource that a job wants to run on
-has become unavailable. This event is no longer used.
+  has become unavailable. This event is no longer used.
 
 | **Event Number:** 021
 | **Event Name:** Remote error
 | **Event Description:** The *condor\_starter* (which monitors the job
-on the execution machine) has failed.
+  on the execution machine) has failed.
 
 | **Event Number:** 022
 | **Event Name:** Remote system call socket lost
 | **Event Description:** The *condor\_shadow* and *condor\_starter*
-(which communicate while the job runs) have lost contact.
+  (which communicate while the job runs) have lost contact.
 
 | **Event Number:** 023
 | **Event Name:** Remote system call socket reestablished
 | **Event Description:** The *condor\_shadow* and *condor\_starter*
-(which communicate while the job runs) have been able to resume contact
-before the job lease expired.
+  (which communicate while the job runs) have been able to resume contact
+  before the job lease expired.
 
 | **Event Number:** 024
 | **Event Name:** Remote system call reconnect failure
 | **Event Description:** The *condor\_shadow* and *condor\_starter*
-(which communicate while the job runs) were unable to resume contact
-before the job lease expired.
+  (which communicate while the job runs) were unable to resume contact
+  before the job lease expired.
 
 | **Event Number:** 025
 | **Event Name:** Grid Resource Back Up
 | **Event Description:** A grid resource that was previously unavailable
-is now available.
+  is now available.
 
 | **Event Number:** 026
 | **Event Name:** Detected Down Grid Resource
 | **Event Description:** The grid resource that a job is to run on is
-unavailable.
+  unavailable.
 
 | **Event Number:** 027
 | **Event Name:** Job submitted to grid resource
 | **Event Description:** A job has been submitted, and is under the
-auspices of the grid resource.
+  auspices of the grid resource.
 
 | **Event Number:** 028
 | **Event Name:** Job ad information event triggered.
 | **Event Description:** Extra job ClassAd attributes are noted. This
-event is written as a supplement to other events when the configuration
-parameter ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS``
-:index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS<single: EVENT_LOG_JOB_AD_INFORMATION_ATTRS>` is set.
+  event is written as a supplement to other events when the configuration
+  parameter ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS``
+  :index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS` is set.
 
 | **Event Number:** 029
 | **Event Name:** The job’s remote status is unknown
 | **Event Description:** No updates of the job’s remote status have been
-received for 15 minutes.
+  received for 15 minutes.
 
 | **Event Number:** 030
 | **Event Name:** The job’s remote status is known again
 | **Event Description:** An update has been received for a job whose
-remote status was previous logged as unknown.
+  remote status was previous logged as unknown.
 
 | **Event Number:** 031
 | **Event Name:** Job stage in
 | **Event Description:** A grid universe job is doing the stage in of
-input files.
+  input files.
 
 | **Event Number:** 032
 | **Event Name:** Job stage out
 | **Event Description:** A grid universe job is doing the stage out of
-output files.
+  output files.
 
 | **Event Number:** 033
 | **Event Name:** Job ClassAd attribute update
 | **Event Description:** A Job ClassAd attribute is changed due to
-action by the *condor\_schedd* daemon. This includes changes by
-*condor\_prio*.
+  action by the *condor\_schedd* daemon. This includes changes by
+  *condor\_prio*.
 
 | **Event Number:** 034
 | **Event Name:** Pre Skip event
 | **Event Description:** For DAGMan, this event is logged if a PRE
-SCRIPT exits with the defined PRE\_SKIP value in the DAG input file.
-This makes it possible for DAGMan to do recovery in a workflow that has
-such an event, as it would otherwise not have any event for the DAGMan
-node to which the script belongs, and in recovery, DAGMan’s internal
-tables would become corrupted.
+  SCRIPT exits with the defined PRE\_SKIP value in the DAG input file.
+  This makes it possible for DAGMan to do recovery in a workflow that has
+  such an event, as it would otherwise not have any event for the DAGMan
+  node to which the script belongs, and in recovery, DAGMan’s internal
+  tables would become corrupted.
 
 | **Event Number:** 035
 | **Event Name:** Factory Submit
 | **Event Description:** This event occurs when a user submits a cluster
-using late materialization.
+  using late materialization.
 
 | **Event Number:** 036
 | **Event Name:** Cluster Removed
 | **Event Description:** Only written for clusters using late
-materialization. This event occurs after all the jobs in a cluster
-submitted using late materialization have materialized and completed, or
-when the cluster is removed (by *condor\_rm*).
+  materialization. This event occurs after all the jobs in a cluster
+  submitted using late materialization have materialized and completed, or
+  when the cluster is removed (by *condor\_rm*).
 
 | **Event Number:** 037
 | **Event Name:** Factory Paused
 | **Event Description:** This event occurs when job materialization for
-a cluster has been paused.
+  a cluster has been paused.
 
 | **Event Number:** 038
 | **Event Name:** Factory Resumed
 | **Event Description:** This event occurs when job materialization for
-a cluster has been resumed
+  a cluster has been resumed
 
 | **Event Number:** 039
 | **Event Name:** None
 | **Event Description:** This event should never occur in a log but may
-be returned by log reading code in certain situations (e.g., timing out
-while waiting for a new event to appear in the log).
+  be returned by log reading code in certain situations (e.g., timing out
+  while waiting for a new event to appear in the log).
+
+| **Event Number:** 040
+| **Event Name:** File Transfer
+| **Event Description:** This event occurs when a file transfer event
+  occurs: transfer queued, transfer started, or transfer finished, for
+  both the input and output sandboxes.
 
 Job Completion
 --------------
 
-:index:`completion;job<single: completion;job>`
+:index:`completion<single: completion; job>`
 
 When an HTCondor job completes, either through normal means or by
 abnormal termination by signal, HTCondor will remove it from the job
@@ -683,11 +689,11 @@ queue. That is, the job will no longer appear in the output of
 Examine the job history file with the *condor\_history* command. If
 there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well.
-:index:`notification;submit commands<single: notification;submit commands>`
+:index:`notification<single: notification; submit commands>`
 
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
-**notification**\ :index:`notification;submit commands<single: notification;submit commands>` command
+**notification**\ :index:`notification<single: notification; submit commands>` command
 in the submit description file. The message will include the exit status
 of the job, which is the argument that the job passed to the exit system
 call when it completed, or it will be notification that the job was

@@ -6,7 +6,7 @@ Special Environment Considerations
 AFS
 ---
 
-:index:`AFS;file system<single: AFS;file system>` :index:`interaction with;AFS<single: interaction with;AFS>`
+:index:`AFS<single: AFS; file system>` :index:`interaction with<single: interaction with; AFS>`
 
 The HTCondor daemons do not run authenticated to AFS; they do not
 possess AFS tokens. Therefore, no child process of HTCondor will be AFS
@@ -39,7 +39,7 @@ for further discussion of this problem.
 NFS
 ---
 
-:index:`NFS;file system<single: NFS;file system>` :index:`interaction with;NFS<single: interaction with;NFS>`
+:index:`NFS<single: NFS; file system>` :index:`interaction with<single: interaction with; NFS>`
 
 If the current working directory when a job is submitted is accessed via
 an NFS automounter, HTCondor may have problems if the automounter later
@@ -49,7 +49,7 @@ the job’s initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
 There is a simple work around. When submitting the job, use the submit
-command **initialdir**\ :index:`initialdir;submit commands<single: initialdir;submit commands>` to
+command **initialdir**\ :index:`initialdir<single: initialdir; submit commands>` to
 point to the stable access point. For example, suppose the NFS
 automounter is configured to mount a volume at mount point
 ``/a/myserver.company.com/vol1/johndoe`` whenever the directory
@@ -60,8 +60,8 @@ description file solves the problem.
 
       initialdir = /home/johndoe
 
-:index:`cache flush on submit machine;NFS<single: cache flush on submit machine;NFS>`
-:index:`IwdFlushNFSCache;ClassAd job attribute<single: IwdFlushNFSCache;ClassAd job attribute>`
+:index:`cache flush on submit machine<single: cache flush on submit machine; NFS>`
+:index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
 
 HTCondor attempts to flush the NFS cache on a submit machine in order to
 refresh a job’s initial working directory. This allows files written by
@@ -81,12 +81,12 @@ definition of the job ClassAd attribute.
 HTCondor Daemons That Do Not Run as root
 ----------------------------------------
 
-:index:`running as root<single: running as root>`
-:index:`running as root;daemon<single: running as root;daemon>`
+:index:`running as root`
+:index:`running as root<single: running as root; daemon>`
 
 HTCondor is normally installed such that the HTCondor daemons have root
 permission. This allows HTCondor to run the *condor\_shadow*
-:index:`condor_shadow;HTCondor daemon<single: condor_shadow;HTCondor daemon>`\ :index:`condor_shadow;remote system call<single: condor_shadow;remote system call>`
+:index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
 daemon and the job with the submitting user’s UID and file access
 rights. When HTCondor is started as root, HTCondor jobs can access
 whatever files the user that submits the jobs can.
@@ -126,7 +126,7 @@ HTCondor job is submitted.
 Job Leases
 ----------
 
-:index:`job lease<single: job lease>`
+:index:`job lease`
 
 A job lease specifies how long a given job will attempt to run on a
 remote resource, even if that resource loses contact with the submitting
@@ -148,16 +148,16 @@ has not expired, yet the submitting machine is still dead, the
 reconnect, before sending final information on the job, and its output
 files. Should the lease expire, the *condor\_startd* daemon kills off
 the *condor\_starter* daemon and user job.
-:index:`JobLeaseDuration;ClassAd job attribute<single: JobLeaseDuration;ClassAd job attribute>`
-:index:`job ClassAd attribute;JobLeaseDuration<single: job ClassAd attribute;JobLeaseDuration>`
+:index:`JobLeaseDuration<single: JobLeaseDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 
 A default value equal to 40 minutes exists for a job’s ClassAd attribute
 ``JobLeaseDuration``, or this attribute may be set in the submit
 description file, using
-**job\_lease\_duration**\ :index:`job_lease_duration;submit commands<single: job_lease_duration;submit commands>`,
+**job\_lease\_duration**\ :index:`job_lease_duration<single: job_lease_duration; submit commands>`,
 to keep a job running in the case that the submit side no longer renews
 the lease. There is a trade off in setting the value of
-**job\_lease\_duration**\ :index:`job_lease_duration;submit commands<single: job_lease_duration;submit commands>`.
+**job\_lease\_duration**\ :index:`job_lease_duration<single: job_lease_duration; submit commands>`.
 Too small a value, and the job might get killed before the submitting
 machine has a chance to recover. Forward progress on the job will be
 lost. Too large a value, and an execute resource will be tied up waiting

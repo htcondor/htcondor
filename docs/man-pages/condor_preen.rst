@@ -4,7 +4,7 @@
 ===============
 
 remove extraneous files from HTCondor directories
-:index:`condor_preen;HTCondor commands<single: condor_preen;HTCondor commands>`\ :index:`condor_preen command<single: condor_preen command>`
+:index:`condor_preen<single: condor_preen; HTCondor commands>`\ :index:`condor_preen command`
 
 Synopsis
 --------
@@ -28,11 +28,11 @@ invoked on an as needed basis.
 
 When *condor\_preen* cleans the ``SPOOL`` directory, it always leaves
 behind the files specified in the configuration variables
-``VALID_SPOOL_FILES`` :index:`VALID_SPOOL_FILES<single: VALID_SPOOL_FILES>` and
-``SYSTEM_VALID_SPOOL_FILES`` :index:`SYSTEM_VALID_SPOOL_FILES<single: SYSTEM_VALID_SPOOL_FILES>`, as
+``VALID_SPOOL_FILES`` :index:`VALID_SPOOL_FILES` and
+``SYSTEM_VALID_SPOOL_FILES`` :index:`SYSTEM_VALID_SPOOL_FILES`, as
 given by the configuration. For the ``LOG`` directory, the only files
 removed or reported are those listed within the configuration variable
-``INVALID_LOG_FILES`` :index:`INVALID_LOG_FILES<single: INVALID_LOG_FILES>` list. The reason
+``INVALID_LOG_FILES`` :index:`INVALID_LOG_FILES` list. The reason
 for this difference is that, in general, the files in the ``LOG``
 directory ought to be left alone, with few exceptions. An example of
 exceptions are core files. As there are new log files introduced
@@ -44,7 +44,7 @@ Options
 
  **-mail**
     Send mail to the user defined in the ``PREEN_ADMIN``
-    :index:`PREEN_ADMIN<single: PREEN_ADMIN>` configuration variable, instead of
+    :index:`PREEN_ADMIN` configuration variable, instead of
     writing to the standard output.
  **-remove**
     Remove the offending files and directories rather than reporting on

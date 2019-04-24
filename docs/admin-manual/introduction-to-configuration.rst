@@ -3,8 +3,8 @@
 Introduction to Configuration
 =============================
 
-` <index://configuration-intro;HTCondor>`__
-:index:`configuration: introduction<single: configuration: introduction>`
+:index:`configuration-intro<single: configuration-intro; HTCondor>`
+:index:`configuration: introduction`
 
 This section of the manual contains general information about HTCondor
 configuration, relating to all parts of the HTCondor system. If you’re
@@ -26,7 +26,7 @@ read the other configuration-related sections:
    suspend, resume, vacate or kill jobs are described in
    section \ `Policy Configuration for Execute Hosts and for Submit
    Hosts <../admin-manual/policy-configuration.html>`__ on Policy
-   Configuration for the *condor\_startd*.
+   Configuration for the *condor_startd*.
 
 HTCondor Configuration Files
 ----------------------------
@@ -60,7 +60,7 @@ Example:
 Ordered Evaluation to Set the Configuration
 -------------------------------------------
 
-:index:`evaluation order;configuration file<single: evaluation order;configuration file>`
+:index:`evaluation order<single: evaluation order; configuration file>`
 
 Multiple files, as well as a program’s environment variables, determine
 the configuration. The order in which attributes are defined is
@@ -80,12 +80,12 @@ is:
 #. if HTCondor daemons are not running as root on Unix platforms, the
    file ``$(HOME)/.condor/user_config`` if it exists, or the file
    defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE<single: USER_CONFIG_FILE>`;
+   :index:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
-   platforms, the file %USERPROFILE\\.condor\\user\_config if it exists,
+   platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
    or the file defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE<single: USER_CONFIG_FILE>`;
+   :index:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
    ``_CONDOR_`` (note that these environment variables directly define
@@ -128,13 +128,13 @@ the value, the parse order of these local configuration files is fully
 specified here. In order:
 
 #. The value of configuration variable ``LOCAL_CONFIG_DIR``
-   :index:`LOCAL_CONFIG_DIR<single: LOCAL_CONFIG_DIR>` lists one or more directories which
+   :index:`LOCAL_CONFIG_DIR` lists one or more directories which
    contain configuration files. The list is parsed from left to right.
    The leftmost (first) in the list is parsed first. Within each
    directory, a lexicographical ordering by file name determines the
    ordering of file consideration.
 #. The value of configuration variable ``LOCAL_CONFIG_FILE``
-   :index:`LOCAL_CONFIG_FILE<single: LOCAL_CONFIG_FILE>` lists one or more configuration
+   :index:`LOCAL_CONFIG_FILE` lists one or more configuration
    files. These listed files are parsed from left to right. The leftmost
    (first) in the list is parsed first.
 #. If one of these steps changes the value (right hand side) of
@@ -150,8 +150,8 @@ needed information.
 Configuration File Macros
 -------------------------
 
-:index:`in configuration file;macro<single: in configuration file;macro>`
-:index:`macro definitions;configuration file<single: macro definitions;configuration file>`
+:index:`in configuration file<single: in configuration file; macro>`
+:index:`macro definitions<single: macro definitions; configuration file>`
 
 Macro definitions are of the form:
 
@@ -295,7 +295,7 @@ sense to define
 
       NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
 
-since the *condor\_negotiator* daemon does not use the
+since the *condor_negotiator* daemon does not use the
 ``MASTER_UPDATE_INTERVAL`` variable.
 
 It makes little sense to do so, but HTCondor will configure correctly
@@ -305,9 +305,9 @@ with a definition such as
 
       MASTER.MASTER_UPDATE_INTERVAL = 60
 
-The *condor\_master* uses this configuration variable, and the prefix of
+The *condor_master* uses this configuration variable, and the prefix of
 ``MASTER.`` causes this configuration to be specific to the
-*condor\_master* daemon.
+*condor_master* daemon.
 
 As of HTCondor version 8.1.1, evaluation works in the expected manner
 when combining the definition of a macro with use of a prefix that gives
@@ -325,7 +325,7 @@ macro:
 
       USEFILE = mydir/$(FILESPEC)
 
-When the *condor\_master* evaluates variable ``USEFILE``, it evaluates
+When the *condor_master* evaluates variable ``USEFILE``, it evaluates
 to ``mydir/B``. Previous to HTCondor version 8.1.1, it evaluated to
 ``mydir/A``. When any other subsystem evaluates variable ``USEFILE``, it
 evaluates to ``mydir/A``.
@@ -338,7 +338,7 @@ a local name on the command line using the command line option
       -local-name <local-name>
 
 This allows multiple instances of a daemon to be run by the same
-*condor\_master* daemon, each instance with its own local configuration
+*condor_master* daemon, each instance with its own local configuration
 variable.
 
 The ordering used to look up a variable, called <parameter name>:
@@ -352,8 +352,8 @@ If this local name is not specified on the command line, numbers 1 and 2
 are skipped. As soon as the first match is found, the search is
 completed, and the corresponding value is used.
 
-This example configures a *condor\_master* to run 2 *condor\_schedd*
-daemons. The *condor\_master* daemon needs the configuration:
+This example configures a *condor_master* to run 2 *condor_schedd*
+daemons. The *condor_master* daemon needs the configuration:
 
 ::
 
@@ -363,13 +363,13 @@ daemons. The *condor\_master* daemon needs the configuration:
       DC_DAEMON_LIST  = + XYZZY 
       XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 
-Using this example configuration, the *condor\_master* starts up a
-second *condor\_schedd* daemon, where this second *condor\_schedd*
+Using this example configuration, the *condor_master* starts up a
+second *condor_schedd* daemon, where this second *condor_schedd*
 daemon is passed **-local-name **\ *xyzzy* on the command line.
 
-Continuing the example, configure the *condor\_schedd* daemon named
-``xyzzy``. This *condor\_schedd* daemon will share all configuration
-variable definitions with the other *condor\_schedd* daemon, except for
+Continuing the example, configure the *condor_schedd* daemon named
+``xyzzy``. This *condor_schedd* daemon will share all configuration
+variable definitions with the other *condor_schedd* daemon, except for
 those specified separately.
 
 ::
@@ -379,17 +379,17 @@ those specified separately.
       SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
-*condor\_schedd* daemon, as opposed to a different daemon such as the
-*condor\_startd*. Other HTCondor daemons using this feature will have
+*condor_schedd* daemon, as opposed to a different daemon such as the
+*condor_startd*. Other HTCondor daemons using this feature will have
 different requirements for which parameters need to be specified
-individually. This example works for the *condor\_schedd*, and more
+individually. This example works for the *condor_schedd*, and more
 local configuration can, and likely would be specified.
 
 Also note that each daemon’s log file must be specified individually,
-and in two places: one specification is for use by the *condor\_master*,
+and in two places: one specification is for use by the *condor_master*,
 and the other is for use by the daemon itself. In the example, the
-``XYZZY`` *condor\_schedd* configuration variable
-``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the *condor\_master*
+``XYZZY`` *condor_schedd* configuration variable
+``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the *condor_master*
 daemon’s ``XYZZY_LOG``.
 
 Comments and Line Continuations
@@ -414,7 +414,7 @@ and
       ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \ 
       stork.cs.wisc.edu, ostrich.cs.wisc.edu, \ 
       bigbird.cs.wisc.edu 
-      HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
+      ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 
 Where a line continuation character directly precedes a comment, the
 entire comment line is ignored, and the following line is used in the
@@ -474,7 +474,7 @@ For example:
       @jrd
 
 Note that in this example, the square brackets are part of the
-JOB\_ROUTER\_DEFAULTS value.
+JOB_ROUTER_DEFAULTS value.
 
 Executing a Program to Produce Configuration Macros
 ---------------------------------------------------
@@ -484,7 +484,7 @@ configuration macros. The vertical bar character (\|) as the last
 character defining a file name provides the syntax necessary to tell
 HTCondor to run a program. This syntax may only be used in the
 definition of the ``CONDOR_CONFIG`` environment variable, or the
-``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE<single: LOCAL_CONFIG_FILE>` configuration
+``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` configuration
 variable.
 
 The command line for the program is formed by the characters preceding
@@ -497,7 +497,7 @@ An example:
 
     LOCAL_CONFIG_FILE = /bin/make_the_config|
 
-Program */bin/make\_the\_config* is executed, and its output is the set
+Program */bin/make_the_config* is executed, and its output is the set
 of configuration macros.
 
 Note that either a program is executed to generate the configuration
@@ -507,15 +507,15 @@ program produces the configuration macros. Space characters would
 otherwise separate the list of files. This syntax does not permit
 distinguishing one from the other, so only one may be specified.
 
-(Note that the ``include command`` :index:`include command<single: include command>`
+(Note that the ``include command`` :index:`include command`
 syntax (see below) is now the preferred way to execute a program to
 generate configuration macros.)
 
 Including Configuration from Elsewhere
 --------------------------------------
 
-:index:`INCLUDE syntax;configuration<single: INCLUDE syntax;configuration>`
-:index:`INCLUDE configuration syntax<single: INCLUDE configuration syntax>`
+:index:`INCLUDE syntax<single: INCLUDE syntax; configuration>`
+:index:`INCLUDE configuration syntax`
 
 Externally defined configuration can be incorporated using the following
 syntax:
@@ -603,7 +603,7 @@ to fail when reading it.
       @include : $(LOCAL_DIR)/$(FILE)
 
 A daemon older than version 8.1.6 will fail to start. Running an older
-*condor\_config\_val* identifies the ``@include`` line as being bad. A
+*condor_config_val* identifies the ``@include`` line as being bad. A
 daemon of HTCondor version 8.1.6 or more recent sees:
 
 ::
@@ -623,8 +623,8 @@ Here is an example using the new ifexist and into options:
 Reporting Errors and Warnings
 -----------------------------
 
-:index:`Error and warning syntax;configuration<single: Error and warning syntax;configuration>`
-:index:`Error and warning configuration syntax<single: Error and warning configuration syntax>`
+:index:`Error and warning syntax<single: Error and warning syntax; configuration>`
+:index:`Error and warning configuration syntax`
 
 As of version 8.5.7, warning and error messages can be included in
 HTCondor configuration files.
@@ -640,7 +640,7 @@ The warning and error messages will be printed when the configuration
 file is used (when almost any HTCondor command is run, for example).
 Error messages (unlike warnings) will prevent the successful use of the
 configuration file. This will, for example, prevent a daemon from
-starting, and prevent *condor\_config\_val* from returning a value.
+starting, and prevent *condor_config_val* from returning a value.
 
 Here’s an example of using an error message in a configuration file
 (combined with some of the new include features documented above):
@@ -656,8 +656,8 @@ Here’s an example of using an error message in a configuration file
 Conditionals in Configuration
 -----------------------------
 
-:index:`IF/ELSE syntax;configuration<single: IF/ELSE syntax;configuration>`
-:index:`IF/ELSE configuration syntax<single: IF/ELSE configuration syntax>`
+:index:`IF/ELSE syntax<single: IF/ELSE syntax; configuration>`
+:index:`IF/ELSE configuration syntax`
 
 Conditional if/else semantics are available in a limited form. The
 syntax:
@@ -763,7 +763,7 @@ is the same as syntax
 Function Macros in Configuration
 --------------------------------
 
-:index:`function macros;configuration<single: function macros;configuration>`
+:index:`function macros<single: function macros; configuration>`
 
 A set of predefined functions increase flexibility. Both submit
 description files and configuration files are read using the same
@@ -779,7 +779,8 @@ as given in these definitions.
     parameter determines which item. The first item in the list is at
     index 0. If the index is out of bounds for the list contents, an
     error occurs.
- ``$ENV(environment-variable-name[:default-value])``
+
+``$ENV(environment-variable-name[:default-value])``
     Evaluates to the value of environment variable
     ``environment-variable-name``. If there is no environment variable
     with that name, Evaluates to UNDEFINED unless the optional
@@ -799,7 +800,7 @@ as given in these definitions.
 
     -  ``f`` convert relative path to full path by prefixing the current
        working directory to it. This option works only in
-       *condor\_submit* files.
+       *condor_submit* files.
     -  ``p`` refers to the entire directory portion of ``filename``,
        with a trailing slash or backslash character. Whether a slash or
        backslash is used depends on the platform of the machine. The
@@ -839,8 +840,9 @@ as given in these definitions.
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
- ``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
-    :index:`$RANDOM_CHOICE() function macro<single: $RANDOM_CHOICE() function macro>` A random choice
+
+``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
+    :index:`$RANDOM_CHOICE() function macro` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -850,7 +852,7 @@ as given in these definitions.
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
-    :index:`in configuration;$RANDOM_INTEGER()<single: in configuration;$RANDOM_INTEGER()>` A random integer
+    :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
     to the value 1. For example, to randomly chose an even integer in
@@ -867,8 +869,8 @@ as given in these definitions.
     ``format-specifier`` is a C language or Perl format specifier. If no
     ``format-specifier`` is specified, "%16G" is used as a format
     specifier.
- ``$SUBSTR(name, start-index)`` or
-``$SUBSTR(name, start-index, length)``
+
+``$SUBSTR(name, start-index)`` or ``$SUBSTR(name, start-index, length)``
     Expands name and returns a substring of it. The first character of
     the string is at index 0. The first character of the substring is at
     index start-index. If the optional length is not specified, then the
@@ -895,32 +897,32 @@ configurations.
 Macros That Will Require a Restart When Changed
 -----------------------------------------------
 
-:index:`configuration change requiring a restart of HTCondor<single: configuration change requiring a restart of HTCondor>`
+:index:`configuration change requiring a restart of HTCondor`
 
 When any of the following listed configuration variables are changed,
-HTCondor must be restarted. Reconfiguration using *condor\_reconfig*
+HTCondor must be restarted. Reconfiguration using *condor_reconfig*
 will not be enough.
 
--  BIND\_ALL\_INTERFACES
+-  BIND_ALL_INTERFACES
 -  FetchWorkDelay
--  MAX\_NUM\_CPUS
--  MAX\_TRACKING\_GID
+-  MAX_NUM_CPUS
+-  MAX_TRACKING_GID
 -  MEMORY
--  MIN\_TRACKING\_GID
--  NETWORK\_HOSTNAME
--  NETWORK\_INTERFACE
--  NUM\_CPUS
--  PREEMPTION\_REQUIREMENTS\_STABLE
--  PRIVSEP\_ENABLED
--  PROCD\_ADDRESS
--  SLOT\_TYPE\_<N>
--  OFFLINE\_MACHINE\_RESOURCE\_<name>
+-  MIN_TRACKING_GID
+-  NETWORK_HOSTNAME
+-  NETWORK_INTERFACE
+-  NUM_CPUS
+-  PREEMPTION_REQUIREMENTS_STABLE
+-  PRIVSEP_ENABLED
+-  PROCD_ADDRESS
+-  SLOT_TYPE_<N>
+-  OFFLINE_MACHINE_RESOURCE_<name>
 
 Pre-Defined Macros
 ------------------
 
-` <index://pre-defined macros;configuration>`__
-` <index://pre-defined macros;configuration file>`__
+:index:`pre-defined macros<single: pre-defined macros; configuration>`
+:index:`pre-defined macros<single: pre-defined macros; configuration file>`
 
 HTCondor provides pre-defined macros that help configure HTCondor.
 Pre-defined macros are listed as ``$(macro_name)``.
@@ -931,12 +933,14 @@ routine which parses the configuration files. This implies that a change
 to the underlying value of any of these variables will require a full
 restart of HTCondor in order to use the changed value.
 
- ``$(FULL_HOSTNAME)``\ :index:`FULL_HOSTNAME<single: FULL_HOSTNAME>`
+ ``$(FULL_HOSTNAME)``\ :index:`FULL_HOSTNAME`
     The fully qualified host name of the local machine, which is host
     name plus domain name.
- ``$(HOSTNAME)``\ :index:`HOSTNAME<single: HOSTNAME>`
+
+``$(HOSTNAME)``\ :index:`HOSTNAME`
     The host name of the local machine, without a domain name.
- ``$(IP_ADDRESS)``\ :index:`IP_ADDRESS<single: IP_ADDRESS>`
+
+``$(IP_ADDRESS)``\ :index:`IP_ADDRESS`
     The ASCII string version of the local machine’s “most public” IP
     address. This address may be IPv4 or IPv6, but the macro will always
     be set.
@@ -948,45 +952,46 @@ restart of HTCondor in order to use the changed value.
 
     labelparam:IPv4Address
 
- ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS<single: IPV4_ADDRESS>`
+ ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS`
     The ASCII string version of the local machine’s “most public” IPv4
     address; unset if the local machine has no IPv4 address.
 
     See ``IP_ADDRESS`` about “most public”.
 
- ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS<single: IPV6_ADDRESS>`
+ ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS`
     The ASCII string version of the local machine’s “most public” IPv6
     address; unset if the local machine has no IPv6 address.
 
     See ``IP_ADDRESS`` about “most public”.
 
- ``$(IP_ADDRESS_IS_V6)``\ :index:`IP_ADDRESS_IS_V6<single: IP_ADDRESS_IS_V6>`
+ ``$(IP_ADDRESS_IS_V6)``\ :index:`IP_ADDRESS_IS_V6`
     A boolean which is true if and only if ``IP_ADDRESS``
-    :index:`IP_ADDRESS<single: IP_ADDRESS>` is an IPv6 address. Useful for conditonal
+    :index:`IP_ADDRESS` is an IPv6 address. Useful for conditonal
     configuration.
- ``$(TILDE)``\ :index:`TILDE<single: TILDE>`
+
+``$(TILDE)``\ :index:`TILDE`
     The full path to the home directory of the Unix user condor, if such
     a user exists on the local machine.
-    :index:`subsystem names;configuration file<single: subsystem names;configuration file>`
- ``$(SUBSYSTEM)``\ :index:`SUBSYSTEM<single: SUBSYSTEM>`
+
+``$(SUBSYSTEM)``\ :index:`SUBSYSTEM` :index:`subsystem names<single: subsystem names; configuration file>`
     The subsystem name of the daemon or tool that is evaluating the
     macro. This is a unique string which identifies a given daemon
     within the HTCondor system. The possible subsystem names are:
-    :index:`subsystem names<single: subsystem names>`
-    :index:`subsystem names;macro<single: subsystem names;macro>`
+    :index:`subsystem names`
+    :index:`subsystem names<single: subsystem names; macro>`
 
-    -  C\_GAHP
-    -  C\_GAHP\_WORKER\_THREAD
-    -  CKPT\_SERVER
+    -  C_GAHP
+    -  C_GAHP_WORKER_THREAD
+    -  CKPT_SERVER
     -  COLLECTOR
     -  DBMSD
     -  DEFRAG
-    -  EC2\_GAHP
+    -  EC2_GAHP
     -  GANGLIAD
-    -  GCE\_GAHP
+    -  GCE_GAHP
     -  GRIDMANAGER
     -  HAD
-    -  JOB\_ROUTER
+    -  JOB_ROUTER
     -  KBDD
     -  LEASEMANAGER
     -  MASTER
@@ -995,78 +1000,91 @@ restart of HTCondor in order to use the changed value.
     -  ROOSTER
     -  SCHEDD
     -  SHADOW
-    -  SHARED\_PORT
+    -  SHARED_PORT
     -  STARTD
     -  STARTER
     -  SUBMIT
     -  TOOL
     -  TRANSFERER
 
- ``$(DETECTED_CPUS)``\ :index:`DETECTED_CPUS<single: DETECTED_CPUS>`
+ ``$(DETECTED_CPUS)``\ :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by
     ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
     by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS``
-    :index:`COUNT_HYPERTHREAD_CPUS<single: COUNT_HYPERTHREAD_CPUS>` is ``False``. When
+    :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. When
     ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
- ``$(DETECTED_PHYSICAL_CPUS)``\ :index:`DETECTED_PHYSICAL_CPUS<single: DETECTED_PHYSICAL_CPUS>`
+
+``$(DETECTED_PHYSICAL_CPUS)``\ :index:`DETECTED_PHYSICAL_CPUS`
     The integer number of physical (non hyper-threaded) CPUs. This will
     be equal the number of unique CPU IDs.
 
 This second set of macros are entries whose default values are
 determined automatically at run time but which can be overwritten.
-:index:`macros;configuration file<single: macros;configuration file>`
+:index:`macros<single: macros; configuration file>`
 
- ``$(ARCH)``\ :index:`ARCH<single: ARCH>`
+ ``$(ARCH)``\ :index:`ARCH`
     Defines the string used to identify the architecture of the local
-    machine to HTCondor. The *condor\_startd* will advertise itself with
+    machine to HTCondor. The *condor_startd* will advertise itself with
     this attribute so that users can submit binaries compiled for a
     given platform and force them to run on the correct machines.
-    *condor\_submit* will append a requirement to the job ClassAd that
+    *condor_submit* will append a requirement to the job ClassAd that
     it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
     it was submitted, unless the user specifies ``ARCH`` and/or
-    ``OPSYS`` explicitly in their submit file. See the *condor\_submit*
+    ``OPSYS`` explicitly in their submit file. See the *condor_submit*
     manual page on
-    page \ `condor\_submit <../man-pages/condor_submit.html>`__ for
+    page \ `condor_submit <../man-pages/condor_submit.html>`__ for
     details.
- ``$(OPSYS)``\ :index:`OPSYS<single: OPSYS>`
+
+``$(OPSYS)``\ :index:`OPSYS`
     Defines the string used to identify the operating system of the
     local machine to HTCondor. If it is not defined in the configuration
     file, HTCondor will automatically insert the operating system of
     this machine as determined by *uname*.
- ``$(OPSYS_VER)``\ :index:`OPSYS_VER<single: OPSYS_VER>`
+
+``$(OPSYS_VER)``\ :index:`OPSYS_VER`
     Defines the integer used to identify the operating system version
     number.
- ``$(OPSYS_AND_VER)``\ :index:`OPSYS_AND_VER<single: OPSYS_AND_VER>`
+
+``$(OPSYS_AND_VER)``\ :index:`OPSYS_AND_VER`
     Defines the string used prior to HTCondor version 7.7.2 as
     ``$(OPSYS)``.
- ``$(UNAME_ARCH)``\ :index:`UNAME_ARCH<single: UNAME_ARCH>`
+
+``$(UNAME_ARCH)``\ :index:`UNAME_ARCH`
     The architecture as reported by *uname*\ (2)’s ``machine`` field.
     Always the same as ``ARCH`` on Windows.
- ``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS<single: UNAME_OPSYS>`
+
+``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS`
     The operating system as reported by *uname*\ (2)’s ``sysname``
     field. Always the same as ``OPSYS`` on Windows.
- ``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY<single: DETECTED_MEMORY>`
+
+``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY`
     The amount of detected physical memory (RAM) in MiB.
- ``$(DETECTED_CORES)``\ :index:`DETECTED_CORES<single: DETECTED_CORES>`
+
+``$(DETECTED_CORES)``\ :index:`DETECTED_CORES`
     The number of CPU cores that the operating system schedules. On
     machines that support hyper-threading, this will be the number of
     hyper-threads.
- ``$(PID)``\ :index:`PID<single: PID>`
+
+``$(PID)``\ :index:`PID`
     The process ID for the daemon or tool.
- ``$(PPID)``\ :index:`PPID<single: PPID>`
+
+``$(PPID)``\ :index:`PPID`
     The process ID of the parent process for the daemon or tool.
- ``$(USERNAME)``\ :index:`USERNAME<single: USERNAME>`
+
+``$(USERNAME)``\ :index:`USERNAME`
     The user name of the UID of the daemon or tool. For daemons started
     as root, but running under another UID (typically the user condor),
     this will be the other UID.
- ``$(FILESYSTEM_DOMAIN)``\ :index:`FILESYSTEM_DOMAIN<single: FILESYSTEM_DOMAIN>`
+
+``$(FILESYSTEM_DOMAIN)``\ :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See section \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
- ``$(UID_DOMAIN)``\ :index:`UID_DOMAIN<single: UID_DOMAIN>`
+
+``$(UID_DOMAIN)``\ :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See section \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__ for the full

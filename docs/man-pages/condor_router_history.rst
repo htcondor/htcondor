@@ -4,8 +4,8 @@
 =========================
 
 Display the history for routed jobs
-:index:`condor_router_history;Job Router commands<single: condor_router_history;Job Router commands>`
-:index:`condor_router_history<single: condor_router_history>`
+:index:`condor_router_history<single: condor_router_history; Job Router commands>`
+:index:`condor_router_history`
 
 Synopsis
 --------

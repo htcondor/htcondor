@@ -4,7 +4,7 @@
 =================
 
 suspend jobs from the HTCondor queue
-:index:`condor_suspend;HTCondor commands<single: condor_suspend;HTCondor commands>`\ :index:`condor_suspend command<single: condor_suspend command>`
+:index:`condor_suspend<single: condor_suspend; HTCondor commands>`\ :index:`condor_suspend command`
 
 Synopsis
 --------

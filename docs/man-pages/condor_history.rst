@@ -1,17 +1,17 @@
       
 
-*condor\_history*
+*condor_history*
 =================
 
 View log of HTCondor jobs completed to date
-:index:`condor_history;HTCondor commands<single: condor_history;HTCondor commands>`\ :index:`condor_history command<single: condor_history command>`
+:index:`condor_history<single: condor_history; HTCondor commands>`\ :index:`condor_history command`
 
 Synopsis
 --------
 
-**condor\_history** [**-help**\ ]
+**condor_history** [**-help**\ ]
 
-**condor\_history** [**-name  **\ *name*]
+**condor_history** [**-name  **\ *name*]
 [**-pool  **\ *centralmanagerhostname[:portnumber]*] [**-backwards**\ ]
 [**-forwards**\ ] [**-constraint  **\ *expr*] [**-file  **\ *filename*]
 [**-userlog  **\ *filename*] [**-format  **\ *formatString
@@ -22,7 +22,7 @@ AttributeName*] [**-autoformat[:jlhVr,tng]  **\ *attr1 [attr2 ...]*]
 Description
 -----------
 
-*condor\_history* displays a summary of all HTCondor jobs listed in the
+*condor_history* displays a summary of all HTCondor jobs listed in the
 specified history files. If no history files are specified with the
 **-file** option, the local history file as specified in HTCondor’s
 configuration file (``$(SPOOL)``/history by default) is read. The
@@ -35,7 +35,7 @@ single line, and contains the following items:
     The owner of the job.
  SUBMITTED
     The month, day, hour, and minute the job was submitted to the queue.
- RUN\_TIME
+ RUN_TIME
     Remote wall clock time accumulated by the job to date in days,
     hours, minutes, and seconds, given as the job ClassAd attribute
     ``RemoteWallClockTime``.
@@ -46,7 +46,7 @@ single line, and contains the following items:
  CMD
     The name of the executable.
 
-If a job ID (in the form of *cluster\_id* or *cluster\_id.proc\_id*) or
+If a job ID (in the form of *cluster_id* or *cluster_id.proc_id*) or
 an *owner* is provided, output will be restricted to jobs with the
 specified IDs and/or submitted by the specified owner. The *-constraint*
 option can be used to display jobs that satisfy a specified boolean
@@ -58,8 +58,8 @@ entries are appended at the end of the file. As of Condor version
 reading of the history file backwards (most recent job first). History
 files written with earlier versions of Condor, as well as those that
 have entries of both the older and newer format need to be converted to
-the new format. See the *condor\_convert\_history* manual page on
-page \ `1866 <Condorconverthistory.html#x108-75500012>`__ for details on
+the new format. See the *condor_convert_history* manual page on
+page \ `1879 <Condorconverthistory.html#x108-75500012>`__ for details on
 converting history files to the new format.
 
 Options
@@ -68,10 +68,10 @@ Options
  **-help**
     Display usage information and exit.
  **-name **\ *name*
-    Query the named *condor\_schedd* daemon.
+    Query the named *condor_schedd* daemon.
  **-pool **\ *centralmanagerhostname[:portnumber]*
     Use the *centralmanagerhostname* as the central manager to locate
-    *condor\_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
+    *condor_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
     specified in the configuration.
  **-backwards**
     List jobs in reverse chronological order. The job most recently
@@ -89,7 +89,7 @@ Options
     Stop scanning when the given jobid is found or when the expression
     becomes true.
  **-local **\ **
-    Read from local history files even if there is a SCHEDD\_HOST
+    Read from local history files even if there is a SCHEDD_HOST
     configured.
  **-file **\ *filename*
     Use the specified file instead of the default history file.
@@ -97,12 +97,11 @@ Options
     Display jobs, with job information coming from a job event log,
     instead of from the default history file. A job event log does not
     contain all of the job information, so some fields in the normal
-    output of *condor\_history* will be blank.
+    output of *condor_history* will be blank.
  **-format **\ *formatString*\ AttributeName
-    Display jobs with a custom format. See the *condor\_q* man page
+    Display jobs with a custom format. See the *condor_q* man page
     **-format** option for details.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or
-**-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -141,7 +140,7 @@ Options
 
     Use **-af:lrng** to get -long equivalent format.
 
-    | The newline and comma characters may not be used together. The
+    The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
  **-l** or **-long**
@@ -163,7 +162,7 @@ Options
 Exit Status
 -----------
 
-*condor\_history* will exit with a status value of 0 (zero) upon
+*condor_history* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Author

@@ -3,8 +3,8 @@
 Virtual Machine Applications
 ============================
 
-:index:`virtual machine universe<single: virtual machine universe>` :index:`vm;universe<single: vm;universe>`
-:index:`vm universe<single: vm universe>`
+:index:`virtual machine universe` :index:`vm<single: vm; universe>`
+:index:`vm universe`
 
 The **vm** universe facilitates an HTCondor job that matches and then
 lands a disk image on an execute machine within an HTCondor pool. This
@@ -21,11 +21,11 @@ The Submit Description File
 
 Different than all other universe jobs, the **vm** universe job
 specifies a disk image, not an executable. Therefore, the submit
-commands **input**\ :index:`input;submit commands<single: input;submit commands>`,
-**output**\ :index:`output;submit commands<single: output;submit commands>`, and
-**error**\ :index:`error;submit commands<single: error;submit commands>` do not apply. If
+commands **input**\ :index:`input<single: input; submit commands>`,
+**output**\ :index:`output<single: output; submit commands>`, and
+**error**\ :index:`error<single: error; submit commands>` do not apply. If
 specified, *condor\_submit* rejects the job with an error. The
-**executable**\ :index:`executable;submit commands<single: executable;submit commands>` command
+**executable**\ :index:`executable<single: executable; submit commands>` command
 changes definition within a **vm** universe job. It no longer specifies
 an executable file, but instead provides a string that identifies the
 job for tools such as *condor\_q*. Other commands specific to the type
@@ -51,7 +51,7 @@ or
       vm_type = kvm
 
 The job is required to specify its memory needs for the disk image with
-**vm\_memory**\ :index:`vm_memory;submit commands<single: vm_memory;submit commands>`, which is
+**vm\_memory**\ :index:`vm_memory<single: vm_memory; submit commands>`, which is
 given in Mbytes. HTCondor uses this number to assure a match with a
 machine that can provide the needed memory space.
 
@@ -62,13 +62,13 @@ Virtual machine networking is enabled with the command
       vm_networking = true
 
 And, when networking is enabled, a definition of
-**vm\_networking\_type**\ :index:`vm_networking_type;submit commands<single: vm_networking_type;submit commands>`
+**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 as **bridge** matches the job only with a machine that is configured to
 use bridge networking. A definition of
-**vm\_networking\_type**\ :index:`vm_networking_type;submit commands<single: vm_networking_type;submit commands>`
+**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 as **nat** matches the job only with a machine that is configured to use
 NAT networking. When no definition of
-**vm\_networking\_type**\ :index:`vm_networking_type;submit commands<single: vm_networking_type;submit commands>`
+**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 is given, HTCondor may match the job with a machine that enables
 networking, and further, the choice of bridge or NAT networking is
 determined by the machine’s configuration.
@@ -86,7 +86,7 @@ its own files, the submit command to prevent the transfer is
       vm_no_output_vm = true
 
 The required disk image must be identified for a virtual machine. This
-**vm\_disk**\ :index:`vm_disk;submit commands<single: vm_disk;submit commands>` command specifies
+**vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>` command specifies
 a list of comma-separated files. Each disk file is specified by
 colon-separated fields. The first field is the path and file name of the
 disk file. The second field specifies the device. The third field
@@ -98,7 +98,7 @@ Here is an example that identifies a single file:
       vm_disk = swap.img:sda2:w:raw
 
 If HTCondor will be transferring the disk file, then the file name given
-in **vm\_disk**\ :index:`vm_disk;submit commands<single: vm_disk;submit commands>` should not
+in **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>` should not
 contain any path information. Otherwise, the full path to the file
 should be given.
 
@@ -106,11 +106,11 @@ Setting values in the submit description file for some commands have
 consequences for the virtual machine description file. These commands
 are
 
--  **vm\_memory**\ :index:`vm_memory;submit commands<single: vm_memory;submit commands>`
--  **vm\_macaddr**\ :index:`vm_macaddr;submit commands<single: vm_macaddr;submit commands>`
--  **vm\_networking**\ :index:`vm_networking;submit commands<single: vm_networking;submit commands>`
--  **vm\_networking\_type**\ :index:`vm_networking_type;submit commands<single: vm_networking_type;submit commands>`
--  **vm\_disk**\ :index:`vm_disk;submit commands<single: vm_disk;submit commands>`
+-  **vm\_memory**\ :index:`vm_memory<single: vm_memory; submit commands>`
+-  **vm\_macaddr**\ :index:`vm_macaddr<single: vm_macaddr; submit commands>`
+-  **vm\_networking**\ :index:`vm_networking<single: vm_networking; submit commands>`
+-  **vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
+-  **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>`
 
 For VMware virtual machines, setting values for these commands causes
 HTCondor to modify the ``.vmx`` file, overwriting existing values. For
@@ -137,10 +137,10 @@ machine type targeted.
 VMware-Specific Submit Commands
 '''''''''''''''''''''''''''''''
 
-:index:`submit commands specific to VMware;vm universe<single: submit commands specific to VMware;vm universe>`
+:index:`submit commands specific to VMware<single: submit commands specific to VMware; vm universe>`
 
 Specific to VMware, the submit description file command
-**vmware\_dir**\ :index:`vmware_dir;submit commands<single: vmware_dir;submit commands>` gives the
+**vmware\_dir**\ :index:`vmware_dir<single: vmware_dir; submit commands>` gives the
 path and directory (on the machine from which the job is submitted) to
 where VMware-specific files and applications reside. One example of a
 VMware-specific application is the VMDK files, which form a virtual hard
@@ -151,7 +151,7 @@ directory.
 HTCondor must be told whether or not the contents of the **vmware\_dir**
 directory must be transferred to the machine where the job is to be
 executed. This required information is given with the submit command
-**vmware\_should\_transfer\_files**\ :index:`vmware_should_transfer_files;submit commands<single: vmware_should_transfer_files;submit commands>`.
+**vmware\_should\_transfer\_files**\ :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`.
 With a value of ``True``, HTCondor does transfer the contents of the
 directory. With a value of ``False``, HTCondor does not transfer the
 contents of the directory, and instead presumes that access to this
@@ -170,7 +170,7 @@ job may specify that a snapshot disk is not to be used with the command
 In this case, HTCondor will utilize original disk files in producing
 checkpoints. Note that *condor\_submit* issues an error message and does
 not submit the job if both **vmware\_should\_transfer\_files** and
-**vmware\_snapshot\_disk**\ :index:`vmware_snapshot_disk;submit commands<single: vmware_snapshot_disk;submit commands>`
+**vmware\_snapshot\_disk**\ :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
 are ``False``.
 
 Because *VMware Player* does not support snapshots, machines using
@@ -209,31 +209,31 @@ HTCondor job.
 Xen-Specific Submit Commands
 ''''''''''''''''''''''''''''
 
-:index:`submit commands specific to Xen;vm universe<single: submit commands specific to Xen;vm universe>`
+:index:`submit commands specific to Xen<single: submit commands specific to Xen; vm universe>`
 
 A Xen **vm** universe job requires specification of the guest kernel.
-The **xen\_kernel**\ :index:`xen_kernel;submit commands<single: xen_kernel;submit commands>` command
+The **xen\_kernel**\ :index:`xen_kernel<single: xen_kernel; submit commands>` command
 accomplishes this, utilizing one of the following definitions.
 
 #. ``xen_kernel = included`` implies that the kernel is to be found in
    disk image given by the definition of the single file specified in
-   **vm\_disk**\ :index:`vm_disk;submit commands<single: vm_disk;submit commands>`.
+   **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>`.
 #. ``xen_kernel = path-to-kernel`` gives the file name of the required
    kernel. If this kernel must be transferred to machine on which the
    **vm** universe job will execute, it must also be included in the
-   **transfer\_input\_files**\ :index:`transfer_input_files;submit commands<single: transfer_input_files;submit commands>`
+   **transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
    command.
 
    This form of the
-   **xen\_kernel**\ :index:`xen_kernel;submit commands<single: xen_kernel;submit commands>` command
+   **xen\_kernel**\ :index:`xen_kernel<single: xen_kernel; submit commands>` command
    also requires further definition of the
-   **xen\_root**\ :index:`xen_root;submit commands<single: xen_root;submit commands>` command.
+   **xen\_root**\ :index:`xen_root<single: xen_root; submit commands>` command.
    **xen\_root** defines the device containing files needed by root.
 
 Checkpoints
 -----------
 
-:index:`checkpoints;vm universe<single: checkpoints;vm universe>`
+:index:`checkpoints<single: checkpoints; vm universe>`
 
 Creating a checkpoint is straightforward for a virtual machine, as a
 checkpoint is a set of files that represent a snapshot of both disk
@@ -327,7 +327,7 @@ job is submitted.
 Failures to Launch
 ------------------
 
-:index:`ftl;vm universe<single: ftl;vm universe>`
+:index:`ftl<single: ftl; vm universe>`
 
 It is not uncommon for a **vm** universe job to fail to launch because
 of a problem with the execute machine. In these cases, HTCondor will
@@ -435,6 +435,6 @@ attribute. The following table may help in understanding such reasons.
     on a shared filesystem.  Files on a shared filesystem must be specified in 
     vm_disk with full paths. 
 
-:index:`virtual machine universe<single: virtual machine universe>`
+:index:`virtual machine universe`
 
       

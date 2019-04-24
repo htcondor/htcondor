@@ -11,8 +11,8 @@ Synopsis
 **condor\_convert\_history** [**-help**\ ]
 
 **condor\_convert\_history** *history-file1* [*history-file2…*\ ]
-:index:`condor_convert_history;Condor commands<single: condor_convert_history;Condor commands>`
-:index:`condor_convert_history command<single: condor_convert_history command>`
+:index:`condor_convert_history<single: condor_convert_history; Condor commands>`
+:index:`condor_convert_history command`
 
 Description
 -----------

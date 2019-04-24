@@ -15,29 +15,103 @@ Version 8.8.2
 
 Release Notes:
 
--  HTCondor version 8.8.2 not yet released.
+-  HTCondor version 8.8.2 released on April 11, 2019.
 
 New Features:
 
--  None.
+-  Added a new parameter ``SINGULARITY_IS_SETUID``
+   :index:`SINGULARITY_IS_SETUID`, which defaults to true. If
+   false, allows *condor\_ssh\_to\_job* to work when Singularity is
+   configured to run without the setuid wrapper. :ticket:`6931`
+-  The negotiator parameter ``NEGOTIATOR_DEPTH_FIRST``
+   :index:`NEGOTIATOR_DEPTH_FIRST` has been added which, when
+   using partitionable slots, fill each machine up with jobs before
+   trying to use the next available machine. :ticket:`5884`
+-  The Python bindings ``ClassAd`` module has a new printJson() method
+   to serialize a ClassAd into a string in JSON format. :ticket:`6950`
 
 Bugs Fixed:
 
--  None.
+-  Support for the *condor\_ssh\_to\_job* command, when ssh’ing to a
+   Singularity job, requires the nsenter command. Previous versions of
+   HTCondor relied on features of nsenter not universally available.
+   8.8.2 now works with all known versions of nsenter. :ticket:`6934`
+-  Moved the execution of ``USER_JOB_WRAPPER``
+   :index:`USER_JOB_WRAPPER` with Singularity jobs to be executed
+   outside the container, not inside the container. :ticket:`6904`
+-  Fixed a bug where *condor\_ssh\_to\_job* would not work to a Docker
+   universe job when file transfer was off. :ticket:`6945`
+-  Included a patch from the development series that fixes problems that
+   could crash *condor\_annex* to crash. :ticket:`6980`
+-  Fixed a bug that could cause the ``job_queue.log`` file to be
+   corrupted when the *condor\_schedd* compacts it. :ticket:`6929`
+-  The *condor\_userprio* command, when given the -negotiator and -l
+   options used to emit the value of the concurrency limits in the one
+   large ClassAd it printed. This was removed in 8.8.0, but has been
+   restored in 8.8.2. :ticket:`6948`
+-  In some situations, the GPU monitoring code could disagree with the
+   GPU discovery code about the mapping between GPU device indices and
+   actual devices. Both now use PCI bus IDs to establish the mapping.
+   One consequence of this change is that we now prefer to use NVidia’s
+   management library, rather than the CUDA run-time library, when doing
+   discovery. :ticket:`6903`
+   :ticket:`6901`
+-  Corrected documentation of ``CHIRP_DELAYED_UPDATED_PREFIX``; it is
+   neither singular nor a prefix. Also resolved a problem where
+   administrators had to specify each attribute in that list, rather
+   than via prefixes or via wildcards. :ticket:`6958`
+-  The Condormaster now waits until the *condor\_procd* has exited
+   before exiting itself. This change helps to prevent problems on
+   Windows with using the Service Control Manager to restart the Condor
+   service. :ticket:`6952`
+-  Fixed a bug on Windows that could cause a delay of up to 2 minutes in
+   responding to *condor\_reconfig*, *condor\_restart* or *condor\_off*
+   commands when using shared port. :ticket:`6960`
+-  Fixed a bug that could cause the *condor\_schedd* on Windows to to
+   restart with the message "fd\_set is full". This change reduces that
+   maximum number of active connections that a *condor\_collector* or
+   *condor\_schedd* on Windows will allow from 1023 to 1014. :ticket:`6957`
+-  Fixed a bug where local universe jobs where unable to run
+   *condor\_submit* to their local schedd. :ticket:`6920`
+-  Restored the old Python bindings for reading the job event log
+   (``EventIterator`` and ``read_events()``). These bindings are marked
+   as deprecated, are not available in Python 3, and will likely be
+   removed permanently in the 8.9 series. Users should transition to the
+   replacement bindings (``JobEventLog``) :ticket:`6939`
+-  Fixed a bug that could cause entries in the job event log to be
+   written with the wrong job id when a *condor\_shadow* process is used
+   to run multiple jobs. :ticket:`6919`
+-  In some situations, the bytes sent and bytes received values in the
+   termination event of the job event log could be reversed. This has
+   been fixed. :ticket:`6914`
+-  For grid universe jobs of type ``batch``, the job now receives a
+   signal when the batch system wants it to exit, giving the job a
+   chance to shut down gracefully. :ticket:`6915`
 
 Version 8.8.1
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.1 not yet released.
+-  HTCondor version 8.8.1 released on February 19, 2019.
 
 Known Issues:
 
--  GPU resource monitoring is no longer enabled by default after reports
-   indicating excessive CPU usage. GPU resource monitoring may be enable
-   by adding ‘use feature: GPUsMonitor’ to the HTCondor configuration.
+-  GPU resource monitoring is no longer enabled by default after we
+   received reports indicating excessive CPU usage. We believe we’ve
+   fixed the problem, but would like to get updated reports from users
+   who were previously affected. To enable (the patched) GPU resource
+   monitoring, add ‘use feature: GPUsMonitor’ to the HTCondor
+   configuration. Thank you.
+
    :ticket:`6857`
+
+-  Discovered a bug in DAGMan where graph metrics reporting could
+   sometimes send the *condor\_dagman* process into an infinite loop. We
+   worked around this by disabling graph metrics reporting by default,
+   via the new ``DAGMAN_REPORT_GRAPH_METRICS``
+   :index:`DAGMAN_REPORT_GRAPH_METRICS` configuration knob.
+   :ticket:`6896`
 
 New Features:
 
@@ -45,7 +119,36 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug that caused *condor\_gpu\_discovery* to report the wrong
+   value for DeviceMemory and possibly other attributes of the GPU when
+   CUDA 10 was installed as the default run-time. Also fixed a bug that
+   would sometimes cause the reported value of DeviceMemory to be
+   limited to 4 Gigabytes. :ticket:`6883`
+-  Fixed bug that prevented HTCondor on Windows from running jobs in the
+   default configuration when started as a service. :ticket:`6853`
+-  The Job Router no longer sets an incorrect ``User`` job attribute
+   when routing a job between two *condor\_schedd*\ s with different
+   values for configuration parameter ``UID_DOMAIN``. :ticket:`6856`
+-  Made Collector.locateAll() method more efficient in the Python
+   bindings. :ticket:`6831`
+-  Improved efficiency of negotiation code in the *condor\_schedd*.
+   :ticket:`6834`
+-  The new ``minihtcondor`` package now starts HTCondor automatically at
+   after installation. :ticket:`6888`
+-  The *condor\_master* now sends status updates to *systemd* every 10
+   seconds. :ticket:`6888`
+-  *condor\_q* -autocluster data is now much more up-to-date. :ticket:`6833`
+-  In order to work better with HTCondor 8.9.1 and later, remove support
+   for remote submission to *condor\_schedd*\ s older than version
+   7.5.0. :ticket:`6844`
+-  Fixed a bug that would cause DAGMan jobs to fail when using Kerberos
+   Authentication on Debian or Ubuntu. :ticket:`6917`
+-  Fixed a bug that caused execute nodes to ignore config knob
+   ``CREDD_POLLING_TIMEOUT``\ :index:`CREDD_POLLING_TIMEOUT`.
+   :ticket:`6887`
+-  Python binding API method Schedd.submit() and submitMany() now edits
+   job ``Requirements`` expression to consider the job ad’s
+   ``RequestCPUs`` and ``RequestGPUs`` attributes. :ticket:`6918`
 
 Version 8.8.0
 -------------

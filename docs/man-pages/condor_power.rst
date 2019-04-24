@@ -4,7 +4,7 @@
 ===============
 
 send packet intended to wake a machine from a low power state
-:index:`condor_power;HTCondor commands<single: condor_power;HTCondor commands>`\ :index:`condor_power command<single: condor_power command>`
+:index:`condor_power<single: condor_power; HTCondor commands>`\ :index:`condor_power command`
 
 Synopsis
 --------

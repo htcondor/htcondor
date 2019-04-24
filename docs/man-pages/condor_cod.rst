@@ -4,8 +4,8 @@
 =============
 
 manage COD machines and jobs
-:index:`condor_cod;HTCondor commands<single: condor_cod;HTCondor commands>`
-:index:`condor_cod command<single: condor_cod command>`
+:index:`condor_cod<single: condor_cod; HTCondor commands>`
+:index:`condor_cod command`
 
 Synopsis
 --------

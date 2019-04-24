@@ -3,7 +3,7 @@
 Upgrading from the 8.6 series to the 8.8 series of HTCondor
 ===========================================================
 
-:index:`items to be aware of;upgrading<single: items to be aware of;upgrading>`
+:index:`items to be aware of<single: items to be aware of; upgrading>`
 
 Upgrading from the 8.6 series of HTCondor to the 8.8 series will bring
 new features introduced in the 8.7 series of HTCondor. These new

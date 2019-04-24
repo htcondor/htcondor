@@ -1,29 +1,29 @@
       
 
-*condor\_userprio*
+*condor_userprio*
 ==================
 
 Manage user priorities
-:index:`condor_userprio;HTCondor commands<single: condor_userprio;HTCondor commands>`\ :index:`condor_userprio command<single: condor_userprio command>`
+:index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ :index:`condor_userprio command`
 
 Synopsis
 --------
 
-**condor\_userprio** **-help**
+**condor_userprio** **-help**
 
-**condor\_userprio** [**-name  **\ *negotiatorname*]
+**condor_userprio** [**-name  **\ *negotiatorname*]
 [**-pool  **\ *centralmanagerhostname[:portnumber]*] [**Edit option**\ ]
 \| [**Display options**\ ] [**-inputfile  **\ *filename*]
 
 Description
 -----------
 
-*condor\_userprio* either modifies priority-related information or
+*condor_userprio* either modifies priority-related information or
 displays priority-related information. Displayed information comes from
-the accountant log, where the *condor\_negotiator* daemon stores
+the accountant log, where the *condor_negotiator* daemon stores
 historical usage information in the file at
 ``$(SPOOL)``/Accountantnew.log. Which fields are displayed changes based
-on command line arguments. *condor\_userprio* with no arguments, lists
+on command line arguments. *condor_userprio* with no arguments, lists
 the active users along with their priorities, in increasing priority
 order. The **-all** option can be used to display more detailed
 information about each user, resulting in a rather wide display, and
@@ -70,16 +70,16 @@ Options
  **-help**
     Display usage information and exit.
  **-name **\ *negotiatorname*
-    When querying ads from the *condor\_collector*, only retrieve ads
+    When querying ads from the *condor_collector*, only retrieve ads
     that came from the negotiator with the given name.
  **-pool **\ *centralmanagerhostname[:portnumber]*
     Contact the specified *centralmanagerhostname* with an optional port
     number, instead of the local central manager. This can be used to
     check other pools. NOTE: The host name (and optional port) specified
-    refer to the host name (and port) of the *condor\_negotiator* to
+    refer to the host name (and port) of the *condor_negotiator* to
     query for user priorities. This is slightly different than most
     HTCondor tools that support a **-pool** option, and instead expect
-    the host name (and port) of the *condor\_collector*.
+    the host name (and port) of the *condor_collector*.
  **-inputfile **\ *filename*
     Introduced for debugging purposes, read priority information from
     *filename*. The contents of *filename* are expected to be the same
@@ -120,8 +120,7 @@ Options
  **-negotiator**
     (Display option) Force the query to come from the negotiator instead
     of the collector.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or
-**-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
     (Display option) Display attribute(s) or expression(s) formatted in
     a default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -160,7 +159,7 @@ Options
 
     Use **-af:lrng** to get -long equivalent format.
 
-    | The newline and comma characters may not be used together. The
+    The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
  **-constraint **\ *<expr>*
@@ -275,7 +274,7 @@ wide display.
 Exit Status
 -----------
 
-*condor\_userprio* will exit with a status value of 0 (zero) upon
+*condor_userprio* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Author

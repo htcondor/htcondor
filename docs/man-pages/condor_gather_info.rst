@@ -4,7 +4,7 @@
 ======================
 
 Gather information about an HTCondor installation and a queued job
-:index:`condor_gather_info;HTCondor commands<single: condor_gather_info;HTCondor commands>`\ :index:`condor_gather_info command<single: condor_gather_info command>`
+:index:`condor_gather_info<single: condor_gather_info; HTCondor commands>`\ :index:`condor_gather_info command`
 
 Synopsis
 --------
