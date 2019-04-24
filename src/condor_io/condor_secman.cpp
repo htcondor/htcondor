@@ -2218,7 +2218,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Failure: Unable to lookup valid commands.");
-				delete sesid;
+				free(sesid);
 				return StartCommandFailed;
 			}
 

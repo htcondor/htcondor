@@ -141,6 +141,7 @@
 #define SUBMIT_KEY_TransferInput "transfer_input"
 #define SUBMIT_KEY_TransferOutput "transfer_output"
 #define SUBMIT_KEY_TransferError "transfer_error"
+#define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 
@@ -598,8 +599,8 @@ public:
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
-	void dump(FILE* out, int flags);
-	const char* to_string(std::string & buf, int flags);
+	void dump(FILE* out, int flags); // print the hash to the given FILE*
+	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
 
@@ -638,6 +639,8 @@ protected:
 	bool IsRemoteJob;
 	int (*FnCheckFile)(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 	void *CheckFileArg;
+
+	bool CheckProxyFile;
 
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables
@@ -783,6 +786,7 @@ protected:
 
 	// private helper functions
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
+	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
 	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:

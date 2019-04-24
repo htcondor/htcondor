@@ -926,13 +926,16 @@ main( int argc, const char *argv[] )
             MySchedd = new DCSchedd(ScheddName, PoolName);
         }
 		if( ! MySchedd->locate() ) {
-			if( ScheddName ) {
-				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
-						 ScheddName );
+			if (ScheddName) {
+				fprintf(stderr, "\nERROR: Can't find address of schedd %s\n", ScheddName);
+				exit(1);
+			} else if ( ! DashDryRun) {
+				fprintf(stderr, "\nERROR: Can't find address of local schedd\n");
+				exit(1);
 			} else {
-				fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
+				// delete the MySchedd so that -dry-run will assume the version of submit
+				delete MySchedd; MySchedd = NULL;
 			}
-			exit(1);
 		}
 	}
 
@@ -1173,7 +1176,7 @@ main( int argc, const char *argv[] )
 			switch(STMethod) {
 				case STM_USE_SCHEDD_ONLY:
 					// perhaps check for proper schedd version here?
-					result = MySchedd->spoolJobFiles( JobAdsArray.size(),
+					result = MySchedd->spoolJobFiles( (int)JobAdsArray.size(),
 											  JobAdsArray.data(),
 											  &errstack );
 					if ( !result ) {
@@ -1187,7 +1190,7 @@ main( int argc, const char *argv[] )
 					{ // start block
 
 					fprintf(stdout,
-							"Locating a Sandbox for %lu jobs.\n",JobAdsArray.size());
+							"Locating a Sandbox for %lu jobs.\n", (unsigned long)JobAdsArray.size());
 					MyString td_sinful;
 					MyString td_capability;
 					ClassAd respad;
@@ -1195,7 +1198,7 @@ main( int argc, const char *argv[] )
 					MyString reason;
 
 					result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
-												JobAdsArray.size(),
+												(int)JobAdsArray.size(),
 												JobAdsArray.data(), FTP_CFTP,
 												&respad, &errstack );
 					if ( !result ) {
@@ -1221,11 +1224,11 @@ main( int argc, const char *argv[] )
 						td_capability.Value());
 
 					fprintf(stdout,"Spooling data files for %lu jobs.\n",
-						JobAdsArray.size());
+						(unsigned long)JobAdsArray.size());
 
 					DCTransferD dctd(td_sinful.Value());
 
-					result = dctd.upload_job_files( JobAdsArray.size(),
+					result = dctd.upload_job_files( (int)JobAdsArray.size(),
 											  JobAdsArray.data(),
 											  &respad, &errstack );
 					if ( !result ) {
@@ -1477,6 +1480,7 @@ reschedule()
 {
 	if ( ! MySchedd)
 		return;
+
 	if ( param_boolean("SUBMIT_SEND_RESCHEDULE",true) ) {
 		Stream::stream_type st = MySchedd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 		if (DashDryRun) {
@@ -1930,22 +1934,20 @@ int submit_jobs (
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
+			if (submit_digest.empty()) {
+				rval = -1;
+				break;
+			}
 
-		#if 1
-			//if (DashDryRun && create_local_factory_file) {
-			//	MyString items_fn = create_local_factory_file;
-			//	items_fn += ".items";
-			//	MyQ->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
-			//}
+			// if generating a dry-run digest file with a generic name, also generate a dry-run itemdata file
+			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
+				MyString items_fn = create_local_factory_file;
+				items_fn += ".items";
+				dynamic_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+			}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
 				break;
-		#else
-			// convert foreach data into canonical form, writing a new .items file if needed
-			rval = convert_to_foreach_file(submit_hash, o, ClusterId, true);
-			if (rval < 0)
-				break;
-		#endif
 
 			// append the revised queue statement to the submit digest
 			rval = append_queue_statement(submit_digest, o);
@@ -1955,7 +1957,8 @@ int submit_jobs (
 			// write the submit digest to the current working directory.
 			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
 			if (create_local_factory_file) {
-				rval = write_factory_file(create_local_factory_file, submit_digest.data(), (int)submit_digest.size(), 0644);
+				MyString factory_path = submit_hash.full_path(create_local_factory_file, false);
+				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
 			}
@@ -2596,7 +2599,11 @@ int SetSyscalls( int foo ) { return foo; }
 
 MyString credd_has_tokens(MyString m) {
 
-	dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), my_username());
+	if (IsDebugLevel(D_SECURITY)) {
+			char *myname = my_username();
+			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
+			free(myname);
+	}
 
 	// PHASE 1
 	//
@@ -2835,7 +2842,9 @@ int process_job_credentials()
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
-					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+					char *my_un = my_username();
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.Value());
+					free(my_un);
 				} else {
 					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
 				}

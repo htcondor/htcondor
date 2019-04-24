@@ -68,7 +68,6 @@
 #include "dc_transferd.h"
 #include "condor_ftp.h"
 #include "condor_crontab.h"
-#include <scheduler.h>
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
@@ -77,7 +76,8 @@
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "condor_md.h"
-#include "submit_internal.h"
+#include "submit_protocol.h"
+#include "submit_utils.h"
 
 #include <algorithm>
 #include <string>
@@ -161,7 +161,12 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	return SetJobFactory(cluster, qnum, filename, text);
 }
 
-static int send_row(void* pv, std::string & rowdata) {
+// helper function used as 3rd argument to SendMaterializeData.
+// it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
+// resulting rowdata for SendMaterializeData to use.  This could be a free function
+// I made it part of the AbstractScheddQ just to put it in a namespace.
+//
+/*static*/ int AbstractScheddQ::next_rowdata(void* pv, std::string & rowdata) {
 	SubmitForeachArgs &fea = *((SubmitForeachArgs *)pv);
 
 	rowdata.clear();
@@ -198,12 +203,13 @@ int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 	if (o.items.number() > 0) {
 		int row_count = 0;
 		o.items.rewind();
-		int rval = SendMaterializeData(cluster_id, 0, send_row, &o, o.items_filename, &row_count);
+		int rval = SendMaterializeData(cluster_id, 0, AbstractScheddQ::next_rowdata, &o, o.items_filename, &row_count);
 		if (rval) return rval;
 		if (row_count != o.items.number()) {
 			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %d items\n", row_count, o.items.number());
 			return -1;
 		}
+		o.foreach_mode = foreach_from;
 	}
 	return 0;
 }
@@ -217,139 +223,4 @@ int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, 
 int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
 int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
 int ActualScheddQ::send_SpoolFileBytes(char const *filename) { return SendSpoolFileBytes(filename); }
-
-//====================================================================================
-// functions for a simulate schedd q
-//====================================================================================
-
-SimScheddQ::SimScheddQ(int starting_cluster)
-	: cluster(starting_cluster)
-	, proc(-1)
-	, close_file_on_disconnect(false)
-	, log_all_communication(false)
-	, fp(NULL)
-{
-}
-
-SimScheddQ::~SimScheddQ()
-{
-	if (fp && close_file_on_disconnect) {
-		fclose(fp);
-	}
-	fp = NULL;
-}
-
-bool SimScheddQ::Connect(FILE* _fp, bool close_on_disconnect, bool log_all) {
-	ASSERT( ! fp);
-	fp = _fp;
-	close_file_on_disconnect = close_on_disconnect;
-	log_all_communication = log_all;
-	return fp != NULL;
-}
-
-bool SimScheddQ::disconnect(bool /*commit_transaction*/, CondorError & /*errstack*/)
-{
-	if (fp && close_file_on_disconnect) {
-		fclose(fp);
-	}
-	fp = NULL;
-	return true;
-}
-
-int SimScheddQ::get_NewCluster() {
-	proc = -1;
-	if (log_all_communication) fprintf(fp, "::get_newCluster\n");
-	return ++cluster;
-}
-
-int SimScheddQ::get_NewProc(int cluster_id) {
-	ASSERT(cluster == cluster_id);
-	if (fp) { 
-		if (log_all_communication) fprintf(fp, "::get_newProc\n");
-		fprintf (fp, "\n");
-	}
-	return ++proc;
-}
-
-int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
-	ASSERT(cluster_id == cluster);
-	return 0;
-}
-
-int SimScheddQ::get_Capabilities(ClassAd & caps) {
-	caps.Assign( "LateMaterialize", true );
-	return GetScheddCapabilites(0, caps);
-}
-
-// hack for 8.7.8 testing
-extern int attr_chain_depth;
-
-int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, const char *value, SetAttributeFlags_t /*flags*/) {
-	ASSERT(cluster_id == cluster);
-	ASSERT(proc_id == proc || proc_id == -1);
-	if (fp) {
-		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth-1);
-		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
-		fprintf(fp, "%s=%s\n", attr, value);
-	}
-	return 0;
-}
-int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, int value, SetAttributeFlags_t /*flags*/) {
-	ASSERT(cluster_id == cluster);
-	ASSERT(proc_id == proc || proc_id == -1);
-	if (fp) {
-		if (log_all_communication) fprintf(fp, "::int(%d,%d) ", cluster_id, proc_id);
-		fprintf(fp, "%s=%d\n", attr, value);
-	}
-	return 0;
-}
-
-
-int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, const char * text) {
-	ASSERT(cluster_id == cluster);
-	if (fp) {
-		if (log_all_communication) {
-			fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
-			if (text) { fprintf(fp, "factory_text=%s\n", text); }
-			else if (filename) { fprintf(fp, "factory_file=%s\n", filename); }
-			else { fprintf(fp, "\n"); }
-		}
-	}
-	return 0;
-}
-
-
-int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
-{
-	ASSERT(cluster_id == cluster);
-	if (fp && ! log_all_communication) {
-		// normally get_NewProc would terminate the previous line, but if we get here
-		// we know that we are doing a DashDryRun and get_NewProc will never be called
-		// and we have just printed Dry-Run jobs(s) without a \n, so print the \n now.
-		fprintf(fp, "\n");
-	}
-	if (o.items.number() > 0) {
-		if (log_all_communication) {
-			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
-		}
-	}
-	return 0;
-}
-
-
-int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) {
-	if (fp) {
-		fprintf(fp, "::send_SpoolFileIfNeeded\n");
-		fPrintAd(fp, ad);
-	}
-	return 0;
-}
-int SimScheddQ::send_SpoolFile(char const * filename) {
-	if (fp) { fprintf(fp, "::send_SpoolFile: %s\n", filename); }
-	return 0;
-}
-int SimScheddQ::send_SpoolFileBytes(char const * filename) {
-	if (fp) { fprintf(fp, "::send_SpoolFileBytes: %s\n", filename); }
-	return 0;
-}
 

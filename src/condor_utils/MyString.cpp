@@ -501,7 +501,7 @@ MyString::substr(int pos, int len) const
 	if ( pos < 0 ) {
 		pos = 0;
 	}
-	if ( pos + len > Len ) {
+	if ( len > Len - pos ) {
 		len = Len - pos;
 	}
 	S.reserve( len );

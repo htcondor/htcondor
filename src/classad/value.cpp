@@ -62,6 +62,10 @@ void Value::
 _Clear()
 {
 	switch( valueType ) {
+	    case SCLASSAD_VALUE:
+	        delete sclassadValue;
+	        break;
+
 		case SLIST_VALUE:
 			delete slistValue;
 			break;
@@ -214,7 +218,7 @@ CopyFrom( const Value &val )
 		case UNDEFINED_VALUE:
 		case ERROR_VALUE:
 			return;
-	
+
 		case LIST_VALUE:
 			listValue = val.listValue;
 			return;
@@ -225,6 +229,10 @@ CopyFrom( const Value &val )
 
 		case CLASSAD_VALUE:
 			classadValue = val.classadValue;
+			return;
+
+		case SCLASSAD_VALUE:
+			sclassadValue = new classad_shared_ptr<ClassAd>(*val.sclassadValue);
 			return;
 
 		case ABSOLUTE_TIME_VALUE:
@@ -336,6 +344,15 @@ SetListValue( classad_shared_ptr<ExprList> l)
 }
 
 void Value::
+SetClassAdValue( classad_shared_ptr<ClassAd> ad )
+{
+	_Clear();
+	valueType = SCLASSAD_VALUE;
+    sclassadValue = new classad_shared_ptr<ClassAd>(ad);
+}
+
+
+void Value::
 SetClassAdValue( ClassAd *ad )
 {
 	_Clear();
@@ -399,6 +416,9 @@ SameAs(const Value &otherValue) const
         case Value::CLASSAD_VALUE:
             is_same = classadValue->SameAs(otherValue.classadValue);
             break;
+        case Value::SCLASSAD_VALUE:
+            is_same = classadValue->SameAs(otherValue.sclassadValue->get());
+            break;
         case Value::RELATIVE_TIME_VALUE:
             is_same = (relTimeValueSecs == otherValue.relTimeValueSecs);
             break;
@@ -452,7 +472,8 @@ ostream& operator<<(ostream &stream, Value &value)
 	case Value::LIST_VALUE:
 	case Value::SLIST_VALUE:
 	case Value::CLASSAD_VALUE:
-	case Value::RELATIVE_TIME_VALUE: 
+	case Value::SCLASSAD_VALUE:
+	case Value::RELATIVE_TIME_VALUE:
 	case Value::ABSOLUTE_TIME_VALUE: {
 		unparser.Unparse(unparsed_text, value);
 		stream << unparsed_text;
@@ -490,6 +511,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 			realValue.SetErrorValue();
@@ -581,6 +603,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 			integerValue.SetErrorValue();
@@ -675,6 +698,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
             break;
 
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
@@ -723,6 +747,28 @@ IsSListValue(classad_shared_ptr<ExprList>& l)
             // in case we are called multiple times, stash a shared_ptr
             // to the copy of the list
         SetListValue(l);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Value::
+IsSClassAdValue(classad_shared_ptr<ClassAd>& c)
+{
+    if (valueType == SCLASSAD_VALUE) {
+        c = (*sclassadValue);
+        return true;
+    } else if (valueType == CLASSAD_VALUE) {
+            // we must copy our list, because it does not belong
+            // to a shared_ptr
+        c = classad_shared_ptr<ClassAd>( (ClassAd*)classadValue->Copy() );
+        if( !c ) {
+            return false;
+        }
+            // in case we are called multiple times, stash a shared_ptr
+            // to the copy of the list
+        SetClassAdValue(c);
         return true;
     } else {
         return false;

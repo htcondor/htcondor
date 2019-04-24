@@ -1696,7 +1696,7 @@ cleanup:
 	}
 
 	// Else, we block and finish up immediately.
-	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, &st);
+	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, st);
 #endif
 }
 

@@ -917,6 +917,16 @@ will instead use this string.
 For interactive jobs that do not have a submit description file,
 this string will default to \Expr{"Interactive job"}.
 
+%%% ClassAd attribute: JobDisconnectedDate
+\index{ClassAd job attribute!JobDisconnectedDate}
+\index{JobDisconnectedDate!job ClassAd attribute}
+\label{JobDisconnectedDate-job-attribute}
+\item[\AdAttr{JobDisconnectedDate}:]  Time at which the \condor{shadow}
+and \Condor{starter} became disconnected.
+Set to \Expr{Undefined} when a successful reconnect occurs.
+Measured in the number of seconds since the epoch
+(00:00:00 UTC, Jan 1, 1970).
+
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}

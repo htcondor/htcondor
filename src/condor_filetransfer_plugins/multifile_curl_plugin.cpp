@@ -197,7 +197,7 @@ MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mo
     }
     else {
         if ( _diagnostic ) { fprintf( stderr, "Fetching to %s\n", local_file.c_str() ); }
-        file = fopen( local_file.c_str(), mode );
+        file = safe_fopen_wrapper( local_file.c_str(), mode );
     }
 
     if( !file ) {
@@ -460,7 +460,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
             else if( retry_count <= MAX_RETRY_ATTEMPTS &&
-                     ShouldRetryTransfer(retry_count) ) {
+                     ShouldRetryTransfer(file_rval) ) {
                 continue;
             }
             // On fatal errors, break out of the loop
@@ -495,6 +495,10 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     rval = BuildTransferRequests(input_filename, requested_files);
+    // If BuildTransferRequests failed, exit immediately
+    if ( rval != 0 ) {
+        return rval;
+    }
     classad::ClassAdUnParser unparser;
 
     // Iterate over the map of files to transfer.
@@ -541,7 +545,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
             else if( retry_count <= MAX_RETRY_ATTEMPTS && 
-                     ShouldRetryTransfer(retry_count) ) {
+                     ShouldRetryTransfer(rval) ) {
                 continue;
             }
             // On fatal errors, break out of the loop

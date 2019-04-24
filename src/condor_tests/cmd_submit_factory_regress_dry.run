@@ -29,18 +29,20 @@ use CondorTest;
 use CondorUtils;
 use strict;
 use warnings;
+#use Data::Dumper;
 
-my $verbose = 0;
+my $verbose = 2;
 my $result = 1;
-my $testname = "cmd_submit_regress_dry";
+my $testname = "cmd_submit_factory_regress_dry";
+my $peername = "cmd_submit_regress_dry";
 
 # these will get filled in with expectations about the results of submitting the subfiles
 my %expect;
 my %expect_warn;
 my %dont_expect;
 
-TLOG "Creating sub files for coverage test from $testname.subs\n";
-my @subs = emit_subs("$testname.subs");
+TLOG "Creating sub files for coverage test from $peername.subs\n";
+my @subs = emit_subs("$peername.subs");
 
 # regression test wheat.sub needs some directories to exist
 if ( ! -d "Multilevel_Thesis_WheatData") {
@@ -52,8 +54,8 @@ if ( ! -d "Multilevel_Thesis_WheatData") {
 }
 
 
-TLOG "Loading expectations from $testname.expect\n";
-load_expectations("$testname.expect", \%expect, \%expect_warn, \%dont_expect);
+TLOG "Loading expectations from $peername.expect\n";
+load_expectations("$peername.expect", \%expect, \%expect_warn, \%dont_expect);
 
 # print the loaded expectations
 #
@@ -87,13 +89,17 @@ my %base_cluster_ad;
 foreach my $sub (@subs) {
 
 	my $tag = $sub; $tag =~ s/^\d*//;
+	my $digest = $sub; $digest =~ s/\.sub/.digest/;
+	my $cad = $sub; $cad =~ s/\.sub/.cad/;
 
-	TLOG "$tag: condor_submit -dry $sub\n";
+	TLOG "$tag: condor_submit $sub -factory -digest $digest -dry $cad\n";
 	if ( ! -f $sub) {
 		print "\tskipping submit because file $sub does not exist\n";
 		next;
 	}
 
+	my @digest = ();
+	my @items = ();
 	my %cluster_ad = ();
 	my @proc_ads = ();
 
@@ -101,7 +107,7 @@ foreach my $sub (@subs) {
 	$opts{expect_result} = \&ANY; # don't care if the command fails, just return the exitcode
 	$opts{emit_output} = 0;       # change to 1 to see the raw output of the submit
 
-	my $hashref = runcmd( "condor_submit -dry-run:cluster=$sub - $sub", \%opts );
+	my $hashref = runcmd( "condor_submit $sub -factory -digest $digest -dry-run:cluster=$sub $cad", \%opts );
 	my @output =  @{${$hashref}{"stdout"}};
 	my @error =  @{${$hashref}{"stderr"}};
 	my $exitcode = ${$hashref}{"exitcode"};
@@ -112,7 +118,7 @@ foreach my $sub (@subs) {
 
 	# always print the stderr output
 	if(defined $error[0]) {
-		TLOG "exit code is $exitcode\n";
+		TLOG "submit exit code is $exitcode\n";
 		print("\t----stderr----\n");
 		foreach (@error) { print $_; }
 		print("\t----end stderr----\n");
@@ -122,7 +128,7 @@ foreach my $sub (@subs) {
 	if ($verbose > 1) {
 		if(defined $error[0]) {
 		} else {
-			TLOG "exit code is $exitcode\n";
+			TLOG "submit exit code is $exitcode\n";
 			print("\t----no stderr----\n");
 		}
 		if(defined $output[0]) {
@@ -134,19 +140,95 @@ foreach my $sub (@subs) {
 		}
 	}
 
-	# parse stdout to get a cluster ad and array of proc ads
-	# 
-	%cluster_ad = get_ads(\@output, \@proc_ads);
+    # read in the cluster ad file, the digest file and the .items that was just created
+    # the .items file may not exist, and this is not an error
+	%cluster_ad = load_ad($cad);
+	my ($queuenum,$qargs) = load_digest($digest, \@digest, \@items);
 
-	# print the raw cluster ad and proc ads
-	#
+	my $expected_num_ads = $queuenum;
+	if (scalar @items) { $expected_num_ads *= scalar @items; }
+	
+
+	# print the raw submit digest and itemdata and ClusterAd
 	if ($verbose) {
-		print "\tClusterAd:\n";
+		print "  ClusterAd:\n";
 		foreach my $key (sort keys %cluster_ad) {
 			print "\t$key=$cluster_ad{$key}\n";
 		}
+		print "  Digest:\n";
+		for (@digest) {
+			print "\t$_\n";
+		}
+		my $numitems = @items;
+		print "  Items: $numitems\n";
+		for (@items) {
+			print "\t$_";
+		}
+		print "  QUEUE $queuenum $qargs\n";
+		print "\t$expected_num_ads jobs expected to materialize\n";
 		print "\n";
+	}
+	
+	my $logarg = "";
+	if ($verbose) {
+		$logarg = "-verbose";
+		if ( ! CondorUtils::is_windows()) {
+			# for some reason, turning on -debug on Windows causes this test to never exit...
+			$logarg = "-verbose -debug";
+			$ENV{'_CONDOR_TOOL_DEBUG'} = 'D_MATERIALIZE D_FULLDEBUG';
+		}
+	}
 
+	my $itemsarg = "";
+	if (-f "$digest.items") {
+		$itemsarg = "-item $digest.items";
+	}
+
+	TLOG "$tag: test_job_factory.exe $logarg -cl $cad $digest $itemsarg\n";
+	
+	# now materialize the proc ads from the cluster ad and digest
+	#
+	#
+	$hashref = runcmd( "test_job_factory.exe $logarg -cl $cad $digest $itemsarg", \%opts );
+	@output =  @{${$hashref}{"stdout"}};
+	@error =  @{${$hashref}{"stderr"}};
+	$exitcode = ${$hashref}{"exitcode"};
+	
+
+	# always print the stderr output
+	if(defined $error[0]) {
+		TLOG "job_factory exit code is $exitcode\n";
+		print("\t----stderr----\n");
+		foreach (@error) { print $_; }
+		print("\t----end stderr----\n");
+	}
+	
+	# print the raw command output only if we are in verbose mode
+	if ($verbose > 1) {
+		if(defined $error[0]) {
+		} else {
+			TLOG "job_factory exit code is $exitcode\n";
+			print("\t----no stderr----\n");
+		}
+		if(defined $output[0]) {
+			print("\t----stdout----\n");
+			foreach (@output) { print $_; }
+			print("\t----end stdout----\n");
+		} else {
+			print("\t----no stdout----\n");
+		}
+	}
+	
+	# parse stdout to get an array of proc ads
+	# 
+	get_ads(\@output, \@proc_ads);
+
+	my $num_ads = @proc_ads;
+	TLOG "$num_ads job ads were generated. ($expected_num_ads expected)\n";
+		
+	# print the raw cluster ad and proc ads
+	#
+	if ($verbose) {
 		TLOG "ProcAds:\n";
 		foreach my $ad (@proc_ads) {
 			foreach my $key (sort keys %$ad) {
@@ -155,8 +237,7 @@ foreach my $sub (@subs) {
 			print "\n";
 		}
 	}
-
-	TLOG "$tag: Checking Expectations\n";
+	TLOG "$tag: Checking expectations\n";
 
 	# check expectations
 	# 
@@ -294,46 +375,88 @@ sub check_expectations {
 	return $misses == 0 && $exit == 0;
 }
 
+# read a  classad from a file
+sub load_ad {
+	my $fn = shift;
+	my %ad;
 
-# parse the output of condor_submit -dry -
-# and return a cluster ad and a set of proc ads
-# for example, assuming @stdout is the output of runcmd
+	open (FHI, "<$fn");
+	for (<FHI>) {
+		if ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
+			$ad{$1}=$2;
+			#print "\t\t$1=$2\n";
+			next;
+		}
+		#print $_;
+	}
+	return %ad;
+}
+
+# parse an array of lines, and build a set of ads
+# any line that does have a key=value on it act as an ad separator
+# call by 
 #   my @proc_ads = ();
-#   my %cluster_ad = get_ads(\@stdout, \@proc_ads);
+#   get_proc_ads(\@stdout, \@proc_ads);
 #
 sub get_ads {
 	my $out = shift;   # in: array ref 
-	my $procads = shift;
+	my $ads = shift;
 
-	my %cad;
 	my $pad = {};
-	my $procid = 0;
-
+	
 	foreach (@{$out}) {
 		s/\s*$//;
-		if ($_ =~ /^Dry-Run/) {
-			# read cluster ad until the next line with a .
-			next;
-		} elsif ($_ =~ /^\.$/) {
-			push @$procads, $pad;
-			$pad = {};
-			$procid += 1;
-			next;
-		} elsif ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
-			if ($1 eq 'ProcId' || $1 eq 'JobStatus' || $procid > 0) {
-				$pad->{$1}=$2;
-			} else {
-				$cad{$1}=$2;
-			}
+		if ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
+			$pad->{$1}=$2;
 			#print "\t\t$1=$2\n";
 			next;
-		} else {
-			# 4 job(s) dry-run to cluster 35.
+		}
+		# any line that doesn't have a = on it act as an ad separator
+		if ( scalar %{$pad}) {
+  			push @$ads, $pad;
+			$pad = {};
+			#print "\t\t--- ad sep : $_\n";
+		}
+	}
+	if ( scalar %{$pad}) {
+		push @$ads, $pad;
+	}
+}
+
+# read a  classad from a file
+sub load_digest {
+	my $fn = shift;
+	my $digest = shift; # out: an array ref
+	my $items = shift;  # out: an array ref
+	my $num = 1;
+	my $qargs = "";
+
+	open (FHI, "<$fn") || return (0,"");
+	for (<FHI>) {
+		s/\s*$//;
+		if ($_ =~ /^\s*Queue\s+(\d+)(.*)$/i) {
+			$num = $1;
+			$qargs = $2; $qargs =~ s/^\s*//;
+			next;
+		} elsif ($_ =~ /^\s*$/) {
+			# ignore blank lines
+			next;
+		}
+		push @$digest, $_;
+		#print "$_;
+	}
+	close(FHI);
+
+	if (-s "$fn.items") {
+		open (FHI, "<$fn.items");
+		for (<FHI>) {
+			push @$items, $_;
 		}
 	}
 
-	return %cad;
+	return ($num,$qargs);
 }
+
 
 # Helper function to create a file from a string
 sub emit_file {
@@ -365,7 +488,7 @@ sub emit_subs {
 		if ($_ =~ /^==(\S+)/) {
 			close (FHO);
 			$iter += 1;
-			my $fn = sprintf("%03d%s", $iter, $1);
+			my $fn = sprintf("%04d%s", $iter, $1);
 			push @subs, $fn;
 			open (FHO, ">$fn") || die "error writing to $fn: $!\n";
 			next;

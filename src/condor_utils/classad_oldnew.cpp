@@ -283,7 +283,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		// and returns a pointer to the first non-whitespace character after the =
 		const char * rhs;
 		if ( ! SplitLongFormAttrValue(strptr, attr, rhs)) {
-			dprintf(D_ALWAYS, "getClassAd FAILED to insert%s %s\n", its_a_secret?" secret":"", strptr );
+			dprintf(D_ALWAYS, "getClassAd FAILED to split%s %s\n", its_a_secret?" secret":"", strptr );
 			return false;
 		}
 

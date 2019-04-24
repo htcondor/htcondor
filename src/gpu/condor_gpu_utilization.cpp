@@ -50,6 +50,10 @@ void fail() {
 }
 
 nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount, unsigned long long * runningSampleCount ) {
+	if( d == NULL ) {
+		return NVML_ERROR_INVALID_ARGUMENT;
+	}
+
 	if( elapsedTime == NULL || lastSample == NULL ) {
 		return NVML_ERROR_INVALID_ARGUMENT;
 	}
@@ -99,6 +103,11 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 int main() {
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
+	//
+	// FIXME: Which is fine, but it might be nice to avoid doing any work
+	// that we know the startd is just going to throw away.
+	// FIXME: Also, see cnodor_gpu_discovery for the other environmental
+	// variable we may want/need to worry about.
 #if defined(WINDOWS)
 	_putenv( "CUDA_VISIBLE_DEVICES=" );
 #else
@@ -148,6 +157,12 @@ int main() {
 	std::vector<unsigned long long> elapsedTimes; elapsedTimes.resize(deviceCount);
 	std::vector<unsigned long long> runningSampleCounts; runningSampleCounts.resize(deviceCount);
 	for( unsigned i = 0; i < deviceCount; ++i ) {
+		devices[i] = NULL;
+		lastSamples[i] = 0;
+		firstSamples[i] = 0;
+		elapsedTimes[i] = 0;
+		runningSampleCounts[i] = 0;
+
 		r = nvmlDeviceGetHandleByPciBusId( cudaDevices[i].pciId, &(devices[i]) );
 		if( r == NVML_ERROR_NO_PERMISSION ) {
 			// Ignore devices we don't have permission for rather than fail.
@@ -156,11 +171,6 @@ int main() {
 			fprintf( stderr, "nvmlGetDeviceHandleByIndex(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
 			fail();
 		}
-
-		lastSamples[i] = 0;
-		firstSamples[i] = 0;
-		elapsedTimes[i] = 0;
-		runningSampleCounts[i] = 0;
 
 		nvmlValueType_t sampleValueType;
 		r = nvmlDeviceGetSamples( devices[i], NVML_GPU_UTILIZATION_SAMPLES, 0, & sampleValueType, & maxSampleCounts[i], NULL );
@@ -182,6 +192,7 @@ int main() {
 	// the NVML library causes a one-second 99% usage spike on an other-
 	// wise idle GPU.  So we'll ignore as much of that as we easily can.
 	for( unsigned i = 0; i < deviceCount; ++i ) {
+		if( devices[i] == NULL ) { continue; }
 		getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
 		firstSamples[i] = lastSamples[i];
 		elapsedTimes[i] = 0;
@@ -195,11 +206,12 @@ int main() {
 	// is minimal).
 	unsigned minMaxSampleCount = (unsigned)-1;
 	for( unsigned i = 0; i < deviceCount; ++i ) {
+		if( devices[i] == NULL ) { continue; }
 		if( maxSampleCounts[i] < minMaxSampleCount ) {
 			minMaxSampleCount = maxSampleCounts[i];
 		}
 	}
-	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000)/6;
+	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000ull)/6;
 
 
 	time_t lastReport = time( NULL );
@@ -208,6 +220,7 @@ int main() {
 		usleep(sampleIntervalMicrosec / 3 );
 
 		for( unsigned i = 0; i < deviceCount; ++i ) {
+			if( devices[i] == NULL ) { continue; }
 			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
 			if( r != NVML_SUCCESS ) {
 				fprintf( stderr, "getElapsedTimeForDevice(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
@@ -234,6 +247,7 @@ int main() {
 
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
+				if( devices[i] == NULL ) { continue; }
 				fprintf( stdout, "SlotMergeConstraint = StringListMember( \"CUDA%u\", AssignedGPUs )\n", i );
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
 				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );

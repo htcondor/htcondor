@@ -296,8 +296,8 @@ the condition chosen for when to run jobs.]
 
      For more details on these access permissions, and others that can be
      manually changed in your configuration file, please
-     see the section titled Setting Up IP/Host-Based Security in HTCondor
-     in section section~\ref{sec:Host-Security}.
+     see the section titled Setting Up Security in HTCondor
+     in section section~\ref{sec:Security-Authorization}.
 
 \item[STEP 8: VM Universe Setting.]
      A radio button determines whether 
@@ -409,9 +409,9 @@ set ARGS=%ARGS% VACATEJOBS="Y"
 set ARGS=%ARGS% SUBMITJOBS="Y"
 set ARGS=%ARGS% CONDOREMAIL="you@yours.com"
 set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
-set ARGS=%ARGS% HOSTALLOWREAD="*"
-set ARGS=%ARGS% HOSTALLOWWRITE="*"
-set ARGS=%ARGS% HOSTALLOWADMINISTRATOR="$(IP_ADDRESS)"
+set ARGS=%ARGS% ALLOWREAD="*"
+set ARGS=%ARGS% ALLOWWRITE="*"
+set ARGS=%ARGS% ALLOWADMINISTRATOR="$(IP_ADDRESS)"
 set ARGS=%ARGS% INSTALLDIR="C:\Condor"
 set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)"
 set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
@@ -464,24 +464,24 @@ node when set to Y.
 sets the e-mail address of the HTCondor administrator. Possible values are
 an e-mail address or the empty string \verb@""@.
 
-\item[HOSTALLOWREAD]
-is a list of host names that are allowed to issue READ commands to
+\item[ALLOWREAD]
+is a list of names that are allowed to issue READ commands to
 HTCondor daemons. This value should be set in accordance with the
-\Macro{HOSTALLOW\_READ} setting in the configuration file, as described in
-section~\ref{sec:Host-Security}.
+\Macro{ALLOW\_READ} setting in the configuration file, as described in
+section~\ref{sec:Security-Authorization}.
 
-\item[HOSTALLOWWRITE]
-is a list of host names that are allowed to issue WRITE commands to
+\item[ALLOWWRITE]
+is a list of names that are allowed to issue WRITE commands to
 HTCondor daemons. This value should be set in accordance with the
-\Macro{HOSTALLOW\_WRITE} setting in the configuration file, as described in
-section~\ref{sec:Host-Security}.
+\Macro{ALLOW\_WRITE} setting in the configuration file, as described in
+section~\ref{sec:Security-Authorization}.
 
-\item[HOSTALLOWADMINISTRATOR]
-is a list of host names that are allowed to issue ADMINISTRATOR commands to
+\item[ALLOWADMINISTRATOR]
+is a list of names that are allowed to issue ADMINISTRATOR commands to
 HTCondor daemons. This value should be set in accordance with the
-\Macro{HOSTALLOW\_ADMINISTRATOR} setting in the configuration file, 
+\Macro{ALLOW\_ADMINISTRATOR} setting in the configuration file, 
 as described in
-section~\ref{sec:Host-Security}.
+section~\ref{sec:Security-Authorization}.
 
 \item[INSTALLDIR]
 defines the path to the directory where HTCondor will be installed. 

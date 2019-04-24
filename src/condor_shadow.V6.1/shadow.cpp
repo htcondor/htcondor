@@ -409,6 +409,30 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
+UniShadow::resourceDisconnected( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+	const char* txt = "Socket between submit and execute hosts "
+		"closed unexpectedly";
+	logDisconnectedEvent( txt );
+
+	int now = time(NULL);
+	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
+
+	if (m_lazy_queue_update) {
+			// For lazy update, we just want to make sure the
+			// job_updater object knows about this attribute (which we
+			// already updated our copy of).
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
+	}
+	else {
+			// They want it now, so do the qmgmt operation directly.
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, now);
+	}
+}
+
+void
 UniShadow::resourceReconnected( RemoteResource* rr )
 {
 	ASSERT( rr == remRes );
@@ -429,16 +453,19 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 	jobAd->LookupInteger(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
 	job_reconnect_cnt++;
 	jobAd->Assign(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+	jobAd->AssignExpr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 
 	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).
 		job_updater->watchAttribute(ATTR_NUM_JOB_RECONNECTS);
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
 	}
 	else {
 			// They want it now, so do the qmgmt operation directly.
 		updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 	}
 
 		// if we're trying to remove this job, now that connection is

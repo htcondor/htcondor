@@ -308,6 +308,14 @@ are named using only the base name.
 Therefore, each output file or directory must have a different name,
 even if they originate from different paths.
 
+If only a subset of the output sandbox should be transferred,
+the subset is specified by further adding a submit command of the form:
+\footnotesize
+\begin{verbatim}
+transfer_output_files = file1, file2
+\end{verbatim}
+\normalsize
+
 For \SubmitCmdNI{grid} universe jobs other than than HTCondor-C grid jobs,
 files to be transferred 
 (other than standard output and standard error)
@@ -782,13 +790,35 @@ output_destination = urltype://path/to/destination/directory
 \normalsize
 Note that with this feature, no files are transferred back to the 
 submit machine.  
-This does not interfere with the streaming of output. 
+This does not interfere with the streaming of output.
 
-If only a subset of the output sandbox should be transferred,
-the subset is specified by further adding a submit command of the form:
+\textbf{Uploading to URLs using output file remaps}
+
+File transfer plugins now support uploads as well as downloads. 
+The \Attr{transfer\_output\_remaps} attribute can additionally be used to upload 
+files to specific URLs when a job completes. To do this, set the destination 
+for an output file to a URL instead of a filename. For example:
 \footnotesize
 \begin{verbatim}
-transfer_output_files = file1, file2
+transfer_output_files = "myresults.dat = http://destination-server.com/myresults.dat"
+\end{verbatim}
+\normalsize
+We use a HTTP PUT request to perform the upload, so the user is responsible 
+for making sure that the destination server accepts PUT requests (which is 
+usually disabled by default).
+
+\textbf{Passing a credential for URL file transfers}
+
+Some files served over HTTPS will require a credential in order to download.
+Each credential \Expr{cred} should be placed in a file in 
+\Expr{\$\_CONDOR\_CREDS/cred.use}. Then in order to use that credential for 
+a download, append its name to the beginning of the URL protocol along with a + 
+symbol. For example, to download the file 
+https://download.com/bar using the \Expr{cred} credential, specify the 
+following in the submit file:
+\footnotesize
+\begin{verbatim}
+transfer_input_files = cred+https://download.com/bar
 \end{verbatim}
 \normalsize
 

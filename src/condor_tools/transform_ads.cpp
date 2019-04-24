@@ -1435,6 +1435,10 @@ static ExprTree * XFormCopyValueToTree(classad::Value & val)
 		classad::ClassAd* aval;
 		val.IsClassAdValue(aval);
 		tree = aval->Copy();
+	} else if (vtyp == classad::Value::SCLASSAD_VALUE) {
+		classad_shared_ptr<classad::ClassAd> aval;
+		val.IsSClassAdValue(aval);
+		tree = aval.get()->Copy();
 	} else {
 		tree = classad::Literal::MakeLiteral(val);
 	}

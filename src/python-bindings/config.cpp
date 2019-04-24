@@ -658,7 +658,8 @@ void export_config()
             methods of this class have the same semantics as a Python dictionary.
 
             Writing to a ``_Param`` object will update the in-memory HTCondor configuration.
-            )C0ND0R")
+            )C0ND0R",
+            init<>(args("self")))
         .def("__getitem__", &Param::getitem)
         .def("__setitem__", &Param::setitem)
         .def("__contains__", &Param::contains)
@@ -687,9 +688,11 @@ void export_config()
                 methods of this class have the same semantics as a Python dictionary.
                 )C0ND0R",
             boost::python::init<const ClassAdWrapper &>(
-            R"C0ND0R(
-            :param ad: An ad containing the location of the remote daemon.
-            )C0ND0R"))
+                R"C0ND0R(
+                :param ad: An ad containing the location of the remote daemon.
+                :type ad: :class:`~classad.ClassAd`
+                )C0ND0R",
+                args("self", "ad")))
         .def("__getitem__", &RemoteParam::getitem)
         .def("__setitem__", &RemoteParam::setitem)
         .def("__contains__", &RemoteParam::contains)
@@ -704,6 +707,7 @@ void export_config()
         .def("refresh", &RemoteParam::refresh,
             R"C0ND0R(
             Rebuilds the dictionary based on the current configuration of the daemon.
-            )C0ND0R")
+            )C0ND0R",
+            args("self"))
         ;
 }

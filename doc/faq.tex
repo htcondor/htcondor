@@ -110,7 +110,7 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %\begin{verbatim}
 %ERROR "The following configuration macros appear to contain default values 
 %that must be changed before Condor will run.  These macros are:
-%hostallow_write 
+%allow_write
 %(found on line 1853 of /scratch/adesmet/TRUNK/work/src/localdir/condor_config)"
 %at line 217 in file condor_config.C
 %\end{verbatim}
@@ -124,7 +124,7 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %
 %By default, an installation of HTCondor 6.8.0 and later releases
 %will have the
-%configuration file entry \MacroNI{HOSTALLOW\_WRITE} set to the above sentinel
+%configuration file entry \MacroNI{ALLOW\_WRITE} set to the above sentinel
 %value. 
 %The HTCondor administrator must alter this value to be the correct domain
 %or IP addresses that the administrator desires.
@@ -294,8 +294,8 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %that appear to have no effect (for example, \Condor{off} or
 %\Condor{on}). 
 %
-%The solution is to properly configure the \Macro{HOSTALLOW\_*} and
-%\Macro{HOSTDENY\_*} settings (for host/IP based authentication) or to
+%The solution is to properly configure the \Macro{ALLOW\_*} and
+%\Macro{DENY\_*} settings (for host/IP based authentication) or to
 %configure strong authentication and set \Macro{ALLOW\_*} and
 %\Macro{DENY\_*} as appropriate.
 %Host-based authentication is described in
@@ -350,8 +350,8 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %The \Condor{startd} daemons do not have write permission to the
 %\Condor{collector} daemon.
 %This could be because
-%you used domain names in your \MacroNI{HOSTALLOW\_WRITE} and/or
-%\MacroNI{HOSTDENY\_WRITE} configuration macros,
+%you used domain names in your \MacroNI{ALLOW\_WRITE} and/or
+%\MacroNI{DENY\_WRITE} configuration macros,
 %but the domain name server (DNS) is not properly configured at your site.
 %Without the proper configuration, HTCondor cannot resolve
 %the IP addresses of your machines
@@ -363,8 +363,8 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %   either fix the DNS itself,
 %   or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your HTCondor
 %         configuration file.
-%\item Use numeric IP addresses in the \MacroNI{HOSTALLOW\_WRITE} and/or
-%   \MacroNI{HOSTDENY\_WRITE} configuration macros
+%\item Use numeric IP addresses in the \MacroNI{ALLOW\_WRITE} and/or
+%   \MacroNI{DENY\_WRITE} configuration macros
 %   instead of domain names.
 %   As an example of this, assume your site has a machine such as
 %   foo.your.domain.com, and it has two subnets, with IP addresses
@@ -372,33 +372,33 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %   If the configuration macro is set as 
 %
 %\begin{verbatim}
-% HOSTALLOW_WRITE = *.your.domain.com
+% ALLOW_WRITE = *.your.domain.com
 %\end{verbatim}
 %
 %   and this does not work, use
 %
 %\begin{verbatim}
-% HOSTALLOW_WRITE = 192.131.133.*, 192.131.132.*
+% ALLOW_WRITE = 192.131.133.*, 192.131.132.*
 %\end{verbatim}
 %\end{enumerate}
 %
 %\underline{Alternatively}, this permissions problem
 %may be caused by being too restrictive in the setting of
-%your \MacroNI{HOSTALLOW\_WRITE} and/or
-%\MacroNI{HOSTDENY\_WRITE} configuration macros.
+%your \MacroNI{ALLOW\_WRITE} and/or
+%\MacroNI{DENY\_WRITE} configuration macros.
 %If it is, then the solution is to change the macros,
 %for example from
 %\begin{verbatim}
-% HOSTALLOW_WRITE = condor.your.domain.com
+% ALLOW_WRITE = condor.your.domain.com
 %\end{verbatim}
 %to
 %\begin{verbatim}
-% HOSTALLOW_WRITE = *.your.domain.com
+% ALLOW_WRITE = *.your.domain.com
 %\end{verbatim}
 %or possibly
 %\footnotesize
 %\begin{verbatim}
-% HOSTALLOW_WRITE = condor.your.domain.com, foo.your.domain.com, \
+% ALLOW_WRITE = condor.your.domain.com, foo.your.domain.com, \
 % bar.your.domain.com 
 %\end{verbatim}
 %\normalsize

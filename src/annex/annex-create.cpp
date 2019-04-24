@@ -459,6 +459,7 @@ callCreateOneAnnex() {
 		reply->LookupString( ATTR_ERROR_STRING, errorString );
 		ASSERT(! errorString.empty());
 		fprintf( stderr, "%s\n", errorString.c_str() );
+		delete reply;
 		DC_Exit( 6 );
 	}
 }
