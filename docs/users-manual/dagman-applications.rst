@@ -32,15 +32,11 @@ A node within a DAG may encompass more than a single program submitted
 to run under HTCondor. Figure \ `2.1 <#x22-760021>`__ illustrates the
 elements of a node.
 
---------------
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-node.png
+  :width: 400
+  :alt: Figure 2.1: One Node within a DAG 
 
 Figure 2.1: One Node within a DAG
-
---------------
 
 More than one HTCondor job may belong to a single node. All HTCondor
 jobs within a node must be within a single cluster, as given by the job
@@ -82,15 +78,12 @@ A simple diamond-shaped DAG, as shown in Figure \ `2.2 <#x22-770022>`__
 is presented as a starting point for examples. This DAG contains 4
 nodes.
 
---------------
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-diamond-dag.png
+  :width: 300
+  :alt: Figure 2.2: Diamond DAG
 
 Figure 2.2: Diamond DAG
 
---------------
 
 A very simple DAG input file for this diamond-shaped DAG is
 
@@ -2210,11 +2203,9 @@ and the dependencies produced. Notice the naming of nodes scoped with
 the splice name. This hierarchy of splice names assures unique names
 associated with all nodes.
 
---------------
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-diamond-spliced.png
+  :width: 350
+  :alt: Figure 2.3: The diamond-shaped DAG spliced between two nodes.
 
 Figure 2.3: The diamond-shaped DAG spliced between two nodes.
 
@@ -2258,15 +2249,12 @@ file is specified.
      
       # END DAG FILE X.dag
 
---------------
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-x-shaped-dag.png
+  :width: 350
+  :alt: Figure 2.4: The X-shaped DAG.
 
 Figure 2.4: The X-shaped DAG.
 
---------------
 
 File ``s1.dag`` continues the example, presenting the DAG input file
 that incorporates two separate splices of the X-shaped DAG.
@@ -2297,15 +2285,12 @@ Figure \ `2.5 <#x22-1030055>`__ illustrates the resulting DAG.
      
       # END DAG FILE s1.dag
 
---------------
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-s1-dag.png
+  :width: 350
+  :alt: Figure 2.5: The DAG described by s1.dag.
 
 Figure 2.5: The DAG described by ``s1.dag``.
 
---------------
 
 The top level DAG in the hierarchy of this complex example is described
 by the DAG input file ``toplevel.dag``. Figure \ `2.6 <#x22-1030066>`__
@@ -2344,17 +2329,12 @@ with it in this top level DAG.
      
       # END DAG FILE toplevel.dag
 
---------------
-
-SVG-Viewer needed.
-
-SVG-Viewer needed.
-
-| 
+.. image:: /_images/dagman-complex-splice.png
+  :width: 750
+  :alt: Figure 2.6: The complex splice example DAG.
 
 Figure 2.6: The complex splice example DAG.
 
---------------
 
  Splices and rescue DAGs
 
@@ -2679,15 +2659,13 @@ parents of C1.
 
 A diagram of the above example:
 
---------------
-
-| 
+.. image:: /_images/dagman-splice-connect.png
+  :width: 600
+  :alt: Figure 2.7: Diagram of the splice connect example
 
 Figure 2.7: Diagram of the splice connect example
 
-SVG-Viewer needed.
 
---------------
 
 FINAL node
 ''''''''''

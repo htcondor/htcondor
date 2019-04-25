@@ -333,18 +333,12 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-Figure \ `3.1 <#x35-2470231>`__ shows the states and the possible
-transitions between the states.
+.. image:: /_images/machine-states-transitions.png
+  :width: 600
+  :alt: Machine states and the possible transitions between the states
 
---------------
+Figure 3.1: Machine states and the possible transitions between the states.
 
-SVG-Viewer needed.
-
-| 
-
-Figure 3.1: Machine States
-
---------------
 
 Each transition is labeled with a letter. The cause of each transition
 is described below.
@@ -622,12 +616,12 @@ numbers referred to in this manual will be **bold**.
 :index:`state and activities figure`
 :index:`activities and state figure`
 
---------------
-
+.. image:: /_images/machine-states-activities.png
+  :width: 700
+  :alt: Figure 3.2: Machine States and Activities
 
 Figure 3.2: Machine States and Activities
 
---------------
 
 Various expressions are used to determine when and if many of these
 state and activity transitions occur. Other transitions are initiated by

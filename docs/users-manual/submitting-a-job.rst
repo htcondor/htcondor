@@ -1,5 +1,3 @@
-      
-
 Submitting a Job
 ================
 
@@ -53,7 +51,8 @@ there are more in the *condor\_submit* manual page (see
  `condor\_submit <../man-pages/condor_submit.html>`__).
 :index:`examples<single: examples; submit description file>`
 
- Example 1
+
+**Example 1**
 
 Example 1 is one of the simplest submit description files possible. It
 queues up the program *myexe* for execution somewhere in the pool. Use
@@ -98,7 +97,8 @@ jobs.
       Output       = outputfile 
       Queue
 
- Example 2
+
+**Example 2**
 
 Example 2 queues up one copy of the program *foo* (which had been
 created by *condor\_compile*) for execution by HTCondor. No
@@ -123,7 +123,8 @@ explicitly opening a file and writing to it.
       Log          = foo.log 
       Queue
 
- Example 3
+
+**Example 3**
 
 Example 3 queues two copies of the program *mathematica*. The first copy
 will run in directory ``run_1``, and the second will run in directory
@@ -165,7 +166,8 @@ then execute on pool machines that provide at least 1 GByte of memory.
       initialdir     = run_2 
       queue
 
- Example 4
+
+**Example 4**
 
 The submit description file for Example 4 queues 150
 :index:`running multiple programs`\ runs of program *foo*
@@ -256,7 +258,8 @@ Python syntax for a slice. Negative step values are not permitted.
 
 Here are a set of examples.
 
- Example 1
+
+**Example 1**
 
 ::
 
@@ -287,7 +290,9 @@ to
       arguments            = -infile ending.dat 
       queue
 
- Example 2
+
+
+**Example 2**
 
 ::
 
@@ -306,7 +311,8 @@ to
       input = C 
       queue
 
- Example 3
+
+**Example 3**
 
 ::
 
@@ -327,6 +333,7 @@ specified is given a value from the list of items. For this example the
       input = file2 
       arguments = -c -d 92 
       queue
+
 
 Variables in the Submit Description File
 ----------------------------------------
@@ -375,13 +382,14 @@ file.
 Here is an example of a **queue** command for which the values of these
 automatic variables are identified.
 
- Example 1
+
+**Example 1**
 
 This example queues six jobs.
 
 ::
 
-      queue 3 in (A, B)
+    queue 3 in (A, B)
 
 -  ``$(Process)`` takes on the six values 0, 1, 2, 3, 4, and 5.
 -  Because there is no specification for the ``<varname>`` within this
@@ -394,6 +402,7 @@ This example queues six jobs.
 -  ``$(ItemIndex)`` is 0 for all three jobs with ``$(Item)=A``, and it
    is 1 for all three jobs with ``$(Item)=B``.
 -  ``$(Row)`` has the same value as ``$(ItemIndex)`` for this example.
+
 
 Including Submit Commands Defined Elsewhere
 -------------------------------------------
@@ -448,6 +457,7 @@ submit command
       transfer_input_files = infiles/A.dat, infiles/B.dat, infiles/C.dat
 
 is incorporated into the submit description file.
+
 
 Using Conditionals in the Submit Description File
 -------------------------------------------------
@@ -595,6 +605,7 @@ then the command line arguments of the submitted job become
 
         -n 1 -debug
 
+
 Function Macros in the Submit Description File
 ----------------------------------------------
 
@@ -608,7 +619,7 @@ and configuration files.
 Case is significant in the function’s name, so use the same letter case
 as given in these definitions.
 
- ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
+``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
     An item within the list is returned. The list is represented by a
     parameter name, or the list items are the parameters. The ``index``
     parameter determines which item. The first item in the list is at
@@ -628,7 +639,7 @@ as given in these definitions.
 
     binds ``A`` to the value of the ``HOME`` environment variable.
 
- ``$F[fpduwnxbqa](filename)``
+``$F[fpduwnxbqa](filename)``
     One or more of the lower case letters may be combined to form the
     function name and thus, its functionality. Each letter operates on
     the ``filename`` in its own way.
@@ -730,7 +741,8 @@ file. Note that these are not complete submit description files, but
 only the portions that promote understanding of use cases of the
 function macros.
 
- Example 1
+
+**Example 1**
 
 Generate a range of numerical values for a set of jobs, where values
 other than those given by $(Process) are desired.
@@ -744,7 +756,8 @@ Assuming that there are three jobs queued, such that $(Process) becomes
 0, 1, and 2, ``initial_dir`` will evaluate to the directories
 ``run-0001``, ``run-0002``, and ``run-0003``.
 
- Example 2
+
+**Example 2**
 
 This variation on Example 1 generates a file name extension which is a
 3-digit integer value.
@@ -760,7 +773,8 @@ Assuming that there are four jobs queued, such that $(Process) becomes
 leading to files defined for **input** of ``X.000``, ``X.010``,
 ``X.020``, and ``X.030``.
 
- Example 3
+
+**Example 3**
 
 This example uses both the file globbing of the
 **queue**\ :index:`queue<single: queue; submit commands>` command and a macro
@@ -785,6 +799,7 @@ complete file name with any leading directory specification stripped,
 such that the command line argument for one of the jobs will be
 ``A.dat`` and the command line argument for the other job will be
 ``B.dat``.
+
 
 About Requirements and Rank
 ---------------------------
@@ -1369,182 +1384,189 @@ the examples:
               in2 (file) 
           logs (directory)
 
- Example 1
-    This first example explicitly transfers input files. These input
-    files to be transferred are specified relative to the directory
-    where the job is submitted. An output file specified in the
-    **arguments**\ :index:`arguments<single: arguments; submit commands>` command,
-    ``out1``, is created when the job is executed. It will be
-    transferred back into the directory ``/scratch/test``.
+**Example 1**
 
-    ::
+This first example explicitly transfers input files. These input
+files to be transferred are specified relative to the directory
+where the job is submitted. An output file specified in the
+**arguments**\ :index:`arguments<single: arguments; submit commands>` command,
+``out1``, is created when the job is executed. It will be
+transferred back into the directory ``/scratch/test``.
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs/err.$(cluster) 
-        Output          = logs/out.$(cluster) 
-        Log             = logs/log.$(cluster) 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = files/in1,files/in2 
-         
-        Arguments       = in1 in2 out1 
-        Queue
+::
+
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs/err.$(cluster) 
+    Output          = logs/out.$(cluster) 
+    Log             = logs/log.$(cluster) 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = files/in1,files/in2 
+     
+    Arguments       = in1 in2 out1 
+    Queue
 
     The log file is written on the submit machine, and is not involved
     with the file transfer mechanism.
 
- Example 2
-    This second example is identical to Example 1, except that absolute
-    paths to the input files are specified, instead of relative paths to
-    the input files.
+**Example 2**
 
-    ::
+This second example is identical to Example 1, except that absolute
+paths to the input files are specified, instead of relative paths to
+the input files.
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs/err.$(cluster) 
-        Output          = logs/out.$(cluster) 
-        Log             = logs/log.$(cluster) 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2 
-         
-        Arguments       = in1 in2 out1 
-        Queue
+::
 
- Example 3
-    This third example illustrates the use of the submit command
-    **initialdir**\ :index:`initialdir<single: initialdir; submit commands>`, and its
-    effect on the paths used for the various files. The expected
-    location of the executable is not affected by the
-    **initialdir**\ :index:`initialdir<single: initialdir; submit commands>` command.
-    All other files (specified by
-    **input**\ :index:`input<single: input; submit commands>`,
-    **output**\ :index:`output<single: output; submit commands>`,
-    **error**\ :index:`error<single: error; submit commands>`,
-    **transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`,
-    as well as files modified or created by the job and automatically
-    transferred back) are located relative to the specified
-    **initialdir**\ :index:`initialdir<single: initialdir; submit commands>`.
-    Therefore, the output file, ``out1``, will be placed in the files
-    directory. Note that the ``logs2`` directory exists to make this
-    example work correctly.
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs/err.$(cluster) 
+    Output          = logs/out.$(cluster) 
+    Log             = logs/log.$(cluster) 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2 
+     
+    Arguments       = in1 in2 out1 
+    Queue
 
-    ::
+**Example 3**
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs2/err.$(cluster) 
-        Output          = logs2/out.$(cluster) 
-        Log             = logs2/log.$(cluster) 
-         
-        initialdir      = files 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = in1,in2 
-         
-        Arguments       = in1 in2 out1 
-        Queue
+This third example illustrates the use of the submit command
+**initialdir**\ :index:`initialdir<single: initialdir; submit commands>`, and its
+effect on the paths used for the various files. The expected
+location of the executable is not affected by the
+**initialdir**\ :index:`initialdir<single: initialdir; submit commands>` command.
+All other files (specified by
+**input**\ :index:`input<single: input; submit commands>`,
+**output**\ :index:`output<single: output; submit commands>`,
+**error**\ :index:`error<single: error; submit commands>`,
+**transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`,
+as well as files modified or created by the job and automatically
+transferred back) are located relative to the specified
+**initialdir**\ :index:`initialdir<single: initialdir; submit commands>`.
+Therefore, the output file, ``out1``, will be placed in the files
+directory. Note that the ``logs2`` directory exists to make this
+example work correctly.
 
- Example 4 – Illustrates an Error
-    This example illustrates a job that will fail. The files specified
-    using the
-    **transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
-    command work correctly (see Example 1). However, relative paths to
-    files in the
-    **arguments**\ :index:`arguments<single: arguments; submit commands>` command
-    cause the executing program to fail. The file system on the
-    submission side may utilize relative paths to files, however those
-    files are placed into the single, flat, remote scratch directory on
-    the execute machine.
+::
 
-    ::
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs2/err.$(cluster) 
+    Output          = logs2/out.$(cluster) 
+    Log             = logs2/log.$(cluster) 
+     
+    initialdir      = files 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = in1,in2 
+     
+    Arguments       = in1 in2 out1 
+    Queue
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs/err.$(cluster) 
-        Output          = logs/out.$(cluster) 
-        Log             = logs/log.$(cluster) 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = files/in1,files/in2 
-         
-        Arguments       = files/in1 files/in2 files/out1 
-        Queue
+**Example 4 – Illustrates an Error**
 
-    This example fails with the following error:
+This example illustrates a job that will fail. The files specified
+using the
+**transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+command work correctly (see Example 1). However, relative paths to
+files in the
+**arguments**\ :index:`arguments<single: arguments; submit commands>` command
+cause the executing program to fail. The file system on the
+submission side may utilize relative paths to files, however those
+files are placed into the single, flat, remote scratch directory on
+the execute machine.
 
-    ::
+::
 
-        err: files/out1: No such file or directory.
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs/err.$(cluster) 
+    Output          = logs/out.$(cluster) 
+    Log             = logs/log.$(cluster) 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = files/in1,files/in2 
+     
+    Arguments       = files/in1 files/in2 files/out1 
+    Queue
 
- Example 5 – Illustrates an Error
-    As with Example 4, this example illustrates a job that will fail.
-    The executing program’s use of absolute paths cannot work.
+This example fails with the following error:
 
-    ::
+::
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs/err.$(cluster) 
-        Output          = logs/out.$(cluster) 
-        Log             = logs/log.$(cluster) 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2 
-         
-        Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1 
-        Queue
+    err: files/out1: No such file or directory.
 
-    The job fails with the following error:
+**Example 5 – Illustrates an Error**
 
-    ::
+As with Example 4, this example illustrates a job that will fail.
+The executing program’s use of absolute paths cannot work.
 
-        err: /scratch/test/files/out1: No such file or directory.
+::
 
- Example 6
-    This example illustrates a case where the executing program creates
-    an output file in a directory other than within the remote scratch
-    directory that the program executes within. The file creation may or
-    may not cause an error, depending on the existence and permissions
-    of the directories on the remote file system.
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs/err.$(cluster) 
+    Output          = logs/out.$(cluster) 
+    Log             = logs/log.$(cluster) 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2 
+     
+    Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1 
+    Queue
 
-    The output file ``/tmp/out1`` is transferred back to the job’s
-    initial working directory as ``/scratch/test/out1``.
+The job fails with the following error:
 
-    ::
+::
 
-        # file name:  my_program.condor 
-        # HTCondor submit description file for my_program 
-        Executable      = my_program 
-        Universe        = vanilla 
-        Error           = logs/err.$(cluster) 
-        Output          = logs/out.$(cluster) 
-        Log             = logs/log.$(cluster) 
-         
-        should_transfer_files = YES 
-        when_to_transfer_output = ON_EXIT 
-        transfer_input_files = files/in1,files/in2 
-        transfer_output_files = /tmp/out1 
-         
-        Arguments       = in1 in2 /tmp/out1 
-        Queue
+    err: /scratch/test/files/out1: No such file or directory.
+
+**Example 6**
+
+This example illustrates a case where the executing program creates
+an output file in a directory other than within the remote scratch
+directory that the program executes within. The file creation may or
+may not cause an error, depending on the existence and permissions
+of the directories on the remote file system.
+
+The output file ``/tmp/out1`` is transferred back to the job’s
+initial working directory as ``/scratch/test/out1``.
+
+::
+
+    # file name:  my_program.condor 
+    # HTCondor submit description file for my_program 
+    Executable      = my_program 
+    Universe        = vanilla 
+    Error           = logs/err.$(cluster) 
+    Output          = logs/out.$(cluster) 
+    Log             = logs/log.$(cluster) 
+     
+    should_transfer_files = YES 
+    when_to_transfer_output = ON_EXIT 
+    transfer_input_files = files/in1,files/in2 
+    transfer_output_files = /tmp/out1 
+     
+    Arguments       = in1 in2 /tmp/out1 
+    Queue
+
 
 Public Input Files
 ''''''''''''''''''
@@ -2082,6 +2104,7 @@ The complete submit description file for this example:
      
       Arguments    = +W1024 +H768 +Iimage3.pov 
       Queue
+
 
 Vanilla Universe Example for Execution on Differing Operating Systems
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

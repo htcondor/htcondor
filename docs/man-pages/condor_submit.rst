@@ -246,7 +246,10 @@ The submit description file must contain at least one *executable*
 command and at least one *queue* command. All of the other commands have
 default actions.
 
-****
+**Note that a submit file that contains more than one executable command 
+will produce multiple clusters when submitted. This is not generally 
+recommended, and is not allowed for submit files that are run as DAG node 
+jobs by condor_dagman.**
 
 The commands which can appear in the submit description file are
 numerous. They are listed here in alphabetical order by category.
