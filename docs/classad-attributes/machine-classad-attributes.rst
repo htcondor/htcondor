@@ -487,7 +487,7 @@ Machine ClassAd Attributes
     names will be of the form “slot#@full.hostname”, for example,
     “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
     vulture.cs.wisc.edu.
-    :index:`Offline<name><single: Offline<name>; ClassAd machine attribute>`
+    :index:`Offline<single: Offline; ClassAd machine attribute>`
  ``Offline<name>``:
     A string that lists specific instances of a user-defined machine
     resource, identified by ``name``. Each instance is currently
@@ -1232,16 +1232,16 @@ For machines with user-defined or custom resource specifications,
 including GPUs, the following attributes will be in the ClassAd for each
 slot. In the name of the attribute, ``<name>`` is substituted with the
 configured name given to the resource.
-:index:`Assigned<name><single: Assigned<name>; ClassAd machine attribute (for a user-defined resource)>`
+:index:`Assigned<single: Assigned; ClassAd machine attribute (for a user-defined resource)>`
 
  ``Assigned<name>``:
     A space separated list that identifies which of these resources are
     currently assigned to slots.
-    :index:`Offline<name><single: Offline<name>; ClassAd machine attribute (for a user-defined resource)>`
+    :index:`Offline<single: Offline; ClassAd machine attribute (for a user-defined resource)>`
  ``Offline<name>``:
     A space separated list that indicates which of these resources is
     unavailable for match making.
-    :index:`Total<name><single: Total<name>; ClassAd machine attribute (for a user-defined resource)>`
+    :index:`Total<single: Total; ClassAd machine attribute (for a user-defined resource)>`
  ``Total<name>``:
     An integer quantity of the total number of these resources.
 

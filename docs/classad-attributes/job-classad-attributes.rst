@@ -1130,8 +1130,8 @@ Job ClassAd Attributes
  ``LocalUserCpu``:
     An accumulated number of seconds of user CPU time that the job
     caused to the machine upon which the job was submitted.
-    :index:`MachineAttr<X><N><single: MachineAttr<X><N>; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; MachineAttr<X><N>>`
+    :index:`MachineAttr<single: MachineAttr; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; MachineAttr>`
  ``MachineAttr<X><N>``:
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable

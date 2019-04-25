@@ -824,7 +824,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
-    :index:`request_<name><single: request_<name>; submit commands>`
+    :index:`request_name<single: request_name; submit commands>`
     :index:`request_GPUs<single: request_GPUs; submit commands>`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
 
@@ -1807,7 +1807,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  ec2_parameter_names = ParameterName1, ParameterName2, ...
     For grid type **ec2** jobs, a space or comma separated list of the
     names of additional parameters to pass when instantiating an
-    instance. :index:`ec2_parameter_<name><single: ec2_parameter_<name>; submit commands>`
+    instance. :index:`ec2_parameter_name<single: ec2_parameter_name; submit commands>`
  ec2_parameter_<name> = <value>
     For grid type **ec2** jobs, specifies the value for the
     correspondingly named (instance instantiation) parameter. **<name>**
@@ -1836,7 +1836,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     will be associated with the running instance. This is only necessary
     if a tag name case matters. By default the list will be
     automatically generated.
-    :index:`ec2_tag_<name><single: ec2_tag_<name>; submit commands>`
+    :index:`ec2_tag_name<single: ec2_tag_name; submit commands>`
  ec2_tag_<name> = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
     the running instance. The tag name will be lower-cased, use

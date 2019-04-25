@@ -176,7 +176,7 @@ these configuration variables.
     with no slot represented in the attribute name, refers to the
     current slot being evaluated.
 
-:index:`Slot<N>_RemoteUserPrio<single: Slot<N>_RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``:
+:index:`Slot_RemoteUserPrio<single: Slot_RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``:
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
     machine.

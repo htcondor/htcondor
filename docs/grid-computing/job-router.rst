@@ -389,28 +389,28 @@ may appear in a Routing Table entry.
     name. When ``False``, it indicates that if there is a previous entry
     by the same name, the previous entry should be retained and this
     entry should be ignored. The default value is ``True``.
-    :index:`Set_<ATTR><single: Set_<ATTR>; Job Router Routing Table ClassAd attribute>`
+    :index:`Set_ATTR><single: Set_ATTR>; Job Router Routing Table ClassAd attribute>`
  Set\_<ATTR>
     Sets the value of ``<ATTR>`` in the routed copy’s job ClassAd to the
     specified value. An example of an attribute that might be set is
     ``PeriodicRemove``. For example, if the routed job goes on hold or
     stays idle for too long, remove it and return the original copy of
     the job to a normal state.
-    :index:`Eval_Set_<ATTR><single: Eval_Set_<ATTR>; Job Router Routing Table ClassAd attribute>`
+    :index:`Eval_Set_ATTR><single: Eval_Set_ATTR>; Job Router Routing Table ClassAd attribute>`
  Eval\_Set\_<ATTR>
     Defines an expression. The expression is evaluated, and the
     resulting value sets the value of the routed copy’s job ClassAd
     attribute ``<ATTR>``. Use this attribute to set a custom or local
     value, especially for modifying an attribute which may have been
     already specified in a default routing table.
-    :index:`Copy_<ATTR><single: Copy_<ATTR>; Job Router Routing Table ClassAd attribute>`
+    :index:`Copy_ATTR><single: Copy_ATTR>; Job Router Routing Table ClassAd attribute>`
  Copy\_<ATTR>
     Defined with the name of a routed copy ClassAd attribute. Copies the
     value of ``<ATTR>`` from the original job ClassAd into the specified
     attribute named of the routed copy. Useful to save the value of an
     expression, before replacing it with something else that references
     the original expression.
-    :index:`Delete_<ATTR><single: Delete_<ATTR>; Job Router Routing Table ClassAd attribute>`
+    :index:`Delete_ATTR><single: Delete_ATTR>; Job Router Routing Table ClassAd attribute>`
  Delete\_<ATTR>
     Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
     this attribute in the routing table entry is ignored.
