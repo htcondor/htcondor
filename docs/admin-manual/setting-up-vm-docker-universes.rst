@@ -23,7 +23,7 @@ section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__.
 
 Begin by installing the virtualization package on all execute machines,
-according to the vendor’s instructions. We have successfully used
+according to the vendor's instructions. We have successfully used
 VMware, Xen, and KVM. If considering running on a Windows system, a
 *Perl* distribution will also need to be installed; we have successfully
 used *ActivePerl*.
@@ -98,19 +98,19 @@ expression.
 
 The final required configuration is the location of the VMware control
 script used by the *condor\_vm-gahp* on the execute machine to talk to
-the virtual machine hypervisor. It is located in HTCondor’s ``sbin``
+the virtual machine hypervisor. It is located in HTCondor's ``sbin``
 directory:
 
 ::
 
     VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
-Note that an execute machine’s ``EXECUTE`` variable should not contain
+Note that an execute machine's ``EXECUTE`` variable should not contain
 any symbolic links in its path, if the machine is configured to run
 VMware **vm** universe jobs. Strange behavior has been noted when
 HTCondor tries to run a **vm** universe VMware job using a path to a VMX
 file that contains a symbolic link. An example of an error message that
-may appear in such a job’s event log:
+may appear in such a job's event log:
 
 ::
 
@@ -174,7 +174,7 @@ When a vm Universe Job Fails to Start
 '''''''''''''''''''''''''''''''''''''
 
 If a vm universe job should fail to launch, HTCondor will attempt to
-distinguish between a problem with the user’s job description, and a
+distinguish between a problem with the user's job description, and a
 problem with the virtual machine infrastructure of the matched machine.
 If the problem is with the job, the job will go on hold with a reason
 explaining the problem. If the problem is with the virtual machine
@@ -191,7 +191,7 @@ machine ClassAd attributes are changed:
 -  ``VMOfflineTime`` will be set to the time of the failure
 -  ``OfflineUniverses`` will be adjusted to include ``"VM"`` and ``13``
 
-Since *condor\_submit* adds ``HasVM == True`` to a vm universe job’s
+Since *condor\_submit* adds ``HasVM == True`` to a vm universe job's
 requirements, no further vm universe jobs will match.
 
 Once any problems with the infrastructure are fixed, to change the
@@ -226,7 +226,7 @@ Docker container on an execute host.
 The docker universe job is mapped to a vanilla universe job, and the
 submit description file must specify the submit command
 **docker\_image**\ :index:`docker_image<single: docker_image; submit commands>` to
-identify the Docker image. The job’s ``requirement`` ClassAd attribute
+identify the Docker image. The job's ``requirement`` ClassAd attribute
 is automatically appended, such that the job will only match with an
 execute machine that has Docker installed.
 :index:`HasDocker<single: HasDocker; ClassAd machine attribute>`
@@ -240,7 +240,7 @@ jobs.
 
 When a docker universe job is matched with a Docker-capable execute
 machine, HTCondor invokes the Docker CLI to instantiate the
-image-specific container. The job’s scratch directory tree is mounted as
+image-specific container. The job's scratch directory tree is mounted as
 a Docker volume. When the job completes, is put on hold, or is evicted,
 the container is removed.
 

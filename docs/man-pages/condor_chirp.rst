@@ -98,7 +98,7 @@ Chirp Commands
     List the contents of the directory specified by *RemotePath*. If
     *-l* is specified, list all metadata as well.
  **whoami**
-    Get the user’s current identity.
+    Get the user's current identity.
  **whoareyou **\ *RemoteHost*
     Get the identity of *RemoteHost*.
  **link** [**-s**\ ] *OldRemotePath* *NewRemotePath*

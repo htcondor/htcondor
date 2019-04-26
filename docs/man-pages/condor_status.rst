@@ -114,7 +114,7 @@ Options
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
     defined for ``STATISTICS_TO_PUBLISH``. A definition is in the
-    HTCondor Administrator’s manual section on configuration
+    HTCondor Administrator's manual section on configuration
     (section `Configuration
     Macros <../admin-manual/configuration-macros.html>`__).
  **-storage**
@@ -203,7 +203,7 @@ Options
     attribute. Like ``printf(3)``-style formats, one may include other
     text that will be reproduced directly. A format without any
     conversion specifiers may be specified, but an attribute is still
-    required. Include a backslash followed by an ‘n’ to specify a line
+    required. Include a backslash followed by an ‘n' to specify a line
     break.
  **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
     (Output option) Display attribute(s) or expression(s) formatted in a
@@ -289,7 +289,7 @@ General Remarks
    propagates through the network and the system.
 -  Note that the ``ActivityTime`` in the ``Idle`` state is not the
    amount of time that the machine has been idle. See the section on
-   *condor_startd* states in the Administrator’s Manual for more
+   *condor_startd* states in the Administrator's Manual for more
    information (section `Policy Configuration for Execute Hosts and for
    Submit Hosts <../admin-manual/policy-configuration.html>`__).
 -  When using *condor_status* on a pool with SMP machines, you can

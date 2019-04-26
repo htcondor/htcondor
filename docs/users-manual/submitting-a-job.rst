@@ -78,7 +78,7 @@ after job execution.
 
 A log file, ``myexe.log``, will also be produced that contains events
 the job had during its lifetime inside of HTCondor. When the job
-finishes, its exit conditions will be noted in the log file. This file’s
+finishes, its exit conditions will be noted in the log file. This file's
 contents are an excellent way to figure out what happened to submitted
 jobs.
 
@@ -616,7 +616,7 @@ description files and configuration files are read using the same
 parser, so these functions may be used in both submit description files
 and configuration files.
 
-Case is significant in the function’s name, so use the same letter case
+Case is significant in the function's name, so use the same letter case
 as given in these definitions.
 
 ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
@@ -863,17 +863,17 @@ Rank Expression Examples
 :index:`rank<single: rank; submit commands>`
 
 When considering the match between a job and a machine, rank is used to
-choose a match from among all machines that satisfy the job’s
+choose a match from among all machines that satisfy the job's
 requirements and are available to the user, after accounting for the
-user’s priority and the machine’s rank of the job. The rank expressions,
+user's priority and the machine's rank of the job. The rank expressions,
 simple or complex, define a numerical value that expresses preferences.
 
-The job’s ``Rank`` expression evaluates to one of three values. It can
+The job's ``Rank`` expression evaluates to one of three values. It can
 be UNDEFINED, ERROR, or a floating point value. If ``Rank`` evaluates to
 a floating point value, the best match will be the one with the largest,
 positive value. If no ``Rank`` is given in the submit description file,
 then HTCondor substitutes a default value of 0.0 when considering
-machines to match. If the job’s ``Rank`` of a given machine evaluates to
+machines to match. If the job's ``Rank`` of a given machine evaluates to
 UNDEFINED or ERROR, this same value of 0.0 is used. Therefore, the
 machine is still considered for a match, but has no ranking above any
 other.
@@ -889,7 +889,7 @@ For a job that desires the machine with the most available memory:
 
        Rank = memory
 
-For a job that prefers to run on a friend’s machine on Saturdays and
+For a job that prefers to run on a friend's machine on Saturdays and
 Sundays:
 
 ::
@@ -922,7 +922,7 @@ the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
 So, it is wise when writing a ``Rank`` expression to check if the
-expression’s evaluation will lead to the expected resulting ranking of
+expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the *condor\_status* command
 with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
@@ -1046,10 +1046,10 @@ administrator does not configure the ``FileSystemDomain`` setting
 correctly (the default is that each machine in a pool is in its own file
 system and UID domain), a user submits a job that cannot use remote
 system calls (for example, a vanilla universe job), and the user does
-not enable HTCondor’s File Transfer mechanism, the job will only run on
+not enable HTCondor's File Transfer mechanism, the job will only run on
 the machine from which it was submitted.
 
-Submitting Jobs Without a Shared File System: HTCondor’s File Transfer Mechanism
+Submitting Jobs Without a Shared File System: HTCondor's File Transfer Mechanism
 --------------------------------------------------------------------------------
 
 :index:`submission without a shared file system<single: submission without a shared file system; job>`
@@ -1065,13 +1065,13 @@ a remote scratch directory on the machine where the job is to be
 executed. HTCondor executes the job and transfers output back to the
 submitting machine. The user specifies which files and directories to
 transfer, and at what point the output files should be copied back to
-the submitting machine. This specification is done within the job’s
+the submitting machine. This specification is done within the job's
 submit description file.
 
 Specifying If and When to Transfer Files
 ''''''''''''''''''''''''''''''''''''''''
 
-To enable the file transfer mechanism, place two commands in the job’s
+To enable the file transfer mechanism, place two commands in the job's
 submit description file:
 **should\_transfer\_files**\ :index:`should_transfer_files<single: should_transfer_files; submit commands>`
 and
@@ -1103,7 +1103,7 @@ command takes on one of three possible values:
    should\_transfer\_files = YES. If the job is matched with a machine
    in the local ``FileSystemDomain``, HTCondor will not transfer files
    and relies on the shared file system.
-#. NO: HTCondor’s file transfer mechanism is disabled.
+#. NO: HTCondor's file transfer mechanism is disabled.
 
 The **when\_to\_transfer\_output** command tells HTCondor when output
 files are to be transferred back to the submit machine. The command
@@ -1122,7 +1122,7 @@ takes on one of two possible values:
    **transfer\_output\_files**\ :index:`transfer_output_files<single: transfer_output_files; submit commands>`
    is specified, its list governs which are transferred back at eviction
    time. Before the job starts running again, all of the files that were
-   stored when the job was last evicted are copied to the job’s new
+   stored when the job was last evicted are copied to the job's new
    remote scratch directory.
 
    The purpose of saving files at eviction time is to allow the job to
@@ -1133,7 +1133,7 @@ takes on one of two possible values:
    restore its state using the files that are saved at eviction time.
 
    The files that are transferred back at eviction time are not stored
-   in the location where the job’s final output will be written when the
+   in the location where the job's final output will be written when the
    job exits. HTCondor manages these files automatically, so usually the
    only reason for a user to worry about them is to make sure that there
    is enough space to store them. The files are stored on the submit
@@ -1191,7 +1191,7 @@ should utilize the
 command. This comma-separated list specifies any other files or
 directories that HTCondor is to transfer to the remote scratch
 directory, to set up the execution environment for the job before it is
-run. These files are placed in the same directory as the job’s
+run. These files are placed in the same directory as the job's
 executable. For example:
 
 ::
@@ -1350,9 +1350,9 @@ overwrite the earlier one.
 
 Both relative and absolute paths may be used in
 **transfer\_output\_files**\ :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
-Relative paths are relative to the job’s remote scratch directory on the
+Relative paths are relative to the job's remote scratch directory on the
 execute machine. When the files and directories are copied back to the
-submit machine, they are placed in the job’s initial working directory
+submit machine, they are placed in the job's initial working directory
 as the base name of the original path. An alternate name or path may be
 specified by using
 **transfer\_output\_remaps**\ :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`.
@@ -1513,7 +1513,7 @@ This example fails with the following error:
 **Example 5 – Illustrates an Error**
 
 As with Example 4, this example illustrates a job that will fail.
-The executing program’s use of absolute paths cannot work.
+The executing program's use of absolute paths cannot work.
 
 ::
 
@@ -1546,7 +1546,7 @@ directory that the program executes within. The file creation may or
 may not cause an error, depending on the existence and permissions
 of the directories on the remote file system.
 
-The output file ``/tmp/out1`` is transferred back to the job’s
+The output file ``/tmp/out1`` is transferred back to the job's
 initial working directory as ``/scratch/test/out1``.
 
 ::
@@ -1571,7 +1571,7 @@ initial working directory as ``/scratch/test/out1``.
 Public Input Files
 ''''''''''''''''''
 
-There are some cases where HTCondor’s file transfer mechanism is
+There are some cases where HTCondor's file transfer mechanism is
 inefficient. For jobs that need to run a large number of times, the
 input files need to get transferred for every job, even if those files
 are identical. This wastes resources on both the submit machine and the
@@ -1612,7 +1612,7 @@ sensitive data.
 Behavior for Error Cases
 ''''''''''''''''''''''''
 
-This section describes HTCondor’s behavior for some error cases in
+This section describes HTCondor's behavior for some error cases in
 dealing with the transfer of files.
 
  Disk Full on Execute Machine
@@ -1627,7 +1627,7 @@ dealing with the transfer of files.
     cannot be created, then job submission fails.
 
     This job submission failure avoids having the job run to completion,
-    only to be unable to transfer the job’s output due to permission
+    only to be unable to transfer the job's output due to permission
     errors.
 
  Error When Transferring Files from Execute Machine to Submit Machine
@@ -1654,14 +1654,14 @@ File Transfer Using a URL
 
 Instead of file transfer that goes only between the submit machine and
 the execute machine, HTCondor has the ability to transfer files from a
-location specified by a URL for a job’s input file, or from the execute
-machine to a location specified by a URL for a job’s output file(s).
+location specified by a URL for a job's input file, or from the execute
+machine to a location specified by a URL for a job's output file(s).
 This capability requires administrative set up, as described in
 section \ `Setting Up for Special
 Environments <../admin-manual/setting-up-special-environments.html>`__.
 
 The transfer of an input file is restricted to vanilla and vm universe
-jobs only. HTCondor’s file transfer mechanism must be enabled.
+jobs only. HTCondor's file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
 **should\_transfer\_files**\ :index:`should_transfer_files<single: should_transfer_files; submit commands>`
 and
@@ -1680,7 +1680,7 @@ that has a single file specified with a URL:
 The destination file is given by the file name within the URL.
 
 For the transfer of the entire contents of the output sandbox, which are
-all files that the job creates or modifies, HTCondor’s file transfer
+all files that the job creates or modifies, HTCondor's file transfer
 mechanism must be enabled. In this sample portion of the submit
 description file, the first two commands explicitly enable file
 transfer, and the added
@@ -1773,7 +1773,7 @@ different values of should\_transfer\_files:
 To ensure that the job is matched to a machine with enough local disk
 space to hold all the transferred files, HTCondor automatically adds the
 ``DiskUsage`` job attribute. This attribute includes the total size of
-the job’s executable and all input files to be transferred. HTCondor
+the job's executable and all input files to be transferred. HTCondor
 then adds an additional clause to the ``Requirements`` expression that
 states that the remote machine must have at least enough available disk
 space to hold all these files:
@@ -1823,12 +1823,12 @@ that is potentially useful to the job. HTCondor allows a user to both
 set and reference environment variables for a job or job cluster.
 
 Within a submit description file, the user may define environment
-variables for the job’s environment by using the **environment**
+variables for the job's environment by using the **environment**
 command. See within the *condor\_submit* manual page at
 section \ `condor\_submit <../man-pages/condor_submit.html>`__ for more
 details about this command.
 
-The submitter’s entire environment can be copied into the job ClassAd
+The submitter's entire environment can be copied into the job ClassAd
 for the job at job submission. The
 **getenv**\ :index:`getenv<single: getenv; submit commands>` command within the
 submit description file does this, as described at
@@ -1837,7 +1837,7 @@ section \ `condor\_submit <../man-pages/condor_submit.html>`__.
 If the environment is set with the
 **environment**\ :index:`environment<single: environment; submit commands>` command
 and **getenv** is also set to true, values specified with
-**environment** override values in the submitter’s environment,
+**environment** override values in the submitter's environment,
 regardless of the order of the **environment** and **getenv** commands.
 
 Commands within the submit description file may reference the
@@ -1857,7 +1857,7 @@ executing job that may be useful for the job to reference.
    :index:`_CONDOR_SLOT environment variable`\ :index:`_CONDOR_SLOT<single: _CONDOR_SLOT; environment variables>`
    gives the name of the slot (for SMP machines), on which the job is
    run. On machines with only a single slot, the value of this variable
-   will be 1, just like the ``SlotID`` attribute in the machine’s
+   will be 1, just like the ``SlotID`` attribute in the machine's
    ClassAd. This setting is available in all universes. See
    section \ `Policy Configuration for Execute Hosts and for Submit
    Hosts <../admin-manual/policy-configuration.html>`__ for more details
@@ -1871,7 +1871,7 @@ executing job that may be useful for the job to reference.
    the local, java, and vanilla universes.
 -  ``_CONDOR_JOB_AD``
    :index:`_CONDOR_JOB_AD environment variable`\ :index:`_CONDOR_JOB_AD<single: _CONDOR_JOB_AD; environment variables>`
-   is the path to a file in the job’s scratch directory which contains
+   is the path to a file in the job's scratch directory which contains
    the job ad for the currently running job. The job ad is current as of
    the start of the job, but is not updated during the running of the
    job. The job may read attributes and their values out of this file as
@@ -1881,7 +1881,7 @@ executing job that may be useful for the job to reference.
    USER\_JOB\_WRAPPER.
 -  ``_CONDOR_MACHINE_AD``
    :index:`_CONDOR_MACHINE_AD environment variable`\ :index:`_CONDOR_MACHINE_AD<single: _CONDOR_MACHINE_AD; environment variables>`
-   is the path to a file in the job’s scratch directory which contains
+   is the path to a file in the job's scratch directory which contains
    the machine ad for the slot the currently running job is using. The
    machine ad is current as of the start of the job, but is not updated
    during the running of the job. The format is the same as the output
@@ -2018,7 +2018,7 @@ correctly.
 
 There are two common errors made with the substitution macro. The first
 is the use of a non-existent ``MachineAdAttribute``. If the specified
-``MachineAdAttribute`` does not exist in the machine’s ClassAd, then
+``MachineAdAttribute`` does not exist in the machine's ClassAd, then
 HTCondor will place the job in the held state until the problem is
 resolved.
 
@@ -2221,7 +2221,7 @@ correct, or it might provide information on the RAM or disk space
 needed. This job (shell) continues until the user logs out or any other
 policy implementation causes the job to stop running. A useful feature
 of the interactive job is that the users and jobs are accounted for
-within Condor’s scheduling and priority system.
+within Condor's scheduling and priority system.
 
 Neither the submit nor the execute host for interactive jobs may be on
 Windows platforms.
@@ -2277,6 +2277,6 @@ benefit.
    identified, they can be corrected on the spot.
 -  Development may have an interactive nature, and proceed more quickly
    when done on a pool machine. It may also be that the development
-   platforms required reside within Condor’s purview as execute hosts.
+   platforms required reside within Condor's purview as execute hosts.
 
       

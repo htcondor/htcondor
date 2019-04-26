@@ -50,7 +50,7 @@ Options
  **-version**
     Display version information
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*

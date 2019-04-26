@@ -48,7 +48,7 @@ in order to let HTCondor function. This makes it easier to upgrade the
 binaries to a newer version at a later date, and means that users can
 find the HTCondor tools in a consistent location on all the machines in
 the pool. Also, the HTCondor configuration files may be placed in a
-centralized location. This is what we do for the UW-Madison’s CS
+centralized location. This is what we do for the UW-Madison's CS
 department HTCondor pool, and it works quite well.
 
 Finally, consider setting up some targeted AFS groups to help users deal
@@ -72,11 +72,11 @@ user who submitted the job, the *condor_shadow* daemon will not
 normally be able to write any output. Therefore the directories in which
 the job will be creating output files will need to be world writable;
 they need to be writable by non-authenticated AFS users. In addition,
-the program’s ``stdout``, ``stderr``, log file, and any file the program
+the program's ``stdout``, ``stderr``, log file, and any file the program
 explicitly opens will need to be in a directory that is world-writable.
 
 An administrator may be able to set up special AFS groups that can make
-unauthenticated access to the program’s files less scary. For example,
+unauthenticated access to the program's files less scary. For example,
 there is supposed to be a way for AFS to grant access to any
 unauthenticated process on a given host. If set up, write access need
 only be granted to unauthenticated processes on the submit machine, as
@@ -92,7 +92,7 @@ submitted the jobs. So, on a local (or NFS) file system, the
 *condor_shadow* daemon will be able to access the files, and no special
 permissions need be granted to anyone other than the job submitter. If
 the HTCondor daemons are not invoked as root however, the
-*condor_shadow* daemon will not be able to run with the submitter’s
+*condor_shadow* daemon will not be able to run with the submitter's
 effective UID, leading to a similar problem as with files on AFS.
 
 Enabling the Transfer of Files Specified by a URL
@@ -156,7 +156,7 @@ available plug-ins is specified as in the example:
 
 The *condor_starter* invokes all listed plug-ins to determine their
 capabilities. Each may handle one or more protocols (scheme names). The
-plug-in’s response to invocation identifies which protocols it can
+plug-in's response to invocation identifies which protocols it can
 handle. When a URL transfer is specified by a job, the *condor_starter*
 invokes the proper one to do the transfer. If more than one plugin is
 capable of handling a particular protocol, then the last one within the
@@ -382,7 +382,7 @@ Intel Linux machines, the files ought to be named:
 
 Then, assuming these files are in the directory defined by the ``ETC``
 configuration variable, and machine-specific configuration files are in
-the same directory, named by each machine’s host name,
+the same directory, named by each machine's host name,
 ``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` becomes:
 
 ::
@@ -432,7 +432,7 @@ The configuration variables that are truly platform-specific are:
     needed on other platforms.
 
 Reasonable defaults for all of these configuration variables will be
-found in the default configuration files inside a given platform’s
+found in the default configuration files inside a given platform's
 binary distribution (except the ``RELEASE_DIR``, since the location of
 the HTCondor binaries and libraries is installation specific). With
 multiple platforms, use one of the ``condor_config`` files from either
@@ -488,7 +488,7 @@ Full Installation of condor_compile
 
 In order to take advantage of two major HTCondor features: checkpointing
 and remote system calls, users need to relink their binaries. Programs
-that are not relinked for HTCondor can run under HTCondor’s vanilla
+that are not relinked for HTCondor can run under HTCondor's vanilla
 universe. However, these jobs cannot take checkpoints and migrate.
 
 To relink programs with HTCondor, we provide the *condor_compile* tool.
@@ -527,7 +527,7 @@ the system linker (*ld*), is as follows:
     Linux                         /usr/bin
 
 On these platforms, issue the following commands (as root), where
-*ld-path* is replaced by the path to the system’s *ld*.
+*ld-path* is replaced by the path to the system's *ld*.
 
 ::
 
@@ -604,7 +604,7 @@ to run with super user privileges. Currently, the *condor_kbdd* assumes
 that X uses the ``HOME`` environment variable in order to locate a file
 named ``.Xauthority``. This file contains keys necessary to connect to
 an X server. The keyboard daemon attempts to set ``HOME`` to various
-users’ home directories in order to gain a connection to the X server
+users' home directories in order to gain a connection to the X server
 and monitor events. This may fail to work if the keyboard daemon is not
 allowed to attach to the X server, and the state of a machine may be
 incorrectly set to idle when a user is, in fact, using the machine.
@@ -613,7 +613,7 @@ In some environments, the *condor_kbdd* will not be able to connect to
 the X server because the user currently logged into the system keeps
 their authentication token for using the X server in a place that no
 local user on the current machine can get to. This may be the case for
-files on AFS, because the user’s ``.Xauthority`` file is in an AFS home
+files on AFS, because the user's ``.Xauthority`` file is in an AFS home
 directory.
 
 There may also be cases where the *condor_kbdd* may not be run with
@@ -624,8 +624,8 @@ permissions of the logged in user. If running X11R6.3, the files to edit
 will probably be in ``/usr/X11R6/lib/X11/xdm``. The ``.xsession`` file
 should start up the *condor_kbdd* at the end, and the ``.Xreset`` file
 should shut down the *condor_kbdd*. The **-l** option can be used to
-write the daemon’s log file to a place where the user running the daemon
-has permission to write a file. The file’s recommended location will be
+write the daemon's log file to a place where the user running the daemon
+has permission to write a file. The file's recommended location will be
 similar to ``$HOME/.kbdd.log``, since this is a place where every user
 can write, and the file will not get in the way. The **-pidfile** and
 **-k** options allow for easy shut down of the *condor_kbdd* by storing
@@ -650,7 +650,7 @@ exit.
 
 To see how well the keyboard daemon is working, review the log for the
 daemon and look for successful connections to the X server. If there are
-none, the *condor_kbdd* is unable to connect to the machine’s X server.
+none, the *condor_kbdd* is unable to connect to the machine's X server.
 
 Configuring The HTCondorView Server
 -----------------------------------
@@ -879,7 +879,7 @@ started on the host.
 The inner virtual machine is further provided with a new syntax for
 referring to the machine ClassAd attributes of its host. Any machine
 ClassAd attribute with a prefix of the string ``HOST_`` explicitly
-refers to the host’s ClassAd attributes. The ``START`` policy on the
+refers to the host's ClassAd attributes. The ``START`` policy on the
 inner virtual machine ought to use this syntax to avoid starting jobs
 when its host is too busy processing other items. An example
 configuration for ``START`` on an inner virtual machine:
@@ -889,7 +889,7 @@ configuration for ``START`` on an inner virtual machine:
     START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \ 
             && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
 
-HTCondor’s Dedicated Scheduling
+HTCondor's Dedicated Scheduling
 -------------------------------
 
 :index:`dedicated scheduling`
@@ -915,7 +915,7 @@ all users submit their parallel universe jobs. The perfect choice for
 the dedicated scheduler is the single, front-end machine for a dedicated
 cluster of compute nodes. For the pool without an obvious choice for a
 submit machine, choose a machine that all users can log into, as well as
-one that is likely to be up and running all the time. All of HTCondor’s
+one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a submit machine apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
 See
@@ -999,7 +999,7 @@ varying the local configuration.
     (with the ``Scheduler`` attribute) has the highest rank. This
     prevents other jobs from preempting it based on user priorities. The
     rest of the expressions disable any other of the *condor_startd*
-    daemon’s pool-wide policies, such as those for evicting jobs when
+    daemon's pool-wide policies, such as those for evicting jobs when
     keyboard and CPU activity is discovered on the machine.
 
  Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
@@ -1019,7 +1019,7 @@ varying the local configuration.
 
  Policy Scenario: Adding Desktop Resources To The Mix
     A third policy example allows all jobs. These desktop machines use a
-    preexisting ``START`` expression that takes the machine owner’s
+    preexisting ``START`` expression that takes the machine owner's
     usage into account for some jobs. The machine does not preempt jobs
     that must run on dedicated resources, while it may preempt other
     jobs as defined by policy. So, the default pool policy is used for
@@ -1050,7 +1050,7 @@ Preemption with Dedicated Jobs
 The dedicated scheduler can be configured to preempt running parallel
 universe jobs in favor of higher priority parallel universe jobs. Note
 that this is different from preemption in other universes, and parallel
-universe jobs cannot be preempted either by a machine’s user pressing a
+universe jobs cannot be preempted either by a machine's user pressing a
 key or by other means.
 
 By default, the dedicated scheduler will never preempt running parallel
@@ -1100,7 +1100,7 @@ most common example is a pool of machine using InfiniBand switches. For
 example, each switch might connect 16 machines, and a pool might have
 160 machines on 10 switches. If the InfiniBand switches are not routed
 to each other, each job must run on machines connected to the same
-switch. The dedicated scheduler’s Parallel Scheduling Groups feature
+switch. The dedicated scheduler's Parallel Scheduling Groups feature
 supports this operation.
 
 Each *condor_startd* must define which group it belongs to by setting
@@ -1269,7 +1269,7 @@ server for each project it has been configured to work for. The BOINC
 software downloads the appropriate platform-specific application binary
 and some work units from the central server for each project. Whenever
 the client software completes a given work unit, it once again attempts
-to connect to that project’s central server to upload the results and
+to connect to that project's central server to upload the results and
 download more work.
 
 BOINC participants must register at the centralized server for each
@@ -1626,14 +1626,14 @@ properly clean up any processes that jobs leave behind when they exit.
 In general, tracking process families is difficult to do reliably. By
 default HTCondor uses a combination of process parent-child
 relationships, process groups, and information that HTCondor places in a
-job’s environment to track process families on a best-effort basis. This
+job's environment to track process families on a best-effort basis. This
 usually works well, but it can falter for certain applications or for
 jobs that try to evade detection.
 
-Jobs that run with a user account dedicated for HTCondor’s use can be
+Jobs that run with a user account dedicated for HTCondor's use can be
 reliably tracked, since all HTCondor needs to do is look for all
 processes running using the given account. Administrators must specify
-in HTCondor’s configuration what accounts can be considered dedicated
+in HTCondor's configuration what accounts can be considered dedicated
 via the ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
 :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
 Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for further
@@ -1642,13 +1642,13 @@ details.
 Ideally, jobs can be reliably tracked regardless of the user account
 they execute under. This can be accomplished with group ID-based
 tracking. This method of tracking requires that a range of dedicated
-group IDs (GID) be set aside for HTCondor’s use. The number of GIDs that
+group IDs (GID) be set aside for HTCondor's use. The number of GIDs that
 must be set aside for an execute machine is equal to its number of
 execution slots. GID-based tracking is only available on Linux, and it
 requires that HTCondor daemons run as root.
 
 GID-based tracking works by placing a dedicated GID in the supplementary
-group list of a job’s initial process. Since modifying the supplementary
+group list of a job's initial process. Since modifying the supplementary
 group ID list requires root privilege, the job will not be able to
 create processes that go unnoticed by HTCondor.
 
@@ -1759,7 +1759,7 @@ are controlled by the *condor_starter* daemon, and they include the
 **vanilla**, **standard**, **java**, **local**, and **parallel**
 universes.
 
-The job’s ClassAd is written by the *condor_starter* daemon. It will
+The job's ClassAd is written by the *condor_starter* daemon. It will
 need to contain attributes that the script defined by
 ``USER_JOB_WRAPPER`` can use to implement platform specific resource
 limiting actions. Examples of resources that may be referred to for
@@ -1808,7 +1808,7 @@ contents of that file:
     echo "Failed to exec($error): $@" > $_CONDOR_WRAPPER_ERROR_FILE 
     exit 1
 
-If used in an unmodified form, this script sets the job’s limits on a
+If used in an unmodified form, this script sets the job's limits on a
 per slot basis for memory and disk usage, with the limits defined by the
 values in the machine ClassAd. This example file will need to be
 modified and merged for use with a preexisting ``USER_JOB_WRAPPER``
@@ -1843,7 +1843,7 @@ Limiting Resource Usage Using Cgroups
 :index:`on resource usage with cgroup<single: on resource usage with cgroup; limits>`
 :index:`resource limits<single: resource limits; cgroups>`
 
-While the method described to limit a job’s resource usage is portable,
+While the method described to limit a job's resource usage is portable,
 and it should run on any Linux or BSD or Unix system, it suffers from
 one large flaw. The flaw is that resource limits imposed are per
 process, not per job. An HTCondor job is often composed of many Unix
@@ -1958,14 +1958,14 @@ where the administrator needs to limit the number of jobs accessing the
 server.
 
 The administrator must predefine the names and capacities of the
-resources to be limited in the negotiator’s configuration file. The job
+resources to be limited in the negotiator's configuration file. The job
 submitter must declare in the submit description file which resources
 the job consumes.
 
 The administrator chooses a name for the limit. Concurrency limit names
-are case-insensitive. The names are formed from the alphabet letters ’A’
-to ’Z’ and ’a’ to ’z’, the numerical digits 0 to 9, the underscore
-character ’_’ , and at most one period character. The names cannot
+are case-insensitive. The names are formed from the alphabet letters 'A'
+to 'Z' and 'a' to 'z', the numerical digits 0 to 9, the underscore
+character '_' , and at most one period character. The names cannot
 start with a numerical digit.
 
 For example, assume that there are 3 licenses for the X software, so
@@ -2042,7 +2042,7 @@ set. For example, define the sets called ``LARGE`` and ``SMALL``:
     CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
 
 To use the set name in a concurrency limit, the syntax follows the set
-name with a period and then the set member’s name. Continuing this
+name with a period and then the set member's name. Continuing this
 example, there may be a concurrency limit named ``LARGE.SWLICENSE``,
 which gets the capacity of the default defined for the ``LARGE`` set,
 which is 100. A concurrency limit named ``LARGE.DBSESSION`` will also

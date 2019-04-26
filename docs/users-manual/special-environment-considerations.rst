@@ -45,7 +45,7 @@ If the current working directory when a job is submitted is accessed via
 an NFS automounter, HTCondor may have problems if the automounter later
 decides to unmount the volume before the job has completed. This is
 because *condor\_submit* likely has stored the dynamic mount point as
-the job’s initial current working directory, and this mount point could
+the job's initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
 There is a simple work around. When submitting the job, use the submit
@@ -64,7 +64,7 @@ description file solves the problem.
 :index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
 
 HTCondor attempts to flush the NFS cache on a submit machine in order to
-refresh a job’s initial working directory. This allows files written by
+refresh a job's initial working directory. This allows files written by
 the job into an NFS mounted initial working directory to be immediately
 visible on the submit machine. Since the flush operation can require
 multiple round trips to the NFS server, it is expensive. Therefore, a
@@ -74,7 +74,7 @@ job may disable the flushing by setting
 
       +IwdFlushNFSCache = False
 
-in the job’s submit description file. See page \ `Job ClassAd
+in the job's submit description file. See page \ `Job ClassAd
 Attributes <../classad-attributes/job-classad-attributes.html>`__ for a
 definition of the job ClassAd attribute.
 
@@ -87,7 +87,7 @@ HTCondor Daemons That Do Not Run as root
 HTCondor is normally installed such that the HTCondor daemons have root
 permission. This allows HTCondor to run the *condor\_shadow*
 :index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
-daemon and the job with the submitting user’s UID and file access
+daemon and the job with the submitting user's UID and file access
 rights. When HTCondor is started as root, HTCondor jobs can access
 whatever files the user that submits the jobs can.
 
@@ -151,7 +151,7 @@ the *condor\_starter* daemon and user job.
 :index:`JobLeaseDuration<single: JobLeaseDuration; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 
-A default value equal to 40 minutes exists for a job’s ClassAd attribute
+A default value equal to 40 minutes exists for a job's ClassAd attribute
 ``JobLeaseDuration``, or this attribute may be set in the submit
 description file, using
 **job\_lease\_duration**\ :index:`job_lease_duration<single: job_lease_duration; submit commands>`,

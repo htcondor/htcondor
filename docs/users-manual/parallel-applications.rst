@@ -5,7 +5,7 @@ Parallel Applications (Including MPI Applications)
 
 :index:`parallel universe` :index:`MPI application`
 
-HTCondor’s parallel universe supports jobs that span multiple machines,
+HTCondor's parallel universe supports jobs that span multiple machines,
 where the multiple processes within a job must be running concurrently
 on these multiple machines, perhaps communicating with each other. The
 parallel universe provides machine scheduling, but does not enforce a
@@ -215,7 +215,7 @@ The ``$(Node)`` value is fixed for the entire length of the job.
 
  Differing Requirements for the Machines
 
-Sometimes one machine’s part in a parallel job will have specialized
+Sometimes one machine's part in a parallel job will have specialized
 needs. These can be handled with a
 **Requirements**\ :index:`Requirements<single: Requirements; submit commands>` submit
 command that also specifies the number of needed machines.
@@ -301,7 +301,7 @@ machines (slots), executing in parallel. The various implementations of
 MPI such as Open MPI and MPICH require further framework. HTCondor
 supports this necessary framework through a user-modified script. This
 implementation-dependent script becomes the HTCondor executable. The
-script sets up the framework, and then it invokes the MPI application’s
+script sets up the framework, and then it invokes the MPI application's
 executable.
 
 The scripts are located in the ``$(RELEASE_DIR)``/etc/examples
@@ -334,8 +334,8 @@ Here is a sample submit description file for an MPICH MPI application:
 The **executable**\ :index:`executable<single: executable; submit commands>` is the
 ``mp1script`` script that will have been modified for this MPI
 application. This script is invoked on each slot or core. The script, in
-turn, is expected to invoke the MPI application’s executable. To know
-the MPI application’s executable, it is the first in the list of
+turn, is expected to invoke the MPI application's executable. To know
+the MPI application's executable, it is the first in the list of
 **arguments**\ :index:`arguments<single: arguments; submit commands>`. And, since
 HTCondor must transfer this executable to the machine where it will run,
 it is listed with the
@@ -392,7 +392,7 @@ want to consider tweaking the ``OPENMPI_EXCLUDE_NETWORK_INTERFACES``
 as well as set ``MOUNT_UNDER_SCRATCH`` = ``/tmp``.
 :index:`parallel universe`
 
-MPI Applications Within HTCondor’s Vanilla Universe
+MPI Applications Within HTCondor's Vanilla Universe
 ---------------------------------------------------
 
 The vanilla universe may be preferred over the parallel universe for

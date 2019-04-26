@@ -27,7 +27,7 @@ remotely. The *condor\_master* will run on every machine in your
 HTCondor pool, regardless of what functions each machine are performing.
 Additionally, on Linux platforms, if you start the *condor\_master* as
 root, it will tune (but never decrease) certain kernel parameters
-important to HTCondor’s performance.
+important to HTCondor's performance.
 
 The ``DAEMON_LIST`` :index:`DAEMON_LIST` configuration macro is
 used by the *condor\_master* to provide a per-machine list of daemons

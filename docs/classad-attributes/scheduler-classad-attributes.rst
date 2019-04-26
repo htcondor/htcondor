@@ -270,7 +270,7 @@ Scheduler ClassAd Attributes
     time interval defined by attribute ``StatsLifetime``.
     :index:`Machine<single: Machine; ClassAd Scheduler attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MaxJobsRunning<single: MaxJobsRunning; ClassAd Scheduler attribute>`
  ``MaxJobsRunning``:
     The same integer value as set by the evaluation of the configuration
@@ -336,7 +336,7 @@ Scheduler ClassAd Attributes
     :index:`NumUsers<single: NumUsers; ClassAd Scheduler attribute>`
  ``NumUsers``:
     The integer number of distinct users with jobs in this
-    *condor\_schedd*\ ’s queue.
+    *condor\_schedd*\ 's queue.
     :index:`PublicNetworkIpAddr<single: PublicNetworkIpAddr; ClassAd Scheduler attribute>`
  ``PublicNetworkIpAddr``:
     Description is not yet written.

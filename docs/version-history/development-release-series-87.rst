@@ -41,7 +41,7 @@ New Features:
 -  *condor_submit* will no longer attempt to read submit commands from
    standard input when there is no submit file if a queue statement and
    at least one submit command is provided on the command line. :ticket:`6581`
--  If the first line of the job’s executable starts with ``#!``
+-  If the first line of the job's executable starts with ``#!``
    *condor_submit* will now check that line for a Windows/DOS line
    ending, and if it finds one, it will not submit the job because such
    a script will not be able to start on Unix or Linux platforms. This
@@ -52,7 +52,7 @@ New Features:
 -  Improved error handling during SSL authentication. :ticket:`6720`
 -  Improved throughput when submitting a large number of Condor-C jobs.
    Previously, Condor-C jobs could remain held for a long time in the
-   remote *condor_schedd*\ ’s queue while other jobs were being
+   remote *condor_schedd*\ 's queue while other jobs were being
    submitted. :ticket:`6716`
 -  Updated default configuration parameters to improve performance for
    large pools and gives users a better experience. :ticket:`6768`
@@ -162,17 +162,17 @@ New Features:
 -  VM universe jobs are now given time to shutdown after a power-off
    signal when they are evicted gracefully. :ticket:`6705`
 -  The ``NETWORK_HOSTNAME`` configuration parameter can now be set to a
-   fully-qualified hostname that’s an alias of one of the machine’s
+   fully-qualified hostname that's an alias of one of the machine's
    interfaces. :ticket:`6702`
 -  Added a new tool, *condor_now*, which tries to run the specified job
    now. You specify two jobs that you own from the same
    *condor_schedd*: the now-job and the vacate-job. The latter is
    immediately vacated; after the vacated job terminates, if the
-   *condor_schedd* still has the claim to the vacated job’s slot (and
+   *condor_schedd* still has the claim to the vacated job's slot (and
    it usually will), the *condor_schedd* will immediately start the
    now-job on that slot. The now-job must be idle and the vacate-job
-   must be running. If you’re a queue super-user, the jobs must have the
-   same owner, but that owner doesn’t have to be you. :ticket:`6659`
+   must be running. If you're a queue super-user, the jobs must have the
+   same owner, but that owner doesn't have to be you. :ticket:`6659`
 -  HTCondor now supports backfill while draining. You may now use the
    *condor_drain* command, or configure the *condor_defrag* daemon, to
    set a different ``START`` expression for the duration of the
@@ -203,7 +203,7 @@ Bugs Fixed:
 -  Fixed a problem where a *condor_vacate_job*, when passed the
    **-fast** flag, would leave the corresponding slot stuck in
    “Preempting/Vacating” state until the job lease expired. :ticket:`6663`
--  Fixed a problem where *condor_annex*\ ’s setup routine, if no region
+-  Fixed a problem where *condor_annex*\ 's setup routine, if no region
    had been specified on the command line, would write a configuration
    for a bogus region rather than the default one. :ticket:`6666`
 -  The *condor_history_helper* program was removed. *condor_history*
@@ -308,8 +308,8 @@ New Features:
    instances and over time to produce a ``<Resource>Usage`` attribute,
    which is like ``GPUsUsage``, except for the custom machine resource
    in question. :ticket:`6477`
--  The *condor_startd* now periodically writes a file to each job’s
-   sandbox named “.update.ad”. This file is a copy of the slot’s machine
+-  The *condor_startd* now periodically writes a file to each job's
+   sandbox named “.update.ad”. This file is a copy of the slot's machine
    ad, but unlike “.machine.ad”, it is regularly updated. Jobs may read
    this file to observe their own usage attributes. :ticket:`6477`
 -  A new option **-unmatchable** was added to *condor_q* that causes
@@ -408,11 +408,11 @@ New Features:
    :ticket:`6486`
 -  Added new job attributes BatchProject and BatchRuntime for grid-type
    batch jobs. They specify the project/allocation name and maximum
-   runtime in seconds for the job that’s submited to the underlying
+   runtime in seconds for the job that's submited to the underlying
    batch system. :ticket:`6451`
 -  HTCondor now respects ``ATTR_JOB_SUCCESS_EXIT_CODE`` when sending job
    notifications. :ticket:`6432`
--  Added some graph metrics (height, width, etc.) to DAGMan’s metrics
+-  Added some graph metrics (height, width, etc.) to DAGMan's metrics
    file output. :ticket:`6470`
 -  Removed Quill from HTCondor codebase. :ticket:`6496`
 
@@ -423,7 +423,7 @@ Bugs Fixed:
 -  The job log will no longer contain empty submit warnings. :ticket:`6465`
 -  DAGMan previously connected to *condor_schedd* every time it
    detected an update in its internal state. This is too aggressive for
-   rapidly changing DAGs, so we’ve changed the connection to happen in
+   rapidly changing DAGs, so we've changed the connection to happen in
    time intervals defined by ``DAGMAN_QUEUE_UPDATE_INTERVAL``, by
    default once every five minutes. :ticket:`6464`
 -  DAGMan now enforces the ``DAGMAN_MAX_JOB_HOLDS`` limit by the number
@@ -510,7 +510,7 @@ New Features:
 -  Added submit warnings. See section `Policy Configuration for Execute
    Hosts and for Submit
    Hosts <../admin-manual/policy-configuration.html>`__. :ticket:`5971`
--  ``openmpiscript`` now uses *condor_chirp* to run Open MPI’s execute
+-  ``openmpiscript`` now uses *condor_chirp* to run Open MPI's execute
    daemons (orted) directly under the *condor_starter* (instead of
    using SSH). ``openmpiscript`` now also puts information about the
    number of CPUs in the hostfile given to ``mpirun`` and now includes
@@ -580,7 +580,7 @@ New Features:
    users to transfer input files over a publicly-available HTTP web
    service, which can benefit from caching proxies, load balancers, and
    other tools to improve file transfer performance. :ticket:`6356`
--  Added **-grid:ec2** to *condor_q* to avoid truncating AWS’ new,
+-  Added **-grid:ec2** to *condor_q* to avoid truncating AWS' new,
    longer, instance IDs. Replaced useless (given the instance ID)
    instance host name with the CMD column, to help distinguish EC2 jobs
    from each other. :ticket:`5478`
@@ -698,7 +698,7 @@ Bugs Fixed:
    running in that slot. Previously, load associated from outside of
    condor was proportionately distributed into the condor slots,
    resulting in much confusion. :ticket:`6225`
--  Illegal chars (’+’, ’.’) are now prohibited in DAGMan node names.
+-  Illegal chars ('+', '.') are now prohibited in DAGMan node names.
    :ticket:`5966`
 -  Improve audit log messages by including the connection ID and
    properly filtering out shadow and gridmanager modifications to the

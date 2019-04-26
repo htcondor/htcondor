@@ -1,6 +1,6 @@
       
 
-HTCondor’s Checkpoint Mechanism
+HTCondor's Checkpoint Mechanism
 ===============================
 
 :index:`checkpoint`
@@ -27,7 +27,7 @@ program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
-HTCondor’s resource management functionality. See section \ `Running a
+HTCondor's resource management functionality. See section \ `Running a
 Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
 page \ `Running a Job: the Steps To
 Take <../users-manual/running-a-job-steps.html>`__ for a description of
@@ -39,7 +39,7 @@ call library as a signal handler. When HTCondor sends a checkpoint
 signal to a process linked with this library, the provided signal
 handler writes the state of the process out to a file or a network
 socket. This state includes the contents of the process stack and data
-segments, all shared library code and data mapped into the process’s
+segments, all shared library code and data mapped into the process's
 address space, the state of all open files, and any signal handlers and
 pending signals. On restart, the process reads this state from the file,
 restoring the stack, shared library and data segments, file state,
@@ -55,7 +55,7 @@ checkpoint, and computation resumes from where it left off. Jobs that
 can not take checkpoints are preempted and restarted from the beginning.
 :index:`periodic<single: periodic; checkpoint>`
 
-HTCondor’s taking of periodic checkpoints provides fault tolerance.
+HTCondor's taking of periodic checkpoints provides fault tolerance.
 Pools may be configured with the ``PERIODIC_CHECKPOINT``
 :index:`PERIODIC_CHECKPOINT` variable, which controls when and how
 often jobs which can take and use checkpoints do so periodically.

@@ -6,7 +6,7 @@ ClassAd Types
 ClassAd attributes vary, depending on the entity producing the ClassAd.
 Therefore, each ClassAd has an attribute named ``MyType``, which
 describes the type of ClassAd. In addition, the *condor\_collector*
-appends attributes to any daemon’s ClassAd, whenever the
+appends attributes to any daemon's ClassAd, whenever the
 *condor\_collector* is queried. These additional attributes are listed
 in the unnumbered subsection labeled ClassAd Attributes Added by the
 *condor\_collector* on page \ `ClassAd Attributes Added by the

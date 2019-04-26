@@ -50,7 +50,7 @@ Options
  **-version**
     Display version information
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*
@@ -102,10 +102,10 @@ state. Therefore, the command
 
     % condor_hold Mary -constraint "JobStatus!=2"
 
-places all of Mary’s queued jobs into the hold state, and the constraint
+places all of Mary's queued jobs into the hold state, and the constraint
 holds all queued jobs not currently running. It also sends a hard kill
-signal to any of Mary’s jobs that are currently running. Note that the
-jobs specified by the constraint will also be Mary’s jobs, if it is Mary
+signal to any of Mary's jobs that are currently running. Note that the
+jobs specified by the constraint will also be Mary's jobs, if it is Mary
 that issues this example *condor\_hold* command.
 
 Exit Status

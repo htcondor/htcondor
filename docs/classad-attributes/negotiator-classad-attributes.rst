@@ -164,7 +164,7 @@ Negotiator ClassAd Attributes
     name indicates how many negotiation cycles ago this cycle happened.
     :index:`Machine<single: Machine; ClassAd Negotiator attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MyAddress<single: MyAddress; ClassAd Negotiator attribute>`
  ``MyAddress``:
     String with the IP and port address of the *condor\_negotiator*

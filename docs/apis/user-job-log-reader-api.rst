@@ -8,8 +8,8 @@ The HTCondor User and Job Log Reader API
 :index:`Event Log Reader API` :index:`ReadUserLog`
 :index:`Job Log Reader API`
 
-HTCondor has the ability to log an HTCondor job’s significant events
-during its lifetime. This is enabled in the job’s submit description
+HTCondor has the ability to log an HTCondor job's significant events
+during its lifetime. This is enabled in the job's submit description
 file with the **Log**\ :index:`Log<single: Log; submit commands>` command.
 
 This section describes the API defined by the C++ ``ReadUserLog`` class,

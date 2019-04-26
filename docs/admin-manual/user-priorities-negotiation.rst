@@ -35,7 +35,7 @@ Real User Priority (RUP)
 :index:`real user priority (RUP)`
 :index:`real (RUP)<single: real (RUP); user priority>`
 
-A user’s RUP measures the resource usage of the user through time. Every
+A user's RUP measures the resource usage of the user through time. Every
 user begins with a RUP of one half (0.5), and at steady state, the RUP
 of a user equilibrates to the number of resources used by that user.
 Therefore, if a specific user continuously uses exactly ten resources
@@ -46,7 +46,7 @@ gets better. The rate at which the priority value decays can be set by
 the macro ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`, a time
 period defined in seconds. Intuitively, if the ``PRIORITY_HALFLIFE``
 :index:`PRIORITY_HALFLIFE` in a pool is set to 86400 (one day),
-and if a user whose RUP was 10 has no running jobs, that user’s RUP
+and if a user whose RUP was 10 has no running jobs, that user's RUP
 would be 5 one day later, 2.5 two days later, and so on.
 
 Effective User Priority (EUP)
@@ -85,7 +85,7 @@ EUP may be useful:
     large EUP. This corresponds to a low priority for resources,
     therefore using resources not used by other HTCondor users.
  Remote Users
-    HTCondor’s flocking feature (see section \ `Connecting HTCondor
+    HTCondor's flocking feature (see section \ `Connecting HTCondor
     Pools with
     Flocking <../grid-computing/connecting-pools-with-flocking.html>`__)
     allows jobs to run in a pool other than the local one. In addition,
@@ -127,8 +127,8 @@ running job has been running for a relatively short period of time. This
 effectively limits the number of preemptions per resource per time
 interval. Note that ``PREEMPTION_REQUIREMENTS`` only applies to
 preemptions due to user priority. It does not have any effect if the
-machine’s ``RANK`` expression prefers a different job, or if the
-machine’s policy causes the job to vacate due to other activity on the
+machine's ``RANK`` expression prefers a different job, or if the
+machine's policy causes the job to vacate due to other activity on the
 machine. See section `Policy Configuration for Execute Hosts and for
 Submit Hosts <../admin-manual/policy-configuration.html>`__ for the
 current default policy on preemption.
@@ -145,7 +145,7 @@ expression to check if defined such as
 is likely necessary.
 
 Within these attributes, those with names that contain the string
-``Submitter`` refer to characteristics about the candidate job’s user;
+``Submitter`` refer to characteristics about the candidate job's user;
 those with names that contain the string ``Remote`` refer to
 characteristics about the user currently using the resource. Further,
 those with names that end with the string ``ResourcesInUse`` have values
@@ -196,7 +196,7 @@ these configuration variables.
 :index:`SubmitterGroupQuota<single: SubmitterGroupQuota; ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``:
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
-    integer number of slots defined as the group’s quota.
+    integer number of slots defined as the group's quota.
 
 :index:`RemoteGroupResourcesInUse<single: RemoteGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteGroupResourcesInUse``:
     If the owner of the currently running job is a member of a valid
@@ -209,7 +209,7 @@ these configuration variables.
 :index:`RemoteGroupQuota<single: RemoteGroupQuota; ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``:
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
-    the integer number of slots defined as the group’s quota.
+    the integer number of slots defined as the group's quota.
 
 :index:`SubmitterNegotiatingGroup<single: SubmitterNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``:
     The accounting group name that the candidate job is negotiating
@@ -231,7 +231,7 @@ Priority Calculation
 --------------------
 
 This section may be skipped if the reader so feels, but for the curious,
-here is HTCondor’s priority calculation algorithm.
+here is HTCondor's priority calculation algorithm.
 
 The RUP of a user u at time t, π\ :sub:`r`\ (u,t), is calculated every
 time interval δt using the formula
@@ -253,7 +253,7 @@ The EUP of user u at time t, π\ :sub:`e`\ (u,t) is calculated by
 where f(u,t) is the priority boost factor for user u at time t.
 
 As mentioned previously, the RUP calculation is designed so that at
-steady state, each user’s RUP stabilizes at the number of resources used
+steady state, each user's RUP stabilizes at the number of resources used
 by that user. The definition of β ensures that the calculation of
 π\ :sub:`r`\ (u,t) can be calculated over non-uniform time intervals δt
 without affecting the calculation. The time interval δt varies due to
@@ -339,7 +339,7 @@ change the definition of what the *condor_schedd* considers a cluster
 from the default definition of all jobs that share the same
 ``ClusterId``.
 
-The Layperson’s Description of the Pie Spin and Pie Slice
+The Layperson's Description of the Pie Spin and Pie Slice
 ---------------------------------------------------------
 
 :index:`pie slice` :index:`pie spin`
@@ -383,7 +383,7 @@ Group Accounting
 :index:`by group<single: by group; priority>`
 
 By default, HTCondor does all accounting on a per-user basis, and this
-accounting is primarily used to compute priorities for HTCondor’s
+accounting is primarily used to compute priorities for HTCondor's
 fair-share scheduling algorithms. However, accounting can also be done
 on a per-group basis. Multiple users can all submit jobs into the same
 accounting group, and all jobs with the same accounting group will be
@@ -490,7 +490,7 @@ the physics group and ten are owned by the chemistry group. The desired
 policy is that no more than twenty concurrent jobs are ever running from
 the physicists, and only ten from the chemists. These machines are
 otherwise identical, so it does not matter which machines run which
-group’s jobs. It only matters that the proportions of allocated slots
+group's jobs. It only matters that the proportions of allocated slots
 are correct.
 
 Instead of quotas, this could be implemented by configuring the ``RANK``
@@ -499,7 +499,7 @@ prefer jobs submitted by the physics users. Likewise, the ten machines
 owned by the chemistry group are configured to prefer jobs submitted by
 the chemistry group. However, this steers jobs to execute on specific
 machines, instead of the desired policy which allocates numbers of
-machines, where these machines can be any of the pool’s machines that
+machines, where these machines can be any of the pool's machines that
 are available.
 
 Group quotas may implement this policy. Define the groups and set their
@@ -517,7 +517,7 @@ names identify the groups, such that the configuration can define the
 quotas in terms of limiting the number of cores allocated for a group or
 subgroup. Group names do not need to begin with ``"group_"``, but that
 is the convention, which helps to avoid naming conflicts between groups
-and subgroups. The hierarchy is identified by using the period (’.’)
+and subgroups. The hierarchy is identified by using the period ('.')
 character to separate a group name from a subgroup name from a sub
 subgroup name, etc. Group names are case-insensitive for negotiation.
 :index:`<none> group`
@@ -578,7 +578,7 @@ same. Configuration on the central manager becomes:
       GROUP_QUOTA_DYNAMIC_group_physics =   0.66
 
 The values of the quotas must be less than 1.0, indicating fractions of
-the pool’s machines. As with static quota specification, if the sum of
+the pool's machines. As with static quota specification, if the sum of
 the children exceeds one, they are scaled down proportionally so that
 their sum does equal 1.0. If their sum is less than one, they are not
 changed.
@@ -587,7 +587,7 @@ Extending this example to incorporate subgroups, assume that the physics
 group consists of high-energy (hep) and low-energy (lep) subgroups. The
 high-energy sub-group owns fifteen of the twenty physics slots, and the
 low-energy group owns the remainder. Groups are distinguished from
-subgroups by an intervening period character (.) in the group’s name.
+subgroups by an intervening period character (.) in the group's name.
 Static quotas for these subgroups extend the example configuration:
 
 ::
@@ -609,8 +609,8 @@ the example, using dynamic quotas:
       GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75 
       GROUP_QUOTA_DYNAMIC_group_physics.lep =   0.25
 
-The fraction of a subgroup’s quota is expressed with respect to its
-parent group’s quota. That is, the high-energy physics subgroup is
+The fraction of a subgroup's quota is expressed with respect to its
+parent group's quota. That is, the high-energy physics subgroup is
 allocated 75% of the 66% that physics gets of the entire pool, however
 many that might be. If there are 30 machines in the pool, that would be
 the same 15 machines as specified in the static quota example.
@@ -656,7 +656,7 @@ However, ``GROUP_ACCEPT_SURPLUS`` is set to ``False`` globally,
 group_physics.lep and group_physics.lep. This means that
 group_physics.lep and group_physics.hep are allowed to exceed their
 quota of 15 and 5, but their sum cannot exceed 20, for that is their
-parent’s quota. If the group_physics had ``GROUP_ACCEPT_SURPLUS`` set
+parent's quota. If the group_physics had ``GROUP_ACCEPT_SURPLUS`` set
 to ``True``, then either group_physics.lep and group_physics.hep would
 not be limited by quota.
 
@@ -665,7 +665,7 @@ is, any leaf nodes of this tree with excess quota will share it with any
 peers which accept surplus. Any subsequent excess will then be passed up
 to the parent node and over to all of its children, recursively. Any
 node that does not accept surplus implements a hard cap on the number of
-slots that the sum of it’s children use.
+slots that the sum of it's children use.
 
 After the *condor_negotiator* calculates the quota assigned to each
 group, possibly adding in surplus, it then negotiates with the

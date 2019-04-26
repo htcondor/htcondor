@@ -186,7 +186,7 @@ Collector ClassAd Attributes
     Description is not yet written.
     :index:`Machine<single: Machine; ClassAd Collector attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MaxJobsRunningAll<single: MaxJobsRunningAll; ClassAd Collector attribute>`
  ``MaxJobsRunning<universe``:
     An integer value representing the sum of all

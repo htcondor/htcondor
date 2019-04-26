@@ -37,7 +37,7 @@ common functionality. Currently, the following daemons use DaemonCore:
 -  *condor_vm-gahp*
 -  *condor_vm-gahp-vmware*
 
-Most of DaemonCore’s details are not interesting for administrators.
+Most of DaemonCore's details are not interesting for administrators.
 However, DaemonCore does provide a uniform interface for the daemons to
 various Unix signals, and provides a common set of command-line options
 that can be used to start up each daemon.
@@ -119,14 +119,14 @@ These arguments and what they do are described below:
 -d
     Use dynamic directories. The ``$(LOG)``, ``$(SPOOL)``, and
     ``$(EXECUTE)`` directories are all created by the daemon at run
-    time, and they are named by appending the parent’s IP address and
+    time, and they are named by appending the parent's IP address and
     PID to the value in the configuration file. These values are then
     inherited by all children of the daemon invoked with this **-d**
     argument. For the *condor_master*, all HTCondor processes will use
     the new directories. If a *condor_schedd* is invoked with the *-d*
     argument, then only the *condor_schedd* daemon and any
     *condor_shadow* daemons it spawns will use the dynamic directories
-    (named with the *condor_schedd* daemon’s PID).
+    (named with the *condor_schedd* daemon's PID).
 
     Note that by using a dynamically-created spool directory named by
     the IP address and PID, upon restarting daemons, jobs submitted to
@@ -156,7 +156,7 @@ These arguments and what they do are described below:
     the configuration files. Primarily, this option is used with the
     *condor_kbdd* when it needs to run as the individual user logged
     into the machine, instead of running as root. Regular users would
-    not normally have permission to write files into HTCondor’s log
+    not normally have permission to write files into HTCondor's log
     directory. Using this option, they can override the value of ``LOG``
     and have the *condor_kbdd* write its log file into a directory that
     the user has permission to write to.

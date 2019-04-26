@@ -55,7 +55,7 @@ Options
     (help option) Display usage information
  **-daemons**
     (help option) Display information about the daemons running on the
-    specified machine, including the daemon’s PID, IP address and
+    specified machine, including the daemon's PID, IP address and
     command port
  **-diagnostic**
     (help option) Display extra information helpful for debugging
@@ -100,7 +100,7 @@ Options
     desired attribute. Like ``printf(3)``-style formats, one may include
     other text that will be reproduced directly. A format without any
     conversion specifiers may be specified, but an attribute is still
-    required. Include a backslash followed by an ‘n’ to specify a line
+    required. Include a backslash followed by an ‘n' to specify a line
     break.
  **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
     (display option) Display attribute(s) or expression(s) formatted in

@@ -32,6 +32,7 @@ sys.path.append(os.path.abspath('extensions'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -39,6 +40,7 @@ extensions = [
     'macro',
     'index',
 ]
+autosectionlabel_prefix_document = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -363,7 +365,6 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
         return_annotation = ''
 
     return signature, return_annotation
-
 
 def setup(app):
     app.add_stylesheet('css/htcondor-manual.css')

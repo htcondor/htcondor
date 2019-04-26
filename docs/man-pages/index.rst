@@ -59,11 +59,11 @@ Command Reference Manual (man pages)
    condor_run
    condor_set_shutdown
    condor_sos
-   condor_sshtojob
+   condor_ssh_to_job
    condor_stats
    condor_status
    condor_storecred
-   condor_submitdag
+   condor_submit_dag
    condor_submit
    condor_suspend
    condor_tail

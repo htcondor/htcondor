@@ -35,7 +35,7 @@ with the exception of the scratch directory, which is volume mounted to
 the host, and is the initial working directory of the job. Optionally,
 the administrator may configure other directories from the host machine
 to be volume mounted, and thus visible inside the container. See the
-docker section of the administrator’s manual for details.
+docker section of the administrator's manual for details.
 
 In Docker universe (as well as vanilla), HTCondor never allows a
 containerized process to run as root inside the container, it always
@@ -54,7 +54,7 @@ directory. In docker terms, we docker run with the -v
 non-root-user command line options (along with many others).
 
 The executable file can come from one of two places: either from within
-the container’s image, or it can be a script transfered from the submit
+the container's image, or it can be a script transfered from the submit
 machine to the scratch directory of the execute machine. To specify the
 former, use an absolute path (starting with a /) for the executable. For
 the latter, use a relative path.
@@ -102,7 +102,7 @@ network interface. In the job submit file, if the user specifies
 
     docker_network_type = host
 
-then, instead of at NATted interface, the job will use the host’s
+then, instead of at NATted interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
 

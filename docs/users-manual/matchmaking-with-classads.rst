@@ -7,10 +7,10 @@ Before you learn about how to submit a job, it is important to
 understand how HTCondor allocates resources.
 :index:`resource allocation<single: resource allocation; HTCondor>`\ Understanding the unique
 framework by which HTCondor matches submitted jobs with machines is the
-key to getting the most from HTCondor’s scheduling algorithm.
+key to getting the most from HTCondor's scheduling algorithm.
 
 HTCondor simplifies job submission by acting as a matchmaker of
-ClassAds. HTCondor’s ClassAds :index:`ClassAd`\ are analogous to
+ClassAds. HTCondor's ClassAds :index:`ClassAd`\ are analogous to
 the classified advertising section of the newspaper. Sellers advertise
 specifics about what they have to sell, hoping to attract a buyer.
 Buyers may advertise specifics about what they wish to purchase. Both

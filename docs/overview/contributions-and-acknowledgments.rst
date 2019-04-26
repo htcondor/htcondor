@@ -16,7 +16,7 @@ contributions.
 -  The GOZAL Project from the Computer Science Department of the
    Technion Israel Institute of Technology
    (`http://www.technion.ac.il/ <http://www.technion.ac.il/>`__), for
-   their enhancements for HTCondor’s High Availability. The
+   their enhancements for HTCondor's High Availability. The
    *condor\_had* daemon allows one of multiple machines to function as
    the central manager for a HTCondor pool. Therefore, if an acting
    central manager fails, another can take its place.

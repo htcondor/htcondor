@@ -45,12 +45,12 @@ the HTCondor User Manual section on DAGMan.
 :index:`e-mail in DAGs<single: e-mail in DAGs; notification>`
 
 Some options may be specified on the command line or in the
-configuration or in a node job’s submit description file. Precedence is
+configuration or in a node job's submit description file. Precedence is
 given to command line options or configuration over settings from a
 submit description file. An example is e-mail notifications. When
 configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
 :index:`DAGMAN_SUPPRESS_NOTIFICATION` is its default value of
-``True``, and a node job’s submit description file contains
+``True``, and a node job's submit description file contains
 
 ::
 
@@ -111,7 +111,7 @@ Options
     defaults to 0 (unlimited).
  **-dagman **\ *DagmanExecutable*
     Allows the specification of an alternate *condor_dagman* executable
-    to be used instead of the one found in the user’s path. This must be
+    to be used instead of the one found in the user's path. This must be
     a fully qualified path.
  **-maxpre **\ *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
@@ -155,7 +155,7 @@ Options
     between the local computer and the remote computer. It is also
     necessary that the user has appropriate permissions to submit a job
     to the remote machine; the permissions are the same as those
-    required to use *condor_submit*\ ’s **-remote** option. If other
+    required to use *condor_submit*\ 's **-remote** option. If other
     options are desired, including transfer of other input files,
     consider using the **-no_submit** option, modifying the resulting
     submit file for specific needs, and then using *condor_submit* on
@@ -217,7 +217,7 @@ Options
     *condor_q* groups jobs for display. As of version 8.5.5, the batch
     name set with this argument is propagated to all node jobs of the
     given DAG (including sub-DAGs), overriding any batch names set in
-    the individual submit files. Note: set the batch name to ’ ’ (space)
+    the individual submit files. Note: set the batch name to ' ' (space)
     to avoid overriding batch names specified in node job submit files.
     If no batch name is set, the batch name defaults to
     *DagFile*\ +\ *cluster* (where *DagFile* is the primary DAG file of
@@ -338,7 +338,7 @@ Options
  **-DoRecovery**
     Causes *condor_dagman* to start in recovery mode. (This means that
     it reads the relevant job user log(s) and "catches up" to the given
-    DAG’s previous state before submitting any new jobs.)
+    DAG's previous state before submitting any new jobs.)
 
 Exit Status
 -----------

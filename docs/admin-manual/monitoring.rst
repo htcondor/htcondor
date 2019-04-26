@@ -34,14 +34,14 @@ shared libraries for efficiency.
 
 If Ganglia is already deployed in the pool, the monitoring of HTCondor
 is enabled by running the *condor\_gangliad* daemon on a single machine
-within the pool. If the machine chosen is the one running Ganglia’s
+within the pool. If the machine chosen is the one running Ganglia's
 *gmetad*, then the HTCondor configuration consists of adding
 ``GANGLIAD`` to the definition of configuration variable ``DAEMON_LIST``
 on that machine. It may be advantageous to run the *condor\_gangliad*
 daemon on the same machine as is running the *condor\_collector* daemon,
 because on a large pool with many ClassAds, there is likely to be less
 network traffic. If the *condor\_gangliad* daemon is to run on a
-different machine than the one running Ganglia’s *gmetad*, modify
+different machine than the one running Ganglia's *gmetad*, modify
 configuration variable ``GANGLIA_GSTAT_COMMAND``
 :index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts
 from the master *gmond* program.
@@ -120,7 +120,7 @@ Recognized metric attribute names and their use:
     The graph title used for this metric. The default is the metric
     name.
  Group
-    A string specifying the name of this metric’s group. Metrics are
+    A string specifying the name of this metric's group. Metrics are
     arranged by group within a Ganglia web page. The default is
     determined by the daemon type. Metrics in different groups must have
     unique names.
@@ -187,12 +187,12 @@ Recognized metric attribute names and their use:
     ClassAds, make the metric name an expression that is unique to each
     type. The default ``AggregateGroup`` would be set accordingly. Note
     that the assumption is still that the result is a pool-wide metric,
-    so by default it is associated with the *condor\_collector* daemon’s
+    so by default it is associated with the *condor\_collector* daemon's
     host. To group by machine and publish the result into the Ganglia
     page associated with each machine, make the ``AggregateGroup``
     contain the machine name and override the default ``Machine``
-    attribute to be the daemon’s machine name, rather than the
-    *condor\_collector* daemon’s machine name.
+    attribute to be the daemon's machine name, rather than the
+    *condor\_collector* daemon's machine name.
  Machine
     The name of the host associated with this metric. If configuration
     variable ``GANGLIAD_DEFAULT_MACHINE``
@@ -260,7 +260,7 @@ or when the absent machine ClassAd attribute is mentioned on the
 *condor\_status* command line. This renders absent ClassAds invisible to
 the rest of the HTCondor infrastructure.
 
-A daemon may inform the *condor\_collector* that the daemon’s ClassAd
+A daemon may inform the *condor\_collector* that the daemon's ClassAd
 should not expire, but should be removed right away; the daemon asks for
 its ClassAd to be invalidated. It may be useful to place an invalidated
 ClassAd in the absent state, instead of having it removed as an

@@ -10,11 +10,11 @@ site with a :index:`Java Virtual Machine`\ :index:`JVM`
 Java Virtual Machine (JVM). To do this, HTCondor must be informed of
 some details of the JVM installation.
 
-Begin by installing a Java distribution according to the vendor’s
+Begin by installing a Java distribution according to the vendor's
 instructions. Your machine may have been delivered with a JVM already
 installed – installed code is frequently found in ``/usr/bin/java``.
 
-HTCondor’s configuration includes the location of the installed JVM.
+HTCondor's configuration includes the location of the installed JVM.
 Edit the configuration file. Modify the ``JAVA`` :index:`JAVA`
 entry to point to the JVM binary, typically ``/usr/bin/java``. Restart
 the *condor\_startd* daemon on that host. For example,
@@ -98,6 +98,6 @@ setting a different value for ``JAVA_EXTRA_ARGUMENTS``
 Note that if a specific job sets the value in the submit description
 file, using the submit command
 **java\_vm\_args**\ :index:`java_vm_args<single: java_vm_args; submit commands>`, the
-job’s value takes precedence over a configured value.
+job's value takes precedence over a configured value.
 
       

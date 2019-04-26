@@ -47,7 +47,7 @@ Options
     *r\_expr* is the rank expression evaluated to use as a basis for
     machine selection. *r\_expr* is a ClassAd expression.
  **-p **\ *centralmanagerhostname*
-    Specify the pool to be searched by giving the central manager’s host
+    Specify the pool to be searched by giving the central manager's host
     name. Without this option, the current pool is searched.
 
 General Remarks

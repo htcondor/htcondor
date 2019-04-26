@@ -1,4 +1,4 @@
-Users’ Manual
+Users' Manual
 -------------
 
 .. toctree::

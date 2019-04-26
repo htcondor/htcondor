@@ -20,11 +20,11 @@ Description
 
 *condor_advertise* sends one or more ClassAds to the
 *condor_collector* daemon on the central manager machine. The optional
-argument *update-command* says what daemon type’s ClassAd is to be
+argument *update-command* says what daemon type's ClassAd is to be
 updated; if it is absent, it assumed to be the update command
 corresponding to the type of the (first) ClassAd. The optional argument
 *classad-filename* is the file from which the ClassAd(s) should be read.
-If *classad-filename* is omitted or is the dash character (’-’), then
+If *classad-filename* is omitted or is the dash character ('-'), then
 the ClassAd(s) are read from standard input. You must specify
 *update-command* if you do not want to read from standard input.
 
@@ -100,7 +100,7 @@ Options
     Send more than one ClassAd, where the boundary between ClassAds is
     one or more blank lines.
  **-pool **\ *centralmanagerhostname[:portname]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number. The default is the ``COLLECTOR_HOST``
     specified in the configuration file.
  **-tcp**
@@ -143,7 +143,7 @@ Examples
 Assume that a machine called condor.example.com is turned off, yet its
 *condor_startd* ClassAd does not expire for another 20 minutes. To
 avoid this machine being matched, an administrator chooses to delete the
-machine’s *condor_startd* ClassAd. Create a file (called
+machine's *condor_startd* ClassAd. Create a file (called
 ``remove_file`` in this example) with the three required attributes:
 
 ::

@@ -28,7 +28,7 @@ information:
  Job
     The cluster/process id of the HTCondor job.
  Host
-    The host where the job ran. By default, the host’s IP address is
+    The host where the job ran. By default, the host's IP address is
     displayed. If **-hostname** is specified, the host name will be
     displayed instead.
  Start Time
@@ -88,10 +88,10 @@ information:
     job.
  Good Time
     The total time (days+hours:minutes) allocated to this job which
-    contributed to the job’s completion.
+    contributed to the job's completion.
  CPU Usage
     The total CPU time (days+hours:minutes) which contributed to this
-    job’s completion.
+    job's completion.
  Avg Alloc
     The average length of a workstation allocation obtained by this job
     in minutes (days+hours:minutes).

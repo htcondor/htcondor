@@ -272,7 +272,7 @@ or has run for at least a little bit.
 For jobs that have never run,
 :index:`condor_q<single: condor_q; HTCondor commands>`\ many problems can be
 diagnosed by using the **-analyze** option of the *condor\_q* command.
-Here is an example; running *condor\_q*\ ’s analyzer provided the
+Here is an example; running *condor\_q*\ 's analyzer provided the
 following information:
 
 ::
@@ -373,7 +373,7 @@ A swap space problem will show in the log with the following message:
 
 As an explanation, HTCondor computes the total swap space on the submit
 machine. It then tries to limit the total number of jobs it will spawn
-based on an estimate of the size of the *condor\_shadow* daemon’s memory
+based on an estimate of the size of the *condor\_shadow* daemon's memory
 footprint and a configurable amount of swap space that should be
 reserved. This is done to avoid the situation within a very large pool
 in which all the jobs are submitted from a single host. The huge number
@@ -472,7 +472,7 @@ These are all of the events that can show up in a job log file:
 
 | **Event Number:** 003
 | **Event Name:** Job was checkpointed
-| **Event Description:** The job’s complete state was written to a
+| **Event Description:** The job's complete state was written to a
   checkpoint file. This might happen without the job being removed from a
   machine, because the checkpointing can happen periodically.
 
@@ -609,12 +609,12 @@ These are all of the events that can show up in a job log file:
   :index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS` is set.
 
 | **Event Number:** 029
-| **Event Name:** The job’s remote status is unknown
-| **Event Description:** No updates of the job’s remote status have been
+| **Event Name:** The job's remote status is unknown
+| **Event Description:** No updates of the job's remote status have been
   received for 15 minutes.
 
 | **Event Number:** 030
-| **Event Name:** The job’s remote status is known again
+| **Event Name:** The job's remote status is known again
 | **Event Description:** An update has been received for a job whose
   remote status was previous logged as unknown.
 
@@ -640,7 +640,7 @@ These are all of the events that can show up in a job log file:
   SCRIPT exits with the defined PRE\_SKIP value in the DAG input file.
   This makes it possible for DAGMan to do recovery in a workflow that has
   such an event, as it would otherwise not have any event for the DAGMan
-  node to which the script belongs, and in recovery, DAGMan’s internal
+  node to which the script belongs, and in recovery, DAGMan's internal
   tables would become corrupted.
 
 | **Event Number:** 035

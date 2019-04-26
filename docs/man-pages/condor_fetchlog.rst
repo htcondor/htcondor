@@ -3,7 +3,7 @@
 *condor\_fetchlog*
 ==================
 
-Retrieve a daemon’s log file that is located on another computer
+Retrieve a daemon's log file that is located on another computer
 :index:`condor_fetchlog<single: condor_fetchlog; HTCondor commands>`
 :index:`condor_fetchlog command`
 
@@ -24,15 +24,15 @@ Description
 *machine-name*, and asks it to return a log file from that machine.
 Which log file is determined from the *subsystem[.extension]* argument.
 The log file is printed to standard output. This command eliminates the
-need to remotely log in to a machine in order to retrieve a daemon’s log
+need to remotely log in to a machine in order to retrieve a daemon's log
 file.
 
 For security purposes of authentication and authorization, this command
 requires ``ADMINISTRATOR`` level of access.
 
 The *subsystem[.extension]* argument is utilized to construct the log
-file’s name. Without an optional *.extension*, the value of the
-configuration variable named *subsystem*\ \_LOG defines the log file’s
+file's name. Without an optional *.extension*, the value of the
+configuration variable named *subsystem*\ \_LOG defines the log file's
 name. When specified, the *.extension* is appended to this value.
 
 The *subsystem* argument is any value ``$(SUBSYSTEM)`` that has a
@@ -63,7 +63,7 @@ Options
  **-version**
     Display version information
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-master**
     Send the command to the *condor\_master* daemon (default)
@@ -79,25 +79,25 @@ Options
 Examples
 --------
 
-To get the *condor\_negotiator* daemon’s log from a host named
+To get the *condor\_negotiator* daemon's log from a host named
 ``head.example.com`` from within the current pool:
 
 ::
 
     condor_fetchlog head.example.com NEGOTIATOR
 
-To get the *condor\_startd* daemon’s log from a host named
+To get the *condor\_startd* daemon's log from a host named
 ``execute.example.com`` from within the current pool:
 
 ::
 
     condor_fetchlog execute.example.com STARTD
 
-This command requested the *condor\_startd* daemon’s log from the
+This command requested the *condor\_startd* daemon's log from the
 *condor\_master*. If the *condor\_master* has crashed or is
 unresponsive, ask another daemon running on that computer to return the
 log. For example, ask the *condor\_startd* daemon to return the
-*condor\_master*\ ’s log:
+*condor\_master*\ 's log:
 
 ::
 

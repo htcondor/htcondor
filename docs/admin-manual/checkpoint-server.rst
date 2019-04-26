@@ -19,7 +19,7 @@ If the spool directories are on a network file system, then checkpoint
 files will make two trips over the network: one between the submitting
 machine and the execution machine, and a second between the submitting
 machine and the network file server. A checkpoint server configured to
-use the server’s local disk means that the checkpoint file will travel
+use the server's local disk means that the checkpoint file will travel
 only once over the network, between the execution machine and the
 checkpoint server. The pool may also obtain checkpointing network
 performance benefits by using multiple checkpoint servers, as discussed
@@ -108,7 +108,7 @@ There are three steps necessary towards running a checkpoint server:
         Described in section \ `Configuration
         Macros <../admin-manual/configuration-macros.html>`__. To have
         the checkpoint server managed by the *condor\_master*, the
-        ``DAEMON_LIST`` variable’s value must list both ``MASTER`` and
+        ``DAEMON_LIST`` variable's value must list both ``MASTER`` and
         ``CKPT_SERVER``. Also add ``STARTD`` to allow jobs to run on the
         checkpoint server machine. Similarly, add ``SCHEDD`` to permit
         the submission of jobs from the checkpoint server machine.
@@ -155,7 +155,7 @@ There are three steps necessary towards running a checkpoint server:
         Provides the full host name of the machine that is now running
         the checkpoint server.
 
-    It is most convenient to set these variables in the pool’s global
+    It is most convenient to set these variables in the pool's global
     configuration file, so that they affect all submission machines.
     However, it is permitted to configure each submission machine
     separately (using local configuration files), for example if it is
@@ -242,7 +242,7 @@ some circumstances, it is also useful to configure HTCondor to localize
 checkpoint read transfers, which occur when the job restarts from its
 last checkpoint on a new machine. To localize these transfers, it is
 desired to schedule the job on a machine which is near the checkpoint
-server on which the job’s checkpoint is stored.
+server on which the job's checkpoint is stored.
 
 In terminology, all of the machines configured to use checkpoint server
 A are in checkpoint server domain A. To localize checkpoint transfers,
@@ -285,7 +285,7 @@ With this configuration, all machine ClassAds will include a
 closest to this machine. So, the ``CkptServer`` attribute defines the
 checkpoint server domain of each machine.
 
-To restrict jobs to one checkpoint server domain, modify the jobs’
+To restrict jobs to one checkpoint server domain, modify the jobs'
 ``Requirements`` expression as follows:
 
 ::
@@ -293,7 +293,7 @@ To restrict jobs to one checkpoint server domain, modify the jobs’
       Requirements = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 
 This ``Requirements`` expression uses the ``LastCkptServer`` attribute
-in the job’s ClassAd, which specifies where the job last wrote a
+in the job's ClassAd, which specifies where the job last wrote a
 checkpoint, and the ``CkptServer`` attribute in the machine ClassAd,
 which specifies the checkpoint server domain. If the job has not yet
 written a checkpoint, the ``LastCkptServer`` attribute will be
@@ -304,13 +304,13 @@ checkpoint server domain where it started running.
 
 To instead allow jobs to transfer to other checkpoint server domains
 when there are no available machines in the current checkpoint server
-domain, modify the jobs’ ``Rank`` expression as follows:
+domain, modify the jobs' ``Rank`` expression as follows:
 
 ::
 
       Rank = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 
-This ``Rank`` expression will evaluate to 1 for machines in the job’s
+This ``Rank`` expression will evaluate to 1 for machines in the job's
 checkpoint server domain and 0 for other machines. So, the job will
 prefer to run on machines in its checkpoint server domain, but if no
 such machines are available, the job will run in a new checkpoint server

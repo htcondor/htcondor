@@ -19,10 +19,10 @@ This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
 the overview chapter (section `High Throughput Computing (HTC) and its
 Requirements <../overview/high-throughput-computing-requirements.html>`__)
-and the user’s manual (section `Welcome to
+and the user's manual (section `Welcome to
 HTCondor <../users-manual/welcome-to-htcondor.html>`__). If
 administrating or customizing the policy and set up of HTCondor, also
-read the administrator’s manual chapter (section `Administrators' Manual
+read the administrator's manual chapter (section `Administrators' Manual
 Introduction <../admin-manual/introduction-admin-manual.html>`__). After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
@@ -66,7 +66,7 @@ work in HTCondor:
    and floating-point performance, keyboard/mouse idle time, etc.
    Likewise, job ClassAds contain a full complement of information,
    including system dependent entries such as dynamic updates of the
-   job’s image size and CPU usage.
+   job's image size and CPU usage.
 -  Everything necessary to run an HTCondor central manager on Windows.
 -  Security mechanisms.
 -  HTCondor for Windows can run jobs at a lower operating system
@@ -88,20 +88,20 @@ work in HTCondor:
    Information specified by the user in the set up program is stored in
    the system registry. The set up program can update a current
    installation with a new release using a minimal amount of effort.
--  HTCondor can give a job access to the running user’s Registry hive.
+-  HTCondor can give a job access to the running user's Registry hive.
 
 Secure Password Storage
 -----------------------
 
 In order for HTCondor to operate properly, it must at times be able to
 act on behalf of users who submit jobs. This is required on submit
-machines, so that HTCondor can access a job’s input files, create and
-access the job’s output files, and write to the job’s log file from
+machines, so that HTCondor can access a job's input files, create and
+access the job's output files, and write to the job's log file from
 within the appropriate security context. On Unix systems, arbitrarily
 changing what user HTCondor performs its actions as is easily done when
 HTCondor is started with root privileges. On Windows, however,
 performing an action as a particular user or on behalf of a particular
-user requires knowledge of that user’s password, even when running at
+user requires knowledge of that user's password, even when running at
 the maximum privilege level. HTCondor provides secure password storage
 through the use of the *condor\_store\_cred* tool. Passwords managed by
 HTCondor are encrypted and stored in a secure location within the
@@ -115,15 +115,15 @@ submit jobs from the Windows submit machine.
 A further feature permits HTCondor to execute the job itself under the
 security context of its submitting user, specifying the
 **run\_as\_owner**\ :index:`run_as_owner<single: run_as_owner; submit commands>`
-command in the job’s submit description file. With this feature, it is
+command in the job's submit description file. With this feature, it is
 necessary to configure and run a centralized *condor\_credd* daemon to
-manage the secure password storage. This makes each user’s password
+manage the secure password storage. This makes each user's password
 available, via an encrypted connection to the *condor\_credd*, to any
 execute machine that may need it.
 
 By default, the secure password store for a submit machine when no
 *condor\_credd* is running is managed by the *condor\_schedd*. This
-approach works in environments where the user’s password is only needed
+approach works in environments where the user's password is only needed
 on the submit machine.
 
 Executing Jobs as the Submitting User
@@ -141,9 +141,9 @@ run account.
 
 This feature requires use of a *condor\_credd* daemon for secure
 password storage and retrieval. With the *condor\_credd* daemon running,
-the user’s password must be stored, using the *condor\_store\_cred*
+the user's password must be stored, using the *condor\_store\_cred*
 tool. Then, a user that wants a job to run using their own account
-places into the job’s submit description file
+places into the job's submit description file
 
 ::
 
@@ -162,7 +162,7 @@ instead of as a temporary user that has strictly limited access
 capabilities.
 
 It is first necessary to select the single machine on which to run the
-*condor\_credd*. Often, the machine acting as the pool’s central manager
+*condor\_credd*. Often, the machine acting as the pool's central manager
 is a good choice. An important restriction, however, is that the
 *condor\_credd* host must be a machine running Windows.
 
@@ -251,7 +251,7 @@ Any rows in the output with the ``UNDEF`` string indicate machines where
 secure communication is not working properly. Verify that the pool
 password is stored correctly on these machines.
 
-Regardless of how Condor’s authentication is configured, the pool
+Regardless of how Condor's authentication is configured, the pool
 password can always be set locally by running the
 
 ::
@@ -263,7 +263,7 @@ can be used to accomplish this. When condor\_store\_cred is run as the
 local SYSTEM account, it bypasses the network authentication and writes
 the pool password to the registry itself. This allows the other condor
 daemons (also running under the SYSTEM account) to access the pool
-password when authenticating against the pool’s collector. In case the
+password when authenticating against the pool's collector. In case the
 pool is remote and no initial communication can be established due to
 strong security, the pool password may have to be set using the above
 method and following command:
@@ -272,16 +272,16 @@ method and following command:
 
       condor_store_cred -u condor_pool@poolhost add
 
-Executing Jobs with the User’s Profile Loaded
+Executing Jobs with the User's Profile Loaded
 ---------------------------------------------
 
 :index:`loading account profile<single: loading account profile; Windows>`
 
 HTCondor can be configured when using dedicated run accounts, to load
-the account’s profile. A user’s profile includes a set of personal
+the account's profile. A user's profile includes a set of personal
 directories and a registry hive loaded under ``HKEY_CURRENT_USER``.
 
-This may be useful if the job requires direct access to the user’s
+This may be useful if the job requires direct access to the user's
 registry entries. It also may be useful when the job requires an
 application, and the application requires registry access. This feature
 is always enabled on the *condor\_startd*, but it is limited to the
@@ -293,7 +293,7 @@ next job has a fresh registry hive.
 
 A job that is to run with a profile uses the
 **load\_profile**\ :index:`load_profile<single: load_profile; submit commands>` command
-in the job’s submit description file:
+in the job's submit description file:
 
 ::
 
@@ -309,10 +309,10 @@ Using Windows Scripts as Job Executables
 HTCondor has added support for scripting jobs on Windows. Previously,
 HTCondor jobs on Windows were limited to executables or batch files.
 With this new support, HTCondor determines how to interpret the script
-using the file name’s extension. Without a file name extension, the file
+using the file name's extension. Without a file name extension, the file
 will be treated as it has been in the past: as a Windows executable.
 
-This feature may not require any modifications to HTCondor’s
+This feature may not require any modifications to HTCondor's
 configuration. An example that does not require administrative
 intervention are Perl scripts using *ActivePerl*.
 
@@ -359,12 +359,12 @@ up for several scripting languages:
 
 In this example, HTCondor specifies the Open2 verb, instead of the
 default Open verb, for a script with the file name extension of wsh. The
-*Windows Scripting Host*\ ’s Open2 verb allows standard input, standard
+*Windows Scripting Host*\ 's Open2 verb allows standard input, standard
 output, and standard error to be redirected as needed for HTCondor jobs.
 
 A common difficulty is encountered when a script interpreter requires
-access to the user’s registry. Note that the user’s registry is
-different than the root registry. If not given access to the user’s
+access to the user's registry. Note that the user's registry is
+different than the root registry. If not given access to the user's
 registry, some scripts, such as *Windows Scripting Host* scripts, will
 fail. The failure error message appears as:
 
@@ -373,9 +373,9 @@ fail. The failure error message appears as:
     CScript Error: Loading your settings failed. (Access is denied.)
 
 The fix for this error is to give explicit access to the submitting
-user’s registry hive. This can be accomplished with the addition of the
+user's registry hive. This can be accomplished with the addition of the
 **load\_profile**\ :index:`load_profile<single: load_profile; submit commands>` command
-in the job’s submit description file:
+in the job's submit description file:
 
 ::
 
@@ -384,7 +384,7 @@ in the job’s submit description file:
 With this command, there should be no registry access errors. This
 command should also work for other interpreters. Note that not all
 interpreters will require access. For example, *ActivePerl* does not by
-default require access to the user’s registry hive.
+default require access to the user's registry hive.
 
 How HTCondor for Windows Starts and Stops a Job
 -----------------------------------------------
@@ -394,7 +394,7 @@ How HTCondor for Windows Starts and Stops a Job
 This section provides some details on how HTCondor starts and stops
 jobs. This discussion is geared for the HTCondor administrator or
 advanced user who is already familiar with the material in the
-Administrator’s Manual and wishes to know detailed information on what
+Administrator's Manual and wishes to know detailed information on what
 HTCondor does when starting and stopping jobs.
 
 When HTCondor is about to start a job, the *condor\_startd* on the
@@ -407,12 +407,12 @@ execute machine spawns a *condor\_starter* process. The
    be changed by setting configuration variable
    ``DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP``
    :index:`DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP`. This step is skipped
-   if the job is to be run using the submitting user’s account, as
+   if the job is to be run using the submitting user's account, as
    specified in section `8.2.4 <#x76-5770008.2.4>`__.
 #. a new temporary working directory for the job on the execute machine.
    This directory is named ``dir_XXX``, where ``XXX`` is the process ID
    of the *condor\_starter*. The directory is created in the
-   ``$(EXECUTE)`` directory, as specified in HTCondor’s configuration
+   ``$(EXECUTE)`` directory, as specified in HTCondor's configuration
    file. HTCondor then grants write permission to this directory for the
    user account newly created for the job.
 #. a new, non-visible Window Station and Desktop for the job.
@@ -425,23 +425,23 @@ execute machine spawns a *condor\_starter* process. The
 
 Next, the *condor\_starter* daemon contacts the *condor\_shadow* daemon,
 which is running on the submitting machine, and the *condor\_starter*
-pulls over the job’s executable and input files. These files are placed
+pulls over the job's executable and input files. These files are placed
 into the temporary working directory for the job. After all files have
-been received, the *condor\_starter* spawns the user’s executable. Its
+been received, the *condor\_starter* spawns the user's executable. Its
 current working directory set to the temporary working directory.
 
 While the job is running, the *condor\_starter* closely monitors the CPU
 usage and image size of all processes started by the job. Every 20
 minutes the *condor\_starter* sends this information, along with the
-total size of all files contained in the job’s temporary working
+total size of all files contained in the job's temporary working
 directory, to the *condor\_shadow*. The *condor\_shadow* then inserts
-this information into the job’s ClassAd so that policy and scheduling
+this information into the job's ClassAd so that policy and scheduling
 expressions can make use of this dynamic information.
 
 If the job exits of its own accord (that is, the job completes), the
 *condor\_starter* first terminates any processes started by the job
 which could still be around if the job did not clean up after itself.
-The *condor\_starter* examines the job’s temporary working directory for
+The *condor\_starter* examines the job's temporary working directory for
 any files which have been created or modified and sends these files back
 to the *condor\_shadow* running on the submit machine. The
 *condor\_shadow* places these files into the
@@ -462,10 +462,10 @@ Windows, since this method allows the job to clean up and free any
 resources it may have allocated. When the job exits, the
 *condor\_starter* cleans up any processes left behind. At this point, if
 **when\_to\_transfer\_output**\ :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
-is set to ``ON_EXIT`` (the default) in the job’s submit description
+is set to ``ON_EXIT`` (the default) in the job's submit description
 file, the job switches states, from Running to Idle, and no files are
 transferred back. If **when\_to\_transfer\_output** is set to
-``ON_EXIT_OR_EVICT``, then files in the job’s temporary working
+``ON_EXIT_OR_EVICT``, then files in the job's temporary working
 directory which were changed or modified are first sent back to the
 submitting machine. If exactly which files to transfer is specified with
 **transfer\_output\_files**\ :index:`transfer_output_files<single: transfer_output_files; submit commands>`,
@@ -475,8 +475,8 @@ job if the specified files do not exist. On an eviction, the
 created in the ``$(SPOOL)`` directory on the submitting machine. The job
 is then switched back to the Idle state until HTCondor finds a different
 machine on which to run. When the job is started again, HTCondor places
-into the job’s temporary working directory the executable and input
-files as before, plus any files stored in the submit machine’s
+into the job's temporary working directory the executable and input
+files as before, plus any files stored in the submit machine's
 ``$(SPOOL)`` directory for that job.
 
 NOTE: A Windows console process can intercept a WM\_CLOSE message via
@@ -509,7 +509,7 @@ are configured so that only Administrators have write access to
 C:\\WINNT, then certainly no HTCondor job run on that machine would be
 able to write anything there. The only files the job should be able to
 access on the execute machine are files accessible by the Users and
-Everyone groups, and files in the job’s temporary working directory. Of
+Everyone groups, and files in the job's temporary working directory. Of
 course, if the job is configured to run using the account of the
 submitting user (as described in section `8.2.4 <#x76-5770008.2.4>`__),
 it will be able to do anything that the user is able to do on the
@@ -531,7 +531,7 @@ C:\\WINNT on the submit machine, and a user gives the following to
 Unless that user is in group Administrators, HTCondor will not permit
 ``explorer.exe`` to be overwritten.
 
-If for some reason the submitting user’s account disappears between the
+If for some reason the submitting user's account disappears between the
 time *condor\_submit* was run and when the job runs, HTCondor is not
 able to check and see if the now-defunct submitting user has read/write
 access to a given file. In this case, HTCondor will ensure that group
@@ -542,10 +542,10 @@ logged in.
 
 HTCondor also provides protection to the job queue. It would be bad if
 the integrity of the job queue is compromised, because a malicious user
-could remove other user’s jobs or even change what executable a user’s
-job will run. To guard against this, in HTCondor’s default configuration
+could remove other user's jobs or even change what executable a user's
+job will run. To guard against this, in HTCondor's default configuration
 all connections to the *condor\_schedd* (the process which manages the
-job queue on a given machine) are authenticated using Windows’ eSSPI
+job queue on a given machine) are authenticated using Windows' eSSPI
 security layer. The user is then authenticated using the same
 challenge-response protocol that Windows uses to authenticate users to
 Windows file servers. Once authenticated, the only users allowed to edit
@@ -616,7 +616,7 @@ Example: you want to copy a file off of a server before running it....
 The idea here is to simply authenticate to the file server with a
 different login than the temporary HTCondor login. This is easy with the
 "net use" command as shown above. Of course, the obvious disadvantage is
-this user’s password is stored and transferred as clear text.
+this user's password is stored and transferred as clear text.
 
 METHOD B - access the file server as guest
 
@@ -630,7 +630,7 @@ GUEST
        copy \\myserver\someshare\my-program.exe 
        my-program.exe
 
-In this example, you’d contact the server MYSERVER as the HTCondor
+In this example, you'd contact the server MYSERVER as the HTCondor
 temporary user. However, if you have the GUEST account enabled on
 MYSERVER, you will be authenticated to the server as user "GUEST". If
 your file permissions (ACLs) are setup so that either user GUEST (or
@@ -652,7 +652,7 @@ them to your registry. You can then use the batch file wrapper like:
     net use z: \\myserver\someshare /USER:"" 
     z:\my-program.exe
 
-so long as ’someshare’ is in the list of allowed NULL session shares. To
+so long as 'someshare' is in the list of allowed NULL session shares. To
 edit this list, run regedit.exe and navigate to the key:
 
 ::
@@ -665,7 +665,7 @@ edit this list, run regedit.exe and navigate to the key:
                Parameters\ 
                  NullSessionShares
 
-and edit it. unfortunately it is a binary value, so you’ll then need to
+and edit it. unfortunately it is a binary value, so you'll then need to
 type in the hex ASCII codes to spell out your share. each share is
 separated by a null (0x00) and the last in the list is terminated with
 two nulls.

@@ -43,7 +43,7 @@ Defrag ClassAd Attributes
     lifetime of this *condor\_defrag* daemon.
     :index:`Machine<single: Machine; ClassAd Defrag attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MachinesDraining<single: MachinesDraining; ClassAd Defrag attribute>`
  ``MachinesDraining``:
     Number of machines that were observed to be draining in the last

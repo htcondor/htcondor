@@ -38,7 +38,7 @@ Here are all the steps needed to run a job using HTCondor.
     The vanilla universe provides a way to run jobs that cannot be
     relinked. There is no way to take a checkpoint or migrate a job
     executed under the vanilla universe. For access to input and output
-    files, jobs must either use a shared file system, or use HTCondor’s
+    files, jobs must either use a shared file system, or use HTCondor's
     File Transfer mechanism.
 
     Choose a universe under which to run the HTCondor program, and
@@ -61,7 +61,7 @@ Here are all the steps needed to run a job using HTCondor.
     :index:`condor_submit<single: condor_submit; HTCondor commands>`
 
 Once submitted, HTCondor does the rest toward running the job. Monitor
-the job’s progress with the *condor\_q*
+the job's progress with the *condor\_q*
 :index:`condor_q<single: condor_q; HTCondor commands>`\ and *condor\_status*
 commands. :index:`condor_status<single: condor_status; HTCondor commands>`\ You may
 modify the order in which HTCondor will run your jobs with
@@ -108,7 +108,7 @@ restrictions on the programs that can be run.
 :index:`vanilla<single: vanilla; universe>`\ The vanilla universe provides fewer
 services, but has very few restrictions.
 :index:`Grid<single: Grid; universe>`\ The grid universe allows users to submit
-jobs using HTCondor’s interface. These jobs are submitted for execution
+jobs using HTCondor's interface. These jobs are submitted for execution
 on grid resources. :index:`java<single: java; universe>`\ :index:`Java`
 :index:`Java Virtual Machine`\ :index:`JVM` The java
 universe allows users to run jobs written for the Java Virtual Machine
@@ -162,7 +162,7 @@ the data to the machine where the job is running.
 To convert your program into a standard universe job, you must use
 *condor\_compile* to relink it with the HTCondor libraries. Put
 *condor\_compile* in front of your usual link command. You do not need
-to modify the program’s source code, but you do need access to the
+to modify the program's source code, but you do need access to the
 unlinked object files. A commercial program that is packaged as a single
 executable file cannot be converted into a standard universe job.
 
@@ -215,7 +215,7 @@ There are a few restrictions on standard universe jobs:
    opened for both reading and writing will result in a warning but not
    an error.
 #. A fair amount of disk space must be available on the submitting
-   machine for storing a job’s checkpoint images. A checkpoint image is
+   machine for storing a job's checkpoint images. A checkpoint image is
    approximately equal to the virtual memory consumed by a job while it
    runs. If disk space is short, a special checkpoint server can be
    designated for storing all the checkpoint images for a pool.
@@ -241,8 +241,8 @@ only two choices. It can suspend the job, hoping to complete it at a
 later time, or it can give up and restart the job from the beginning on
 another machine in the pool.
 
-Since HTCondor’s remote system call features cannot be used with the
-vanilla universe, access to the job’s input and output files becomes a
+Since HTCondor's remote system call features cannot be used with the
+vanilla universe, access to the job's input and output files becomes a
 concern. One option is for HTCondor to rely on a shared file system,
 such as NFS or AFS. Alternatively, HTCondor has a mechanism for
 transferring files on behalf of the user. In this case, HTCondor will
@@ -292,8 +292,8 @@ Scheduler Universe
 The scheduler universe allows users to submit lightweight jobs to be run
 immediately, alongside the *condor\_schedd* daemon on the submit host
 itself. Scheduler universe jobs are not matched with a remote machine,
-and will never be preempted. The job’s requirements expression is
-evaluated against the *condor\_schedd*\ ’s ClassAd.
+and will never be preempted. The job's requirements expression is
+evaluated against the *condor\_schedd*\ 's ClassAd.
 
 Originally intended for meta-schedulers such as *condor\_dagman*, the
 scheduler universe can also be used to manage jobs of any sort that must
@@ -316,8 +316,8 @@ The local universe allows an HTCondor job to be submitted and executed
 with different assumptions for the execution conditions of the job. The
 job does not wait to be matched with a machine. It instead executes
 right away, on the machine where the job is submitted. The job will
-never be preempted. The job’s requirements expression is evaluated
-against the *condor\_schedd*\ ’s ClassAd.
+never be preempted. The job's requirements expression is evaluated
+against the *condor\_schedd*\ 's ClassAd.
 
 Parallel Universe
 '''''''''''''''''

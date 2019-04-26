@@ -23,7 +23,7 @@ ability to place a machine into a low power state is accomplished
 through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
-A slot’s readiness to hibernate is determined by the evaluating the
+A slot's readiness to hibernate is determined by the evaluating the
 ``HIBERNATE`` :index:`HIBERNATE` configuration variable (see
 section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
@@ -38,20 +38,20 @@ value. There is a trade off between the extra time not at a low power
 state and the unnecessary computation of readiness.
 
 To put the machine in a low power state rapidly after it has become
-idle, consider checking each slot’s state frequently, as in the example
+idle, consider checking each slot's state frequently, as in the example
 configuration:
 
 ::
 
     HIBERNATE_CHECK_INTERVAL = 20
 
-This checks each slot’s readiness every 20 seconds. A more common value
+This checks each slot's readiness every 20 seconds. A more common value
 for frequency of checks is 300 (5 minutes). A value of 300 loses some
 degree of granularity, but it is more reasonable as machines are likely
 to be put in to a low power state after a few hours, rather than
 minutes.
 
-A slot’s readiness or willingness to enter a low power state is
+A slot's readiness or willingness to enter a low power state is
 determined by the ``HIBERNATE`` expression. Because this expression is
 evaluated in the context of each slot, and not on the machine as a
 whole, any one slot can veto a change of power state. The ``HIBERNATE``
@@ -111,7 +111,7 @@ Macros <../admin-manual/configuration-macros.html>`__.
 Keeping a ClassAd for a Hibernating Machine
 -------------------------------------------
 
-A pool’s *condor\_collector* daemon can be configured to keep a
+A pool's *condor\_collector* daemon can be configured to keep a
 persistent ClassAd entry for each machine, once it has entered
 hibernation. This is required by *condor\_rooster* so that it can
 evaluate the ``UNHIBERNATE`` :index:`UNHIBERNATE` expression of
@@ -126,7 +126,7 @@ Macros <../admin-manual/configuration-macros.html>`__ for the
 definition. An optional expiration time for each ClassAd can be
 specified with ``OFFLINE_EXPIRE_ADS_AFTER``
 :index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
-the hibernating machine’s ClassAd enters the *condor\_collector* daemon.
+the hibernating machine's ClassAd enters the *condor\_collector* daemon.
 See section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
@@ -139,7 +139,7 @@ Linux Platform Details
 :index:`Linux platform details<single: Linux platform details; power management>`
 
 Depending on the Linux distribution and version, there are three methods
-for controlling a machine’s power state. The methods:
+for controlling a machine's power state. The methods:
 
 #. *pm-utils* is a set of command line tools which can be used to detect
    and switch power states. In HTCondor, this is defined by the string
@@ -167,7 +167,7 @@ methods are detected or the method specified by
 hibernation is disabled.
 
 The details of this selection process, and the final method selected can
-be logged via enabling ``D_FULLDEBUG`` in the relevant subsystem’s log
+be logged via enabling ``D_FULLDEBUG`` in the relevant subsystem's log
 configuration.
 
 Windows Platform Details
@@ -177,10 +177,10 @@ Windows Platform Details
 
 If after a suitable amount of time, a Windows machine has not entered
 the expected power state, then HTCondor is having difficulty exercising
-the operating system’s low power capabilities. While the cause will be
-specific to the machine’s hardware, it may also be due to improperly
+the operating system's low power capabilities. While the cause will be
+specific to the machine's hardware, it may also be due to improperly
 configured software. For hardware difficulties, the likely culprit is
-the configuration within the machine’s BIOS, for which HTCondor can
+the configuration within the machine's BIOS, for which HTCondor can
 offer little guidance. For operating system difficulties, the *powercfg*
 tool can be used to discover the available power states on the machine.
 The following command demonstrates how to list all of the supported
@@ -209,7 +209,7 @@ This example turns hibernation on.
 
 If this tool is insufficient for configuring the machine in the manner
 required, the *Power Options* control panel application offers the full
-extent of the machine’s power management abilities. Windows 2000 and XP
+extent of the machine's power management abilities. Windows 2000 and XP
 lack the *powercfg* program, so all configuration must be done via the
 *Power Options* control panel application.
 :index:`green computing` :index:`power management`

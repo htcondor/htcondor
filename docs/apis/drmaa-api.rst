@@ -39,7 +39,7 @@ The library was developed from the DRMA API Specification 1.0 of January
 2004 and the DRMAA C Bindings v0.9 of September 2003. It is a static C
 library that expects a POSIX thread model on Unix systems and a Windows
 thread model on Windows systems. Unix systems that do not support POSIX
-threads are not guaranteed thread safety when calling the library’s
+threads are not guaranteed thread safety when calling the library's
 functions.
 
 The object library file is called ``libcondordrmaa.a``, and it is
@@ -76,7 +76,7 @@ complete list. Multiple commands can be specified if separated by
 newlines.
 
 As in the normal submit file, arbitrary attributes can be added to the
-job’s ClassAd by prefixing the attribute with +. In this case, you will
+job's ClassAd by prefixing the attribute with +. In this case, you will
 need to put string values in quotation marks, the same as in a submit
 file.
 

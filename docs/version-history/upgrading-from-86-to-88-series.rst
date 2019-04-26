@@ -23,11 +23,11 @@ version history: \ `Development Release Series
    now. You specify two jobs that you own from the same
    *condor\_schedd*: the now-job and the vacate-job. The latter is
    immediately vacated; after the vacated job terminates, if the
-   *condor\_schedd* still has the claim to the vacated job’s slot (and
+   *condor\_schedd* still has the claim to the vacated job's slot (and
    it usually will), the *condor\_schedd* will immediately start the
    now-job on that slot. The now-job must be idle and the vacate-job
-   must be running. If you’re a queue super-user, the jobs must have the
-   same owner, but that owner doesn’t have to be you. :ticket:`6659`
+   must be running. If you're a queue super-user, the jobs must have the
+   same owner, but that owner doesn't have to be you. :ticket:`6659`
 -  Provides a new package, ``minicondor`` on Red Hat based systems and
    ``minihtcondor`` on Debian and Ubuntu based systems. This
    mini-HTCondor package configures HTCondor to work on a single

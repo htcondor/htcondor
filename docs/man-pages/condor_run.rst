@@ -17,7 +17,7 @@ Description
 
 *condor\_run* bundles a shell command line into an HTCondor job and
 submits the job. The *condor\_run* command waits for the HTCondor job to
-complete, writes the job’s output to the terminal, and exits with the
+complete, writes the job's output to the terminal, and exits with the
 exit status of the HTCondor job. No output appears until the job
 completes.
 
@@ -117,7 +117,7 @@ or
 Files
 -----
 
-*condor\_run* creates the following temporary files in the user’s
+*condor\_run* creates the following temporary files in the user's
 working directory. The placeholder <pid> is replaced by the process id
 of *condor\_run*.
 
@@ -128,7 +128,7 @@ of *condor\_run*.
     The submit description file for the job.
 
 ``.condor_log.<pid>``
-    The HTCondor job’s log file; it is monitored by *condor\_run*, to
+    The HTCondor job's log file; it is monitored by *condor\_run*, to
     determine when the job exits.
 
 ``.condor_out.<pid>``
@@ -140,7 +140,7 @@ of *condor\_run*.
 
 *condor\_run* removes these files when the job completes. However, if
 *condor\_run* fails, it is possible that these files will remain in the
-user’s working directory, and the HTCondor job may remain in the queue.
+user's working directory, and the HTCondor job may remain in the queue.
 
 General Remarks
 ---------------

@@ -87,7 +87,7 @@ for routing.
 
 -  Jobs appropriate for routing to the grid must not rely on access to a
    shared file system, or other services that are only available on the
-   local pool. The job will use HTCondor’s file transfer mechanism,
+   local pool. The job will use HTCondor's file transfer mechanism,
    rather than relying on a shared file system to access input files and
    write output files. In the submit description file, to enable file
    transfer, there will be a set of commands similar to
@@ -112,7 +112,7 @@ for routing.
 
    An additional difference between the vanilla universe jobs and
    **gt2** grid universe jobs is that **gt2** jobs do not return any
-   information about the job’s exit status. The exit status as reported
+   information about the job's exit status. The exit status as reported
    in the job ClassAd and job event log are always 0. Therefore, jobs
    that may be routed to a **gt2** grid site must not rely upon a
    non-zero job exit status.
@@ -169,8 +169,8 @@ where ``job1.sub`` might contain:
     queue
 
 The status of the job may be observed as with any other HTCondor job,
-for example by looking in the job’s log file. Before the job completes,
-*condor\_q* shows the job’s status. Should the job become routed, a
+for example by looking in the job's log file. Before the job completes,
+*condor\_q* shows the job's status. Should the job become routed, a
 second job will enter the job queue. This is the routed copy of the
 original job. The command *condor\_router\_q* shows a more specialized
 view of routed jobs, as this example shows:
@@ -297,13 +297,13 @@ may appear in a Routing Table entry.
 
  GridResource
     Specifies the value for the ``GridResource`` attribute that will be
-    inserted into the routed copy of the job’s ClassAd.
+    inserted into the routed copy of the job's ClassAd.
     :index:`Name<single: Name; Job Router Routing Table ClassAd attribute>`
  Name
     An optional identifier that will be used in log messages concerning
     this route. If no name is specified, the default used will be the
     value of ``GridResource``. The *condor\_job\_router* distinguishes
-    routes and advertises statistics based on this attribute’s value.
+    routes and advertises statistics based on this attribute's value.
     :index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
  Requirements
     A ``Requirements`` expression that identifies jobs that may be
@@ -325,7 +325,7 @@ may appear in a Routing Table entry.
     small, the rate of job submission to the site will slow, because the
     *condor\_job\_router* daemon will submit jobs up to this limit, wait
     to see some of the jobs enter the running state, and then submit
-    more. The disadvantage of setting this attribute’s value too high is
+    more. The disadvantage of setting this attribute's value too high is
     that a lot of jobs may be sent to a site, only to site idle for
     hours or days. The default value is 50.
     :index:`FailureRateThreshold<single: FailureRateThreshold; Job Router Routing Table ClassAd attribute>`
@@ -374,11 +374,11 @@ may appear in a Routing Table entry.
  JobShouldBeSandboxed
     A boolean expression that when ``True`` causes the created copy of
     the job to be sandboxed. A copy of the input files will be placed in
-    the *condor\_schedd* daemon’s spool area for the target job, and
+    the *condor\_schedd* daemon's spool area for the target job, and
     when the job runs, the output will be staged back into the spool
     area. Once all of the output has been successfully staged back, it
     will be copied again, this time from the spool area of the sandboxed
-    job back to the original job’s output locations. By default,
+    job back to the original job's output locations. By default,
     sandboxing is turned off. Only to turn it on if using a shared X.509
     user proxy or if direct staging of remote output files back to the
     final output locations is not desired.
@@ -391,7 +391,7 @@ may appear in a Routing Table entry.
     entry should be ignored. The default value is ``True``.
     :index:`Set_ATTR><single: Set_ATTR>; Job Router Routing Table ClassAd attribute>`
  Set\_<ATTR>
-    Sets the value of ``<ATTR>`` in the routed copy’s job ClassAd to the
+    Sets the value of ``<ATTR>`` in the routed copy's job ClassAd to the
     specified value. An example of an attribute that might be set is
     ``PeriodicRemove``. For example, if the routed job goes on hold or
     stays idle for too long, remove it and return the original copy of
@@ -399,7 +399,7 @@ may appear in a Routing Table entry.
     :index:`Eval_Set_ATTR><single: Eval_Set_ATTR>; Job Router Routing Table ClassAd attribute>`
  Eval\_Set\_<ATTR>
     Defines an expression. The expression is evaluated, and the
-    resulting value sets the value of the routed copy’s job ClassAd
+    resulting value sets the value of the routed copy's job ClassAd
     attribute ``<ATTR>``. Use this attribute to set a custom or local
     value, especially for modifying an attribute which may have been
     already specified in a default routing table.
@@ -483,7 +483,7 @@ Using the example configuration, use the above settings to replace
 ``JOB_ROUTER_ENTRIES`` :index:`JOB_ROUTER_ENTRIES` there and have
 a routing table containing entries from both sources. When you restart
 or reconfigure the *condor\_job\_router* daemon, you should see messages
-in the Job Router’s log indicating that it is adding more routes to the
+in the Job Router's log indicating that it is adding more routes to the
 table.
 
       

@@ -77,7 +77,7 @@ Examples
 General Remarks
 ---------------
 
-A job’s ClassAd attributes may be viewed with
+A job's ClassAd attributes may be viewed with
 
 ::
 

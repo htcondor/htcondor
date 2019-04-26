@@ -77,7 +77,7 @@ specification as given by an argument.
  **-resourcelist**
     A query of a single list of resources to provide a list of all the
     machines for which the *condor_collector* daemon has historic
-    information within the query’s time range.
+    information within the query's time range.
  **-resgroupquery **\ *arch/opsys \| “Total”*
     A query of a specified group to provide information about a group of
     machines based on their platform (operating system and
@@ -92,7 +92,7 @@ specification as given by an argument.
 
  **-resgrouplist**
     Queries for a list of all the group names for which the
-    *condor_collector* has historic information within the query’s time
+    *condor_collector* has historic information within the query's time
     range.
  **-userquery **\ *email_address/submit_machine*
     Query for a specific submitter on a specific machine. The
@@ -106,7 +106,7 @@ specification as given by an argument.
  **-userlist**
     Queries for the list of all submitters for which the
     *condor_collector* daemon has historic information within the
-    query’s time range.
+    query's time range.
  **-usergroupquery **\ *email_address \| “Total”*
     Query for all jobs submitted by the specific user, regardless of the
     machine they were submitted from, or all jobs. The information
@@ -114,7 +114,7 @@ specification as given by an argument.
     jobs.
  **-usergrouplist**
     Queries for the list of all users for which the *condor_collector*
-    has historic information within the query’s time range.
+    has historic information within the query's time range.
  **-ckptquery **\ *hostname*
     Query about a checkpoint server given its host name. The information
     displayed includes the number of MiB received, MiB sent, average
@@ -122,7 +122,7 @@ specification as given by an argument.
     KiB/sec).
  **-ckptlist**
     Query for the entire list of checkpoint servers for which the
-    *condor_collector* has historic information in the query’s time
+    *condor_collector* has historic information in the query's time
     range.
 
 Options

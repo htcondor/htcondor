@@ -31,16 +31,16 @@ includes the following columns:
 
  Effective Priority
     The effective priority value of the user, which is used to calculate
-    the user’s share when allocating resources. A lower value means a
+    the user's share when allocating resources. A lower value means a
     higher priority, and the minimum value (highest priority) is 0.5.
     The effective priority is calculated by multiplying the real
     priority by the priority factor.
  Real Priority
     The value of the real priority of the user. This value follows the
-    user’s resource usage.
+    user's resource usage.
  Priority Factor
     The system administrator can set this value for each user, thus
-    controlling a user’s effective priority relative to other users.
+    controlling a user's effective priority relative to other users.
     This can be used to create different classes of users.
  Res Used
     The number of resources currently used.
@@ -86,7 +86,7 @@ Options
     as captured output from running a ``condor_userprio      -long``
     command.
  **-delete **\ *username*
-    (Edit option) Remove the specified *username* from HTCondor’s
+    (Edit option) Remove the specified *username* from HTCondor's
     accounting.
  **-resetall**
     (Edit option) Reset the accumulated usage of all the users to zero.
@@ -170,7 +170,7 @@ Options
     (Display option) Without **:<opts>** specified, use configured debug
     level to send debugging output to ``stderr``. With **:<opts>**
     specified, these options are debug levels that override any
-    configured debug levels for this command’s execution to send
+    configured debug levels for this command's execution to send
     debugging output to ``stderr``.
  **-flat**
     (Display option) Display information such that users within

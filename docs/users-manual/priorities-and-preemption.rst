@@ -15,7 +15,7 @@ Job priorities allow a user to assign a priority level to each of their
 own submitted HTCondor jobs, in order to control the order of job
 execution. This handles the situation in which a user has more jobs
 queued, waiting to be executed, than there are machines available.
-Setting a job priority identifies the ordering in which that user’s jobs
+Setting a job priority identifies the ordering in which that user's jobs
 are executed; a higher job priority job is matched and executed before a
 lower priority job. A job priority can be any integer, and larger values
 are of higher priority. So, 0 is a higher job priority than -3, and 6 is
@@ -39,7 +39,7 @@ User priority
 :index:`priority<single: priority; preemption>` :index:`priority<single: priority; user>`
 :index:`of a user<single: of a user; priority>`
 
-Machines are allocated to users based upon a user’s priority. A lower
+Machines are allocated to users based upon a user's priority. A lower
 numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor\_userprio*
@@ -65,7 +65,7 @@ configuration variable ``PRIORITY_HALFLIFE``
 :index:`PRIORITY_HALFLIFE`, an exponential half-life value. The
 default is one day. If a user that has user priority of 100 and is
 utilizing 100 machines removes all his/her jobs, one day later that
-user’s priority will be 50, and two days later the priority will be 25.
+user's priority will be 50, and two days later the priority will be 25.
 
 HTCondor enforces that each user gets his/her fair share of machines
 according to user priority both when allocating machines which become
@@ -76,11 +76,11 @@ immediately take a checkpoint and vacate jobs belonging to the lower
 priority user. This will free up machines that HTCondor will then give
 over to the higher priority user. HTCondor will not starve the lower
 priority user; it will preempt only enough jobs so that the higher
-priority user’s fair share can be realized (based upon the ratio between
+priority user's fair share can be realized (based upon the ratio between
 user priorities). To prevent thrashing of the system due to priority
 preemption, the HTCondor site administrator can define a
 ``PREEMPTION_REQUIREMENTS`` :index:`PREEMPTION_REQUIREMENTS`
-expression in HTCondor’s configuration. The default expression that
+expression in HTCondor's configuration. The default expression that
 ships with HTCondor is configured to only preempt lower priority jobs
 that have run for at least one hour. So in the previous example, in the
 worse case it could take up to a maximum of one hour until the higher
@@ -88,7 +88,7 @@ priority user receives a fair share of machines. For a general
 discussion of limiting preemption, please see section `Policy
 Configuration for Execute Hosts and for Submit
 Hosts <../admin-manual/policy-configuration.html>`__ of the
-Administrator’s manual.
+Administrator's manual.
 
 User priorities are keyed on ``<username>@<domain>``, for example
 ``johndoe@cs.wisc.edu``. The domain name to use, if any, is configured
@@ -114,7 +114,7 @@ Details About How HTCondor Jobs Vacate Machines
 
 When HTCondor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig``
-attribute of the job’s ClassAd. The value of this attribute can be
+attribute of the job's ClassAd. The value of this attribute can be
 specified by the user at submit time by placing the **kill\_sig** option
 in the HTCondor submit description file.
 
@@ -130,7 +130,7 @@ terminates the process.
 A job that is linked using *condor\_compile* and is subsequently
 submitted into the standard universe, will checkpoint and exit upon
 receipt of a SIGTSTP signal. Thus, SIGTSTP is the default value for
-``KillSig`` when submitting to the standard universe. The user’s code
+``KillSig`` when submitting to the standard universe. The user's code
 may still checkpoint itself at any time by calling one of the following
 functions exported by the HTCondor libraries:
 

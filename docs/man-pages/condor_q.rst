@@ -23,7 +23,7 @@ By default, *condor_q* queries the local job queue, but this behavior
 may be modified by specifying one of the general options.
 
 **As of version 8.5.2, condor_q defaults to querying only the current 
-user’s jobs. This default is overridden when the restriction list has 
+user's jobs. This default is overridden when the restriction list has 
 usernames and/or job ids, when the -submitter or -allusers arguments 
 are specified, or when the current user is a queue superuser. It can also 
 be overridden by setting the CONDOR_Q_ONLY_MY_JOBS configuration macro to 
@@ -297,7 +297,7 @@ The available output data are as follows:
     SEEK The total number of seek operations the application has
     performed on files.
     XPUT The effective throughput (average bytes read and written per
-    second) from the application’s point of view.
+    second) from the application's point of view.
     BUFSIZE The maximum number of bytes to be buffered per file.
     BLOCKSIZE The desired block size for large data transfers. These
     fields are updated when a job produces a checkpoint or completes. If
@@ -529,7 +529,7 @@ Options
     formats, one may include other text that will be reproduced
     directly. A format without any conversion specifiers may be
     specified, but an attribute is still required. Include a backslash
-    followed by an ‘n’ to specify a line break.
+    followed by an ‘n' to specify a line break.
  **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
@@ -594,7 +594,7 @@ Options
     jobs. This option is never meaningful for Scheduler universe jobs
     and only meaningful for grid universe jobs doing matchmaking. When
     this option is used in conjunction with the **-unmatchable** option,
-    The output will be a list of job ids that don’t match any of the
+    The output will be a list of job ids that don't match any of the
     available slots. **<qual>** is a comma separated list containing one
     or more of
 
@@ -665,7 +665,7 @@ Examples
 The **-format** option provides a way to specify both the job attributes
 and formatting of those attributes. There must be only one conversion
 specification per **-format** option. As an example, to list only Jane
-Doe’s jobs in the queue, choosing to print and format only the owner of
+Doe's jobs in the queue, choosing to print and format only the owner of
 the job, the command line arguments for the job, and the process ID of
 the job:
 
@@ -679,7 +679,7 @@ the job:
     jdoe 16386 3600 ProcId = 4 
     jdoe 16386 4200 ProcId = 7
 
-To display only the JobID’s of Jane Doe’s jobs you can use the
+To display only the JobID's of Jane Doe's jobs you can use the
 following.
 
 ::
@@ -753,7 +753,7 @@ value in the last line only counts jobs that are completed but still in
 the queue, whereas the DONE column counts jobs that are no longer in the
 queue.
 
-Here’s an example with a held job, illustrating the addition of the HOLD
+Here's an example with a held job, illustrating the addition of the HOLD
 column to the output:
 
 ::
@@ -794,7 +794,7 @@ First of all, non-batch mode with all of the node jobs in the queue:
     10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
 
 Now non-batch mode with the **-dag** option (unfortunately, *condor_q*
-doesn’t do a good job of grouping procs in the same cluster together):
+doesn't do a good job of grouping procs in the same cluster together):
 
 ::
 

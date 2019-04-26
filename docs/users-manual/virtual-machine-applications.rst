@@ -71,7 +71,7 @@ NAT networking. When no definition of
 **vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 is given, HTCondor may match the job with a machine that enables
 networking, and further, the choice of bridge or NAT networking is
-determined by the machine’s configuration.
+determined by the machine's configuration.
 
 Modified disk images are transferred back to the machine from which the
 job was submitted as the **vm** universe job completes. Job completion
@@ -337,7 +337,7 @@ is unlikely to be directly useful to you as an HTCondor user, but may
 help your HTCondor administrator understand the problem.
 
 If the VM fails to launch for other reasons, the job will be placed on
-hold and the reason placed in the job ClassAd’s ``HoldReason``
+hold and the reason placed in the job ClassAd's ``HoldReason``
 attribute. The following table may help in understanding such reasons.
 
 ::

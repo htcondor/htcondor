@@ -21,7 +21,7 @@ New Features:
    support, allowing it to transfer many files in a single invocation of
    the plugin. :ticket:`6499`
    :ticket:`6859`
--  The performance of HTCondor’s File Transfer mechanism has improved
+-  The performance of HTCondor's File Transfer mechanism has improved
    when sending multiple files, especially in wide-area network
    settings. :ticket:`6884`
 -  Added support for passing HTTPS authentication credentials to file
@@ -32,20 +32,20 @@ New Features:
    automatically passes the **–nv** flag to Singularity to tell it to
    mount the nVidia GPUs. :ticket:`6898`
 -  Added a new submit file option, ``docker_network_type = host``, which
-   causes a docker universe job to use the host’s network, instead of
+   causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 -  Added a new config knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
--  We’ve added six new events to the job event log, recording details
+-  We've added six new events to the job event log, recording details
    about file transfer. For both file transfer -in (before/to the job)
    and -out (after/from the job), we log if the transfer was queued,
    when it started, and when it finished. If the event was queued, the
    start event will note for how long; the first transfer event written
-   will additionally include the starter’s address, which has not
+   will additionally include the starter's address, which has not
    otherwise been printed.
 
-   We’ve also added several transfer-related attributes to the job ad.
+   We've also added several transfer-related attributes to the job ad.
    For jobs which do file transfer, we now set
    ``JobCurrentFinishTransferOutputDate``, to complement
    ``JobCurrentStartTransferOutputDate``, as well as the corresponding
@@ -150,13 +150,13 @@ New Features:
    allows users to use different accounts from the same machine.
    However, if a user started an EC2 instance with the privileges
    necessary to start other instances, and ran HTCondor in that
-   instance, HTCondor was unable to use that instance’s privileges; the
+   instance, HTCondor was unable to use that instance's privileges; the
    user still had to specify their credentials. Instead, the user may
    now specify ``FROM INSTANCE`` instead of the name of a credential
-   file to indicate that HTCondor should use the instance’s credentials.
+   file to indicate that HTCondor should use the instance's credentials.
 
    By default, any user with access to a privileged EC2 instance has
-   access to that instance’s privileges. If you would like to make use
+   access to that instance's privileges. If you would like to make use
    of this feature, please read `HTCondor Annex Customization
    Guide <../cloud-computing/annex-customization-guide.html>`__ before
    adding privileges (an instance role) to an instance which allows
@@ -164,7 +164,7 @@ New Features:
    to or running jobs on that instance. :ticket:`6789`
 
 -  The *condor\_now* tool now supports vacating more than one job; the
-   additional jobs’ resources will be coalesced into a single slot, on
+   additional jobs' resources will be coalesced into a single slot, on
    which the now-job will be run. :ticket:`6694`
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements

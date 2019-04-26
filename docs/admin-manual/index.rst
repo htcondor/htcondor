@@ -1,4 +1,4 @@
-Administrators’ Manual
+Administrators' Manual
 ----------------------
 
 .. toctree::

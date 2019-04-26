@@ -60,14 +60,14 @@ Options
     Wait indefinitely for jobs to finish before shutting down daemons,
     prior to restarting them
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
  **-addr **\ *"<a.b.c.d:port>"*
-    Send the command to a machine’s master located at *"<a.b.c.d:port>"*
+    Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-constraint **\ *expression*

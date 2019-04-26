@@ -25,7 +25,7 @@ Description
 
 *condor\_top* displays the status (e.g. memory usage and duty cycle) of
 a HTCondor daemon and calculates and displays runtime statistics for the
-daemon’s subprocesses.
+daemon's subprocesses.
 
 When no arguments are specified, *condor\_top* displays the status for
 the primary daemon based on the role of the current machine by scanning

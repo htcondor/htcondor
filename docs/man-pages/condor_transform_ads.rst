@@ -99,7 +99,7 @@ success, and it will exit with the value 1 (one) upon failure.
 Examples
 --------
 
-Here’s a simple example that transforms the given input ClassAds
+Here's a simple example that transforms the given input ClassAds
 according to the given rules:
 
 ::

@@ -23,7 +23,7 @@ Description
 PBS/Torque style or an SGE style. *condor\_qsub* permits the submission
 of dependent jobs without the need to specify the full dependency graph
 at submission time. Doing things this way is neither as efficient as
-HTCondor’s DAGMan, nor as functional as SGE’s *qsub* or *qalter*.
+HTCondor's DAGMan, nor as functional as SGE's *qsub* or *qalter*.
 *condor\_qsub* serves as a minimal translator to be able to use software
 originally written to interact with PBS, Torque, and SGE in an HTCondor
 pool.
@@ -127,7 +127,7 @@ Options
     previously submitted job. The second job is the newly submitted one
     that is waiting for the first to finish successfully. The third job
     is what SGE calls a sentinel job; this is an HTCondor local universe
-    job that watches the history for the first job’s exit code. This
+    job that watches the history for the first job's exit code. This
     third job will exit once it has seen the exit code and, for a
     successful termination of the first job, run *condor\_release* on
     the second job. If the first job is an array job, the second job
@@ -252,7 +252,7 @@ Options
     *condor\_qsub* only supports the names *stagein* and *stageout* for
     *attr\_name*. The format of *attr\_value* for *stagein* and
     *stageout* is ``local_file@hostname:remote_file[,…]`` and we strip
-    it to ``remote_file[,…]``. HTCondor’s file transfer mechanism is
+    it to ``remote_file[,…]``. HTCondor's file transfer mechanism is
     then used if needed.
  **—version**
     (Specific option) Print version information for the *condor\_qsub*

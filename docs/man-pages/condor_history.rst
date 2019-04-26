@@ -24,7 +24,7 @@ Description
 
 *condor_history* displays a summary of all HTCondor jobs listed in the
 specified history files. If no history files are specified with the
-**-file** option, the local history file as specified in HTCondor’s
+**-file** option, the local history file as specified in HTCondor's
 configuration file (``$(SPOOL)``/history by default) is read. The
 default listing summarizes in reverse chronological order each job on a
 single line, and contains the following items:

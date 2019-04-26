@@ -48,7 +48,7 @@ Options
  **-version**
     Display version information
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*
@@ -58,7 +58,7 @@ Options
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
  **-forcex**
-    Force the immediate local removal of jobs in the ’X’ state (only
+    Force the immediate local removal of jobs in the 'X' state (only
     affects jobs already being removed)
  *cluster*
     Remove all jobs in the specified cluster

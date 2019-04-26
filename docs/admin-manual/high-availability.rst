@@ -95,7 +95,7 @@ longer running. As other machines capable of running the
 *condor\_schedd* daemon look at the lock (poll), one machine will be the
 first to notice that the lock has timed out or been released. This
 machine (correctly) interprets this situation as the *condor\_schedd*
-daemon is no longer running. This machine’s *condor\_master* daemon then
+daemon is no longer running. This machine's *condor\_master* daemon then
 acquires the lock and runs the *condor\_schedd* daemon.
 
 See section \ `Configuration
@@ -174,7 +174,7 @@ Introduction
 
 The *condor\_negotiator* and *condor\_collector* daemons are the heart
 of the HTCondor matchmaking system. The availability of these daemons is
-critical to an HTCondor pool’s functionality. Both daemons usually run
+critical to an HTCondor pool's functionality. Both daemons usually run
 on the same machine, most often known as the central manager. The
 failure of a central manager machine prevents HTCondor from matching new
 jobs and allocating new resources. High availability of the
@@ -272,7 +272,7 @@ one *condor\_had* or *condor\_replication* daemon with the
 *condor\_shared\_port* daemon under the same master, you must configure
 those additional daemons to use nondefault socket names. (Set the
 ``-sock`` option in ``<NAME>_ARGS``.) Because the *condor\_had* daemon
-must know the *condor\_replication* daemon’s address a priori, you will
+must know the *condor\_replication* daemon's address a priori, you will
 also need to set ``<NAME>.REPLICATION_SOCKET_NAME`` appropriately.
 
 The stabilization period is the time it takes for the *condor\_had*

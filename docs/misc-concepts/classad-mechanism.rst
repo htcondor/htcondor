@@ -1,6 +1,6 @@
       
 
-HTCondor’s ClassAd Mechanism
+HTCondor's ClassAd Mechanism
 ============================
 
 :index:`ClassAd`
@@ -42,7 +42,7 @@ composed of literals and attribute references composed with operators
 and functions. The difference between ClassAd expressions and C
 expressions arise from the fact that ClassAd expressions operate in a
 much more dynamic environment. For example, an expression from a
-machine’s ClassAd may refer to an attribute in a job’s ClassAd, such as
+machine's ClassAd may refer to an attribute in a job's ClassAd, such as
 TARGET.Owner in the above example. The value and type of the attribute
 is not known until the expression is evaluated in an environment which
 pairs a specific job ClassAd with the machine ClassAd.
@@ -162,8 +162,8 @@ Old ClassAd Syntax
 ClassAd expressions are formed by composing literals, attribute
 references and other sub-expressions with operators and functions.
 
-Literals
-''''''''
+Composing Literals
+''''''''''''''''''
 
 Literals in the ClassAd language may be of integer, real, string,
 undefined or error types. The syntax of these literals is as follows:
@@ -207,8 +207,8 @@ may be used are ``MY.`` and ``TARGET.``. The case used for these
 prefixes is not significant. The semantics of supplying a prefix are
 discussed in Section \ `4.1.3 <#x48-4060004.1.3>`__.
 
-Operators
-'''''''''
+New ClassAd Operators
+'''''''''''''''''''''
 
 :index:`expression operators<single: expression operators; ClassAd>`
 
@@ -280,7 +280,7 @@ Optional parameters are given within square brackets.
 
     Note that referring to attributes of a job from within the string
     passed to eval() in the ``Requirements`` or ``Rank`` expressions
-    could cause inaccuracies in HTCondor’s automatic auto-clustering of
+    could cause inaccuracies in HTCondor's automatic auto-clustering of
     jobs into equivalent groups for matchmaking purposes. This is
     because HTCondor needs to determine which ClassAd attributes are
     significant for matchmaking purposes, and indirect references from
@@ -289,8 +289,8 @@ Optional parameters are given within square brackets.
 
  ``String unparse(Attribute attr)``
     This function looks up the value of the provided attribute and
-    returns the unparsed version as a string. The attribute’s value is
-    not evaluated. If the attribute’s value is ``x + 3``, then the
+    returns the unparsed version as a string. The attribute's value is
+    not evaluated. If the attribute's value is ``x + 3``, then the
     function would return the string ``"x + 3"``. If the provided
     attribute cannot be found, an empty string is returned.
 
@@ -687,7 +687,7 @@ Optional parameters are given within square brackets.
     This function evaluates its argument, and it returns the result.
     Thus, it is a no-operation. However, a side-effect of the function
     is that information about the evaluation is logged to the evaluating
-    program’s log file, at the ``D_FULLDEBUG`` debug level. This is
+    program's log file, at the ``D_FULLDEBUG`` debug level. This is
     useful for determining why a given ClassAd expression is evaluating
     the way it does. For example, if a *condor\_startd* ``START``
     expression is unexpectedly evaluating to ``UNDEFINED``, then
@@ -811,7 +811,7 @@ characters other than these as options are ignored.
 
 ``G`` or ``g``
     When doing substitution, apply the substitution for every matching
-    portion of the target string (that doesn’t overlap a previous
+    portion of the target string (that doesn't overlap a previous
     match).
 
 :index:`regexp()<single: regexp(); ClassAd functions>`
@@ -894,7 +894,7 @@ characters other than these as options are ignored.
 Old ClassAd Evaluation Semantics
 --------------------------------
 
-The ClassAd mechanism’s primary purpose is for matching entities that
+The ClassAd mechanism's primary purpose is for matching entities that
 supply constraints on candidate matches. The mechanism is therefore
 defined to carry out expression evaluations in the context of two
 ClassAds that are testing each other for a potential match. For example,
@@ -902,8 +902,8 @@ the *condor\_negotiator* evaluates the ``Requirements`` expressions of
 machine and job ClassAds to test if they can be matched. The semantics
 of evaluating such constraints is defined below.
 
-Literals
-''''''''
+Evaluating Literals
+'''''''''''''''''''
 
 Literals are self-evaluating, Thus, integer, string, real, undefined and
 error values evaluate to themselves.
@@ -952,8 +952,8 @@ ClassAd A that is being evaluated in a context with another ClassAd B:
    the process of being evaluated, there is a circular dependency in the
    evaluation. The value of the reference is ``ERROR``.
 
-Operators
-'''''''''
+Old ClassAd Operators
+'''''''''''''''''''''
 
 :index:`expression operators<single: expression operators; ClassAd>`
 
@@ -1008,7 +1008,7 @@ have these exceptional values.
    #. The logical operators && and \|\| operate on integers and reals.
       The zero value of these types are considered ``FALSE`` and
       non-zero values ``TRUE``.
-   #. The operators are not strict, and exploit the "don’t care"
+   #. The operators are not strict, and exploit the "don't care"
       properties of the operators to squash ``UNDEFINED`` and ``ERROR``
       values when possible. For example, UNDEFINED && FALSE evaluates to
       ``FALSE``, but UNDEFINED \|\| FALSE evaluates to ``UNDEFINED``.
@@ -1177,7 +1177,7 @@ runs algorithms to deliver the best resource (as defined by the ``rank``
 expression), while satisfying other required criteria.
 
 Similarly, the machine may place constraints and preferences on the jobs
-that it will run by setting the machine’s configuration. For example,
+that it will run by setting the machine's configuration. For example,
 
 ::
 

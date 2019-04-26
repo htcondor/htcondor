@@ -8,7 +8,7 @@ Java Applications
 HTCondor allows users to access a wide variety of machines distributed
 around the world. The Java Virtual Machine (JVM)
 :index:`Java Virtual Machine`\ :index:`JVM` provides a
-uniform platform on any machine, regardless of the machine’s
+uniform platform on any machine, regardless of the machine's
 architecture or operating system. The HTCondor Java universe brings
 together these two features to create a distributed, homogeneous
 computing environment.
@@ -112,7 +112,7 @@ submit description file becomes:
       when_to_transfer_output = ON_EXIT 
       queue
 
-For more information about using HTCondor’s file transfer mechanisms,
+For more information about using HTCondor's file transfer mechanisms,
 see section \ `Submitting a
 Job <../users-manual/submitting-a-job.html>`__.
 
@@ -141,7 +141,7 @@ Less Simple Java Specifications
 
     The **executable**\ :index:`executable<single: executable; submit commands>`
     command does not change. It still identifies the class file that
-    contains the program’s entry point.
+    contains the program's entry point.
 
  JAR files.
     :index:`using JAR files<single: using JAR files; Java>` If the program consists of a
@@ -175,7 +175,7 @@ Less Simple Java Specifications
     and **jar\_files**\ :index:`jar_files<single: jar_files; submit commands>`).
 
     If there are multiple JAR files, the **executable** command
-    specifies the JAR file that contains the program’s entry point. This
+    specifies the JAR file that contains the program's entry point. This
     file is also listed with the **jar\_files** command:
 
     ::
@@ -197,7 +197,7 @@ Less Simple Java Specifications
         jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
 
  An executable JAR file.
-    When the JAR file is an executable, specify the program’s entry
+    When the JAR file is an executable, specify the program's entry
     point in the
     **arguments**\ :index:`arguments<single: arguments; submit commands>` command:
 
@@ -212,7 +212,7 @@ Less Simple Java Specifications
     option, which takes a single JAR file as an argument. With this
     option, the Java virtual machine discovers the main class to run
     from the contents of the Manifest file, which is bundled within the
-    JAR file. HTCondor’s **java** universe does not support this
+    JAR file. HTCondor's **java** universe does not support this
     discovery, so before submitting the job, the name of the main class
     must be identified.
 
@@ -302,7 +302,7 @@ Less Simple Java Specifications
         java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
 
     These options are those which go after the java command, but before
-    the user’s main class. Do not use this to set the classpath, as
+    the user's main class. Do not use this to set the classpath, as
     HTCondor handles that itself. Setting these options is useful for
     setting system properties, system assertions and debugging certain
     kinds of problems.
@@ -313,7 +313,7 @@ Chirp I/O
 :index:`Chirp`
 
 If a job has more sophisticated I/O requirements that cannot be met by
-HTCondor’s file transfer mechanism, then the Chirp facility may provide
+HTCondor's file transfer mechanism, then the Chirp facility may provide
 a solution. Chirp has two advantages over simple, whole-file transfers.
 First, it permits the input files to be decided upon at run-time rather
 than submit time, and second, it permits partial-file I/O with results
@@ -328,7 +328,7 @@ to use the objects ``ChirpInputStream`` and ``ChirpOutputStream``
 instead of ``FileInputStream`` and ``FileOutputStream``. These classes
 are completely documented
 :index:`Chirp<single: Chirp; Software Developers Kit>`\ :index:`Chirp<single: Chirp; SDK>`
-in the HTCondor Software Developer’s Kit (SDK). Here is a simple code
+in the HTCondor Software Developer's Kit (SDK). Here is a simple code
 example:
 
 ::

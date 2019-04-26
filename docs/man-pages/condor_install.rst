@@ -126,7 +126,7 @@ Options
     Instructs the current HTCondor installation to use the specified
     machine as the central manager. This modifies the configuration
     variable ``COLLECTOR_HOST`` to point to the given host name. The
-    central manager machine’s HTCondor configuration needs to be
+    central manager machine's HTCondor configuration needs to be
     independently configured to act as a manager using the option
     **–type=manager**.
  **—owner=<ownername>**
@@ -175,7 +175,7 @@ Options
 
     This prevents *condor_install* from moving an ``sbin`` directory
     out of the way that it should not move. This is particularly useful
-    if you’re trying to install HTCondor in a location used by other
+    if you're trying to install HTCondor in a location used by other
     things (``/usr``, ``/usr/local``, etc.) For example:
     *condor_install* **–prefix=/usr** will not move ``/usr/sbin`` out
     of the way unless you specify the **–backup** option.
@@ -198,7 +198,7 @@ Options
  **—no-env-scripts**
     By default, *condor_configure* writes simple sh and csh shell
     scripts which can be sourced by their respective shells to set the
-    user’s ``PATH`` and ``CONDOR_CONFIG`` environment variables. This
+    user's ``PATH`` and ``CONDOR_CONFIG`` environment variables. This
     option prevents *condor_configure* from generating these scripts.
  **—env-scripts-dir=<directory>**
     By default, the simple *sh* and *csh* shell scripts (see
@@ -221,7 +221,7 @@ success, and it will exit with a nonzero value upon failure.
 Examples
 --------
 
-Install HTCondor on the machine (machine1@cs.wisc.edu) to be the pool’s
+Install HTCondor on the machine (machine1@cs.wisc.edu) to be the pool's
 central manager. On machine1, within the directory that contains the
 unzipped HTCondor distribution directories:
 

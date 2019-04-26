@@ -54,7 +54,7 @@ gracefully-draining machine, some jobs may finish retiring before
 others. By default, the resources used by the newly-retired jobs do not
 become available for use by other jobs until the machine exits the
 draining state (see below). The **-start** expression you supply
-replaces the draining machine’s normal ``START`` expression for the
+replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
 available. See section `Policy Configuration for Execute Hosts and for
 Submit Hosts <../admin-manual/policy-configuration.html>`__ for more
@@ -94,7 +94,7 @@ Options
     Abort draining, if ``expr`` is not true for all slots to be drained.
  **-start **\ *expr*
     The ``START`` expression to use while the machine is draining. You
-    can’t reference the machine’s existing ``START`` expression.
+    can't reference the machine's existing ``START`` expression.
  **-cancel**
     Cancel a prior draining request, to permit the *condor\_negotiator*
     to use the machine again.

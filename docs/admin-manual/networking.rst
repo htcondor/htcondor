@@ -59,14 +59,14 @@ specification:
     URL encoded by  .
 
 ``PrivNet``
-    Provides the name of the daemon’s private network. This value is
+    Provides the name of the daemon's private network. This value is
     specified in the configuration with ``PRIVATE_NETWORK_NAME``.
 
 ``sock``
     Provides the name of *condor_shared_port* daemon named socket.
 
 ``PrivAddr``
-    Provides the daemon’s private address in form of ``IP:port``.
+    Provides the daemon's private address in form of ``IP:port``.
 
 Default Port Usage
 ''''''''''''''''''
@@ -76,7 +76,7 @@ Every HTCondor daemon listens on a network port for incoming commands.
 daemons.) Most daemons listen on a dynamically assigned port. In order
 to send a message, HTCondor daemons and tools locate the correct port to
 use by querying the *condor_collector*, extracting the port number from
-the ClassAd. One of the attributes included in every daemon’s ClassAd is
+the ClassAd. One of the attributes included in every daemon's ClassAd is
 the full IP address and port number upon which the daemon is listening.
 
 To access the *condor_collector* itself, all HTCondor daemons and tools
@@ -103,7 +103,7 @@ dynamically assigned port the *condor_negotiator* is listening on. All
 HTCondor tools and daemons that need to communicate with the
 *condor_negotiator* will either use the ``NEGOTIATOR_ADDRESS_FILE``
 :index:`NEGOTIATOR_ADDRESS_FILE` or will query the
-*condor_collector* for the *condor_negotiator*\ ’s ClassAd.
+*condor_collector* for the *condor_negotiator*\ 's ClassAd.
 
 Sites that configure any checkpoint servers will introduce other fixed
 ports into their network. Each *condor_ckpt_server* will listen to 4
@@ -351,7 +351,7 @@ connectivity to daemons that are using the shared port; they all
 effectively share the same setting, and the *condor_shared_port*
 daemon handles all CCB connection requests on their behalf.
 
-HTCondor’s authentication and authorization steps are unchanged by the
+HTCondor's authentication and authorization steps are unchanged by the
 use of a shared port. Each HTCondor daemon continues to operate
 according to its configured policy. Requests for connections to the
 shared port are not authenticated or restricted by the
@@ -387,7 +387,7 @@ This example assumes that the socket name used by the
 This configuration causes the *condor_collector* to automatically
 choose this socket name. If multiple *condor_collector* daemons are
 started on the same machine, the socket name can be explicitly set in
-the daemon’s invocation arguments, as in the example:
+the daemon's invocation arguments, as in the example:
 
 ::
 
@@ -463,7 +463,7 @@ limitations.
     address in the Kerberos ticket will not necessarily match, causing
     the authentication to fail. Sites using Kerberos authentication on
     multi-homed machines are strongly encouraged not to enable
-    ``BIND_ALL_INTERFACES``, at least until HTCondor’s Kerberos
+    ``BIND_ALL_INTERFACES``, at least until HTCondor's Kerberos
     functionality supports using multiple Kerberos tickets together with
     finding the right one to match the IP address a given socket is
     bound to.
@@ -539,13 +539,13 @@ host/domain names associated with them here is how to configure
 HTCondor:
 
 In this example, ``farm-server.farm.org`` maps to the private interface.
-In the central manager’s global (to the cluster) configuration file:
+In the central manager's global (to the cluster) configuration file:
 
 ::
 
     CONDOR_HOST = farm-server.farm.org
 
-In the central manager’s local configuration file:
+In the central manager's local configuration file:
 
 ::
 
@@ -635,7 +635,7 @@ request to the CCB server, which will instruct B to connect to A so that
 the two can communicate.
 
 As an example, consider an HTCondor execute node that is within a
-private network. This execute node’s *condor_startd* is process B. This
+private network. This execute node's *condor_startd* is process B. This
 execute node cannot normally run jobs submitted from a machine that is
 outside of that private network, because bi-directional connectivity
 between the submit node and the execute node is normally required.
@@ -645,12 +645,12 @@ for the execute node within the private network to connect to the submit
 node, then it is possible for the submit node to run jobs on the execute
 node.
 
-To effect this CCB solution, the execute node’s *condor_startd* within
+To effect this CCB solution, the execute node's *condor_startd* within
 the private network registers itself with the CCB server by setting the
 configuration variable ``CCB_ADDRESS`` :index:`CCB_ADDRESS`. The
-submit node’s *condor_schedd* communicates with the CCB server,
-requesting that the execute node’s *condor_startd* open the TCP
-connection. The CCB server forwards this request to the execute node’s
+submit node's *condor_schedd* communicates with the CCB server,
+requesting that the execute node's *condor_startd* open the TCP
+connection. The CCB server forwards this request to the execute node's
 *condor_startd*, which opens the TCP connection. Once the connection is
 open, bi-directional communication is enabled.
 
@@ -742,7 +742,7 @@ authorization level (these are playing the role of process A in the
 above description). It authorizes all connection requests (from process
 B) at the READ authorization level. As usual, whether process B
 authorizes process A to do whatever it is trying to do is up to the
-security policy for process B; from the HTCondor security model’s point
+security policy for process B; from the HTCondor security model's point
 of view, it is as if process A connected to process B, even though at
 the network layer, the reverse is true.
 
@@ -865,7 +865,7 @@ not find an interface with an address of the corresponding protocol,
 that protocol will not be used. Additionally, if only one of the
 protocols has a private or public address, the other protocol will be
 disabled. For instance, a machine with a private IPv4 address and a
-loopback IPv6 address will only use IPv4; there’s no point trying to
+loopback IPv6 address will only use IPv4; there's no point trying to
 contact some other machine via IPv6 over a loopback interface.
 
 If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed
@@ -875,7 +875,7 @@ choose between these addresses based on which protocols are enabled for
 them; if both are, they will prefer the first address listed by that
 daemon.
 
-A daemon may be listening on one, some, or all of its machine’s
+A daemon may be listening on one, some, or all of its machine's
 addresses. (See ``NETWORK_INTERFACE`` :index:`NETWORK_INTERFACE`.)
 Daemons may presently list at most two addresses, one IPv6 and one IPv4.
 Each address is the “most public” address of its protocol; by default,
@@ -894,10 +894,10 @@ You may force HTCondor to prefer IPv4 in all three of these situations
 by setting the macro ``PREFER_IPV4`` :index:`PREFER_IPV4` to true;
 this is the default. With ``PREFER_IPV4`` :index:`PREFER_IPV4`
 set, HTCondor daemons will list their “most public” IPv4 address first;
-prefer the IPv4 address when choosing from another’s daemon list; and
+prefer the IPv4 address when choosing from another's daemon list; and
 prefer the IPv4 address when looking up a host name in DNS.
 
-In practice, both an HTCondor pool’s central manager and any submit
+In practice, both an HTCondor pool's central manager and any submit
 machines within a mixed mode pool must have both IPv4 and IPv6 addresses
 for both IPv4-only and IPv6-only *condor_startd* daemons to function
 properly.

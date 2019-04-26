@@ -11,7 +11,7 @@ feasible to combine all of their computers into a single, large HTCondor
 pool. HTCondor shines in grid computing, continuing to evolve with the
 field.
 
-Due to the field’s rapid evolution, HTCondor has its own native
+Due to the field's rapid evolution, HTCondor has its own native
 mechanisms for grid computing as well as developing interactions with
 other grid systems.
 
@@ -23,8 +23,8 @@ availability of machines to execute jobs. When the local HTCondor pool
 is not able to run the job (due to a lack of currently available
 machines), the job flocks to another pool. A second advantage to using
 flocking is that the user (who submits the job) does not need to be
-concerned with any aspects of the job. The user’s submit description
-file (and the job’s
+concerned with any aspects of the job. The user's submit description
+file (and the job's
 **universe**\ :index:`universe<single: universe; submit commands>`) are independent
 of the flocking mechanism.
 
@@ -37,11 +37,11 @@ offered by HTCondor are distinguished by the software running on the
 remote resource.
 
 When HTCondor is running on the remote resource, and the desired grid
-computing mechanism is to move the job from the local pool’s job queue
-to the remote pool’s job queue, it is called HTCondor-C. The job is
+computing mechanism is to move the job from the local pool's job queue
+to the remote pool's job queue, it is called HTCondor-C. The job is
 submitted using the **grid** **universe**, and the **grid\_type** is
 **condor**. HTCondor-C jobs have the advantage that once the job has
-moved to the remote pool’s job queue, a network partition does not
+moved to the remote pool's job queue, a network partition does not
 affect the execution of the job. A further advantage of HTCondor-C jobs
 is that the **universe** of the job at the remote resource is not
 restricted.

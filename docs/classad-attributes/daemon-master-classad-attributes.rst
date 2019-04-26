@@ -23,7 +23,7 @@ DaemonMaster ClassAd Attributes
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
     :index:`Machine<single: Machine; ClassAd DaemonMaster attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MasterIpAddr<single: MasterIpAddr; ClassAd DaemonMaster attribute>`
  ``MasterIpAddr``:
     String with the IP and port address of the *condor\_master* daemon

@@ -7,8 +7,8 @@ Time Scheduling for Job Execution
 :index:`at a specific time<single: at a specific time; job execution>`
 
 Jobs may be scheduled to begin execution at a specified time in the
-future with HTCondor’s job deferral functionality. All specifications
-are in a job’s submit description file. Job deferral functionality is
+future with HTCondor's job deferral functionality. All specifications
+are in a job's submit description file. Job deferral functionality is
 expanded to provide for the periodic execution of a job, known as the
 CronTab scheduling.
 
@@ -31,16 +31,16 @@ Deferred Execution Time
 :index:`of a job<single: of a job; deferral time>`
 :index:`DeferralTime<single: DeferralTime; ClassAd job attribute>`
 
-A job’s deferral time is the exact time that HTCondor should attempt to
+A job's deferral time is the exact time that HTCondor should attempt to
 execute the job. The deferral time attribute is defined as an expression
 that evaluates to a Unix Epoch timestamp (the number of seconds elapsed
 since 00:00:00 on January 1, 1970, Coordinated Universal Time). This is
 the time that HTCondor will begin to execute the job.
 
 After a job is matched and all of its files have been transferred to an
-execution machine, HTCondor checks to see if the job’s ClassAd contains
+execution machine, HTCondor checks to see if the job's ClassAd contains
 a deferral time. If it does, HTCondor calculates the number of seconds
-between the execution machine’s current system time and the job’s
+between the execution machine's current system time and the job's
 deferral time. If the deferral time is in the future, the job waits to
 begin execution. While a job waits, its job ClassAd attribute
 ``JobStatus`` indicates the job is in the Running state. As the deferral
@@ -48,7 +48,7 @@ time arrives, the job begins to execute. If a job misses its execution
 time, that is, if the deferral time is in the past, the job is evicted
 from the execution machine and put on hold in the queue.
 
-The specification of a deferral time does not interfere with HTCondor’s
+The specification of a deferral time does not interfere with HTCondor's
 behavior. For example, if a job is waiting to begin execution when a
 *condor\_hold* command is issued, the job is removed from the execution
 machine and is put on hold. If a job is waiting to begin execution when
@@ -56,7 +56,7 @@ a *condor\_suspend* command is issued, the job continues to wait. When
 the deferral time arrives, HTCondor begins execution for the job, but
 immediately suspends it.
 
-The deferral time is specified in the job’s submit description file with
+The deferral time is specified in the job's submit description file with
 the command
 **deferral\_time**\ :index:`deferral_time<single: deferral_time; submit commands>`.
 
@@ -65,24 +65,24 @@ Deferral Window
 
 :index:`DeferralWindow<single: DeferralWindow; ClassAd job attribute>`
 :index:`deferral_window<single: deferral_window; submit commands>`
-
-If a job arrives at its execution machine after the deferral time has
-passed, the job is evicted from the machine and put on hold in the job
-queue. This may occur, for example, because the transfer of needed files
+Usage Examples
+If a job arrives at its execution machine after the defeUsage Examplesrral time has
+passed, the job is evicted from the machine and put on hUsage Examplesold in the job
+queue. This may occur, for example, because the transferUsage Examples of needed files
 took too long due to a slow network connection. A deferral window
 permits the execution of a job that misses its deferral time by
 specifying a window of time within which the job may begin.
 
 The deferral window is the number of seconds after the deferral time,
 within which the job may begin. When a job arrives too late, HTCondor
-calculates the difference in seconds between the execution machine’s
-current time and the job’s deferral time. If this difference is less
+calculates the difference in seconds between the execution machine's
+current time and the job's deferral time. If this difference is less
 than or equal to the deferral window, the job immediately begins
 execution. If this difference is greater than the deferral window, the
 job is evicted from the execution machine and is put on hold in the job
 queue.
 
-The deferral window is specified in the job’s submit description file
+The deferral window is specified in the job's submit description file
 with the command
 **deferral\_window**\ :index:`deferral_window<single: deferral_window; submit commands>`.
 
@@ -102,15 +102,15 @@ with an integer expression that evaluates to a number of seconds. At
 this number of seconds before the deferral time, the job may be matched
 with a machine.
 
-Usage Examples
-''''''''''''''
+Deferral Usage Examples
+'''''''''''''''''''''''
 
 :index:`deferral_time<single: deferral_time; submit commands>`
 
 Here are examples of how the job deferral time, deferral window, and the
 preparation time may be used.
 
-The job’s submit description file specifies that the job is to begin
+The job's submit description file specifies that the job is to begin
 execution on January 1st, 2006 at 12:00 pm:
 
 ::
@@ -163,19 +163,19 @@ job is to begin execution.
        deferral_time      = 1262368800 
        deferral_prep_time = 60
 
-Limitations
-'''''''''''
+Deferral Limitations
+''''''''''''''''''''
 
-There are some limitations to HTCondor’s job deferral feature.
+There are some limitations to HTCondor's job deferral feature.
 
 -  Job deferral is not available for scheduler universe jobs. A
    scheduler universe job defining the ``deferral_time`` produces a
    fatal error when submitted.
 -  The time that the job begins to execute is based on the execution
-   machine’s system clock, and not the submission machine’s system
+   machine's system clock, and not the submission machine's system
    clock. Be mindful of the ramifications when the two clocks show
    dramatically different times.
--  A job’s ``JobStatus`` attribute is always in the Running state when
+-  A job's ``JobStatus`` attribute is always in the Running state when
    job deferral is used. There is currently no way to distinguish
    between a job that is executing and a job that is waiting for its
    deferral time.
@@ -187,12 +187,12 @@ CronTab Scheduling
 :index:`periodic<single: periodic; job scheduling>`
 :index:`to execute periodically<single: to execute periodically; scheduling jobs>`
 
-HTCondor’s CronTab scheduling functionality allows jobs to be scheduled
-to execute periodically. A job’s execution schedule is defined by
+HTCondor's CronTab scheduling functionality allows jobs to be scheduled
+to execute periodically. A job's execution schedule is defined by
 commands within the submit description file. The notation is much like
 that used by the Unix *cron* daemon. As such, HTCondor developers are
 fond of referring to CronTab :index:`Crondor`\ scheduling as
-Crondor. The scheduling of jobs using HTCondor’s CronTab feature
+Crondor. The scheduling of jobs using HTCondor's CronTab feature
 calculates and utilizes the ``DeferralTime`` ClassAd attribute.
 
 Also, unlike the Unix *cron* daemon, HTCondor never runs more than one
@@ -207,7 +207,7 @@ desired.
 Semantics for CronTab Specification
 '''''''''''''''''''''''''''''''''''
 
-A job’s execution schedule is defined by a set of specifications within
+A job's execution schedule is defined by a set of specifications within
 the submit description file. HTCondor uses these to calculate a
 ``DeferralTime`` for the job.
 
@@ -242,7 +242,7 @@ Table 2.3: The list of submit commands and their value ranges.
 
 --------------
 
-The day of a job’s execution can be specified by both the
+The day of a job's execution can be specified by both the
 **cron\_day\_of\_month** and the **cron\_day\_of\_week** attributes. The
 day will be the logical or of both.
 
@@ -310,7 +310,7 @@ Preparation Time and Execution Window
 
 The
 **cron\_prep\_time**\ :index:`cron_prep_time<single: cron_prep_time; submit commands>`
-command is analogous to the deferral time’s
+command is analogous to the deferral time's
 **deferral\_prep\_time**\ :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`
 command. It specifies the number of seconds before the deferral time
 that the job is to be matched and sent to the execution machine. This
@@ -361,18 +361,18 @@ of at least one of the submit description file commands beginning with
 **cron\_** causes HTCondor to calculate and set a deferral time for when
 the job should run. A deferral time is determined based on the current
 time rounded later in time to the next minute. The deferral time is the
-job’s ``DeferralTime`` attribute. A new deferral time is calculated when
+job's ``DeferralTime`` attribute. A new deferral time is calculated when
 the job first enters the job queue, when the job is re-queued, or when
 the job is released from the hold state. New deferral times for all jobs
 in the job queue using the CronTab functionality are recalculated when a
 *condor\_reconfig* or a *condor\_restart* command that affects the job
 queue is issued.
 
-A job’s deferral time is not always the same time that a job will
+A job's deferral time is not always the same time that a job will
 receive a match and be sent to the execution machine. This is because
 HTCondor operates on the job queue at times that are independent of job
 events, such as when job execution completes. Therefore, HTCondor may
-operate on the job queue just after a job’s deferral time states that it
+operate on the job queue just after a job's deferral time states that it
 is to begin execution. HTCondor attempts to start a job when the
 following pseudo-code boolean expression evaluates to ``True``:
 
@@ -392,8 +392,8 @@ for a job must specify an appropriate
 command to ensure that a job remains in the queue. This job maintains
 its original ``ClusterId`` and ``ProcId``.
 
-Usage Examples
-''''''''''''''
+Submit Commands Usage Examples
+''''''''''''''''''''''''''''''
 
 Here are some examples of the submit commands necessary to schedule jobs
 to run at multifarious times. Please note that it is not necessary to
@@ -435,8 +435,8 @@ with a 2-minute preparation time:
        cron_day_of_week = * 
        cron_prep_time = 120
 
-Limitations
-'''''''''''
+Submit Commands Limitations
+'''''''''''''''''''''''''''
 
 The use of the CronTab functionality has all of the same limitations of
 deferral times, because the mechanism is based upon deferral times.

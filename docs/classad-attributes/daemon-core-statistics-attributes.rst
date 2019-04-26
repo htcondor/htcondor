@@ -27,7 +27,7 @@ condor\_status command with a direct query, such as
     :index:`DebugOuts<single: DebugOuts; ClassAd statistics attribute>`
  ``DebugOuts``:
     This attribute is the count of debugging messages printed to the
-    daemon’s debug log, such as the ScheddLog. There is a moderate cost
+    daemon's debug log, such as the ScheddLog. There is a moderate cost
     to writing these logging messages, if the debug level is very high
     for an active daemon, the logging will slow performance. The
     corresponding attribute RecentDebugOuts is the count of the messages

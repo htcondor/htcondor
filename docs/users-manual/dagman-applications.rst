@@ -1,5 +1,3 @@
-      
-
 DAGMan Applications
 ===================
 
@@ -20,7 +18,7 @@ DAG input file describes the DAG.
 
 DAGMan is itself executed as a scheduler universe job within HTCondor.
 It submits the HTCondor jobs within nodes in such a way as to enforce
-the DAG’s dependencies. DAGMan also handles recovery and reporting on
+the DAG's dependencies. DAGMan also handles recovery and reporting on
 the HTCondor jobs.
 
 DAGMan Terminology
@@ -124,7 +122,7 @@ defined for *JobName* and *SubmitDescriptionFileName* are case
 sensitive, as file names in a file system are case sensitive. The
 *JobName* can be any string that contains no white space, except for the
 strings *PARENT* and *CHILD* (in upper, lower, or mixed case). *JobName*
-also cannot contain special characters (*’.’*, *’+’*) which are reserved
+also cannot contain special characters (*'.'*, *'+'*) which are reserved
 for system use.
 
 Note that *DIR*, *NOOP*, and *DONE*, if used, must appear in the order
@@ -260,7 +258,7 @@ the arguments. Both *ExecutableName* and optional *arguments* are case
 sensitive.
 
 Scripts are executed on the submit machine; the submit machine is not
-necessarily the same machine upon which the node’s job is run. Further,
+necessarily the same machine upon which the node's job is run. Further,
 a single cluster of HTCondor jobs may be spread across several machines.
 
 The optional *DEFER* feature causes a retry of only the script, if the
@@ -368,7 +366,7 @@ passed to a PRE or POST script. The three macros ``$JOBID``,
 ``$RETURN``, and ``$PRE_SCRIPT_RETURN`` can be used as arguments to POST
 scripts. The use of these variables is limited to being used as an
 individual command line *argument* to the script, surrounded by spaces,
-in order to cause the substitution of the variable’s value.
+in order to cause the substitution of the variable's value.
 
 The special macros are as follows:
 
@@ -376,13 +374,13 @@ The special macros are as follows:
    *JobName*.
 -  ``$RETRY`` evaluates to an integer value set to 0 the first time a
    node is run, and is incremented each time the node is retried. See
-   section \ `2.10.9 <#x22-910002.10.9>`__ for the description of how to
-   cause nodes to be retried.
+   :ref:`users-manual/dagman-applications:advanced features of dagman` for 
+   the description of how to cause nodes to be retried.
 -  ``$MAX_RETRIES`` evaluates to an integer value set to the maximum
    number of retries for the node. See
-   section \ `2.10.9 <#x22-910002.10.9>`__ for the description of how to
-   cause nodes to be retried. If no retries are set for the node,
-   ``$MAX_RETRIES`` will be set to 0.
+   :ref:`users-manual/dagman-applications:advanced features of dagman` for the
+   description of how to cause nodes to be retried. If no retries are set for
+   the node, ``$MAX_RETRIES`` will be set to 0.
 -  :index:`defined for a DAGMan node job<single: defined for a DAGMan node job; job ID>`\ :index:`defined for a DAGMan node job<single: defined for a DAGMan node job; job ID>`
    ``$JOBID`` (for POST scripts only) evaluates to a representation of
    the HTCondor job ID of the node job. It is the value of the job
@@ -398,7 +396,7 @@ The special macros are as follows:
    successful; the value of ``$RETURN`` will be 0, indicating success.
    In the second case, one or more jobs from the cluster fail. When
    *condor_dagman* sees the first terminated event for a job that
-   failed, it assigns that job’s return value as the value of
+   failed, it assigns that job's return value as the value of
    ``$RETURN``, and it attempts to remove all remaining jobs within the
    cluster. Therefore, if multiple jobs in the cluster fail with
    different exit codes, a race condition determines which exit code
@@ -419,11 +417,11 @@ The special macros are as follows:
    will be the exit value of the PRE script; the POST script can use
    this to see if the PRE script exited with an error condition, and
    assign success or failure to the node, as appropriate.
--  ``$DAG_STATUS`` is the status of the DAG. Note that this macro’s
+-  ``$DAG_STATUS`` is the status of the DAG. Note that this macro's
    value and definition is unrelated to the attribute named
-   ``DagStatus`` as defined for use in a node status file. This macro’s
+   ``DagStatus`` as defined for use in a node status file. This macro's
    value is the same as the job ClassAd attribute ``DAG_Status`` that is
-   defined within the *condor_dagman* job’s ClassAd. This macro may
+   defined within the *condor_dagman* job's ClassAd. This macro may
    have the following values:
 
    -  0: OK
@@ -432,8 +430,8 @@ The special macros are as follows:
    -  3: the DAG has been aborted by an ABORT-DAG-ON specification
    -  4: removed; the DAG has been removed by *condor_rm*
    -  5: cycle; a cycle was found in the DAG
-   -  6: halted; the DAG has been halted (see section
-       `2.10.8 <#x22-890002.10.8>`__)
+   -  6: halted; the DAG has been halted 
+      (see :ref:`users-manual/dagman-applications:suspending a running dag`)
 
 -  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
    in the DAG.
@@ -502,7 +500,7 @@ invokes the POST script with
       stage-out job_status=$RETURN
 
 This example shows that when there is no space between the ``=`` sign
-and the variable ``$RETURN``, there is no substitution of the macro’s
+and the variable ``$RETURN``, there is no substitution of the macro's
 value.
 
 PRE_SKIP
@@ -582,13 +580,13 @@ Here is a sample HTCondor submit description file for this DAG:
 
 Since each node uses the same HTCondor submit description file, this
 implies that each node within the DAG runs the same job. The
-``$(Cluster)`` macro produces unique file names for each job’s output.
+``$(Cluster)`` macro produces unique file names for each job's output.
 :index:`DAGParentNodeNames<single: DAGParentNodeNames; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DAGParentNodeNames>`
 
 The job ClassAd attribute ``DAGParentNodeNames`` is also available for
 use within the submit description file. It defines a comma separated
-list of each *JobName* which is a parent node of this job’s node. This
+list of each *JobName* which is a parent node of this job's node. This
 attribute may be used in the
 **arguments**\ :index:`arguments<single: arguments; submit commands>` command for
 all but scheduler universe jobs. For example, if the job has two
@@ -688,7 +686,7 @@ HTCondor at one time. (See the *condor_submit_dag* man page
 ( `12 <Condorsubmitdag.html#x150-109200012>`__) for more information.
 Also see the equivalent ``DAGMAN_MAX_JOBS_SUBMITTED``
 :index:`DAGMAN_MAX_JOBS_SUBMITTED` configuration option
-( `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__).)
+(ref:`admin-manual/configuration-macros:configuration file entries for dagman`).
 
 **Idle procs:** The number of idle procs within a given DAG can be
 limited with the optional command line argument **-maxidle**.
@@ -698,22 +696,23 @@ ready nodes in the DAG. This allows *condor_dagman* to submit jobs in a
 way that adapts to the load on the HTCondor pool at any given time. If
 the pool is lightly loaded, *condor_dagman* will end up submitting more
 jobs; if the pool is heavily loaded, *condor_dagman* will submit fewer
-jobs. (See the *condor_submit_dag* man page
-( `12 <Condorsubmitdag.html#x150-109200012>`__) for more information.
+jobs. (See the :doc:`/man-pages/condor_submit_dag` man page for more 
+information.)
 Also see the equivalent ``DAGMAN_MAX_JOBS_IDLE``
 :index:`DAGMAN_MAX_JOBS_IDLE` configuration option
-( `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__).)
+(ref:`admin-manual/configuration-macros:configuration file entries for dagman`).
 
 Note that the **-maxjobs** option applies to counts of clusters, whereas
 the **-maxidle** option applies to counts of procs. Unfortunately, this
 can be a bit confusing. Of course, if none of your submit files create
-more than one proc, the distinction doesn’t matter. For example, though,
+more than one proc, the distinction doesn't matter. For example, though,
 a node job submit file that queues 5 procs will count as one for
 **-maxjobs**, but five for **-maxidle** (if all of the procs are idle).
 
 **Subsets of nodes:** Node submission can also be throttled in a
 finer-grained manner by grouping nodes into categories. See section
- `2.10.9 <#x22-950002.10.9>`__ for more details.
+ :ref:`users-manual/dagman-applications:advanced features of dagman` for
+more details.
 
 **PRE/POST scripts:** Since PRE and POST scripts run on the submit
 machine, it may be desirable to limit the number of PRE or POST scripts
@@ -721,14 +720,12 @@ running at one time. The optional **-maxpre** command line argument
 limits the number of PRE scripts that may be running at one time, and
 the optional **-maxpost** command line argument limits the number of
 POST scripts that may be running at one time. (See the
-*condor_submit_dag* man page
-( `12 <Condorsubmitdag.html#x150-109200012>`__) for more information.
-Also see the equivalent ``DAGMAN_MAX_PRE_SCRIPTS``
-:index:`DAGMAN_MAX_PRE_SCRIPTS`
-( `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__) and
+:doc:`/man-pages/condor_submit_dag` man page for more information.)
+Also see the equivalent 
+``DAGMAN_MAX_PRE_SCRIPTS`` :index:`DAGMAN_MAX_PRE_SCRIPTS` and
 ``DAGMAN_MAX_POST_SCRIPTS`` :index:`DAGMAN_MAX_POST_SCRIPTS`
-( `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__) configuration
-options.)
+(ref:`admin-manual/configuration-macros:configuration file entries for dagman`)
+configuration options.
 
 File Paths in DAGs
 ------------------
@@ -743,7 +740,7 @@ independent DAGs are submitted with a single invocation of
 *condor_submit_dag*. Each of these independent DAGs would logically be
 in its own directory, such that it could be run or tested independent of
 other DAGs. Thus, all references to files will be designed to be
-relative to the DAG’s own directory.
+relative to the DAG's own directory.
 
 Consider an example DAG within a directory named ``dag1``. There would
 be a DAG input file, named ``one.dag`` for this example. Assume the
@@ -842,7 +839,7 @@ After submission, the progress of the DAG can be monitored by looking at
 the job event log file(s) or observing the e-mail that job submission to
 HTCondor causes, or by using *condor_q* *-dag*.
 
-Detailed information about a DAG’s job progress can be obtained using
+Detailed information about a DAG's job progress can be obtained using
 *condor_q* *-l* *<jobID>*. This information is not updated frequently,
 however, so expect to see stale data. You can increase the frequency of
 updates by setting the ``DAGMAN_QUEUE_UPDATE_INTERVAL`` configuration
@@ -855,11 +852,11 @@ name of this extra file is produced by appending ``.dagman.out`` to the
 name of the DAG input file; for example, if the DAG input file is
 ``diamond.dag``, this extra file is named ``diamond.dag.dagman.out``. If
 this extra file grows too large, limit its size with the configuration
-variable ``MAX_DAGMAN_LOG`` :index:`MAX_DAGMAN_LOG`, as defined in
-section \ `3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__. The
-``dagman.out`` file is an important resource for debugging; save this
-file if a problem occurs. The ``dagman.out`` is appended to, rather than
-overwritten, with each new DAGMan run.
+variable ``MAX_DAGMAN_LOG`` :index:`MAX_DAGMAN_LOG`, as defined in the
+:ref:`admin-manual/configuration-macros:daemon logging configuration file
+entries` section. The ``dagman.out`` file is an important resource for 
+debugging; save this file if a problem occurs. The ``dagman.out`` is appended
+to, rather than overwritten, with each new DAGMan run.
 
 To remove an entire DAG, consisting of the *condor_dagman* job, plus
 any jobs submitted to HTCondor, remove the *condor_dagman* job by
@@ -889,8 +886,8 @@ removing a *condor_dagman* job that has been held.)
 The previous behavior of *condor_dagman* itself not removing the node
 jobs can be restored by setting the ``DAGMAN_REMOVE_NODE_JOBS``
 configuration macro (see
- `3.5.23 <ConfigurationMacros.html#x33-2140003.5.23>`__) to ``False``.
-This will decrease the load on the *condor_schedd*, at the cost of
+ref:`admin-manual/configuration-macros:configuration file entries for dagman`)
+to ``False``. This will decrease the load on the *condor_schedd*, at the cost of
 allowing the possibility of "orphaned" node jobs.
 
 A removed DAG will be considered failed unless the DAG has a FINAL node
@@ -1185,7 +1182,7 @@ a warning is written to the log, of the format
     Discovered at file "<DAG input file name>", line <line number>
 
 The behavior of DAGMan is such that all definitions for the macro exist,
-but only the last one defined is used as the variable’s value. Using
+but only the last one defined is used as the variable's value. Using
 this example, if the ``job1.submit`` submit description file contains
 
 ::
@@ -1202,8 +1199,7 @@ The value defined for a macro may contain spaces and tabs. It is also
 possible to have double quote marks and backslashes within a value. In
 order to have spaces or tabs within a value specified for a command line
 argument, use the New Syntax format for the **arguments** submit
-command, as described in
-section \ `12 <Condorsubmit.html#x149-108400012>`__. Escapes for double
+command, as described in :doc:`/man-pages/condor_submit`. Escapes for double
 quote marks depend on whether the New Syntax or Old Syntax format is
 used for the **arguments** submit command. Note that in both syntaxes,
 double quote marks require two levels of escaping: one level is for the
@@ -1214,13 +1210,13 @@ As of HTCondor version 8.3.7, single quotes are permitted within the
 value specification. For the specification of command line
 **arguments**, single quotes can be used in three ways:
 
--  in Old Syntax, within a macro’s value specification
--  in New Syntax, within a macro’s value specification
+-  in Old Syntax, within a macro's value specification
+-  in New Syntax, within a macro's value specification
 -  in New Syntax only, to delimit an argument containing white space
 
 There are examples of all three cases below. In New Syntax, to pass a
 single quote as part of an argument, escape it with another single quote
-for *condor_submit* parsing as in the example’s NodeA ``fourth`` macro.
+for *condor_submit* parsing as in the example's NodeA ``fourth`` macro.
 
 As an example that shows uses of all special characters, here are only
 the relevant parts of a DAG input file. Note that the NodeA value for
@@ -1296,7 +1292,7 @@ The resulting values passed to the NodeC executable are:
 
 The $(JOB) and $(RETRY) macros may be used within a definition of the
 *string* that defines a variable. This usage requires parentheses, such
-that proper macro substitution may take place when the macro’s value is
+that proper macro substitution may take place when the macro's value is
 only a portion of the string.
 
 -  $(JOB) expands to the node *JobName*. If the *VARS* line appears in a
@@ -1384,11 +1380,11 @@ numerical priority is better. The default priority is 0.
 
 The node priority affects the order in which nodes that are ready (all
 of their parent nodes have finished successfully) at the same time will
-be submitted. The node priority also sets the node job’s priority in the
+be submitted. The node priority also sets the node job's priority in the
 queue (that is, its ``JobPrio`` attribute), which affects the order in
 which jobs will be run once they are submitted (see
- `2.7.1 <PrioritiesandPreemption.html#x19-630002.7.1>`__ for more
-information about job priority). The node priority only affects the
+:ref:`users-manual/priorities-and-preemption:job priority` for more
+information). The node priority only affects the
 order of job submission within a given DAG; but once jobs are submitted,
 their ``JobPrio`` value affects the order in which they will be run
 relative to all jobs submitted by the same user.
@@ -1405,8 +1401,8 @@ time – so node priorities should not be used as a substitute for
 parent/child dependencies. In other words, priorities should be used
 when it is preferable, but not required, that some jobs run before
 others. (The order in which jobs are run once they are submitted can be
-affected by many things other than the job’s priority; for example,
-whether there are machines available in the pool that match the job’s
+affected by many things other than the job's priority; for example,
+whether there are machines available in the pool that match the job's
 requirements.)
 
 PRE scripts can affect the order in which jobs run, so DAGs containing
@@ -1453,7 +1449,7 @@ are most relevant for sub-DAGs (although a top-level DAG can be submitted
 with a non-zero priority by specifying a **-priority** value on the
 *condor_submit_dag* command line). **This algorithm for calculating
 effective priorities is a simplification introduced in version 8.5.7 (a
-node’s effective priority is no longer dependent on the priorities of
+node's effective priority is no longer dependent on the priorities of
 its parents).**
 
 Here is an example to clarify:
@@ -1527,9 +1523,9 @@ The configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED`` and the
 *condor_submit_dag* *-maxjobs* command-line option are still enforced
 if these *CATEGORY* and *MAXJOBS* throttles are used.
 
-Please see the end of section \ `2.10.9 <#x22-1030002.10.9>`__ on DAG
-Splicing for a description of the interaction between categories and
-splices.
+Please see the end of :ref:`users-manual/dagman-applications:advanced features
+of dagman` on DAG Splicing for a description of the interaction between
+categories and splices.
 
 Configuration Specific to a DAG
 '''''''''''''''''''''''''''''''
@@ -1539,14 +1535,14 @@ Configuration Specific to a DAG
 
 All configuration variables and their definitions that relate to DAGMan
 may be found in
-section \ `3.5.23 <ConfigurationMacros.html#x33-2100003.5.23>`__.
+ref:`admin-manual/configuration-macros:configuration file entries for dagman`.
 
 Configuration variables for *condor_dagman* can be specified in several
 ways, as given within the ordered list:
 
 #. In an HTCondor configuration file.
 #. With an environment variable. Prepend the string _CONDOR_ to the
-   configuration variable’s name.
+   configuration variable's name.
 #. With a line in the DAG input file using the keyword *CONFIG*, such
    that there is a configuration file specified that is specific to an
    instance of *condor_dagman*. The configuration file specification
@@ -1609,7 +1605,7 @@ Setting ClassAd attributes in the DAG file
 :index:`setting ClassAd attributes in a DAG<single: setting ClassAd attributes in a DAG; DAGMan>`
 
 The *SET_JOB_ATTR* keyword within the DAG input file specifies an
-attribute/value pair to be set in the DAGMan job’s ClassAd. The syntax
+attribute/value pair to be set in the DAGMan job's ClassAd. The syntax
 for *SET_JOB_ATTR* is
 
 **SET_JOB_ATTR** *AttributeName*\ =\ *AttributeValue*
@@ -1700,9 +1696,9 @@ are submitted with
 The first listed is ``A.dag``. The remainder of the specialized file
 name adds a suffix onto this first DAG input file name, ``A.dag``. The
 suffix is ``_multi.rescue<XXX>``, where ``<XXX>`` is substituted by the
-3-digit number of the Rescue DAG created as defined in
-section \ `2.10.10 <#x22-1070002.10.10>`__. The first time a Rescue DAG
-is created for the example, it will have the file name
+3-digit number of the Rescue DAG created as defined in 
+:ref:`users-manual/dagman-applications:the rescue dag` section. The first
+time a Rescue DAG is created for the example, it will have the file name
 ``A.dag_multi.rescue001``.
 
 Other files such as ``dagman.out`` and the lock file also have names
@@ -1718,7 +1714,8 @@ By default, DAGMan internally renames the nodes to avoid node name
 collisions. If all node names are unique, the renaming of nodes may be
 disabled by setting the configuration variable
 ``DAGMAN_MUNGE_NODE_NAMES`` :index:`DAGMAN_MUNGE_NODE_NAMES` to
-``False`` (see  `3.5.23 <ConfigurationMacros.html#x33-2140003.5.23>`__).
+``False`` (see ref:`admin-manual/configuration-macros:configuration file
+entries for dagman`).
 
 INCLUDE
 '''''''
@@ -1820,8 +1817,8 @@ HTCondor job). HTCondor DAGMan handles this situation easily, and allows
 DAGs to be nested to any depth.
 
 There are two ways that DAGs can be nested within other DAGs: sub-DAGs
-(see `2.10.9 <#x22-1020002.10.9>`__) and splices
-(see `2.10.9 <#x22-1030002.10.9>`__).
+and splices (see :ref:`users-manual/dagman-applications:advanced features 
+of dagman`)
 
 With sub-DAGs, each DAG has its own *condor_dagman* job, which then
 becomes a node job within the higher-level DAG. With splices, on the
@@ -1919,12 +1916,12 @@ The preferred specification of the DAG input file for the outer DAG is
         PARENT A CHILD B C 
         PARENT B C CHILD D
 
-Within the outer DAG’s input file, the **SUBDAG** command specifies a
+Within the outer DAG's input file, the **SUBDAG** command specifies a
 special case of a **JOB** node, where the job is itself a DAG.
 
 One of the benefits of using the SUBDAG feature is that portions of the
 overall workflow can be constructed and modified during the execution of
-the DAG (a SUBDAG file doesn’t have to exist until just before it is
+the DAG (a SUBDAG file doesn't have to exist until just before it is
 submitted). A drawback can be that each SUBDAG causes its own distinct
 job submission of *condor_dagman*, leading to a larger number of jobs,
 together with their potential need of carefully constructed policy
@@ -2346,10 +2343,10 @@ DAGs, unlike SUBDAG EXTERNALs.
 
 The *DIR* option specifies a working directory for a splice, from which
 the splice will be parsed and the jobs within the splice submitted. The
-directory associated with the splice’s *DIR* specification will be
+directory associated with the splice's *DIR* specification will be
 propagated as a prefix to all nodes in the splice and any included
-splices. If a node already has a *DIR* specification, then the splice’s
-*DIR* specification will be a prefix to the node’s, separated by a
+splices. If a node already has a *DIR* specification, then the splice's
+*DIR* specification will be a prefix to the node's, separated by a
 directory separator character. Jobs in included splices with an absolute
 path for their *DIR* specification will have their *DIR* specification
 untouched. Note that a DAG containing *DIR* specifications cannot be run
@@ -2485,7 +2482,7 @@ Categories normally refer only to nodes within a given splice. All of
 the assignments of nodes to a category, and the setting of the category
 throttle, should be done within a single DAG file. However, it is now
 possible to have categories include nodes from within more than one
-splice. To do this, the category name is prefixed with the ’+’ (plus)
+splice. To do this, the category name is prefixed with the '+' (plus)
 character. This tells DAGMan that the category is a cross-splice
 category. Towards deeper understanding, what this really does is prevent
 renaming of the category when the splice is incorporated into the
@@ -2689,9 +2686,9 @@ HTCondor job is described by the contents of the HTCondor submit
 description file given by *SubmitDescriptionFileName*.
 
 The keywords *DIR* and *NOOP* are as detailed in
-section \ `2.10.2 <#x22-780002.10.2>`__. If both *DIR* and *NOOP* are
-used, they must appear in the order shown within the syntax
-specification.
+:ref:`users-manual/dagman-applications:the dag input file: basic commands`.
+If both *DIR* and *NOOP* are used, they must appear in the order shown within
+the syntax specification.
 
 There may only be one FINAL node in a DAG. A parse error will be logged
 by the *condor_dagman* job in the ``dagman.out`` file, if more than one
@@ -2866,7 +2863,7 @@ successfully completed are not re-run.
 There are a variety of circumstances under which a Rescue DAG is
 generated. If a node in the DAG fails, the DAG does not exit
 immediately; the remainder of the DAG is continued until no more forward
-progress can be made based on the DAG’s dependencies. At this point,
+progress can be made based on the DAG's dependencies. At this point,
 DAGMan produces the Rescue DAG and exits. A Rescue DAG is produced on
 Unix platforms if the *condor_dagman* job itself is removed with
 *condor_rm*. On Windows, a Rescue DAG is not generated in this
@@ -2887,8 +2884,8 @@ DAG. This means that previously-completed node jobs will be re-run.**
 
 The granularity defining success or failure in the Rescue DAG is the
 node. For a node that fails, all parts of the node will be re-run, even
-if some parts were successful the first time. For example, if a node’s
-PRE script succeeds, but then the node’s HTCondor job cluster fails, the
+if some parts were successful the first time. For example, if a node's
+PRE script succeeds, but then the node's HTCondor job cluster fails, the
 entire node, including the PRE script, will be re-run. A job cluster may
 result in the submission of multiple HTCondor jobs. If one of the jobs
 within the cluster fails, the node fails. Therefore, the Rescue DAG will
@@ -2905,8 +2902,8 @@ The file name of the Rescue DAG is obtained by appending the string
 at 001 and continue to 002, 003, and beyond. The configuration variable
 ``DAGMAN_MAX_RESCUE_NUM`` :index:`DAGMAN_MAX_RESCUE_NUM` sets a
 maximum value for <XXX>; see
-section \ `3.5.23 <ConfigurationMacros.html#x33-2150003.5.23>`__ for the
-complete definition of this configuration variable. If you hit the
+:ref:`admin-manual/configuration-macros:configuration file entries for dagman`
+for the complete definition of this configuration variable. If you hit the
 ``DAGMAN_MAX_RESCUE_NUM`` :index:`DAGMAN_MAX_RESCUE_NUM` limit,
 the last Rescue DAG file is overwritten if the DAG fails again.
 
@@ -2972,8 +2969,8 @@ If the Rescue DAG file is generated before all retries of a node are
 completed, then the Rescue DAG file will also contain *Retry* entries.
 The number of retries will be set to the appropriate remaining number of
 retries. The configuration variable ``DAGMAN_RESET_RETRIES_UPON_RESCUE``
-:index:`DAGMAN_RESET_RETRIES_UPON_RESCUE`,
-section \ `3.5.23 <ConfigurationMacros.html#x33-2150003.5.23>`__,
+:index:`DAGMAN_RESET_RETRIES_UPON_RESCUE`
+(ref:`admin-manual/configuration-macros:configuration file entries for dagman`),
 controls whether or not node retries are reset in a Rescue DAG.
 
  Partial versus Full Rescue DAGs
@@ -3206,9 +3203,9 @@ status file for very large DAGs. If no value is specified, this value
 defaults to 60 seconds (as of version 8.5.8; previously, it defaulted to
 0). The node status file can be updated at most once per
 ``DAGMAN_USER_LOG_SCAN_INTERVAL``
-:index:`DAGMAN_USER_LOG_SCAN_INTERVAL`, as defined at
-section \ `3.5.23 <ConfigurationMacros.html#x33-2140003.5.23>`__, no
-matter how small the *minimumUpdateTime* value. Also, the node status
+:index:`DAGMAN_USER_LOG_SCAN_INTERVAL`, as defined in
+ref:`admin-manual/configuration-macros:configuration file entries for dagman`,
+no matter how small the *minimumUpdateTime* value. Also, the node status
 file will be updated when the DAG finishes, whether successfully or not,
 even if *minimumUpdateTime* seconds have not elapsed since the last
 update.
@@ -3297,9 +3294,9 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
    the node is a FINAL node.
 -  1 (STATUS_READY): All parents have finished, but the node is not yet
    running.
--  2 (STATUS_PRERUN): The node’s PRE script is running.
--  3 (STATUS_SUBMITTED): The node’s HTCondor job(s) are in the queue.
--  4 (STATUS_POSTRUN): The node’s POST script is running.
+-  2 (STATUS_PRERUN): The node's PRE script is running.
+-  3 (STATUS_SUBMITTED): The node's HTCondor job(s) are in the queue.
+-  4 (STATUS_POSTRUN): The node's POST script is running.
 -  5 (STATUS_DONE): The node has completed successfully.
 -  6 (STATUS_ERROR): The node has failed.
 
@@ -3355,7 +3352,7 @@ within each line are separated by a single space character.
 
     *timestamp* INTERNAL \*\*\* DAGMAN_STARTED *dagmanCondorID* \*\*\*
 
-    The *dagmanCondorID* field is the *condor_dagman* job’s
+    The *dagmanCondorID* field is the *condor_dagman* job's
     ``ClusterId`` attribute, a period, and the ``ProcId`` attribute.
 
  DAGMan exit
@@ -3401,10 +3398,10 @@ within each line are separated by a single space character.
     The *eventName* is one of the many defined event or meta-events
     given in the lists below.
 
-    The *condorID* field is the job’s ``ClusterId`` attribute, a period,
+    The *condorID* field is the job's ``ClusterId`` attribute, a period,
     and the ``ProcId`` attribute. There is no *condorID* assigned yet
     for some meta-events, such as PRE_SCRIPT_STARTED. For these, the
-    dash character (’-’) is printed.
+    dash character ('-') is printed.
 
     The *jobTag* field is defined for the Pegasus workflow manager. Its
     usage is generalized to be useful to other workflow managers.
@@ -3427,7 +3424,7 @@ within each line are separated by a single space character.
 
     This defines the string ``viz`` as the *jobTag* field. Without any
     of these added lines within the HTCondor submit description file,
-    the dash character (’-’) is printed for the *jobTag* field.
+    the dash character ('-') is printed for the *jobTag* field.
 
     The *sequenceNumber* is a monotonically-increasing number that
     starts at one. It is associated with each attempt at running a node.
@@ -3512,8 +3509,8 @@ Status Information for the DAG in a ClassAd
 :index:`DAG status in a job ClassAd<single: DAG status in a job ClassAd; DAGMan>`
 
 The *condor_dagman* job places information about the status of the DAG
-into its own job ClassAd. The attributes are fully described at section
- `A.2 <JobClassAdAttributes.html#x170-1234000A.2>`__. The attributes are
+into its own job ClassAd. The attributes are fully described in
+:doc:`/classad-attributes/job-classad-attributes`. The attributes are
 
 -  ``DAG_NodesTotal``
 -  ``DAG_NodesDone``
@@ -3528,7 +3525,7 @@ into its own job ClassAd. The attributes are fully described at section
 
 Note that most of this information is also available in the
 ``dagman.out`` file as described in
-section \ `2.10.7 <#x22-880002.10.7>`__.
+:ref:`users-manual/dagman-applications:dag monitoring and dag removal`.
 
 Utilizing the Power of DAGMan for Large Numbers of Jobs
 -------------------------------------------------------
@@ -3636,7 +3633,7 @@ jobs represented. Each of the two ways is presented separately:
           VARS job999 runnumber="999"
 
     The single submit description file for all these jobs utilizes the
-    ``runnumber`` variable value in its identification of the job’s
+    ``runnumber`` variable value in its identification of the job's
     files. This submit description file might appear as
 
     ::
@@ -3655,7 +3652,7 @@ jobs represented. Each of the two ways is presented separately:
     to ``job8.out``. The single log for all job events of the entire DAG
     is ``wholeDAG.log``. Using one file for the entire DAG meets the
     limitation that no macro substitution may be specified for the job
-    log file, and it is likely more efficient as well. This node’s
+    log file, and it is likely more efficient as well. This node's
     executable is invoked with
 
     ::
@@ -3720,7 +3717,7 @@ for the pool. The transfer of files (or not) when using
 based upon the job
 **universe**\ :index:`universe<single: universe; submit commands>` and whether or
 not there is a shared file system. See
-section \ `12 <Condorsubmit.html#x149-108400012>`__ for the details on
+:doc:`/man-pages/condor_submit` for the details on
 the submit command
 **initialdir**\ :index:`initialdir<single: initialdir; submit commands>`.
 
@@ -3836,8 +3833,9 @@ Here is an explanation of each of the items in the file:
    -  ``3``: the DAG has been aborted by an ABORT-DAG-ON specification
    -  ``4``: removed; the DAG has been removed by *condor_rm*
    -  ``5``: a cycle was found in the DAG
-   -  ``6``: the DAG has been halted; see section
-       `2.10.8 <#x22-890002.10.8>`__ for an explanation of halting a DAG
+   -  ``6``: the DAG has been halted; see the
+      :ref:`users-manual/dagman-applications:suspending a running dag` section
+      for an explanation of halting a DAG
 
    Note that any ``dag_status`` other than 0 corresponds to a non-zero
    exit code.
@@ -3885,11 +3883,11 @@ values can be specified using the **-append** flag to
 
     condor_submit_dag -append accounting_group=group_physics -append accounting_group_user=albert relativity.dag
 
-See
-section \ `3.6.7 <UserPrioritiesandNegotiation.html#x34-2390003.6.7>`__
+See :ref:`admin-manual/user-priorities-negotiation:group accounting` 
 for a discussion of group accounting and
-section \ `3.6.8 <UserPrioritiesandNegotiation.html#x34-2400003.6.8>`__
-for a discussion of accounting groups with hierarchical group quotas.
+:ref:`admin-manual/user-priorities-negotiation:accounting groups with
+hierarchical group quotas` for a discussion of accounting groups with
+hierarchical group quotas.
 :index:`DAGMan`
 
       

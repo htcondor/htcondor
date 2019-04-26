@@ -1,6 +1,6 @@
       
 
-HTCondor’s Power
+HTCondor's Power
 ================
 
 HTCondor is a software system that creates a High-Throughput Computing
@@ -51,7 +51,7 @@ resource management systems attach properties to the job queues
 themselves, resulting in user confusion over which queue to use as well
 as administrative hassle in constantly adding and editing queue
 properties to satisfy user demands. HTCondor implements ClassAds,
-:index:`ClassAd`\ a clean design that simplifies the user’s
+:index:`ClassAd`\ a clean design that simplifies the user's
 submission of jobs.
 
 ClassAds work in a fashion similar to the newspaper classified

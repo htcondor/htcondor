@@ -19,7 +19,7 @@ Description
 
 *condor\_now* tries to run the *now-job* now. The *vacate-job* is
 immediately vacated; after it terminates, if the schedd still has the
-claim to the vacated job’s slot – and it usually will – the schedd will
+claim to the vacated job's slot – and it usually will – the schedd will
 immediately start the now-job on that slot.
 
 If you specify multiple *vacate-job*\ s, each will be immediately
@@ -38,7 +38,7 @@ Options
     Print debugging output. Control the verbosity with the environment
     variables \_CONDOR\_TOOL\_DEBUG, as usual.
  **-name **\ **
-    Specify the scheduler(’s name) and (optionally) the pool to find it
+    Specify the scheduler('s name) and (optionally) the pool to find it
     in.
 
 General Remarks
@@ -52,15 +52,15 @@ must be idle and the vacated-job must be running.
 Examples
 --------
 
-To begin running job 17.3 as soon as possible using job 4.2’s slot:
+To begin running job 17.3 as soon as possible using job 4.2's slot:
 
 ::
 
       condor_now 17.3 4.2
 
-To try to figure out why that doesn’t work for the ‘magic’ scheduler in
-the ’gandalf’ pool, set the environment variable \_CONDOR\_TOOL\_DEBUG
-to ‘D\_FULLDEBUG’ and then:
+To try to figure out why that doesn't work for the ‘magic' scheduler in
+the 'gandalf' pool, set the environment variable \_CONDOR\_TOOL\_DEBUG
+to ‘D\_FULLDEBUG' and then:
 
 ::
 

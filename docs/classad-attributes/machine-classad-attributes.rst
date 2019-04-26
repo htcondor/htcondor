@@ -68,7 +68,7 @@ Machine ClassAd Attributes
     attribute will be ``True``. By default, it is ``False``.
     :index:`CheckpointPlatform<single: CheckpointPlatform; ClassAd machine attribute>`
  ``CheckpointPlatform``:
-    A string which opaquely encodes various aspects about a machine’s
+    A string which opaquely encodes various aspects about a machine's
     operating system, hardware, and kernel attributes. It is used to
     identify systems where previously taken checkpoints for the standard
     universe may resume.
@@ -113,11 +113,11 @@ Machine ClassAd Attributes
     in the /proc/cpuinfo file.
     :index:`CurrentRank<single: CurrentRank; ClassAd machine attribute>`
  ``CurrentRank``:
-    A float which represents this machine owner’s affinity for running
+    A float which represents this machine owner's affinity for running
     the HTCondor job which it is currently hosting. If not currently
     hosting an HTCondor job, ``CurrentRank`` is 0.0. When a machine is
-    claimed, the attribute’s value is computed by evaluating the
-    machine’s ``Rank`` expression with respect to the current job’s
+    claimed, the attribute's value is computed by evaluating the
+    machine's ``Rank`` expression with respect to the current job's
     ClassAd. :index:`DetectedCpus<single: DetectedCpus; ClassAd machine attribute>`
  ``DetectedCpus``:
     Set by the value of configuration variable ``DETECTED_CORES``
@@ -254,7 +254,7 @@ Machine ClassAd Attributes
     If the configuration triggers the detection of virtual machine
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
-    can’t start a VM (even if the appropriate software is detected).
+    can't start a VM (even if the appropriate software is detected).
     :index:`IsWakeAble<single: IsWakeAble; ClassAd machine attribute>`
  ``IsWakeAble``:
     A boolean value that when ``True`` identifies that the machine has
@@ -369,7 +369,7 @@ Machine ClassAd Attributes
     :index:`JobRankPreemptions<single: JobRankPreemptions; ClassAd machine attribute>`
  ``JobRankPreemptions``:
     The total number of times a running job has been preempted on this
-    machine due to the machine’s rank of jobs since the *condor\_startd*
+    machine due to the machine's rank of jobs since the *condor\_startd*
     started running.
     :index:`JobStarts<single: JobStarts; ClassAd machine attribute>`
  ``JobStarts``:
@@ -419,7 +419,7 @@ Machine ClassAd Attributes
     A floating point number representing the current load average.
     :index:`Machine<single: Machine; ClassAd machine attribute>`
  ``Machine``:
-    A string with the machine’s fully qualified host name.
+    A string with the machine's fully qualified host name.
     :index:`MachineMaxVacateTime<single: MachineMaxVacateTime; ClassAd machine attribute>`
  ``MachineMaxVacateTime``:
     An integer expression that specifies the time in seconds the machine
@@ -568,13 +568,13 @@ Machine ClassAd Attributes
      ``"SL6"``:
         for Scientific Linux version 6
      ``"SLFermi5"``:
-        for Fermi’s Scientific Linux version 5
+        for Fermi's Scientific Linux version 5
      ``"SLFermi6"``:
-        for Fermi’s Scientific Linux version 6
+        for Fermi's Scientific Linux version 6
      ``"SLCern5"``:
-        for CERN’s Scientific Linux version 5
+        for CERN's Scientific Linux version 5
      ``"SLCern6"``:
-        for CERN’s Scientific Linux version 6
+        for CERN's Scientific Linux version 6
 
     For MacOS operating systems, it is the value of the
     ``OpSysShortName`` attribute concatenated with the string version of
@@ -745,9 +745,9 @@ Machine ClassAd Attributes
      ``"SL"``:
         for Scientific Linux
      ``"SLFermi"``:
-        for Fermi’s Scientific Linux
+        for Fermi's Scientific Linux
      ``"SLCern"``:
-        for CERN’s Scientific Linux
+        for CERN's Scientific Linux
 
     :index:`OpSysShortName<single: OpSysShortName; ClassAd machine attribute>`
  ``OpSysShortName``:
@@ -779,9 +779,9 @@ Machine ClassAd Attributes
      ``"SL"``:
         for Scientific Linux
      ``"SLFermi"``:
-        for Fermi’s Scientific Linux
+        for Fermi's Scientific Linux
      ``"SLCern"``:
-        for CERN’s Scientific Linux
+        for CERN's Scientific Linux
 
     :index:`OpSysVer<single: OpSysVer; ClassAd machine attribute>`
  ``OpSysVer``:
@@ -829,7 +829,7 @@ Machine ClassAd Attributes
     :index:`RecentJobRankPreemptions<single: RecentJobRankPreemptions; ClassAd machine attribute>`
  ``RecentJobRankPreemptions``:
     The total number of times a running job has been preempted on this
-    machine due to the machine’s rank of jobs in the last twenty
+    machine due to the machine's rank of jobs in the last twenty
     minutes.
     :index:`RecentJobStarts<single: RecentJobStarts; ClassAd machine attribute>`
  ``RecentJobStarts``:
@@ -852,7 +852,7 @@ Machine ClassAd Attributes
     expression of how much retirement time the machine offers to new
     jobs, whereas ``RetirementTimeRemaining`` is the negotiated amount
     of time remaining for the current running job. This may be less than
-    the amount offered by the machine’s ``MaxJobRetirementTime``
+    the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
     :index:`SingularityVersion<single: SingularityVersion; ClassAd machine attribute>`
  ``SingularityVersion``:
@@ -891,7 +891,7 @@ Machine ClassAd Attributes
     interface, that information will be included here as well.
     :index:`State<single: State; ClassAd machine attribute>`
  ``State``:
-    String which publishes the machine’s HTCondor state. Can be:
+    String which publishes the machine's HTCondor state. Can be:
 
      ``"Owner"``:
         The machine owner is using the machine, and it is unavailable to
@@ -1158,13 +1158,13 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     relationship between ``RemoteUser`` and ``RemoteOwner``.
     :index:`PreemptingRank<single: PreemptingRank; ClassAd machine attribute (in Claimed State)>`
  ``PreemptingRank``:
-    A float which represents this machine owner’s affinity for running
+    A float which represents this machine owner's affinity for running
     the HTCondor job which is waiting for the current job to finish or
     be preempted. If not currently hosting an HTCondor job,
     ``PreemptingRank`` is undefined. When a machine is claimed and there
-    is already a job running, the attribute’s value is computed by
-    evaluating the machine’s ``Rank`` expression with respect to the
-    preempting job’s ClassAd.
+    is already a job running, the attribute's value is computed by
+    evaluating the machine's ``Rank`` expression with respect to the
+    preempting job's ClassAd.
     :index:`TotalClaimRunTime<single: TotalClaimRunTime; ClassAd machine attribute (in Claimed State)>`
  ``TotalClaimRunTime``:
     A running total of the amount of time (in seconds) that all jobs
@@ -1189,7 +1189,7 @@ no job are running, none of these attributes will be defined.
 :index:`JobId<single: JobId; ClassAd machine attribute (when running)>`
 
  ``JobId``:
-    The job’s identifier (for example, 152.3), as seen from *condor\_q*
+    The job's identifier (for example, 152.3), as seen from *condor\_q*
     on the submitting machine.
     :index:`JobStart<single: JobStart; ClassAd machine attribute (when running)>`
  ``JobStart``:
@@ -1273,14 +1273,14 @@ the *prefix string* assigned for the GPU.
     :index:`<name>DeviceName<single: <name>DeviceName; ClassAd machine attribute (for GPU resources)>`
  ``<name>DeviceName``:
     For CUDA or Open CL devices, a string representing the
-    manufacturer’s proprietary device name.
+    manufacturer's proprietary device name.
     :index:`<name>DieTempC<single: <name>DieTempC; ClassAd machine attribute (for GPU resources)>`
  ``<name>DieTempC``:
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the GPU die.
     :index:`<name>DriverVersion<single: <name>DriverVersion; ClassAd machine attribute (for GPU resources)>`
  ``<name>DriverVersion``:
-    For CUDA devices, a string representing the manufacturer’s driver
+    For CUDA devices, a string representing the manufacturer's driver
     version.
     :index:`<name>ECCEnabled<single: <name>ECCEnabled; ClassAd machine attribute (for GPU resources)>`
  ``<name>ECCEnabled``:
@@ -1305,11 +1305,11 @@ the *prefix string* assigned for the GPU.
     this GPU.
     :index:`<name>OpenCLVersion<single: <name>OpenCLVersion; ClassAd machine attribute (for GPU resources)>`
  ``<name>OpenCLVersion``:
-    For Open CL devices, a string representing the manufacturer’s
+    For Open CL devices, a string representing the manufacturer's
     version number.
     :index:`<name>RuntimeVersion<single: <name>RuntimeVersion; ClassAd machine attribute (for GPU resources)>`
  ``<name>RuntimeVersion``:
-    For CUDA devices, a string representing the manufacturer’s version
+    For CUDA devices, a string representing the manufacturer's version
     number.
 
 The following attributes are advertised for a machine in which

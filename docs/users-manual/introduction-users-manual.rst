@@ -21,7 +21,7 @@ activity, low load average, etc.), HTCondor can effectively harness
 otherwise idle machines throughout a pool of machines. This is important
 because often times the amount of compute power represented by the
 aggregate total of all the non-dedicated desktop workstations sitting on
-people’s desks throughout the organization is far greater than the
+people's desks throughout the organization is far greater than the
 compute power of a dedicated central resource.
 
 HTCondor has several unique capabilities at its disposal which are

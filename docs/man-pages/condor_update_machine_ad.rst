@@ -19,7 +19,7 @@ Description
 -----------
 
 *condor\_update\_machine\_ad* modifies the specified *condor\_startd*
-daemon’s machine ClassAd. The ClassAd in the file given by
+daemon's machine ClassAd. The ClassAd in the file given by
 ``path/to/update-ad`` represents the changed attributes. The changes
 persists until the *condor\_startd* restarts. If no file is specified on
 the command line, *condor\_update\_machine\_ad* reads the update ClassAd
@@ -46,7 +46,7 @@ Options
  **-version**
     Display the HTCondor version and exit
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *startdname*
     Send the command to a machine identified by *startdname*

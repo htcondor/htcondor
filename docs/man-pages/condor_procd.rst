@@ -53,9 +53,9 @@ Options
     specified, the *condor\_procd* will allocate the GID itself.
  **-P **\ *PID*
     If not specified, the *condor\_procd* will use the
-    *condor\_procd*\ ’s parent, which may not be PID 1 on Unix, as the
+    *condor\_procd*\ 's parent, which may not be PID 1 on Unix, as the
     parent of the *condor\_procd* and the root of the tracking family.
-    When not specified, if the *condor\_procd*\ ’s parent PID dies, the
+    When not specified, if the *condor\_procd*\ 's parent PID dies, the
     *condor\_procd* exits. When specified, the *condor\_procd* will
     track this *PID* family in question and not also exit if the PID
     exits.

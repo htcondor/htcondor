@@ -32,7 +32,7 @@ New Features:
 
 Bugs Fixed:
 
--  Support for the *condor\_ssh\_to\_job* command, when ssh’ing to a
+-  Support for the *condor\_ssh\_to\_job* command, when ssh'ing to a
    Singularity job, requires the nsenter command. Previous versions of
    HTCondor relied on features of nsenter not universally available.
    8.8.2 now works with all known versions of nsenter. :ticket:`6934`
@@ -52,7 +52,7 @@ Bugs Fixed:
 -  In some situations, the GPU monitoring code could disagree with the
    GPU discovery code about the mapping between GPU device indices and
    actual devices. Both now use PCI bus IDs to establish the mapping.
-   One consequence of this change is that we now prefer to use NVidia’s
+   One consequence of this change is that we now prefer to use NVidia's
    management library, rather than the CUDA run-time library, when doing
    discovery. :ticket:`6903`
    :ticket:`6901`
@@ -98,10 +98,10 @@ Release Notes:
 Known Issues:
 
 -  GPU resource monitoring is no longer enabled by default after we
-   received reports indicating excessive CPU usage. We believe we’ve
+   received reports indicating excessive CPU usage. We believe we've
    fixed the problem, but would like to get updated reports from users
    who were previously affected. To enable (the patched) GPU resource
-   monitoring, add ‘use feature: GPUsMonitor’ to the HTCondor
+   monitoring, add ‘use feature: GPUsMonitor' to the HTCondor
    configuration. Thank you.
 
    :ticket:`6857`
@@ -147,7 +147,7 @@ Bugs Fixed:
    ``CREDD_POLLING_TIMEOUT``\ :index:`CREDD_POLLING_TIMEOUT`.
    :ticket:`6887`
 -  Python binding API method Schedd.submit() and submitMany() now edits
-   job ``Requirements`` expression to consider the job ad’s
+   job ``Requirements`` expression to consider the job ad's
    ``RequestCPUs`` and ``RequestGPUs`` attributes. :ticket:`6918`
 
 Version 8.8.0
@@ -163,7 +163,7 @@ New Features:
    ``minihtcondor`` on Debian and Ubuntu based systems. This
    mini-HTCondor package configures HTCondor to work on a single
    machine. :ticket:`6823`
--  Made the Python bindings’ ``JobEvent`` API more Pythonic by handling
+-  Made the Python bindings' ``JobEvent`` API more Pythonic by handling
    optional event attributes as if the ``JobEvent`` object were a
    dictionary, instead. See section `Python
    Bindings <../apis/python-bindings.html>`__ for details. :ticket:`6820`

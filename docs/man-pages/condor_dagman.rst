@@ -226,7 +226,7 @@ Options
     *condor_submit_dag* if lazy submit file generation is used for
     nested DAGs.) Allows the specification of an alternate
     *condor_dagman* executable to be used instead of the one found in
-    the user’s path. This must be a fully qualified path.
+    the user's path. This must be a fully qualified path.
  **-outfile_dir **\ *directory*
     (This argument is included only to be passed to
     *condor_submit_dag* if lazy submit file generation is used for
@@ -271,7 +271,7 @@ Options
  **-DoRecovery**
     Causes *condor_dagman* to start in recovery mode. This means that
     it reads the relevant job user log(s) and catches up to the given
-    DAG’s previous state before submitting any new jobs.
+    DAG's previous state before submitting any new jobs.
  **-dag **\ *filename*
     *filename* is the name of the DAG input file that is set as an
     argument to *condor_submit_dag*, and passed to *condor_dagman*.

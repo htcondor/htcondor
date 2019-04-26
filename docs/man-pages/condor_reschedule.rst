@@ -20,7 +20,7 @@ Synopsis
 Description
 -----------
 
-*condor\_reschedule* updates the information about a set of machines’
+*condor\_reschedule* updates the information about a set of machines'
 resources and jobs to the central manager. This command is used to force
 an update before viewing the current status of a machine. Viewing the
 status of a machine is done with the *condor\_status* command.
@@ -46,14 +46,14 @@ Options
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number
  **-name **\ *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
  **-addr **\ *"<a.b.c.d:port>"*
-    Send the command to a machine’s master located at *"<a.b.c.d:port>"*
+    Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-constraint **\ *expression*

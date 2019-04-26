@@ -10,7 +10,7 @@ Exceptional Features
     machine running a job submitted to HTCondor becomes unavailable, the
     job can be check pointed. :index:`checkpoint`\ The job may
     continue after migrating :index:`migration`\ to another
-    machine. HTCondor’s checkpoint feature
+    machine. HTCondor's checkpoint feature
     :index:`periodic<single: periodic; checkpoint>`\ periodically checkpoints a job
     even in lieu of migration in order to safeguard the accumulated
     computation time on a job from being lost in the event of a system
@@ -26,7 +26,7 @@ Exceptional Features
     that submitted the job on the workstation where it was originally
     submitted, no matter on which machine it really ends up executing
     on.
- No Changes Necessary to User’s Source Code.
+ No Changes Necessary to User's Source Code.
     No special programming is required to use HTCondor. HTCondor is able
     to run non-interactive programs. The checkpoint and migration of
     programs by HTCondor is transparent and automatic, as is the use of
@@ -49,7 +49,7 @@ Exceptional Features
     As grid computing becomes a reality, HTCondor is already there. The
     technique of glidein allows jobs submitted to HTCondor to be
     executed on grid machines in various locations worldwide. As the
-    details of grid computing evolve, so does HTCondor’s ability,
+    details of grid computing evolve, so does HTCondor's ability,
     starting with Globus-controlled resources.
  Sensitive to the Desires of Machine Owners.
     The owner of a machine has complete priority over the use of the
@@ -69,7 +69,7 @@ Exceptional Features
     workstation activity detectable at certain hours before HTCondor
     could start a job. Job requirements/preferences and resource
     availability constraints can be described in terms of powerful
-    expressions, resulting in HTCondor’s adaptation to nearly any
+    expressions, resulting in HTCondor's adaptation to nearly any
     desired policy.
 
 :index:`overview<single: overview; HTCondor>` :index:`overview`

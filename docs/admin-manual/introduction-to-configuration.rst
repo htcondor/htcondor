@@ -7,7 +7,7 @@ Introduction to Configuration
 :index:`configuration: introduction`
 
 This section of the manual contains general information about HTCondor
-configuration, relating to all parts of the HTCondor system. If you’re
+configuration, relating to all parts of the HTCondor system. If you're
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
@@ -62,7 +62,7 @@ Ordered Evaluation to Set the Configuration
 
 :index:`evaluation order<single: evaluation order; configuration file>`
 
-Multiple files, as well as a program’s environment variables, determine
+Multiple files, as well as a program's environment variables, determine
 the configuration. The order in which attributes are defined is
 important, as later definitions override earlier definitions. The order
 in which the (multiple) configuration files are parsed is designed to
@@ -385,12 +385,12 @@ different requirements for which parameters need to be specified
 individually. This example works for the *condor_schedd*, and more
 local configuration can, and likely would be specified.
 
-Also note that each daemon’s log file must be specified individually,
+Also note that each daemon's log file must be specified individually,
 and in two places: one specification is for use by the *condor_master*,
 and the other is for use by the daemon itself. In the example, the
 ``XYZZY`` *condor_schedd* configuration variable
 ``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the *condor_master*
-daemon’s ``XYZZY_LOG``.
+daemon's ``XYZZY_LOG``.
 
 Comments and Line Continuations
 -------------------------------
@@ -584,7 +584,7 @@ Consider the further example
 In this example, the bar character at the end of the line causes a
 script to be invoked, and the output of the script is incorporated into
 the current configuration. The same immediate parsing and evaluation
-occurs in this case as when a file’s contents are included.
+occurs in this case as when a file's contents are included.
 
 For pools that are transitioning to using this new syntax in
 configuration, while still having some tools and daemons with HTCondor
@@ -642,7 +642,7 @@ Error messages (unlike warnings) will prevent the successful use of the
 configuration file. This will, for example, prevent a daemon from
 starting, and prevent *condor_config_val* from returning a value.
 
-Here’s an example of using an error message in a configuration file
+Here's an example of using an error message in a configuration file
 (combined with some of the new include features documented above):
 
 ::
@@ -770,7 +770,7 @@ description files and configuration files are read using the same
 parser, so these functions may be used in both submit description files
 and configuration files.
 
-Case is significant in the function’s name, so use the same letter case
+Case is significant in the function's name, so use the same letter case
 as given in these definitions.
 
  ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
@@ -941,25 +941,25 @@ restart of HTCondor in order to use the changed value.
     The host name of the local machine, without a domain name.
 
 ``$(IP_ADDRESS)``\ :index:`IP_ADDRESS`
-    The ASCII string version of the local machine’s “most public” IP
+    The ASCII string version of the local machine's “most public” IP
     address. This address may be IPv4 or IPv6, but the macro will always
     be set.
 
     HTCondor selects the “most public” address heuristically. Your
     configuration should not depend on HTCondor picking any particular
-    IP address for this macro; this macro’s value may not even be one of
+    IP address for this macro; this macro's value may not even be one of
     the IP addresses HTCondor is configured to advertise.
 
     labelparam:IPv4Address
 
  ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS`
-    The ASCII string version of the local machine’s “most public” IPv4
+    The ASCII string version of the local machine's “most public” IPv4
     address; unset if the local machine has no IPv4 address.
 
     See ``IP_ADDRESS`` about “most public”.
 
  ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS`
-    The ASCII string version of the local machine’s “most public” IPv6
+    The ASCII string version of the local machine's “most public” IPv6
     address; unset if the local machine has no IPv6 address.
 
     See ``IP_ADDRESS`` about “most public”.
@@ -1051,11 +1051,11 @@ determined automatically at run time but which can be overwritten.
     ``$(OPSYS)``.
 
 ``$(UNAME_ARCH)``\ :index:`UNAME_ARCH`
-    The architecture as reported by *uname*\ (2)’s ``machine`` field.
+    The architecture as reported by *uname*\ (2)'s ``machine`` field.
     Always the same as ``ARCH`` on Windows.
 
 ``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS`
-    The operating system as reported by *uname*\ (2)’s ``sysname``
+    The operating system as reported by *uname*\ (2)'s ``sysname``
     field. Always the same as ``OPSYS`` on Windows.
 
 ``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY`

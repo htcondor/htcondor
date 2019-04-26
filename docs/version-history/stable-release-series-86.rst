@@ -39,7 +39,7 @@ Bugs Fixed:
    to be transferred to the wrong directory on Windows. This would
    usually cause output file transfer to fail. :ticket:`6747`
 -  Fixed a bug that could cause grid-type ``condor`` jobs under the grid
-   universe to fail if the job’s sandbox is transferred more than once.
+   universe to fail if the job's sandbox is transferred more than once.
    :ticket:`6791`
 -  Fixed a bug where Singularity would not be usable if Docker was not
    installed. :ticket:`6772`
@@ -66,7 +66,7 @@ Bugs Fixed:
    the second argument of an ternary operator is omitted in a ``START``
    expression. ``(expression ?: value)`` :ticket:`6798`
 -  Fixed a bug which would cause certain valid URLs not be recognized.
-   This allows, for example, ‘s3’ to be used as a custom file transfer
+   This allows, for example, ‘s3' to be used as a custom file transfer
    plug-in. :ticket:`6722`
 -  Fixed a bug in file transfer where jobs would go on hold if they
    created a domain socket, which the FileTransfer module would
@@ -130,7 +130,7 @@ Bugs Fixed:
 -  Fixed a bug that prevented the *condor\_starter* from determining the
    status of a VM that has previously been shut down. :ticket:`6704`
 -  Fixed a bug where the *condor\_gridmanager* would consider grid-type
-   gce jobs as completed when a query of the instances’ status failed.
+   gce jobs as completed when a query of the instances' status failed.
    :ticket:`6712`
 -  Fixed a bug where using the warning keyword in a submit file would
    cause the subsequent queue statement to be reported as invalid.
@@ -165,7 +165,7 @@ Bugs Fixed:
 -  When using configuration parameter ``SINGULARITY_TARGET_DIR`` to
    mount the job scratch directory into the Singularity container,
    update the ``X509_USER_PROXY`` environment variable to point to the
-   proxy file’s location inside the container. :ticket:`6625`
+   proxy file's location inside the container. :ticket:`6625`
 -  Corrected a bug which could cause the shared port daemon to hang if
    it had been restarted, HTCondor had been configured with an allowable
    port range, and that port range had filled up. :ticket:`6596`
@@ -277,7 +277,7 @@ Bugs Fixed:
    immediately evicted). :ticket:`6583`
 -  The metaknob ``policy: hold_if_memory_exceeded`` and
    ``policy: preempt_if_memory_exceeded`` now ignore VM universe jobs.
-   These jobs can’t exceed their requested memory. :ticket:`6583`
+   These jobs can't exceed their requested memory. :ticket:`6583`
 -  Fixed a bug which mischaracterized the ``MemoryUsage`` of VM universe
    jobs. This should allow VM universe jobs to run when
    ``feature: Hold_If_Memory_Exceeded`` is enabled. :ticket:`6577`
@@ -440,7 +440,7 @@ Bugs Fixed:
 -  *condor\_status* will now print longer lines when its output is
    redirected into a pipe, rather than its input coming from one.
    :ticket:`6381`
--  Fixed a crash in *condor\_transferer* when a connection can’t be
+-  Fixed a crash in *condor\_transferer* when a connection can't be
    established with its peer. :ticket:`6412`
 -  Fixed a bug that caused *condor\_job\_router\_info* to crash if
    configuration parameter ``JOB_ROUTER_ENTRIES_REFRESH`` was set to a
@@ -452,8 +452,8 @@ Bugs Fixed:
    of this attribute was changed after the job was submitted. :ticket:`6396`
 -  Fixed a bug that rarely caused slurm jobs to be held. When slurm
    reports memory utilization and it is a multiple of 1024k, Slurm uses
-   the ’M’ suffix. The parsing logic was extended to also interpret the
-   ’M’, ’G’, ’T’, and ’P’ suffixes for memory utilization. :ticket:`6431`
+   the 'M' suffix. The parsing logic was extended to also interpret the
+   'M', 'G', 'T', and 'P' suffixes for memory utilization. :ticket:`6431`
 -  The condor-bosco RPM ensures the *rsync* is installed as required by
    the Bosco scripts. :ticket:`6439`
 -  To avoid unnecessary transfers when ``copy_to_spool`` is set in the
@@ -482,10 +482,10 @@ Bugs Fixed:
 -  Fixed a bug where the negotiator would make matches where the daemons
    involved did not share an IP version, and thus could not talk to each
    other. :ticket:`6351`
--  HTCondor now works properly with systemd’s watchdog feature on all
-   flavors of Linux. Previously, the *condor\_master* wouldn’t send
-   alive messages to systemd if systemd wasn’t part of the Linux
-   distribution’s standard configuration. This would result in systemd
+-  HTCondor now works properly with systemd's watchdog feature on all
+   flavors of Linux. Previously, the *condor\_master* wouldn't send
+   alive messages to systemd if systemd wasn't part of the Linux
+   distribution's standard configuration. This would result in systemd
    killing the HTCondor daemons after a short period of time. :ticket:`6385`
 -  Fixed handling of backslashes in string values in old ClassAds format
    in the Python bindings. :ticket:`6382`
@@ -498,7 +498,7 @@ Bugs Fixed:
 -  Fixed a bug that caused a machine to stick in the Preempting/Vacating
    state after a job was removed when a ``JOB_EXIT_HOOK`` was defined.
    :ticket:`6383`
--  Added type enforcement rules for cgroups to HTCondor’s SELinux
+-  Added type enforcement rules for cgroups to HTCondor's SELinux
    profile. :ticket:`6168`
 -  Fixed a bug where setting ``delegate_job_gsi_credentials_lifetime``
    to 0 in a submit description file was treated the same as not setting
@@ -532,13 +532,13 @@ Bugs Fixed:
    could cause HTCondor daemons to except. :ticket:`6339`
 -  Fixed a bug where a cross protocol CCB connection would cause the
    *condor\_shadow* or *condor\_schedd* to except. :ticket:`6344`
--  Fixed a bug where the wildcard ’\*’ in ALLOW or DENY lists was being
+-  Fixed a bug where the wildcard '\*' in ALLOW or DENY lists was being
    interpreted as only matching IPv4 addresses. It now properly matches
    any address family. :ticket:`6340`
 -  Fixed a bug where reverse resolutions could return the string
    representation of the address in question instead of failing. This
    resulted in spurious warnings of the form "WARNING: forward
-   resolution of 2001:630:10:f001::19a0 doesn’t match
+   resolution of 2001:630:10:f001::19a0 doesn't match
    2001:630:10:f001::19a0!" :ticket:`6338`
 -  Fixed a bug which prevented using an ImDisk RAM disk as the execute
    directory on Windows. :ticket:`6324`
@@ -591,7 +591,7 @@ Bugs Fixed:
 -  Fixed a bug that could cause *condor\_submit* to fail to submit a job
    with a proxy file to a *condor\_schedd* older than 8.5.8, due to the
    absence of an X.509 CA certificates directory. :ticket:`6258`
--  Restored a check in *condor\_submit* about whether the job’s X.509
+-  Restored a check in *condor\_submit* about whether the job's X.509
    proxy has sufficient lifetime remaining. :ticket:`6283`
 -  Fixed a bug in *condor\_dagman* where the DAG status file showed an
    incorrect status code if submit attempts failed for the final node.
@@ -637,7 +637,7 @@ Release Notes:
 
 Bugs Fixed:
 
--  Fixed a bug that rarely corrupts the *condor\_schedd*\ ’s job queue
+-  Fixed a bug that rarely corrupts the *condor\_schedd*\ 's job queue
    log file when the input sandbox of a job with an X.509 proxy file is
    spooled. :ticket:`6240`
 -  Fixed a memory leak in the Python bindings related to logging.
@@ -666,7 +666,7 @@ New Features:
 Bugs Fixed:
 
 -  Fixed a bug that could cause *condor\_store\_cred* to fail on Windows
-   due to a case-sensitive check of the user’s account name. :ticket:`6200`
+   due to a case-sensitive check of the user's account name. :ticket:`6200`
 -  Updated Open MPI helper script to catch and handle SIGTERM and to use
    bash explicitly. :ticket:`6194`
 -  Docker Universe jobs now update the RemoteSysCpu attributes for job
@@ -677,7 +677,7 @@ Bugs Fixed:
    hosts. :ticket:`6185`
 -  Fixed a bug that prevented ``SUBMIT_REQUIREMENT`` and
    ``JOB_TRANSFORM`` expressions from referencing job attributes
-   describing the job’s X.509 proxy credential. :ticket:`6188`
+   describing the job's X.509 proxy credential. :ticket:`6188`
 -  The Linux kernel tuning script no longer adjusts some kernel
    parameters unless a *condor\_schedd* will be started by the master.
    :ticket:`6208`
@@ -784,15 +784,15 @@ Bugs Fixed:
    white space. :ticket:`6128`
 -  Fixed several bugs in how the Job Router writes to job event logs.
    :ticket:`6092`
--  Removed Bosco’s attempt to configure a default value for
+-  Removed Bosco's attempt to configure a default value for
    **grid\_resource** in the submit description file, as
    *condor\_submit* no longer supports this ability. Also, Bosco now
    works with Slurm clusters. :ticket:`6106`
--  Changed Bosco’s configuration of the *condor\_ft-gahp* to eliminate
-   worrying error messages in the *condor\_ft-gahp*\ ’s log file.
+-  Changed Bosco's configuration of the *condor\_ft-gahp* to eliminate
+   worrying error messages in the *condor\_ft-gahp*\ 's log file.
    :ticket:`6107`
 -  Fixed a bug that could cause a grid batch job submitted to PBS or
-   Slurm to go on hold when the job’s X.509 proxy is refreshed. :ticket:`6136`
+   Slurm to go on hold when the job's X.509 proxy is refreshed. :ticket:`6136`
 -  Fixed a bug where the *condor\_gridmanager* fails to put a job on
    hold due to the desired hold reason containing invalid characters.
    :ticket:`6142`
@@ -843,7 +843,7 @@ Bugs Fixed:
    same claim. When the starter exits, it notifies the shadow, which
    tells the startd to kill the starter. Immediately after the shadows
    tells the startd, it fetches the next job, and tries to start it. If
-   the starter hasn’t completely exited yet (perhaps it needs to clean
+   the starter hasn't completely exited yet (perhaps it needs to clean
    up a large sandbox), it will notice the shadow has closed the command
    socket, and the starter will go into disconnected mode, and get
    confused. This has been fixed. :ticket:`6049`
@@ -860,8 +860,8 @@ Bugs Fixed:
 -  Fixed a bug that could cause re-installation of a remote cluster to
    fail in Bosco. :ticket:`6042`
 -  Fixed a bug with handling the proxy files of grid-type batch jobs
-   when the proxy’s file name is a relative path. :ticket:`6053`
--  Fixed a bug that caused the *batch\_gahp* to crash when a job’s X.509
+   when the proxy's file name is a relative path. :ticket:`6053`
+-  Fixed a bug that caused the *batch\_gahp* to crash when a job's X.509
    proxy is refreshed and the *batch\_gahp* is configured to not create
    a limited copy of the proxy. :ticket:`6051`
 -  Fixed a bug in the virtual machine universe where ``RequestMemory``

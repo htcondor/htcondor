@@ -39,7 +39,7 @@ Job and Daemon Logs
     the value of configuration variable ``<SUBSYS>_DEBUG``
     :index:`<SUBSYS>_DEBUG`. The possible values for
     ``<SUBSYS>_DEBUG`` categorize events, such that it is possible to
-    control the level and quantity of events written to the daemon’s
+    control the level and quantity of events written to the daemon's
     log.
 
     Configuration variables that affect daemon logs are
@@ -107,7 +107,7 @@ Job and Daemon Logs
     The optional *condor\_shared\_port* audit log records connections
     made through the ``DAEMON_SOCKET_DIR``
     :index:`DAEMON_SOCKET_DIR`. Each record includes the source
-    address, the socket file name, and the target process’s PID, UID,
+    address, the socket file name, and the target process's PID, UID,
     GID, executable path, and command line.
 
     This log exists to help administrators track the activities of pool
@@ -142,7 +142,7 @@ Job and Daemon Logs
 
  accountant log
     The accountant log is a transactional representation of the
-    *condor\_negotiator* daemon’s database of accounting information,
+    *condor\_negotiator* daemon's database of accounting information,
     which are user priorities. The file name of the accountant log is
     ``$(SPOOL)/Accountantnew.log``. Within the log, users are identified
     by username@uid\_domain.

@@ -68,7 +68,7 @@ be within the directory defined by the environment variable ``TMPDIR``.
 When the ssh session is finished, this directory and the ssh keys
 contained within it are removed.
 
-See the HTCondor administrator’s manual section on configuration for
+See the HTCondor administrator's manual section on configuration for
 details of the configuration variables related to
 *condor\_ssh\_to\_job*.
 
@@ -111,7 +111,7 @@ specifying
 causes *condor\_ssh\_to\_job* to attempt to connect to the corresponding
 instance via *ssh*. This attempts invokes *ssh* directly, bypassing the
 HTCondor networking layer. It supplies *ssh* with the public DNS name of
-the instance and the name of the file with the new key pair’s private
+the instance and the name of the file with the new key pair's private
 key. For the connection to succeed, the instance must have started an
 *ssh* server, and its security group(s) must allow connections on port
 22. Conventionally, images will allow logins using the key pair on a
@@ -206,7 +206,7 @@ Therefore, the placeholder string "remote" is perfectly fine.
 
 This example uses *condor\_ssh\_to\_job* to accomplish the task of
 running *rsync* to synchronize a local file with a remote file in the
-job’s working directory. Job id 32.0 is used in place of a host name in
+job's working directory. Job id 32.0 is used in place of a host name in
 this example. This causes *rsync* to insert the expected job id in the
 arguments to *condor\_ssh\_to\_job*.
 

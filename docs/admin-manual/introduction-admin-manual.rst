@@ -3,9 +3,9 @@
 Introduction
 ============
 
-This is the HTCondor Administrator’s Manual. Its purpose is to aid in
+This is the HTCondor Administrator's Manual. Its purpose is to aid in
 the installation and administration of an HTCondor pool. For help on
-using HTCondor, see the HTCondor User’s Manual.
+using HTCondor, see the HTCondor User's Manual.
 
 An HTCondor pool
 :index:`pool<single: pool; HTCondor>`\ :index:`pool of machines` is
@@ -49,7 +49,7 @@ machine that is providing that service: :index:`central manager`
  Central Manager
     There can be only one central manager for the pool. This machine is
     the collector of information, and the negotiator between resources
-    and resource requests. These two halves of the central manager’s
+    and resource requests. These two halves of the central manager's
     responsibility are performed by separate daemons, so it would be
     possible to have different machines providing those two services.
     However, normally they both live on the same machine. This machine
@@ -159,7 +159,7 @@ started under HTCondor and what they do:
  *condor\_shadow*
     This daemon runs on the machine where a given request was submitted
     and acts as the resource manager for the request. Jobs that are
-    linked for HTCondor’s standard universe, which perform remote system
+    linked for HTCondor's standard universe, which perform remote system
     calls, do so via the *condor\_shadow*. Any system call performed on
     the remote execute machine is sent over the network, back to the
     *condor\_shadow* which performs the system call on the submit
@@ -230,7 +230,7 @@ started under HTCondor and what they do:
     This daemon runs on Windows platforms to manage password storage in
     a secure manner. :index:`condor_had daemon`
  *condor\_had*
-    This daemon implements the high availability of a pool’s central
+    This daemon implements the high availability of a pool's central
     manager through monitoring the communication of necessary daemons.
     If the current, functioning, central manager machine stops working,
     then this daemon ensures that another machine takes its place, and
@@ -238,7 +238,7 @@ started under HTCondor and what they do:
     :index:`condor_replication daemon`
  *condor\_replication*
     This daemon assists the *condor\_had* daemon by keeping an updated
-    copy of the pool’s state. This state provides a better transition
+    copy of the pool's state. This state provides a better transition
     from one machine to the next, in the event that the central manager
     machine stops working. :index:`condor_transferer daemon`
  *condor\_transferer*

@@ -48,7 +48,7 @@ Current Limitations
        reasons, a file opened for both reading and writing will result
        in a warning but not an error.
     #. A fair amount of disk space must be available on the submitting
-       machine for storing a job’s checkpoint images. A checkpoint image
+       machine for storing a job's checkpoint images. A checkpoint image
        is approximately equal to the virtual memory consumed by a job
        while it runs. If disk space is short, a special checkpoint
        server can be designated for storing all the checkpoint images
@@ -83,7 +83,7 @@ Current Limitations
     take advantage of checkpointing and remote system calls. This often
     precludes commercial software binaries from taking advantage of
     these services because commercial packages rarely make their source
-    and/or object code available. HTCondor’s other services are still
+    and/or object code available. HTCondor's other services are still
     available for these commercial packages.
 
       

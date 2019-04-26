@@ -16,7 +16,7 @@ system:
 -  The kernel version
 -  The version of the GNU C library (glibc)
 -  the version of GNU C Compiler (GCC) used to build and link HTCondor
-   jobs. This matters for HTCondor’s standard universe, which provides
+   jobs. This matters for HTCondor's standard universe, which provides
    checkpoints and remote system calls.
 
 The HTCondor Team tries to provide support for various releases of the
@@ -31,7 +31,7 @@ provide any guarantees about this.
 New releases of Red Hat usually change the versions of some or all of
 the above system-level components. A version of HTCondor that works with
 one release of Red Hat might not work with newer releases. The following
-sections describe the details of HTCondor’s support for the currently
+sections describe the details of HTCondor's support for the currently
 available versions of Red Hat Linux on x86 architecture machines.
 
 Linux Address Space Randomization

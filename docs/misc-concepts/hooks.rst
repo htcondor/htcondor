@@ -539,7 +539,7 @@ invoked by the *condor\_job\_router* daemon at various points during the
 life cycle of a routed job.
 
 The following sections describe how and when these hooks are used, what
-hooks are invoked at various stages of the job’s life, and how to
+hooks are invoked at various stages of the job's life, and how to
 configure HTCondor to use these Hooks.
 
 Hooks Invoked for Job Routing
@@ -550,7 +550,7 @@ Hooks Invoked for Job Routing
 The Job Router Hooks allow for replacement of the transformation engine
 used by HTCondor for routing a job. Since the external transformation
 engine is not controlled by HTCondor, additional hooks provide a means
-to update the job’s status in HTCondor, and to clean up upon exit or
+to update the job's status in HTCondor, and to clean up upon exit or
 failure cases. This allows one job to be transformed to just about any
 other type of job that HTCondor supports, as well as to use execution
 nodes not normally available to HTCondor.
@@ -563,19 +563,19 @@ engine. For example, if there is a problem transforming the job using
 the hooks, HTCondor will not fall back on its transformation
 accomplished without the hook to process the job.
 
-There are 2 ways in which the Job Router Hooks may be enabled. A job’s
+There are 2 ways in which the Job Router Hooks may be enabled. A job's
 submit description file may cause the hooks to be invoked with
 
 ::
 
       +HookKeyword = "HOOKNAME"
 
-Adding this attribute to the job’s ClassAd causes the
+Adding this attribute to the job's ClassAd causes the
 *condor\_job\_router* daemon on the submit machine to invoke hooks
 prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
 example; any string may be used.
 
-The job’s ClassAd attribute definition of ``HookKeyword`` takes
+The job's ClassAd attribute definition of ``HookKeyword`` takes
 precedence, but if not present, hooks may be enabled by defining on the
 submit machine the configuration variable
 
@@ -603,7 +603,7 @@ expected output. All hooks must exit successfully.
        None.
     Standard input given to the hook
        The first line will be the route that the job matched as defined
-       in HTCondor’s configuration files followed by the job ClassAd,
+       in HTCondor's configuration files followed by the job ClassAd,
        separated by the string "------" and a new line.
     Expected standard output from the hook
        The transformed job.
@@ -626,7 +626,7 @@ expected output. All hooks must exit successfully.
        The routed job ClassAd that is to be updated.
     Expected standard output from the hook
        The job attributes to be updated in the routed job, or nothing,
-       if there was no update. To prevent clashing with HTCondor’s
+       if there was no update. To prevent clashing with HTCondor's
        management of job attributes, only attributes that are not
        managed by HTCondor should be output from this hook.
     Exit status of the hook
@@ -687,7 +687,7 @@ have been identified by various names, including the Startd Cron,
 dynamic attributes, and a distribution of executables collectively known
 as Hawkeye.
 
-Pool management tasks can be enhanced by using a daemon’s ability to
+Pool management tasks can be enhanced by using a daemon's ability to
 periodically run executables. The executables are expected to generate
 ClassAd attributes as their output; these ClassAds are then incorporated
 into the machine ClassAd. Policy expressions can then reference dynamic
@@ -709,8 +709,8 @@ As of version 8.3.0, it is possible for a Startd Cron job (but not a
 Schedd Cron job) to define multiple ClassAds, using the mechanism
 defined below:
 
--  An output line starting with ``’-’`` has always indicated
-   end-of-ClassAd. The ``’-’`` can now be followed by a uniqueness tag
+-  An output line starting with ``'-'`` has always indicated
+   end-of-ClassAd. The ``'-'`` can now be followed by a uniqueness tag
    to indicate the name of the ad that should be replaced by the new ad.
    This name is joined to the name of the Startd Cron job to produced a
    full name for the ad. This allows a single Startd Cron job to return

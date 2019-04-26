@@ -7,7 +7,7 @@ Singularity Support
 
 Note: This documentation is very basic and needs improvement!
 
-Here’s an example configuration file:
+Here's an example configuration file:
 
 ::
 
@@ -42,7 +42,7 @@ quoting):
 
       +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-Finally, let’s pick an image based on the OS – not the filename:
+Finally, let's pick an image based on the OS – not the filename:
 
 ::
 

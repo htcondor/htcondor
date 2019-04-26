@@ -137,9 +137,9 @@ questions:
     every 5 minutes) to this machine. Memory requirements for the
     central manager differ by the number of machines in the pool: a pool
     with up to about 100 machines will require approximately 25 Mbytes
-    of memory for the central manager’s tasks, and a pool with about
+    of memory for the central manager's tasks, and a pool with about
     1000 machines will require approximately 100 Mbytes of memory for
-    the central manager’s tasks.
+    the central manager's tasks.
 
     A faster CPU will speed up matchmaking.
 
@@ -206,7 +206,7 @@ questions:
     Note that the user condor must not be an account into which a person
     can log in. If a person can log in as user condor, it permits a
     major security breach, in that the user condor could submit jobs
-    that run as any other user, providing complete access to the user’s
+    that run as any other user, providing complete access to the user's
     data by the jobs. A standard way of not allowing log in to an
     account on Unix platforms is to enter an invalid shell in the
     password file.
@@ -218,7 +218,7 @@ questions:
     :index:`CONDOR_IDS` config file setting which uid.gid pair
     should be used for the ownership of various HTCondor files. See
     section \ `Security <../admin-manual/security.html>`__ on UIDs in
-    HTCondor in the Administrator’s Manual for details.
+    HTCondor in the Administrator's Manual for details.
 
  6. Where should the machine-specific directories for HTCondor go?
     HTCondor needs a few directories that are unique on every machine in
@@ -232,14 +232,14 @@ questions:
     by HTCondor in these directories are subject to removal.
 
     If you have a Unix user named condor with a local home directory on
-    each machine, the ``LOCAL_DIR`` could just be user condor’s home
+    each machine, the ``LOCAL_DIR`` could just be user condor's home
     directory (``LOCAL_DIR`` = ``$(TILDE)`` in the configuration file).
-    If this user’s home directory is shared among all machines in your
+    If this user's home directory is shared among all machines in your
     pool, you would want to create a directory for each host (named by
     host name) for the local directory (for example, ``LOCAL_DIR`` =
     ``$(TILDE)``/hosts/``$(HOSTNAME)``). If you do not have a condor
     account on your machines, you can put these directories wherever
-    you’d like. However, where to place the directories will require
+    you'd like. However, where to place the directories will require
     some thought, as each one has its own resource needs:
 
      ``execute``
@@ -304,7 +304,7 @@ questions:
     This will cause lots of problems for your machines. Ideally, you
     will have a separate partition for the HTCondor directories. Then,
     the only consequence of filling up the directories will be
-    HTCondor’s malfunction, not your whole machine.
+    HTCondor's malfunction, not your whole machine.
 
  7. Where should the parts of the HTCondor system be installed?
     -  Configuration Files
@@ -355,7 +355,7 @@ questions:
            either put them in a well known location (such as
            ``/usr/local/condor/bin``) which you have HTCondor users add
            to their ``PATH`` environment variable, or copy those files
-           directly into a well known place already in the user’s PATHs
+           directly into a well known place already in the user's PATHs
            (such as ``/usr/local/bin``). With the above examples, you
            could also leave the binaries in ``/usr/local/condor/bin``
            and put in soft links from ``/usr/local/bin`` to point to
@@ -377,12 +377,12 @@ questions:
         -  ``lib`` Directory:
 
            The files in the ``lib`` directory are the HTCondor libraries
-           that must be linked in with user jobs for all of HTCondor’s
+           that must be linked in with user jobs for all of HTCondor's
            checkpointing and migration features to be used. ``lib`` also
            contains scripts used by the *condor_compile* program to
            help re-link jobs with the HTCondor libraries. These files
            should be placed in a location that is world-readable, but
-           they do not need to be placed in anyone’s ``PATH``. The
+           they do not need to be placed in anyone's ``PATH``. The
            *condor_compile* script checks the configuration file for
            the location of the ``lib`` directory.
 
@@ -599,15 +599,15 @@ things to check before starting up HTCondor.
    to look. You do this with the ``CONSOLE_DEVICES``
    :index:`CONSOLE_DEVICES` entry in the condor_startd section of
    the configuration file. On most platforms, reasonable defaults are
-   provided. For example, the default device for the mouse is ’mouse’,
+   provided. For example, the default device for the mouse is 'mouse',
    since most installations have a soft link from ``/dev/mouse`` that
    points to the right device (such as ``tty00`` if you have a serial
    mouse, ``psaux`` if you have a PS/2 bus mouse, etc). If you do not
    have a ``/dev/mouse`` link, you should either create one (you will be
-   glad you did), or change the ``CONSOLE_DEVICES`` entry in HTCondor’s
+   glad you did), or change the ``CONSOLE_DEVICES`` entry in HTCondor's
    configuration file. This entry is a comma separated list, so you can
-   have any devices in ``/dev`` count as ’console devices’ and activity
-   will be reported in the condor_startd’s ClassAd as
+   have any devices in ``/dev`` count as 'console devices' and activity
+   will be reported in the condor_startd's ClassAd as
    ``ConsoleIdleTime``.
 
 #. (Linux only) HTCondor needs to be able to find the ``utmp`` file.
@@ -695,7 +695,7 @@ can and should do:
 
 #. (Optional) Do a full install for the *condor_compile* script.
    condor_compile assists in linking jobs with the HTCondor libraries
-   to take advantage of all of HTCondor’s features. As it is currently
+   to take advantage of all of HTCondor's features. As it is currently
    installed, it will work by placing it in front of any of the
    following commands that you would normally use to link your code:
    gcc, g++, g77, cc, acc, c89, CC, f77, fort77 and ld. If you complete
@@ -846,7 +846,7 @@ and choosing options within the following steps.
     existing pool, enter the host name of the central manager of the
     pool.
 
- STEP 3: This Machine’s Roles.
+ STEP 3: This Machine's Roles.
     Each machine within an HTCondor pool can either submit jobs or
     execute submitted jobs, or both submit and execute jobs. A check box
     determines if this machine will be a submit point for the pool.
@@ -878,7 +878,7 @@ and choosing options within the following steps.
     lost for a partially completed job.
 
  STEP 4: The Account Domain.
-    Enter the machine’s accounting (or UID) domain. On this version of
+    Enter the machine's accounting (or UID) domain. On this version of
     HTCondor for Windows, this setting is only used for user priorities
     (see section \ `User Priorities and
     Negotiation <../admin-manual/user-priorities-negotiation.html>`__)
@@ -919,7 +919,7 @@ and choosing options within the following steps.
         read and write access to all of the machines in the pool.
      Administrator
         A machine with administrator access will be allowed more
-        extended permission to do things such as change other user’s
+        extended permission to do things such as change other user's
         priorities, modify the job queue, turn HTCondor services on and
         off, and restart HTCondor. The central manager should be given
         administrator access and is the default listed. This setting is
@@ -1080,7 +1080,7 @@ of each property as it applies to unattended installations:
  INSTALLDIR
     defines the path to the directory where HTCondor will be installed.
  POOLHOSTNAME
-    defines the host name of the pool’s central manager.
+    defines the host name of the pool's central manager.
  ACCOUNTINGDOMAIN
     defines the accounting (or UID) domain the target machine will be
     in.
@@ -1119,14 +1119,14 @@ of each property as it applies to unattended installations:
 After defining each of these properties for the MSI installer, the
 installer can be started with the *msiexec* command. The following
 command starts the installer in unattended mode, and it dumps a journal
-of the installer’s progress to a log file:
+of the installer's progress to a log file:
 
 ::
 
     msiexec /qb /lxv* condor-install-log.txt /i condor-8.0.0-173133-Windows-x86.msi [property=value] ...
 
 More information on the features of *msiexec* can be found at
-Microsoft’s website at
+Microsoft's website at
 `http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`__.
 
 Manual Installation HTCondor on Windows
@@ -1446,7 +1446,7 @@ implementation of security in HTCondor.
 
           condor_on -subsystem <subsystemname>
 
-    where <subsystemname> is replaced by the daemon’s subsystem name.
+    where <subsystemname> is replaced by the daemon's subsystem name.
     Or, this command might be issued from another machine in the pool
     (which has administrative authority) with
 
@@ -1454,7 +1454,7 @@ implementation of security in HTCondor.
 
           condor_on <hostname> -subsystem <subsystemname>
 
-    where <subsystemname> is replaced by the daemon’s subsystem name,
+    where <subsystemname> is replaced by the daemon's subsystem name,
     and <hostname> is replaced by the host name of the machine where
     this *condor_on* command is to be directed.
 

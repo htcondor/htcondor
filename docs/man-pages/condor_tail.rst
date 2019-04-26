@@ -3,7 +3,7 @@
 *condor\_tail*
 ==============
 
-Display the last contents of a running job’s standard output or file
+Display the last contents of a running job's standard output or file
 :index:`condor_tail<single: condor_tail; HTCondor commands>`\ :index:`condor_tail command`
 
 Synopsis
@@ -34,7 +34,7 @@ Options
  **-version**
     Display version information and exit.
  **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+    Specify a pool by giving the central manager's host name and an
     optional port number.
  **-name **\ *name*
     Query the *condor\_schedd* daemon identified with *name*.

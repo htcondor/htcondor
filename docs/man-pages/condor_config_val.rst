@@ -29,7 +29,7 @@ set of configuration variables with the *vars* argument,
 currently set to. If a given variable is not defined,
 *condor\_config\_val* will halt on that variable, and report that it is
 not defined. By default, *condor\_config\_val* looks in the local
-machine’s configuration files in order to evaluate the variables.
+machine's configuration files in order to evaluate the variables.
 Variables and values may instead be queried from a daemon specified
 using a **location option**.
 
@@ -37,7 +37,7 @@ Raw output of *condor\_config\_val* displays the string used to define
 the configuration variable. This is what is on the right hand side of
 the equals sign (``=``) in a configuration file for a variable. The
 default output is an expanded one. Expanded output recursively replaces
-any macros within the raw definition of a variable with the macro’s raw
+any macros within the raw definition of a variable with the macro's raw
 definition.
 
 Each daemon remembers settings made by a successful invocation of
@@ -53,7 +53,7 @@ runtime settings will override persistent settings until the daemon is
 restarted. Any changes made will not take effect until
 *condor\_reconfig* is invoked.
 
-In general, modifying a host’s configuration with *condor\_config\_val*
+In general, modifying a host's configuration with *condor\_config\_val*
 requires the ``CONFIG`` access level, which is disabled on all hosts by
 default. Administrators have more fine-grained control over which access
 levels can modify which settings. See
@@ -156,7 +156,7 @@ Options
  **-mixedcase**
     (view option) Applied only when the configuration is read from files
     (the default), and not when applied to a specific daemon. Print
-    variable names with the same letter case used in the variable’s
+    variable names with the same letter case used in the variable's
     definition.
  **-local-name **\ *<name>*
     (view option) Applied only when the configuration is read from files
@@ -175,7 +175,7 @@ Options
     (location option) Use the given central manager and an optional port
     number to find daemons.
  **-name **\ *<machine\_name>*
-    (location option) Query the specified machine’s *condor\_master*
+    (location option) Query the specified machine's *condor\_master*
     daemon for its configuration. Does not function together with any of
     the options: **-dump**, **-config**, or **-verbose**.
  **-master \| -schedd \| -startd \| -collector \| -negotiator**

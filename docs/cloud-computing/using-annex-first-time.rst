@@ -3,13 +3,13 @@ Using *condor_annex* for the First Time
 
 This guide assumes that you already have an AWS account, as well as a
 log-in account on a Linux machine with a public address and a system
-administrator who’s willing to open a port for you. All the terminal
+administrator who's willing to open a port for you. All the terminal
 commands (shown in a box without a title) and file edits (shown in a box
 with an emphasized title) take place on the Linux machine. You can
 perform the web-based steps from wherever is convenient, although it
 will save you some copying if you run the browser on the Linux machine.
 
-Before using *condor_annex* for the first time, you’ll have to do three
+Before using *condor_annex* for the first time, you'll have to do three
 things:
 
 #. install a personal HTCondor
@@ -22,27 +22,27 @@ Install a Personal HTCondor
 ---------------------------
 
 We recommend that you install a personal HTCondor to make use of
-*condor_annex*; it’s simpler to configure that way. These instructions
+*condor_annex*; it's simpler to configure that way. These instructions
 assume version 8.7.8 of HTCondor, but should work the 8.8.x series as
-well; change ‘8.7.8’ in the instructions wherever it appears.
+well; change ‘8.7.8' in the instructions wherever it appears.
 
-These instructions assume that it’s OK to create a directory named
+These instructions assume that it's OK to create a directory named
 ``condor-8.7.8`` in your home directory; adjust them accordingly if you
 want to install HTCondor somewhere else.
 
 Start by downloading (from
 `https://research.cs.wisc.edu/htcondor/downloads/ <https://research.cs.wisc.edu/htcondor/downloads/>`__)
 the 8.7.8 release from the “tarballs” section that matches your Linux
-version. (If you don’t know your Linux version, ask your system
+version. (If you don't know your Linux version, ask your system
 administrator.) These instructions assume that the file you downloaded
 is located in your home directory on the Linux machine, so copy it there
 if necessary.
 
 Then do the following; note that in this box, like other terminal boxes,
-the commands you type are preceded by by ‘$’ to distinguish them from
-any expected output, so don’t copy that part of each of the following
-lines. (Lines which end in a ‘\\’ continue on the following line; be
-sure to copy both lines. Don’t copy the ‘\\’ itself.)
+the commands you type are preceded by by ‘$' to distinguish them from
+any expected output, so don't copy that part of each of the following
+lines. (Lines which end in a ‘\\' continue on the following line; be
+sure to copy both lines. Don't copy the ‘\\' itself.)
 
 ::
 
@@ -85,7 +85,7 @@ should generally be pretty similar to the following.
     DaemonMaster       None               submit-3.batlab.org 
     Accounting         none               <none> 
 
-You should also try to submit a job; create the following file. (We’ll
+You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
@@ -123,9 +123,9 @@ Configure Public Interface
 ''''''''''''''''''''''''''
 
 The default personal HTCondor uses the “loopback” interface, which
-basically just means it won’t talk to anyone other than itself. For
+basically just means it won't talk to anyone other than itself. For
 *condor_annex* to work, your personal HTCondor needs to use the Linux
-machine’s public interface. In most cases, that’s as simple as adding
+machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
 *~/condor-8.7.8/local/condor_config.local*
@@ -148,8 +148,8 @@ To verify that this change worked, repeat the steps under section
 Configure a Pool Password
 '''''''''''''''''''''''''
 
-In this section, you’ll configure your personal HTCondor to use a pool
-password. This is a simple but effective method of securing HTCondor’s
+In this section, you'll configure your personal HTCondor to use a pool
+password. This is a simple but effective method of securing HTCondor's
 communications to AWS.
 
 Add the following lines:
@@ -182,10 +182,10 @@ Enter a password.
 Tell HTCondor about the Open Port
 '''''''''''''''''''''''''''''''''
 
-By default, HTCondor will use port 9618. If the Linux machine doesn’t
+By default, HTCondor will use port 9618. If the Linux machine doesn't
 already have HTCondor installed, and the admin is willing to open that
-port, then you don’t have to do anything. Otherwise, you’ll need to add
-a line like the following, replacing ‘9618’ with whatever port the
+port, then you don't have to do anything. Otherwise, you'll need to add
+a line like the following, replacing ‘9618' with whatever port the
 administrator opened for you.
 
 *~/condor-8.7.8/local/condor_config.local*
@@ -236,7 +236,7 @@ secret, *condor_annex* (and HTCondor) are never told these keys
 directly; instead, you tell HTCondor which file to look in to find each
 one.
 
-Create those two files now; we’ll tell you how to fill them in shortly.
+Create those two files now; we'll tell you how to fill them in shortly.
 By convention, these files exist in your ~/.condor directory, which is
 where the -setup command will store the rest of the data it needs.
 
@@ -255,7 +255,7 @@ go to the IAM console at the following URL; log in if you need to:
 `https://console.aws.amazon.com/iam/home?region=us-east-1#/users <https://console.aws.amazon.com/iam/home?region=us-east-1#/users>`__
 
 The following instructions assume you are logged in as a user with the
-privilege to create new users. (The ‘root’ user for any account has this
+privilege to create new users. (The ‘root' user for any account has this
 privilege; other accounts may as well.)
 
 #. Click the “Add User” button.
@@ -275,7 +275,7 @@ privilege; other accounts may as well.)
    file privateKeyFile.
 #. Hit the “Close” button.
 
-The ‘annex-user’ now has full privileges to your account.
+The ‘annex-user' now has full privileges to your account.
 
 Configure *condor_annex*
 ------------------------
@@ -285,7 +285,7 @@ number of persistent components, none of which will cost you anything to
 keep around. These components can take quite some time to create;
 *condor_annex* checks each for completion every ten seconds and prints
 an additional dot (past the first three) when it does so, to let you
-know that everything’s still working.
+know that everything's still working.
 
 ::
 
@@ -310,17 +310,17 @@ procedure completed successfully by running the following command.
     Checking for instance profile... OK. 
     Checking for security group... OK. 
 
-You’re ready to run *condor_annex*!
+You're ready to run *condor_annex*!
 
 Undoing the Setup Command
 '''''''''''''''''''''''''
 
 There is not as yet a way to undo the setup command automatically, but
-it won’t cost you anything extra to leave your account setup for
+it won't cost you anything extra to leave your account setup for
 *condor_annex* indefinitely. If, however, you want to be tidy, you may
 delete the components setup created by going to the CloudFormation
 console at the following URL and deleting the entries whose names begin
-with ‘HTCondorAnnex-’:
+with ‘HTCondorAnnex-':
 
 `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active <https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active>`__
 
@@ -328,7 +328,7 @@ The setup procedure also creates an SSH key pair which may be useful
 for debugging; the private key was stored in
 ~/.condor/HTCondorAnnex-KeyPair.pem. To remove the corresponding public
 key from your AWS account, go to the key pair console at the following
-URL and delete the ‘HTCondorAnnex-KeyPair’ key:
+URL and delete the ‘HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`__
 

@@ -19,7 +19,7 @@ Description
 *condor\_dagman\_metrics\_reporter* anonymously reports metrics from a
 DAGMan workflow to a central server. The reporting of workflow metrics
 is only enabled for DAGMan workflows run under Pegasus; metrics
-reporting has been requested by Pegasus’ funding sources: see
+reporting has been requested by Pegasus' funding sources: see
 `http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php#usage\_statistics <http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics>`__
 and
 `https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting <https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting>`__

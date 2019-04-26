@@ -7,18 +7,18 @@ Computing On Demand (COD)
 :index:`Computing on Demand (see COD)`
 :index:`introduction<single: introduction; COD>`
 
-Computing On Demand (COD) extends HTCondor’s high throughput computing
+Computing On Demand (COD) extends HTCondor's high throughput computing
 abilities to include a method for running short-term jobs on
 instantly-available resources.
 
-The motivation for COD extends HTCondor’s job management to include
+The motivation for COD extends HTCondor's job management to include
 interactive, compute-intensive jobs, giving these jobs immediate access
 to the compute power they need over a relatively short period of time.
 COD provides computing power on demand, switching predefined resources
 from working on HTCondor jobs to working on the COD jobs. These COD jobs
 (applications) cannot use the batch scheduling functionality of
 HTCondor, since the COD jobs require interactive response-time. Many of
-the applications that are well-suited to HTCondor’s COD capabilities
+the applications that are well-suited to HTCondor's COD capabilities
 involve a cycle: application blocked on user input, computation burst to
 compute results, block again on user input, computation burst, etc. When
 the resources are not being used for the bursts of computation to
@@ -87,7 +87,7 @@ the machine (usually in a local configuration file).
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
 authentication methods described in
-section \ `Security <../admin-manual/security.html>`__ on HTCondor’s
+section \ `Security <../admin-manual/security.html>`__ on HTCondor's
 Security Model. If one of these methods cannot be used, then file system
 authentication may be used when directly logging in to that machine (to
 be claimed) and issuing the command locally.
@@ -103,7 +103,7 @@ are the executable or script to use, the directory in which to run the
 application, command-line arguments, and files to use for standard input
 and output. COD users specify a ClassAd that describes these
 characteristics for their application. There are two ways for a user to
-define a COD application’s ClassAd:
+define a COD application's ClassAd:
 
 #. in the HTCondor configuration files of the COD resources
 #. when they use the *condor\_cod* command-line tool to launch the
@@ -114,9 +114,9 @@ example, the user can define some attributes in the configuration file,
 and only provide a few dynamically defined attributes with the
 *condor\_cod* tool.
 
-Independent of how the COD application’s ClassAd is defined, the
-application’s executable and input data must be pre-staged at the node.
-This is a current limitation of HTCondor’s support. There is no
+Independent of how the COD application's ClassAd is defined, the
+application's executable and input data must be pre-staged at the node.
+This is a current limitation of HTCondor's support. There is no
 mechanism to transfer files for a COD application, and all I/O must be
 handled locally or put onto a network file system that is accessible by
 a node.
@@ -318,13 +318,13 @@ the HTCondor debugging logs described in section \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__. For example, in
-the *condor\_starter* daemon’s log file for COD jobs (called
-``StarterLog.cod`` by default) or in the *condor\_startd* daemon’s log
+the *condor\_starter* daemon's log file for COD jobs (called
+``StarterLog.cod`` by default) or in the *condor\_startd* daemon's log
 file (called ``StartLog`` by default).
 
 These COD job IDs are optional. The job ID is useful to define where it
 helps a user with the accounting or debugging of their own application.
-In this case, it is the user’s responsibility to ensure uniqueness, if
+In this case, it is the user's responsibility to ensure uniqueness, if
 so desired.
 
  ``ClusterId``
@@ -364,7 +364,7 @@ Any of the ClassAd attributes described in the previous section can be
 specified in the configuration file with the keyword prefix followed by
 an underscore character ("\_").
 
-For example, if the user’s keyword for a given fractal generation
+For example, if the user's keyword for a given fractal generation
 application is ``FractGen``, the resulting entries in the HTCondor
 configuration file may appear as:
 
@@ -625,7 +625,7 @@ claim ID that the user acquired via *condor\_cod\_request*.
 If the application is defined in the configuration files for the COD
 resource, the user provides the keyword (described in
 section \ `4.3.3 <#x50-4250004.3.3>`__) that uniquely identifies the
-application’s configuration attributes. To continue the example from
+application's configuration attributes. To continue the example from
 that section, the user would spawn their job by specifying
 -keyword FractGen, for example:
 
@@ -657,7 +657,7 @@ Alternatively, if the filename specified with **-jobad** is ``-``, the
 Regardless of how the job attributes are defined, there are other
 options that *condor\_cod\_activate* accepts. These options specify the
 job ID for the application to be run. The job ID can either be specified
-in the job’s ClassAd, or it can be specified on the command line to
+in the job's ClassAd, or it can be specified on the command line to
 *condor\_cod\_activate*. These options are **-cluster** and **-proc**.
 For example, to launch a COD job with keyword foo as cluster 23, proc 5,
 or 23.5, the user invokes:
@@ -823,7 +823,7 @@ should not be used and the rest of this section can be skipped.
 
 The delegate\_proxy command optionally takes a **-x509proxy** argument
 to specify the path to the proxy file to use. Otherwise, it uses the
-same discovery logic that *condor\_submit* uses to find the user’s
+same discovery logic that *condor\_submit* uses to find the user's
 currently active proxy.
 
 Just like every other COD command (except request), this command
@@ -842,7 +842,7 @@ Limitations of COD Support in HTCondor
 
 :index:`limitations<single: limitations; COD>`
 
-HTCondor’s support for COD has a few limitations:
+HTCondor's support for COD has a few limitations:
 
 -  Applications and data must be pre-staged at a given machine.
 -  There is no way to define limits for how long a given COD claim can

@@ -17,7 +17,7 @@ Description
 -----------
 
 *condor_gpu_discovery* outputs ClassAd attributes corresponding to a
-host’s GPU capabilities. It can presently report CUDA and OpenCL
+host's GPU capabilities. It can presently report CUDA and OpenCL
 devices; which type(s) of device(s) it reports is determined by which
 libraries, if any, it can find when it runs; this reflects what GPU jobs
 will find on that host when they run. (Note that some HTCondor

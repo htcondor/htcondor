@@ -59,7 +59,7 @@ Table 1.1: Supported platforms in HTCondor Version 8.9.1
 NOTE: Other Linux distributions likely work, but are not tested or
 supported.
 
-For more platform-specific information about HTCondor’s support for
+For more platform-specific information about HTCondor's support for
 various operating systems, see
 Chapter \ `8 <PlatformSpecificInformation.html#x74-5700008>`__ on
 page \ `1624 <PlatformSpecificInformation.html#x74-5700008>`__.

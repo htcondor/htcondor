@@ -5,7 +5,7 @@ Connecting HTCondor Pools with Flocking
 
 :index:`flocking` :index:`flocking<single: flocking; HTCondor>`
 
-Flocking is HTCondor’s way of allowing jobs that cannot immediately run
+Flocking is HTCondor's way of allowing jobs that cannot immediately run
 within the pool of machines where the job was submitted to instead run
 on a different HTCondor pool. If a machine within HTCondor pool A can
 send jobs to be run on HTCondor pool B, then we say that jobs from
@@ -15,7 +15,7 @@ in both directions. Configuration variables allow the *condor\_schedd*
 daemon (which runs on each machine that may submit jobs) to implement
 flocking.
 
-NOTE: Flocking to pools which use HTCondor’s high availability
+NOTE: Flocking to pools which use HTCondor's high availability
 mechanisms is not advised. See section  `The High Availability of
 Daemons <../admin-manual/high-availability.html>`__ for a discussion of
 the issues.
@@ -26,7 +26,7 @@ Flocking Configuration
 :index:`for flocking<single: for flocking; configuration>`
 
 The simplest flocking configuration sets a few configuration variables.
-If jobs from machine A are to flock to pool B, then in machine A’s
+If jobs from machine A are to flock to pool B, then in machine A's
 configuration, set the following configuration variables:
 
  ``FLOCK_TO`` :index:`FLOCK_TO`
