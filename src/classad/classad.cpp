@@ -699,9 +699,7 @@ LookupInScope( const string &name, const ClassAd *&finalScope ) const
 int ClassAd::
 LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 {
-	extern int exprHash( const ExprTree* const&, int );
 	const ClassAd *current = this, *superScope;
-	Value			val;
 
 	expr = NULL;
 
