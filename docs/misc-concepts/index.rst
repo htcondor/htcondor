@@ -1,5 +1,5 @@
 Miscellaneous Concepts
-----------------------
+======================
 
 This chapter contains sections describing a variety of key HTCondor
 concepts that do not belong in other chapters.

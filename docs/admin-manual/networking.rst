@@ -198,8 +198,8 @@ utilize a specific range of ports.
 
 By default, HTCondor uses port 9618 for the *condor_collector* daemon,
 and dynamic (apparently random) ports for everything else. See
-section \ `3.9.1 <#x37-3050003.9.1>`__, if a dynamically assigned port
-is desired for the *condor_collector* daemon.
+:ref:`admin-manual/networking:port usage in htcondor`, if a dynamically
+assigned port is desired for the *condor_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
 single port. See section \ `Configuration
@@ -397,8 +397,8 @@ When the *condor_collector* address is a shared port, TCP updates will
 be automatically used instead of UDP, because the *condor_shared_port*
 daemon does not work with UDP messages. Under Unix, this means that the
 *condor_collector* daemon should be configured to have enough file
-descriptors. See section \ `3.9.5 <#x37-3200003.9.5>`__ for more
-information on using TCP within HTCondor.
+descriptors. See :ref:`admin-manual/networking:using tcp to send updates to
+the *condor_collector*` for more information on using TCP within HTCondor.
 
 SOAP commands cannot be sent through the *condor_shared_port* daemon.
 However, a daemon may be configured to open a fixed, non-shared port, in
@@ -515,8 +515,7 @@ limitations.
 Sites that make heavy use of private networks and multi-homed machines
 should consider if using the HTCondor Connection Broker, CCB, is right
 for them. More information about CCB and HTCondor can be found in
-section \ `3.9.4 <#x37-3150003.9.4>`__ on
-page \ `1104 <#x37-3150003.9.4>`__.
+the :ref:`admin-manual/networking:htcondor connection brokering (ccb)` section.
 
 Central Manager with Two or More NICs
 '''''''''''''''''''''''''''''''''''''
@@ -666,8 +665,8 @@ provide connectivity. However, if an incoming port or port range can be
 opened in one of the private networks, then the situation becomes
 equivalent to one of the scenarios described above and CCB can provide
 bi-directional communication given only one-directional connectivity.
-See section \ `3.9.1 <#x37-3010003.9.1>`__ for information on opening
-port ranges. Also note that CCB works nicely with
+See :ref:`admin-manual/networking:port usage in htcondor` for information on
+opening port ranges. Also note that CCB works nicely with
 *condor_shared_port*.
 
 Unfortunately at this time, CCB does not support standard universe jobs.

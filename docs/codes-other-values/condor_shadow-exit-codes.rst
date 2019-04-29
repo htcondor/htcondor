@@ -1,5 +1,3 @@
-      
-
 *condor_shadow* Exit Codes
 ===========================
 

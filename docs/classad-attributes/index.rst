@@ -1,5 +1,5 @@
 ClassAd Attributes
-------------------
+==================
 
 .. toctree::
    :maxdepth: 2

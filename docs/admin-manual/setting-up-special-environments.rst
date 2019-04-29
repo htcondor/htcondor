@@ -681,9 +681,8 @@ Configuring a Machine to be a HTCondorView Server
 To configure the HTCondorView collector, a few configuration variables
 are added or modified for the *condor_collector* chosen to act as the
 HTCondorView collector. These configuration variables are described in
-section \ `3.5.14 <ConfigurationMacros.html#x33-2010003.5.14>`__ on
-page \ `731 <ConfigurationMacros.html#x33-2010003.5.14>`__. Here are
-brief explanations of the entries that must be customized:
+:ref:`admin-manual/configuration-macros:condor_collector configuration file
+entries`. Here are brief explanations of the entries that must be customized:
 
  ``POOL_HISTORY_DIR`` :index:`POOL_HISTORY_DIR`
     The directory where historical data will be stored. This directory
@@ -918,11 +917,9 @@ submit machine, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a submit machine apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See
-section \ `3.2.2 <InstallationStartUpShutDownandReconfiguration.html#x30-1540003.2.2>`__
-on
-page \ `465 <InstallationStartUpShutDownandReconfiguration.html#x30-1540003.2.2>`__
-for details on these issues.
+See the 
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
+on unix` section for details on these issues.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''
@@ -1159,15 +1156,12 @@ other work arrives, the *condor_startd* will kill the backfill client
 and clean up any processes it has spawned, freeing the machine resources
 for the new, higher priority task. More details about the different
 states an HTCondor resource can enter and all of the possible
-transitions between them are described in
-section \ `3.7 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__
-beginning on
-page \ `862 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__,
-especially
-sections \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2470003.7.1>`__,
-`3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2490003.7.1>`__,
+transitions between them are described in  
+:doc:`/admin-manual/policy-configuration/`, especially the 
+:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
 and
-`3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2500003.7.1>`__.
+:ref:`admin-manual/policy-configuration:*condor_schedd* policy configuration`
+sections.
 
 At this point, the only backfill system supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client
@@ -1187,8 +1181,7 @@ There are a small set of policy expressions that determine if a
 *condor_startd* will attempt to spawn a backfill client at all, and if
 so, to control the transitions in to and out of the Backfill state. This
 section briefly lists these expressions. More detail can be found in
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ on
-page \ `650 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+:ref:`admin-manual/configuration-macros:condor_startd configuration file macros`.
 
  ``ENABLE_BACKFILL`` :index:`ENABLE_BACKFILL`
     A boolean value to determine if any backfill functionality should be
@@ -1569,10 +1562,11 @@ when dealing with the Windows installation:
    :index:`STARTER_ALLOW_RUNAS_OWNER` be set to ``True`` to insure
    that the local *condor_starter* be able to run jobs in this manner.
    For more information on the ``RunAsUser`` attribute, see
-   section \ `8.2.4 <MicrosoftWindows.html#x76-5770008.2.4>`__. For more
-   information on the the ``STARTER_ALLOW_RUNAS_OWNER`` configuration
-   variable, see
-   section \ `3.5.5 <ConfigurationMacros.html#x33-1920003.5.5>`__.
+   :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
+   user`. For more information on the the ``STARTER_ALLOW_RUNAS_OWNER``
+   configuration variable, see
+   :ref:`admin-manual/configuration-macros:shared file system configuration
+   file macros`.
 
 Per Job PID Namespaces
 ----------------------
@@ -1592,8 +1586,8 @@ Read about per job PID namespaces
 The needed isolation of jobs from the same user that execute on the same
 machine as each other is already provided by the implementation of slot
 users as described in
-section \ `3.8.13 <Security.html#x36-2980003.8.13>`__. This is the
-recommended way to implement the prevention of interference between more
+:ref:`admin-manual/security:user accounts in htcondor on unix platforms`. This 
+is the recommended way to implement the prevention of interference between more
 than one job submitted by a single user. However, the use of a shared
 file system by slot users presents issues in the ownership of files
 written by the jobs.

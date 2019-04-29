@@ -276,10 +276,10 @@ line.
 
 To simplify pool administration, any configuration variable name may be
 prefixed by a subsystem (see the ``$(SUBSYSTEM)`` macro in
-section \ `3.3.12 <#x31-1810003.3.12>`__ for the list of subsystems) and
-the period (.) character. For configuration variables defined this way,
-the value is applied to the specific subsystem. For example, the ports
-that HTCondor may use can be restricted to a range using the
+:ref:`admin-manual/introduction-to-configuration:pre-defined macros` for the
+list of subsystems) and the period (.) character. For configuration variables
+defined this way, the value is applied to the specific subsystem. For example,
+the ports that HTCondor may use can be restricted to a range using the
 ``HIGHPORT`` and ``LOWPORT`` configuration variables.
 
 ::

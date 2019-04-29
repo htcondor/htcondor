@@ -205,7 +205,8 @@ An attribute reference consists of the name of the attribute being
 referenced, and an optional scope resolution prefix. The prefixes that
 may be used are ``MY.`` and ``TARGET.``. The case used for these
 prefixes is not significant. The semantics of supplying a prefix are
-discussed in Section \ `4.1.3 <#x48-4060004.1.3>`__.
+discussed in :ref:`misc-concepts/classad-mechanism:old classad evaluation
+semantics`.
 
 New ClassAd Operators
 '''''''''''''''''''''
@@ -237,7 +238,7 @@ Figure 4.2: Relative precedence of ClassAd expression operators
 The operator with the highest precedence is the unary minus operator.
 The only operators which are unfamiliar are the =?=, is, =!= and isnt
 operators, which are discussed in
-Section \ `4.1.3 <#x48-4090004.1.3>`__.
+:ref:`misc-concepts/classad-mechanism:old classad evaluation semantics`.
 
 Predefined Functions
 ''''''''''''''''''''
@@ -252,8 +253,8 @@ calls are allowed.
 
 Here are descriptions of each of these predefined functions. The
 possible types are the same as itemized in
-Section \ `4.1.2 <#x48-4020004.1.2>`__. Where the type may be any of
-these literal types, it is called out as AnyType. Where the type is
+:ref:`misc-concepts/classad-mechanism:old classad syntax`. Where the type may
+be any of these literal types, it is called out as AnyType. Where the type is
 Integer, but only returns the value 1 or 0 (implying ``True`` or
 ``False``), it is called out as Boolean. The format of each function is
 given as

@@ -919,7 +919,7 @@ Job ClassAd Attributes
     The number of seconds set for a job lease, the amount of time that a
     job may continue running on a remote resource, despite its
     submitting machine's lack of response. See
-    section \ `2.14.4 <SpecialEnvironmentConsiderations.html#x26-1440002.14.4>`__
+    :ref:`users-manual/special-environment-considerations:job leases`
     for details on job leases.
     :index:`JobMaxVacateTime<single: JobMaxVacateTime; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobMaxVacateTime>`

@@ -1,5 +1,3 @@
-      
-
 Job Event Log Codes
 ===================
 

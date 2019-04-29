@@ -1,5 +1,5 @@
 Cloud Computing
----------------
+===============
 
 Although HTCondor has long supported accessing cloud resources as though
 they were part of the Grid, the differences between clouds and the Grid

@@ -1,5 +1,5 @@
 Version History and Release Notes
----------------------------------
+=================================
 
 .. toctree::
    :maxdepth: 2

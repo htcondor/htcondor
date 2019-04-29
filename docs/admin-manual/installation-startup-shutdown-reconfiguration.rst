@@ -766,7 +766,8 @@ decisions to make about the basic layout of the pool.
 
 If the answers to these questions are already known, skip to the Windows
 Installation Procedure section below,
-section \ `3.2.3 <#x30-1610003.2.3>`__. If unsure, read on.
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
+on windows`
 
 -  What machine will be the central manager?
 
@@ -1415,10 +1416,11 @@ implementation of security in HTCondor.
 
           MAX_JOBS_SUBMITTED = 0
 
-    See instructions below in section \ `3.2.6 <#x30-1680003.2.6>`__ for
-    how to reconfigure a pool. After the reconfiguration, the command to
-    wait for all jobs to complete and shut down the submission of jobs
-    is
+    See instructions below in 
+    :ref:`admin-manual/installation-startup-shutdown-reconfiguration:reconfiguring
+    an htcondor pool` for how to reconfigure a pool. After the reconfiguration,
+    the command to wait for all jobs to complete and shut down the submission of
+    jobs is
 
     ::
 

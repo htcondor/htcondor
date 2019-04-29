@@ -1789,11 +1789,10 @@ to HTCondor: a job, and a machine. A grid resource is a machine. The
 ClassAd describes the grid resource, as well as identifying the
 capabilities of the grid resource. It may also state both requirements
 and preferences (called **rank**\ :index:`rank<single: rank; submit commands>`)
-for the jobs it will run. See
-Section \ `2.3 <MatchmakingwithClassAds.html#x15-150002.3>`__ for an
-overview of the interaction between matchmaking and ClassAds. A list of
-common machine ClassAd attributes is given in the Appendix on
-page \ `2410 <MachineClassAdAttributes.html#x171-1235000A.3>`__.
+for the jobs it will run. See the :doc:`/users-manual/matchmaking-with-classads`
+section for an overview of the interaction between matchmaking and ClassAds. A list of
+common machine ClassAd attributes is given in the 
+:doc:`classad-attributes/machine-classad-attributes` appendix page.
 
 To advertise a grid site, place the attributes in a file. Here is a
 sample ClassAd that describes a grid resource that is capable of running
@@ -2027,6 +2026,6 @@ held 4 times per Globus submission.
 
 If you are concerned about unknown or malicious grid sites reporting to
 your *condor_collector*, you should use HTCondor's security options,
-documented in Section \ `3.8 <Security.html#x36-2680003.8>`__.
+documented in the :doc:`/admin-manual/security` section.
 
       

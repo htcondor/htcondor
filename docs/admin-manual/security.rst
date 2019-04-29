@@ -34,7 +34,8 @@ and described:
     daemons are run as the user root, while other common operations are
     owned by a user of HTCondor. Operations that do not belong to either
     root or an HTCondor user are often owned by the condor user. See
-    Section \ `3.8.13 <#x36-2960003.8.13>`__ for more detail.
+    :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
+    for more detail.
  Authentication
     Proper identification of a user is accomplished by the process of
     authentication. It attempts to distinguish between real users and
@@ -82,11 +83,11 @@ model handles these example situations and many more.
 Requests to HTCondor are categorized into groups of access levels, based
 on the type of operation requested. The user of a specific request must
 be authorized at the required access level. For example, executing the
-*condor\_status* command requires the ``READ`` access level. Actions
+*condor_status* command requires the ``READ`` access level. Actions
 that accomplish management tasks, such as shutting down or restarting of
 a daemon require an ``ADMINISTRATOR`` access level. See
-Section \ `3.8.7 <#x36-2880003.8.7>`__ for a full list of HTCondor's
-access levels and their meanings.
+the :ref:`admin-manual/security:authorization` section for a full list of
+HTCondor's access levels and their meanings.
 
 There are two sides to any communication or command invocation in
 HTCondor. One side is identified as the client, and the other side is
@@ -94,15 +95,15 @@ identified as the daemon. The client is the party that initiates the
 command, and the daemon is the party that processes the command and
 responds. In some cases it is easy to distinguish the client from the
 daemon, while in other cases it is not as easy. HTCondor tools such as
-*condor\_submit* and *condor\_config\_val* are clients. They send
+*condor_submit* and *condor_config_val* are clients. They send
 commands to daemons and act as clients in all their communications. For
-example, the *condor\_submit* command communicates with the
-*condor\_schedd*. Behind the scenes, HTCondor daemons also communicate
+example, the *condor_submit* command communicates with the
+*condor_schedd*. Behind the scenes, HTCondor daemons also communicate
 with each other; in this case the daemon initiating the command plays
-the role of the client. For instance, the *condor\_negotiator* daemon
-acts as a client when contacting the *condor\_schedd* daemon to initiate
-matchmaking. Once a match has been found, the *condor\_schedd* daemon
-acts as a client and contacts the *condor\_startd* daemon.
+the role of the client. For instance, the *condor_negotiator* daemon
+acts as a client when contacting the *condor_schedd* daemon to initiate
+matchmaking. Once a match has been found, the *condor_schedd* daemon
+acts as a client and contacts the *condor_startd* daemon.
 
 HTCondor's security model is implemented using configuration. Commands
 in HTCondor are executed over TCP/IP network connections. While network
@@ -127,30 +128,30 @@ described.
  ``READ``
     This access level can obtain or read information about HTCondor.
     Examples that require only ``READ`` access are viewing the status of
-    the pool with *condor\_status*, checking a job queue with
-    *condor\_q*, or viewing user priorities with *condor\_userprio*.
+    the pool with *condor_status*, checking a job queue with
+    *condor_q*, or viewing user priorities with *condor_userprio*.
     ``READ`` access does not allow any changes, and it does not allow
     job submission.
 
 ``WRITE``
     This access level is required to send (write) information to
     HTCondor. Examples that require ``WRITE`` access are job submission
-    with *condor\_submit* and advertising a machine so it appears in the
-    pool (this is usually done automatically by the *condor\_startd*
+    with *condor_submit* and advertising a machine so it appears in the
+    pool (this is usually done automatically by the *condor_startd*
     daemon). The ``WRITE`` level of access implies ``READ`` access.
 
 ``ADMINISTRATOR``
     This access level has additional HTCondor administrator rights to
     the pool. It includes the ability to change user priorities with the
-    command *condor\_userprio*, as well as the ability to turn HTCondor
-    on and off (as with the commands *condor\_on* and *condor\_off*).
-    The *condor\_fetchlog* tool also requires an ``ADMINISTRATOR``
+    command *condor_userprio*, as well as the ability to turn HTCondor
+    on and off (as with the commands *condor_on* and *condor_off*).
+    The *condor_fetchlog* tool also requires an ``ADMINISTRATOR``
     access level. The ``ADMINISTRATOR`` level of access implies both
     ``READ`` and ``WRITE`` access.
 
 ``CONFIG``
     This access level is required to modify a daemon's configuration
-    using the *condor\_config\_val* command. By default, this level of
+    using the *condor_config_val* command. By default, this level of
     access can change any configuration parameters of an HTCondor pool,
     except those specified in the ``condor_config.root`` configuration
     file. The ``CONFIG`` level of access implies ``READ`` access.
@@ -159,16 +160,16 @@ described.
     This level of access is required for commands that the owner of a
     machine (any local user) should be able to use, in addition to the
     HTCondor administrators. An example that requires the ``OWNER``
-    access level is the *condor\_vacate* command. The command causes the
-    *condor\_startd* daemon to vacate any HTCondor job currently running
+    access level is the *condor_vacate* command. The command causes the
+    *condor_startd* daemon to vacate any HTCondor job currently running
     on a machine. The owner of that machine should be able to cause the
     removal of a job running on the machine.
 
 ``DAEMON``
     This access level is used for commands that are internal to the
     operation of HTCondor. An example of this internal operation is when
-    the *condor\_startd* daemon sends its ClassAd updates to the
-    *condor\_collector* daemon (which may be more specifically
+    the *condor_startd* daemon sends its ClassAd updates to the
+    *condor_collector* daemon (which may be more specifically
     controlled by the ``ADVERTISE_STARTD`` access level). Authorization
     at this access level should only be given to the user account under
     which the HTCondor daemons run. The ``DAEMON`` level of access
@@ -176,29 +177,29 @@ described.
 
 ``NEGOTIATOR``
     This access level is used specifically to verify that commands are
-    sent by the *condor\_negotiator* daemon. The *condor\_negotiator*
+    sent by the *condor_negotiator* daemon. The *condor_negotiator*
     daemon runs on the central manager of the pool. Commands requiring
-    this access level are the ones that tell the *condor\_schedd* daemon
+    this access level are the ones that tell the *condor_schedd* daemon
     to begin negotiating, and those that tell an available
-    *condor\_startd* daemon that it has been matched to a
-    *condor\_schedd* with jobs to run. The ``NEGOTIATOR`` level of
+    *condor_startd* daemon that it has been matched to a
+    *condor_schedd* with jobs to run. The ``NEGOTIATOR`` level of
     access implies ``READ`` access.
 
 ``ADVERTISE_MASTER``
     This access level is used specifically for commands used to
-    advertise a *condor\_master* daemon to the collector. Any setting
+    advertise a *condor_master* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
 ``ADVERTISE_STARTD``
     This access level is used specifically for commands used to
-    advertise a *condor\_startd* daemon to the collector. Any setting
+    advertise a *condor_startd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
 ``ADVERTISE_SCHEDD``
     This access level is used specifically for commands used to
-    advertise a *condor\_schedd* daemon to the collector. Any setting
+    advertise a *condor_schedd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
@@ -219,83 +220,83 @@ given machine.
 ALL DAEMONS:
 
  ``WRITE``
-    The command sent as a result of *condor\_reconfig* to reconfigure a
+    The command sent as a result of *condor_reconfig* to reconfigure a
     daemon.
 
 STARTD:
 
  ``WRITE``
-    All commands that relate to a *condor\_schedd* daemon claiming a
+    All commands that relate to a *condor_schedd* daemon claiming a
     machine, starting jobs there, or stopping those jobs.
 
-    The command that *condor\_checkpoint* sends to periodically
+    The command that *condor_checkpoint* sends to periodically
     checkpoint all running jobs.
 
  ``READ``
-    The command that *condor\_preen* sends to request the current state
-    of the *condor\_startd* daemon.
+    The command that *condor_preen* sends to request the current state
+    of the *condor_startd* daemon.
 
  ``OWNER``
-    The command that *condor\_vacate* sends to cause any running jobs to
+    The command that *condor_vacate* sends to cause any running jobs to
     stop running.
 
 ``NEGOTIATOR``
-    The command that the *condor\_negotiator* daemon sends to match a
-    machine's *condor\_startd* daemon with a given *condor\_schedd*
+    The command that the *condor_negotiator* daemon sends to match a
+    machine's *condor_startd* daemon with a given *condor_schedd*
     daemon.
 
 NEGOTIATOR:
 
  ``WRITE``
     The command that initiates a new negotiation cycle. It is sent by
-    the *condor\_schedd* when new jobs are submitted or a
-    *condor\_reschedule* command is issued.
+    the *condor_schedd* when new jobs are submitted or a
+    *condor_reschedule* command is issued.
 
 ``READ``
     The command that can retrieve the current state of user priorities
-    in the pool, sent by the *condor\_userprio* command.
+    in the pool, sent by the *condor_userprio* command.
 
 ``ADMINISTRATOR``
     The command that can set the current values of user priorities, sent
-    as a result of the *condor\_userprio* command.
+    as a result of the *condor_userprio* command.
 
 COLLECTOR:
 
  ``ADVERTISE_MASTER``
-    Commands that update the *condor\_collector* daemon with new
-    *condor\_master* ClassAds.
+    Commands that update the *condor_collector* daemon with new
+    *condor_master* ClassAds.
 
 ``ADVERTISE_SCHEDD``
-    Commands that update the *condor\_collector* daemon with new
-    *condor\_schedd* ClassAds.
+    Commands that update the *condor_collector* daemon with new
+    *condor_schedd* ClassAds.
 
 ``ADVERTISE_STARTD``
-    Commands that update the *condor\_collector* daemon with new
-    *condor\_startd* ClassAds.
+    Commands that update the *condor_collector* daemon with new
+    *condor_startd* ClassAds.
 
 ``DAEMON``
-    All other commands that update the *condor\_collector* daemon with
+    All other commands that update the *condor_collector* daemon with
     new ClassAds. Note that the specific access levels such as
     ``ADVERTISE_STARTD`` default to the ``DAEMON`` settings, which in
     turn defaults to ``WRITE``.
 
 ``READ``
-    All commands that query the *condor\_collector* daemon for ClassAds.
+    All commands that query the *condor_collector* daemon for ClassAds.
 
 SCHEDD:
 
  ``NEGOTIATOR``
-    The command that the *condor\_negotiator* sends to begin negotiating
-    with this *condor\_schedd* to match its jobs with available
-    *condor\_startds*.
+    The command that the *condor_negotiator* sends to begin negotiating
+    with this *condor_schedd* to match its jobs with available
+    *condor_startds*.
 
 ``WRITE``
-    The command which *condor\_reschedule* sends to the *condor\_schedd*
-    to get it to update the *condor\_collector* with a current ClassAd
+    The command which *condor_reschedule* sends to the *condor_schedd*
+    to get it to update the *condor_collector* with a current ClassAd
     and begin a negotiation cycle.
 
     The commands which write information into the job queue (such as
-    *condor\_submit* and *condor\_hold*). Note that for most commands
+    *condor_submit* and *condor_hold*). Note that for most commands
     which attempt to write to the job queue, HTCondor will perform an
     additional user-level authentication step. This additional
     user-level authentication prevents, for example, an ordinary user
@@ -304,22 +305,22 @@ SCHEDD:
  ``READ``
     The command from any tool to view the status of the job queue.
 
-    The commands that a *condor\_startd* sends to the *condor\_schedd*
-    when the *condor\_schedd* daemon's claim is being preempted and also
+    The commands that a *condor_startd* sends to the *condor_schedd*
+    when the *condor_schedd* daemon's claim is being preempted and also
     when the lease on the claim is renewed. These operations only
     require ``READ`` access, rather than ``DAEMON`` in order to limit
-    the level of trust that the *condor\_schedd* must have for the
-    *condor\_startd*. Success of these commands is only possible if the
-    *condor\_startd* knows the secret claim id, so effectively,
+    the level of trust that the *condor_schedd* must have for the
+    *condor_startd*. Success of these commands is only possible if the
+    *condor_startd* knows the secret claim id, so effectively,
     authorization for these commands is more specific than HTCondor's
-    general security model implies. The *condor\_schedd* automatically
-    grants the *condor\_startd* ``READ`` access for the duration of the
+    general security model implies. The *condor_schedd* automatically
+    grants the *condor_startd* ``READ`` access for the duration of the
     claim. Therefore, if one desires to only authorize specific execute
     machines to run jobs, one must either limit which machines are
     allowed to advertise themselves to the pool (most common) or
-    configure the *condor\_schedd*\ 's ``ALLOW_CLIENT``
+    configure the *condor_schedd*\ 's ``ALLOW_CLIENT``
     :index:`ALLOW_CLIENT` setting to only allow connections from
-    the *condor\_schedd* to the trusted execute machines.
+    the *condor_schedd* to the trusted execute machines.
 
 MASTER: All commands are registered with ``ADMINISTRATOR`` access:
 
@@ -348,10 +349,10 @@ chosen for the connection.
 
 Security negotiation is a completely separate process from matchmaking,
 and should not be confused with any specific function of the
-*condor\_negotiator* daemon. Security negotiation occurs when one
+*condor_negotiator* daemon. Security negotiation occurs when one
 HTCondor daemon or tool initiates communication with another HTCondor
 daemon, to determine the security settings by which the communication
-will be ruled. The *condor\_negotiator* daemon does negotiation, whereby
+will be ruled. The *condor_negotiator* daemon does negotiation, whereby
 queued jobs and available machines within a pool go through the process
 of matchmaking (deciding out which machines will run which jobs).
 
@@ -414,7 +415,7 @@ authentication when possible. She sets
 
         SEC_DEFAULT_AUTHENTICATION = OPTIONAL
 
-The machine running the *condor\_schedd* to which Frida will remotely
+The machine running the *condor_schedd* to which Frida will remotely
 submit jobs, however, is operated by a security-conscious system
 administrator who dutifully sets:
 
@@ -427,13 +428,13 @@ that authentication will be used, and allows the command to continue.
 This example illustrates the point that the most restrictive security
 policy sets the levels of security enforced. There is actually more to
 the understanding of this scenario. Some HTCondor commands, such as the
-use of *condor\_submit* to submit jobs always require authentication of
+use of *condor_submit* to submit jobs always require authentication of
 the submitter, no matter what the policy says. This is because the
 identity of the submitter needs to be known in order to carry out the
-operation. Others commands, such as *condor\_q*, do not always require
+operation. Others commands, such as *condor_q*, do not always require
 authentication, so in the above example, the server's policy would force
-Frida's *condor\_q* queries to be authenticated, whereas a different
-policy could allow *condor\_q* to happen without any authentication.
+Frida's *condor_q* queries to be authenticated, whereas a different
+policy could allow *condor_q* to happen without any authentication.
 
 Whether or not security negotiation occurs depends on the setting at
 both the client and daemon side of the configuration variable(s) defined
@@ -491,7 +492,7 @@ The enabling of encryption and/or integrity checks is dependent on
 authentication taking place. The authentication provides a key exchange.
 The key is needed for both encryption and integrity checks.
 
-Setting SEC\_CLIENT\_<feature> determines the policy for all outgoing
+Setting SEC_CLIENT_<feature> determines the policy for all outgoing
 commands. The policy for incoming commands (the daemon side of the
 communication) takes a more fine-grained approach that implements a set
 of access levels for the received command. For example, it is desirable
@@ -527,8 +528,8 @@ authentication and/or encryption are
     SEC_<context>_CRYPTO_METHODS
 
 These macros are defined by a comma or space delimited list of possible
-methods to use. Section `3.8.3 <#x36-2740003.8.3>`__ lists all
-implemented authentication methods. Section `3.8.5 <#x36-2860003.8.5>`__
+methods to use. The :ref:`admin-manual/security:authentication` section
+lists all implemented authentication methods. Section `3.8.5 <#x36-2860003.8.5>`__
 lists all implemented encryption methods.
 
 Authentication
@@ -684,7 +685,7 @@ NTSSPI may be used, then Kerberos will be tried first, and if there is a
 failure for any reason, then NTSSPI will be tried.
 
 An additional specialized method of authentication exists for
-communication between the *condor\_schedd* and *condor\_startd*. It is
+communication between the *condor_schedd* and *condor_startd*. It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of strong authentication between the submit and execute
@@ -695,7 +696,7 @@ daemons. See the description of
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION``, then HTCondor uses a default
 value of OPTIONAL. Authentication will be required for any operation
-which modifies the job queue, such as *condor\_qedit* and *condor\_rm*.
+which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
 Unix machine is FS, KERBEROS, GSI. This default value for a Windows
@@ -733,7 +734,7 @@ trusted CAs. When one side of the communication (as either client A or
 daemon B) is an HTCondor daemon, these locations are determined by
 configuration or by default locations. When one side of the
 communication (as a client A) is a user of HTCondor (the process owner
-of an HTCondor tool, for example *condor\_submit*), these locations are
+of an HTCondor tool, for example *condor_submit*), these locations are
 determined by the pre-set values of environment variables or by default
 locations.
 
@@ -805,8 +806,8 @@ locations.
     HTCondor will also need a way to map an X.509 distinguished name to
     an HTCondor user id. There are two ways to accomplish this mapping.
     For a first way to specify the mapping, see
-    section \ `3.8.4 <#x36-2850003.8.4>`__ to use HTCondor's unified map
-    file. The second way to do the mapping is within an
+    :ref:`admin-manual/security:the unified map file for authentication` to use
+    HTCondor's unified map file. The second way to do the mapping is within an
     administrator-maintained GSI-specific file called an X.509 map file,
     mapping from X.509 Distinguished Name (DN) to HTCondor user id. It
     is similar to a Globus grid map file, except that it is only used
@@ -941,10 +942,10 @@ that when SSL authentication is used and when one process communicates
 with another, each process must be able to verify the signature on the
 certificate presented by the other process. The process that initiates
 the connection is the client, and the process that receives the
-connection is the server. For example, when a *condor\_startd* daemon
-authenticates with a *condor\_collector* daemon to provide a machine
-ClassAd, the *condor\_startd* daemon initiates the connection and acts
-as the client, and the *condor\_collector* daemon acts as the server.
+connection is the server. For example, when a *condor_startd* daemon
+authenticates with a *condor_collector* daemon to provide a machine
+ClassAd, the *condor_startd* daemon initiates the connection and acts
+as the client, and the *condor_collector* daemon acts as the server.
 
 The names and locations of keys and certificates for clients, servers,
 and the files used to specify trusted certificate authorities (CAs) are
@@ -981,9 +982,9 @@ Kerberos Authentication
 If Kerberos is used for authentication, then a mapping from a Kerberos
 domain (called a realm) to an HTCondor UID domain is necessary. There
 are two ways to accomplish this mapping. For a first way to specify the
-mapping, see section \ `3.8.4 <#x36-2850003.8.4>`__ to use HTCondor's
-unified map file. A second way to specify the mapping defines the
-configuration variable ``KERBEROS_MAP_FILE``
+mapping, see admin-manual/security:the unified map file for authentication`
+to use HTCondor's unified map file. A second way to specify the mapping defines
+the configuration variable ``KERBEROS_MAP_FILE``
 :index:`KERBEROS_MAP_FILE` to define a path to an
 administrator-maintained Kerberos-specific map file. The configuration
 syntax is
@@ -1065,8 +1066,8 @@ placed in a file defined by the configuration variable
 ``SEC_PASSWORD_FILE`` :index:`SEC_PASSWORD_FILE`. This file will
 be accessible only by the UID that HTCondor is started as. On Windows,
 the same secure password store that is used for user passwords will be
-used for the pool password (see section
-`8.2.3 <MicrosoftWindows.html#x76-5760008.2.3>`__).
+used for the pool password (see the 
+:ref:`platform-specific/microsoft-windows:secure password storage` section).
 
 Under Unix, the password file can be generated by using the following
 command to write directly to the password file:
@@ -1076,14 +1077,14 @@ command to write directly to the password file:
     condor_store_cred -f /path/to/password/file
 
 Under Windows (or under Unix), storing the pool password is done with
-the **-c** option when using to *condor\_store\_cred* **add**. Running
+the **-c** option when using to *condor_store_cred* **add**. Running
 
 ::
 
     condor_store_cred -c add
 
 prompts for the pool password and store it on the local machine, making
-it available for daemons to use in authentication. The *condor\_master*
+it available for daemons to use in authentication. The *condor_master*
 must be running for this command to work.
 
 In addition, storing the pool password to a given machine requires
@@ -1099,7 +1100,7 @@ It is also possible to set the pool password remotely, but this is
 recommended only if it can be done over an encrypted channel. This is
 possible on Windows, for example, in an environment where common
 accounts exist across all the machines in the pool. In this case,
-ALLOW\_CONFIG can be set to allow the HTCondor administrator (who in
+ALLOW_CONFIG can be set to allow the HTCondor administrator (who in
 this example has an account condor common to all machines in the pool)
 to set the password from the central manager as follows.
 
@@ -1116,14 +1117,14 @@ The HTCondor administrator then executes
 from the central manager to store the password to a given machine. Since
 the condor account exists on both the central manager and host.mydomain,
 the NTSSPI authentication method can be used to authenticate and encrypt
-the connection. *condor\_store\_cred* will warn and prompt for
+the connection. *condor_store_cred* will warn and prompt for
 cancellation, if the channel is not encrypted for whatever reason
 (typically because common accounts do not exist or HTCondor's security
 is misconfigured).
 
 When a daemon is authenticated using a pool password, its security
-principle is condor\_pool@$(UID\_DOMAIN), where $(UID\_DOMAIN) is taken
-from the daemon's configuration. The ALLOW\_DAEMON and ALLOW\_NEGOTIATOR
+principle is condor_pool@$(UID_DOMAIN), where $(UID_DOMAIN) is taken
+from the daemon's configuration. The ALLOW_DAEMON and ALLOW_NEGOTIATOR
 configuration variables for authorization should restrict access using
 this name. For example,
 
@@ -1157,19 +1158,19 @@ authentication can be done using another method such as FS.
                        condor@$(UID_DOMAIN)/$(IP_ADDRESS) 
         ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
 
- Example Using Pool Password for *condor\_startd* Advertisement
+ Example Using Pool Password for *condor_startd* Advertisement
     :index:`sample configuration using pool password for startd advertisement<single: sample configuration using pool password for startd advertisement; security>`
 
     One problem with the pool password method of authentication is that
     it involves a single, shared secret. This does not scale well with
     the addition of remote users who flock to the local pool. However,
     the pool password may still be used for authenticating portions of
-    the local pool, while others (such as the remote *condor\_schedd*
+    the local pool, while others (such as the remote *condor_schedd*
     daemons involved in flocking) are authenticated by other means.
 
-    In this example, only the *condor\_startd* daemons in the local pool
+    In this example, only the *condor_startd* daemons in the local pool
     are required to have the pool password when they advertise
-    themselves to the *condor\_collector* daemon.
+    themselves to the *condor_collector* daemon.
 
     ::
 
@@ -1318,7 +1319,7 @@ the following mappings, with some additional logic noted below:
 For GSI (or SSL), the special name ``GSS_ASSIST_GRIDMAP`` instructs
 HTCondor to use the GSI grid map file (configured with ``GRIDMAP``
 :index:`GRIDMAP` as shown in
-section \ `3.8.3 <#x36-2750003.8.3>`__) to do the mapping. If no mapping
+:ref:`admin-manual/security:authentication` to do the mapping. If no mapping
 can be found for GSI (with or without the use of
 ``GSS_ASSIST_GRIDMAP``), the user is mapped to gsi@unmapped.
 
@@ -1326,7 +1327,7 @@ For Kerberos, if ``KERBEROS_MAP_FILE`` :index:`KERBEROS_MAP_FILE`
 is specified, the domain portion of the name is obtained by mapping the
 Kerberos realm to the value specified in the map file, rather than just
 using the realm verbatim as the domain portion of the condor user name.
-See section \ `3.8.3 <#x36-2770003.8.3>`__ for details.
+See the :ref:`admin-manual/security:authentication` section for details.
 :index:`unauthenticated` :index:`unmapped`
 
 If authentication did not happen or failed and was not required, then
@@ -1464,7 +1465,8 @@ required of further communication.
 
 Note at this time, integrity checks are not performed upon job data
 files that are transferred by HTCondor via the File Transfer Mechanism
-described in section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__.
+described in :ref:`users-manual/submitting-a-job:submitting jobs without a
+shared file system: htcondor's file transfer mechanism`.
 
 The client uses one of two macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
@@ -1538,8 +1540,8 @@ requests made to the resources. It defines who is allowed to do what.
 Authorization is defined in terms of users. An initial implementation
 provided authorization based on hosts (machines), while the current
 implementation relies on user-based authorization.
-Section \ `3.8.9 <#x36-2920003.8.9>`__ on Setting Up IP/Host-Based
-Security in HTCondor describes the previous implementation. This
+The :ref:`admin-manual/security:host-based security in htcondor` section 
+describes the previous implementation. This
 IP/Host-Based security still exists, and it can be used, but
 significantly stronger and more flexible security can be achieved with
 the newer authorization based on fully qualified user names. This
@@ -1750,29 +1752,29 @@ be modified by configuration. :index:`unauthenticated`
    jobs). This prevents these operations from being done by
    unauthenticated users and users who are authenticated but lacking a
    name in the map file.
-#. To simplify flocking, the *condor\_schedd* automatically grants the
-   *condor\_startd* ``READ`` access for the duration of a claim so that
-   claim-related communications are possible. The *condor\_shadow*
-   grants the *condor\_starter* ``DAEMON`` access so that file transfers
+#. To simplify flocking, the *condor_schedd* automatically grants the
+   *condor_startd* ``READ`` access for the duration of a claim so that
+   claim-related communications are possible. The *condor_shadow*
+   grants the *condor_starter* ``DAEMON`` access so that file transfers
    can be done. The identity that is granted access in both these cases
    is the authenticated name (if available) and IP address of the
-   *condor\_startd* when the *condor\_schedd* initially connects to it
+   *condor_startd* when the *condor_schedd* initially connects to it
    to request the claim. It is important that only trusted
-   *condor\_startd*\ s are allowed to publish themselves to the
-   collector or that the *condor\_schedd*\ 's ``ALLOW_CLIENT`` setting
-   prevent it from allowing connections to *condor\_startd*\ s that it
+   *condor_startd*\ s are allowed to publish themselves to the
+   collector or that the *condor_schedd*\ 's ``ALLOW_CLIENT`` setting
+   prevent it from allowing connections to *condor_startd*\ s that it
    does not trust to run jobs.
 #. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
    :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
-   the *condor\_schedd* and ``DAEMON`` access to the *condor\_shadow*.
+   the *condor_schedd* and ``DAEMON`` access to the *condor_shadow*.
 
 Example of Authorization Security Configuration
 '''''''''''''''''''''''''''''''''''''''''''''''
 
 An example of the configuration variables for the user-side
 authorization is derived from the necessary access levels as described
-in Section \ `3.8.1 <#x36-2700003.8.1>`__.
+in :ref:`admin-manual/security:htcondor's security model`.
 
 ::
 
@@ -1886,7 +1888,7 @@ user to set the default level of secure sessions in HTCondor. Like other
 security settings, the possible values for this parameter can be
 REQUIRED, PREFERRED, OPTIONAL, or NEVER. If you disable sessions and you
 have authentication turned on, then most authentication (other than
-commands like *condor\_submit*) will fail because HTCondor requires
+commands like *condor_submit*) will fail because HTCondor requires
 sessions when you have security turned on. On the other hand, if you are
 not using strong security in HTCondor, but you are relying on the
 default host-based security, turning off sessions may be useful in
@@ -1896,7 +1898,7 @@ consumption of the daemons, which keep track of the sessions in use.
 
 Session lifetimes for specific daemons are already properly configured
 in the default installation of HTCondor. HTCondor tools such as
-*condor\_q* and *condor\_status* create a session that expires after one
+*condor_q* and *condor_status* create a session that expires after one
 minute. Theoretically they should not create a session at all, because
 the session cannot be reused between program invocations, but this is
 difficult to do in the general case. This allows a very small window of
@@ -1928,7 +1930,7 @@ HTCondor. It lists the different levels of access and what parts of
 HTCondor use which levels. There is a description of how to configure a
 pool to grant or deny certain levels of access to various machines.
 Configuration examples and the settings of configuration variables using
-the *condor\_config\_val* command complete this section.
+the *condor_config_val* command complete this section.
 
 Inside the HTCondor daemons or tools that use DaemonCore (see
 section \ `3.11 <DaemonCore.html#x39-3300003.11>`__ for details), most
@@ -1971,11 +1973,11 @@ HTCondor can be registered with:
     to send ClassAd updates to the central manager. The machine can talk
     to the other machines in a pool in order to submit or run jobs. In
     addition, any machine with ``WRITE`` access can request the
-    *condor\_startd* daemon to perform periodic checkpoints on an
+    *condor_startd* daemon to perform periodic checkpoints on an
     executing job. After the checkpoint is completed, the job will
     continue to execute and the machine will still be claimed by the
-    original *condor\_schedd* daemon. This allows users on the machines
-    where they submitted their jobs to use the *condor\_checkpoint*
+    original *condor_schedd* daemon. This allows users on the machines
+    where they submitted their jobs to use the *condor_checkpoint*
     command to get their jobs to periodically checkpoint, even if the
     users do not have an account on the machine where the jobs execute.
 
@@ -1986,9 +1988,9 @@ HTCondor can be registered with:
  ``ADMINISTRATOR``
     Machines with ``ADMINISTRATOR`` access are granted additional
     HTCondor administrator rights to the pool. This includes the ability
-    to change user priorities with the command *condor\_userprio*, and
-    the ability to turn HTCondor on and off using *condor\_on* and
-    *condor\_off*. It is recommended that few machines be granted
+    to change user priorities with the command *condor_userprio*, and
+    the ability to turn HTCondor on and off using *condor_on* and
+    *condor_off*. It is recommended that few machines be granted
     administrator access in a pool; typically these are the machines
     that are used by HTCondor and system administrators as their primary
     workstations, or the machines running as the pool's central manager.
@@ -2002,23 +2004,23 @@ HTCondor can be registered with:
  ``OWNER``
     This level of access is required for commands that the owner of a
     machine (any local user) should be able to use, in addition to the
-    HTCondor administrators. For example, the *condor\_vacate* command
-    causes the *condor\_startd* daemon to vacate any running HTCondor
+    HTCondor administrators. For example, the *condor_vacate* command
+    causes the *condor_startd* daemon to vacate any running HTCondor
     job. It requires ``OWNER`` permission, so that any user logged into
-    a local machine can issue a *condor\_vacate* command.
+    a local machine can issue a *condor_vacate* command.
 
 ``NEGOTIATOR``
     This access level is used specifically to verify that commands are
-    sent by the *condor\_negotiator* daemon. The *condor\_negotiator*
+    sent by the *condor_negotiator* daemon. The *condor_negotiator*
     daemon runs on the central manager of the pool. Commands requiring
-    this access level are the ones that tell the *condor\_schedd* daemon
+    this access level are the ones that tell the *condor_schedd* daemon
     to begin negotiating, and those that tell an available
-    *condor\_startd* daemon that it has been matched to a
-    *condor\_schedd* with jobs to run.
+    *condor_startd* daemon that it has been matched to a
+    *condor_schedd* with jobs to run.
 
 ``CONFIG``
     This access level is required to modify a daemon's configuration
-    using the *condor\_config\_val* command. By default, machines with
+    using the *condor_config_val* command. By default, machines with
     this level of access are able to change any configuration parameter,
     except those specified in the ``condor_config.root`` configuration
     file. Therefore, one should exercise extreme caution before granting
@@ -2028,8 +2030,8 @@ HTCondor can be registered with:
 ``DAEMON``
     This access level is used for commands that are internal to the
     operation of HTCondor. An example of this internal operation is when
-    the *condor\_startd* daemon sends its ClassAd updates to the
-    *condor\_collector* daemon (which may be more specifically
+    the *condor_startd* daemon sends its ClassAd updates to the
+    *condor_collector* daemon (which may be more specifically
     controlled by the ``ADVERTISE_STARTD`` access level). Authorization
     at this access level should only be given to hosts that actually run
     HTCondor in your pool. The ``DAEMON`` level of access implies both
@@ -2039,19 +2041,19 @@ HTCondor can be registered with:
 
 ``ADVERTISE_MASTER``
     This access level is used specifically for commands used to
-    advertise a *condor\_master* daemon to the collector. Any setting
+    advertise a *condor_master* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
 ``ADVERTISE_STARTD``
     This access level is used specifically for commands used to
-    advertise a *condor\_startd* daemon to the collector. Any setting
+    advertise a *condor_startd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
 ``ADVERTISE_SCHEDD``
     This access level is used specifically for commands used to
-    advertise a *condor\_schedd* daemon to the collector. Any setting
+    advertise a *condor_schedd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
 
@@ -2096,8 +2098,8 @@ Here is a sample security configuration:
     ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM) 
     ALLOW_CLIENT = *
 
-This example configuration presumes that the *condor\_collector* and
-*condor\_negotiator* daemons are running on the same machine.
+This example configuration presumes that the *condor_collector* and
+*condor_negotiator* daemons are running on the same machine.
 
 For each access level, an ALLOW or a DENY may be added.
 
@@ -2132,10 +2134,10 @@ This is how most people would intuitively expect it to work.
 In addition, the above access levels may be specified on a per-daemon
 basis, instead of machine-wide for all daemons. Do this with the
 subsystem string (described in
-section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
+:ref:`admin-manual/introduction-to-configuration:pre-defined macros`
 on Subsystem Names), which is one of: ``STARTD``, ``SCHEDD``,
 ``MASTER``, ``NEGOTIATOR``, or ``COLLECTOR``. For example, to grant
-different read access for the *condor\_schedd*:
+different read access for the *condor_schedd*:
 
 ::
 
@@ -2217,10 +2219,10 @@ Changing the Security Configuration
 
 A new security feature introduced in HTCondor version 6.3.2 enables more
 fine-grained control over the configuration settings that can be
-modified remotely with the *condor\_config\_val* command. The manual
-page for *condor\_config\_val* on
+modified remotely with the *condor_config_val* command. The manual
+page for *condor_config_val* on
 page \ `1848 <Condorconfigval.html#x105-73100012>`__ details how to use
-*condor\_config\_val* to modify configuration settings remotely. Since
+*condor_config_val* to modify configuration settings remotely. Since
 certain configuration attributes can have a large impact on the
 functioning of the HTCondor system and the security of the machines in
 an HTCondor pool, it is important to restrict the ability to change
@@ -2243,7 +2245,7 @@ granted. If not covered, the request will be refused.
 
 The default configuration shipped with HTCondor is exceedingly
 restrictive. HTCondor users or administrators cannot set configuration
-values from remote hosts with *condor\_config\_val*. Enabling this
+values from remote hosts with *condor_config_val*. Enabling this
 feature requires a change to the settings in the configuration file. Use
 this security feature carefully. Grant access only for attributes which
 you need to be able to modify in this manner, and grant access only at
@@ -2253,10 +2255,9 @@ The most secure use of this feature allows HTCondor users to set
 attributes in the configuration file which are not used by HTCondor
 directly. These are custom attributes published by various HTCondor
 daemons with the ``<SUBSYS>_ATTRS`` setting described in
-section \ `3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__ on
-page \ `621 <ConfigurationMacros.html#x33-1900003.5.3>`__. It is secure
-to grant access only to modify attributes that are used by HTCondor to
-publish information. Granting access to modify settings used to control
+:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`.
+It is secure to grant access only to modify attributes that are used by HTCondor
+to publish information. Granting access to modify settings used to control
 the behavior of HTCondor is not secure. The goal is to ensure no one can
 use the power to change configuration attributes to compromise the
 security of your HTCondor pool.
@@ -2283,9 +2284,7 @@ define separate rules for which configuration attributes can be set for
 each kind of HTCondor daemon (for example, ``STARTD``, ``SCHEDD``, and
 ``MASTER``). There are many configuration settings that can be defined
 differently for each daemon that use this <SUBSYS> naming convention.
-See
-section \ `3.3.12 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
-on page \ `569 <IntroductiontoConfiguration.html#x31-1810003.3.12>`__
+See :ref:`admin-manual/introduction-to-configuration:pre-defined macros`
 for a list. If there is no daemon-specific value for a given daemon,
 HTCondor will look for ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
 :index:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`.
@@ -2309,8 +2308,8 @@ Some examples of valid definitions of control lists with explanations:
        SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG
 
    Grant access to change any configuration setting that ended with
-   \_DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
-   matched MAX\_\*\_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
+   _DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
+   matched MAX_\*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
    with ``ADMINISTRATOR`` access.
 
 -  ::
@@ -2331,9 +2330,9 @@ Some examples of valid definitions of control lists with explanations:
 Using HTCondor w/ Firewalls, Private Networks, and NATs
 -------------------------------------------------------
 
-This topic is now addressed in more detail in
-section \ `3.9 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3000003.9>`__,
-which explains network communication in HTCondor.
+This topic is now addressed in more detail in the 
+:doc:`/admin-manual/networking` section, which explains network communication
+in HTCondor.
 
 User Accounts in HTCondor on Unix Platforms
 -------------------------------------------
@@ -2374,13 +2373,13 @@ non-root user for system daemons to execute as), the daemon user's UID
 was 2, and group daemon had a GID of 2, the corresponding setting in the
 HTCondor configuration file would be ``CONDOR_IDS = 2.2``.
 
-On a machine where a job is submitted, the *condor\_schedd* daemon
+On a machine where a job is submitted, the *condor_schedd* daemon
 changes its effective UID to root such that it has the capability to
-start up a *condor\_shadow* daemon for the job. Before a
-*condor\_shadow* daemon is created, the *condor\_schedd* daemon switches
-back to root, so that it can start up the *condor\_shadow* daemon with
+start up a *condor_shadow* daemon for the job. Before a
+*condor_shadow* daemon is created, the *condor_schedd* daemon switches
+back to root, so that it can start up the *condor_shadow* daemon with
 the (real) UID of the user who submitted the job. Since the
-*condor\_shadow* runs as the owner of the job, all remote system calls
+*condor_shadow* runs as the owner of the job, all remote system calls
 are performed under the owner's UID and GID. This ensures that as the
 job executes, it can access only files that its owner could access if
 the job were running locally, without HTCondor.
@@ -2412,12 +2411,12 @@ running as root.
 The effects of HTCondor of running both with and without root access are
 classified for each daemon:
 
- *condor\_startd*
+ *condor_startd*
     An HTCondor machine set up to execute jobs where the
-    *condor\_startd* is not started as root relies on the good will of
+    *condor_startd* is not started as root relies on the good will of
     the HTCondor users to agree to the policy configured for the
-    *condor\_startd* to enforce for starting, suspending, vacating, and
-    killing HTCondor jobs. When the *condor\_startd* is started as root,
+    *condor_startd* to enforce for starting, suspending, vacating, and
+    killing HTCondor jobs. When the *condor_startd* is started as root,
     however, these policies may be enforced regardless of malicious
     users. By running as root, the HTCondor daemons run with a different
     UID than the HTCondor job. The user's job is started as either the
@@ -2426,61 +2425,61 @@ classified for each daemon:
     the HTCondor job cannot do anything to the HTCondor daemons. Without
     starting the daemons as root, all processes started by HTCondor,
     including the user's job, run with the same UID. Only root can
-    switch UIDs. Therefore, a user's job could kill the *condor\_startd*
-    and *condor\_starter*. By doing so, the user's job avoids getting
+    switch UIDs. Therefore, a user's job could kill the *condor_startd*
+    and *condor_starter*. By doing so, the user's job avoids getting
     suspended or vacated. This is nice for the job, as it obtains
     unlimited access to the machine, but it is awful for the machine
     owner or administrator. If there is trust of the users submitting
     jobs to HTCondor, this might not be a concern. However, to ensure
-    that the policy chosen is enforced by HTCondor, the *condor\_startd*
+    that the policy chosen is enforced by HTCondor, the *condor_startd*
     should be started as root.
 
     In addition, some system information cannot be obtained without root
     access on some platforms. As a result, when running without root
-    access, the *condor\_startd* must call other programs such as
+    access, the *condor_startd* must call other programs such as
     *uptime*, to get this information. This is much less efficient than
     getting the information directly from the kernel, as is done when
     running as root. On Linux, this information is available without
     root access, so it is not a concern on those platforms.
 
     If all of HTCondor cannot be run as root, at least consider
-    installing the *condor\_startd* as setuid root. That would solve
+    installing the *condor_startd* as setuid root. That would solve
     both problems. Barring that, install it as a setgid sys or kmem
     program, depending on whatever group has read access to
     ``/dev/kmem`` on the system. That would solve the system information
     problem.
 
- *condor\_schedd*
-    The biggest problem with running the *condor\_schedd* without root
-    access is that the *condor\_shadow* processes which it spawns are
-    stuck with the same UID that the *condor\_schedd* has. This requires
+ *condor_schedd*
+    The biggest problem with running the *condor_schedd* without root
+    access is that the *condor_shadow* processes which it spawns are
+    stuck with the same UID that the *condor_schedd* has. This requires
     users to go out of their way to grant write access to user or group
-    that the *condor\_schedd* is run as for any files or directories
+    that the *condor_schedd* is run as for any files or directories
     their jobs write or create. Similarly, read access must be granted
     to their input files.
 
-    Consider installing *condor\_submit* as a setgid condor program so
+    Consider installing *condor_submit* as a setgid condor program so
     that at least the ``stdout``, ``stderr`` and job event log files get
-    created with the right permissions. If *condor\_submit* is a setgid
+    created with the right permissions. If *condor_submit* is a setgid
     program, it will automatically set its umask to 002 and create
     group-writable files. This way, the simple case of a job that only
     writes to ``stdout`` and ``stderr`` will work. If users have
     programs that open their own files, they will need to know and set
     the proper permissions on the directories they submit from.
 
- *condor\_master*
-    The *condor\_master* spawns both the *condor\_startd* and the
-    *condor\_schedd*. To have both running as root, have the
-    *condor\_master* run as root. This happens automatically if the
-    *condor\_master* is started from boot scripts.
- *condor\_negotiator* and *condor\_collector*
+ *condor_master*
+    The *condor_master* spawns both the *condor_startd* and the
+    *condor_schedd*. To have both running as root, have the
+    *condor_master* run as root. This happens automatically if the
+    *condor_master* is started from boot scripts.
+ *condor_negotiator* and *condor_collector*
     There is no need to have either of these daemons running as root.
- *condor\_kbdd*
-    On platforms that need the *condor\_kbdd*, the *condor\_kbdd* must
+ *condor_kbdd*
+    On platforms that need the *condor_kbdd*, the *condor_kbdd* must
     run as root. If it is started as any other user, it will not work.
     Consider installing this program as a setuid root binary if the
-    *condor\_master* will not be run as root. Without the
-    *condor\_kbdd*, the *condor\_startd* has no way to monitor USB mouse
+    *condor_master* will not be run as root. Without the
+    *condor_kbdd*, the *condor_startd* has no way to monitor USB mouse
     or keyboard activity, although it will notice keyboard activity on
     ttys such as xterms and remote logins.
 
@@ -2508,9 +2507,9 @@ accounts and start up the daemons (to run with the UID of the user). As
 in the case where the daemons run as user condor, there is no ability to
 switch UIDs or GIDs. The daemons run as the UID and GID of the user who
 started them. On a machine where jobs are submitted, the
-*condor\_shadow* daemons all run as this same user. But, if other users
+*condor_shadow* daemons all run as this same user. But, if other users
 are using HTCondor on the machine in this environment, the
-*condor\_shadow* daemons for these other users' jobs execute with the
+*condor_shadow* daemons for these other users' jobs execute with the
 UID of the user who started the daemons. This is a security risk, since
 the HTCondor job of the other user has access to all the files and
 directories of the user who started the daemons. Some installations have
@@ -2519,7 +2518,7 @@ not exist, it is best to set up a condor account and group, or to have
 each user start up their own Personal HTCondor submit installation.
 
 When a machine is an execution site for an HTCondor job, the HTCondor
-job executes with the UID of the user who started the *condor\_startd*
+job executes with the UID of the user who started the *condor_startd*
 daemon. This is also potentially a security risk, which is why we do not
 recommend starting up the execution site daemons as a regular user. Use
 either root or a user such as condor that exists only to run HTCondor
@@ -2624,13 +2623,13 @@ Under Unix, HTCondor runs jobs as one of
             RunAsOwner = True
 
    #. The value of configuration variable ``UID_DOMAIN`` must be the
-      same for both the *condor\_startd* and *condor\_schedd* daemons.
-   #. The UID\_DOMAIN must be trusted. For example, if the
-      *condor\_starter* daemon does a reverse DNS lookup on the
-      *condor\_schedd* daemon, and finds that the result is not the same
+      same for both the *condor_startd* and *condor_schedd* daemons.
+   #. The UID_DOMAIN must be trusted. For example, if the
+      *condor_starter* daemon does a reverse DNS lookup on the
+      *condor_schedd* daemon, and finds that the result is not the same
       as defined for configuration variable ``UID_DOMAIN``, then it is
       not trusted. To correct this, set in the configuration for the
-      *condor\_starter*
+      *condor_starter*
 
       ::
 
@@ -2648,17 +2647,15 @@ Notes:
    ``RunAsOwner``\ =True.
 
    ``SLOT<N>_USER`` will only work if the credential of the specified
-   user is stored on the execute machine using *condor\_store\_cred*.
+   user is stored on the execute machine using *condor_store_cred*.
    for details of this command. However, the default behavior in Windows
    is to run jobs under a dynamically created dedicated execution
    account, so just using the default behavior is sufficient to avoid
    problems with lurker processes. See
-   section \ `8.2.4 <MicrosoftWindows.html#x76-5770008.2.4>`__,
-    `8.2.5 <MicrosoftWindows.html#x76-5780008.2.5>`__, and the
-   *condor\_store\_cred* manual page at
-   section \ `12 <Condorstorecred.html#x148-107300012>`__ for details.
+   :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
+   user`, and the :doc:`/man-pages/condor_store_cred` for details.
 
-#. The *condor\_starter* logs a line similar to
+#. The *condor_starter* logs a line similar to
 
    ::
 
@@ -2677,15 +2674,15 @@ This is the directory that acts as the base for all file system access.
 There are two current working directories for any HTCondor job: one
 where the job is submitted and a second where the job executes. When a
 user submits a job, the submit-side current working directory is the
-same as for the user when the *condor\_submit* command is issued. The
+same as for the user when the *condor_submit* command is issued. The
 **initialdir**\ :index:`initialdir<single: initialdir; submit commands>` submit
 command may change this, thereby allowing different jobs to have
 different working directories. This is useful when submitting large
 numbers of jobs. This submit-side current working directory remains
 unchanged for the entire life of a job. The submit-side current working
-directory is also the working directory of the *condor\_shadow* daemon.
+directory is also the working directory of the *condor_shadow* daemon.
 This is particularly relevant for standard universe jobs, since file
-system access for the job goes through the *condor\_shadow* daemon, and
+system access for the job goes through the *condor_shadow* daemon, and
 therefore all accesses behave as if they were executing without
 HTCondor.
 
@@ -2694,12 +2691,12 @@ universe jobs, it is set to the ``execute`` subdirectory of HTCondor's
 home directory. This directory is world-writable, since an HTCondor job
 usually runs as user nobody. Normally, standard universe jobs would
 never access this directory, since all I/O system calls are passed back
-to the *condor\_shadow* daemon on the submit machine. In the event,
+to the *condor_shadow* daemon on the submit machine. In the event,
 however, that a job crashes and creates a core dump file, the
 execute-side current working directory needs to be accessible by the job
 so that it can write the core file. The core file is moved back to the
-submit machine, and the *condor\_shadow* daemon is informed. The
-*condor\_shadow* daemon sends e-mail to the job owner announcing the
+submit machine, and the *condor_shadow* daemon is informed. The
+*condor_shadow* daemon sends e-mail to the job owner announcing the
 core file, and provides a pointer to where the core file resides in the
 submit-side current working directory.
 :index:`UIDs in HTCondor`

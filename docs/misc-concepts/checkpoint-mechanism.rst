@@ -21,7 +21,7 @@ most recent snapshot.
 HTCondor provides checkpoint services to single process jobs on some
 Unix platforms. To enable the taking of checkpoints, the user must link
 the program with the HTCondor system call library
-(``libcondorsyscall.a``), using the *condor\_compile* command. This
+(``libcondorsyscall.a``), using the *condor_compile* command. This
 means that the user must have the object files or source code of the
 program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
@@ -62,7 +62,7 @@ often jobs which can take and use checkpoints do so periodically.
 Examples of when are never, and every three hours. When the time to take
 a periodic checkpoint occurs, the job suspends processing, takes the
 checkpoint, and immediately continues from where it left off. There is
-also a *condor\_ckpt* command which allows the user to request that an
+also a *condor_ckpt* command which allows the user to request that an
 HTCondor job immediately take a periodic checkpoint.
 
 In all cases, HTCondor jobs continue execution from the most recent
@@ -79,7 +79,8 @@ When the network connection is closed, the checkpoint will be taken.
 
 The HTCondor checkpoint feature can also be used for any Unix process
 outside of the HTCondor batch environment. Standalone checkpoints are
-described in section \ `4.2.1 <#x49-4160004.2.1>`__.
+described in the :ref:`misc-concepts/checkpoint-mechanism:standalone checkpoint
+mechanism` section.
 :index:`compression<single: compression; checkpoint>`
 
 HTCondor can produce and use compressed checkpoints. Configuration
@@ -110,8 +111,8 @@ functionality and outside of the HTCondor system is known as the
 standalone mode checkpoint mechanism.
 
 To prepare a program for taking standalone checkpoints, use the
-*condor\_compile* utility as for a standard HTCondor job, but do not use
-*condor\_submit*. Run the program from the command line. The checkpoint
+*condor_compile* utility as for a standard HTCondor job, but do not use
+*condor_submit*. Run the program from the command line. The checkpoint
 library will print a message to let you know that taking checkpoints is
 enabled and to inform you of the default name for the checkpoint image.
 The message is of the form:
@@ -132,7 +133,7 @@ SIGTSTP signal or press control-Z. To force the program to write a
 checkpoint image and continue executing, send it the SIGUSR2 signal.
 
 To restart a program using a checkpoint, invoke the program with the
-command line argument *-\_condor\_restart*, followed by the name of the
+command line argument *-_condor_restart*, followed by the name of the
 checkpoint image file. As an example, if the program is called *P1* and
 the checkpoint is called ``P1.ckpt``, use
 
@@ -147,7 +148,7 @@ section \ `Linux <../platform-specific/linux.html>`__.
 By default, the program will restart in the same directory in which it
 originally ran, and the program will fail if it can not change to that
 absolute path. To suppress this behavior, also pass the
-*-\_condor\_relocatable* argument to the program. Not all programs will
+*-_condor_relocatable* argument to the program. Not all programs will
 continue to work. Doing this may simplify moving standalone checkpoints
 between machines. Continuing the example given above, the command would
 be
@@ -175,9 +176,9 @@ future, and yield unexpected results.
 
 To prevent this sort of accident, HTCondor displays a warning if a file
 is used for both reading and writing. You can ignore or disable these
-warnings if you choose as described in section
-`4.2.3 <#x49-4180004.2.3>`__, but please understand that your program
-may compute incorrect results.
+warnings if you choose as described in 
+:ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings`, but please 
+understand that your program may compute incorrect results.
 
 Checkpoint Warnings
 -------------------
@@ -190,14 +191,14 @@ reading and writing, this message will be displayed:
 
     HTCondor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
 
-Control how these messages are displayed with the -\_condor\_warning
+Control how these messages are displayed with the -_condor_warning
 command line argument. This argument accepts a warning category and a
 mode. The category describes a certain class of messages, such as
 READWRITE or ALL. The mode describes what to do with the category. It
 may be ON, OFF, or ONCE. If a category is ON, it is always displayed. If
 a category is OFF, it is never displayed. If a category is ONCE, it is
 displayed only once. To show all the available categories and modes, use
--\_condor\_warning with no arguments.
+-_condor_warning with no arguments.
 
 For example, the additional command line argument to limit read/write
 warnings to one instance is
@@ -213,7 +214,7 @@ To turn all ordinary notices off:
     -_condor_warning NOTICE OFF
 
 The same effect can be accomplished within a program by using the
-function \_condor\_warning\_config().
+function _condor_warning_config().
 
 Checkpoint Library Interface
 ----------------------------
@@ -227,12 +228,12 @@ functions are provided.
 
 -  ``void init_image_with_file_name( char *ckpt_file_name )``
    This function explicitly sets a file name to use when producing or
-   using a checkpoint. ckpt() or ckpt\_and\_exit() must be called to
+   using a checkpoint. ckpt() or ckpt_and_exit() must be called to
    produce the checkpoint, and restart() must be called to perform the
    actual restart.
 -  ``void init_image_with_file_descriptor( int fd )``
    This function explicitly sets a file descriptor to use when producing
-   or using a checkpoint. ckpt() or ckpt\_and\_exit() must be called to
+   or using a checkpoint. ckpt() or ckpt_and_exit() must be called to
    produce the checkpoint, and restart() must be called to perform the
    actual restart.
 -  ``void ckpt()``
@@ -251,25 +252,25 @@ functions are provided.
    This function temporarily disables the taking of checkpoints. This
    can be handy if the program does something that is not
    checkpoint-safe. For example, if a program must not be interrupted
-   while accessing a special file, call \_condor\_ckpt\_disable(),
-   access the file, and then call \_condor\_ckpt\_enable(). Some program
+   while accessing a special file, call _condor_ckpt_disable(),
+   access the file, and then call _condor_ckpt_enable(). Some program
    actions, such as opening a socket or a pipe, implicitly cause the
    taking of checkpoints to be disabled.
 -  ``void _condor_ckpt_enable()``
    This function re-enables the taking of checkpoints after a call to
-   \_condor\_ckpt\_disable(). If a checkpoint signal arrived while the
+   _condor_ckpt_disable(). If a checkpoint signal arrived while the
    taking of checkpoints was disabled, the checkpoint will be taken when
    this function is called. Disabling and enabling the taking of
-   checkpoints must occur in matched pairs. \_condor\_ckpt\_enable()
-   must be called once for every time that \_condor\_ckpt\_disable() is
+   checkpoints must occur in matched pairs. _condor_ckpt_enable()
+   must be called once for every time that _condor_ckpt_disable() is
    called.
 -  ``int _condor_warning_config( const char *kind, const char *mode )``
    This function controls what warnings are displayed by HTCondor. The
    ``kind`` and ``mode`` arguments are the same as for the
-   ``-_condor_warning`` option described in section
-   `4.2.3 <#x49-4180004.2.3>`__. This function returns ``true`` if the
-   arguments are understood and accepted. Otherwise, it returns
-   ``false``.
+   ``-_condor_warning`` option described in the 
+   :ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings` section.
+   This function returns ``true`` if the arguments are understood and accepted.
+   Otherwise, it returns ``false``.
 -  ``extern int condor_compress_ckpt``
    Setting this variable to 1 (one) causes checkpoint images to be
    compressed. Setting it to 0 (zero) disables compression.

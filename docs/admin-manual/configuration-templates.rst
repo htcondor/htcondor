@@ -313,7 +313,8 @@ incorporates.
        containing an expression that evaluates to ``True`` if the job
        should be preempted.
 
-       See an example here:  `3.4.4 <#x32-1860003.4.4>`__.
+       See an example here:
+       :ref:`admin-manual/configuration-templates:configuration template examples`.
 
     -  ``Want_Hold_If( policy_variable, subcode, reason_text )``
 
@@ -325,7 +326,8 @@ incorporates.
        Standard universe jobs can't be held by startd policy
        expressions, so this metaknob automatically ignores them.
 
-       See an example here:  `3.4.4 <#x32-1860003.4.4>`__.
+       See an example here:
+       :ref:`admin-manual/configuration-templates:configuration template examples`.
 
     -  ``Startd_Publish_CpusUsage``
 

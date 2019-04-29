@@ -1,5 +1,5 @@
 Contrib and Source Modules
---------------------------
+==========================
 
 .. toctree::
    :maxdepth: 2

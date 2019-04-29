@@ -1,8 +1,8 @@
 Command Reference Manual (man pages)
-------------------------------------
+====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :glob:
    
    bosco_cluster
@@ -62,7 +62,7 @@ Command Reference Manual (man pages)
    condor_ssh_to_job
    condor_stats
    condor_status
-   condor_storecred
+   condor_store_cred
    condor_submit_dag
    condor_submit
    condor_suspend

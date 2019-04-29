@@ -27,8 +27,7 @@ Introduction <../admin-manual/introduction-admin-manual.html>`__). After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
 HTCondor on Windows. For information on installing HTCondor for Windows,
-see section \ `Installation, Start Up, Shut Down and
-Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
+see :doc:`/admin-manual/installation-startup-shutdown-reconfiguration`.
 
 Limitations under Windows
 -------------------------
@@ -156,10 +155,10 @@ The condor\_credd Daemon
 
 The *condor\_credd* daemon manages secure password storage. A single
 running instance of the *condor\_credd* within an HTCondor pool is
-necessary in order to provide the feature described in section
-`8.2.4 <#x76-5770008.2.4>`__, where a job runs as the submitting user,
-instead of as a temporary user that has strictly limited access
-capabilities.
+necessary in order to provide the feature described in
+:ref:`platform-specific/microsoft-windows:executing jobs as the submitting user`,
+where a job runs as the submitting user, instead of as a temporary user that
+has strictly limited access capabilities.
 
 It is first necessary to select the single machine on which to run the
 *condor\_credd*. Often, the machine acting as the pool's central manager
@@ -408,7 +407,8 @@ execute machine spawns a *condor\_starter* process. The
    ``DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP``
    :index:`DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP`. This step is skipped
    if the job is to be run using the submitting user's account, as
-   specified in section `8.2.4 <#x76-5770008.2.4>`__.
+   specified in :ref:`platform-specific/microsoft-windows:executing jobs as
+   the submitting user`.
 #. a new temporary working directory for the job on the execute machine.
    This directory is named ``dir_XXX``, where ``XXX`` is the process ID
    of the *condor\_starter*. The directory is created in the
@@ -511,7 +511,8 @@ able to write anything there. The only files the job should be able to
 access on the execute machine are files accessible by the Users and
 Everyone groups, and files in the job's temporary working directory. Of
 course, if the job is configured to run using the account of the
-submitting user (as described in section `8.2.4 <#x76-5770008.2.4>`__),
+submitting user (as described in
+:ref:`platform-specific/microsoft-windows:executing jobs as the submitting user`),
 it will be able to do anything that the user is able to do on the
 execute machine it runs on.
 
@@ -579,9 +580,9 @@ Network files and HTCondor
 HTCondor can work well with a network file server. The recommended
 approach to having jobs access files on network shares is to configure
 jobs to run using the security context of the submitting user (see
-section `8.2.4 <#x76-5770008.2.4>`__). If this is done, the job will be
-able to access resources on the network in the same way as the user can
-when logged in interactively.
+:ref:`platform-specific/microsoft-windows:executing jobs as the submitting user`).
+If this is done, the job will be able to access resources on the network in
+the same way as the user can when logged in interactively.
 
 In some environments, running jobs as their submitting users is not a
 feasible option. This section outlines some possible alternatives. The

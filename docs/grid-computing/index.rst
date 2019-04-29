@@ -1,5 +1,5 @@
 Grid Computing
---------------
+==============
 
 .. toctree::
    :maxdepth: 2

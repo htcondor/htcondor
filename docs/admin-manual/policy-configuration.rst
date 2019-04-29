@@ -106,11 +106,11 @@ configuration template, the ``IS_OWNER`` expression is a function of the
     START =?= FALSE
 
 See a detailed discussion of the ``IS_OWNER`` expression in
-section \ `3.7.1 <#x35-2500003.7.1>`__. However, the machine locally
-evaluates the ``IS_OWNER`` expression to determine if it is capable of
-running jobs for HTCondor. Any job ClassAd attributes appearing in the
-``START`` expression, and hence in the ``IS_OWNER`` expression, are
-undefined in this context, and may lead to unexpected behavior. Whenever
+:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
+However, the machine locally evaluates the ``IS_OWNER`` expression to determine
+if it is capable of running jobs for HTCondor. Any job ClassAd attributes
+appearing in the ``START`` expression, and hence in the ``IS_OWNER`` expression,
+are undefined in this context, and may lead to unexpected behavior. Whenever
 the ``START`` expression is modified to reference job ClassAd
 attributes, the ``IS_OWNER`` expression should also be modified to
 reference only machine ClassAd attributes.
@@ -663,7 +663,8 @@ expression is optimized for a shared resource
 
 So, the machine will remain in the Owner state as long as the ``START``
 expression locally evaluates to FALSE.
-Section \ `3.7.1 <#x35-2440003.7.1>`__ provides more detail on the
+The :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+section provides more detail on the
 ``START`` expression. If the ``START`` locally evaluates to TRUE or
 cannot be locally evaluated (it evaluates to UNDEFINED), transition
 **1** occurs and the machine enters the Unclaimed state. The
@@ -1788,8 +1789,8 @@ However, jobs run on either slot are free to consume more than 50% of
 available RAM. HTCondor will not directly enforce a RAM utilization
 limit on either slot. If a shared resource enforcement capability is
 needed, it is possible to write a policy that will evict a job that
-oversubscribes to shared resources, as described in section
-`3.7.1 <#x35-2550003.7.1>`__.
+oversubscribes to shared resources, as described in
+:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 
 Dividing System Resources in Multi-core Machines
 ''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1977,9 +1978,9 @@ ways to go about dividing the resources of a multi-core machine:
 
     A job may request these local machine resources using the syntax
     **request_<name>**\ :index:`request_<name><single: request_<name>; submit commands>`,
-    as described in section \ `3.7.1 <#x35-2600003.7.1>`__. This example
-    shows a portion of a submit description file that requests GPUs and
-    an actuator:
+    as described in :ref:`admin-manual/policy-configuration:*condor_startd*
+    policy configuration`. This example shows a portion of a submit description
+    file that requests GPUs and an actuator:
 
     ::
 
@@ -2409,7 +2410,8 @@ large number of jobs requiring 1GB of memory, a pool might be split up
 into 1GB dynamic slots. In this instance a job requiring 2GB of memory
 will be starved and unable to run. A partial solution to this problem is
 provided by defragmentation accomplished by the *condor_defrag* daemon,
-as discussed in section \ `3.7.1 <#x35-2630003.7.1>`__.
+as discussed in 
+:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
 

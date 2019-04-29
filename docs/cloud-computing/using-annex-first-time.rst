@@ -142,8 +142,9 @@ Restart HTCondor to force the changes to take effect:
     $ condor_restart 
     Sent "Restart" command to local master 
 
-To verify that this change worked, repeat the steps under section
-`6.3.1 <#x64-5240006.3.1>`__. Then proceed onto the next section.
+To verify that this change worked, repeat the steps under the
+:ref:cloud-computing/using-annex-first-time:install a personal htcondor
+section. Then proceed onto the next section.
 
 Configure a Pool Password
 '''''''''''''''''''''''''
