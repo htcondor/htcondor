@@ -21,7 +21,7 @@
  * This utilizes OpenSSL cryptography routines in order to provide high-quality
  * PRNG data.
  *
- * If there's no high-quality PRNG available, these routine will ASSERT
+ * If there's no high-quality PRNG available, these routines will fail to compile
  */
 
 #include "condor_common.h"
@@ -30,6 +30,8 @@
 #ifdef HAVE_EXT_OPENSSL
 #include <openssl/rand.h>
 #endif
+
+#include <chrono>
 
 static bool prng_initialized = false;
 
@@ -47,12 +49,15 @@ static void add_seed_prng() {
 	// We assume a determined attacker can signficantly influence the output
 	// of the insecure variant; this is OK in this context.
 	for (int i = 0; i < size; i++) {
-		buf[i] = get_random_int_insecure() & 0xFF;
+                auto epoch_time = std::chrono::high_resolution_clock::now().time_since_epoch();
+                auto epoch_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch_time).count();
+                auto seed = static_cast<unsigned char>(epoch_ns);
+		buf[i] = seed;
 	}
 	RAND_seed(buf, size);
 	free(buf);
 #else
-	ASSERT(1);
+	#error OpenSSL is required to build this function
 #endif
 	prng_initialized = true;
 }
@@ -61,7 +66,7 @@ static void add_seed_prng() {
 /* returns a random integer that is effectively impossible for an attacker
    to guess.
  */
-int get_random_int_prng( void )
+int get_csrng_int( void )
 {
 	add_seed_prng();
 
@@ -69,7 +74,7 @@ int get_random_int_prng( void )
 #ifdef HAVE_EXT_OPENSSL
 	RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
 #else
-	ASSERT(1);
+	#error OpenSSL is required to build this function
 #endif
 	return retval;
 }
@@ -77,7 +82,7 @@ int get_random_int_prng( void )
 
 /* returns a random unsigned int from the PRNG.
  */
-int get_random_uint_prng( void )
+int get_csrng_uint( void )
 {
 	add_seed_prng();
 
@@ -85,7 +90,7 @@ int get_random_uint_prng( void )
 #ifdef HAVE_EXT_OPENSSL
         RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
 #else
-        ASSERT(1);
+	#error OpenSSL is required to build this function
 #endif
 	return retval;
 }

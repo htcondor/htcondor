@@ -60,10 +60,10 @@ void SafeSock::init()
 		// [TODO:IPv6] Remove it!
 		//_outMsgID.ip_addr = (unsigned long)my_ip_addr();
 
-		_outMsgID.ip_addr = get_random_uint_prng();
-		_outMsgID.pid = get_random_uint_prng() % 65536;
-		_outMsgID.time = get_random_uint_prng();
-		_outMsgID.msgNo = get_random_uint_prng();
+		_outMsgID.ip_addr = get_csrng_uint();
+		_outMsgID.pid = get_csrng_uint() % 65536;
+		_outMsgID.time = get_csrng_uint();
+		_outMsgID.msgNo = get_csrng_uint();
 	}
 
     mdChecker_     = NULL;

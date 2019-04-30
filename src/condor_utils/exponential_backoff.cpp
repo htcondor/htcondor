@@ -23,21 +23,10 @@
 
 
 //////////////////////////////////////////////////////////////////////
-// Static variables
-//////////////////////////////////////////////////////////////////////
-int ExponentialBackoff::NEXT_SEED = 1;
-
-//////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 ExponentialBackoff::ExponentialBackoff(int minimum, int maximum, double b){
-	int theSeed = NEXT_SEED;
-	NEXT_SEED++;
-	init(minimum, maximum, b, theSeed);
-}
-
-ExponentialBackoff::ExponentialBackoff(int minimum, int maximum, double b, int s){
-	init(minimum,maximum,b,s);
+	init(minimum, maximum, b);
 }
 
 ExponentialBackoff::ExponentialBackoff(const ExponentialBackoff& orig){
@@ -59,18 +48,15 @@ ExponentialBackoff::~ExponentialBackoff(){
 }
 
 void
-ExponentialBackoff::init(int minimum, int maximum, double b, int s){
+ExponentialBackoff::init(int minimum, int maximum, double b){
 	this->min = minimum;
 	this->max = maximum;
 	this->base = b;
-	this->seed = s;
 
 		// init the internals
 	this->tries = 0;
 	this->prevBackoff = minimum;
 
-		// seed the PRNG
-	set_seed_insecure(s);
 }
 
 void
@@ -78,7 +64,6 @@ ExponentialBackoff::deepCopy(const ExponentialBackoff& orig){
 	this->min = orig.min;
 	this->max = orig.max;
 	this->base = orig.base;
-	this->seed = orig.seed;
 	this->tries = orig.tries;
 	this->prevBackoff = orig.prevBackoff;
 }

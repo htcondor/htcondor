@@ -954,7 +954,7 @@ CCBServer::AddTarget( CCBTarget *target )
 
 	// generate reconnect info for this new target daemon so that it
 	// can reclaim its CCBID
-	CCBID reconnect_cookie = get_random_uint_prng();
+	CCBID reconnect_cookie = get_csrng_uint();
 	CCBReconnectInfo *reconnect_info = new CCBReconnectInfo(
 		target->getCCBID(),
 		reconnect_cookie,
