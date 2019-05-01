@@ -1,4 +1,4 @@
-      
+      
 
 *condor_job_router_info*
 ===========================
@@ -38,7 +38,7 @@ Options
     For each job, remove any existing routing ClassAd attributes, and
     set attribute ``JobStatus`` to the Idle state before finding the
     first route.
- **-jobads **\ *filename*
+ **-jobads **\ *filename*
     Read job ClassAds from file *filename*. If *filename* is ``-``, then
     read from ``stdin``.
 
@@ -56,8 +56,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

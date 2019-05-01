@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_store\_cred*
 =====================
@@ -11,15 +11,15 @@ Synopsis
 
 **condor\_store\_cred** [**-help**\ ]
 
-**condor\_store\_cred** *add* [**-c** \| **-u **\ *username*
-][\ **-p  **\ *password*] [**-n  **\ *machinename*]
-[**-f  **\ *filename*]
+**condor\_store\_cred** *add* [**-c** \| **-u **\ *username*
+][\ **-p  **\ *password*] [**-n  **\ *machinename*]
+[**-f  **\ *filename*]
 
-**condor\_store\_cred** *delete* [**-c** \| **-u **\ *username*
-][\ **-n  **\ *machinename*]
+**condor\_store\_cred** *delete* [**-c** \| **-u **\ *username*
+][\ **-n  **\ *machinename*]
 
-**condor\_store\_cred** *query* [**-c** \| **-u **\ *username*
-][\ **-n  **\ *machinename*]
+**condor\_store\_cred** *query* [**-c** \| **-u **\ *username*
+][\ **-n  **\ *machinename*]
 
 Description
 -----------
@@ -67,18 +67,18 @@ Options
  **-c**
     Operations refer to the pool password, as used in the ``PASSWORD``
     authentication method.
- **-f **\ *filename*
+ **-f **\ *filename*
     For Unix machines only, generates a pool password file named
     *filename* that may be used with the ``PASSWORD`` authentication
     method.
  **-help**
     Displays a brief summary of command options.
- **-n **\ *machinename*
+ **-n **\ *machinename*
     Apply the command on the given machine.
- **-p **\ *password*
+ **-p **\ *password*
     Stores *password*, rather than prompting the user to enter a
     password.
- **-u **\ *username*
+ **-u **\ *username*
     Specify the user name.
 
 Exit Status
@@ -95,8 +95,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

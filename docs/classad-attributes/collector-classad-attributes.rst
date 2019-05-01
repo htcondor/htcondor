@@ -1,4 +1,4 @@
-      
+      
 
 Collector ClassAd Attributes
 ============================
@@ -55,7 +55,7 @@ Collector ClassAd Attributes
 
     ::
 
-          CurrentJobsRunningVanilla = 567
+          CurrentJobsRunningVanilla = 567
 
     identifies that the *condor\_collector* counts 567 vanilla universe
     jobs currently running. ``<universe>`` is one of ``Unknown``,
@@ -199,7 +199,7 @@ Collector ClassAd Attributes
 
     ::
 
-          MaxJobsRunningVanilla = 401
+          MaxJobsRunningVanilla = 401
 
     identifies that the *condor\_collector* saw 401 vanilla universe
     jobs currently running at one point in time, and that was the
@@ -298,4 +298,4 @@ Collector ClassAd Attributes
     ``Defrag``, ``Master``, ``Schedd``, ``Start``, ``StartdPvt``, and
     ``Submittor``.
 
-      
+      

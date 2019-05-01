@@ -1,4 +1,4 @@
-      
+      
 
 Running a Job: the Steps To Take
 ================================
@@ -32,7 +32,7 @@ Here are all the steps needed to run a job using HTCondor.
     become unavailable. To use the standard universe, it is necessary to
     relink the program with the HTCondor library using the
     *condor\_compile* command. The manual page for *condor\_compile* on
-    page \ `condor\_compile <../man-pages/condor_compile.html>`__ has
+    page \ `condor\_compile <../man-pages/condor_compile.html>`__ has
     details.
 
     The vanilla universe provides a way to run jobs that cannot be
@@ -53,8 +53,7 @@ Here are all the steps needed to run a job using HTCondor.
     run the same program multiple times with multiple data sets.
 
     Write a submit description file to go with the job, using the
-    examples provided in section \ `Submitting a
-    Job <../users-manual/submitting-a-job.html>`__ for guidance.
+    examples provided in the :doc:`/users-manual/submitting-a-job` section for guidance.
 
  Submit the Job.
     Submit the program to HTCondor with the *condor\_submit* command.
@@ -82,7 +81,7 @@ Choosing an HTCondor Universe
 
 A universe in HTCondor
 :index:`universe`\ :index:`universe<single: universe; HTCondor>` defines an
-execution environment. HTCondor Version 8.9.1 supports several different
+execution environment. HTCondor Version 8.9.1 supports several different
 universes for user jobs:
 
 -  standard
@@ -115,7 +114,7 @@ universe allows users to run jobs written for the Java Virtual Machine
 (JVM). The scheduler universe allows users to submit lightweight jobs to
 be spawned by the program known as a daemon on the submit host itself.
 :index:`parallel<single: parallel; universe>`\ The parallel universe is for programs
-that require multiple machines for one job. See section \ `Parallel
+that require multiple machines for one job. See section \ `Parallel
 Applications (Including MPI
 Applications) <../users-manual/parallel-applications.html>`__ for more
 about the Parallel universe. :index:`vm<single: vm; universe>`\ The vm universe
@@ -170,13 +169,13 @@ For example, if you would have linked the job by executing:
 
 ::
 
-    % cc main.o tools.o -o program
+    % cc main.o tools.o -o program
 
 Then, relink the job for HTCondor with:
 
 ::
 
-    % condor_compile cc main.o tools.o -o program
+    % condor_compile cc main.o tools.o -o program
 
 There are a few restrictions on standard universe jobs:
 
@@ -253,11 +252,9 @@ Under Unix, HTCondor presumes a shared file system for vanilla jobs.
 However, if a shared file system is unavailable, a user can enable the
 HTCondor File Transfer mechanism. On Windows platforms, the default is
 to use the File Transfer mechanism. For details on running a job with a
-shared file system, see section \ `Submitting a
-Job <../users-manual/submitting-a-job.html>`__ on page \ `Submitting a
+shared file system, see the :doc:`/users-manual/submitting-a-job` section on page \ `Submitting a
 Job <../users-manual/submitting-a-job.html>`__. For details on using the
-HTCondor File Transfer mechanism, see section \ `Submitting a
-Job <../users-manual/submitting-a-job.html>`__ on page \ `Submitting a
+HTCondor File Transfer mechanism, see the :doc:`/users-manual/submitting-a-job` section on page \ `Submitting a
 Job <../users-manual/submitting-a-job.html>`__.
 
 Grid Universe
@@ -267,11 +264,11 @@ Grid Universe
 
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
-management systems. Section \ `The Grid
-Universe <../grid-computing/grid-universe.html>`__ on page \ `The Grid
+management systems. Section \ `The Grid
+Universe <../grid-computing/grid-universe.html>`__ on page \ `The Grid
 Universe <../grid-computing/grid-universe.html>`__ has details on using
 the Grid universe. The manual page for *condor\_submit* on
-page \ `condor\_submit <../man-pages/condor_submit.html>`__ has detailed
+page \ `condor\_submit <../man-pages/condor_submit.html>`__ has detailed
 descriptions of the grid-related attributes.
 
 Java Universe
@@ -326,7 +323,7 @@ Parallel Universe
 
 The parallel universe allows parallel programs, such as MPI jobs, to be
 run within the opportunistic HTCondor environment. Please see
-section \ `Parallel Applications (Including MPI
+section \ `Parallel Applications (Including MPI
 Applications) <../users-manual/parallel-applications.html>`__ for more
 details.
 
@@ -338,8 +335,7 @@ VM Universe
 HTCondor facilitates the execution of VMware and Xen virtual machines
 with the vm universe.
 
-Please see section \ `Virtual Machine
-Applications <../users-manual/virtual-machine-applications.html>`__ for
+Please see the :doc:`/users-manual/virtual-machine-applications` section for
 details.
 
 Docker Universe
@@ -348,8 +344,7 @@ Docker Universe
 :index:`docker<single: docker; universe>` :index:`docker universe`
 
 The docker universe runs a docker container on an execute host as a job.
-Please see section \ `Docker Universe
-Applications <../users-manual/docker-universe-applications.html>`__ for
+Please see the :doc:`/users-manual/docker-universe-applications` section for
 details.
 
-      
+      

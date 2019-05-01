@@ -1,4 +1,4 @@
-      
+      
 
 *bosco\_cluster*
 ================
@@ -36,18 +36,18 @@ Options
     Print usage information and exit.
  **—list**
     List all installed clusters.
- **—remove **\ *<host>*
+ **—remove **\ *<host>*
     Remove an already installed cluster, where the cluster is identified
     by *<host>*.
- **—add **\ *<host> [scheduler]*
+ **—add **\ *<host> [scheduler]*
     Install and add a cluster defined by *<host>*. The optional
     *scheduler* specifies the scheduler on the cluster. Valid values are
     ``pbs``, ``lsf``, ``condor``, ``sge`` or ``slurm``. If not given,
     the default will be ``pbs``.
- **—status **\ *<host>*
+ **—status **\ *<host>*
     Query and print the status of an already installed cluster, where
     the cluster is identified by *<host>*.
- **—test **\ *<host>*
+ **—test **\ *<host>*
     Attempt to submit a test job to an already installed cluster, where
     the cluster is identified by *<host>*.
 
@@ -59,8 +59,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

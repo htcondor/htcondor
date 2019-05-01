@@ -1,4 +1,4 @@
-      
+      
 
 The HTCondor User and Job Log Reader API
 ========================================
@@ -279,19 +279,19 @@ To save the state, do something like this:
 
 ::
 
-      ReadUserLog                reader; 
-      ReadUserLog::FileState     statebuf; 
-     
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-     
-      status = UninitFileState( statebuf );
+      ReadUserLog                reader; 
+      ReadUserLog::FileState     statebuf; 
+     
+      status = ReadUserLog::InitFileState( statebuf ); 
+     
+      status = reader.GetFileState( statebuf ); 
+      write( fd, statebuf.buf, statebuf.size ); 
+      ... 
+      status = reader.GetFileState( statebuf ); 
+      write( fd, statebuf.buf, statebuf.size ); 
+      ... 
+     
+      status = UninitFileState( statebuf );
 
 Restore state from persistent storage
 -------------------------------------
@@ -300,16 +300,16 @@ To restore the state, do something like this:
 
 ::
 
-      ReadUserLog::FileState     statebuf; 
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      read( fd, statebuf.buf, statebuf.size ); 
-     
-      ReadUserLog                reader; 
-      status = reader.initialize( statebuf ); 
-     
-      status = UninitFileState( statebuf ); 
-      ....
+      ReadUserLog::FileState     statebuf; 
+      status = ReadUserLog::InitFileState( statebuf ); 
+     
+      read( fd, statebuf.buf, statebuf.size ); 
+     
+      ReadUserLog                reader; 
+      status = reader.initialize( statebuf ); 
+     
+      status = UninitFileState( statebuf ); 
+      ....
 
 API Reference
 -------------
@@ -538,4 +538,4 @@ initialize.
 Additionally, the functionality of ``ReadUserLogStateAccess`` will be
 integrated into this class.
 
-      
+      

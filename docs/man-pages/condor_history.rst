@@ -1,4 +1,4 @@
-      
+      
 
 *condor_history*
 =================
@@ -11,12 +11,12 @@ Synopsis
 
 **condor_history** [**-help**\ ]
 
-**condor_history** [**-name  **\ *name*]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [**-backwards**\ ]
-[**-forwards**\ ] [**-constraint  **\ *expr*] [**-file  **\ *filename*]
-[**-userlog  **\ *filename*] [**-format  **\ *formatString
-AttributeName*] [**-autoformat[:jlhVr,tng]  **\ *attr1 [attr2 ...]*]
-[**-l \| -long \| -xml \| -json**\ ] [**-match \| -limit  **\ *number*]
+**condor_history** [**-name  **\ *name*]
+[**-pool  **\ *centralmanagerhostname[:portnumber]*] [**-backwards**\ ]
+[**-forwards**\ ] [**-constraint  **\ *expr*] [**-file  **\ *filename*]
+[**-userlog  **\ *filename*] [**-format  **\ *formatString
+AttributeName*] [**-autoformat[:jlhVr,tng]  **\ *attr1 [attr2 ...]*]
+[**-l \| -long \| -xml \| -json**\ ] [**-match \| -limit  **\ *number*]
 [**cluster \| cluster.process \| owner**\ ]
 
 Description
@@ -59,7 +59,7 @@ reading of the history file backwards (most recent job first). History
 files written with earlier versions of Condor, as well as those that
 have entries of both the older and newer format need to be converted to
 the new format. See the *condor_convert_history* manual page on
-page \ `1879 <Condorconverthistory.html#x108-75500012>`__ for details on
+page \ `1879 <Condorconverthistory.html#x108-75500012>`__ for details on
 converting history files to the new format.
 
 Options
@@ -67,9 +67,9 @@ Options
 
  **-help**
     Display usage information and exit.
- **-name **\ *name*
+ **-name **\ *name*
     Query the named *condor_schedd* daemon.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Use the *centralmanagerhostname* as the central manager to locate
     *condor_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
     specified in the configuration.
@@ -80,28 +80,28 @@ Options
     List jobs in chronological order. The job most recently added to the
     history file is last. At least 4 characters must be given to
     distinguish this option from the **-file** and **-format** options.
- **-constraint **\ *expr*
+ **-constraint **\ *expr*
     Display jobs that satisfy the expression.
- **-attributes **\ *attrs*
-    Display only the given attributes when the **-long **\ *o*\ ption is
+ **-attributes **\ *attrs*
+    Display only the given attributes when the **-long **\ *o*\ ption is
     used.
- **-since **\ *jobid or expr*
+ **-since **\ *jobid or expr*
     Stop scanning when the given jobid is found or when the expression
     becomes true.
- **-local **\ **
+ **-local **\ **
     Read from local history files even if there is a SCHEDD_HOST
     configured.
- **-file **\ *filename*
+ **-file **\ *filename*
     Use the specified file instead of the default history file.
- **-userlog **\ *filename*
+ **-userlog **\ *filename*
     Display jobs, with job information coming from a job event log,
     instead of from the default history file. A job event log does not
     contain all of the job information, so some fields in the normal
     output of *condor_history* will be blank.
- **-format **\ *formatString*\ AttributeName
+ **-format **\ *formatString*\ AttributeName
     Display jobs with a custom format. See the *condor_q* man page
     **-format** option for details.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -145,10 +145,10 @@ Options
 
  **-l** or **-long**
     Display job ClassAds in long format.
- **-limit **\ *Number*
+ **-limit **\ *Number*
     Limit the number of jobs displayed to *Number*. Same option as
     **-match**.
- **-match **\ *Number*
+ **-match **\ *Number*
     Limit the number of jobs displayed to *Number*. Same option as
     **-limit**.
  **-xml**
@@ -173,8 +173,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_qsub*
 ==============
@@ -57,24 +57,24 @@ HTCondor syntax and submits them to PBS, SGE, or LSF.
 Options
 -------
 
- **-a **\ *date\_time*
+ **-a **\ *date\_time*
     (Submission option) Specify a deferred execution date and time. The
     PBS/Torque syntax of *date\_time* is a string in the form
     *[[[[CC]YY]MM]DD]hhmm[.SS]*. The portions of this string which are
     optional are *CC*, *YY*, *MM*, *DD*, and *SS*. For SGE, *MM* and
     *DD* are not optional. For PBS, *MM* and *DD* are optional.
     *condor\_qsub* follows the PBS style.
- **-A **\ *account\_string*
+ **-A **\ *account\_string*
     (Status option) Uses group accounting where the string
     *account\_string* is the accounting group associated with this job.
     Unlike SGE, there is no default group of ``"sge"``.
- **-b **\ *y\|n*
+ **-b **\ *y\|n*
     (Submission option) Using the SGE definition of its *-b* option, a
     value of *y* causes *condor\_qsub* to not parse the file for
     additional *condor\_qsub* commands. The default value is *n*. If the
-    command line argument **-f **\ *filename* is also specified, it
+    command line argument **-f **\ *filename* is also specified, it
     negates a value of *y*.
- **-c **\ *checkpoint\_option*
+ **-c **\ *checkpoint\_option*
     (Submission option) For standard universe jobs only, controls the
     how HTCondor produces checkpoints. *checkpoint\_options* may be one
     of
@@ -97,19 +97,19 @@ Options
     submitted. This sets
     **initialdir**\ :index:`initialdir<single: initialdir; submit commands>` for
     *condor\_submit*.
- **-d **\ *path* or **-wd **\ *path*
+ **-d **\ *path* or **-wd **\ *path*
     (Directory option) Specifies the initial directory in which the job
     will run to be *path*. This sets
     **initialdir**\ :index:`initialdir<single: initialdir; submit commands>` for
     *condor\_submit*.
- **-e **\ *filename*
+ **-e **\ *filename*
     (File option) Specifies the *condor\_submit* command
     **error**\ :index:`error<single: error; submit commands>`, the file where
     ``stderr`` is written. If not specified, set to the default name of
     ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
     *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
     ``ClusterId`` assigned for the job.
- **—f **\ *qsub\_file*
+ **—f **\ *qsub\_file*
     (Specific option) Parse *qsub\_file* to search for and set
     additional *condor\_submit* commands. Within the file, commands will
     appear as ``#PBS`` or ``#SGE``. *condor\_qsub* will parse the batch
@@ -118,7 +118,7 @@ Options
     (Status option) Placed submitted job directly into the hold state.
  **—help**
     (Specific option) Print usage information and exit.
- **-hold\_jid **\ *<jid>*
+ **-hold\_jid **\ *<jid>*
     (Status option) Submits a job in the hold state. This job is
     released only when a previously submitted job, identified by its
     cluster ID as *<jid>*, exits successfully. Successful completion is
@@ -133,11 +133,11 @@ Options
     the second job. If the first job is an array job, the second job
     will only be released after all individual jobs of the first job
     have completed.
- **-i **\ *[hostname:]filename*
+ **-i **\ *[hostname:]filename*
     (File option) Specifies the *condor\_submit* command
     **input**\ :index:`input<single: input; submit commands>`, the file from
     which ``stdin`` is read.
- **-j **\ *characters*
+ **-j **\ *characters*
     (File option) Acceptable characters for this option are ``e``,
     ``o``, and ``n``. The only sequence that is relevant is ``eo``; it
     specifies that both standard output and standard error are to be
@@ -146,7 +146,7 @@ Options
     will be the one specified by the **-e** option, if only the **-e**
     option is provided. If neither the **-o** nor the **-e** options are
     provided, the file will be the default used for the **-o** option.
- **-l **\ *resource\_spec*
+ **-l **\ *resource\_spec*
     (Resource option) Specifies requirements for the job, such as the
     amount of RAM and the number of CPUs. Only PBS-style resource
     requests are supported. *resource\_spec* is a comma separated list
@@ -190,21 +190,21 @@ Options
     A size value is an integer specified in bytes, following the
     PBS/Torque default. Append ``Kb``, ``Mb``, ``Gb``, or ``Tb`` to
     specify the value in powers of two quantities greater than bytes.
- **-m **\ *a\|e\|n*
+ **-m **\ *a\|e\|n*
     (Notification option) Identify when HTCondor sends notification
     e-mail. If *a*, send e-mail when the job terminates abnormally. If
     *e*, send e-mail when the job terminates. If *n*, never send e-mail.
- **-M **\ *e-mail\_address*
+ **-M **\ *e-mail\_address*
     (Notification option) Sets the destination address for HTCondor
     e-mail.
- **-o **\ *filename*
+ **-o **\ *filename*
     (File option) Specifies the *condor\_submit* command
     **output**\ :index:`output<single: output; submit commands>`, the file where
     ``stdout`` is written. If not specified, set to the default name of
     ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
     *condor\_qsub* argument, and ``  <ClusterId>`` is the job attribute
     ``ClusterId`` assigned for the job.
- **-p **\ *integer*
+ **-p **\ *integer*
     (Status option) Sets the
     **priority**\ :index:`priority<single: priority; submit commands>` submit
     command for the job, with 0 being the default. Jobs with higher
@@ -213,20 +213,20 @@ Options
  **—print**
     (Specific option) Send to ``stdout`` the contents of the HTCondor
     submit description file that *condor\_qsub* generates.
- **-r **\ *y\|n*
+ **-r **\ *y\|n*
     (Status option) The default value of *y* implements the default
     HTCondor policy of assuming that jobs that do not complete are
     placed back in the queue to be run again. When *n*, job submission
     is restricted to only running the job if the job ClassAd attribute
     ``NumJobStarts`` is currently 0. This identifies the job as not
     re-runnable, limiting it to start once.
- **-S **\ *shell*
+ **-S **\ *shell*
     (Submission option) Specifies the path and executable name of a
     shell. Alters the HTCondor submit description file produced, such
     that the executable becomes a wrapper script. Within the submit
     description file will be ``executable = <shell>`` and
     ``arguments = <commandfile>``.
- **-t **\ *start [-stop:step]*
+ **-t **\ *start [-stop:step]*
     (Submission option) Queues a set of nearly identical jobs. The
     SGE-style syntax is supported. *start*, *stop*, and *step* are all
     integers. *start* is the starting index of the jobs, *stop* is the
@@ -238,7 +238,7 @@ Options
     submission, parse files and commands to generate error output.
     Produces, but then removes the HTCondor submit description file.
     Never submits the job, even if no errors are encountered.
- **-v **\ *variable list*
+ **-v **\ *variable list*
     (Environmental option) Used to set the submit command
     **environment**\ :index:`environment<single: environment; submit commands>` for
     the job. *variable list* is as that defined for the submit command.
@@ -247,7 +247,7 @@ Options
  **-V**
     (Environmental option) Sets ``getenv = True`` in the submit
     description file.
- **-W **\ *attr\_name=attr\_value[,attr\_name=attr\_value…]*
+ **-W **\ *attr\_name=attr\_value[,attr\_name=attr\_value…]*
     (File option) PBS/Torque supports a number of attributes. However,
     *condor\_qsub* only supports the names *stagein* and *stageout* for
     *attr\_name*. The format of *attr\_value* for *stagein* and
@@ -273,8 +273,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

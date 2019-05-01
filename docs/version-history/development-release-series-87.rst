@@ -1,4 +1,4 @@
-      
+      
 
 Development Release Series 8.7
 ==============================
@@ -489,14 +489,14 @@ New Features:
    know about. The annex instance ads fabricated for this purpose are
    not real slot ads, so some options you may know from *condor_status*
    do not apply to the *status* command of *condor_annex*. See
-   section \ `Cloud Computing <../cloud-computing/index.html>`__ for
+   the :doc:`/cloud-computing/index` section for
    details. :ticket:`6321`
 -  Added a “merge” mode to *condor_status*. When invoked with the
-   [**-merge  **\ *<file>*] option, ads will be read from *file*, which
+   [**-merge** *<file>*] option, ads will be read from *file*, which
    can be ``-`` to indicate standard in, and compared to the ads
    selected by the query specified as usual by the remainder of the
    command-line. Ads will be compared on the basis of the sort key
-   (which you can change with [**-sort  **\ *<key>*]). *condor_status*
+   (which you can change with [**-sort** *<key>*]). *condor_status*
    will print three tables based on that comparison: the first table
    will be generated from those ads whose key was in the query but not
    in *file*; the second table will be generated from those ads whose
@@ -819,7 +819,7 @@ New Features:
 
    ::
 
-       ( ( ( foo ) ) )
+       ( ( ( foo ) ) )
 
    now will print like this
 

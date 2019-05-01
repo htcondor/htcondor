@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_router\_rm*
 ====================
@@ -29,14 +29,14 @@ groups:
 Options
 -------
 
- **-constraint **\ *X*
+ **-constraint **\ *X*
     (router\_rm option) Remove jobs matching the constraint specified by
     *X*
  **-held**
     (router\_rm option) Remove only jobs in the hold state
  **-idle**
     (router\_rm option) Remove only idle jobs
- **-route **\ *name*
+ **-route **\ *name*
     (router\_rm option) Remove only jobs on specified route
 
 Exit Status
@@ -53,8 +53,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

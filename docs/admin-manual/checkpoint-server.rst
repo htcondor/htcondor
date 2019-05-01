@@ -1,4 +1,4 @@
-      
+      
 
 The Checkpoint Server
 =====================
@@ -57,7 +57,7 @@ results in the jobs with checkpoints remaining indefinitely queued, due
 to the lack of finding their checkpoints. It is therefore best to either
 remove jobs from the queues or let them complete before installing a
 checkpoint server. It is advisable to shut the pool down before doing
-any maintenance on the checkpoint server. See section \ `Installation,
+any maintenance on the checkpoint server. See section \ `Installation,
 Start Up, Shut Down and
 Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
 for details on shutting down the pool.
@@ -72,8 +72,8 @@ The files relevant to a checkpoint server are
 
 ::
 
-            sbin/condor_ckpt_server 
-            etc/examples/condor_config.local.ckpt.server
+            sbin/condor_ckpt_server 
+            etc/examples/condor_config.local.ckpt.server
 
 ``condor_ckpt_server`` is the checkpoint server binary.
 
@@ -105,8 +105,7 @@ There are three steps necessary towards running a checkpoint server:
     The other optional variables are:
 
      ``DAEMON_LIST`` :index:`DAEMON_LIST`
-        Described in section \ `Configuration
-        Macros <../admin-manual/configuration-macros.html>`__. To have
+        Described in the :doc:`/admin-manual/configuration-macros` section. To have
         the checkpoint server managed by the *condor\_master*, the
         ``DAEMON_LIST`` variable's value must list both ``MASTER`` and
         ``CKPT_SERVER``. Also add ``STARTD`` to allow jobs to run on the
@@ -115,9 +114,8 @@ There are three steps necessary towards running a checkpoint server:
 
     The remainder of these variables are the checkpoint server-specific
     versions of the HTCondor logging entries, as described in
-    section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ on
-    page \ `Configuration
+    the :doc:`/admin-manual/configuration-macros` section on
+    page \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__.
 
      ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG`
@@ -134,8 +132,8 @@ There are three steps necessary towards running a checkpoint server:
     that host to enable the *condor\_master* to notice the new
     configuration. Do this by sending a *condor\_restart* command from
     any machine with administrator access to the pool. See
-    section \ `Security <../admin-manual/security.html>`__ on
-    page \ `Security <../admin-manual/security.html>`__ for full details
+    the :doc:`/admin-manual/security` section on
+    page \ `Security <../admin-manual/security.html>`__ for full details
     about security in HTCondor.
 
     Note that when the *condor\_ckpt\_server* starts up, it will
@@ -165,10 +163,10 @@ There are three steps necessary towards running a checkpoint server:
 
     Once these variables are in place, send the command
     *condor\_reconfig* to all machines in the pool, so the changes take
-    effect. This is described in section \ `Installation, Start Up, Shut
+    effect. This is described in section \ `Installation, Start Up, Shut
     Down and
     Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
-    on page \ `Installation, Start Up, Shut Down and
+    on page \ `Installation, Start Up, Shut Down and
     Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
 
 Configuring the Pool to Use Multiple Checkpoint Servers
@@ -200,9 +198,8 @@ checkpoint server. Additionally, variable
 (the default) on these submitting machines. When ``True``, this variable
 specifies that the checkpoint server specified by the machine running
 the job should be used instead of the checkpoint server specified by the
-submitting machine. See section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+submitting machine. See the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for more details.
 This allows the job to use the checkpoint server closest to the machine
 on which it is running, instead of the server closest to the submitting
@@ -217,9 +214,9 @@ local configuration file.
 
 Third, send a *condor\_reconfig* command to all machines in the pool, so
 that the changes take effect. This is described in
-section \ `Installation, Start Up, Shut Down and
+section \ `Installation, Start Up, Shut Down and
 Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
-on page \ `Installation, Start Up, Shut Down and
+on page \ `Installation, Start Up, Shut Down and
 Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
 
 After completing these three steps, the jobs in the pool will send their
@@ -267,8 +264,8 @@ add the following configuration to each machine:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
-      STARTD_ATTRS = $(STARTD_ATTRS), CkptServer
+      CkptServer = "$(CKPT_SERVER_HOST)" 
+      STARTD_ATTRS = $(STARTD_ATTRS), CkptServer
 
 For convenience, set these variables in the global configuration file.
 Note that this example assumes that ``STARTD_ATTRS`` is previously
@@ -277,8 +274,8 @@ configuration instead:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
-      STARTD_ATTRS = CkptServer
+      CkptServer = "$(CKPT_SERVER_HOST)" 
+      STARTD_ATTRS = CkptServer
 
 With this configuration, all machine ClassAds will include a
 ``CkptServer`` attribute, which is the name of the checkpoint server
@@ -290,7 +287,7 @@ To restrict jobs to one checkpoint server domain, modify the jobs'
 
 ::
 
-      Requirements = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
+      Requirements = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 
 This ``Requirements`` expression uses the ``LastCkptServer`` attribute
 in the job's ClassAd, which specifies where the job last wrote a
@@ -308,7 +305,7 @@ domain, modify the jobs' ``Rank`` expression as follows:
 
 ::
 
-      Rank = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
+      Rank = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 
 This ``Rank`` expression will evaluate to 1 for machines in the job's
 checkpoint server domain and 0 for other machines. So, the job will
@@ -319,10 +316,9 @@ domain.
 The checkpoint server domain ``Requirements`` or ``Rank`` expressions
 can be automatically appended to all standard universe jobs submitted in
 the pool using the configuration variables ``APPEND_REQ_STANDARD`` or
-``APPEND_RANK_STANDARD``. See section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+``APPEND_RANK_STANDARD``. See the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for more details.
 :index:`installation<single: installation; checkpoint server>`
 
-      
+      

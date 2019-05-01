@@ -1,4 +1,4 @@
-      
+      
 
 Negotiator ClassAd Attributes
 =============================
@@ -196,4 +196,4 @@ Negotiator ClassAd Attributes
     update sent to the *condor\_collector*. The *condor\_collector* uses
     this value to sequence the updates it receives.
 
-      
+      

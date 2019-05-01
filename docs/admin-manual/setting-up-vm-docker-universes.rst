@@ -1,4 +1,4 @@
-      
+      
 
 Setting Up the VM and Docker Universes
 ======================================
@@ -19,8 +19,7 @@ What follows is not a comprehensive list of the options that help set up
 to use the **vm** universe; rather, it is intended to serve as a
 starting point for those users interested in getting **vm** universe
 jobs up and running quickly. Details of configuration variables are in
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+the :doc:`/admin-manual/configuration-macros` section.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions. We have successfully used
@@ -60,7 +59,7 @@ instance, the following tells HTCondor to use VMware:
 
 ::
 
-    VM_TYPE = vmware
+    VM_TYPE = vmware
 
 The location of the *condor\_vm-gahp* and its log file must also be
 specified on the execute machine. On a Windows installation, these
@@ -68,8 +67,8 @@ options would look like this:
 
 ::
 
-    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe 
-    VM_GAHP_LOG = $(LOG)/VMGahpLog
+    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe 
+    VM_GAHP_LOG = $(LOG)/VMGahpLog
 
 VMware-Specific Configuration
 '''''''''''''''''''''''''''''
@@ -79,7 +78,7 @@ execute machine. In most cases, the default value should suffice:
 
 ::
 
-    VMWARE_PERL = perl
+    VMWARE_PERL = perl
 
 This, of course, assumes the *Perl* executable is in the path of the
 *condor\_master* daemon. If this is not the case, then a full path to
@@ -94,7 +93,7 @@ expression.
 
 ::
 
-    START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
+    START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
 
 The final required configuration is the location of the VMware control
 script used by the *condor\_vm-gahp* on the execute machine to talk to
@@ -103,7 +102,7 @@ directory:
 
 ::
 
-    VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
+    VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
 Note that an execute machine's ``EXECUTE`` variable should not contain
 any symbolic links in its path, if the machine is configured to run
@@ -114,12 +113,12 @@ may appear in such a job's event log:
 
 ::
 
-    Error from starter on master_vmuniverse_strtd@nostos.cs.wisc 
-    .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con 
-    dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c 
-    ondor.vmx) = 1/Error: Command failed: A file was not found/( 
-    ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g 
-    it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute 
+    Error from starter on master_vmuniverse_strtd@nostos.cs.wisc 
+    .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con 
+    dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c 
+    ondor.vmx) = 1/Error: Command failed: A file was not found/( 
+    ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g 
+    it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute 
     /dir_31534/vmN3hylp_condor.vmx)
 
 To work around this problem:
@@ -143,7 +142,7 @@ Once the configuration options have been set, restart the
 
 ::
 
-    > condor_restart -startd leovinus
+    > condor_restart -startd leovinus
 
 The *condor\_startd* daemon takes a few moments to exercise the VM
 capabilities of the *condor\_vm-gahp*, query its properties, and then
@@ -153,7 +152,7 @@ VM-capable by printing the VM type and the version number:
 
 ::
 
-    > condor_status -vm leovinus
+    > condor_status -vm leovinus
 
 After a suitable amount of time, if this command does not give any
 output, then the *condor\_vm-gahp* is having difficulty executing the VM
@@ -257,10 +256,10 @@ For example,
 
 ::
 
-    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
-    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
-    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
-    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
 
 The *condor\_startd* will advertise which docker volumes it has
 available for mounting with the machine attributes
@@ -284,11 +283,11 @@ Extending the above example,
 
 ::
 
-    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
-    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
-    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith" 
-    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
-    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
+    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith" 
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
+    DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
 
 In this case, the directory /path1 will get mounted inside the container
 only for jobs owned by user "smith", and who set +WantSomeDirMounted =
@@ -299,8 +298,7 @@ variable ``DOCKER`` :index:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor\_starter* daemon has been given a password-less sudo permission
 to start the container as root. Details of the ``DOCKER`` configuration
-variable are in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+variable are in the :doc:`/admin-manual/configuration-macros` section.
 
 Docker must be installed as root by following these steps on an
 Enterprise Linux machine.
@@ -311,36 +309,36 @@ Enterprise Linux machine.
 
    ::
 
-         usermod -aG docker condor
+         usermod -aG docker condor
 
 #. Invoke the docker software:
 
    ::
 
-         systemctl start docker 
-         systemctl enable docker
+         systemctl start docker 
+         systemctl enable docker
 
 #. Reconfigure the execute machine, such that it can set the machine
    ClassAd attribute ``HasDocker``:
 
    ::
 
-         condor_reconfig
+         condor_reconfig
 
 #. Check that the execute machine properly advertises that it is
    docker-capable with:
 
    ::
 
-         condor_status -l | grep -i docker
+         condor_status -l | grep -i docker
 
    The output of this command line for a correctly-installed and
    docker-capable execute host will be similar to
 
    ::
 
-         HasDocker = true 
-         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
+         HasDocker = true 
+         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
 By default, HTCondor will keep the 20 most recently used Docker images
 on the local machine. This number may be controlled with the
@@ -372,6 +370,6 @@ on the execute directories for all the startd machines:
 
 ::
 
-    # chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
+    # chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
 
-      
+      

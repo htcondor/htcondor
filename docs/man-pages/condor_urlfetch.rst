@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_urlfetch*
 ==================
@@ -24,8 +24,8 @@ defining configuration, such as in the nonfunctional example:
 
 ::
 
-    LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \ 
-      http://www.example.com/htcondor-baseconfig  local.config |
+    LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \ 
+      http://www.example.com/htcondor-baseconfig  local.config |
 
 The pipe character (\|) at the end of this definition of the location of
 a configuration file changes the use of the definition. It causes the
@@ -70,8 +70,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

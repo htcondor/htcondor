@@ -1,4 +1,4 @@
-      
+      
 
 Monitoring
 ==========
@@ -77,11 +77,11 @@ is an example of a single metric definition given as a New ClassAd:
 
 ::
 
-    [ 
-      Name   = "JobsSubmitted"; 
-      Desc   = "Number of jobs submitted"; 
-      Units  = "jobs"; 
-      TargetType = "Scheduler"; 
+    [ 
+      Name   = "JobsSubmitted"; 
+      Desc   = "Number of jobs submitted"; 
+      Units  = "jobs"; 
+      TargetType = "Scheduler"; 
     ]
 
 A nice set of default metrics is in file:
@@ -272,4 +272,4 @@ all invalidated ClassAds to become absent instead of invalidated, set
 ``True``. Invalidated ClassAds will instead be treated as if they
 expired, including when evaluating ``ABSENT_REQUIREMENTS``.
 
-      
+      

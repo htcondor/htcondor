@@ -1,4 +1,4 @@
-      
+      
 
 Managing a Job
 ==============
@@ -6,9 +6,9 @@ Managing a Job
 This section provides a brief summary of what can be done once jobs are
 submitted. The basic mechanisms for monitoring a job are introduced, but
 the commands are discussed briefly. You are encouraged to look at the
-man pages of the commands referred to (located in Chapter \ `Command
+man pages of the commands referred to (located in Chapter \ `Command
 Reference Manual (man pages) <../man-pages/index.html>`__ beginning on
-page \ `Command Reference Manual (man
+page \ `Command Reference Manual (man
 pages) <../man-pages/index.html>`__) for more information.
 
 When jobs are submitted, HTCondor will attempt to find resources to run
@@ -19,23 +19,23 @@ option. An example of this would yield output similar to:
 
 ::
 
-    %  condor_status -submitters 
-     
-    Name                 Machine      Running IdleJobs HeldJobs 
-     
-    ballard@cs.wisc.edu  bluebird.c         0       11        0 
-    nice-user.condor@cs. cardinal.c         6      504        0 
-    wright@cs.wisc.edu   finch.cs.w         1        1        0 
-    jbasney@cs.wisc.edu  perdita.cs         0        0        5 
-     
-                               RunningJobs           IdleJobs           HeldJobs 
-     
-     ballard@cs.wisc.edu                 0                 11                  0 
-     jbasney@cs.wisc.edu                 0                  0                  5 
-    nice-user.condor@cs.                 6                504                  0 
-      wright@cs.wisc.edu                 1                  1                  0 
-     
-                   Total                 7                516                  5
+    %  condor_status -submitters 
+     
+    Name                 Machine      Running IdleJobs HeldJobs 
+     
+    ballard@cs.wisc.edu  bluebird.c         0       11        0 
+    nice-user.condor@cs. cardinal.c         6      504        0 
+    wright@cs.wisc.edu   finch.cs.w         1        1        0 
+    jbasney@cs.wisc.edu  perdita.cs         0        0        5 
+     
+                               RunningJobs           IdleJobs           HeldJobs 
+     
+     ballard@cs.wisc.edu                 0                 11                  0 
+     jbasney@cs.wisc.edu                 0                  0                  5 
+    nice-user.condor@cs.                 6                504                  0 
+      wright@cs.wisc.edu                 1                  1                  0 
+     
+                   Total                 7                516                  5
 
 Checking on the progress of jobs
 --------------------------------
@@ -47,26 +47,26 @@ from *condor\_q* is
 
 ::
 
-    %  condor_q 
-     
-    -- Submitter: submit.chtc.wisc.edu : <128.104.55.9:32772> : submit.chtc.wisc.edu 
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
-    711197.0   aragorn         1/15 19:18   0+04:29:33 H  0   0.0  script.sh 
-    894381.0   frodo           3/16 09:06  82+17:08:51 R  0   439.5 elk elk.in 
-    894386.0   frodo           3/16 09:06  82+20:21:28 R  0   219.7 elk elk.in 
-    894388.0   frodo           3/16 09:06  81+17:22:10 R  0   439.5 elk elk.in 
-    1086870.0   gollum          4/27 09:07   0+00:10:14 I  0   7.3  condor_dagman 
-    1086874.0   gollum          4/27 09:08   0+00:00:01 H  0   0.0  RunDC.bat 
-    1297254.0   legolas         5/31 18:05  14+17:40:01 R  0   7.3  condor_dagman 
-    1297255.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
-    1297256.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
-    1297259.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
-    1297261.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
-    1302278.0   legolas         6/4  12:22   1+00:05:37 I  0   390.6 mdrun_1.sh 
-    1304740.0   legolas         6/5  00:14   1+00:03:43 I  0   390.6 mdrun_1.sh 
-    1304967.0   legolas         6/5  05:08   0+00:00:00 I  0   0.0  mdrun_1.sh 
-     
-    14 jobs; 4 idle, 8 running, 2 held 
+    %  condor_q 
+     
+    -- Submitter: submit.chtc.wisc.edu : <128.104.55.9:32772> : submit.chtc.wisc.edu 
+     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
+    711197.0   aragorn         1/15 19:18   0+04:29:33 H  0   0.0  script.sh 
+    894381.0   frodo           3/16 09:06  82+17:08:51 R  0   439.5 elk elk.in 
+    894386.0   frodo           3/16 09:06  82+20:21:28 R  0   219.7 elk elk.in 
+    894388.0   frodo           3/16 09:06  81+17:22:10 R  0   439.5 elk elk.in 
+    1086870.0   gollum          4/27 09:07   0+00:10:14 I  0   7.3  condor_dagman 
+    1086874.0   gollum          4/27 09:08   0+00:00:01 H  0   0.0  RunDC.bat 
+    1297254.0   legolas         5/31 18:05  14+17:40:01 R  0   7.3  condor_dagman 
+    1297255.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
+    1297256.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
+    1297259.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
+    1297261.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman 
+    1302278.0   legolas         6/4  12:22   1+00:05:37 I  0   390.6 mdrun_1.sh 
+    1304740.0   legolas         6/5  00:14   1+00:03:43 I  0   390.6 mdrun_1.sh 
+    1304967.0   legolas         6/5  05:08   0+00:00:00 I  0   0.0  mdrun_1.sh 
+     
+    14 jobs; 4 idle, 8 running, 2 held 
 
 This output contains many columns of information about the queued jobs.
 :index:`of queued jobs<single: of queued jobs; status>`\ :index:`state<single: state; job>` The
@@ -78,9 +78,9 @@ ST column (for status) shows the status of current jobs in the queue:
     H: The job is the hold state. In the hold state, the job will not be
     scheduled to run until it is released. See the *condor\_hold* manual
     page located on
-    page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the
+    page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the
     *condor\_release* manual page located on
-    page \ `condor\_release <../man-pages/condor_release.html>`__.
+    page \ `condor\_release <../man-pages/condor_release.html>`__.
 
 The RUN\_TIME time reported for a job is the time that has been
 committed to the job.
@@ -114,38 +114,38 @@ all the machines that are running jobs submitted by
 
 ::
 
-    %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"' 
-     
-    Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime 
-     
-    alfred.cs. INTEL    LINUX        Claimed    Busy       0.980  64    0+07:10:02 
-    biron.cs.w INTEL    LINUX        Claimed    Busy       1.000  128   0+01:10:00 
-    cambridge. INTEL    LINUX        Claimed    Busy       0.988  64    0+00:15:00 
-    falcons.cs INTEL    LINUX        Claimed    Busy       0.996  32    0+02:05:03 
-    happy.cs.w INTEL    LINUX        Claimed    Busy       0.988  128   0+03:05:00 
-    istat03.st INTEL    LINUX        Claimed    Busy       0.883  64    0+06:45:01 
-    istat04.st INTEL    LINUX        Claimed    Busy       0.988  64    0+00:10:00 
-    istat09.st INTEL    LINUX        Claimed    Busy       0.301  64    0+03:45:00 
+    %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"' 
+     
+    Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime 
+     
+    alfred.cs. INTEL    LINUX        Claimed    Busy       0.980  64    0+07:10:02 
+    biron.cs.w INTEL    LINUX        Claimed    Busy       1.000  128   0+01:10:00 
+    cambridge. INTEL    LINUX        Claimed    Busy       0.988  64    0+00:15:00 
+    falcons.cs INTEL    LINUX        Claimed    Busy       0.996  32    0+02:05:03 
+    happy.cs.w INTEL    LINUX        Claimed    Busy       0.988  128   0+03:05:00 
+    istat03.st INTEL    LINUX        Claimed    Busy       0.883  64    0+06:45:01 
+    istat04.st INTEL    LINUX        Claimed    Busy       0.988  64    0+00:10:00 
+    istat09.st INTEL    LINUX        Claimed    Busy       0.301  64    0+03:45:00 
     ...
 
 To find all the machines that are running any job at all, type:
 
 ::
 
-    %  condor_status -run 
-     
-    Name       Arch     OpSys        LoadAv RemoteUser           ClientMachine 
-     
-    adriana.cs INTEL    LINUX        0.980  hepcon@cs.wisc.edu   chevre.cs.wisc. 
-    alfred.cs. INTEL    LINUX        0.980  breach@cs.wisc.edu   neufchatel.cs.w 
-    amul.cs.wi X86_64   LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
-    anfrom.cs. X86_64   LINUX        1.023  ashoks@jules.ncsa.ui jules.ncsa.uiuc 
-    anthrax.cs INTEL    LINUX        0.285  hepcon@cs.wisc.edu   chevre.cs.wisc. 
-    astro.cs.w INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
-    aura.cs.wi X86_64   WINDOWS      0.996  nice-user.condor@cs. chevre.cs.wisc. 
-    balder.cs. INTEL    WINDOWS      1.000  nice-user.condor@cs. chevre.cs.wisc. 
-    bamba.cs.w INTEL    LINUX        1.574  dmarino@cs.wisc.edu  riola.cs.wisc.e 
-    bardolph.c INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
+    %  condor_status -run 
+     
+    Name       Arch     OpSys        LoadAv RemoteUser           ClientMachine 
+     
+    adriana.cs INTEL    LINUX        0.980  hepcon@cs.wisc.edu   chevre.cs.wisc. 
+    alfred.cs. INTEL    LINUX        0.980  breach@cs.wisc.edu   neufchatel.cs.w 
+    amul.cs.wi X86_64   LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
+    anfrom.cs. X86_64   LINUX        1.023  ashoks@jules.ncsa.ui jules.ncsa.uiuc 
+    anthrax.cs INTEL    LINUX        0.285  hepcon@cs.wisc.edu   chevre.cs.wisc. 
+    astro.cs.w INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
+    aura.cs.wi X86_64   WINDOWS      0.996  nice-user.condor@cs. chevre.cs.wisc. 
+    balder.cs. INTEL    WINDOWS      1.000  nice-user.condor@cs. chevre.cs.wisc. 
+    bamba.cs.w INTEL    LINUX        1.574  dmarino@cs.wisc.edu  riola.cs.wisc.e 
+    bardolph.c INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc. 
     ...
 
 Removing a job from the queue
@@ -159,25 +159,25 @@ example shows the queue of jobs before and after a job is removed.
 
 ::
 
-    %  condor_q 
-     
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
-     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
-     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote 
-     132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello 
-     
-    2 jobs; 1 idle, 1 running, 0 held 
-     
-    %  condor_rm 132.0 
-    Job 132.0 removed. 
-     
-    %  condor_q 
-     
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
-     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
-     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote 
-     
-    1 jobs; 1 idle, 0 running, 0 held
+    %  condor_q 
+     
+    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
+     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
+     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote 
+     132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello 
+     
+    2 jobs; 1 idle, 1 running, 0 held 
+     
+    %  condor_rm 132.0 
+    Job 132.0 removed. 
+     
+    %  condor_q 
+     
+    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
+     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
+     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote 
+     
+    1 jobs; 1 idle, 0 running, 0 held
 
 Placing a job on hold
 ---------------------
@@ -201,9 +201,9 @@ Jobs in universes other than the standard universe that are running when
 placed on hold will start over from the beginning when released.
 
 The manual page for *condor\_hold* on
-page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the manual
+page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the manual
 page for *condor\_release* on
-page \ `condor\_release <../man-pages/condor_release.html>`__ contain
+page \ `condor\_release <../man-pages/condor_release.html>`__ contain
 usage details.
 
 Changing the priority of jobs
@@ -223,23 +223,23 @@ the priority of a job to -15,
 
 ::
 
-    %  condor_q raman 
-     
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
-     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
-     126.0   raman           4/11 15:06   0+00:00:00 I  0   0.3  hello 
-     
-    1 jobs; 1 idle, 0 running, 0 held 
-     
-    %  condor_prio -p -15 126.0 
-     
-    %  condor_q raman 
-     
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
-     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
-     126.0   raman           4/11 15:06   0+00:00:00 I  -15 0.3  hello 
-     
-    1 jobs; 1 idle, 0 running, 0 held
+    %  condor_q raman 
+     
+    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
+     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
+     126.0   raman           4/11 15:06   0+00:00:00 I  0   0.3  hello 
+     
+    1 jobs; 1 idle, 0 running, 0 held 
+     
+    %  condor_prio -p -15 126.0 
+     
+    %  condor_q raman 
+     
+    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu 
+     ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD 
+     126.0   raman           4/11 15:06   0+00:00:00 I  -15 0.3  hello 
+     
+    1 jobs; 1 idle, 0 running, 0 held
 
 It is important to note that these job priorities are completely
 different from the user priorities assigned by HTCondor. Job priorities
@@ -277,42 +277,42 @@ following information:
 
 ::
 
-    $ condor_q -analyze 27497829 
-     
-    -- Submitter: s1.chtc.wisc.edu : <128.104.100.43:9618?sock=5557_e660_3> : s1.chtc.wisc.edu 
-    User priority for ei@chtc.wisc.edu is not available, attempting to analyze without it. 
-    --- 
-    27497829.000:  Run analysis summary.  Of 5257 machines, 
-       5257 are rejected by your job's requirements 
-          0 reject your job because of their own requirements 
-          0 match and are already running your jobs 
-          0 match but are serving other users 
-          0 are available to run your job 
-            No successful match recorded. 
-            Last failed match: Tue Jun 18 14:36:25 2013 
-     
-            Reason for last match failure: no match found 
-     
-    WARNING:  Be advised: 
-       No resources matched request's constraints 
-     
-    The Requirements expression for your job is: 
-     
-        ( OpSys == "OSX" ) && ( TARGET.Arch == "X86_64" ) && 
-        ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && 
-        ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == MY.FileSystemDomain ) ) 
-     
-     
-    Suggestions: 
-        Condition                         Machines Matched Suggestion 
-        ---------                         ---------------- ---------- 
-    1   ( target.OpSys == "OSX" )         0                MODIFY TO "LINUX" 
-    2   ( TARGET.Arch == "X86_64" )       5190 
-    3   ( TARGET.Disk >= 1 )              5257 
-    4   ( TARGET.Memory >= ifthenelse(MemoryUsage isnt undefined,MemoryUsage,1) ) 
-                                          5257 
-    5   ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == "submit-1.chtc.wisc.edu" ) ) 
-                                          5257
+    $ condor_q -analyze 27497829 
+     
+    -- Submitter: s1.chtc.wisc.edu : <128.104.100.43:9618?sock=5557_e660_3> : s1.chtc.wisc.edu 
+    User priority for ei@chtc.wisc.edu is not available, attempting to analyze without it. 
+    --- 
+    27497829.000:  Run analysis summary.  Of 5257 machines, 
+       5257 are rejected by your job's requirements 
+          0 reject your job because of their own requirements 
+          0 match and are already running your jobs 
+          0 match but are serving other users 
+          0 are available to run your job 
+            No successful match recorded. 
+            Last failed match: Tue Jun 18 14:36:25 2013 
+     
+            Reason for last match failure: no match found 
+     
+    WARNING:  Be advised: 
+       No resources matched request's constraints 
+     
+    The Requirements expression for your job is: 
+     
+        ( OpSys == "OSX" ) && ( TARGET.Arch == "X86_64" ) && 
+        ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && 
+        ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == MY.FileSystemDomain ) ) 
+     
+     
+    Suggestions: 
+        Condition                         Machines Matched Suggestion 
+        ---------                         ---------------- ---------- 
+    1   ( target.OpSys == "OSX" )         0                MODIFY TO "LINUX" 
+    2   ( TARGET.Arch == "X86_64" )       5190 
+    3   ( TARGET.Disk >= 1 )              5257 
+    4   ( TARGET.Memory >= ifthenelse(MemoryUsage isnt undefined,MemoryUsage,1) ) 
+                                          5257 
+    5   ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == "submit-1.chtc.wisc.edu" ) ) 
+                                          5257
 
 This example also shows that the job does not run because the platform
 requested, Mac OS X, is not available on any of the machines in the
@@ -342,7 +342,7 @@ defined in the submit description file for the job. If these files are
 not defined, then there is little hope of determining if the job ran at
 all. For a job that ran, even for the briefest amount of time, the
 **log**\ :index:`log<single: log; submit commands>` file will contain an event
-of type 1, which will contain the string Job executing on host.
+of type 1, which will contain the string Job executing on host.
 
 A job may run for a short time, before failing due to a file permission
 problem. The log file used by the *condor\_shadow* daemon will contain
@@ -353,7 +353,7 @@ command
 
 ::
 
-    %  condor_config_val SHADOW_LOG
+    %  condor_config_val SHADOW_LOG
 
 Memory and swap space problems may be identified by looking at the log
 file used by the *condor\_schedd* daemon. The location and name of this
@@ -361,15 +361,15 @@ log file may be discovered on the submitting machine, using the command
 
 ::
 
-    %  condor_config_val SCHEDD_LOG
+    %  condor_config_val SCHEDD_LOG
 
 A swap space problem will show in the log with the following message:
 
 ::
 
-    2/3 17:46:53 Swap space estimate reached! No more jobs can be run! 
-    12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0 
-    12/3 17:46:53     0 jobs matched, 1 jobs idle
+    2/3 17:46:53 Swap space estimate reached! No more jobs can be run! 
+    12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0 
+    12/3 17:46:53     0 jobs matched, 1 jobs idle
 
 As an explanation, HTCondor computes the total swap space on the submit
 machine. It then tries to limit the total number of jobs it will spawn
@@ -390,7 +390,7 @@ output of a *condor\_status* command of the following form:
 
 ::
 
-    % condor_status -schedd [hostname] -long | grep VirtualMemory
+    % condor_status -schedd [hostname] -long | grep VirtualMemory
 
 If the value listed is 0, then this is what is confusing HTCondor. There
 are two ways to fix the problem:
@@ -402,7 +402,7 @@ are two ways to fix the problem:
 
    ::
 
-       RESERVED_SWAP = 0
+       RESERVED_SWAP = 0
 
    and then send a *condor\_restart* to the submit machine.
 
@@ -415,16 +415,14 @@ A variety of errors and unusual conditions may cause a job to be placed
 into the Hold state. The job will stay in this state and in the job
 queue until conditions are corrected and *condor\_release* is invoked.
 
-A table listing the reasons why a job may be held is at section \ `Job
-ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`__. A
+A table listing the reasons why a job may be held is at the :doc:`/classad-attributes/job-classad-attributes` section. A
 string identifying the reason that a particular job is in the Hold state
 may be displayed by invoking *condor\_q*. For the example job ID 16.0,
 use:
 
 ::
 
-      condor_q  -hold  16.0
+      condor_q  -hold  16.0
 
 This command prints information about the job, including the job ClassAd
 attribute ``HoldReason``.
@@ -732,4 +730,4 @@ time given in the form ``<days> <hours>:<minutes>:<seconds>``.
 And, statistics about the bytes sent and received by the last run of the
 job and summed over all attempts at running the job are given.
 
-      
+      

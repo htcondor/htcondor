@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_userlog*
 =================
@@ -10,7 +10,7 @@ Synopsis
 --------
 
 **condor\_userlog** [**-help**\ ] [**-total \| -raw**\ ] [**-debug**\ ]
-[**-evict**\ ] [**-j  **\ *cluster \| cluster.proc*] [**-all**\ ]
+[**-evict**\ ] [**-j  **\ *cluster \| cluster.proc*] [**-all**\ ]
 [**-hostname**\ ] *logfile …*
 
 Description
@@ -149,8 +149,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

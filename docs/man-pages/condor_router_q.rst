@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_router\_q*
 ===================
@@ -11,8 +11,8 @@ Synopsis
 --------
 
 **condor\_router\_q** [**-S**\ ] [**-R**\ ] [**-I**\ ] [**-H**\ ]
-[**-route  **\ *name*] [**-idle**\ ] [**-held**\ ]
-[**-constraint  **\ *X*] [**condor\_q options**\ ]
+[**-route  **\ *name*] [**-idle**\ ] [**-held**\ ]
+[**-constraint  **\ *X*] [**condor\_q options**\ ]
 
 Description
 -----------
@@ -34,13 +34,13 @@ Options
     Summarize the idle jobs on each route.
  **-H**
     Summarize the held jobs on each route.
- **-route **\ *name*
+ **-route **\ *name*
     Display only the jobs on the route identified by *name*.
  **-idle**
     Display only the idle jobs.
  **-held**
     Display only the held jobs.
- **-constraint **\ *X*
+ **-constraint **\ *X*
     Display only the jobs matching constraint *X*.
 
 Exit Status
@@ -57,8 +57,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

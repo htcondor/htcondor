@@ -1,4 +1,4 @@
-      
+      
 
 *condor_install*
 ================
@@ -46,7 +46,7 @@ or
 
 ::
 
-    condor_configure --install
+    condor_configure --install
 
 or, it can change the configuration files when invoked via
 
@@ -227,7 +227,7 @@ unzipped HTCondor distribution directories:
 
 ::
 
-    % condor_install --type=submit,execute,manager
+    % condor_install --type=submit,execute,manager
 
 This will allow the machine to submit and execute HTCondor jobs, in
 addition to being the central manager of the pool.
@@ -240,14 +240,14 @@ installed:
 
 ::
 
-    % condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
+    % condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 
 To change the location of the ``LOCAL_DIR`` directory in the
 configuration file, do (from the directory where HTCondor is installed):
 
 ::
 
-    % condor_configure --local-dir=/path/to/new/local/directory
+    % condor_configure --local-dir=/path/to/new/local/directory
 
 This will move the ``log``,\ ``spool``,\ ``execute`` directories to
 ``/path/to/new/local/directory`` from the current local directory.
@@ -260,8 +260,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

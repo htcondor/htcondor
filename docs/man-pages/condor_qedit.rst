@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_qedit*
 ===============
@@ -9,8 +9,8 @@ modify job attributes
 Synopsis
 --------
 
-**condor\_qedit** [**-debug**\ ] [**-n  **\ *schedd-name*]
-[**-pool  **\ *pool-name*] *{cluster \| cluster.proc \| owner \|
+**condor\_qedit** [**-debug**\ ] [**-n  **\ *schedd-name*]
+[**-pool  **\ *pool-name*] *{cluster \| cluster.proc \| owner \|
 -constraint constraint}* *attribute-name* *attribute-value* *…*
 
 Description
@@ -54,9 +54,9 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-n **\ *schedd-name*
+ **-n **\ *schedd-name*
     Modify job attributes in the queue of the specified schedd
- **-pool **\ *pool-name*
+ **-pool **\ *pool-name*
     Modify job attributes in the queue of the schedd specified in the
     specified pool
 
@@ -65,14 +65,14 @@ Examples
 
 ::
 
-    % condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42 
-    Set attribute "answer". 
-    % condor_qedit -name perdita 1849.0 In '"myinput"' 
-    Set attribute "In". 
-    % condor_qedit jbasney NiceUser TRUE 
-    Set attribute "NiceUser". 
-    % condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)' 
-    Set attribute "Requirements".
+    % condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42 
+    Set attribute "answer". 
+    % condor_qedit -name perdita 1849.0 In '"myinput"' 
+    Set attribute "In". 
+    % condor_qedit jbasney NiceUser TRUE 
+    Set attribute "NiceUser". 
+    % condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)' 
+    Set attribute "Requirements".
 
 General Remarks
 ---------------
@@ -81,7 +81,7 @@ A job's ClassAd attributes may be viewed with
 
 ::
 
-      condor_q -long
+      condor_q -long
 
 Exit Status
 -----------
@@ -97,8 +97,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

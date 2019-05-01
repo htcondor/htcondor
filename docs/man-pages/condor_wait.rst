@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_wait*
 ==============
@@ -12,7 +12,7 @@ Synopsis
 **condor\_wait** [**-help \| -version**\ ]
 
 **condor\_wait** [**-debug**\ ] [**-status**\ ] [**-echo**\ ]
-[**-wait  **\ *seconds*] [**-num  **\ *number-of-jobs*] *log-file*
+[**-wait  **\ *seconds*] [**-num  **\ *number-of-jobs*] *log-file*
 [**job ID**\ ]
 
 Description
@@ -42,10 +42,10 @@ Options
     Show job start and terminate information.
  **-echo**
     Print the events out to ``stdout``.
- **-wait **\ *seconds*
+ **-wait **\ *seconds*
     Wait no more than the integer number of *seconds*. The default is
     unlimited time.
- **-num **\ *number-of-jobs*
+ **-num **\ *number-of-jobs*
     Wait for the integer *number-of-jobs* jobs to end. The default is
     all jobs in the log file.
  log file
@@ -75,33 +75,33 @@ Examples
 
 ::
 
-    condor_wait logfile
+    condor_wait logfile
 
 This command waits for all jobs that exist in ``logfile`` to complete.
 
 ::
 
-    condor_wait logfile 40
+    condor_wait logfile 40
 
 This command waits for all jobs that exist in ``logfile`` with a job
 ClassAd attribute ``ClusterId`` of 40 to complete.
 
 ::
 
-    condor_wait -num 2 logfile
+    condor_wait -num 2 logfile
 
 This command waits for any two jobs that exist in ``logfile`` to
 complete.
 
 ::
 
-    condor_wait logfile 40.1
+    condor_wait logfile 40.1
 
 This command waits for job 40.1 that exists in ``logfile`` to complete.
 
 ::
 
-    condor_wait -wait 3600 logfile 40.1
+    condor_wait -wait 3600 logfile 40.1
 
 This waits for job 40.1 to complete by watching ``logfile``, but it will
 not wait more than one hour (3600 seconds).
@@ -122,8 +122,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

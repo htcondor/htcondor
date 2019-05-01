@@ -1,4 +1,4 @@
-      
+      
 
 Introduction
 ============
@@ -19,4 +19,4 @@ This chapter documents the HTCondorView Client contrib module, Quill
 (available with the source code), and using HTCondor with the Hadoop
 File System (available with the source code).
 
-      
+      

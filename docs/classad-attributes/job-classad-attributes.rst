@@ -1,4 +1,4 @@
-      
+      
 
 Job ClassAd Attributes
 ======================
@@ -16,8 +16,7 @@ Job ClassAd Attributes
     the
     **accounting_group**\ :index:`accounting_group<single: accounting_group; submit commands>`
     command. This attribute is only present if an accounting group was
-    requested by the submission. See section \ `User Priorities and
-    Negotiation <../admin-manual/user-priorities-negotiation.html>`__
+    requested by the submission. See the :doc:`/admin-manual/user-priorities-negotiation` section
     for more information about accounting groups.
     :index:`AcctGroupUser<single: AcctGroupUser; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; AcctGroupUser>`
@@ -35,14 +34,14 @@ Job ClassAd Attributes
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the old syntax, as
     specified in
-    section \ `condor_submit <../man-pages/condor_submit.html>`__.
+    the :doc:`/man-pages/condor_submit` section.
     :index:`Arguments<single: Arguments; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; Arguments>`
  ``Arguments``:
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the new syntax, as
     specified in
-    section \ `condor_submit <../man-pages/condor_submit.html>`__.
+    the :doc:`/man-pages/condor_submit` section.
     :index:`BatchQueue<single: BatchQueue; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; BatchQueue>`
  ``BatchQueue``:
@@ -109,7 +108,7 @@ Job ClassAd Attributes
 
     ::
 
-        CommittedTime - CommittedSuspensionTime
+        CommittedTime - CommittedSuspensionTime
 
     :index:`CommittedSlotTime<single: CommittedSlotTime; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; CommittedSlotTime>`
@@ -182,7 +181,7 @@ Job ClassAd Attributes
 
     ::
 
-          -append +DAGParentNodeNames=B,C
+          -append +DAGParentNodeNames=B,C
 
     :index:`DAGManNodesLog<single: DAGManNodesLog; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; DAGManNodesLog>`
@@ -250,8 +249,8 @@ Job ClassAd Attributes
 
     ::
 
-          # 1 megabyte initial value 
-          +DiskUsage = 1024
+          # 1 megabyte initial value 
+          +DiskUsage = 1024
 
     **vm** universe jobs will default to an initial value of the disk
     image size. If not initialized by the job, non-**vm** universe jobs
@@ -436,7 +435,7 @@ Job ClassAd Attributes
 
     ::
 
-            time() - EnteredCurrentStatus
+            time() - EnteredCurrentStatus
 
     will equal the number of seconds that the job has been on hold.
     :index:`Env<single: Env; ClassAd job attribute>`
@@ -446,14 +445,14 @@ Job ClassAd Attributes
     A string representing the environment variables passed to the job,
     when those arguments are specified using the old syntax, as
     specified in
-    section \ `condor_submit <../man-pages/condor_submit.html>`__.
+    the :doc:`/man-pages/condor_submit` section.
     :index:`Environment<single: Environment; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; Environment>`
  ``Environment``:
     A string representing the environment variables passed to the job,
     when those arguments are specified using the new syntax, as
     specified in
-    section \ `condor_submit <../man-pages/condor_submit.html>`__.
+    the :doc:`/man-pages/condor_submit` section.
     :index:`ExecutableSize<single: ExecutableSize; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; ExecutableSize>`
  ``ExecutableSize``:
@@ -570,7 +569,7 @@ Job ClassAd Attributes
  ``HoldReason``:
     A string containing a human-readable message about why a job is on
     hold. This is the message that will be displayed in response to the
-    command condor_q -hold. It can be used to determine if a job should
+    command condor_q -hold. It can be used to determine if a job should
     be released or not.
     :index:`HoldReasonCode<single: HoldReasonCode; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; HoldReasonCode>`
@@ -867,7 +866,7 @@ Job ClassAd Attributes
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    page \ `619 <ConfigurationMacros.html#x33-1890003.5.2>`__) but it
+    page \ `619 <ConfigurationMacros.html#x33-1890003.5.2>`__) but it
     applies to the job event log instead of the system event log.
     :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
@@ -1307,7 +1306,7 @@ Job ClassAd Attributes
 
     ::
 
-          condor_rm -constraint <constraint>
+          condor_rm -constraint <constraint>
 
     This attribute is used for jobs managed with *condor_dagman* to
     ensure that node jobs of the DAG are removed when the
@@ -1343,14 +1342,14 @@ Job ClassAd Attributes
  ``PostArgs``:
     Defines the command-line arguments for the post command using the
     old argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
+    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
     ``PostArgs`` and ``PostArguments`` exists, the former is ignored.
     :index:`PostArguments<single: PostArguments; ClassAd job attribute>`
     :index:`ClassAd job attribute<single: ClassAd job attribute; PostArguments>`
  ``PostArguments``:
     Defines the command-line arguments for the post command using the
     new argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
+    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
     double quotes must be escaped with a backslash instead of another
     double quote. If both ``PostArgs`` and ``PostArguments`` exists, the
     former is ignored. :index:`PostCmd<single: PostCmd; ClassAd job attribute>`
@@ -1423,14 +1422,14 @@ Job ClassAd Attributes
  ``PreArgs``:
     Defines the command-line arguments for the pre command using the old
     argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
+    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
     ``PreArgs`` and ``PreArguments`` exists, the former is ignored.
     :index:`PreArguments<single: PreArguments; ClassAd job attribute>`
     :index:`ClassAd job attribute<single: ClassAd job attribute; PreArguments>`
  ``PreArguments``:
     Defines the command-line arguments for the pre command using the new
     argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
+    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
     double quotes must be escape with a backslash instead of another
     double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
     former is ignored. :index:`PreCmd<single: PreCmd; ClassAd job attribute>`
@@ -1626,7 +1625,7 @@ Job ClassAd Attributes
 
     ::
 
-        RemoteWallClockTime - CumulativeSuspensionTime
+        RemoteWallClockTime - CumulativeSuspensionTime
 
     Note that this number does not get reset to zero when a job is
     forced to migrate from one machine to another. ``CommittedTime``, on
@@ -2090,4 +2089,4 @@ written to the job's execute directory while the job is running.
     upon the job attribute ``Request<Name>``, but may be larger due to
     the minimum given to a dynamic slot.
 
-      
+      

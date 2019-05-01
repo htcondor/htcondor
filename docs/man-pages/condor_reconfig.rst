@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_reconfig*
 ==================
@@ -12,10 +12,10 @@ Synopsis
 **condor\_reconfig** [**-help \| -version**\ ]
 
 **condor\_reconfig** [**-debug**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
-**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
-[**-daemon  **\ *daemonname*]
+[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
+**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
+\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
+[**-daemon  **\ *daemonname*]
 
 Description
 -----------
@@ -33,7 +33,7 @@ configuration files, since it is faster and more efficient than
 restarting the daemons.
 
 The command *condor\_reconfig* with no arguments or with the
-**-daemon **\ *master* option will cause the reconfiguration of the
+**-daemon **\ *master* option will cause the reconfiguration of the
 *condor\_master* daemon and all the child processes of the
 *condor\_master*.
 
@@ -50,23 +50,23 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *hostname*
+ **-name **\ *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Apply this command only to machines matching the given ClassAd
     *expression*
  **-all**
     Send the command to all machines in the pool
- **-daemon **\ *daemonname*
+ **-daemon **\ *daemonname*
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor\_master* daemon.
 
@@ -84,13 +84,13 @@ host:
 
 ::
 
-    % condor_reconfig
+    % condor_reconfig
 
 To reconfigure only the *condor\_startd* on a named machine:
 
 ::
 
-    % condor_reconfig -name bluejay -daemon startd
+    % condor_reconfig -name bluejay -daemon startd
 
 To reconfigure a machine within a pool other than the local pool, use
 the **-pool** option. The argument is the name of the central manager
@@ -101,7 +101,7 @@ single machine named **cae17** within the pool of machines that has
 
 ::
 
-    % condor_reconfig -pool condor.cae.wisc.edu -name cae17
+    % condor_reconfig -pool condor.cae.wisc.edu -name cae17
 
 Author
 ------
@@ -111,8 +111,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

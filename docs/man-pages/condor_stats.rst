@@ -1,4 +1,4 @@
-      
+      
 
 *condor_stats*
 ==============
@@ -10,8 +10,8 @@ Display historical information about the HTCondor pool
 Synopsis
 --------
 
-**condor_stats** [**-f  **\ *filename*] [**-orgformat**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [**time-range**\ ]
+**condor_stats** [**-f  **\ *filename*] [**-orgformat**\ ]
+[**-pool  **\ *centralmanagerhostname[:portnumber]*] [**time-range**\ ]
 *query-type*
 
 Description
@@ -53,13 +53,13 @@ Time Range Options
     Get information for the last week.
  **-lastmonth**
     Get information for the last month.
- **-lasthours **\ *n*
+ **-lasthours **\ *n*
     Get information for the n last hours.
- **-from **\ *m d y*
+ **-from **\ *m d y*
     Get information for the time since the beginning of the specified
     date. A start date prior to the Unix epoch causes *condor_stats* to
     print its usage information and quit.
- **-to **\ *m d y*
+ **-to **\ *m d y*
     Get information for the time up to the beginning of the specified
     date, instead of up to now. A finish date in the future causes
     *condor_stats* to print its usage information and quit.
@@ -70,7 +70,7 @@ Query Type Arguments
 The query types that do not list all of a category require further
 specification as given by an argument.
 
- **-resourcequery **\ *hostname*
+ **-resourcequery **\ *hostname*
     A single resource query provides information about a single machine.
     The information also includes the keyboard idle time (in seconds),
     the load average, and the machine state.
@@ -78,7 +78,7 @@ specification as given by an argument.
     A query of a single list of resources to provide a list of all the
     machines for which the *condor_collector* daemon has historic
     information within the query's time range.
- **-resgroupquery **\ *arch/opsys \| “Total”*
+ **-resgroupquery **\ *arch/opsys \| “Total”*
     A query of a specified group to provide information about a group of
     machines based on their platform (operating system and
     architecture). The architecture is defined by the machine ClassAd
@@ -94,20 +94,20 @@ specification as given by an argument.
     Queries for a list of all the group names for which the
     *condor_collector* has historic information within the query's time
     range.
- **-userquery **\ *email_address/submit_machine*
+ **-userquery **\ *email_address/submit_machine*
     Query for a specific submitter on a specific machine. The
     information displayed includes the number of running jobs and the
     number of idle jobs. An example argument appears as
 
     ::
 
-            -userquery jondoe@sample.com/onemachine.sample.com
+            -userquery jondoe@sample.com/onemachine.sample.com
 
  **-userlist**
     Queries for the list of all submitters for which the
     *condor_collector* daemon has historic information within the
     query's time range.
- **-usergroupquery **\ *email_address \| “Total”*
+ **-usergroupquery **\ *email_address \| “Total”*
     Query for all jobs submitted by the specific user, regardless of the
     machine they were submitted from, or all jobs. The information
     displayed includes the number of running jobs and the number of idle
@@ -115,7 +115,7 @@ specification as given by an argument.
  **-usergrouplist**
     Queries for the list of all users for which the *condor_collector*
     has historic information within the query's time range.
- **-ckptquery **\ *hostname*
+ **-ckptquery **\ *hostname*
     Query about a checkpoint server given its host name. The information
     displayed includes the number of MiB received, MiB sent, average
     receive bandwidth (in KiB/sec), and average send bandwidth (in
@@ -128,9 +128,9 @@ specification as given by an argument.
 Options
 -------
 
- **-f **\ *filename*
+ **-f **\ *filename*
     Write the information to a file instead of the standard output.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Contact the specified central manager instead of the local one.
  **-orgformat**
     Display the information in an alternate format for timing, which
@@ -152,8 +152,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

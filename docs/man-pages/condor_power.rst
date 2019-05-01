@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_power*
 ===============
@@ -11,8 +11,8 @@ Synopsis
 
 **condor\_power** [**-h**\ ]
 
-**condor\_power** [**-d**\ ] [**-i**\ ] [**-m  **\ *MACaddress*]
-[**-s  **\ *subnet*] [*ClassAdFile*\ ]
+**condor\_power** [**-d**\ ] [**-i**\ ] [**-m  **\ *MACaddress*]
+[**-s  **\ *subnet*] [*ClassAdFile*\ ]
 
 Description
 -----------
@@ -50,10 +50,10 @@ Options
     Enable debugging messages.
  **-i**
     Read a ClassAd that is piped in through standard input.
- **-m **\ *MACaddress*
+ **-m **\ *MACaddress*
     Specify the MAC address in the standard format of six groups of two
     hexadecimal digits separated by colons.
- **-s **\ *subnet*
+ **-s **\ *subnet*
     Specify the subnet in the standard form of a mask for an IPv4
     address. Without this option, a global broadcast will be sent.
 
@@ -71,8 +71,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -50,7 +50,7 @@ sure to copy both lines. Don't copy the ‘\\' itself.)
     $ tar -z -x -f ~/condor-8.7.8-*-stripped.tar.gz 
     $ ./condor-8.7.8-*-stripped/condor_install --local-dir `pwd`/local \
     --make-personal-condor 
-    $ . ./condor.sh 
+    $ . ./condor.sh 
     $ condor_master 
 
 Testing
@@ -63,27 +63,27 @@ should generally be pretty similar to the following.
 
 ::
 
-    $ condor_q 
-     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 
-    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
+    $ condor_q 
+     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 
+    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
 
-    0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended 
-    $ condor_status -any 
-    MyType             TargetType         Name 
+    0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended 
+    $ condor_status -any 
+    MyType             TargetType         Name 
 
-    Negotiator         None               NEGOTIATOR 
-    Collector          None               Personal Condor at 127.0.0.1@submit-3 
-    Machine            Job                slot1@submit-3.batlab.org 
-    Machine            Job                slot2@submit-3.batlab.org 
-    Machine            Job                slot3@submit-3.batlab.org 
-    Machine            Job                slot4@submit-3.batlab.org 
-    Machine            Job                slot5@submit-3.batlab.org 
-    Machine            Job                slot6@submit-3.batlab.org 
-    Machine            Job                slot7@submit-3.batlab.org 
-    Machine            Job                slot8@submit-3.batlab.org 
-    Scheduler          None               submit-3.batlab.org 
-    DaemonMaster       None               submit-3.batlab.org 
-    Accounting         none               <none> 
+    Negotiator         None               NEGOTIATOR 
+    Collector          None               Personal Condor at 127.0.0.1@submit-3 
+    Machine            Job                slot1@submit-3.batlab.org 
+    Machine            Job                slot2@submit-3.batlab.org 
+    Machine            Job                slot3@submit-3.batlab.org 
+    Machine            Job                slot4@submit-3.batlab.org 
+    Machine            Job                slot5@submit-3.batlab.org 
+    Machine            Job                slot6@submit-3.batlab.org 
+    Machine            Job                slot7@submit-3.batlab.org 
+    Machine            Job                slot8@submit-3.batlab.org 
+    Scheduler          None               submit-3.batlab.org 
+    DaemonMaster       None               submit-3.batlab.org 
+    Accounting         none               <none> 
 
 You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
@@ -110,14 +110,14 @@ After a little while:
 
 ::
 
-    $ condor_q 
+    $ condor_q 
 
 
-     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 
-    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
-    tlmiller CMD: /bin/sleep   2/3  13:56      _      1      _      1 3.0 
+     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 
+    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
+    tlmiller CMD: /bin/sleep   2/3  13:56      _      1      _      1 3.0 
 
-    1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended 
+    1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended 
 
 Configure Public Interface
 ''''''''''''''''''''''''''
@@ -333,4 +333,4 @@ URL and delete the ‘HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`__
 
-      
+      

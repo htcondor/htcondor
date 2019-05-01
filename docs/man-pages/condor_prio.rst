@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_prio*
 ==============
@@ -9,11 +9,11 @@ change priority of jobs in the HTCondor queue
 Synopsis
 --------
 
-**condor\_prio** **-p **\ *priority* \| **+ **\ *value* \|
-**- **\ *value* [**-n  **\ *schedd\_name*] **
+**condor\_prio** **-p **\ *priority* \| **+ **\ *value* \|
+**- **\ *value* [**-n  **\ *schedd\_name*] **
 
-**condor\_prio** **-p **\ *priority* \| **+ **\ *value* \|
-**- **\ *value* [**-pool **\ *pool\_name* **-n **\ *schedd\_name* ]\ **
+**condor\_prio** **-p **\ *priority* \| **+ **\ *value* \|
+**- **\ *value* [**-pool **\ *pool\_name* **-n **\ *schedd\_name* ]\ **
 
 Description
 -----------
@@ -31,8 +31,8 @@ change priority of all jobs in the queue.
 The user must set a new priority with the **-p** option, or specify a
 priority adjustment. The priority of a job can be any integer, with
 higher numbers corresponding to greater priority. For adjustment of the
-current priority, **+ **\ *value* increases the priority by the amount
-given with *value*. **- **\ *value* decreases the priority by the amount
+current priority, **+ **\ *value* increases the priority by the amount
+given with *value*. **- **\ *value* decreases the priority by the amount
 given with *value*.
 
 Only the owner of a job or the super user can change the priority.
@@ -44,10 +44,10 @@ machine.
 Options
 -------
 
- **-n **\ *schedd\_name*
+ **-n **\ *schedd\_name*
     Change priority of jobs queued at the specified *condor\_schedd* in
     the local pool.
- **-pool **\ *pool\_name* **-n **\ *schedd\_name*
+ **-pool **\ *pool\_name* **-n **\ *schedd\_name*
     Change priority of jobs queued at the specified *condor\_schedd* in
     the specified pool.
 
@@ -65,8 +65,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

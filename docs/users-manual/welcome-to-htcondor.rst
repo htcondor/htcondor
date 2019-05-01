@@ -1,4 +1,4 @@
-      
+      
 
 Welcome to HTCondor
 ===================
@@ -18,4 +18,4 @@ now the Center for High Throughput Computing have established
 collaborations with scientists from around the world, and have provided
 them with access to many cycles. One scientist consumed 100 CPU years!
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_suspend*
 =================
@@ -12,8 +12,8 @@ Synopsis
 **condor\_suspend** [**-help \| -version**\ ]
 
 **condor\_suspend** [**-debug**\ ] [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*] **
+**-pool **\ *centralmanagerhostname[:portnumber]* \|
+**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*] **
 
 Description
 -----------
@@ -36,12 +36,12 @@ Options
     Display usage information
  **-version**
     Display version information
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *scheddname*
+ **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
@@ -52,7 +52,7 @@ Options
     Suspend the specific job in the cluster
  *user*
     Suspend jobs belonging to specified user
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Suspend all jobs which match the job ClassAd expression constraint
  **-all**
     Suspend all the jobs in the queue
@@ -70,7 +70,7 @@ To suspend all jobs except for a specific user:
 
 ::
 
-    % condor_suspend -constraint 'Owner =!= "foo"'
+    % condor_suspend -constraint 'Owner =!= "foo"'
 
 Run *condor\_continue* to continue execution.
 
@@ -82,8 +82,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

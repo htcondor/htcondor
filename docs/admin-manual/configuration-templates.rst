@@ -1,4 +1,4 @@
-      
+      
 
 Configuration Templates
 =======================
@@ -21,7 +21,7 @@ macro later in the configuration.
 
 Detailed information about configuration templates (such as the macros
 they set) can be obtained using the *condor\_config\_val* ``use`` option
-(see `condor\_configval <../man-pages/condor_config_val.html>`__). (This
+(see `condor\_configval <../man-pages/condor_config_val.html>`__). (This
 document does not contain such information because the
 *condor\_config\_val* command is a better way to obtain it.)
 
@@ -36,7 +36,7 @@ the configuration using the syntax
 
 ::
 
-      use <category name> : <template name>
+      use <category name> : <template name>
 
 The ``use`` key word is case insensitive. There are no requirements for
 white space characters surrounding the colon character. More than one
@@ -133,7 +133,7 @@ incorporates.
 
        Sets up a partitionable slot of the specified slot type number
        and allocation (defaults for slot\_type\_num and allocation are 1
-       and 100% respectively). See \ `Policy Configuration for Execute
+       and 100% respectively). See \ `Policy Configuration for Execute
        Hosts and for Submit
        Hosts <../admin-manual/policy-configuration.html>`__ for
        information on partitionalble slot policies.
@@ -155,58 +155,58 @@ incorporates.
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe          [,hook_args] )``
 
        Create a periodic job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args]          )``
 
        Create a (nearly) continuous job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
-        
+        
 
     -  ``UWCS_Desktop_Policy_Values``
 
@@ -375,7 +375,7 @@ it sees:
 
 ::
 
-    @use feature : GPUs
+    @use feature : GPUs
 
 Running an older *condor\_config\_val* also identifies the ``@use`` line
 as being bad. A *condor\_startd* of HTCondor version 8.1.6 or more
@@ -383,7 +383,7 @@ recent sees
 
 ::
 
-    use feature : GPUs
+    use feature : GPUs
 
 Configuration Template Examples
 -------------------------------
@@ -392,36 +392,36 @@ Configuration Template Examples
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
-           
+       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
+           
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
-           
+       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
+           
 
 -  Update dynamic GPU information every 15 minutes:
 
    ::
 
-       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
-           
+       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
+           
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
    the DetectedGPUs line from textttcondor\_gpu\_discovery:
 
    ::
 
-       #!/usr/bin/env perl 
-       my @attrs = `@ARGV`; 
-       for (@attrs) { 
-       next if ($_ =~ /^Detected/i); 
-       print $_; 
-       } 
-           
+       #!/usr/bin/env perl 
+       my @attrs = `@ARGV`; 
+       for (@attrs) { 
+       next if ($_ =~ /^Detected/i); 
+       print $_; 
+       } 
+           
 
-      
+      

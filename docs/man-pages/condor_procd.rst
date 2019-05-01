@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_procd*
 ===============
@@ -11,7 +11,7 @@ Synopsis
 
 **condor\_procd** **-h**
 
-**condor\_procd** **-A **\ *address-file* [**options**\ ]
+**condor\_procd** **-A **\ *address-file* [**options**\ ]
 
 Description
 -----------
@@ -30,7 +30,7 @@ group IDs. Management of the PID families include
 In a regular HTCondor installation, this program is not intended to be
 used or executed by any human.
 
-The required argument, **-A **\ *address-file*, is the path and file
+The required argument, **-A **\ *address-file*, is the path and file
 name of the address file which is the named pipe that clients must use
 to speak with the *condor\_procd*.
 
@@ -42,16 +42,16 @@ Options
  **-D**
     Wait for the debugger. Initially sleep 30 seconds before beginning
     normal function.
- **-C **\ *principal*
+ **-C **\ *principal*
     The *principal* is the UID of the owner of the named pipe that
     clients must use to speak to the *condor\_procd*.
- **-L **\ *log-file*
+ **-L **\ *log-file*
     A file the *condor\_procd* will use to write logging information.
  **-E**
     When specified, another tool such as the *procd\_ctl* tool must
     allocate the GID associated with a process. When this option is not
     specified, the *condor\_procd* will allocate the GID itself.
- **-P **\ *PID*
+ **-P **\ *PID*
     If not specified, the *condor\_procd* will use the
     *condor\_procd*\ 's parent, which may not be PID 1 on Unix, as the
     parent of the *condor\_procd* and the root of the tracking family.
@@ -59,13 +59,13 @@ Options
     *condor\_procd* exits. When specified, the *condor\_procd* will
     track this *PID* family in question and not also exit if the PID
     exits.
- **-S **\ *seconds*
+ **-S **\ *seconds*
     The maximum number of seconds the *condor\_procd* will wait between
     taking snapshots of the tree of families. Different clients to the
     *condor\_procd* can specify different snapshot times. The quickest
     snapshot time is the one performed by the *condor\_procd*. When this
     option is not specified, a default value of 60 seconds is used.
- **-G **\ *min-gid max-gid*
+ **-G **\ *min-gid max-gid*
     If the **-E** option is not specified, then track process families
     using a self-allocated, free GID out of the inclusive range
     specified by *min-gid* and *max-gid*. This means that if a new
@@ -75,11 +75,11 @@ Options
     the GID, the *procd\_ctl* tool must be used to associate the GID
     with the PID root of the family. The associated GID must still be in
     the range specified. This is a Linux-only feature.
- **-K **\ *windows-softkill-binary*
+ **-K **\ *windows-softkill-binary*
     This is the path and executable name of the *condor\_softkill.exe*
     binary. It is used to send softkill signals to process families.
     This is a Windows-only feature.
- **-I **\ *glexec-kill-path glexec-path*
+ **-I **\ *glexec-kill-path glexec-path*
     Specifies, with *glexec-kill-path*, the path and executable name of
     a binary used to send a signal to a PID. The *glexec* binary,
     specified by *glexec-path*, executes the program specified with
@@ -108,8 +108,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

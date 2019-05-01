@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_transform\_ads*
 ========================
@@ -12,9 +12,9 @@ Synopsis
 
 **condor\_transform\_ads** [**-help [rules]**\ ]
 
-**condor\_transform\_ads** **-rules **\ *rules-file*
-[**-in[:<form>]  **\ *infile*] [**-out[:<form>[,
-nosort]]  **\ *outfile*] [*<key>=<value>*\ ] [**-long**\ ] [**-json**\ ]
+**condor\_transform\_ads** **-rules **\ *rules-file*
+[**-in[:<form>]  **\ *infile*] [**-out[:<form>[,
+nosort]]  **\ *outfile*] [*<key>=<value>*\ ] [**-long**\ ] [**-json**\ ]
 [**-xml**\ ] [**-verbose**\ ] [**-terse**\ ] [**-debug**\ ]
 [**-unit-test**\ ] [**-testing**\ ] [**-convertoldroutes**\ ] [*infile1
 …infileN*\ ]
@@ -40,10 +40,10 @@ Options
  **-help [rules]**
     Display usage information and exit. **-help rules** displays
     information about the available transformation rules.
- **-rules **\ *rules-file*
+ **-rules **\ *rules-file*
     Specifies the file containing definitions of the transformation
     rules.
- **-in[:<form>] **\ *infile*
+ **-in[:<form>] **\ *infile*
     Specifies an input file containing ClassAd(s) to be transformed.
     **<form>**, if specified, is one of:
 
@@ -55,7 +55,7 @@ Options
 
     | If ``-`` is specified for *infile*, input is read from ``stdin``.
 
- **-out[:<form>[, nosort] **\ *outfile*
+ **-out[:<form>[, nosort] **\ *outfile*
     Specifies an output file to receive the transformed ClassAd(s).
     **<form>**, if specified, is one of:
 
@@ -104,30 +104,30 @@ according to the given rules:
 
 ::
 
-      # File: my_input 
-      ResidentSetSize = 500 
-      DiskUsage = 2500000 
-      NumCkpts = 0 
-      TransferrErr = false 
-      Err = "/dev/null" 
-     
-      # File: my_rules 
-      EVALSET MemoryUsage ( ResidentSetSize / 100 ) 
-      EVALMACRO WantDisk = ( DiskUsage * 2 ) 
-      SET RequestDisk ( $(WantDisk) / 1024 ) 
-      RENAME NumCkpts NumCheckPoints 
-      DELETE /(.+)Err/ 
-     
-      # Command: 
-      condor_transform_ads -rules my_rules -in my_input 
-     
-      # Output: 
-      DiskUsage = 2500000 
-      Err = "/dev/null" 
-      MemoryUsage = 5 
-      NumCheckPoints = 0 
-      RequestDisk = ( 5000000 / 1024 ) 
-      ResidentSetSize = 500
+      # File: my_input 
+      ResidentSetSize = 500 
+      DiskUsage = 2500000 
+      NumCkpts = 0 
+      TransferrErr = false 
+      Err = "/dev/null" 
+     
+      # File: my_rules 
+      EVALSET MemoryUsage ( ResidentSetSize / 100 ) 
+      EVALMACRO WantDisk = ( DiskUsage * 2 ) 
+      SET RequestDisk ( $(WantDisk) / 1024 ) 
+      RENAME NumCkpts NumCheckPoints 
+      DELETE /(.+)Err/ 
+     
+      # Command: 
+      condor_transform_ads -rules my_rules -in my_input 
+     
+      # Output: 
+      DiskUsage = 2500000 
+      Err = "/dev/null" 
+      MemoryUsage = 5 
+      NumCheckPoints = 0 
+      RequestDisk = ( 5000000 / 1024 ) 
+      ResidentSetSize = 500
 
 Author
 ------
@@ -137,8 +137,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

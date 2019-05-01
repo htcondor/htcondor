@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_off*
 =============
@@ -12,11 +12,11 @@ Synopsis
 **condor\_off** [**-help \| -version**\ ]
 
 **condor\_off** [**-graceful \| -fast \| -peaceful \|
--force-graceful**\ ] [**-annex  **\ *name*] [**-debug**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
-**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
-[**-daemon  **\ *daemonname*]
+-force-graceful**\ ] [**-annex  **\ *name*] [**-debug**\ ]
+[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
+**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
+\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
+[**-daemon  **\ *daemonname*]
 
 Description
 -----------
@@ -26,12 +26,12 @@ of one or more machines. It does this cleanly so that checkpointable
 jobs may gracefully exit with minimal loss of work.
 
 The command *condor\_off* without any arguments will shut down all
-daemons except *condor\_master*, unless **-annex **\ *name* is
+daemons except *condor\_master*, unless **-annex **\ *name* is
 specified. The *condor\_master* can then handle both local and remote
 requests to restart the other HTCondor daemons if need be. To restart
 HTCondor running on a machine, see the *condor\_on* command.
 
-With the **-daemon **\ *master* option, *condor\_off* will shut down all
+With the **-daemon **\ *master* option, *condor\_off* will shut down all
 daemons including the *condor\_master*. Specification using the
 **-daemon** option will shut down only the specified daemon.
 
@@ -57,29 +57,29 @@ Options
     Force a graceful shutdown, even after issuing a **-peaceful**
     command. A minimum of the first two characters of this option must
     be specified, to distinguish it from the **-fast** command.
- **-annex **\ *name*
+ **-annex **\ *name*
     Turn off master daemons in the specified annex. By default this will
     result in the corresponding instances shutting down.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *hostname*
+ **-name **\ *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Apply this command only to machines matching the given ClassAd
     *expression*
  **-all**
     Send the command to all machines in the pool
- **-daemon **\ *daemonname*
+ **-daemon **\ *daemonname*
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor\_master* daemon.
 
@@ -97,13 +97,13 @@ host:
 
 ::
 
-    % condor_off
+    % condor_off
 
 To shut down only the *condor\_collector* on three named machines:
 
 ::
 
-    % condor_off  cinnamon cloves vanilla -daemon collector
+    % condor_off  cinnamon cloves vanilla -daemon collector
 
 To shut down daemons within a pool of machines other than the local
 pool, use the **-pool** option. The argument is the name of the central
@@ -115,7 +115,7 @@ as its central manager:
 
 ::
 
-    % condor_off  -pool condor.cae.wisc.edu -name cae17
+    % condor_off  -pool condor.cae.wisc.edu -name cae17
 
 Author
 ------
@@ -125,8 +125,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

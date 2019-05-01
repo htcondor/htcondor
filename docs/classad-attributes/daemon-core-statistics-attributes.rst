@@ -1,4 +1,4 @@
-      
+      
 
 DaemonCore Statistics Attributes
 ================================
@@ -14,7 +14,7 @@ condor\_status command with a direct query, such as
 
 ::
 
-    condor\_status -direct somehostname.example.com -schedd -statistics DC:2 -l
+    condor\_status -direct somehostname.example.com -schedd -statistics DC:2 -l
 
 :index:`DCUdpQueueDepth<single: DCUdpQueueDepth; ClassAd statistics attribute>`
 
@@ -85,4 +85,4 @@ condor\_status command with a direct query, such as
     RecentTimersFired in the number of timers fired in the last 20
     minutes.
 
-      
+      

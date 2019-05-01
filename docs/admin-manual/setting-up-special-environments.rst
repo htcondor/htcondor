@@ -1,4 +1,4 @@
-      
+      
 
 Setting Up for Special Environments
 ===================================
@@ -12,8 +12,7 @@ Using HTCondor with AFS
 :index:`AFS<single: AFS; file system>`
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+shared file system are given at the :doc:`/admin-manual/configuration-macros` section.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
@@ -118,8 +117,7 @@ to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
 **transfer_input_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
-see section \ `Submitting a
-Job <../users-manual/submitting-a-job.html>`__ for details.
+see the :doc:`/users-manual/submitting-a-job` section for details.
 
 For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
@@ -129,8 +127,7 @@ command
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
 **output_destination**\ :index:`output_destination<single: output_destination; submit commands>`;
-see section \ `Submitting a
-Job <../users-manual/submitting-a-job.html>`__ for details. The plug-in
+see the :doc:`/users-manual/submitting-a-job` section for details. The plug-in
 is invoked once for each output file to be transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
@@ -143,16 +140,16 @@ machines. Disabling URL transfers is accomplished by setting
 
 ::
 
-    ENABLE_URL_TRANSFERS = FALSE
+    ENABLE_URL_TRANSFERS = FALSE
 
 A comma separated list giving the absolute path and name of all
 available plug-ins is specified as in the example:
 
 ::
 
-    FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \ 
-                           /opt/condor/plugins/hdfs-plugin, \ 
-                           /opt/condor/plugins/custom-plugin
+    FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \ 
+                           /opt/condor/plugins/hdfs-plugin, \ 
+                           /opt/condor/plugins/custom-plugin
 
 The *condor_starter* invokes all listed plug-ins to determine their
 capabilities. Each may handle one or more protocols (scheme names). The
@@ -171,8 +168,8 @@ ClassAd attributes. The first two are fixed:
 
 ::
 
-    PluginVersion = "0.1" 
-    PluginType = "FileTransfer"
+    PluginVersion = "0.1" 
+    PluginType = "FileTransfer"
 
 The third ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
@@ -180,7 +177,7 @@ plug-in handles. So, for example
 
 ::
 
-    SupportedMethods = "http,ftp,file"
+    SupportedMethods = "http,ftp,file"
 
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
@@ -211,8 +208,8 @@ the submit description file contains
 
 ::
 
-    output_destination = url://server/some/directory/ 
-    transfer_output_files = foo, bar, qux
+    output_destination = url://server/some/directory/ 
+    transfer_output_files = foo, bar, qux
 
 HTCondor invokes the plug-in that handles the ``url`` protocol three
 times. The directory delimiter (/ on Unix, and \\ on Windows) is
@@ -221,9 +218,9 @@ of the plug-in will appear similar to
 
 ::
 
-    url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo 
-    url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar 
-    url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+    url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo 
+    url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar 
+    url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
 
 Note that this functionality is not limited to a predefined set of
 protocols. New ones can be invented. As an invented example, the zkm
@@ -233,16 +230,16 @@ line argument with:
 
 ::
 
-    PluginVersion = "0.1" 
-    PluginType = "FileTransfer" 
-    SupportedMethods = "zkm"
+    PluginVersion = "0.1" 
+    PluginType = "FileTransfer" 
+    SupportedMethods = "zkm"
 
 And, then when a job requested that this plug-in be invoked, for the
 invented example:
 
 ::
 
-    transfer_input_files = zkm://128/r-data
+    transfer_input_files = zkm://128/r-data
 
 the plug-in will be invoked with a first command line argument of
 zkm://128/r-data and a second command line argument giving the full path
@@ -275,7 +272,7 @@ follows:
 
 ::
 
-    public_input_files = file1,file2,file3
+    public_input_files = file1,file2,file3
 
 HTCondor will automatically convert these files into URLs and transfer
 them over HTTP using plug-ins. The advantage to this approach is that
@@ -377,8 +374,8 @@ Intel Linux machines, the files ought to be named:
 
 ::
 
-      condor_config.INTEL.WINDOWS 
-      condor_config.X86_64.LINUX
+      condor_config.INTEL.WINDOWS 
+      condor_config.X86_64.LINUX
 
 Then, assuming these files are in the directory defined by the ``ETC``
 configuration variable, and machine-specific configuration files are in
@@ -387,8 +384,8 @@ the same directory, named by each machine's host name,
 
 ::
 
-    LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \ 
-                        $(ETC)/$(HOSTNAME).local
+    LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \ 
+                        $(ETC)/$(HOSTNAME).local
 
 Alternatively, when using AFS, an ``@sys`` link may be used to specify
 the platform-specific configuration file, which lets AFS resolve this
@@ -398,15 +395,15 @@ this case, the files might be named:
 
 ::
 
-      condor_config.i386_linux2 
-      condor_config.platform -> condor_config.@sys
+      condor_config.i386_linux2 
+      condor_config.platform -> condor_config.@sys
 
 and the ``LOCAL_CONFIG_FILE`` configuration variable would be set to
 
 ::
 
-    LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \ 
-                        $(ETC)/$(HOSTNAME).local
+    LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \ 
+                        $(ETC)/$(HOSTNAME).local
 
 Platform-Specific Configuration File Settings
 '''''''''''''''''''''''''''''''''''''''''''''
@@ -523,18 +520,18 @@ the system linker (*ld*), is as follows:
 
 ::
 
-    Operating System              Location of ld (ld-path) 
-    Linux                         /usr/bin
+    Operating System              Location of ld (ld-path) 
+    Linux                         /usr/bin
 
 On these platforms, issue the following commands (as root), where
 *ld-path* is replaced by the path to the system's *ld*.
 
 ::
 
-      mv /[ld-path]/ld /<ld-path>/ld.real 
-      cp /usr/local/condor/lib/ld /<ld-path>/ld 
-      chown root /<ld-path>/ld 
-      chmod 755 /<ld-path>/ld
+      mv /[ld-path]/ld /<ld-path>/ld.real 
+      cp /usr/local/condor/lib/ld /<ld-path>/ld 
+      chown root /<ld-path>/ld 
+      chmod 755 /<ld-path>/ld
 
 If you remove HTCondor from your system later on, linking will continue
 to work, since the HTCondor linker will always default to compiling
@@ -634,7 +631,7 @@ configuration similar to
 
 ::
 
-      condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+      condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
 
 This will start the *condor_kbdd* as the user who is currently logged
 in and write the log to a file in the directory ``$HOME/.kbdd.log/``.
@@ -643,7 +640,7 @@ that when the user logs out, XDM can do:
 
 ::
 
-      condor_kbdd -k $HOME/.kbdd.pid
+      condor_kbdd -k $HOME/.kbdd.pid
 
 This will shut down the process recorded in file ``˜/.kbdd.pid`` and
 exit.
@@ -726,10 +723,10 @@ example, the HTCondorView collector uses port 12345.
 
 ::
 
-      VIEW_SERVER = $(COLLECTOR) 
-      VIEW_SERVER_ARGS = -f -p 12345 
-      VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog" 
-      DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
+      VIEW_SERVER = $(COLLECTOR) 
+      VIEW_SERVER_ARGS = -f -p 12345 
+      VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog" 
+      DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
 
 For this change to take effect, restart the *condor_master* on this
 host. This may be accomplished with the *condor_restart* command, if
@@ -750,7 +747,7 @@ Define the following configuration variable:
 
 ::
 
-      CONDOR_VIEW_HOST = full.hostname[:portnumber]
+      CONDOR_VIEW_HOST = full.hostname[:portnumber]
 
 where full.hostname is the full host name of the machine running the
 HTCondorView collector. The full host name is optionally followed by a
@@ -771,7 +768,7 @@ example:
 
 ::
 
-      condor_status -pool condor.view.host[:portnumber]
+      condor_status -pool condor.view.host[:portnumber]
 
 A *condor_collector* may also be configured to report to multiple
 HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
@@ -784,22 +781,22 @@ are running on the same machine, localhost.localdomain:
 
 ::
 
-    VIEWSERV01 = $(COLLECTOR) 
-    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01 
-    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01" 
-    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01 
-    VIEWSERV01.KEEP_POOL_HISTORY = TRUE 
-    VIEWSERV01.CONDOR_VIEW_HOST = 
-     
-    VIEWSERV02 = $(COLLECTOR) 
-    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02 
-    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02" 
-    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02 
-    VIEWSERV02.KEEP_POOL_HISTORY = TRUE 
-    VIEWSERV02.CONDOR_VIEW_HOST = 
-     
-    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680 
-    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
+    VIEWSERV01 = $(COLLECTOR) 
+    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01 
+    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01" 
+    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01 
+    VIEWSERV01.KEEP_POOL_HISTORY = TRUE 
+    VIEWSERV01.CONDOR_VIEW_HOST = 
+     
+    VIEWSERV02 = $(COLLECTOR) 
+    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02 
+    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02" 
+    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02 
+    VIEWSERV02.KEEP_POOL_HISTORY = TRUE 
+    VIEWSERV02.CONDOR_VIEW_HOST = 
+     
+    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680 
+    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
 
 Note that the value of ``CONDOR_VIEW_HOST``
 :index:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02 is unset,
@@ -854,7 +851,7 @@ configuration on the host machine:
 
 ::
 
-    VMP_VM_LIST = vmware1.domain.com, vmware2.domain.com
+    VMP_VM_LIST = vmware1.domain.com, vmware2.domain.com
 
 The configuration for each separate inner virtual machine specifies
 ``VMP_HOST_MACHINE`` :index:`VMP_HOST_MACHINE`. This specifies the
@@ -863,7 +860,7 @@ virtual machine:
 
 ::
 
-    VMP_HOST_MACHINE = host.domain.com
+    VMP_HOST_MACHINE = host.domain.com
 
 Given this configuration, as well as communication between HTCondor
 daemons running on the host and on the inner virtual machine, the policy
@@ -885,8 +882,8 @@ configuration for ``START`` on an inner virtual machine:
 
 ::
 
-    START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \ 
-            && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
+    START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \ 
+            && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
 
 HTCondor's Dedicated Scheduling
 -------------------------------
@@ -939,8 +936,8 @@ configuration file contains a modified form of
 
 ::
 
-    DedicatedScheduler = "DedicatedScheduler@full.host.name" 
-    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
+    DedicatedScheduler = "DedicatedScheduler@full.host.name" 
+    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 
 Substitute the host name of the dedicated scheduler machine for the
 string "full.host.name".
@@ -950,8 +947,8 @@ user name it was started as, so the configuration appears as:
 
 ::
 
-    DedicatedScheduler = "DedicatedScheduler@username@full.host.name" 
-    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
+    DedicatedScheduler = "DedicatedScheduler@username@full.host.name" 
+    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 
 All dedicated execute machines must have policy expressions which allow
 for jobs to always run, but not be preempted. The resource must also be
@@ -965,7 +962,7 @@ Job ClassAds from the dedicated scheduler contain the attribute
 
 ::
 
-    Scheduler = "DedicatedScheduler@full.host.name"
+    Scheduler = "DedicatedScheduler@full.host.name"
 
 The host name of the dedicated scheduler substitutes for the string
 full.host.name.
@@ -980,14 +977,14 @@ varying the local configuration.
 
     ::
 
-        START     = Scheduler =?= $(DedicatedScheduler) 
-        SUSPEND   = False 
-        CONTINUE  = True 
-        PREEMPT   = False 
-        KILL      = False 
-        WANT_SUSPEND   = False 
-        WANT_VACATE    = False 
-        RANK      = Scheduler =?= $(DedicatedScheduler)
+        START     = Scheduler =?= $(DedicatedScheduler) 
+        SUSPEND   = False 
+        CONTINUE  = True 
+        PREEMPT   = False 
+        KILL      = False 
+        WANT_SUSPEND   = False 
+        WANT_VACATE    = False 
+        RANK      = Scheduler =?= $(DedicatedScheduler)
 
     The ``START`` :index:`START` expression specifies that a job
     with the ``Scheduler`` attribute must match the string corresponding
@@ -1012,7 +1009,7 @@ varying the local configuration.
 
     ::
 
-        START = True
+        START = True
 
  Policy Scenario: Adding Desktop Resources To The Mix
     A third policy example allows all jobs. These desktop machines use a
@@ -1029,12 +1026,12 @@ varying the local configuration.
 
     ::
 
-        SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND)) 
-        PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT)) 
-        RANK_FACTOR    = 1000000 
-        RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) \ 
-                       + $(RANK) 
-        START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
+        SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND)) 
+        PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT)) 
+        RANK_FACTOR    = 1000000 
+        RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) \ 
+                       + $(RANK) 
+        START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 
     Define ``RANK_FACTOR`` :index:`RANK_FACTOR` to be a larger
     value than the maximum value possible for the existing rank
@@ -1074,9 +1071,9 @@ with the configuration:
 
 ::
 
-    STARTD_JOB_EXPRS = JobPrio 
-    SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio) 
-    SCHEDD_PREEMPTION_RANK = 0.0
+    STARTD_JOB_EXPRS = JobPrio 
+    SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio) 
+    SCHEDD_PREEMPTION_RANK = 0.0
 
 In this example, preemption is enabled by user-defined job priority. If
 a set of machines is running a job at user priority 5, and the user
@@ -1114,7 +1111,7 @@ cross group boundaries contains
 
 ::
 
-    +WantParallelSchedulingGroups = True
+    +WantParallelSchedulingGroups = True
 
 The dedicated scheduler enforces the allocation to within a group.
 
@@ -1208,17 +1205,17 @@ The following example shows a possible configuration to enable backfill:
 
 ::
 
-    # Turn on backfill functionality, and use BOINC 
-    ENABLE_BACKFILL = TRUE 
-    BACKFILL_SYSTEM = BOINC 
-     
-    # Spawn a backfill job if we've been Unclaimed for more than 5 
-    # minutes 
-    START_BACKFILL = $(StateTimer) > (5 * $(MINUTE)) 
-     
-    # Evict a backfill job if the machine is busy (based on keyboard 
-    # activity or cpu load) 
-    EVICT_BACKFILL = $(MachineBusy)
+    # Turn on backfill functionality, and use BOINC 
+    ENABLE_BACKFILL = TRUE 
+    BACKFILL_SYSTEM = BOINC 
+     
+    # Spawn a backfill job if we've been Unclaimed for more than 5 
+    # minutes 
+    START_BACKFILL = $(StateTimer) > (5 * $(MINUTE)) 
+     
+    # Evict a backfill job if the machine is busy (based on keyboard 
+    # activity or cpu load) 
+    EVICT_BACKFILL = $(MachineBusy)
 
 Overview of the BOINC system
 ''''''''''''''''''''''''''''
@@ -1340,8 +1337,8 @@ directly launch and monitor the *boinc_client* program. This
 *condor_starter* is just like the one used to invoke any other HTCondor
 jobs. In fact, the argv[0] of the *boinc_client* will be renamed to
 *condor_exec*, as described in
-section \ `2.15.1 <PotentialProblems.html#x27-1460002.15.1>`__ on
-page \ `448 <PotentialProblems.html#x27-1460002.15.1>`__.
+section \ `2.15.1 <PotentialProblems.html#x27-1460002.15.1>`__ on
+page \ `448 <PotentialProblems.html#x27-1460002.15.1>`__.
 
 This *condor_starter* reads values out of the HTCondor configuration
 files to define the job it should run, as opposed to getting these
@@ -1383,7 +1380,7 @@ Optional configuration variables:
 
     ::
 
-        BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
+        BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
  ``BOINC_Environment`` :index:`BOINC_Environment`
     Environment variables that should be set for the *boinc_client*.
@@ -1402,29 +1399,29 @@ The following example shows one possible usage of these settings:
 
 ::
 
-    # Define a shared macro that can be used to define other settings. 
-    # This directory must be manually created before attempting to run 
-    # any backfill jobs. 
-    BOINC_HOME = $(LOCAL_DIR)/boinc 
-     
-    # Path to the boinc_client to use, and required universe setting 
-    BOINC_Executable = /usr/local/bin/boinc_client 
-    BOINC_Universe = vanilla 
-     
-    # What initial working directory should BOINC use? 
-    BOINC_InitialDir = $(BOINC_HOME) 
-     
-    # Where to place stdout and stderr 
-    BOINC_Output = $(BOINC_HOME)/boinc.out 
-    BOINC_Error = $(BOINC_HOME)/boinc.err
+    # Define a shared macro that can be used to define other settings. 
+    # This directory must be manually created before attempting to run 
+    # any backfill jobs. 
+    BOINC_HOME = $(LOCAL_DIR)/boinc 
+     
+    # Path to the boinc_client to use, and required universe setting 
+    BOINC_Executable = /usr/local/bin/boinc_client 
+    BOINC_Universe = vanilla 
+     
+    # What initial working directory should BOINC use? 
+    BOINC_InitialDir = $(BOINC_HOME) 
+     
+    # Where to place stdout and stderr 
+    BOINC_Output = $(BOINC_HOME)/boinc.out 
+    BOINC_Error = $(BOINC_HOME)/boinc.err
 
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
 ::
 
-    # Specify the user that the boinc_client should run as: 
-    BOINC_Owner = nobody
+    # Specify the user that the boinc_client should run as: 
+    BOINC_Owner = nobody
 
 In this case, HTCondor would spawn the *boinc_client* as nobody, so the
 directory specified in ``$(BOINC_HOME)`` would have to be writable by
@@ -1462,18 +1459,18 @@ BOINC project:
 
    ::
 
-       <account> 
-         <master_url>[URL]</master_url> 
-         <authenticator>[key]</authenticator> 
+       <account> 
+         <master_url>[URL]</master_url> 
+         <authenticator>[key]</authenticator> 
        </account>
 
    For example:
 
    ::
 
-       <account> 
-         <master_url>http://einstein.phys.uwm.edu</master_url> 
-         <authenticator>aaaa1111bbbb2222cccc3333</authenticator> 
+       <account> 
+         <master_url>http://einstein.phys.uwm.edu</master_url> 
+         <authenticator>aaaa1111bbbb2222cccc3333</authenticator> 
        </account>
 
    Of course, the <authenticator> tag would use the real authentication
@@ -1512,7 +1509,7 @@ when dealing with the Windows installation:
 
    ::
 
-       BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
+       BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
    The Unix administrative tool *boinc_cmd* is called *boinccmd.exe* on
    Windows.
@@ -1526,17 +1523,17 @@ when dealing with the Windows installation:
 
    ::
 
-       BOINC_Arguments = --dir $(BOINC_HOME) \ 
-                 --attach_project http://einstein.phys.uwm.edu [account_key]
+       BOINC_Arguments = --dir $(BOINC_HOME) \ 
+                 --attach_project http://einstein.phys.uwm.edu [account_key]
 
    As a consequence of setting the BOINC home directory, some projects
    may fail with the authentication error:
 
    ::
 
-       Scheduler request failed: Peer 
-       certificate cannot be authenticated 
-       with known CA certificates.
+       Scheduler request failed: Peer 
+       certificate cannot be authenticated 
+       with known CA certificates.
 
    To resolve this issue, copy the ``ca-bundle.crt`` file from the BOINC
    installation directory to ``$(BOINC_HOME)``. This file appears to be
@@ -1555,7 +1552,7 @@ when dealing with the Windows installation:
 
    ::
 
-       RunAsUser = True
+       RunAsUser = True
 
    to the backfill client. This further implies that the configuration
    variable ``STARTER_ALLOW_RUNAS_OWNER``
@@ -1604,7 +1601,7 @@ include
 
 ::
 
-      USE_PID_NAMESPACES = True
+      USE_PID_NAMESPACES = True
 
 This configuration variable defaults to ``False``, thus the use of per
 job PID namespaces is disabled by default.
@@ -1630,7 +1627,7 @@ processes running using the given account. Administrators must specify
 in HTCondor's configuration what accounts can be considered dedicated
 via the ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
 :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
-Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for further
+Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for further
 details.
 
 Ideally, jobs can be reliably tracked regardless of the user account
@@ -1657,9 +1654,9 @@ machine with 8 slots.
 
 ::
 
-    USE_GID_PROCESS_TRACKING = True 
-    MIN_TRACKING_GID = 750 
-    MAX_TRACKING_GID = 757
+    USE_GID_PROCESS_TRACKING = True 
+    MIN_TRACKING_GID = 750 
+    MAX_TRACKING_GID = 757
 
 If the defined range is too small, such that there is not a GID
 available when starting a job, then the *condor_starter* will fail as
@@ -1706,8 +1703,8 @@ following commands in ``rc.local``:
 
 ::
 
-    /usr/sbin/cgconfigparser -l /etc/cgconfig.conf 
-    /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
+    /usr/sbin/cgconfigparser -l /etc/cgconfig.conf 
+    /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
 
 When cgroups are correctly configured and running, the virtual file
 system mounted on ``/cgroup`` should have several subdirectories under
@@ -1766,41 +1763,41 @@ contents of that file:
 
 ::
 
-    #!/bin/bash 
-    # Copyright 2008 Red Hat, Inc. 
-    # 
-    # Licensed under the Apache License, Version 2.0 (the "License"); 
-    # you may not use this file except in compliance with the License. 
-    # You may obtain a copy of the License at 
-    # 
-    #     http://www.apache.org/licenses/LICENSE-2.0 
-    # 
-    # Unless required by applicable law or agreed to in writing, software 
-    # distributed under the License is distributed on an "AS IS" BASIS, 
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-    # See the License for the specific language governing permissions and 
-    # limitations under the License. 
-     
-    if [[ $_CONDOR_MACHINE_AD != "" ]]; then 
-       mem_limit=$((`egrep '^Memory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` * 1024)) 
-       disk_limit=`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` 
-     
-       ulimit -d $mem_limit 
-       if [[ $? != 0 ]] || [[ $mem_limit = "" ]]; then 
-          echo "Failed to set Memory Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
-          exit 1 
-       fi 
-       ulimit -f $disk_limit 
-       if [[ $? != 0 ]] || [[ $disk_limit = "" ]]; then 
-          echo "Failed to set Disk Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
-          exit 1 
-       fi 
-    fi 
-     
-    exec "$@" 
-    error=$? 
-    echo "Failed to exec($error): $@" > $_CONDOR_WRAPPER_ERROR_FILE 
-    exit 1
+    #!/bin/bash 
+    # Copyright 2008 Red Hat, Inc. 
+    # 
+    # Licensed under the Apache License, Version 2.0 (the "License"); 
+    # you may not use this file except in compliance with the License. 
+    # You may obtain a copy of the License at 
+    # 
+    #     http://www.apache.org/licenses/LICENSE-2.0 
+    # 
+    # Unless required by applicable law or agreed to in writing, software 
+    # distributed under the License is distributed on an "AS IS" BASIS, 
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+    # See the License for the specific language governing permissions and 
+    # limitations under the License. 
+     
+    if [[ $_CONDOR_MACHINE_AD != "" ]]; then 
+       mem_limit=$((`egrep '^Memory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` * 1024)) 
+       disk_limit=`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` 
+     
+       ulimit -d $mem_limit 
+       if [[ $? != 0 ]] || [[ $mem_limit = "" ]]; then 
+          echo "Failed to set Memory Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
+          exit 1 
+       fi 
+       ulimit -f $disk_limit 
+       if [[ $? != 0 ]] || [[ $disk_limit = "" ]]; then 
+          echo "Failed to set Disk Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
+          exit 1 
+       fi 
+    fi 
+     
+    exec "$@" 
+    error=$? 
+    echo "Failed to exec($error): $@" > $_CONDOR_WRAPPER_ERROR_FILE 
+    exit 1
 
 If used in an unmodified form, this script sets the job's limits on a
 per slot basis for memory and disk usage, with the limits defined by the
@@ -1863,7 +1860,7 @@ require editing of system configuration files.
 
 To enable cgroup-based limits, first ensure that cgroup-based tracking
 is enabled, as it is by default on supported systems, as described in
-section  `3.14.13 <#x42-3790003.14.13>`__. Once set, the
+section  `3.14.13 <#x42-3790003.14.13>`__. Once set, the
 *condor_starter* will create a cgroup for each job, and set two
 attributes in that cgroup which control resource usage therein. These
 two attributes are the cpu.shares attribute in the cpu controller, and
@@ -1908,9 +1905,9 @@ example,
 
 ::
 
-    NUM_SLOTS_TYPE_1 = 1 
-    SLOT_TYPE_1_PARTITIONABLE = true 
-    SLOT_TYPE_1 = cpus=100%,swap=10%
+    NUM_SLOTS_TYPE_1 = 1 
+    SLOT_TYPE_1_PARTITIONABLE = true 
+    SLOT_TYPE_1 = cpus=100%,swap=10%
 
 Optionally, if the administrator sets the config file setting
 ``PROPORTIONAL_SWAP_ASSSIGNMENT``
@@ -1969,7 +1966,7 @@ and sets the configuration
 
 ::
 
-    XSW_LIMIT = 3
+    XSW_LIMIT = 3
 
 where ``XSW`` is the invented name of this resource, and this name is
 appended with the string ``_LIMIT``. With this limit, a maximum of 3
@@ -1984,7 +1981,7 @@ sets this value. For example,
 
 ::
 
-    CONCURRENCY_LIMIT_DEFAULT = 1
+    CONCURRENCY_LIMIT_DEFAULT = 1
 
 will enforce a limit of at most 1 running job that declares a usage of
 an unnamed resource. If ``CONCURRENCY_LIMIT_DEFAULT`` is omitted from
@@ -1999,20 +1996,20 @@ adds:
 
 ::
 
-    concurrency_limits = XSW
+    concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
 ::
 
-    ConcurrencyLimits = "XSW"
+    ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
 ::
 
-    concurrency_limits = XSW, DATABASE, FILESERVER
+    concurrency_limits = XSW, DATABASE, FILESERVER
 
 The units of these limits are arbitrary. This job consumes one unit of
 each resource. Jobs can declare that they use more than one unit with
@@ -2022,7 +2019,7 @@ units of the file server resource, it is declared with
 
 ::
 
-    concurrency_limits = XSW, DATABASE, FILESERVER:3
+    concurrency_limits = XSW, DATABASE, FILESERVER:3
 
 If there are sets of resources which have the same capacity for each
 member of the set, the configuration may become tedious, as it defines
@@ -2031,9 +2028,9 @@ set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
 ::
 
-    CONCURRENCY_LIMIT_DEFAULT = 5 
-    CONCURRENCY_LIMIT_DEFAULT_LARGE = 100 
-    CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
+    CONCURRENCY_LIMIT_DEFAULT = 5 
+    CONCURRENCY_LIMIT_DEFAULT_LARGE = 100 
+    CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
 
 To use the set name in a concurrency limit, the syntax follows the set
 name with a period and then the set member's name. Continuing this
@@ -2058,29 +2055,29 @@ on ``"NETWORK_A"`` configures
 
 ::
 
-    NETWORK = "NETWORK_A" 
-    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+    NETWORK = "NETWORK_A" 
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
 ::
 
-    NETWORK = "NETWORK_B" 
-    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
+    NETWORK = "NETWORK_B" 
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
 ::
 
-    NETWORK_A_LIMIT = 10 
-    NETWORK_B_LIMIT = 10
+    NETWORK_A_LIMIT = 10 
+    NETWORK_B_LIMIT = 10
 
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
 ::
 
-    concurrency_limits_expr = TARGET.NETWORK
+    concurrency_limits_expr = TARGET.NETWORK
 
 The concurrency limit is applied based on the network of the matched
 machine.
@@ -2093,7 +2090,7 @@ extended to also include
 
 ::
 
-    SWX_LIMIT = 15
+    SWX_LIMIT = 15
 
 The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
@@ -2101,7 +2098,7 @@ command:
 
 ::
 
-    concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
+    concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 
 Submit command **concurrency_limits_expr** may not be used together
 with submit command **concurrency_limits**.
@@ -2113,4 +2110,4 @@ daemon to the *condor_collector* daemon, it is possible for the limit
 to be exceeded. If the limits are exceeded, HTCondor will not kill any
 job to reduce the number of running jobs to meet the limit.
 
-      
+      

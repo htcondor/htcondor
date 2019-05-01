@@ -1,4 +1,4 @@
-      
+      
 
 *condor_q*
 ===========
@@ -46,9 +46,9 @@ meaningful batch names for their jobs, to make it easier to keep track
 of related jobs.
 
 (For information about specifying batch names for your jobs, see the
-*condor_submit* ( `condor_submit <../man-pages/condor_submit.html>`__)
+*condor_submit* ( `condor_submit <../man-pages/condor_submit.html>`__)
 and *condor_submit_dag*
-( `condor_submitdag <../man-pages/condor_submitdag.html>`__) man
+( `condor_submitdag <../man-pages/condor_submitdag.html>`__) man
 pages.)
 
 A batch of jobs is defined as follows:
@@ -93,7 +93,7 @@ of output per batch of jobs:
 
 ::
 
-        OWNER, BATCH_NAME, SUBMITTED, DONE, RUN, IDLE, [HOLD,] TOTAL, JOB_IDS
+        OWNER, BATCH_NAME, SUBMITTED, DONE, RUN, IDLE, [HOLD,] TOTAL, JOB_IDS
 
 Note that the HOLD column is only shown if there are held jobs in the
 output or if there are no jobs in the output.
@@ -103,7 +103,7 @@ following columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
+        ID, OWNER, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
 If the **-dag** option is specified (in conjunction with **-nobatch**),
 *condor_q* displays the following columns of information, with one line
@@ -112,7 +112,7 @@ all other jobs (including sub-DAGs) the node name is shown:
 
 ::
 
-        ID, OWNER/NODENAME, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
+        ID, OWNER/NODENAME, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
 If the **-run** option is specified (in conjunction with **-nobatch**),
 *condor_q* displays the following columns of information, with one line
@@ -120,7 +120,7 @@ of output per running job:
 
 ::
 
-        ID, OWNER, SUBMITTED, RUN_TIME, HOST(S)
+        ID, OWNER, SUBMITTED, RUN_TIME, HOST(S)
 
 Also note that the **-run** option disables output of the totals line.
 
@@ -129,28 +129,28 @@ columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, STATUS, GRID->MANAGER, HOST, GRID_JOB_ID
+        ID, OWNER, STATUS, GRID->MANAGER, HOST, GRID_JOB_ID
 
 If the **-grid:ec2** option is specified, *condor_q* displays the
 following columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, STATUS, INSTANCE ID, CMD
+        ID, OWNER, STATUS, INSTANCE ID, CMD
 
 If the **-goodput** option is specified, *condor_q* displays the
 following columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, SUBMITTED, RUN_TIME, GOODPUT, CPU_UTIL, Mb/s
+        ID, OWNER, SUBMITTED, RUN_TIME, GOODPUT, CPU_UTIL, Mb/s
 
 If the **-io** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, RUNS, ST, INPUT, OUTPUT, RATE, MISC
+        ID, OWNER, RUNS, ST, INPUT, OUTPUT, RATE, MISC
 
 If the **-cputime** option is specified (in conjunction with
 **-nobatch**), *condor_q* displays the following columns of
@@ -158,14 +158,14 @@ information, with one line of output per job:
 
 ::
 
-        ID, OWNER, SUBMITTED, CPU_TIME, ST, PRI, SIZE, CMD
+        ID, OWNER, SUBMITTED, CPU_TIME, ST, PRI, SIZE, CMD
 
 If the **-hold** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
 ::
 
-        ID, OWNER, HELD_SINCE, HOLD_REASON
+        ID, OWNER, HELD_SINCE, HOLD_REASON
 
 If the **-totals** option is specified, *condor_q* displays only one
 line of output no matter how many jobs and batches of jobs are in the
@@ -359,7 +359,7 @@ restriction options may be supplied. Each restriction may be one of:
 -  **-constraint expression**, which matches all jobs that satisfy the 
    specified ClassAd expression;
 -  **-unmatchable expression**, which matches all jobs that do not match 
-   any slot that would be considered by **-better-analyze **\ *;*
+   any slot that would be considered by **-better-analyze **\ *;*
 -  **-allusers**, which overrides the default restriction of only
    matching jobs submitted by the current user.
 
@@ -402,22 +402,22 @@ Options
     option).
  **-global**
     (general option) Queries all job queues in the pool.
- **-submitter **\ *submitter*
+ **-submitter **\ *submitter*
     (general option) List jobs of a specific submitter in the entire
     pool, not just for a single *condor_schedd*.
- **-name **\ *name*
+ **-name **\ *name*
     (general option) Query only the job queue of the named
     *condor_schedd* daemon.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     (general option) Use the *centralmanagerhostname* as the central
     manager to locate *condor_schedd* daemons. The default is the
     ``COLLECTOR_HOST``, as specified in the configuration.
- **-jobads **\ *file*
+ **-jobads **\ *file*
     (general option) Display jobs from a list of ClassAds from a file,
     instead of the real ClassAds from the *condor_schedd* daemon. This
     is most useful for debugging purposes. The ClassAds appear as if
     *condor_q* **-long** is used with the header stripped out.
- **-userlog **\ *file*
+ **-userlog **\ *file*
     (general option) Display jobs, with job information coming from a
     job event log, instead of from the real ClassAds from the
     *condor_schedd* daemon. This is most useful for automated testing
@@ -468,7 +468,7 @@ Options
     (output option) Get information about jobs in the hold state. Also
     displays the time the job was placed into the hold state and the
     reason why the job was placed in the hold state.
- **-limit **\ *Number*
+ **-limit **\ *Number*
     (output option) Limit the number of items output to *Number*.
  **-io**
     (output option) Display job input/output summaries.
@@ -500,12 +500,12 @@ Options
     `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
  **-json**
     (output option) Display entire job ClassAds in JSON format.
- **-attributes **\ *Attr1[,Attr2 …]*
+ **-attributes **\ *Attr1[,Attr2 …]*
     (output option) Explicitly list the attributes, by name in a comma
     separated list, which should be displayed when using the **-xml**,
     **-json** or **-long** options. Limiting the number of attributes
     increases the efficiency of the query.
- **-format **\ *fmt attr*
+ **-format **\ *fmt attr*
     (output option) Display attribute or expression *attr* in format
     *fmt*. To display the attribute or expression the format must
     contain a single ``printf(3)``-style conversion specifier.
@@ -530,7 +530,7 @@ Options
     directly. A format without any conversion specifiers may be
     specified, but an attribute is still required. Include a backslash
     followed by an ‘n' to specify a line break.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -604,20 +604,20 @@ Options
 
     | **reverse** to analyze machines, rather than jobs
 
- **-machine **\ *name*
+ **-machine **\ *name*
     (analyze option) When doing matchmaking analysis, analyze only
     machine ClassAds that have slot or machine names that match the
     given name.
- **-mconstraint **\ *expression*
+ **-mconstraint **\ *expression*
     (analyze option) When doing matchmaking analysis, match only machine
     ClassAds which match the ClassAd expression constraint.
- **-slotads **\ *file*
+ **-slotads **\ *file*
     (analyze option) When doing matchmaking analysis, use the machine
     ClassAds from the file instead of the ones from the
     *condor_collector* daemon. This is most useful for debugging
     purposes. The ClassAds appear as if *condor_status* **-long** is
     used.
- **-userprios **\ *file*
+ **-userprios **\ *file*
     (analyze option) When doing matchmaking analysis with priority, read
     user priorities from the file rather than the ones from the
     *condor_negotiator* daemon. This is most useful for debugging
@@ -656,7 +656,7 @@ standard universe jobs, since they rely on values computed when a job
 produces a checkpoint.
 
 It is possible to to hold jobs that are in the X state. To avoid this it
-is best to construct a **-constraint **\ *expression* that option
+is best to construct a **-constraint **\ *expression* that option
 contains ``JobStatus != 3`` if the user wishes to avoid this condition.
 
 Examples
@@ -671,77 +671,77 @@ the job:
 
 ::
 
-    $ condor_q -submitter jdoe -format "%s" Owner -format " %s " Args -format " ProcId = %d\n" ProcId 
-    jdoe 16386 2800 ProcId = 0 
-    jdoe 16386 3000 ProcId = 1 
-    jdoe 16386 3200 ProcId = 2 
-    jdoe 16386 3400 ProcId = 3 
-    jdoe 16386 3600 ProcId = 4 
-    jdoe 16386 4200 ProcId = 7
+    $ condor_q -submitter jdoe -format "%s" Owner -format " %s " Args -format " ProcId = %d\n" ProcId 
+    jdoe 16386 2800 ProcId = 0 
+    jdoe 16386 3000 ProcId = 1 
+    jdoe 16386 3200 ProcId = 2 
+    jdoe 16386 3400 ProcId = 3 
+    jdoe 16386 3600 ProcId = 4 
+    jdoe 16386 4200 ProcId = 7
 
 To display only the JobID's of Jane Doe's jobs you can use the
 following.
 
 ::
 
-    $ condor_q -submitter jdoe -format "%d." ClusterId -format "%d\n" ProcId 
-    27.0 
-    27.1 
-    27.2 
-    27.3 
-    27.4 
+    $ condor_q -submitter jdoe -format "%d." ClusterId -format "%d\n" ProcId 
+    27.0 
+    27.1 
+    27.2 
+    27.3 
+    27.4 
     27.7
 
 An example that shows the analysis in summary format:
 
 ::
 
-    $ condor_q -analyze:summary 
-     
-    -- Submitter: submit-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : 
-     submit-1.chtc.wisc.edu 
-    Analyzing matches for 5979 slots 
-                Autocluster  Matches    Machine     Running  Serving 
-     JobId     Members/Idle  Reqmnts  Rejects Job  Users Job Other User Avail Owner 
-    ---------- ------------ -------- ------------ ---------- ---------- ----- ----- 
-    25764522.0  7/0             5910        820   7/10       5046        34   smith 
-    25764682.0  9/0             2172        603   9/9        1531        29   smith 
-    25765082.0  18/0            2172        603   18/9       1531        29   smith 
-    25765900.0  1/0             2172        603   1/9        1531        29   smith
+    $ condor_q -analyze:summary 
+     
+    -- Submitter: submit-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : 
+     submit-1.chtc.wisc.edu 
+    Analyzing matches for 5979 slots 
+                Autocluster  Matches    Machine     Running  Serving 
+     JobId     Members/Idle  Reqmnts  Rejects Job  Users Job Other User Avail Owner 
+    ---------- ------------ -------- ------------ ---------- ---------- ----- ----- 
+    25764522.0  7/0             5910        820   7/10       5046        34   smith 
+    25764682.0  9/0             2172        603   9/9        1531        29   smith 
+    25765082.0  18/0            2172        603   18/9       1531        29   smith 
+    25765900.0  1/0             2172        603   1/9        1531        29   smith
 
 An example that shows summary information by machine:
 
 ::
 
-    $ condor_q -ana:sum,rev 
-     
-    -- Submitter: s-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu 
-    Analyzing matches for 2885 jobs 
-                                    Slot  Slot's Req    Job's Req     Both 
-    Name                            Type  Matches Job  Matches Slot    Match % 
-    ------------------------        ---- ------------  ------------ ---------- 
-    slot1@INFO.wisc.edu             Stat         2729  0                  0.00 
-    slot2@INFO.wisc.edu             Stat         2729  0                  0.00 
-    slot1@aci-001.chtc.wisc.edu     Part            0  2793               0.00 
-    slot1_1@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37 
-    slot1_2@a-001.chtc.wisc.edu     Dyn          2623  2601              85.10 
-    slot1_3@a-001.chtc.wisc.edu     Dyn          2644  2632              85.82 
-    slot1_4@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37 
-    slot1@a-002.chtc.wisc.edu       Part            0  2633               0.00 
-    slot1_10@a-002.chtc.wisc.edu    Den          2623  2601              85.10
+    $ condor_q -ana:sum,rev 
+     
+    -- Submitter: s-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu 
+    Analyzing matches for 2885 jobs 
+                                    Slot  Slot's Req    Job's Req     Both 
+    Name                            Type  Matches Job  Matches Slot    Match % 
+    ------------------------        ---- ------------  ------------ ---------- 
+    slot1@INFO.wisc.edu             Stat         2729  0                  0.00 
+    slot2@INFO.wisc.edu             Stat         2729  0                  0.00 
+    slot1@aci-001.chtc.wisc.edu     Part            0  2793               0.00 
+    slot1_1@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37 
+    slot1_2@a-001.chtc.wisc.edu     Dyn          2623  2601              85.10 
+    slot1_3@a-001.chtc.wisc.edu     Dyn          2644  2632              85.82 
+    slot1_4@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37 
+    slot1@a-002.chtc.wisc.edu       Part            0  2633               0.00 
+    slot1_10@a-002.chtc.wisc.edu    Den          2623  2601              85.10
 
 An example with two independent DAGs in the queue:
 
 ::
 
-    $ condor_q 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:35169?... 
-    OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
-    wenger DAG: 3696    2/12 11:55      _     10      _     10 3698.0 ... 3707.0 
-    wenger DAG: 3697    2/12 11:55      1      1      1     10 3709.0 ... 3710.0 
-     
-    14 jobs; 0 completed, 0 removed, 1 idle, 13 running, 0 held, 0 suspended
+    $ condor_q 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:35169?... 
+    OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
+    wenger DAG: 3696    2/12 11:55      _     10      _     10 3698.0 ... 3707.0 
+    wenger DAG: 3697    2/12 11:55      1      1      1     10 3709.0 ... 3710.0 
+     
+    14 jobs; 0 completed, 0 removed, 1 idle, 13 running, 0 held, 0 suspended
 
 Note that the "13 running" in the last line is two more than the total
 of the RUN column, because the two *condor_dagman* jobs themselves are
@@ -758,13 +758,13 @@ column to the output:
 
 ::
 
-    $ condor_q 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-    OWNER  BATCH_NAME        SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS 
-    wenger CMD: /bin/slee   9/13 16:25      _      3      _      1      4 599.0 ... 
-     
-    4 jobs; 0 completed, 0 removed, 0 idle, 3 running, 1 held, 0 suspended
+    $ condor_q 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+    OWNER  BATCH_NAME        SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS 
+    wenger CMD: /bin/slee   9/13 16:25      _      3      _      1      4 599.0 ... 
+     
+    4 jobs; 0 completed, 0 removed, 0 idle, 3 running, 1 held, 0 suspended
 
 Here are some examples with a nested-DAG workflow in the queue, which is
 one of the most complicated cases. The workflow consists of a top-level
@@ -776,56 +776,56 @@ First of all, non-batch mode with all of the node jobs in the queue:
 
 ::
 
-    $ condor_q -nobatch 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
-     591.0   wenger          9/13 16:05   0+00:00:13 R  0    2.4 condor_dagman -p 0 
-     592.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60 
-     592.1   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 300 
-     593.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60 
-     593.1   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 300 
-     594.0   wenger          9/13 16:05   0+00:00:07 R  0    2.4 condor_dagman -p 0 
-     595.0   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 60 
-     595.1   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 300 
-     596.0   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 60 
-     596.1   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 300 
-     
-    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
+    $ condor_q -nobatch 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
+     591.0   wenger          9/13 16:05   0+00:00:13 R  0    2.4 condor_dagman -p 0 
+     592.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60 
+     592.1   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 300 
+     593.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60 
+     593.1   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 300 
+     594.0   wenger          9/13 16:05   0+00:00:07 R  0    2.4 condor_dagman -p 0 
+     595.0   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 60 
+     595.1   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 300 
+     596.0   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 60 
+     596.1   wenger          9/13 16:05   0+00:00:01 R  0    0.0 sleep 300 
+     
+    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
 
 Now non-batch mode with the **-dag** option (unfortunately, *condor_q*
 doesn't do a good job of grouping procs in the same cluster together):
 
 ::
 
-    $ condor_q -nobatch -dag 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-     ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD 
-     591.0   wenger             9/13 16:05   0+00:00:27 R  0    2.4 condor_dagman - 
-     592.0    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60 
-     593.0    |-NodeB           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60 
-     594.0    |-SubZ            9/13 16:05   0+00:00:21 R  0    2.4 condor_dagman - 
-     595.0     |-NodeSA         9/13 16:05   0+00:00:15 R  0    0.0 sleep 60 
-     596.0     |-NodeSB         9/13 16:05   0+00:00:15 R  0    0.0 sleep 60 
-     592.1    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 300 
-     593.1    |-NodeB           9/13 16:05   0+00:00:21 R  0    0.0 sleep 300 
-     595.1     |-NodeSA         9/13 16:05   0+00:00:15 R  0    0.0 sleep 300 
-     596.1     |-NodeSB         9/13 16:05   0+00:00:15 R  0    0.0 sleep 300 
-     
-    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
+    $ condor_q -nobatch -dag 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+     ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD 
+     591.0   wenger             9/13 16:05   0+00:00:27 R  0    2.4 condor_dagman - 
+     592.0    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60 
+     593.0    |-NodeB           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60 
+     594.0    |-SubZ            9/13 16:05   0+00:00:21 R  0    2.4 condor_dagman - 
+     595.0     |-NodeSA         9/13 16:05   0+00:00:15 R  0    0.0 sleep 60 
+     596.0     |-NodeSB         9/13 16:05   0+00:00:15 R  0    0.0 sleep 60 
+     592.1    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 300 
+     593.1    |-NodeB           9/13 16:05   0+00:00:21 R  0    0.0 sleep 300 
+     595.1     |-NodeSA         9/13 16:05   0+00:00:15 R  0    0.0 sleep 300 
+     596.1     |-NodeSB         9/13 16:05   0+00:00:15 R  0    0.0 sleep 300 
+     
+    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
 
 Now, finally, the non-batch (default) mode:
 
 ::
 
-    $ condor_q 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-    OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
-    wenger ex1.dag+591   9/13 16:05      _      8      _      5 592.0 ... 596.1 
-     
-    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
+    $ condor_q 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+    OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
+    wenger ex1.dag+591   9/13 16:05      _      8      _      5 592.0 ... 596.1 
+     
+    10 jobs; 0 completed, 0 removed, 0 idle, 10 running, 0 held, 0 suspended
 
 There are several things about this output that may be slightly
 confusing:
@@ -846,47 +846,47 @@ Now here is non-batch mode after proc 0 of each node job has finished:
 
 ::
 
-    $ condor_q -nobatch 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
-     591.0   wenger          9/13 16:05   0+00:01:19 R  0    2.4 condor_dagman -p 0 
-     592.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300 
-     593.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300 
-     594.0   wenger          9/13 16:05   0+00:01:13 R  0    2.4 condor_dagman -p 0 
-     595.1   wenger          9/13 16:05   0+00:01:07 R  0    0.0 sleep 300 
-     596.1   wenger          9/13 16:05   0+00:01:07 R  0    0.0 sleep 300 
-     
-    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
+    $ condor_q -nobatch 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD 
+     591.0   wenger          9/13 16:05   0+00:01:19 R  0    2.4 condor_dagman -p 0 
+     592.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300 
+     593.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300 
+     594.0   wenger          9/13 16:05   0+00:01:13 R  0    2.4 condor_dagman -p 0 
+     595.1   wenger          9/13 16:05   0+00:01:07 R  0    0.0 sleep 300 
+     596.1   wenger          9/13 16:05   0+00:01:07 R  0    0.0 sleep 300 
+     
+    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
 
 The same state also with the **-dag** option:
 
 ::
 
-    $ condor_q -nobatch -dag 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-     ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD 
-     591.0   wenger             9/13 16:05   0+00:01:30 R  0    2.4 condor_dagman - 
-     592.1    |-NodeA           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300 
-     593.1    |-NodeB           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300 
-     594.0    |-SubZ            9/13 16:05   0+00:01:24 R  0    2.4 condor_dagman - 
-     595.1     |-NodeSA         9/13 16:05   0+00:01:18 R  0    0.0 sleep 300 
-     596.1     |-NodeSB         9/13 16:05   0+00:01:18 R  0    0.0 sleep 300 
-     
-    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
+    $ condor_q -nobatch -dag 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+     ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD 
+     591.0   wenger             9/13 16:05   0+00:01:30 R  0    2.4 condor_dagman - 
+     592.1    |-NodeA           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300 
+     593.1    |-NodeB           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300 
+     594.0    |-SubZ            9/13 16:05   0+00:01:24 R  0    2.4 condor_dagman - 
+     595.1     |-NodeSA         9/13 16:05   0+00:01:18 R  0    0.0 sleep 300 
+     596.1     |-NodeSB         9/13 16:05   0+00:01:18 R  0    0.0 sleep 300 
+     
+    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
 
 And, finally, that state in batch (default) mode:
 
 ::
 
-    $ condor_q 
-     
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
-    OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
-    wenger ex1.dag+591   9/13 16:05      _      4      _      5 592.1 ... 596.1 
-     
-    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
+    $ condor_q 
+     
+    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?... 
+    OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS 
+    wenger ex1.dag+591   9/13 16:05      _      4      _      5 592.1 ... 596.1 
+     
+    6 jobs; 0 completed, 0 removed, 0 idle, 6 running, 0 held, 0 suspended
 
 Exit Status
 -----------
@@ -902,8 +902,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

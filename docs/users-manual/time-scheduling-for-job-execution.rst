@@ -1,4 +1,4 @@
-      
+      
 
 Time Scheduling for Job Execution
 =================================
@@ -115,7 +115,7 @@ execution on January 1st, 2006 at 12:00 pm:
 
 ::
 
-       deferral_time = 1136138400
+       deferral_time = 1136138400
 
 The Unix *date* program may be used to calculate a Unix epoch time. The
 syntax of the command to do this depends on the options provided within
@@ -123,13 +123,13 @@ that flavor of Unix. In some, it appears as
 
 ::
 
-    %  date --date "MM/DD/YYYY HH:MM:SS" +%s
+    %  date --date "MM/DD/YYYY HH:MM:SS" +%s
 
 and in others, it appears as
 
 ::
 
-    %  date -d "YYYY-MM-DD HH:MM:SS" +%s
+    %  date -d "YYYY-MM-DD HH:MM:SS" +%s
 
 MM is a 2-digit month number, DD is a 2-digit day of the month number,
 and YYYY is a 4-digit year. HH is the 2-digit hour of the day, MM is the
@@ -142,7 +142,7 @@ execution:
 
 ::
 
-       deferral_time = (QDate + 60)
+       deferral_time = (QDate + 60)
 
 In this example, assume that the deferral time is 45 seconds in the past
 as the job is available. The job begins execution, because 75 seconds
@@ -150,7 +150,7 @@ remain in the deferral window:
 
 ::
 
-       deferral_window = 120
+       deferral_window = 120
 
 In this example, a job is scheduled to execute far in the future, on
 January 1st, 2010 at 12:00 pm. The
@@ -160,8 +160,8 @@ job is to begin execution.
 
 ::
 
-       deferral_time      = 1262368800 
-       deferral_prep_time = 60
+       deferral_time      = 1262368800 
+       deferral_prep_time = 60
 
 Deferral Limitations
 ''''''''''''''''''''
@@ -238,7 +238,7 @@ values in the allowed values ranges.
 
 | 
 
-Table 2.3: The list of submit commands and their value ranges.
+Table 2.3: The list of submit commands and their value ranges.
 
 --------------
 
@@ -255,8 +255,8 @@ operator, ranges, lists, and steps (strides) within ranges.
 
     ::
 
-              cron_month = * 
-           
+              cron_month = * 
+           
 
     becomes any and all of the list of possible months:
     (1,2,3,4,5,6,7,8,9,10,11,12). Thus, a job runs any month in the
@@ -270,8 +270,8 @@ operator, ranges, lists, and steps (strides) within ranges.
 
     ::
 
-              cron_hour = 0-4 
-           
+              cron_hour = 0-4 
+           
 
     represents the set of hours from 12:00 am (midnight) to 4:00 am, or
     (0,1,2,3,4).
@@ -282,9 +282,9 @@ operator, ranges, lists, and steps (strides) within ranges.
 
     ::
 
-              cron_minute = 15,20,25,30 
-              cron_hour   = 0-3,9-12,15 
-           
+              cron_minute = 15,20,25,30 
+              cron_hour   = 0-3,9-12,15 
+           
 
     where this **cron\_minute** example represents (15,20,25,30) and
     **cron\_hour** represents (0,1,2,3,9,10,11,12,15).
@@ -296,9 +296,9 @@ operator, ranges, lists, and steps (strides) within ranges.
 
     ::
 
-              cron_minute = 10-30/5 
-              cron_hour = */3 
-           
+              cron_minute = 10-30/5 
+              cron_hour = */3 
+           
 
     where this **cron\_minute** example specifies every five minutes
     within the specified range to represent (10,15,20,25,30), and
@@ -321,9 +321,9 @@ Consider the submit description file example that includes
 
 ::
 
-       cron_minute = 0 
-       cron_hour = * 
-       cron_prep_time = 300
+       cron_minute = 0 
+       cron_hour = * 
+       cron_prep_time = 300
 
 The job is scheduled to begin execution at the top of every hour. Note
 that the setting of **cron\_hour** in this example is not required, as
@@ -343,9 +343,9 @@ Consider the submit description file example that includes
 
 ::
 
-       cron_minute = 0 
-       cron_hour = * 
-       cron_window = 360
+       cron_minute = 0 
+       cron_hour = * 
+       cron_window = 360
 
 As the previous example, the job is scheduled to begin execution at the
 top of every hour. Yet with no preparation time, the job is likely to
@@ -378,7 +378,7 @@ following pseudo-code boolean expression evaluates to ``True``:
 
 ::
 
-       ( time() + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
+       ( time() + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
 
 If the ``time()`` plus the number of seconds until the next time
 HTCondor checks the job queue is greater than or equal to the time that
@@ -403,37 +403,37 @@ Run 23 minutes after every two hours, every day of the week:
 
 ::
 
-       on_exit_remove = false 
-       cron_minute = 23 
-       cron_hour = 0-23/2 
-       cron_day_of_month = * 
-       cron_month = * 
-       cron_day_of_week = *
+       on_exit_remove = false 
+       cron_minute = 23 
+       cron_hour = 0-23/2 
+       cron_day_of_month = * 
+       cron_month = * 
+       cron_day_of_week = *
 
 Run at 10:30pm on each of May 10th to May 20th, as well as every
 remaining Monday within the month of May:
 
 ::
 
-       on_exit_remove = false 
-       cron_minute = 30 
-       cron_hour = 20 
-       cron_day_of_month = 10-20 
-       cron_month = 5 
-       cron_day_of_week = 2
+       on_exit_remove = false 
+       cron_minute = 30 
+       cron_hour = 20 
+       cron_day_of_month = 10-20 
+       cron_month = 5 
+       cron_day_of_week = 2
 
 Run every 10 minutes and every 6 minutes before noon on January 18th
 with a 2-minute preparation time:
 
 ::
 
-       on_exit_remove = false 
-       cron_minute = */10,*/6 
-       cron_hour = 0-11 
-       cron_day_of_month = 18 
-       cron_month = 1 
-       cron_day_of_week = * 
-       cron_prep_time = 120
+       on_exit_remove = false 
+       cron_minute = */10,*/6 
+       cron_hour = 0-11 
+       cron_day_of_month = 18 
+       cron_month = 1 
+       cron_day_of_week = * 
+       cron_prep_time = 120
 
 Submit Commands Limitations
 '''''''''''''''''''''''''''
@@ -454,4 +454,4 @@ deferral times, because the mechanism is based upon deferral times.
    a match, then the job will miss its chance for executing and must
    wait for the next execution time specified by the CronTab schedule.
 
-      
+      

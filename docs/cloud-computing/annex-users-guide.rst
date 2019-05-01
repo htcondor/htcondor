@@ -1,4 +1,4 @@
-      
+      
 
 HTCondor Annex User's Guide
 ===========================
@@ -32,8 +32,7 @@ their new pool. Otherwise, jobs will have to be manually divided
 (removed from one and resubmitted to the other) between the pools. For
 instructions on creating a personal HTCondor pool, preparing an AWS
 account for use by *condor_annex*, and then configuring *condor_annex*
-to use that account, see section \ `Using condor_annex for the First
-Time <../cloud-computing/using-annex-first-time.html>`__.
+to use that account, see the :doc:`/cloud-computing/using-annex-first-time` section.
 
 Starting in v8.7.1, *condor_annex* will check for inbound access to the
 collector (usually port 9618) before starting an annex (it does not
@@ -51,9 +50,7 @@ Basic Usage
 -----------
 
 This section assumes you're logged into a Linux machine an that you've
-already configured *condor_annex*. If you haven't, see section \ `Using
-condor_annex for the First
-Time <../cloud-computing/using-annex-first-time.html>`__.
+already configured *condor_annex*. If you haven't, see the :doc:`/cloud-computing/using-annex-first-time` section.
 
 All the terminal commands (shown in a box without a title) and file
 edits (shown in a box with an emphasized filename for a title) in this
@@ -173,16 +170,16 @@ following way:
 
 ::
 
-    $ condor_annex status 
-    Name                               OpSys      Arch   State     Activity     Load 
+    $ condor_annex status 
+    Name                               OpSys      Arch   State     Activity     Load 
 
-    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
-    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
+    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
+    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+    X86_64/LINUX     2     0       0         2       0          0        0      0 
+    Total     2     0       0         2       0          0        0      0 
 
 This example shows that the annex instance you requested has joined your
 pool. (The default annex image configures one static slot for each CPU
@@ -192,25 +189,25 @@ You may instead use *condor_status*:
 
 ::
 
-    $ condor_status -annex MyFirstAnnex 
-    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    $ condor_status -annex MyFirstAnnex 
+    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
 
-     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    X86_64/LINUX     2     0       0         2       0          0        0      0 
+    Total     2     0       0         2       0          0        0      0 
 
 You can also get a report about the instances which have not joined your
 pool:
 
 ::
 
-    $ condor_annex -annex MyFirstAnnex -status 
-    STATE          COUNT 
-    pending            1 
-    TOTAL              1 
-    Instances not in the pool, grouped by state: 
-    pending i-06928b26786dc7e6e 
+    $ condor_annex -annex MyFirstAnnex -status 
+    STATE          COUNT 
+    pending            1 
+    TOTAL              1 
+    Instances not in the pool, grouped by state: 
+    pending i-06928b26786dc7e6e 
 
 Monitoring Multiple Annexes
 '''''''''''''''''''''''''''
@@ -220,32 +217,32 @@ the pool, regardless of which annex they're from:
 
 ::
 
-    $ condor_status -annex 
-    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot1@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    $ condor_status -annex 
+    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    slot1@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    slot2@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
-    X86_64/LINUX     4     0       0         4       0          0        0      0 
-    Total     4     0       0         4       0          0        0      0 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    X86_64/LINUX     4     0       0         4       0          0        0      0 
+    Total     4     0       0         4       0          0        0      0 
 
 The following command reports about instance which have not joined the
 pool, regardless of which annex they're from:
 
 ::
 
-    $ condor_annex -status 
-    NAME                        TOTAL running 
-    NamelessTestA                   2       2 
-    NamelessTestB                   3       3 
-    NamelessTestC                   1       1 
+    $ condor_annex -status 
+    NAME                        TOTAL running 
+    NamelessTestA                   2       2 
+    NamelessTestB                   3       3 
+    NamelessTestC                   1       1 
 
-    NAME                        STATUS  INSTANCES... 
-    NamelessTestA               running i-075af9ccb40efb162 i-0bc5e90066ed62dd8 
-    NamelessTestB               running i-02e69e85197f249c2 i-0385f59f482ae6a2e 
-     i-06191feb755963edd 
-    NamelessTestC               running i-09da89d40cde1f212 
+    NAME                        STATUS  INSTANCES... 
+    NamelessTestA               running i-075af9ccb40efb162 i-0bc5e90066ed62dd8 
+    NamelessTestB               running i-02e69e85197f249c2 i-0385f59f482ae6a2e 
+     i-06191feb755963edd 
+    NamelessTestC               running i-09da89d40cde1f212 
 
 The ellipsis in the last column (INSTANCES...) is to indicate that it's
 a very wide column and may wrap (as it has in the example), not that it
@@ -255,24 +252,24 @@ The following command combines these two reports:
 
 ::
 
-    $ condor_annex status 
-    Name                               OpSys      Arch   State     Activity     Load 
+    $ condor_annex status 
+    Name                               OpSys      Arch   State     Activity     Load 
 
-    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
-    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
+    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
+    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+    X86_64/LINUX     2     0       0         2       0          0        0      0 
+    Total     2     0       0         2       0          0        0      0 
 
-    Instance ID         not in Annex  Status  Reason (if known) 
-    i-075af9ccb40efb162 NamelessTestA running - 
-    i-0bc5e90066ed62dd8 NamelessTestA running - 
-    i-02e69e85197f249c2 NamelessTestB running - 
-    i-0385f59f482ae6a2e NamelessTestB running - 
-    i-06191feb755963edd NamelessTestB running - 
-    i-09da89d40cde1f212 NamelessTestC running - 
+    Instance ID         not in Annex  Status  Reason (if known) 
+    i-075af9ccb40efb162 NamelessTestA running - 
+    i-0bc5e90066ed62dd8 NamelessTestA running - 
+    i-02e69e85197f249c2 NamelessTestB running - 
+    i-0385f59f482ae6a2e NamelessTestB running - 
+    i-06191feb755963edd NamelessTestB running - 
+    i-09da89d40cde1f212 NamelessTestC running - 
 
 Run a Job
 ---------
@@ -494,4 +491,4 @@ The options labeled “developers only” control implementation details and
 may change without warning; they are probably best left unused unless
 you're a developer.
 
-      
+      

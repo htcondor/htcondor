@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_master*
 ================
@@ -40,7 +40,7 @@ will be no *-f* argument.
 Options
 -------
 
- **-n **\ *name*
+ **-n **\ *name*
     Provides an alternate name for the *condor\_master* to override that
     given by the ``MASTER_NAME`` :index:`MASTER_NAME`
     configuration variable.
@@ -53,8 +53,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0. 7
 
-      
+      

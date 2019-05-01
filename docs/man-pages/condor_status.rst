@@ -1,4 +1,4 @@
-      
+      
 
 *condor_status*
 ===============
@@ -49,10 +49,10 @@ Options
     (Help option) Print out ClassAd query without performing the query.
  **-absent**
     (Query option) Query for and display only absent resources.
- **-ads **\ *filename*
+ **-ads **\ *filename*
     (Query option) Read the set of ClassAds in the file specified by
     *filename*, instead of querying the *condor_collector*.
- **-annex **\ *name*
+ **-annex **\ *name*
     (Query option) Query for and display only resources in the named
     annex.
  **-any**
@@ -76,7 +76,7 @@ Options
     attributes.
  **-defrag**
     (Query option) Query *condor_defrag* ClassAds.
- **-direct **\ *hostname*
+ **-direct **\ *hostname*
     (Query option) Go directly to the given host name to get the
     ClassAds to display. By default, returns the *condor_startd*
     ClassAd. If **-schedd** is also given, return the *condor_schedd*
@@ -91,7 +91,7 @@ Options
  **-negotiator**
     (Query option) Query *condor_negotiator* ClassAds and display
     attributes.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     (Query option) Query the specified central manager using an optional
     port number. *condor_status* queries the machine specified by the
     configuration variable ``COLLECTOR_HOST`` by default.
@@ -109,13 +109,13 @@ Options
  **-state**
     (Query option) Query *condor_startd* ClassAds and display resource
     state information.
- **-statistics **\ *WhichStatistics*
+ **-statistics **\ *WhichStatistics*
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
     defined for ``STATISTICS_TO_PUBLISH``. A definition is in the
     HTCondor Administrator's manual section on configuration
-    (section `Configuration
+    (section `Configuration
     Macros <../admin-manual/configuration-macros.html>`__).
  **-storage**
     (Query option) Display attributes of machines with network storage
@@ -123,11 +123,11 @@ Options
  **-submitters**
     (Query option) Query ClassAds sent by submitters and display
     important submitter attributes.
- **-subsystem **\ *type*
+ **-subsystem **\ *type*
     (Query option) If *type* is one of *collector*, *negotiator*,
     *master*, *schedd*, or *startd*, then behavior is the same as the
     query option without the **-subsystem** option. For example,
-    **-subsystem **\ *collector* is the same as **-collector**. A value
+    **-subsystem **\ *collector* is the same as **-collector**. A value
     of *type* of *CkptServer*, *Machine*, *DaemonMaster*, or *Scheduler*
     targets that type of ClassAd.
  **-vm**
@@ -139,7 +139,7 @@ Options
     (Query option) Query *condor_startd* ClassAds, and display, for
     each machine with at least one offline universe, which universes are
     offline for it.
- **-attributes **\ *Attr1[,Attr2 …]*
+ **-attributes **\ *Attr1[,Attr2 …]*
     (Display option) Explicitly list the attributes in a comma separated
     list which should be displayed when using the **-xml**, **-json** or
     **-long** options. Limiting the number of attributes increases the
@@ -151,7 +151,7 @@ Options
     not be displayed.
  **-limit**\ num
     (Query option) At most *num* results should be displayed.
- **-sort **\ *expr*
+ **-sort **\ *expr*
     (Display option) Change the display order to be based on ascending
     values of an evaluated expression given by *expr*. Evaluated
     expressions of a string type are in a case insensitive alphabetical
@@ -174,12 +174,12 @@ Options
     `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
  **-json**
     (Display option) Display entire ClassAds in JSON format.
- **-constraint **\ *const*
+ **-constraint **\ *const*
     (Custom option) Add constraint expression.
- **-compact **\ **
+ **-compact **\ **
     (Custom option) Show compact form, rolling up slots into a single
     line.
- **-format **\ *fmt attr*
+ **-format **\ *fmt attr*
     (Custom option) Display attribute or expression *attr* in format
     *fmt*. To display the attribute or expression the format must
     contain a single ``printf(3)``-style conversion specifier.
@@ -205,7 +205,7 @@ Options
     conversion specifiers may be specified, but an attribute is still
     required. Include a backslash followed by an ‘n' to specify a line
     break.
- **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
     (Output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -246,15 +246,15 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
- **-target **\ *filename*
+ **-target **\ *filename*
     (Custom option) Where evaluation requires a target ClassAd to
     evaluate against, file *filename* contains the target ClassAd.
- **-merge **\ *filename*
+ **-merge **\ *filename*
     (Custom option) Ads will be read from *filename*, which may be ``-``
     to indicate standard in, and compared to the ads selected by the
     query specified by the remainder of the command line. Ads will be
     considered the same if their sort keys match; sort keys may be
-    specified with [**-sort  **\ *<key>*]. This option will cause up to
+    specified with [**-sort  **\ *<key>*]. This option will cause up to
     three tables to print, in the following order, depending on where a
     given ad appeared: first, the ads which appeared in the query but
     not in *filename*; second, the ads which appeared in both the query
@@ -290,7 +290,7 @@ General Remarks
 -  Note that the ``ActivityTime`` in the ``Idle`` state is not the
    amount of time that the machine has been idle. See the section on
    *condor_startd* states in the Administrator's Manual for more
-   information (section `Policy Configuration for Execute Hosts and for
+   information (section `Policy Configuration for Execute Hosts and for
    Submit Hosts <../admin-manual/policy-configuration.html>`__).
 -  When using *condor_status* on a pool with SMP machines, you can
    either provide the host name, in which case you will get back
@@ -328,20 +328,20 @@ the host name. For example, if you had a 4-CPU machine, named
 
 ::
 
-    % condor_status vulture 
-     
-    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
-     
-    slot1@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.050   512  0+01:47:42 
-    slot2@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.000   512  0+01:48:19 
-    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:05:32 
-    slot4@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.000   512  1+11:05:34 
-     
-                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
-     
-             INTEL/LINUX     4     0       2         2       0          0        0 
-     
-                   Total     4     0       2         2       0          0        0
+    % condor_status vulture 
+     
+    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
+     
+    slot1@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.050   512  0+01:47:42 
+    slot2@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.000   512  0+01:48:19 
+    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:05:32 
+    slot4@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.000   512  1+11:05:34 
+     
+                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
+     
+             INTEL/LINUX     4     0       2         2       0          0        0 
+     
+                   Total     4     0       2         2       0          0        0
 
 Example 2 To view information from a specific nodes of an SMP machine,
 specify the node directly. You do this by providing the name of the
@@ -349,17 +349,17 @@ slot. This has the form ``slot#@hostname``. For example:
 
 ::
 
-    % condor_status slot3@vulture 
-     
-    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
-     
-    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32 
-     
-                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
-     
-             INTEL/LINUX     1     0       0         1       0          0        0 
-     
-                   Total     1     0       0         1       0          0        0
+    % condor_status slot3@vulture 
+     
+    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
+     
+    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32 
+     
+                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
+     
+             INTEL/LINUX     1     0       0         1       0          0        0 
+     
+                   Total     1     0       0         1       0          0        0
 
 Constraint option examples
 
@@ -368,7 +368,7 @@ the ``OpSys`` of ``"LINUX"``:
 
 ::
 
-    % condor_status -constraint OpSys==\"LINUX\"
+    % condor_status -constraint OpSys==\"LINUX\"
 
 Note that quotation marks must be escaped with the backslash characters
 for most shells.
@@ -377,7 +377,7 @@ The Windows command to do the same thing:
 
 ::
 
-    >condor_status -constraint " OpSys==""LINUX"" "
+    >condor_status -constraint " OpSys==""LINUX"" "
 
 Note that quotation marks are used to delimit the single argument which
 is the expression, and the quotation marks that identify the string must
@@ -389,14 +389,14 @@ command is
 
 ::
 
-    % condor_status -constraint State==\"Idle\"
+    % condor_status -constraint State==\"Idle\"
 
 To see all machines that are bench marked to have a MIPS rating of more
 than 750, the Unix command is
 
 ::
 
-    % condor_status -constraint 'Mips>750'
+    % condor_status -constraint 'Mips>750'
 
 -cod option example
 
@@ -405,27 +405,27 @@ HTCondor pool.
 
 ::
 
-    Name        ID   ClaimState TimeInState RemoteUser JobId Keyword 
-    astro.cs.wi COD1 Idle        0+00:00:04 wright 
-    chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen 
-    chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen 
-     
-                   Total  Idle  Running  Suspended  Vacating  Killing 
-     INTEL/LINUX       3     1        1          1         0        0 
-           Total       3     1        1          1         0        0
+    Name        ID   ClaimState TimeInState RemoteUser JobId Keyword 
+    astro.cs.wi COD1 Idle        0+00:00:04 wright 
+    chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen 
+    chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen 
+     
+                   Total  Idle  Running  Suspended  Vacating  Killing 
+     INTEL/LINUX       3     1        1          1         0        0 
+           Total       3     1        1          1         0        0
 
 -format option example To display the name and memory attributes of each
 job ClassAd in a format that is easily parsable by other tools:
 
 ::
 
-    % condor_status -format "%s " Name -format "%d\n" Memory
+    % condor_status -format "%s " Name -format "%d\n" Memory
 
 To do the same with the **autoformat** option, run
 
 ::
 
-    % condor_status -autoformat Name Memory
+    % condor_status -autoformat Name Memory
 
 Exit Status
 -----------
@@ -441,8 +441,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

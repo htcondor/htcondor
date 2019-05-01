@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_findhost*
 ==================
@@ -10,9 +10,9 @@ currently running HTCondor jobs and best meet any specified constraints
 Synopsis
 --------
 
-**condor\_findhost** [**-help**\ ] [**-m**\ ] [**-n  **\ *num*]
-[**-c  **\ *c\_expr*] [**-r  **\ *r\_expr*]
-[**-p  **\ *centralmanagerhostname*]
+**condor\_findhost** [**-help**\ ] [**-m**\ ] [**-n  **\ *num*]
+[**-c  **\ *c\_expr*] [**-r  **\ *r\_expr*]
+[**-p  **\ *centralmanagerhostname*]
 
 Description
 -----------
@@ -37,16 +37,16 @@ Options
  **-m**
     Only search for entire machines. Slots within an entire machine are
     not considered.
- **-n **\ *num*
+ **-n **\ *num*
     Find and list up to *num* machines that fulfill the specification.
     *num* is an integer greater than zero.
- **-c **\ *c\_expr*
+ **-c **\ *c\_expr*
     Constrain the search to only consider machines that result from the
     evaluation of *c\_expr*. *c\_expr* is a ClassAd expression.
- **-r **\ *r\_expr*
+ **-r **\ *r\_expr*
     *r\_expr* is the rank expression evaluated to use as a basis for
     machine selection. *r\_expr* is a ClassAd expression.
- **-p **\ *centralmanagerhostname*
+ **-p **\ *centralmanagerhostname*
     Specify the pool to be searched by giving the central manager's host
     name. Without this option, the current pool is searched.
 
@@ -61,7 +61,7 @@ pool. The expression
 
 ::
 
-    (Interactive =?= TRUE )
+    (Interactive =?= TRUE )
 
 will let *condor\_findhost* know that it can claim a machine even if
 HTCondor would not normally preempt a job running on that machine.
@@ -84,14 +84,14 @@ To find and list four machines, preferring those with the highest mips
 
 ::
 
-    condor_findhost -n 4 -r "mips"
+    condor_findhost -n 4 -r "mips"
 
 To find and list 24 machines, considering only those where the
 ``kflops`` attribute is not defined:
 
 ::
 
-    condor_findhost -n 24 -c "kflops=?=undefined"
+    condor_findhost -n 24 -c "kflops=?=undefined"
 
 Author
 ------
@@ -101,8 +101,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

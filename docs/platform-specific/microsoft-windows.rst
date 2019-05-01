@@ -1,4 +1,4 @@
-      
+      
 
 Microsoft Windows
 =================
@@ -17,12 +17,12 @@ are no remote system calls.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
-the overview chapter (section `High Throughput Computing (HTC) and its
+the overview chapter (section `High Throughput Computing (HTC) and its
 Requirements <../overview/high-throughput-computing-requirements.html>`__)
-and the user's manual (section `Welcome to
+and the user's manual (section `Welcome to
 HTCondor <../users-manual/welcome-to-htcondor.html>`__). If
 administrating or customizing the policy and set up of HTCondor, also
-read the administrator's manual chapter (section `Administrators' Manual
+read the administrator's manual chapter (section `Administrators' Manual
 Introduction <../admin-manual/introduction-admin-manual.html>`__). After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
@@ -51,8 +51,8 @@ Supported Features under Windows
 
 Except for those items listed above, most everything works the same way
 in HTCondor as it does in the Unix release. This release is based on the
-HTCondor Version 8.9.1 source tree, and thus the feature set is the same
-as HTCondor Version 8.9.1 for Unix. For instance, all of the following
+HTCondor Version 8.9.1 source tree, and thus the feature set is the same
+as HTCondor Version 8.9.1 for Unix. For instance, all of the following
 work in HTCondor:
 
 -  The ability to submit, run, and manage queues of jobs running on a
@@ -146,7 +146,7 @@ places into the job's submit description file
 
 ::
 
-      run_as_owner = True
+      run_as_owner = True
 
 The condor\_credd Daemon
 ------------------------
@@ -186,17 +186,17 @@ on all HTCondor nodes.
 
 ::
 
-    CREDD_HOST = credd.cs.wisc.edu 
-    CREDD_CACHE_LOCALLY = True 
-     
-    STARTER_ALLOW_RUNAS_OWNER = True 
-     
-    ALLOW_CONFIG = Administrator@* 
-    SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD 
-    SEC_CONFIG_NEGOTIATION = REQUIRED 
-    SEC_CONFIG_AUTHENTICATION = REQUIRED 
-    SEC_CONFIG_ENCRYPTION = REQUIRED 
-    SEC_CONFIG_INTEGRITY = REQUIRED
+    CREDD_HOST = credd.cs.wisc.edu 
+    CREDD_CACHE_LOCALLY = True 
+     
+    STARTER_ALLOW_RUNAS_OWNER = True 
+     
+    ALLOW_CONFIG = Administrator@* 
+    SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD 
+    SEC_CONFIG_NEGOTIATION = REQUIRED 
+    SEC_CONFIG_AUTHENTICATION = REQUIRED 
+    SEC_CONFIG_ENCRYPTION = REQUIRED 
+    SEC_CONFIG_INTEGRITY = REQUIRED
 
 The example above can be modified to meet the needs of your pool,
 providing the following conditions are met:
@@ -218,7 +218,7 @@ To store the pool password on a Windows machine, run
 
 ::
 
-      condor_store_cred add -c
+      condor_store_cred add -c
 
 when logged in with the administrative account on that machine, and
 enter the password when prompted. If the administrative account is
@@ -229,14 +229,14 @@ pushed out for each Windows machine using a command of the form
 
 ::
 
-      condor_store_cred add -c -n exec01.cs.wisc.edu
+      condor_store_cred add -c -n exec01.cs.wisc.edu
 
 Once the pool password is distributed, but before submitting jobs, all
 machines must reevaluate their configuration, so execute
 
 ::
 
-      condor_reconfig -all
+      condor_reconfig -all
 
 from the central manager. This will cause each execute machine to test
 its ability to authenticate with the *condor\_credd*. To see whether
@@ -244,7 +244,7 @@ this test worked for each machine in the pool, run the command
 
 ::
 
-      condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
+      condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
 
 Any rows in the output with the ``UNDEF`` string indicate machines where
 secure communication is not working properly. Verify that the pool
@@ -255,7 +255,7 @@ password can always be set locally by running the
 
 ::
 
-      condor_store_cred add -c
+      condor_store_cred add -c
 
 command as the local SYSTEM account. Third party tools such as PsExec
 can be used to accomplish this. When condor\_store\_cred is run as the
@@ -269,7 +269,7 @@ method and following command:
 
 ::
 
-      condor_store_cred -u condor_pool@poolhost add
+      condor_store_cred -u condor_pool@poolhost add
 
 Executing Jobs with the User's Profile Loaded
 ---------------------------------------------
@@ -296,7 +296,7 @@ in the job's submit description file:
 
 ::
 
-    load_profile = True
+    load_profile = True
 
 This feature is currently not compatible with
 **run\_as\_owner**\ :index:`run_as_owner<single: run_as_owner; submit commands>`, and
@@ -349,12 +349,12 @@ up for several scripting languages:
 
 ::
 
-    OPEN_VERB_FOR_JS_FILES  = Open2 
-    OPEN_VERB_FOR_VBS_FILES = Open2 
-    OPEN_VERB_FOR_VBE_FILES = Open2 
-    OPEN_VERB_FOR_JSE_FILES = Open2 
-    OPEN_VERB_FOR_WSF_FILES = Open2 
-    OPEN_VERB_FOR_WSH_FILES = Open2
+    OPEN_VERB_FOR_JS_FILES  = Open2 
+    OPEN_VERB_FOR_VBS_FILES = Open2 
+    OPEN_VERB_FOR_VBE_FILES = Open2 
+    OPEN_VERB_FOR_JSE_FILES = Open2 
+    OPEN_VERB_FOR_WSF_FILES = Open2 
+    OPEN_VERB_FOR_WSH_FILES = Open2
 
 In this example, HTCondor specifies the Open2 verb, instead of the
 default Open verb, for a script with the file name extension of wsh. The
@@ -369,7 +369,7 @@ fail. The failure error message appears as:
 
 ::
 
-    CScript Error: Loading your settings failed. (Access is denied.)
+    CScript Error: Loading your settings failed. (Access is denied.)
 
 The fix for this error is to give explicit access to the submitting
 user's registry hive. This can be accomplished with the addition of the
@@ -378,7 +378,7 @@ in the job's submit description file:
 
 ::
 
-    load_profile = True
+    load_profile = True
 
 With this command, there should be no registry access errors. This
 command should also work for other interpreters. Note that not all
@@ -524,10 +524,10 @@ C:\\WINNT on the submit machine, and a user gives the following to
 
 ::
 
-             executable = mytrojan.exe 
-             initialdir = c:\winnt 
-             output = explorer.exe 
-             queue
+             executable = mytrojan.exe 
+             initialdir = c:\winnt 
+             output = explorer.exe 
+             queue
 
 Unless that user is in group Administrators, HTCondor will not permit
 ``explorer.exe`` to be overwritten.
@@ -570,8 +570,8 @@ access.
 
 Finally, HTCondor has all the security mechanisms present in the
 full-blown version of HTCondor. See
-section \ `Security <../admin-manual/security.html>`__ starting on
-page \ `Security <../admin-manual/security.html>`__ for complete
+the :doc:`/admin-manual/security` section starting on
+page \ `Security <../admin-manual/security.html>`__ for complete
 information on how to allow/deny access to HTCondor.
 
 Network files and HTCondor
@@ -609,10 +609,10 @@ Example: you want to copy a file off of a server before running it....
 
 ::
 
-       @echo off 
-       net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN 
-       copy \\myserver\someshare\my-program.exe 
-       my-program.exe
+       @echo off 
+       net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN 
+       copy \\myserver\someshare\my-program.exe 
+       my-program.exe
 
 The idea here is to simply authenticate to the file server with a
 different login than the temporary HTCondor login. This is easy with the
@@ -626,10 +626,10 @@ GUEST
 
 ::
 
-       @echo off 
-       net use \\myserver\someshare 
-       copy \\myserver\someshare\my-program.exe 
-       my-program.exe
+       @echo off 
+       net use \\myserver\someshare 
+       copy \\myserver\someshare\my-program.exe 
+       my-program.exe
 
 In this example, you'd contact the server MYSERVER as the HTCondor
 temporary user. However, if you have the GUEST account enabled on
@@ -650,7 +650,7 @@ them to your registry. You can then use the batch file wrapper like:
 
 ::
 
-    net use z: \\myserver\someshare /USER:"" 
+    net use z: \\myserver\someshare /USER:"" 
     z:\my-program.exe
 
 so long as 'someshare' is in the list of allowed NULL session shares. To
@@ -658,13 +658,13 @@ edit this list, run regedit.exe and navigate to the key:
 
 ::
 
-    HKEY_LOCAL_MACHINE\ 
-       SYSTEM\ 
-         CurrentControlSet\ 
-           Services\ 
-             LanmanServer\ 
-               Parameters\ 
-                 NullSessionShares
+    HKEY_LOCAL_MACHINE\ 
+       SYSTEM\ 
+         CurrentControlSet\ 
+           Services\ 
+             LanmanServer\ 
+               Parameters\ 
+                 NullSessionShares
 
 and edit it. unfortunately it is a binary value, so you'll then need to
 type in the hex ASCII codes to spell out your share. each share is
@@ -690,7 +690,7 @@ registry using *condor\_store\_cred* on all Windows machines.
 
 Tell HTCondor to use the condor-guest user as the owner of jobs, when
 required. Details for this are in
-section \ `Security <../admin-manual/security.html>`__.
+the :doc:`/admin-manual/security` section.
 
 Interoperability between HTCondor for Unix and HTCondor for Windows
 -------------------------------------------------------------------
@@ -734,4 +734,4 @@ Some differences between HTCondor for Unix -vs- HTCondor for Windows
 
 :index:`Windows<single: Windows; platform-specific information>`
 
-      
+      

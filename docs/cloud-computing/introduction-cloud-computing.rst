@@ -1,4 +1,4 @@
-      
+      
 
 Introduction
 ============
@@ -67,4 +67,4 @@ It may be possible for an HTCondor administrator to lower the cost of
 their pool by increasing utilization and meeting peak demand with cloud
 computing.
 
-      
+      

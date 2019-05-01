@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_router\_history*
 =========================
@@ -33,11 +33,11 @@ Options
     Displays individual records in addition to the summary.
  **—show\_iwd**
     Include working directory in displayed records.
- **—age **\ *days*
+ **—age **\ *days*
     Set the ending time of the summary to be *days* days ago.
- **—days **\ *days*
+ **—days **\ *days*
     Set the number of days to summarize.
- **—start **\ *"YYYY-MM-DD HH:MM"*
+ **—start **\ *"YYYY-MM-DD HH:MM"*
     Set the start time of the summary.
 
 Exit Status
@@ -54,8 +54,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

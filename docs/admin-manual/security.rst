@@ -1,4 +1,4 @@
-      
+      
 
 Security
 ========
@@ -67,8 +67,7 @@ and described:
     does not have this integrity information. Also note that integrity
     checks are not performed upon job data files that are transferred by
     HTCondor via the File Transfer Mechanism described in
-    section \ `Submitting a
-    Job <../users-manual/submitting-a-job.html>`__.
+    the :doc:`/users-manual/submitting-a-job` section.
 
 HTCondor's Security Model
 -------------------------
@@ -364,17 +363,17 @@ during client-daemon communication follow the pattern:
 
 ::
 
-        SEC_<context>_<feature>
+        SEC_<context>_<feature>
 
 The <feature> portion of the macro name determines which security
 feature's policy is being set. <feature> may be any one of
 
 ::
 
-        AUTHENTICATION 
-        ENCRYPTION 
-        INTEGRITY 
-        NEGOTIATION
+        AUTHENTICATION 
+        ENCRYPTION 
+        INTEGRITY 
+        NEGOTIATION
 
 The <context> component of the security policy macros can be used to
 craft a fine-grained security policy based on the type of communication
@@ -382,28 +381,28 @@ taking place. <context> may be any one of
 
 ::
 
-        CLIENT 
-        READ 
-        WRITE 
-        ADMINISTRATOR 
-        CONFIG 
-        OWNER 
-        DAEMON 
-        NEGOTIATOR 
-        ADVERTISE_MASTER 
-        ADVERTISE_STARTD 
-        ADVERTISE_SCHEDD 
-        DEFAULT
+        CLIENT 
+        READ 
+        WRITE 
+        ADMINISTRATOR 
+        CONFIG 
+        OWNER 
+        DAEMON 
+        NEGOTIATOR 
+        ADVERTISE_MASTER 
+        ADVERTISE_STARTD 
+        ADVERTISE_SCHEDD 
+        DEFAULT
 
 Any of these constructed configuration macros may be set to any of the
 following values:
 
 ::
 
-        REQUIRED 
-        PREFERRED 
-        OPTIONAL 
-        NEVER
+        REQUIRED 
+        PREFERRED 
+        OPTIONAL 
+        NEVER
 
 Security negotiation resolves various client-daemon combinations of
 desired security features in order to set a policy.
@@ -413,7 +412,7 @@ authentication when possible. She sets
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION = OPTIONAL
+        SEC_DEFAULT_AUTHENTICATION = OPTIONAL
 
 The machine running the *condor_schedd* to which Frida will remotely
 submit jobs, however, is operated by a security-conscious system
@@ -421,7 +420,7 @@ administrator who dutifully sets:
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION = REQUIRED
+        SEC_DEFAULT_AUTHENTICATION = REQUIRED
 
 When Frida submits her jobs, HTCondor's security negotiation determines
 that authentication will be used, and allows the command to continue.
@@ -442,7 +441,7 @@ by ``SEC_*_NEGOTIATION``. ``SEC_DEFAULT_NEGOTIATION`` is a variable
 representing the entire set of configuration variables for
 ``NEGOTIATION``. For the client side setting, the only definitions that
 make sense are ``REQUIRED`` and ``NEVER``. For the daemon side setting,
-the ``PREFERRED`` value makes no sense. Table \ `3.2 <#x36-2720012>`__
+the ``PREFERRED`` value makes no sense. Table \ `3.2 <#x36-2720012>`__
 shows how security negotiation resolves various client-daemon
 combinations of security negotiation policy settings. Within the table,
 Yes means the security negotiation will take place. No means it will
@@ -459,16 +458,16 @@ communication cannot continue.
 
 | 
 
-Table 3.2: Resolution of security negotiation.
+Table 3.2: Resolution of security negotiation.
 
 --------------
 
 Enabling authentication, encryption, and integrity checks is dependent
 on security negotiation taking place. The enabled security negotiation
 further sets the policy for these other features.
-Table \ `3.3 <#x36-2720023>`__ shows how security features are resolved
+Table \ `3.3 <#x36-2720023>`__ shows how security features are resolved
 for client-daemon combinations of security feature policy settings. Like
-Table \ `3.2 <#x36-2720012>`__, Yes means the feature will be utilized.
+Table \ `3.2 <#x36-2720012>`__, Yes means the feature will be utilized.
 No means it will not. Fail implies incompatibility and the feature
 cannot be resolved.
 
@@ -484,7 +483,7 @@ cannot be resolved.
 
 | 
 
-Table 3.3: Resolution of security features.
+Table 3.3: Resolution of security features.
 
 --------------
 
@@ -502,8 +501,8 @@ the administrator configures the policy:
 
 ::
 
-    SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED 
-    SEC_READ_AUTHENTICATION          = OPTIONAL
+    SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED 
+    SEC_READ_AUTHENTICATION          = OPTIONAL
 
 The DEFAULT value for <context> provides a way to set a policy for all
 access levels (READ, WRITE, etc.) that do not have a specific
@@ -524,7 +523,7 @@ authentication and/or encryption are
 
 ::
 
-    SEC_<context>_AUTHENTICATION_METHODS 
+    SEC_<context>_AUTHENTICATION_METHODS 
     SEC_<context>_CRYPTO_METHODS
 
 These macros are defined by a comma or space delimited list of possible
@@ -544,8 +543,8 @@ whether authentication is to occur:
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION 
-        SEC_CLIENT_AUTHENTICATION
+        SEC_DEFAULT_AUTHENTICATION 
+        SEC_CLIENT_AUTHENTICATION
 
 For the daemon side, there are a larger number of macros to specify
 whether authentication is to take place, based upon the necessary access
@@ -563,24 +562,24 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION 
-        SEC_READ_AUTHENTICATION 
-        SEC_WRITE_AUTHENTICATION 
-        SEC_ADMINISTRATOR_AUTHENTICATION 
-        SEC_CONFIG_AUTHENTICATION 
-        SEC_OWNER_AUTHENTICATION 
-        SEC_DAEMON_AUTHENTICATION 
-        SEC_NEGOTIATOR_AUTHENTICATION 
-        SEC_ADVERTISE_MASTER_AUTHENTICATION 
-        SEC_ADVERTISE_STARTD_AUTHENTICATION 
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION
+        SEC_DEFAULT_AUTHENTICATION 
+        SEC_READ_AUTHENTICATION 
+        SEC_WRITE_AUTHENTICATION 
+        SEC_ADMINISTRATOR_AUTHENTICATION 
+        SEC_CONFIG_AUTHENTICATION 
+        SEC_OWNER_AUTHENTICATION 
+        SEC_DAEMON_AUTHENTICATION 
+        SEC_NEGOTIATOR_AUTHENTICATION 
+        SEC_ADVERTISE_MASTER_AUTHENTICATION 
+        SEC_ADVERTISE_STARTD_AUTHENTICATION 
+        SEC_ADVERTISE_SCHEDD_AUTHENTICATION
 
 As an example, the macro defined in the configuration file for a daemon
 as
 
 ::
 
-    SEC_WRITE_AUTHENTICATION = REQUIRED
+    SEC_WRITE_AUTHENTICATION = REQUIRED
 
 signifies that the daemon must authenticate the client for any
 communication that requires the ``WRITE`` access level. If the daemon's
@@ -588,7 +587,7 @@ configuration contains
 
 ::
 
-    SEC_DEFAULT_AUTHENTICATION = REQUIRED
+    SEC_DEFAULT_AUTHENTICATION = REQUIRED
 
 and does not contain any other security configuration for
 AUTHENTICATION, then this default defines the daemon's needs for
@@ -604,8 +603,8 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION_METHODS 
-        SEC_CLIENT_AUTHENTICATION_METHODS
+        SEC_DEFAULT_AUTHENTICATION_METHODS 
+        SEC_CLIENT_AUTHENTICATION_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
 macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
@@ -622,17 +621,17 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 
 ::
 
-        SEC_DEFAULT_AUTHENTICATION_METHODS 
-        SEC_READ_AUTHENTICATION_METHODS 
-        SEC_WRITE_AUTHENTICATION_METHODS 
-        SEC_ADMINISTRATOR_AUTHENTICATION_METHODS 
-        SEC_CONFIG_AUTHENTICATION_METHODS 
-        SEC_OWNER_AUTHENTICATION_METHODS 
-        SEC_DAEMON_AUTHENTICATION_METHODS 
-        SEC_NEGOTIATOR_AUTHENTICATION_METHODS 
-        SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS 
-        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS 
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS
+        SEC_DEFAULT_AUTHENTICATION_METHODS 
+        SEC_READ_AUTHENTICATION_METHODS 
+        SEC_WRITE_AUTHENTICATION_METHODS 
+        SEC_ADMINISTRATOR_AUTHENTICATION_METHODS 
+        SEC_CONFIG_AUTHENTICATION_METHODS 
+        SEC_OWNER_AUTHENTICATION_METHODS 
+        SEC_DAEMON_AUTHENTICATION_METHODS 
+        SEC_NEGOTIATOR_AUTHENTICATION_METHODS 
+        SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS 
+        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS 
+        SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available to be
@@ -643,28 +642,28 @@ indicated in the following list of defined values:
 
 ::
 
-        GSI       (not available on Windows platforms) 
-        SSL 
-        KERBEROS 
-        PASSWORD 
-        FS        (not available on Windows platforms) 
-        FS_REMOTE (not available on Windows platforms) 
-        NTSSPI 
-        MUNGE 
-        CLAIMTOBE 
-        ANONYMOUS
+        GSI       (not available on Windows platforms) 
+        SSL 
+        KERBEROS 
+        PASSWORD 
+        FS        (not available on Windows platforms) 
+        FS_REMOTE (not available on Windows platforms) 
+        NTSSPI 
+        MUNGE 
+        CLAIMTOBE 
+        ANONYMOUS
 
 For example, a client may be configured with:
 
 ::
 
-    SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
 
 and a daemon the client is trying to contact with:
 
 ::
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+    SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
 
 Security negotiation will determine that GSI authentication is the only
 compatible choice. If there are multiple compatible authentication
@@ -675,7 +674,7 @@ As another example, the macro
 
 ::
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
+    SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 
 indicates that either Kerberos or Windows authentication may be used,
 but Kerberos is preferred over Windows. Note that if the client and
@@ -761,9 +760,9 @@ locations.
 
        ::
 
-           GSI_DAEMON_CERT           = $(GSI_DAEMON_DIRECTORY)/hostcert.pem 
-           GSI_DAEMON_KEY            = $(GSI_DAEMON_DIRECTORY)/hostkey.pem 
-           GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIRECTORY)/certificates
+           GSI_DAEMON_CERT           = $(GSI_DAEMON_DIRECTORY)/hostcert.pem 
+           GSI_DAEMON_KEY            = $(GSI_DAEMON_DIRECTORY)/hostkey.pem 
+           GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIRECTORY)/certificates
 
        Note that no proxy is assumed in this case.
 
@@ -799,7 +798,7 @@ locations.
 
     ::
 
-        GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
+        GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 
     :index:`unified map file<single: unified map file; authentication>`
 
@@ -824,8 +823,8 @@ locations.
 
     ::
 
-        "/C=US/O=Globus/O=University of Wisconsin/ 
-        OU=Computer Sciences Department/CN=Alice Smith" asmith
+        "/C=US/O=Globus/O=University of Wisconsin/ 
+        OU=Computer Sciences Department/CN=Alice Smith" asmith
 
     HTCondor finds the map file in one of three ways. If the
     configuration variable ``GRIDMAP`` :index:`GRIDMAP` is
@@ -857,8 +856,8 @@ locations.
 
        ::
 
-             /tmp/x509up_uXXXX 
-             
+             /tmp/x509up_uXXXX 
+             
 
        The specific file name is given by substituting the XXXX
        characters with the UID of the user. Note that when a valid proxy
@@ -890,22 +889,22 @@ locations.
 
     ::
 
-        SEC_DEFAULT_AUTHENTICATION = REQUIRED 
-        SEC_DEFAULT_AUTHENTICATION_METHODS = GSI 
-        SEC_DEFAULT_INTEGRITY = REQUIRED 
-        GSI_DAEMON_DIRECTORY = /etc/grid-security 
-        GRIDMAP = /etc/grid-security/grid-mapfile 
-         
-        # authorize based on user names produced by the map file 
-        ALLOW_READ = *@cs.wisc.edu/*.cs.wisc.edu 
-        ALLOW_DAEMON = condor@cs.wisc.edu/*.cs.wisc.edu 
-        ALLOW_NEGOTIATOR = condor@cs.wisc.edu/condor.cs.wisc.edu, \ 
-                           condor@cs.wisc.edu/condor2.cs.wisc.edu 
-        ALLOW_ADMINISTRATOR = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
-         
-        # condor daemon certificate(s) trusted by condor tools and daemons 
-        # when connecting to other condor daemons 
-        GSI_DAEMON_NAME = /C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu
+        SEC_DEFAULT_AUTHENTICATION = REQUIRED 
+        SEC_DEFAULT_AUTHENTICATION_METHODS = GSI 
+        SEC_DEFAULT_INTEGRITY = REQUIRED 
+        GSI_DAEMON_DIRECTORY = /etc/grid-security 
+        GRIDMAP = /etc/grid-security/grid-mapfile 
+         
+        # authorize based on user names produced by the map file 
+        ALLOW_READ = *@cs.wisc.edu/*.cs.wisc.edu 
+        ALLOW_DAEMON = condor@cs.wisc.edu/*.cs.wisc.edu 
+        ALLOW_NEGOTIATOR = condor@cs.wisc.edu/condor.cs.wisc.edu, \ 
+                           condor@cs.wisc.edu/condor2.cs.wisc.edu 
+        ALLOW_ADMINISTRATOR = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
+         
+        # condor daemon certificate(s) trusted by condor tools and daemons 
+        # when connecting to other condor daemons 
+        GSI_DAEMON_NAME = /C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu
 
     The ``SEC_DEFAULT_AUTHENTICATION`` macro specifies that
     authentication is required for all communications. This single macro
@@ -924,7 +923,7 @@ locations.
 
     ::
 
-        "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
+        "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
 
     Additional mappings would be needed for the users who submit jobs to
     the pool or who issue administrative commands.
@@ -991,20 +990,20 @@ syntax is
 
 ::
 
-    KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
+    KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
 
 Lines within this map file have the syntax
 
 ::
 
-       KERB.REALM = UID.domain.name
+       KERB.REALM = UID.domain.name
 
 Here are two lines from a map file to use as an example:
 
 ::
 
-       CS.WISC.EDU   = cs.wisc.edu 
-       ENGR.WISC.EDU = ee.wisc.edu
+       CS.WISC.EDU   = cs.wisc.edu 
+       ENGR.WISC.EDU = ee.wisc.edu
 
 If a ``KERBEROS_MAP_FILE`` configuration variable is defined and set,
 then all permitted realms must be explicitly mapped. If no map file is
@@ -1024,7 +1023,7 @@ realm. As an example, the configuration
 
 ::
 
-    KERBEROS_SERVER_PRINCIPAL = condor-daemon
+    KERBEROS_SERVER_PRINCIPAL = condor-daemon
 
 results in HTCondor's use of
 
@@ -1040,10 +1039,10 @@ write or administrator access level.
 
 ::
 
-    SEC_WRITE_AUTHENTICATION                 = REQUIRED 
-    SEC_WRITE_AUTHENTICATION_METHODS         = KERBEROS 
-    SEC_ADMINISTRATOR_AUTHENTICATION         = REQUIRED 
-    SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
+    SEC_WRITE_AUTHENTICATION                 = REQUIRED 
+    SEC_WRITE_AUTHENTICATION_METHODS         = KERBEROS 
+    SEC_ADMINISTRATOR_AUTHENTICATION         = REQUIRED 
+    SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
 
 Kerberos authentication on Unix platforms requires access to various
 files that usually are only accessible by the root user. At this time,
@@ -1074,14 +1073,14 @@ command to write directly to the password file:
 
 ::
 
-    condor_store_cred -f /path/to/password/file
+    condor_store_cred -f /path/to/password/file
 
 Under Windows (or under Unix), storing the pool password is done with
 the **-c** option when using to *condor_store_cred* **add**. Running
 
 ::
 
-    condor_store_cred -c add
+    condor_store_cred -c add
 
 prompts for the pool password and store it on the local machine, making
 it available for daemons to use in authentication. The *condor_master*
@@ -1094,7 +1093,7 @@ global configuration file.
 
 ::
 
-    ALLOW_CONFIG = root@mydomain/$(IP_ADDRESS)
+    ALLOW_CONFIG = root@mydomain/$(IP_ADDRESS)
 
 It is also possible to set the pool password remotely, but this is
 recommended only if it can be done over an encrypted channel. This is
@@ -1106,13 +1105,13 @@ to set the password from the central manager as follows.
 
 ::
 
-    ALLOW_CONFIG = condor@mydomain/$(CONDOR_HOST)
+    ALLOW_CONFIG = condor@mydomain/$(CONDOR_HOST)
 
 The HTCondor administrator then executes
 
 ::
 
-    condor_store_cred -c -n host.mydomain add
+    condor_store_cred -c -n host.mydomain add
 
 from the central manager to store the password to a given machine. Since
 the condor account exists on both the central manager and host.mydomain,
@@ -1130,8 +1129,8 @@ this name. For example,
 
 ::
 
-    ALLOW_DAEMON = condor_pool@mydomain/*, condor@mydomain/$(IP_ADDRESS) 
-    ALLOW_NEGOTIATOR = condor_pool@mydomain/$(CONDOR_HOST)
+    ALLOW_DAEMON = condor_pool@mydomain/*, condor@mydomain/$(IP_ADDRESS) 
+    ALLOW_NEGOTIATOR = condor_pool@mydomain/$(CONDOR_HOST)
 
 This configuration allows remote DAEMON-level and NEGOTIATOR-level
 access, if the pool password is known. Local daemons authenticated as
@@ -1146,17 +1145,17 @@ authentication can be done using another method such as FS.
 
     ::
 
-        SEC_PASSWORD_FILE = $(LOCK)/pool_password 
-        SEC_DAEMON_AUTHENTICATION = REQUIRED 
-        SEC_DAEMON_INTEGRITY = REQUIRED 
-        SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD 
-        SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED 
-        SEC_NEGOTIATOR_INTEGRITY = REQUIRED 
-        SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD 
-        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI 
-        ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \ 
-                       condor@$(UID_DOMAIN)/$(IP_ADDRESS) 
-        ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
+        SEC_PASSWORD_FILE = $(LOCK)/pool_password 
+        SEC_DAEMON_AUTHENTICATION = REQUIRED 
+        SEC_DAEMON_INTEGRITY = REQUIRED 
+        SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD 
+        SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED 
+        SEC_NEGOTIATOR_INTEGRITY = REQUIRED 
+        SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD 
+        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI 
+        ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \ 
+                       condor@$(UID_DOMAIN)/$(IP_ADDRESS) 
+        ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
 
  Example Using Pool Password for *condor_startd* Advertisement
     :index:`sample configuration using pool password for startd advertisement<single: sample configuration using pool password for startd advertisement; security>`
@@ -1174,12 +1173,12 @@ authentication can be done using another method such as FS.
 
     ::
 
-        SEC_PASSWORD_FILE = $(LOCK)/pool_password 
-        SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED 
-        SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED 
-        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD 
-        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI 
-        ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
+        SEC_PASSWORD_FILE = $(LOCK)/pool_password 
+        SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED 
+        SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED 
+        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD 
+        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI 
+        ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1269,16 +1268,16 @@ repeated here:
 
 ::
 
-        GSI 
-        SSL 
-        KERBEROS 
-        PASSWORD 
-        FS 
-        FS_REMOTE 
-        NTSSPI 
-        MUNGE 
-        CLAIMTOBE 
-        ANONYMOUS
+        GSI 
+        SSL 
+        KERBEROS 
+        PASSWORD 
+        FS 
+        FS_REMOTE 
+        NTSSPI 
+        MUNGE 
+        CLAIMTOBE 
+        ANONYMOUS
 
 The fields that represent an authenticated name and the canonical
 HTCondor user name may utilize regular expressions as defined by PCRE
@@ -1306,15 +1305,15 @@ the following mappings, with some additional logic noted below:
 
 ::
 
-    FS (.*) \1 
-    FS_REMOTE (.*) \1 
-    GSI (.*) GSS_ASSIST_GRIDMAP 
-    SSL (.*) ssl@unmapped 
-    KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2 
-    NTSSPI (.*) \1 
-    MUNGE (.*) \1 
-    CLAIMTOBE (.*) \1 
-    PASSWORD (.*) \1
+    FS (.*) \1 
+    FS_REMOTE (.*) \1 
+    GSI (.*) GSS_ASSIST_GRIDMAP 
+    SSL (.*) ssl@unmapped 
+    KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2 
+    NTSSPI (.*) \1 
+    MUNGE (.*) \1 
+    CLAIMTOBE (.*) \1 
+    PASSWORD (.*) \1
 
 For GSI (or SSL), the special name ``GSS_ASSIST_GRIDMAP`` instructs
 HTCondor to use the GSI grid map file (configured with ``GRIDMAP``
@@ -1357,8 +1356,8 @@ The client uses one of two macros to enable or disable encryption:
 
 ::
 
-        SEC_DEFAULT_ENCRYPTION 
-        SEC_CLIENT_ENCRYPTION
+        SEC_DEFAULT_ENCRYPTION 
+        SEC_CLIENT_ENCRYPTION
 
 For the daemon, there are seven macros to enable or disable encryption:
 :index:`SEC_DEFAULT_ENCRYPTION` :index:`SEC_READ_ENCRYPTION`
@@ -1373,31 +1372,31 @@ For the daemon, there are seven macros to enable or disable encryption:
 
 ::
 
-        SEC_DEFAULT_ENCRYPTION 
-        SEC_READ_ENCRYPTION 
-        SEC_WRITE_ENCRYPTION 
-        SEC_ADMINISTRATOR_ENCRYPTION 
-        SEC_CONFIG_ENCRYPTION 
-        SEC_OWNER_ENCRYPTION 
-        SEC_DAEMON_ENCRYPTION 
-        SEC_NEGOTIATOR_ENCRYPTION 
-        SEC_ADVERTISE_MASTER_ENCRYPTION 
-        SEC_ADVERTISE_STARTD_ENCRYPTION 
-        SEC_ADVERTISE_SCHEDD_ENCRYPTION
+        SEC_DEFAULT_ENCRYPTION 
+        SEC_READ_ENCRYPTION 
+        SEC_WRITE_ENCRYPTION 
+        SEC_ADMINISTRATOR_ENCRYPTION 
+        SEC_CONFIG_ENCRYPTION 
+        SEC_OWNER_ENCRYPTION 
+        SEC_DAEMON_ENCRYPTION 
+        SEC_NEGOTIATOR_ENCRYPTION 
+        SEC_ADVERTISE_MASTER_ENCRYPTION 
+        SEC_ADVERTISE_STARTD_ENCRYPTION 
+        SEC_ADVERTISE_SCHEDD_ENCRYPTION
 
 As an example, the macro defined in the configuration file for a daemon
 as
 
 ::
 
-    SEC_CONFIG_ENCRYPTION = REQUIRED
+    SEC_CONFIG_ENCRYPTION = REQUIRED
 
 signifies that any communication that changes a daemon's configuration
 must be encrypted. If a daemon's configuration contains
 
 ::
 
-    SEC_DEFAULT_ENCRYPTION = REQUIRED
+    SEC_DEFAULT_ENCRYPTION = REQUIRED
 
 and does not contain any other security configuration for ENCRYPTION,
 then this default defines the daemon's needs for encryption over all
@@ -1412,8 +1411,8 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 
 ::
 
-        SEC_DEFAULT_CRYPTO_METHODS 
-        SEC_CLIENT_CRYPTO_METHODS
+        SEC_DEFAULT_CRYPTO_METHODS 
+        SEC_CLIENT_CRYPTO_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
 macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
@@ -1430,17 +1429,17 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 
 ::
 
-        SEC_DEFAULT_CRYPTO_METHODS 
-        SEC_READ_CRYPTO_METHODS 
-        SEC_WRITE_CRYPTO_METHODS 
-        SEC_ADMINISTRATOR_CRYPTO_METHODS 
-        SEC_CONFIG_CRYPTO_METHODS 
-        SEC_OWNER_CRYPTO_METHODS 
-        SEC_DAEMON_CRYPTO_METHODS 
-        SEC_NEGOTIATOR_CRYPTO_METHODS 
-        SEC_ADVERTISE_MASTER_CRYPTO_METHODS 
-        SEC_ADVERTISE_STARTD_CRYPTO_METHODS 
-        SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
+        SEC_DEFAULT_CRYPTO_METHODS 
+        SEC_READ_CRYPTO_METHODS 
+        SEC_WRITE_CRYPTO_METHODS 
+        SEC_ADMINISTRATOR_CRYPTO_METHODS 
+        SEC_CONFIG_CRYPTO_METHODS 
+        SEC_OWNER_CRYPTO_METHODS 
+        SEC_DAEMON_CRYPTO_METHODS 
+        SEC_NEGOTIATOR_CRYPTO_METHODS 
+        SEC_ADVERTISE_MASTER_CRYPTO_METHODS 
+        SEC_ADVERTISE_STARTD_CRYPTO_METHODS 
+        SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the encryption methods that are available to be
@@ -1449,8 +1448,8 @@ list indicates the highest preference. Possible values are
 
 ::
 
-        3DES 
-        BLOWFISH
+        3DES 
+        BLOWFISH
 
 Integrity
 ---------
@@ -1474,8 +1473,8 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 
 ::
 
-        SEC_DEFAULT_INTEGRITY 
-        SEC_CLIENT_INTEGRITY
+        SEC_DEFAULT_INTEGRITY 
+        SEC_CLIENT_INTEGRITY
 
 For the daemon, there are seven macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
@@ -1490,31 +1489,31 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 
 ::
 
-        SEC_DEFAULT_INTEGRITY 
-        SEC_READ_INTEGRITY 
-        SEC_WRITE_INTEGRITY 
-        SEC_ADMINISTRATOR_INTEGRITY 
-        SEC_CONFIG_INTEGRITY 
-        SEC_OWNER_INTEGRITY 
-        SEC_DAEMON_INTEGRITY 
-        SEC_NEGOTIATOR_INTEGRITY 
-        SEC_ADVERTISE_MASTER_INTEGRITY 
-        SEC_ADVERTISE_STARTD_INTEGRITY 
-        SEC_ADVERTISE_SCHEDD_INTEGRITY
+        SEC_DEFAULT_INTEGRITY 
+        SEC_READ_INTEGRITY 
+        SEC_WRITE_INTEGRITY 
+        SEC_ADMINISTRATOR_INTEGRITY 
+        SEC_CONFIG_INTEGRITY 
+        SEC_OWNER_INTEGRITY 
+        SEC_DAEMON_INTEGRITY 
+        SEC_NEGOTIATOR_INTEGRITY 
+        SEC_ADVERTISE_MASTER_INTEGRITY 
+        SEC_ADVERTISE_STARTD_INTEGRITY 
+        SEC_ADVERTISE_SCHEDD_INTEGRITY
 
 As an example, the macro defined in the configuration file for a daemon
 as
 
 ::
 
-    SEC_CONFIG_INTEGRITY = REQUIRED
+    SEC_CONFIG_INTEGRITY = REQUIRED
 
 signifies that any communication that changes a daemon's configuration
 must have its integrity assured. If a daemon's configuration contains
 
 ::
 
-    SEC_DEFAULT_INTEGRITY = REQUIRED
+    SEC_DEFAULT_INTEGRITY = REQUIRED
 
 and does not contain any other security configuration for INTEGRITY,
 then this default defines the daemon's needs for integrity checks over
@@ -1567,20 +1566,20 @@ authorization macros: :index:`ALLOW_READ`
 
 ::
 
-        ALLOW_READ 
-        ALLOW_WRITE 
-        ALLOW_ADMINISTRATOR 
-        ALLOW_CONFIG 
-        ALLOW_OWNER 
-        ALLOW_NEGOTIATOR 
-        ALLOW_DAEMON 
-        DENY_READ 
-        DENY_WRITE 
-        DENY_ADMINISTRATOR 
-        DENY_CONFIG 
-        DENY_OWNER 
-        DENY_NEGOTIATOR 
-        DENY_DAEMON
+        ALLOW_READ 
+        ALLOW_WRITE 
+        ALLOW_ADMINISTRATOR 
+        ALLOW_CONFIG 
+        ALLOW_OWNER 
+        ALLOW_NEGOTIATOR 
+        ALLOW_DAEMON 
+        DENY_READ 
+        DENY_WRITE 
+        DENY_ADMINISTRATOR 
+        DENY_CONFIG 
+        DENY_OWNER 
+        DENY_NEGOTIATOR 
+        DENY_DAEMON
 
 In addition, the following are used to control authorization of specific
 types of HTCondor daemons when advertising themselves to the pool. If
@@ -1594,12 +1593,12 @@ unspecified, these default to the broader ``ALLOW_DAEMON`` and
 
 ::
 
-        ALLOW_ADVERTISE_MASTER 
-        ALLOW_ADVERTISE_STARTD 
-        ALLOW_ADVERTISE_SCHEDD 
-        DENY_ADVERTISE_MASTER 
-        DENY_ADVERTISE_STARTD 
-        DENY_ADVERTISE_SCHEDD
+        ALLOW_ADVERTISE_MASTER 
+        ALLOW_ADVERTISE_STARTD 
+        ALLOW_ADVERTISE_SCHEDD 
+        DENY_ADVERTISE_MASTER 
+        DENY_ADVERTISE_STARTD 
+        DENY_ADVERTISE_SCHEDD
 
 Each client side of a connection may also specify its own list of
 trusted servers. This is done using the following settings. Note that
@@ -1612,8 +1611,8 @@ the specific identity of the server. :index:`ALLOW_CLIENT`
 
 ::
 
-      ALLOW_CLIENT 
-      DENY_CLIENT
+      ALLOW_CLIENT 
+      DENY_CLIENT
 
 The names ``ALLOW_CLIENT`` and ``DENY_CLIENT`` should be thought of as
 “when I am acting as a client, these are the servers I allow or deny.”
@@ -1626,7 +1625,7 @@ following format:
 
 ::
 
-        username@domain/hostname
+        username@domain/hostname
 
 The information to the left of the slash character describes a user
 within a domain. The information to the right of the slash character
@@ -1720,7 +1719,7 @@ mask is
 
 ::
 
-    ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
+    ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
 
 User joesmith within the cs.wisc.edu domain is given write authorization
 when originating from machines that match their leftmost 17 bits of the
@@ -1778,13 +1777,13 @@ in :ref:`admin-manual/security:htcondor's security model`.
 
 ::
 
-    ALLOW_READ            = *@cs.wisc.edu/* 
-    ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu 
-    ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
-    ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
-    ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/condor.cs.wisc.edu, \ 
-                            condor@cs.wisc.edu/condor2.cs.wisc.edu 
-    ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
+    ALLOW_READ            = *@cs.wisc.edu/* 
+    ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu 
+    ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
+    ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu 
+    ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/condor.cs.wisc.edu, \ 
+                            condor@cs.wisc.edu/condor2.cs.wisc.edu 
+    ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
 
 This example configuration authorizes any authenticated user in the
 cs.wisc.edu domain to carry out a request that requires the ``READ``
@@ -1809,7 +1808,7 @@ the local configuration file:
 
 ::
 
-    ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
+    ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
 
 In this example the owner has a login of username, and the machine's
 name is represented by hostname.
@@ -1820,12 +1819,12 @@ Debugging Security Configuration
 If the authorization policy denies a network request, an explanation of
 why the request was denied is printed in the log file of the daemon that
 denied the request. The line in the log file contains the words
-PERMISSION DENIED.
+PERMISSION DENIED.
 
 To get HTCondor to generate a similar explanation of why requests are
 accepted, add ``D_SECURITY`` :index:`D_SECURITY` to the daemon's
 debug options (and restart or reconfig the daemon). The line in the log
-file for these cases will contain the words PERMISSION GRANTED. If you
+file for these cases will contain the words PERMISSION GRANTED. If you
 do not want to see a full explanation but just want to see when requests
 are made, add ``D_COMMAND`` :index:`D_COMMAND` to the daemon's
 debug options.
@@ -1933,7 +1932,7 @@ Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
 Inside the HTCondor daemons or tools that use DaemonCore (see
-section \ `3.11 <DaemonCore.html#x39-3300003.11>`__ for details), most
+section \ `3.11 <DaemonCore.html#x39-3300003.11>`__ for details), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
 command is being requested, followed by any optional information that
@@ -2086,17 +2085,17 @@ Here is a sample security configuration:
 
 ::
 
-    ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
-    ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR) 
-    ALLOW_READ = * 
-    ALLOW_WRITE = * 
-    ALLOW_NEGOTIATOR = $(COLLECTOR_HOST) 
-    ALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS) 
-    ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM) 
-    ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM) 
-    ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM) 
-    ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM) 
-    ALLOW_CLIENT = *
+    ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
+    ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR) 
+    ALLOW_READ = * 
+    ALLOW_WRITE = * 
+    ALLOW_NEGOTIATOR = $(COLLECTOR_HOST) 
+    ALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS) 
+    ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM) 
+    ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM) 
+    ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM) 
+    ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM) 
+    ALLOW_CLIENT = *
 
 This example configuration presumes that the *condor_collector* and
 *condor_negotiator* daemons are running on the same machine.
@@ -2141,7 +2140,7 @@ different read access for the *condor_schedd*:
 
 ::
 
-    ALLOW_READ_SCHEDD = <list of machines>
+    ALLOW_READ_SCHEDD = <list of machines>
 
 Here are more examples of configuration settings. Notice that
 ``ADMINISTRATOR`` access is only granted through an ``ALLOW`` setting to
@@ -2153,18 +2152,18 @@ this.
 
    ::
 
-       ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+       ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
+       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA to join or view the pool. The central
    manager is the only machine with ``ADMINISTRATOR`` access.
 
    ::
 
-       ALLOW_READ = *.ncsa.uiuc.edu 
-       ALLOW_WRITE = *.ncsa.uiuc.edu 
-       ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+       ALLOW_READ = *.ncsa.uiuc.edu 
+       ALLOW_WRITE = *.ncsa.uiuc.edu 
+       ALLOW_ADMINISTRATOR = $(CONDOR_HOST) 
+       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and the U of I Math department join the
    pool, except do not allow lab machines to do so. Also, do not allow
@@ -2174,10 +2173,10 @@ this.
 
    ::
 
-       ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu 
-       DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.* 
-       ALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu 
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+       ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu 
+       DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.* 
+       ALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu 
+       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and UW-Madison's CS department to view
    the pool. Only NCSA machines and the machine raven.cs.wisc.edu can
@@ -2190,11 +2189,11 @@ this.
 
    ::
 
-       ALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu 
-       ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu 
-       ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \ 
-                                 biggercheese.uiuc.edu 
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+       ALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu 
+       ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu 
+       ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \ 
+                                 biggercheese.uiuc.edu 
+       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Allow anyone except the military to view the status of the pool, but
    only let machines at NCSA view the job queues. Only NCSA machines can
@@ -2204,13 +2203,13 @@ this.
 
    ::
 
-       DENY_READ = *.mil 
-       ALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
-       ALLOW_WRITE = *.ncsa.uiuc.edu 
-       ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \ 
-                                 biggercheese.uiuc.edu 
-       ALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu 
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+       DENY_READ = *.mil 
+       ALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
+       ALLOW_WRITE = *.ncsa.uiuc.edu 
+       ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \ 
+                                 biggercheese.uiuc.edu 
+       ALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu 
+       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 Changing the Security Configuration
 -----------------------------------
@@ -2220,8 +2219,7 @@ Changing the Security Configuration
 A new security feature introduced in HTCondor version 6.3.2 enables more
 fine-grained control over the configuration settings that can be
 modified remotely with the *condor_config_val* command. The manual
-page for *condor_config_val* on
-page \ `1848 <Condorconfigval.html#x105-73100012>`__ details how to use
+page for :doc:`/man-pages/condor_config_val` details how to use
 *condor_config_val* to modify configuration settings remotely. Since
 certain configuration attributes can have a large impact on the
 functioning of the HTCondor system and the security of the machines in
@@ -2297,7 +2295,7 @@ Some examples of valid definitions of control lists with explanations:
 
 -  ::
 
-       SETTABLE_ATTRS_CONFIG = *
+       SETTABLE_ATTRS_CONFIG = *
 
    Grant unlimited access to modify configuration attributes to any
    request that came from a machine in the ``CONFIG`` access level. This
@@ -2305,16 +2303,16 @@ Some examples of valid definitions of control lists with explanations:
 
 -  ::
 
-       SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG
+       SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG
 
    Grant access to change any configuration setting that ended with
    _DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
-   matched MAX_\*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
+   matched MAX_*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
    with ``ADMINISTRATOR`` access.
 
 -  ::
 
-       STARTD.SETTABLE_ATTRS_OWNER = HasDataSet
+       STARTD.SETTABLE_ATTRS_OWNER = HasDataSet
 
    Allows any request to modify the ``HasDataSet`` attribute that came
    from a host with ``OWNER`` access. By default, ``OWNER`` covers any
@@ -2581,8 +2579,8 @@ Under Unix, HTCondor runs jobs as one of
 
    ::
 
-          SLOT1_USER = cndrusr1 
-          SLOT2_USER = cndrusr2
+          SLOT1_USER = cndrusr1 
+          SLOT2_USER = cndrusr2
 
    Also tell HTCondor that these accounts are intended only to be used
    by HTCondor, so HTCondor can kill all the processes belonging to
@@ -2593,13 +2591,13 @@ Under Unix, HTCondor runs jobs as one of
 
    ::
 
-          DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
+          DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
 
    Finally, tell HTCondor not to run jobs as the job owner:
 
    ::
 
-          STARTER_ALLOW_RUNAS_OWNER = False
+          STARTER_ALLOW_RUNAS_OWNER = False
 
 -  the user that submitted the jobs
 
@@ -2619,8 +2617,8 @@ Under Unix, HTCondor runs jobs as one of
 
       ::
 
-            SUBMIT_ATTRS = RunAsOwner 
-            RunAsOwner = True
+            SUBMIT_ATTRS = RunAsOwner 
+            RunAsOwner = True
 
    #. The value of configuration variable ``UID_DOMAIN`` must be the
       same for both the *condor_startd* and *condor_schedd* daemons.
@@ -2633,7 +2631,7 @@ Under Unix, HTCondor runs jobs as one of
 
       ::
 
-            TRUST_UID_DOMAIN = True
+            TRUST_UID_DOMAIN = True
 
 Notes:
 
@@ -2659,7 +2657,7 @@ Notes:
 
    ::
 
-       Tracking process family by login "cndrusr1"
+       Tracking process family by login "cndrusr1"
 
    when it treats the account as a dedicated account.
 
@@ -2702,4 +2700,4 @@ submit-side current working directory.
 :index:`UIDs in HTCondor`
 :index:`in HTCondor<single: in HTCondor; security>`
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 The DRMAA API
 =============
@@ -71,7 +71,7 @@ attributes:
 The attribute ``DRMAA_NATIVE_SPECIFICATION`` can be used to direct all
 commands supported within submit description files. See the
 *condor\_submit* manual page at
-section \ `condor\_submit <../man-pages/condor_submit.html>`__ for a
+section \ `condor\_submit <../man-pages/condor_submit.html>`__ for a
 complete list. Multiple commands can be specified if separated by
 newlines.
 
@@ -87,8 +87,8 @@ would set AttrDRMAA\_NATIVE\_SPECIFICATION to the C string:
 
 ::
 
-      drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION, 
-          "image_size=65536\nrank=Memory\n+department=\"chemistry\"", 
-          err_buf, sizeof(err_buf)-1); 
+      drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION, 
+          "image_size=65536\nrank=Memory\n+department=\"chemistry\"", 
+          err_buf, sizeof(err_buf)-1); 
 
-      
+      

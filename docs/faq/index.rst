@@ -10,4 +10,4 @@ and on the configuration how-to and recipes page at
 Supported platforms are listed in the :doc:`/overview/availability` section.
 There is also :doc:`/platform-specific/index` available..
 
-      
+      

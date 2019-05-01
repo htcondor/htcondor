@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_drain*
 ===============
@@ -11,12 +11,12 @@ Synopsis
 
 **condor\_drain** [**-help**\ ]
 
-**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] [**-graceful
+**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] [**-graceful
 \| -quick \| -fast**\ ] [**-resume-on-completion**\ ]
-[**-check  **\ *expr*] [**-start  **\ *expr*] *machine-name*
+[**-check  **\ *expr*] [**-start  **\ *expr*] *machine-name*
 
-**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] **-cancel**
-[**-request-id  **\ *id*] *machine-name*
+**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] **-cancel**
+[**-request-id  **\ *id*] *machine-name*
 
 Description
 -----------
@@ -77,7 +77,7 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *pool-name*
+ **-pool **\ *pool-name*
     Specify an alternate HTCondor pool, if the default one is not
     desired.
  **-graceful**
@@ -90,15 +90,15 @@ Options
  **-resume-on-completion**
     When done draining, resume normal operation, such that potentially
     the whole machine could be claimed.
- **-check **\ *expr*
+ **-check **\ *expr*
     Abort draining, if ``expr`` is not true for all slots to be drained.
- **-start **\ *expr*
+ **-start **\ *expr*
     The ``START`` expression to use while the machine is draining. You
     can't reference the machine's existing ``START`` expression.
  **-cancel**
     Cancel a prior draining request, to permit the *condor\_negotiator*
     to use the machine again.
- **-request-id **\ *id*
+ **-request-id **\ *id*
     Specify a specific draining request to cancel, where *id* is given
     by the ``DrainingRequestId`` machine ClassAd attribute.
 
@@ -116,8 +116,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 Contributions and Acknowledgments
 =================================
@@ -59,4 +59,4 @@ The HTCondor project wishes to acknowledge the following:
    and do not necessarily reflect the views of the National Science
    Foundation.
 
-      
+      

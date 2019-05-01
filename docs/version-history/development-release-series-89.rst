@@ -1,5 +1,3 @@
-      
-
 Development Release Series 8.9
 ==============================
 
@@ -17,7 +15,7 @@ New Features:
 
 -  The deprecated ``HOSTALLOW…`` and ``HOSTDENY…`` configuration knobs
    have been removed. Please use ``ALLOW…`` and ``DENY…``. :ticket:`6921`
--  Implemented a new version of the curl\_plugin with multi-file
+-  Implemented a new version of the curl_plugin with multi-file
    support, allowing it to transfer many files in a single invocation of
    the plugin. :ticket:`6499`
    :ticket:`6859`
@@ -72,7 +70,7 @@ New Features:
    ``fg`` options). :ticket:`6848`
 -  When jobs are run without file transfer on, usually because there is
    a shared file system, HTCondor used to unconditionally set the jobs
-   argv[0] to the string *condor\_exe.exe*. This breaks jobs that look
+   argv[0] to the string *condor_exe.exe*. This breaks jobs that look
    at their own argv[0], in ways that are very hard to debug. In this
    release of HTCondor, we no longer do this. :ticket:`6943`
 
@@ -81,11 +79,11 @@ Bugs Fixed:
 -  Avoid killing jobs using between 90% and 99% of memory limit.
    :ticket:`6925`
 -  Improved how ``"Chirp"`` handles a network disconnection between the
-   *condor\_starter* and *condor\_shadow*. ``"Chirp"`` commands now
-   return a error and no longer cause the *condor\_starter* to exit
+   *condor_starter* and *condor_shadow*. ``"Chirp"`` commands now
+   return a error and no longer cause the *condor_starter* to exit
    (killing the job). :ticket:`6873`
--  Fixed a bug that could cause *condor\_submit* to send invalid job
-   ClassAds to the *condor\_schedd* when the executable attribute was
+-  Fixed a bug that could cause *condor_submit* to send invalid job
+   ClassAds to the *condor_schedd* when the executable attribute was
    not the same for all jobs in that submission. :ticket:`6719`
 
 Version 8.9.0
@@ -113,8 +111,8 @@ changes.
 
    ::
 
-       ALLOW_READ = * 
-       ALLOW_DAEMON = $(ALLOW_WRITE)
+       ALLOW_READ = * 
+       ALLOW_DAEMON = $(ALLOW_WRITE)
 
    The main configuration file (``/etc/condor/condor_config``) already
    implements the above change by calling ``use SECURITY : HOST_BASED``.
@@ -139,14 +137,14 @@ New Features:
    parameter ``SEC_USE_FAMILY_SESSION`` to ``False``. :ticket:`6788`
 -  Scheduler Universe jobs now start in order of priority, instead of
    random order. This is most typically used for DAGMan. When running
-   *condor\_submit\_dag* against a .dag file, you can use the -priority
-   <N> flag to set the priority for the overall *condor\_dagman* job.
-   When the *condor\_schedd* is starting new Scheduler Universe jobs,
+   *condor_submit_dag* against a .dag file, you can use the -priority
+   <N> flag to set the priority for the overall *condor_dagman* job.
+   When the *condor_schedd* is starting new Scheduler Universe jobs,
    the highest priority queued job will start first. If all queued
    Scheduler Universe jobs have equal priority, they get started in
    order of submission. :ticket:`6703`
 -  Normally, HTCondor requires the user to specify their credentials
-   when using EC2 (via the grid universe or via *condor\_annex*). This
+   when using EC2 (via the grid universe or via *condor_annex*). This
    allows users to use different accounts from the same machine.
    However, if a user started an EC2 instance with the privileges
    necessary to start other instances, and ran HTCondor in that
@@ -163,21 +161,21 @@ New Features:
    access by other users, specifically including the submitting of jobs
    to or running jobs on that instance. :ticket:`6789`
 
--  The *condor\_now* tool now supports vacating more than one job; the
+-  The *condor_now* tool now supports vacating more than one job; the
    additional jobs' resources will be coalesced into a single slot, on
    which the now-job will be run. :ticket:`6694`
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements
    ``__enter__`` and ``__exit__``). The ``JobEvent`` class now
    implements ``__str__`` and ``__repr__``. :ticket:`6814`
--  the *condor\_hdfs* daemon which allowed the hdfs daemons to run under
-   the *condor\_master* has been removed from the contributed source.
+-  the *condor_hdfs* daemon which allowed the hdfs daemons to run under
+   the *condor_master* has been removed from the contributed source.
    :ticket:`6809`
 
 Bugs Fixed:
 
--  Fixed potential authentication failures between the *condor\_schedd*
-   and *condor\_startd* when multiple *condor\_startd*\ s are using the
+-  Fixed potential authentication failures between the *condor_schedd*
+   and *condor_startd* when multiple *condor_startd*\ s are using the
    same shared port server. :ticket:`5604`
 
-      
+      

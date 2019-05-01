@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_top*
 =============
@@ -13,11 +13,11 @@ Synopsis
 **condor\_top** [**-h**\ ]
 
 **condor\_top** [**-l**\ ]
-[**-p  **\ *centralmanagerhostname[:portname]*] [**-n  **\ *name*]
-[**-d  **\ *delay*] [**-c  **\ *columnset*] [**-s  **\ *sortcolumn*]
+[**-p  **\ *centralmanagerhostname[:portname]*] [**-n  **\ *name*]
+[**-d  **\ *delay*] [**-c  **\ *columnset*] [**-s  **\ *sortcolumn*]
 [--**attrs=<attr1,attr2,...>**] [*daemon options*\ ]
 
-**condor\_top** [**-c  **\ *columnset*] [**-s  **\ *sortcolumn*]
+**condor\_top** [**-c  **\ *columnset*] [**-s  **\ *sortcolumn*]
 [--**attrs=<attr1,attr2,...>**] [*classad-filename classad-filename*\ ]
 
 Description
@@ -101,20 +101,20 @@ Options
     Displays the list of options.
  **-l**
     Puts *condor\_top* in to a live, continually updating mode.
- **-p **\ *centralmanagerhostname[:portname]*
+ **-p **\ *centralmanagerhostname[:portname]*
     Query the daemon via the specified central manager. If omitted, the
     value of the configuration variable ``COLLECTOR_HOST`` is used.
- **-n **\ *name*
+ **-n **\ *name*
     Query the daemon named *name*. If omitted, the value used will
     depend on the type of daemon queried (see Daemon Options).
- **-d **\ *delay*
+ **-d **\ *delay*
     Specifies the *delay* between ClassAd updates, in integer seconds.
     If omitted, the value of the configuration variable
     ``STATISTICS_WINDOW_QUANTUM`` is used.
- **-c **\ *columnset*
+ **-c **\ *columnset*
     Display *columnset* set of columns. Valid *columnset*\ s are:
     default, runtime, count, all.
- **-s **\ *sortcolumn*
+ **-s **\ *sortcolumn*
     Sort table by *sortcolumn*. Defaults to InstRt.
  **—attrs=<attr1,attr2,...>**
     | Comma-delimited list of additional ClassAd attributes to monitor.
@@ -149,8 +149,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

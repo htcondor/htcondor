@@ -1,4 +1,4 @@
-      
+      
 
 Submitter ClassAd Attributes
 ============================
@@ -84,4 +84,4 @@ Submitter ClassAd Attributes
     A total number of requested cores across all Running jobs from the
     submitter.
 
-      
+      

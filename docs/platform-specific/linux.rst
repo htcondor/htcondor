@@ -1,4 +1,4 @@
-      
+      
 
 Linux
 =====
@@ -53,13 +53,13 @@ the standalone executable with:
 
 ::
 
-      setarch i386 -L -R ./myapp
+      setarch i386 -L -R ./myapp
 
 For a 64-bit architecture, the resumption command will be:
 
 ::
 
-      setarch x86_64 -L -R ./myapp
+      setarch x86_64 -L -R ./myapp
 
 Some applications will also need the **-B** option.
 
@@ -68,6 +68,6 @@ address space randomization, as the 32-bit architecture example:
 
 ::
 
-      setarch i386 -L -R myapp -_condor_restart myapp.ckpt
+      setarch i386 -L -R myapp -_condor_restart myapp.ckpt
 
-      
+      

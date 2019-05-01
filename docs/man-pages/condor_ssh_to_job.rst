@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_ssh\_to\_job*
 ======================
@@ -11,10 +11,10 @@ Synopsis
 
 **condor\_ssh\_to\_job** [**-help**\ ]
 
-**condor\_ssh\_to\_job** [**-debug**\ ] [**-name  **\ *schedd-name*]
-[**-pool  **\ *pool-name*] [**-ssh  **\ *ssh-command*]
-[**-keygen-options  **\ *ssh-keygen-options*]
-[**-shells  **\ *shell1,shell2,...*] [**-auto-retry**\ ]
+**condor\_ssh\_to\_job** [**-debug**\ ] [**-name  **\ *schedd-name*]
+[**-pool  **\ *pool-name*] [**-ssh  **\ *ssh-command*]
+[**-keygen-options  **\ *ssh-keygen-options*]
+[**-shells  **\ *shell1,shell2,...*] [**-auto-retry**\ ]
 [**-remove-on-interrupt**\ ] *cluster \| cluster.process \|
 cluster.process.node* [*remote-command*\ ]
 
@@ -130,13 +130,13 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-name **\ *schedd-name*
+ **-name **\ *schedd-name*
     Specify an alternate *condor\_schedd*, if the default (local) one is
     not desired.
- **-pool **\ *pool-name*
+ **-pool **\ *pool-name*
     Specify an alternate HTCondor pool, if the default one is not
     desired. Does not apply to EC2 jobs.
- **-ssh **\ *ssh-command*
+ **-ssh **\ *ssh-command*
     Specify an alternate *ssh* program to run in place of *ssh*, for
     example *sftp* or *scp*. Additional arguments are specified as
     *ssh-command*. Since the arguments are delimited by spaces, place
@@ -144,12 +144,12 @@ Options
     from splitting it into multiple arguments to *condor\_ssh\_to\_job*.
     If any arguments must contain spaces, enclose them within single
     quotes. Does not apply to EC2 jobs.
- **-keygen-options **\ *ssh-keygen-options*
+ **-keygen-options **\ *ssh-keygen-options*
     Specify additional arguments to the *ssh\_keygen* program, for
     creating the ssh key that is used for the duration of the session.
     For example, a different number of bits could be used, or a
     different key type than the default. Does not apply to EC2 jobs.
- **-shells **\ *shell1,shell2,...*
+ **-shells **\ *shell1,shell2,...*
     Specify a comma-separated list of shells to attempt to launch. If
     the first shell does not exist on the remote machine, then the
     following ones in the list will be tried. If none of the specified
@@ -175,24 +175,24 @@ Examples
 
 ::
 
-    % condor_ssh_to_job 32.0 
-    Welcome to slot2@tonic.cs.wisc.edu! 
-    Your condor job is running with pid(s) 65881. 
-    % gdb -p 65881 
-    (gdb) where 
-    ... 
-    % logout 
-    Connection to condor-job.tonic.cs.wisc.edu closed.
+    % condor_ssh_to_job 32.0 
+    Welcome to slot2@tonic.cs.wisc.edu! 
+    Your condor job is running with pid(s) 65881. 
+    % gdb -p 65881 
+    (gdb) where 
+    ... 
+    % logout 
+    Connection to condor-job.tonic.cs.wisc.edu closed.
 
 To upload or download files interactively with *sftp*:
 
 ::
 
-    % condor_ssh_to_job -ssh sftp 32.0 
-    Connecting to condor-job.tonic.cs.wisc.edu... 
-    sftp> ls 
-    ... 
-    sftp> get outputfile.dat
+    % condor_ssh_to_job -ssh sftp 32.0 
+    Connecting to condor-job.tonic.cs.wisc.edu... 
+    sftp> ls 
+    ... 
+    sftp> get outputfile.dat
 
 This example shows downloading a file from the job with *scp*. The
 string "remote" is used in place of a host name in this example. It is
@@ -202,7 +202,7 @@ Therefore, the placeholder string "remote" is perfectly fine.
 
 ::
 
-    % condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
+    % condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
 
 This example uses *condor\_ssh\_to\_job* to accomplish the task of
 running *rsync* to synchronize a local file with a remote file in the
@@ -212,7 +212,7 @@ arguments to *condor\_ssh\_to\_job*.
 
 ::
 
-    % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
+    % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
 
 Note that *condor\_ssh\_to\_job* was added to HTCondor in version 7.3.
 If one uses *condor\_ssh\_to\_job* to connect to a job on an execute
@@ -221,7 +221,7 @@ command will fail with the error message
 
 ::
 
-    Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
+    Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
 
 Exit Status
 -----------
@@ -238,8 +238,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

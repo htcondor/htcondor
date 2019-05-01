@@ -1,4 +1,4 @@
-      
+      
 
 Logging in HTCondor
 ===================
@@ -20,8 +20,7 @@ Job and Daemon Logs
     event log with the submit command
     **log**\ :index:`log<single: log; submit commands>`. The log is created
     and remains on the submit machine. Contents of the log are detailed
-    in section \ `Managing a
-    Job <../users-manual/managing-a-job.html>`__. Examples of events are
+    in the :doc:`/users-manual/managing-a-job` section. Examples of events are
     that the job is running, that the job is placed on hold, or that the
     job completed.
  daemon logs
@@ -60,7 +59,7 @@ Job and Daemon Logs
 
     ::
 
-          condor_config_val COLLECTOR_LOG
+          condor_config_val COLLECTOR_LOG
 
  job queue log
     The job queue log is a transactional representation of the current
@@ -191,8 +190,7 @@ DAGMan Logs
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ for the
+    the :doc:`/admin-manual/configuration-macros` section for the
     complete definition.
 
     Configuration variables that affect this log are
@@ -217,10 +215,10 @@ DAGMan Logs
 
  the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. Section \ `DAGMan
+    DAG. Section \ `DAGMan
     Applications <../users-manual/dagman-applications.html>`__ details
     this log.
 
 :index:`logging`
 
-      
+      

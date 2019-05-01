@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_vacate\_job*
 =====================
@@ -12,14 +12,14 @@ Synopsis
 **condor\_vacate\_job** [**-help \| -version**\ ]
 
 **condor\_vacate\_job** [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
+**-pool **\ *centralmanagerhostname[:portnumber]* \|
+**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
 [**-fast**\ ] *cluster… \| cluster.process… \| user…* \|
-**-constraint **\ *expression* …
+**-constraint **\ *expression* …
 
 **condor\_vacate\_job** [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
+**-pool **\ *centralmanagerhostname[:portnumber]* \|
+**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
 [**-fast**\ ] **-all**
 
 Description
@@ -61,12 +61,12 @@ Options
     Display usage information
  **-version**
     Display version information
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *scheddname*
+ **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
  *cluster*
     Vacate all jobs in the specified cluster
@@ -74,7 +74,7 @@ Options
     Vacate the specific job in the cluster
  *user*
     Vacate jobs belonging to specified user
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Vacate all jobs which match the job ClassAd expression constraint
  **-all**
     Vacate all the jobs in the queue
@@ -100,19 +100,19 @@ To vacate job 23.0:
 
 ::
 
-    % condor_vacate_job 23.0
+    % condor_vacate_job 23.0
 
 To vacate all jobs of a user named Mary:
 
 ::
 
-    % condor_vacate_job mary
+    % condor_vacate_job mary
 
 To vacate all standard universe jobs owned by Mary:
 
 ::
 
-    % condor_vacate_job -constraint 'JobUniverse == 1 && Owner == "mary"'
+    % condor_vacate_job -constraint 'JobUniverse == 1 && Owner == "mary"'
 
 Note that the entire constraint, including the quotation marks, must be
 enclosed in single quote marks for most shells.
@@ -131,8 +131,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

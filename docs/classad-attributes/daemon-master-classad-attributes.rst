@@ -1,4 +1,4 @@
-      
+      
 
 DaemonMaster ClassAd Attributes
 ===============================
@@ -82,4 +82,4 @@ DaemonMaster ClassAd Attributes
     update sent to the *condor\_collector*. The *condor\_collector* uses
     this value to sequence the updates it receives.
 
-      
+      

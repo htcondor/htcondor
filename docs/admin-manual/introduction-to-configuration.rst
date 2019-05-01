@@ -1,4 +1,4 @@
-      
+      
 
 Introduction to Configuration
 =============================
@@ -11,11 +11,11 @@ configuration, relating to all parts of the HTCondor system. If you're
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
--  Section \ `Configuration
+-  Section \ `Configuration
    Templates <../admin-manual/configuration-templates.html>`__ contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  Section \ `Configuration
+-  Section \ `Configuration
    Macros <../admin-manual/configuration-macros.html>`__ contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
@@ -24,8 +24,7 @@ read the other configuration-related sections:
    configuration macros.
 -  The settings that control the policy under which HTCondor will start,
    suspend, resume, vacate or kill jobs are described in
-   section \ `Policy Configuration for Execute Hosts and for Submit
-   Hosts <../admin-manual/policy-configuration.html>`__ on Policy
+   the :doc:`/admin-manual/policy-configuration` section on Policy
    Configuration for the *condor_startd*.
 
 HTCondor Configuration Files
@@ -53,9 +52,9 @@ Example:
 
 ::
 
-    MINUTE          = 60 
-    HOUR            = (60 * $(MINUTE)) 
-    SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
+    MINUTE          = 60 
+    HOUR            = (60 * $(MINUTE)) 
+    SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 
 Ordered Evaluation to Set the Configuration
 -------------------------------------------
@@ -157,7 +156,7 @@ Macro definitions are of the form:
 
 ::
 
-    <macro_name> = <macro_definition>
+    <macro_name> = <macro_definition>
 
 The macro name given on the left hand side of the definition is a case
 insensitive identifier. There may be white space between the macro name,
@@ -168,7 +167,7 @@ Macro invocations are of the form:
 
 ::
 
-    $(macro_name[:<default if macro_name not defined>])
+    $(macro_name[:<default if macro_name not defined>])
 
 The colon and default are optional in a macro invocation. Macro
 definitions may contain references to other macros, even ones that are
@@ -179,8 +178,8 @@ themselves.
 
 ::
 
-    A = xxx 
-    C = $(A)
+    A = xxx 
+    C = $(A)
 
 is a legal set of macro definitions, and the resulting value of ``C`` is
 ``xxx``. Note that ``C`` is actually bound to ``$(A)``, not its value.
@@ -189,9 +188,9 @@ As a further example,
 
 ::
 
-    A = xxx 
-    C = $(A) 
-    A = yyy
+    A = xxx 
+    C = $(A) 
+    A = yyy
 
 is also a legal set of macro definitions, and the resulting value of
 ``C`` is ``yyy``.
@@ -201,10 +200,10 @@ definition. For example,
 
 ::
 
-    A = xxx 
-    B = $(A) 
-    A = $(A)yyy 
-    A = $(A)zzz
+    A = xxx 
+    B = $(A) 
+    A = $(A)yyy 
+    A = $(A)zzz
 
 is a legal set of macro definitions, and the resulting value of ``A`` is
 ``xxxyyyzzz``. Note that invocations of a macro in its own definition
@@ -216,8 +215,8 @@ Recursively defined macros such as
 
 ::
 
-    A = $(B) 
-    B = $(A)
+    A = $(B) 
+    B = $(A)
 
 are not allowed. They create definitions that HTCondor refuses to parse.
 
@@ -226,33 +225,33 @@ substitution of the empty string. Consider the example
 
 ::
 
-    MAX_ALLOC_CPUS = $(NUMCPUS)-1
+    MAX_ALLOC_CPUS = $(NUMCPUS)-1
 
 If ``NUMCPUS`` is not defined, then this macro substitution becomes
 
 ::
 
-    MAX_ALLOC_CPUS = -1
+    MAX_ALLOC_CPUS = -1
 
 The default value may help to avoid this situation. The default value
 may be a literal
 
 ::
 
-    MAX_ALLOC_CPUS = $(NUMCPUS:4)-1
+    MAX_ALLOC_CPUS = $(NUMCPUS:4)-1
 
 such that if ``NUMCPUS`` is not defined, the result of macro
 substitution becomes
 
 ::
 
-    MAX_ALLOC_CPUS = 4-1
+    MAX_ALLOC_CPUS = 4-1
 
 The default may be another macro invocation:
 
 ::
 
-    MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS))-1
+    MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS))-1
 
 These default specifications are restricted such that a macro invocation
 with a default can not be nested inside of another default. An
@@ -271,8 +270,8 @@ line.
 
 ::
 
-    [HTCondor Settings] 
-    my_classad = [ foo=bar ]
+    [HTCondor Settings] 
+    my_classad = [ foo=bar ]
 
 To simplify pool administration, any configuration variable name may be
 prefixed by a subsystem (see the ``$(SUBSYSTEM)`` macro in
@@ -284,8 +283,8 @@ the ports that HTCondor may use can be restricted to a range using the
 
 ::
 
-      MASTER.LOWPORT   = 20000 
-      MASTER.HIGHPORT  = 20100
+      MASTER.LOWPORT   = 20000 
+      MASTER.HIGHPORT  = 20100
 
 Note that all configuration variables may utilize this syntax, but
 nonsense configuration variables may result. For example, it makes no
@@ -293,7 +292,7 @@ sense to define
 
 ::
 
-      NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
+      NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
 
 since the *condor_negotiator* daemon does not use the
 ``MASTER_UPDATE_INTERVAL`` variable.
@@ -303,7 +302,7 @@ with a definition such as
 
 ::
 
-      MASTER.MASTER_UPDATE_INTERVAL = 60
+      MASTER.MASTER_UPDATE_INTERVAL = 60
 
 The *condor_master* uses this configuration variable, and the prefix of
 ``MASTER.`` causes this configuration to be specific to the
@@ -315,15 +314,15 @@ the subsystem name and a period. Consider the example
 
 ::
 
-      FILESPEC = A 
-      MASTER.FILESPEC = B
+      FILESPEC = A 
+      MASTER.FILESPEC = B
 
 combined with a later definition that incorporates ``FILESPEC`` in a
 macro:
 
 ::
 
-      USEFILE = mydir/$(FILESPEC)
+      USEFILE = mydir/$(FILESPEC)
 
 When the *condor_master* evaluates variable ``USEFILE``, it evaluates
 to ``mydir/B``. Previous to HTCondor version 8.1.1, it evaluated to
@@ -335,18 +334,18 @@ a local name on the command line using the command line option
 
 ::
 
-      -local-name <local-name>
+      -local-name <local-name>
 
 This allows multiple instances of a daemon to be run by the same
 *condor_master* daemon, each instance with its own local configuration
 variable.
 
-The ordering used to look up a variable, called <parameter name>:
+The ordering used to look up a variable, called <parameter name>:
 
-#. <subsystem name>.<local name>.<parameter name>
-#. <local name>.<parameter name>
-#. <subsystem name>.<parameter name>
-#. <parameter name>
+#. <subsystem name>.<local name>.<parameter name>
+#. <local name>.<parameter name>
+#. <subsystem name>.<parameter name>
+#. <parameter name>
 
 If this local name is not specified on the command line, numbers 1 and 2
 are skipped. As soon as the first match is found, the search is
@@ -357,15 +356,15 @@ daemons. The *condor_master* daemon needs the configuration:
 
 ::
 
-      XYZZY           = $(SCHEDD) 
-      XYZZY_ARGS      = -local-name xyzzy 
-      DAEMON_LIST     = $(DAEMON_LIST) XYZZY 
-      DC_DAEMON_LIST  = + XYZZY 
-      XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
+      XYZZY           = $(SCHEDD) 
+      XYZZY_ARGS      = -local-name xyzzy 
+      DAEMON_LIST     = $(DAEMON_LIST) XYZZY 
+      DC_DAEMON_LIST  = + XYZZY 
+      XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 
 Using this example configuration, the *condor_master* starts up a
 second *condor_schedd* daemon, where this second *condor_schedd*
-daemon is passed **-local-name **\ *xyzzy* on the command line.
+daemon is passed **-local-name** *xyzzy* on the command line.
 
 Continuing the example, configure the *condor_schedd* daemon named
 ``xyzzy``. This *condor_schedd* daemon will share all configuration
@@ -374,9 +373,9 @@ those specified separately.
 
 ::
 
-      SCHEDD.XYZZY.SCHEDD_NAME = XYZZY 
-      SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG) 
-      SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
+      SCHEDD.XYZZY.SCHEDD_NAME = XYZZY 
+      SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG) 
+      SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
 *condor_schedd* daemon, as opposed to a different daemon such as the
@@ -404,17 +403,17 @@ line continuation are
 
 ::
 
-      START = (KeyboardIdle > 15 * $(MINUTE)) && \ 
-      ((LoadAvg - CondorLoadAvg) <= 0.3)
+      START = (KeyboardIdle > 15 * $(MINUTE)) && \ 
+      ((LoadAvg - CondorLoadAvg) <= 0.3)
 
 and
 
 ::
 
-      ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \ 
-      stork.cs.wisc.edu, ostrich.cs.wisc.edu, \ 
-      bigbird.cs.wisc.edu 
-      ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
+      ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \ 
+      stork.cs.wisc.edu, ostrich.cs.wisc.edu, \ 
+      bigbird.cs.wisc.edu 
+      ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 
 Where a line continuation character directly precedes a comment, the
 entire comment line is ignored, and the following line is used in the
@@ -424,23 +423,23 @@ Both this example
 
 ::
 
-      A = $(B) \ 
-      # $(C) 
-      $(D)
+      A = $(B) \ 
+      # $(C) 
+      $(D)
 
 and this example
 
 ::
 
-      A = $(B) \ 
-      # $(C) \ 
-      $(D)
+      A = $(B) \ 
+      # $(C) \ 
+      $(D)
 
 result in the same value for A:
 
 ::
 
-      A = $(B) $(D)
+      A = $(B) $(D)
 
 Multi-Line Values
 -----------------
@@ -450,28 +449,28 @@ of text. The syntax for this is as follows:
 
 ::
 
-    <macro_name> @=<tag> 
-    <macro_definition lines> 
+    <macro_name> @=<tag> 
+    <macro_definition lines> 
     @<tag>
 
 For example:
 
 ::
 
-    JOB_ROUTER_DEFAULTS @=jrd 
-      [ 
-        requirements=target.WantJobRouter is True; 
-        MaxIdleJobs = 10; 
-        MaxJobs = 200; 
-     
-        /* now modify routed job attributes */ 
-        /* remove routed job if it goes on hold or stays idle for over 6 hours */ 
-        set_PeriodicRemove = JobStatus == 5 || 
-                            (JobStatus == 1 && (time() - QDate) > 3600*6); 
-        delete_WantJobRouter = true; 
-        set_requirements = true; 
-      ] 
-      @jrd
+    JOB_ROUTER_DEFAULTS @=jrd 
+      [ 
+        requirements=target.WantJobRouter is True; 
+        MaxIdleJobs = 10; 
+        MaxJobs = 200; 
+     
+        /* now modify routed job attributes */ 
+        /* remove routed job if it goes on hold or stays idle for over 6 hours */ 
+        set_PeriodicRemove = JobStatus == 5 || 
+                            (JobStatus == 1 && (time() - QDate) > 3600*6); 
+        delete_WantJobRouter = true; 
+        set_requirements = true; 
+      ] 
+      @jrd
 
 Note that in this example, the square brackets are part of the
 JOB_ROUTER_DEFAULTS value.
@@ -495,7 +494,7 @@ An example:
 
 ::
 
-    LOCAL_CONFIG_FILE = /bin/make_the_config|
+    LOCAL_CONFIG_FILE = /bin/make_the_config|
 
 Program */bin/make_the_config* is executed, and its output is the set
 of configuration macros.
@@ -522,9 +521,9 @@ syntax:
 
 ::
 
-      include [ifexist] : <file> 
-      include : <cmdline>| 
-      include [ifexist] command [into <cache-file>] : <cmdline>
+      include [ifexist] : <file> 
+      include : <cmdline>| 
+      include [ifexist] command [into <cache-file>] : <cmdline>
 
 (Note that the ifexist and into options were added in version 8.5.7.
 Also note that the command option must be specified in order to use the
@@ -561,8 +560,8 @@ Consider the example
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
-      include : $(LOCAL_DIR)/$(FILE)
+      FILE = config.$(FULL_HOSTNAME) 
+      include : $(LOCAL_DIR)/$(FILE)
 
 Values are acquired for configuration variables ``FILE``, and
 ``LOCAL_DIR`` by immediate evaluation, causing variable
@@ -578,8 +577,8 @@ Consider the further example
 
 ::
 
-      SCRIPT_FILE = script.$(IP_ADDRESS) 
-      include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
+      SCRIPT_FILE = script.$(IP_ADDRESS) 
+      include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
 
 In this example, the bar character at the end of the line causes a
 script to be invoked, and the output of the script is incorporated into
@@ -599,8 +598,8 @@ to fail when reading it.
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
-      @include : $(LOCAL_DIR)/$(FILE)
+      FILE = config.$(FULL_HOSTNAME) 
+      @include : $(LOCAL_DIR)/$(FILE)
 
 A daemon older than version 8.1.6 will fail to start. Running an older
 *condor_config_val* identifies the ``@include`` line as being bad. A
@@ -608,8 +607,8 @@ daemon of HTCondor version 8.1.6 or more recent sees:
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
-      include : $(LOCAL_DIR)/$(FILE)
+      FILE = config.$(FULL_HOSTNAME) 
+      include : $(LOCAL_DIR)/$(FILE)
 
 and starts up successfully.
 
@@ -617,8 +616,8 @@ Here is an example using the new ifexist and into options:
 
 ::
 
-      # stuff.pl writes "STUFF=1" to stdout 
-      include ifexist command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
+      # stuff.pl writes "STUFF=1" to stdout 
+      include ifexist command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
 
 Reporting Errors and Warnings
 -----------------------------
@@ -633,8 +632,8 @@ The syntax for warning and error messages is as follows:
 
 ::
 
-      warning : <warning message> 
-      error : <error message>
+      warning : <warning message> 
+      error : <error message>
 
 The warning and error messages will be printed when the configuration
 file is used (when almost any HTCondor command is run, for example).
@@ -647,10 +646,10 @@ Here's an example of using an error message in a configuration file
 
 ::
 
-    # stuff.pl writes "STUFF=1" to stdout 
-    include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl 
-    if ! defined stuff 
-      error : stuff is needed! 
+    # stuff.pl writes "STUFF=1" to stdout 
+    include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl 
+    if ! defined stuff 
+      error : stuff is needed! 
     endif
 
 Conditionals in Configuration
@@ -664,18 +663,18 @@ syntax:
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         <statement> 
-         . . . 
-         <statement> 
-      endif
+      if <simple condition> 
+         <statement> 
+         . . . 
+         <statement> 
+      else 
+         <statement> 
+         . . . 
+         <statement> 
+      endif
 
 An else key word and statements are not required, such that simple if
-semantics are implemented. The <simple condition> does not permit
+semantics are implemented. The <simple condition> does not permit
 compound conditions. It optionally contains the exclamation point
 character (!) to represent the not operation, followed by
 
@@ -686,11 +685,11 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if defined MY_UNDEFINED_VARIABLE 
-            X = 12 
-         else 
-            X = -1 
-         endif
+         if defined MY_UNDEFINED_VARIABLE 
+            X = 12 
+         else 
+            X = -1 
+         endif
 
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
@@ -713,11 +712,11 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if version >= 8.1.6 
-            DO_X = True 
-         else 
-            DO_Y = True 
-         endif
+         if version >= 8.1.6 
+            DO_X = True 
+         else 
+            DO_Y = True 
+         endif
 
    results in defining ``DO_X`` as ``True`` if the current version of
    the daemon or tool reading this if statement is 8.1.6 or a more
@@ -734,31 +733,31 @@ The syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      elif <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      endif
+      if <simple condition> 
+         <statement> 
+         . . . 
+         <statement> 
+      elif <simple condition> 
+         <statement> 
+         . . . 
+         <statement> 
+      endif
 
 is the same as syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         if <simple condition> 
-            <statement> 
-            . . . 
-            <statement> 
-         endif 
-      endif
+      if <simple condition> 
+         <statement> 
+         . . . 
+         <statement> 
+      else 
+         if <simple condition> 
+            <statement> 
+            . . . 
+            <statement> 
+         endif 
+      endif
 
 Function Macros in Configuration
 --------------------------------
@@ -789,7 +788,7 @@ as given in these definitions.
 
     ::
 
-          A = $ENV(HOME)
+          A = $ENV(HOME)
 
     binds ``A`` to the value of the ``HOME`` environment variable.
 
@@ -849,7 +848,7 @@ as given in these definitions.
 
     ::
 
-          $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+          $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
  ``$RANDOM_INTEGER(min, max [, step])``
     :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
@@ -860,7 +859,7 @@ as given in these definitions.
 
     ::
 
-          $RANDOM_INTEGER(0, 8, 2)
+          $RANDOM_INTEGER(0, 8, 2)
 
  ``$REAL(item-to-convert)`` or
 ``$REAL(item-to-convert, format-specifier)``
@@ -881,7 +880,7 @@ as given in these definitions.
 
     ::
 
-          Name = abcdef
+          Name = abcdef
 
     -  ``$SUBSTR(Name, 2)`` is ``cdef``.
     -  ``$SUBSTR(Name, 0, -2)`` is ``abcd``.
@@ -1033,7 +1032,7 @@ determined automatically at run time but which can be overwritten.
     it was submitted, unless the user specifies ``ARCH`` and/or
     ``OPSYS`` explicitly in their submit file. See the *condor_submit*
     manual page on
-    page \ `condor_submit <../man-pages/condor_submit.html>`__ for
+    page \ `condor_submit <../man-pages/condor_submit.html>`__ for
     details.
 
 ``$(OPSYS)``\ :index:`OPSYS`
@@ -1079,18 +1078,16 @@ determined automatically at run time but which can be overwritten.
 
 ``$(FILESYSTEM_DOMAIN)``\ :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__, Shared File
+    evaluated on. See the :doc:`/admin-manual/configuration-macros` section, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
 
 ``$(UID_DOMAIN)``\ :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ for the full
+    evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
     description of this configuration variable.
 
 Since ``$(ARCH)`` and ``$(OPSYS)`` will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 
-      
+      

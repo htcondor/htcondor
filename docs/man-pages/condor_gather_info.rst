@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_gather\_info*
 ======================
@@ -94,10 +94,10 @@ The information gathered by this tool:
 Options
 -------
 
- **—jobid **\ *<ClusterId.ProcId>*
+ **—jobid **\ *<ClusterId.ProcId>*
     Data mine information about this HTCondor job from the local
     HTCondor installation and *condor\_schedd*.
- **—scratch **\ */path/to/directory*
+ **—scratch **\ */path/to/directory*
     A path to temporary space needed when building the output tar file.
     Defaults to ``/tmp/cgi-<PID>``, where ``<PID>`` is replaced by the
     process ID of *condor\_gather\_info*.
@@ -125,8 +125,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

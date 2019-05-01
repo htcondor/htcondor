@@ -1,4 +1,4 @@
-      
+      
 
 Stable Release Series 8.6
 =========================
@@ -266,21 +266,21 @@ Bugs Fixed:
    authentication was enabled. :ticket:`6520`
 -  Fixed a bug in Python API *htcondor.Secman().ping()* method which
    would sometimes result in a RunTimeError exception. :ticket:`6562`
--  Fixed a bug where ``policy: want_hold_if`` would always evict
+-  Fixed a bug where ``policy: want_hold_if`` would always evict
    standard universe jobs instead of putting them on hold. Instead, this
    policy now ignores standard universe jobs entirely. This means that
-   the metaknobs ``policy: hold_if_memory_exceeded`` and
-   ``policy: hold_if_cpus_exceeded`` will also ignore standard universe
+   the metaknobs ``policy: hold_if_memory_exceeded`` and
+   ``policy: hold_if_cpus_exceeded`` will also ignore standard universe
    jobs entirely (instead of its previous bad behavior of of letting
    standard universe jobs use more than their requested memory until the
    first time they were evicted, whereafter each restart would be
    immediately evicted). :ticket:`6583`
--  The metaknob ``policy: hold_if_memory_exceeded`` and
-   ``policy: preempt_if_memory_exceeded`` now ignore VM universe jobs.
+-  The metaknob ``policy: hold_if_memory_exceeded`` and
+   ``policy: preempt_if_memory_exceeded`` now ignore VM universe jobs.
    These jobs can't exceed their requested memory. :ticket:`6583`
 -  Fixed a bug which mischaracterized the ``MemoryUsage`` of VM universe
    jobs. This should allow VM universe jobs to run when
-   ``feature: Hold_If_Memory_Exceeded`` is enabled. :ticket:`6577`
+   ``feature: Hold_If_Memory_Exceeded`` is enabled. :ticket:`6577`
 -  Fixed a bug where the *condor\_shadow* could accidentally kill itself
    by not checking if it was attempting to change immutable attributes.
    :ticket:`6557`
@@ -870,4 +870,4 @@ Bugs Fixed:
    ``RequestMemory``, and the number of CPUs defaults to
    ``RequestCPUs``. :ticket:`5998`
 
-      
+      

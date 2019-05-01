@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_ping*
 ==============
@@ -11,9 +11,9 @@ Synopsis
 
 **condor\_ping** [**-help \| -version**\ ]
 
-**condor\_ping** [**-debug**\ ] [**-address  **\ *<a.b.c.d:port>*]
-[**-pool  **\ *host name*] [**-name  **\ *daemon name*]
-[**-type  **\ *subsystem*] [**-config  **\ *filename*] [**-quiet \|
+**condor\_ping** [**-debug**\ ] [**-address  **\ *<a.b.c.d:port>*]
+[**-pool  **\ *host name*] [**-name  **\ *daemon name*]
+[**-type  **\ *subsystem*] [**-config  **\ *filename*] [**-quiet \|
 -table \| -verbose**\ ] *token* [*token […]*\ ]
 
 Description
@@ -58,19 +58,19 @@ Options
     Display version information
  **-debug**
     Print extra debugging information as the command executes.
- **-config **\ *filename*
+ **-config **\ *filename*
     Attempt the negotiation based on the contents of the configuration
     file contents in file *filename*.
- **-address **\ *<a.b.c.d:port>*
+ **-address **\ *<a.b.c.d:port>*
     Target the given IP address with the negotiation attempt.
- **-pool **\ *hostname*
+ **-pool **\ *hostname*
     Target the given *host* with the negotiation attempt. May be
     combined with specifications defined by **name** and **type**
     options.
- **-name **\ *daemonname*
+ **-name **\ *daemonname*
     Target the daemon given by *daemonname* with the negotiation
     attempt.
- **-type **\ *subsystem*
+ **-type **\ *subsystem*
     Target the daemon identified by *subsystem*, one of the values of
     the predefined ``$(SUBSYSTEM)`` macro.
  **-quiet**
@@ -87,7 +87,7 @@ The example Unix command
 
 ::
 
-    condor_ping  -address "<127.0.0.1:9618>" -table READ WRITE DAEMON
+    condor_ping  -address "<127.0.0.1:9618>" -table READ WRITE DAEMON
 
 places double quote marks around the sinful string to prevent the less
 than and the greater than characters from causing redirect of input and
@@ -111,8 +111,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

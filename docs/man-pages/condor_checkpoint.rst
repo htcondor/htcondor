@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_checkpoint*
 ====================
@@ -12,9 +12,9 @@ Synopsis
 **condor\_checkpoint** [**-help \| -version**\ ]
 
 **condor\_checkpoint** [**-debug**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
-**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
+[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
+**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
+\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
 
 Description
 -----------
@@ -53,18 +53,18 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *hostname*
+ **-name **\ *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Apply this command only to machines matching the given ClassAd
     *expression*
  **-all**
@@ -83,7 +83,7 @@ To send a *condor\_checkpoint* command to two named machines:
 
 ::
 
-    % condor_checkpoint  robin cardinal
+    % condor_checkpoint  robin cardinal
 
 To send the *condor\_checkpoint* command to a machine within a pool of
 machines other than the local pool, use the **-pool** option. The
@@ -95,7 +95,7 @@ named **cae17** within the pool of machines that has
 
 ::
 
-    % condor_checkpoint -pool condor.cae.wisc.edu -name cae17
+    % condor_checkpoint -pool condor.cae.wisc.edu -name cae17
 
 Author
 ------
@@ -105,8 +105,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

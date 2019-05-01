@@ -1,4 +1,4 @@
-      
+      
 
 Job Monitor/Log Viewer
 ======================
@@ -92,4 +92,4 @@ Keyboard and Mouse Shortcuts
    -  Control + Right click - zoom out
    -  Shift + left click - re-center
 
-      
+      

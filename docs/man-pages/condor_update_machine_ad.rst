@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_update\_machine\_ad*
 =============================
@@ -12,8 +12,8 @@ Synopsis
 **condor\_update\_machine\_ad** [**-help \| -version**\ ]
 
 **condor\_update\_machine\_ad**
-[**-pool  **\ *centralmanagerhostname[:portnumber]*]
-[**-name  **\ *startdname*] *path/to/update-ad*
+[**-pool  **\ *centralmanagerhostname[:portnumber]*]
+[**-name  **\ *startdname*] *path/to/update-ad*
 
 Description
 -----------
@@ -31,7 +31,7 @@ of the file. Lines are of the form
 
 ::
 
-    <attribute> = <value>
+    <attribute> = <value>
 
 Changes to certain ClassAd attributes will cause the *condor\_startd* to
 regenerate values for other ClassAd attributes. An example of this is
@@ -45,10 +45,10 @@ Options
     Display usage information and exit
  **-version**
     Display the HTCondor version and exit
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *startdname*
+ **-name **\ *startdname*
     Send the command to a machine identified by *startdname*
 
 General Remarks
@@ -66,24 +66,24 @@ value of ClassAd attribute ``HasVM``:
 
 ::
 
-    echo "HasVM = True 
-    " | condor_update_machine_ad
+    echo "HasVM = True 
+    " | condor_update_machine_ad
 
 To prevent vm universe jobs from matching with the machine:
 
 ::
 
-    echo "HasVM = False 
-    " | condor_update_machine_ad
+    echo "HasVM = False 
+    " | condor_update_machine_ad
 
 To prevent vm universe jobs from matching with the machine and specify a
 reason:
 
 ::
 
-    echo "HasVM = False 
-    VMOfflineReason = \"Cosmic rays.\" 
-    " | condor_update_machine_ad
+    echo "HasVM = False 
+    VMOfflineReason = \"Cosmic rays.\" 
+    " | condor_update_machine_ad
 
 Note that the quotes around the reason are required by ClassAds, and
 they must be escaped because of the shell. Using a file instead of
@@ -104,8 +104,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 Java Applications
 =================
@@ -22,14 +22,14 @@ the pool for which HTCondor can use the Java Virtual Machine.
 
 ::
 
-    % condor_status -java 
-     
-    Name               JavaVendor Ver    State     Activity LoadAv  Mem  ActvtyTime 
-     
-    adelie01.cs.wisc.e Sun Micros 1.6.0_ Claimed   Busy     0.090   873  0+00:02:46 
-    adelie02.cs.wisc.e Sun Micros 1.6.0_ Owner     Idle     0.210   873  0+03:19:32 
-    slot10@bio.cs.wisc Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28 
-    slot2@bio.cs.wisc. Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28 
+    % condor_status -java 
+     
+    Name               JavaVendor Ver    State     Activity LoadAv  Mem  ActvtyTime 
+     
+    adelie01.cs.wisc.e Sun Micros 1.6.0_ Claimed   Busy     0.090   873  0+00:02:46 
+    adelie02.cs.wisc.e Sun Micros 1.6.0_ Owner     Idle     0.210   873  0+03:19:32 
+    slot10@bio.cs.wisc Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28 
+    slot2@bio.cs.wisc. Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28 
     ...
 
 If there is no output from the *condor\_status* command, then HTCondor
@@ -49,10 +49,10 @@ program, ``Hello.java``:
 
 ::
 
-    public class Hello { 
-            public static void main( String [] args ) { 
-                    System.out.println("Hello, world!\n"); 
-            } 
+    public class Hello { 
+            public static void main( String [] args ) { 
+                    System.out.println("Hello, world!\n"); 
+            } 
     }
 
 Build this program using your Java compiler. On most platforms, this is
@@ -60,7 +60,7 @@ accomplished with the command
 
 ::
 
-    javac Hello.java
+    javac Hello.java
 
 Submission to HTCondor requires a submit description file. If submitting
 where files are accessible using a shared file system, this simple
@@ -68,19 +68,19 @@ submit description file works:
 
 ::
 
-      #################### 
-      # 
-      # Example 1 
-      # Execute a single Java class 
-      # 
-      #################### 
-     
-      universe       = java 
-      executable     = Hello.class 
-      arguments      = Hello 
-      output         = Hello.output 
-      error          = Hello.error 
-      queue
+      #################### 
+      # 
+      # Example 1 
+      # Execute a single Java class 
+      # 
+      #################### 
+     
+      universe       = java 
+      executable     = Hello.class 
+      arguments      = Hello 
+      output         = Hello.output 
+      error          = Hello.error 
+      queue
 
 The Java universe must be explicitly selected.
 
@@ -95,33 +95,32 @@ submit description file becomes:
 
 ::
 
-      #################### 
-      # 
-      # Example 2 
-      # Execute a single Java class, 
-      # not on a shared file system 
-      # 
-      #################### 
-     
-      universe       = java 
-      executable     = Hello.class 
-      arguments      = Hello 
-      output         = Hello.output 
-      error          = Hello.error 
-      should_transfer_files = YES 
-      when_to_transfer_output = ON_EXIT 
-      queue
+      #################### 
+      # 
+      # Example 2 
+      # Execute a single Java class, 
+      # not on a shared file system 
+      # 
+      #################### 
+     
+      universe       = java 
+      executable     = Hello.class 
+      arguments      = Hello 
+      output         = Hello.output 
+      error          = Hello.error 
+      should_transfer_files = YES 
+      when_to_transfer_output = ON_EXIT 
+      queue
 
 For more information about using HTCondor's file transfer mechanisms,
-see section \ `Submitting a
-Job <../users-manual/submitting-a-job.html>`__.
+see the :doc:`/users-manual/submitting-a-job` section.
 
 To submit the job, where the submit description file is named
 ``Hello.cmd``, execute
 
 ::
 
-    condor_submit Hello.cmd
+    condor_submit Hello.cmd
 
 To monitor the job, the commands *condor\_q* and *condor\_rm* are used
 as with all jobs.
@@ -136,8 +135,8 @@ Less Simple Java Specifications
 
     ::
 
-        executable = Stooges.class 
-        transfer_input_files = Larry.class,Curly.class,Moe.class
+        executable = Stooges.class 
+        transfer_input_files = Larry.class,Curly.class,Moe.class
 
     The **executable**\ :index:`executable<single: executable; submit commands>`
     command does not change. It still identifies the class file that
@@ -151,7 +150,7 @@ Less Simple Java Specifications
 
     ::
 
-        % jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
+        % jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
@@ -163,8 +162,8 @@ Less Simple Java Specifications
 
     ::
 
-        executable = Library.jar 
-        jar_files = Library.jar
+        executable = Library.jar 
+        jar_files = Library.jar
 
     Note that the JVM must know whether it is receiving JAR files or
     class files. Therefore, HTCondor must also be informed, in order to
@@ -180,8 +179,8 @@ Less Simple Java Specifications
 
     ::
 
-        executable = sortmerge.jar 
-        jar_files = sortmerge.jar,statemap.jar
+        executable = sortmerge.jar 
+        jar_files = sortmerge.jar,statemap.jar
 
  Using a third-party JAR file.
     As HTCondor requires that all JAR files (third-party or not) be
@@ -193,8 +192,8 @@ Less Simple Java Specifications
 
     ::
 
-        executable = sortmerge.jar 
-        jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
+        executable = sortmerge.jar 
+        jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
 
  An executable JAR file.
     When the JAR file is an executable, specify the program's entry
@@ -203,9 +202,9 @@ Less Simple Java Specifications
 
     ::
 
-        executable = anexecutable.jar 
-        jar_files  = anexecutable.jar 
-        arguments  = some.main.ClassFile
+        executable = anexecutable.jar 
+        jar_files  = anexecutable.jar 
+        arguments  = some.main.ClassFile
 
  Discovering the main class within a JAR file.
     As of Java version 1.4, Java virtual machines have a **-jar**
@@ -220,13 +219,13 @@ Less Simple Java Specifications
 
     ::
 
-          java -jar OneJarFile.jar
+          java -jar OneJarFile.jar
 
     the equivalent version after discovery might look like
 
     ::
 
-          java -classpath OneJarFile.jar TheMainClass
+          java -classpath OneJarFile.jar TheMainClass
 
     The specified value for TheMainClass can be discovered by unjarring
     the JAR file, and looking for the MainClass definition in the
@@ -236,11 +235,11 @@ Less Simple Java Specifications
 
     ::
 
-          universe   = java 
-          executable =  OneJarFile.jar 
-          jar_files = OneJarFile.jar 
-          Arguments = TheMainClass More-Arguments 
-          queue
+          universe   = java 
+          executable =  OneJarFile.jar 
+          jar_files = OneJarFile.jar 
+          Arguments = TheMainClass More-Arguments 
+          queue
 
  Packages.
     :index:`using packages<single: using packages; Java>` An example of a Java class that
@@ -248,12 +247,12 @@ Less Simple Java Specifications
 
     ::
 
-        package hpc; 
-         
-         public class CondorDriver 
-         { 
-             // class definition here 
-         }
+        package hpc; 
+         
+         public class CondorDriver 
+         { 
+             // class definition here 
+         }
 
     The JVM needs to know the location of this package. It is passed as
     a command-line argument, implying the use of the naming convention
@@ -263,7 +262,7 @@ Less Simple Java Specifications
 
     ::
 
-        arguments = hpc.CondorDriver
+        arguments = hpc.CondorDriver
 
  JVM-version specific features.
     If the program uses Java features found only in certain JVMs, then
@@ -275,7 +274,7 @@ Less Simple Java Specifications
 
     ::
 
-        requirements = (JavaVersion=="3.2")
+        requirements = (JavaVersion=="3.2")
 
  Benchmark speeds.
     Each machine with Java capability in an HTCondor pool will execute a
@@ -291,7 +290,7 @@ Less Simple Java Specifications
 
     ::
 
-        requirements = (JavaMFlops>4.5)
+        requirements = (JavaMFlops>4.5)
 
  JVM options.
     Options to the JVM itself are specified in the submit description
@@ -299,7 +298,7 @@ Less Simple Java Specifications
 
     ::
 
-        java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
+        java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
 
     These options are those which go after the java command, but before
     the user's main class. Do not use this to set the classpath, as
@@ -333,32 +332,32 @@ example:
 
 ::
 
-    import java.io.*; 
-    import edu.wisc.cs.condor.chirp.*; 
-     
-    public class TestChirp { 
-     
-       public static void main( String args[] ) { 
-     
-          try { 
-             BufferedReader in = new BufferedReader( 
-                new InputStreamReader( 
-                   new ChirpInputStream("input"))); 
-     
-             PrintWriter out = new PrintWriter( 
-                new OutputStreamWriter( 
-                   new ChirpOutputStream("output"))); 
-     
-             while(true) { 
-                String line = in.readLine(); 
-                if(line==null) break; 
-                out.println(line); 
-             } 
-             out.close(); 
-          } catch( IOException e ) { 
-             System.out.println(e); 
-          } 
-       } 
+    import java.io.*; 
+    import edu.wisc.cs.condor.chirp.*; 
+     
+    public class TestChirp { 
+     
+       public static void main( String args[] ) { 
+     
+          try { 
+             BufferedReader in = new BufferedReader( 
+                new InputStreamReader( 
+                   new ChirpInputStream("input"))); 
+     
+             PrintWriter out = new PrintWriter( 
+                new OutputStreamWriter( 
+                   new ChirpOutputStream("output"))); 
+     
+             while(true) { 
+                String line = in.readLine(); 
+                if(line==null) break; 
+                out.println(line); 
+             } 
+             out.close(); 
+          } catch( IOException e ) { 
+             System.out.println(e); 
+          } 
+       } 
     }
 
 :index:`ChirpClient<single: ChirpClient; Chirp>`
@@ -370,32 +369,32 @@ in the HTCondor SDK, but here is a brief example:
 
 ::
 
-    import java.io.*; 
-    import edu.wisc.cs.condor.chirp.*; 
-     
-    public class TestChirp { 
-     
-       public static void main( String args[] ) { 
-     
-          try { 
-             ChirpClient client = new ChirpClient(); 
-             String message = "Hello, world!\n"; 
-             byte [] buffer = message.getBytes(); 
-     
-             // Note that we should check that actual==length. 
-             // However, skip it for clarity. 
-     
-             int fd = client.open("output","wct",0777); 
-             int actual = client.write(fd,buffer,0,buffer.length); 
-             client.close(fd); 
-     
-             client.rename("output","output.new"); 
-             client.unlink("output.new"); 
-     
-          } catch( IOException e ) { 
-             System.out.println(e); 
-          } 
-       } 
+    import java.io.*; 
+    import edu.wisc.cs.condor.chirp.*; 
+     
+    public class TestChirp { 
+     
+       public static void main( String args[] ) { 
+     
+          try { 
+             ChirpClient client = new ChirpClient(); 
+             String message = "Hello, world!\n"; 
+             byte [] buffer = message.getBytes(); 
+     
+             // Note that we should check that actual==length. 
+             // However, skip it for clarity. 
+     
+             int fd = client.open("output","wct",0777); 
+             int actual = client.write(fd,buffer,0,buffer.length); 
+             client.close(fd); 
+     
+             client.rename("output","output.new"); 
+             client.unlink("output.new"); 
+     
+          } catch( IOException e ) { 
+             System.out.println(e); 
+          } 
+       } 
     }
 
 :index:`Chirp.jar<single: Chirp.jar; Chirp>`
@@ -408,15 +407,15 @@ use Chirp I/O.
 
 ::
 
-    % condor_config_val LIB 
-    /usr/local/condor/lib 
-    % cp /usr/local/condor/lib/Chirp.jar .
+    % condor_config_val LIB 
+    /usr/local/condor/lib 
+    % cp /usr/local/condor/lib/Chirp.jar .
 
 Rebuild the program with the Chirp JAR file in the class path.
 
 ::
 
-    % javac -classpath Chirp.jar:. TestChirp.java
+    % javac -classpath Chirp.jar:. TestChirp.java
 
 The Chirp JAR file must be specified in the submit description file.
 Here is an example submit description file that works for both of the
@@ -424,11 +423,11 @@ given test programs:
 
 ::
 
-    universe = java 
-    executable = TestChirp.class 
-    arguments = TestChirp 
-    jar_files = Chirp.jar 
-    +WantIOProxy = True 
+    universe = java 
+    executable = TestChirp.class 
+    arguments = TestChirp 
+    jar_files = Chirp.jar 
+    +WantIOProxy = True 
     queue
 
-      
+      

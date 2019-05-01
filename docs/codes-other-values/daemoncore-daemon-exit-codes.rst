@@ -1,9 +1,9 @@
-      
+      
 
 DaemonCore Daemon Exit Codes
 ============================
 
-Table B.5: DaemonCore Daemon Exit Codes
+Table B.5: DaemonCore Daemon Exit Codes
 
 +-------------+----------------------------------------------------------------------------+
 | Exit Code   | Description                                                                |
@@ -13,4 +13,4 @@ Table B.5: DaemonCore Daemon Exit Codes
 | 99          | ``DAEMON_SHUTDOWN`` :index:`DAEMON_SHUTDOWN` evaluated to ``True``         |
 +-------------+----------------------------------------------------------------------------+
 
-      
+      

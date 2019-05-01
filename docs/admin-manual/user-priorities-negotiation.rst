@@ -1,4 +1,4 @@
-      
+      
 
 User Priorities and Negotiation
 ===============================
@@ -26,8 +26,7 @@ two priority values assigned to HTCondor users:
 
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
-priorities may be found in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+priorities may be found in the :doc:`/admin-manual/configuration-macros` section.
 
 Real User Priority (RUP)
 ------------------------
@@ -85,9 +84,7 @@ EUP may be useful:
     large EUP. This corresponds to a low priority for resources,
     therefore using resources not used by other HTCondor users.
  Remote Users
-    HTCondor's flocking feature (see section \ `Connecting HTCondor
-    Pools with
-    Flocking <../grid-computing/connecting-pools-with-flocking.html>`__)
+    HTCondor's flocking feature (see the :doc:`/grid-computing/connecting-pools-with-flocking` section)
     allows jobs to run in a pool other than the local one. In addition,
     the submit-only feature allows a user to submit jobs to another
     pool. In such situations, submitters from other domains can submit
@@ -100,7 +97,7 @@ EUP may be useful:
 The priority boost factors for individual users can be set with the
 **setfactor** option of *condor_userprio*. Details may be found in the
 *condor_userprio* manual page on
-page \ `condor_userprio <../man-pages/condor_userprio.html>`__.
+page \ `condor_userprio <../man-pages/condor_userprio.html>`__.
 
 Priorities in Negotiation and Preemption
 ----------------------------------------
@@ -140,7 +137,7 @@ expression to check if defined such as
 
 ::
 
-      (RemoteUserPrio =?= UNDEFINED)
+      (RemoteUserPrio =?= UNDEFINED)
 
 is likely necessary.
 
@@ -155,9 +152,8 @@ negotiation cycle. Therefore, the configuration variables
 :index:`PREEMPTION_REQUIREMENTS_STABLE` and and
 ``PREEMPTION_RANK_STABLE`` :index:`PREEMPTION_RANK_STABLE` exist
 to inform the *condor_negotiator* daemon that values may change. See
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for definitions of
 these configuration variables.
 
@@ -278,7 +274,7 @@ the following ordered list of items.
    those resources.
 #. Obtain a list of all job submitters (for the entire pool).
 #. Sort the list of all job submitters based on EUP (see section
-    `3.6.2 <#x34-2340003.6.2>`__ for an explanation of EUP). The
+    `3.6.2 <#x34-2340003.6.2>`__ for an explanation of EUP). The
    submitter with the best priority is first within the sorted list.
 #. Iterate until there are either no more resources to match, or no more
    jobs to match.
@@ -363,7 +359,7 @@ preempting a job that might already be running on that machine.
 Otherwise, give the machine to the job that the job ranks highest. If
 the machine ranked highest is already running a job, we may preempt
 running job for the new job. When preemption is enabled, a reasonable
-policy states that the user must have a 20% better priority in order for
+policy states that the user must have a 20% better priority in order for
 preemption to succeed. If the job has no preferences as to what sort of
 machine it gets, matchmaking gives it the first idle resource to meet
 its requirements.
@@ -402,7 +398,7 @@ specifies the group name:
 
 ::
 
-      accounting_group = group_physics
+      accounting_group = group_physics
 
 This command causes the job ClassAd attribute ``AcctGroup`` to be set
 with this group name.
@@ -412,7 +408,7 @@ job ClassAd attribute, an additional command specifies the user name:
 
 ::
 
-      accounting_group_user = albert
+      accounting_group_user = albert
 
 This command causes the job ClassAd attribute ``AcctGroupUser`` to be
 set with this user name.
@@ -425,7 +421,7 @@ example:
 
 ::
 
-    +AccountingGroup = "group_physics.albert"
+    +AccountingGroup = "group_physics.albert"
 
 In this previous method for defining accounting groups, the
 ``AccountingGroup`` attribute is a string, and it therefore must be
@@ -447,12 +443,12 @@ the appended domain, for example
 
 ::
 
-                                        Effective 
-    User Name                           Priority 
-    ------------------------------      --------- 
-    group_physics@example.com                0.50 
-    user@example.com                        23.11 
-    heavyuser@example.com                  111.13 
+                                        Effective 
+    User Name                           Priority 
+    ------------------------------      --------- 
+    group_physics@example.com                0.50 
+    user@example.com                        23.11 
+    heavyuser@example.com                  111.13 
     ...
 
 Additionally, the *condor_userprio* command allows administrators to
@@ -465,7 +461,7 @@ For example
 
 ::
 
-    condor_userprio -delete group_physics@example.com
+    condor_userprio -delete group_physics@example.com
 
 HTCondor removes entities itself as they are no longer relevant.
 Intervention by an administrator to delete entities can be beneficial
@@ -507,9 +503,9 @@ quotas in the configuration of the central manager:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry 
-      GROUP_QUOTA_group_physics =   20 
-      GROUP_QUOTA_group_chemistry = 10
+      GROUP_NAMES = group_physics, group_chemistry 
+      GROUP_QUOTA_group_physics =   20 
+      GROUP_QUOTA_group_chemistry = 10
 
 The implementation of quotas is hierarchical, such that quotas may be
 described for the tree of groups, subgroups, sub subgroups, etc. Group
@@ -553,12 +549,12 @@ many groups. Jobs identify which group they are in by setting the
 and
 **accounting_group_user**\ :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 commands within the submit description file, as specified in
-section \ `3.6.7 <#x34-2390003.6.7>`__. For example:
+section \ `3.6.7 <#x34-2390003.6.7>`__. For example:
 
 ::
 
-    accounting_group = group_physics 
-    accounting_group_user = einstein
+    accounting_group = group_physics 
+    accounting_group_user = einstein
 
 The size of the quotas may instead be expressed as a proportion. This is
 then referred to as a dynamic group quota, because the size of the quota
@@ -573,9 +569,9 @@ same. Configuration on the central manager becomes:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry 
-      GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33 
-      GROUP_QUOTA_DYNAMIC_group_physics =   0.66
+      GROUP_NAMES = group_physics, group_chemistry 
+      GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33 
+      GROUP_QUOTA_DYNAMIC_group_physics =   0.66
 
 The values of the quotas must be less than 1.0, indicating fractions of
 the pool's machines. As with static quota specification, if the sum of
@@ -592,22 +588,22 @@ Static quotas for these subgroups extend the example configuration:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_group_physics     =   20 
-      GROUP_QUOTA_group_physics.hep =   15 
-      GROUP_QUOTA_group_physics.lep =    5 
-      GROUP_QUOTA_group_chemistry   =   10
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
+      GROUP_QUOTA_group_physics     =   20 
+      GROUP_QUOTA_group_physics.hep =   15 
+      GROUP_QUOTA_group_physics.lep =    5 
+      GROUP_QUOTA_group_chemistry   =   10
 
 This hierarchy may be more useful when dynamic quotas are used. Here is
 the example, using dynamic quotas:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334 
-      GROUP_QUOTA_DYNAMIC_group_physics     =   0.66667 
-      GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75 
-      GROUP_QUOTA_DYNAMIC_group_physics.lep =   0.25
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
+      GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334 
+      GROUP_QUOTA_DYNAMIC_group_physics     =   0.66667 
+      GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75 
+      GROUP_QUOTA_DYNAMIC_group_physics.lep =   0.25
 
 The fraction of a subgroup's quota is expressed with respect to its
 parent group's quota. That is, the high-energy physics subgroup is
@@ -620,8 +616,8 @@ with the submit description file identification:
 
 ::
 
-    accounting_group = group_physics.hep 
-    accounting_group_user = higgs
+    accounting_group = group_physics.hep 
+    accounting_group_user = higgs
 
 In all these examples so far, the hierarchy is merely a notational
 convenience. Each of the examples could be implemented with a flat
@@ -640,15 +636,15 @@ the following example:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_group_physics     =   20 
-      GROUP_QUOTA_group_physics.hep =   15 
-      GROUP_QUOTA_group_physics.lep =    5 
-      GROUP_QUOTA_group_chemistry   =   10 
-      GROUP_ACCEPT_SURPLUS = false 
-      GROUP_ACCEPT_SURPLUS_group_physics = false 
-      GROUP_ACCEPT_SURPLUS_group_physics.lep = true 
-      GROUP_ACCEPT_SURPLUS_group_physics.hep = true
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
+      GROUP_QUOTA_group_physics     =   20 
+      GROUP_QUOTA_group_physics.hep =   15 
+      GROUP_QUOTA_group_physics.lep =    5 
+      GROUP_QUOTA_group_chemistry   =   10 
+      GROUP_ACCEPT_SURPLUS = false 
+      GROUP_ACCEPT_SURPLUS_group_physics = false 
+      GROUP_ACCEPT_SURPLUS_group_physics.lep = true 
+      GROUP_ACCEPT_SURPLUS_group_physics.hep = true
 
 This configuration is the same as above for the chemistry users.
 However, ``GROUP_ACCEPT_SURPLUS`` is set to ``False`` globally,
@@ -684,7 +680,7 @@ attributes for sorting with ``GROUP_SORT_EXPR``
 
 --------------
 
-Table 3.1: Attributes visible to GROUP_SORT_EXPR
+Table 3.1: Attributes visible to GROUP_SORT_EXPR
 
 +-----------------------+--------------------------------------------+
 | Attribute Name        | Description                                |
@@ -720,15 +716,15 @@ and the current usage by group. For example:
 
 ::
 
-    $ condor_userprio -quotas 
-    Last Priority Update: 11/12 15:18 
-    Group                    Effective  Config     Use    Subtree  Requested 
-    Name                       Quota     Quota   Surplus   Quota   Resources 
-    ------------------------ --------- --------- ------- --------- ---------- 
-    group_physics.hep            15.00     15.00 no          15.00         60 
-    group_physics.lep             5.00      5.00 no           5.00         60 
-    ------------------------ --------- --------- ------- --------- ---------- 
-    Number of users: 2                                 ByQuota
+    $ condor_userprio -quotas 
+    Last Priority Update: 11/12 15:18 
+    Group                    Effective  Config     Use    Subtree  Requested 
+    Name                       Quota     Quota   Surplus   Quota   Resources 
+    ------------------------ --------- --------- ------- --------- ---------- 
+    group_physics.hep            15.00     15.00 no          15.00         60 
+    group_physics.lep             5.00      5.00 no           5.00         60 
+    ------------------------ --------- --------- ------- --------- ---------- 
+    Number of users: 2                                 ByQuota
 
 This shows that there are two groups, each with 60 jobs in the queue.
 group_physics.hep has a quota of 15 machines, and group_physics.lep

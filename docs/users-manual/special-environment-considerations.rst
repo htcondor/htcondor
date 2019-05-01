@@ -1,4 +1,4 @@
-      
+      
 
 Special Environment Considerations
 ==================================
@@ -32,8 +32,7 @@ you have the following choices:
 The Center for High Throughput Computing hopes to improve upon how
 HTCondor deals with AFS authentication in a subsequent release.
 
-Please see section \ `Setting Up for Special
-Environments <../admin-manual/setting-up-special-environments.html>`__
+Please see the :doc:`/admin-manual/setting-up-special-environments` section
 for further discussion of this problem.
 
 NFS
@@ -58,7 +57,7 @@ description file solves the problem.
 
 ::
 
-      initialdir = /home/johndoe
+      initialdir = /home/johndoe
 
 :index:`cache flush on submit machine<single: cache flush on submit machine; NFS>`
 :index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
@@ -72,9 +71,9 @@ job may disable the flushing by setting
 
 ::
 
-      +IwdFlushNFSCache = False
+      +IwdFlushNFSCache = False
 
-in the job's submit description file. See page \ `Job ClassAd
+in the job's submit description file. See page \ `Job ClassAd
 Attributes <../classad-attributes/job-classad-attributes.html>`__ for a
 definition of the job ClassAd attribute.
 
@@ -98,7 +97,7 @@ HTCondor is running as root on a specific machine, use the command
 
 ::
 
-      condor_status -master -l <machine-name>
+      condor_status -master -l <machine-name>
 
 where <machine-name> is the name of the specified machine. This command
 displays the full condor\_master ClassAd; if the attribute ``RealUid``
@@ -120,7 +119,7 @@ perform a privileged operation.
 If daemons are not running with root access, make any and all files
 and/or directories that the job will touch readable and/or writable by
 the UID (user id) specified by the ``RealUid`` attribute. Often this may
-mean using the Unix command chmod 777 on the directory from which the
+mean using the Unix command chmod 777 on the directory from which the
 HTCondor job is submitted.
 
 Job Leases
@@ -171,7 +170,7 @@ As a special case, a submit description file setting of
 
 ::
 
-     job_lease_duration = 0
+     job_lease_duration = 0
 
 as well as utilizing submission other than *condor\_submit* that do not
 set ``JobLeaseDuration`` (such as using the web services interface)
@@ -180,4 +179,4 @@ undefined. This has the further effect of changing the duration of a
 claim lease, the amount of time that the execution machine waits before
 dropping a claim due to missing keep alive messages.
 
-      
+      

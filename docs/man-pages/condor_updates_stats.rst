@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_updates\_stats*
 ========================
@@ -86,17 +86,17 @@ interval is 5 minutes, *condor\_updates\_stats* displays:
 
 ::
 
-    $ condor_status -l host1 | condor_updates_stats --interval=300 
-    (Reading from stdin) 
-    *** Name/Machine = 'HOST1.cs.wisc.edu' MyType = 'Machine' *** 
-     Type: Main 
-       Stats: Total=2277, Seq=2276, Lost=3 (0.13%) 
-         0 @ Mon Feb 16 12:55:38 2004: Ok 
-      ... 
-        28 @ Mon Feb 16 10:35:38 2004: Missed 
-        29 @ Mon Feb 16 10:30:38 2004: Ok 
-      ... 
-       127 @ Mon Feb 16 02:20:38 2004: Ok
+    $ condor_status -l host1 | condor_updates_stats --interval=300 
+    (Reading from stdin) 
+    *** Name/Machine = 'HOST1.cs.wisc.edu' MyType = 'Machine' *** 
+     Type: Main 
+       Stats: Total=2277, Seq=2276, Lost=3 (0.13%) 
+         0 @ Mon Feb 16 12:55:38 2004: Ok 
+      ... 
+        28 @ Mon Feb 16 10:35:38 2004: Missed 
+        29 @ Mon Feb 16 10:30:38 2004: Ok 
+      ... 
+       127 @ Mon Feb 16 02:20:38 2004: Ok
 
 Within this display, update numbered 27, which occurs later in time than
 the missed update numbered 28, is Ok. Each change in state, in reverse
@@ -110,8 +110,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 Parallel Applications (Including MPI Applications)
 ==================================================
@@ -53,7 +53,7 @@ may be altered by placing the line
 
 ::
 
-    +ParallelShutdownPolicy = "WAIT_FOR_ALL"
+    +ParallelShutdownPolicy = "WAIT_FOR_ALL"
 
 in the submit description file. It causes HTCondor to wait until every
 node in the parallel job has completed to consider the job finished.
@@ -74,8 +74,7 @@ the difference between parallel and serial jobs. While any scheduler in
 a pool can send serial jobs to any machine, only the designated
 dedicated scheduler may send parallel universe jobs to a dedicated
 machine. Dedicated machines must be specially configured. See
-section \ `Setting Up for Special
-Environments <../admin-manual/setting-up-special-environments.html>`__
+the :doc:`/admin-manual/setting-up-special-environments` section
 for a description of the necessary configuration, as well as examples.
 Usually, a single dedicated scheduler is configured for a pool which can
 run parallel universe jobs, and this *condor\_schedd* daemon becomes the
@@ -89,11 +88,11 @@ jobs, this name will be defined to be the string
 
 ::
 
-      condor_status -const '!isUndefined(DedicatedScheduler)' \ 
-    -format "%s\t" Machine -format "%s\n" DedicatedScheduler 
-     
-    execute1.example.com DedicatedScheduler@submit.example.com 
-    execute2.example.com DedicatedScheduler@submit.example.com 
+      condor_status -const '!isUndefined(DedicatedScheduler)' \ 
+    -format "%s\t" Machine -format "%s\n" DedicatedScheduler 
+     
+    execute1.example.com DedicatedScheduler@submit.example.com 
+    execute2.example.com DedicatedScheduler@submit.example.com 
 
 If this command emits no lines of output, then then pool is not
 correctly configured to run parallel jobs. Make sure that the name of
@@ -102,7 +101,7 @@ the name of the *condor\_schedd* daemon, as returned by the command
 
 ::
 
-      condor_status -schedd
+      condor_status -schedd
 
 Submission Examples
 -------------------
@@ -114,16 +113,16 @@ that is as simple as possible:
 
 ::
 
-    ############################################# 
-    ##  submit description file for a parallel universe job 
-    ############################################# 
-    universe = parallel 
-    executable = /bin/sleep 
-    arguments = 30 
-    machine_count = 8 
-    log = log 
-    should_transfer_files = IF_NEEDED 
-    when_to_transfer_output = ON_EXIT 
+    ############################################# 
+    ##  submit description file for a parallel universe job 
+    ############################################# 
+    universe = parallel 
+    executable = /bin/sleep 
+    arguments = 30 
+    machine_count = 8 
+    log = log 
+    should_transfer_files = IF_NEEDED 
+    when_to_transfer_output = ON_EXIT 
     queue
 
 This job specifies the **universe** as **parallel**, letting HTCondor
@@ -156,18 +155,18 @@ RedHat platforms, the requirements expression may specify this:
 
 ::
 
-    ############################################# 
-    ##  submit description file for a parallel program 
-    ##  targeting RedHat machines 
-    ############################################# 
-    universe = parallel 
-    executable = /bin/sleep 
-    arguments = 30 
-    machine_count = 8 
-    log = log 
-    should_transfer_files = IF_NEEDED 
-    when_to_transfer_output = ON_EXIT 
-    requirements = (OpSysName == "RedHat") 
+    ############################################# 
+    ##  submit description file for a parallel program 
+    ##  targeting RedHat machines 
+    ############################################# 
+    universe = parallel 
+    executable = /bin/sleep 
+    arguments = 30 
+    machine_count = 8 
+    log = log 
+    should_transfer_files = IF_NEEDED 
+    when_to_transfer_output = ON_EXIT 
+    requirements = (OpSysName == "RedHat") 
     queue
 
 The machine selection may be further narrowed, instead using the
@@ -175,37 +174,37 @@ The machine selection may be further narrowed, instead using the
 
 ::
 
-    ############################################# 
-    ##  submit description file for a parallel program 
-    ##  targeting RedHat 6 machines 
-    ############################################# 
-    universe = parallel 
-    executable = /bin/sleep 
-    arguments = 30 
-    machine_count = 8 
-    log = log 
-    should_transfer_files = IF_NEEDED 
-    when_to_transfer_output = ON_EXIT 
-    requirements = (OpSysAndVer == "RedHat6") 
+    ############################################# 
+    ##  submit description file for a parallel program 
+    ##  targeting RedHat 6 machines 
+    ############################################# 
+    universe = parallel 
+    executable = /bin/sleep 
+    arguments = 30 
+    machine_count = 8 
+    log = log 
+    should_transfer_files = IF_NEEDED 
+    when_to_transfer_output = ON_EXIT 
+    requirements = (OpSysAndVer == "RedHat6") 
     queue
 
  Using the ``$(Node)`` Macro
 
 ::
 
-    ###################################### 
-    ## submit description file for a parallel program 
-    ## showing the $(Node) macro 
-    ###################################### 
-    universe = parallel 
-    executable = /bin/cat 
-    log = logfile 
-    input = infile.$(Node) 
-    output = outfile.$(Node) 
-    error = errfile.$(Node) 
-    machine_count = 4 
-    should_transfer_files = IF_NEEDED 
-    when_to_transfer_output = ON_EXIT 
+    ###################################### 
+    ## submit description file for a parallel program 
+    ## showing the $(Node) macro 
+    ###################################### 
+    universe = parallel 
+    executable = /bin/cat 
+    log = logfile 
+    input = infile.$(Node) 
+    output = outfile.$(Node) 
+    error = errfile.$(Node) 
+    machine_count = 4 
+    should_transfer_files = IF_NEEDED 
+    when_to_transfer_output = ON_EXIT 
     queue
 
 The ``$(Node)`` macro is expanded to values of 0-3 as the job instances
@@ -222,18 +221,18 @@ command that also specifies the number of needed machines.
 
 ::
 
-    ###################################### 
-    ## Example submit description file 
-    ## with 4 total machines and differing requirements 
-    ###################################### 
-    universe = parallel 
-    executable = special.exe 
-    machine_count = 1 
-    requirements = ( machine == "machine1@example.com") 
-    queue 
-     
-    machine_count = 3 
-    requirements = ( machine =!= "machine1@example.com") 
+    ###################################### 
+    ## Example submit description file 
+    ## with 4 total machines and differing requirements 
+    ###################################### 
+    universe = parallel 
+    executable = special.exe 
+    machine_count = 1 
+    requirements = ( machine == "machine1@example.com") 
+    queue 
+     
+    machine_count = 3 
+    requirements = ( machine =!= "machine1@example.com") 
     queue
 
 The dedicated scheduler acquires and claims four machines. All four
@@ -253,20 +252,20 @@ multiple cores within the same slot, multi-core slots may be specified.
 
 ::
 
-    ###################################### 
-    ## submit description file for a parallel program 
-    ## that needs 8-core slots 
-    ###################################### 
-    universe = parallel 
-    executable = foo.sh 
-    log = logfile 
-    input = infile.$(Node) 
-    output = outfile.$(Node) 
-    error = errfile.$(Node) 
-    machine_count = 2 
-    request_cpus = 8 
-    should_transfer_files = IF_NEEDED 
-    when_to_transfer_output = ON_EXIT 
+    ###################################### 
+    ## submit description file for a parallel program 
+    ## that needs 8-core slots 
+    ###################################### 
+    universe = parallel 
+    executable = foo.sh 
+    log = logfile 
+    input = infile.$(Node) 
+    output = outfile.$(Node) 
+    error = errfile.$(Node) 
+    machine_count = 2 
+    request_cpus = 8 
+    should_transfer_files = IF_NEEDED 
+    when_to_transfer_output = ON_EXIT 
     queue
 
 This parallel job causes the scheduler to match and claim two machines,
@@ -284,8 +283,8 @@ compared with the request that contains
 
 ::
 
-    machine_count = 16 
-    request_cpus = 1
+    machine_count = 16 
+    request_cpus = 1
 
 The interaction of the eight cores within the single slot may be
 advantageous with respect to communication delay or memory access. But,
@@ -317,18 +316,18 @@ Here is a sample submit description file for an MPICH MPI application:
 
 ::
 
-    ###################################### 
-    ## Example submit description file 
-    ## for MPICH 1 MPI 
-    ## works with MPICH 1.2.4, 1.2.5 and 1.2.6 
-    ###################################### 
-    universe = parallel 
-    executable = mp1script 
-    arguments = my_mpich_linked_executable arg1 arg2 
-    machine_count = 4 
-    should_transfer_files = yes 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = my_mpich_linked_executable 
+    ###################################### 
+    ## Example submit description file 
+    ## for MPICH 1 MPI 
+    ## works with MPICH 1.2.4, 1.2.5 and 1.2.6 
+    ###################################### 
+    universe = parallel 
+    executable = mp1script 
+    arguments = my_mpich_linked_executable arg1 arg2 
+    machine_count = 4 
+    should_transfer_files = yes 
+    when_to_transfer_output = on_exit 
+    transfer_input_files = my_mpich_linked_executable 
     queue
 
 The **executable**\ :index:`executable<single: executable; submit commands>` is the
@@ -349,17 +348,17 @@ MPI application:
 
 ::
 
-    ###################################### 
-    ## Example submit description file 
-    ## for Open MPI 
-    ###################################### 
-    universe = parallel 
-    executable = openmpiscript 
-    arguments = my_openmpi_linked_executable arg1 arg2 
-    machine_count = 4 
-    should_transfer_files = yes 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = my_openmpi_linked_executable 
+    ###################################### 
+    ## Example submit description file 
+    ## for Open MPI 
+    ###################################### 
+    universe = parallel 
+    executable = openmpiscript 
+    arguments = my_openmpi_linked_executable arg1 arg2 
+    machine_count = 4 
+    should_transfer_files = yes 
+    when_to_transfer_output = on_exit 
+    transfer_input_files = my_openmpi_linked_executable 
     queue
 
 Most MPI implementations require two system-wide prerequisites. The
@@ -418,17 +417,17 @@ using static libraries and a static version of ``mpirun`` is available.
 
 ::
 
-    ############################################################ 
-    ##   submit description file for 
-    ##   static build of MPI under the vanilla universe 
-    ############################################################ 
-    universe = vanilla 
-    executable = /path/to/mpirun 
-    request_cpus = 2 
-    arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3 
-    should_transfer_files = yes 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = my_mpi_linked_executable 
+    ############################################################ 
+    ##   submit description file for 
+    ##   static build of MPI under the vanilla universe 
+    ############################################################ 
+    universe = vanilla 
+    executable = /path/to/mpirun 
+    request_cpus = 2 
+    arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3 
+    should_transfer_files = yes 
+    when_to_transfer_output = on_exit 
+    transfer_input_files = my_mpi_linked_executable 
     queue
 
 If CDE is to be used, then CDE needs to be run first to create the
@@ -437,7 +436,7 @@ command
 
 ::
 
-    prompt-> cde mpirun -n 2 my_mpi_linked_executable
+    prompt-> cde mpirun -n 2 my_mpi_linked_executable
 
 creates a directory tree that will contain all libraries needed for the
 program. By creating a tarball of this directory, the user can package
@@ -448,17 +447,17 @@ contains the directory tree created by CDE.
 
 ::
 
-    ############################################################ 
-    ##   submit description file for 
-    ##   MPI under the vanilla universe; CDE used 
-    ############################################################ 
-    universe = vanilla 
-    executable = cde_script.sh 
-    request_cpus = 2 
-    should_transfer_files = yes 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = cde_my_mpi_linked_executable.tar 
-    transfer_output_files = cde-package/cde-root/path/to/original/directory 
+    ############################################################ 
+    ##   submit description file for 
+    ##   MPI under the vanilla universe; CDE used 
+    ############################################################ 
+    universe = vanilla 
+    executable = cde_script.sh 
+    request_cpus = 2 
+    should_transfer_files = yes 
+    when_to_transfer_output = on_exit 
+    transfer_input_files = cde_my_mpi_linked_executable.tar 
+    transfer_output_files = cde-package/cde-root/path/to/original/directory 
     queue
 
 The executable is now a specialized shell script tailored to this job.
@@ -466,19 +465,19 @@ In this example, *cde\_script.sh* contains:
 
 ::
 
-    #!/bin/sh 
-    # Untar the CDE package 
-    tar xpf cde_my_mpi_linked_executable.tar 
-    # cd to the subdirectory where I need to run 
-    cd cde-package/cde-root/path/to/original/directory 
-    # Run my command 
-    ./mpirun.cde -n 2 ./my_mpi_linked_executable 
-    # Since HTCondor will transfer the contents of this directory 
-    # back upon job completion. 
-    # We do not want the .cde command and the executable transferred back. 
-    # To prevent the transfer, remove both files. 
-    rm -f mpirun.cde 
-    rm -f my_mpi_linked_executable
+    #!/bin/sh 
+    # Untar the CDE package 
+    tar xpf cde_my_mpi_linked_executable.tar 
+    # cd to the subdirectory where I need to run 
+    cd cde-package/cde-root/path/to/original/directory 
+    # Run my command 
+    ./mpirun.cde -n 2 ./my_mpi_linked_executable 
+    # Since HTCondor will transfer the contents of this directory 
+    # back upon job completion. 
+    # We do not want the .cde command and the executable transferred back. 
+    # To prevent the transfer, remove both files. 
+    rm -f mpirun.cde 
+    rm -f my_mpi_linked_executable
 
 Any additional input files that will be needed for the executable that
 are not already in the tarball should be included in the list in
@@ -486,4 +485,4 @@ are not already in the tarball should be included in the list in
 command. The corresponding script should then also be updated to move
 those files into the directory where the executable will be run.
 
-      
+      

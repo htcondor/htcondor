@@ -1,4 +1,4 @@
-      
+      
 
 The HTCondorView Client Contrib Module
 ======================================
@@ -30,7 +30,7 @@ Step-by-Step Installation of the HTCondorView Client
 :index:`Client installation<single: Client installation; HTCondorView>`
 
 #. Make certain that the HTCondorView Server is configured. Section
-    `Setting Up for Special
+    `Setting Up for Special
    Environments <../admin-manual/setting-up-special-environments.html>`__
    describes configuration of the server. The server logs information on
    disk in order to provide a persistent, historical database of pool
@@ -42,8 +42,8 @@ Step-by-Step Installation of the HTCondorView Client
 
    ::
 
-           POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data 
-           KEEP_POOL_HISTORY = True
+           POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data 
+           KEEP_POOL_HISTORY = True
 
 #. Create a directory where HTCondorView is to place the HTML files.
    This directory should be one published by a web server, so that HTML
@@ -58,7 +58,7 @@ Step-by-Step Installation of the HTCondorView Client
 
    ::
 
-         jar -xf condorview.jar
+         jar -xf condorview.jar
 
 #. Edit the *make_stats* script. At the beginning of the file are six
    parameters to customize. The parameters are
@@ -88,14 +88,14 @@ Step-by-Step Installation of the HTCondorView Client
 
        ::
 
-                   PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin 
-                   
+                   PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin 
+                   
 
 #. To create all of the initial HTML files, run
 
    ::
 
-               ./make_stats setup
+               ./make_stats setup
 
    Open the file ``index.html`` to verify that things look good.
    :index:`use of<single: use of; HTCondorView>` :index:`crontab program`
@@ -117,7 +117,7 @@ Step-by-Step Installation of the HTCondorView Client
 
    ::
 
-         crontab cronentries
+         crontab cronentries
 
    can set the crontab file; note that this command overwrites the
    current, existing crontab file with the entries from the file

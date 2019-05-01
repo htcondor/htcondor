@@ -1,4 +1,4 @@
-      
+      
 
 Introduction
 ============
@@ -248,7 +248,7 @@ started under HTCondor and what they do:
  *condor\_procd*
     This daemon controls and monitors process families within HTCondor.
     Its use is optional in general, but it must be used if group-ID
-    based tracking (see Section \ `Setting Up for Special
+    based tracking (see Section \ `Setting Up for Special
     Environments <../admin-manual/setting-up-special-environments.html>`__)
     is enabled. :index:`condor_job_router daemon`
  *condor\_job\_router*
@@ -279,4 +279,4 @@ to provide optional functionality. :index:`condor_hdfs daemon`
     This daemon manages the configuration of a Hadoop file system as
     well as the invocation of a properly configured Hadoop file system.
 
-      
+      

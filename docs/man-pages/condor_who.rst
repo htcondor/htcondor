@@ -1,4 +1,4 @@
-      
+      
 
 *condor_who*
 ============
@@ -61,15 +61,15 @@ Options
     (help option) Display extra information helpful for debugging
  **-verbose**
     (help option) Display PIDs and addresses of daemons
- **-address **\ *hostaddress*
+ **-address **\ *hostaddress*
     (address option) Identify the *condor_startd* host address to query
  **-allpids**
     (address option) Query all local *condor_startd* daemons
- **-logdir **\ *directoryname*
+ **-logdir **\ *directoryname*
     (address option) Specifies the directory containing log and address
     files that *condor_who* will scan to search for command ports of
     *condor_start* daemons to query
- **-pid **\ *PID*
+ **-pid **\ *PID*
     (address option) Use the given *PID* to identify the
     *condor_startd* daemon to query
  **-long**
@@ -77,7 +77,7 @@ Options
  **-wide**
     (display option) Displays fields without truncating them in order to
     fit screen width
- **-format **\ *fmt attr*
+ **-format **\ *fmt attr*
     (display option) Display attribute *attr* in format *fmt*. To
     display the attribute or expression the format must contain a single
     ``printf(3)``-style conversion specifier. Attributes must be from
@@ -102,7 +102,7 @@ Options
     conversion specifiers may be specified, but an attribute is still
     required. Include a backslash followed by an ‘n' to specify a line
     break.
- **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
     (display option) Display attribute(s) or expression(s) formatted in
     a default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -152,39 +152,39 @@ shown in this example output.
 
 ::
 
-    % condor_who 
-     
-    OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
-    smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:00:08 7776 D:\scratch\condor\execut
+    % condor_who 
+     
+    OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
+    smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:00:08 7776 D:\scratch\condor\execut
 
 Example 2 Verbose sample output.
 
 ::
 
-    % condor_who -verbose 
-     
-    LOG directory "D:\scratch\condor\master\test/log" 
-     
-    Daemon       PID      Exit       Addr                     Log, Log.Old 
-    ------       ---      ----       ----                     ---, ------- 
-    Collector    6788                <128.105.136.32:7977> CollectorLog, CollectorLog.old 
-    Credd        8148                <128.105.136.32:9620> CredLog, CredLog.old 
-    Master       5976                <128.105.136.32:64980> MasterLog, 
-    Match MatchLog, MatchLog.old 
-    Negotiator   6600 NegotiatorLog, NegotiatorLog.old 
-    Schedd       6336                <128.105.136.32:64985> SchedLog, SchedLog.old 
-    Shadow ShadowLog, 
-    Slot1 StarterLog.slot1, 
-    Slot2        7272                <128.105.136.32:65026> StarterLog.slot2, 
-    Slot3 StarterLog.slot3, 
-    Slot4 StarterLog.slot4, 
-    SoftKill SoftKillLog, 
-    Startd       7416                <128.105.136.32:64984> StartLog, StartLog.old 
-    Starter StarterLog, 
-    TOOL                                                      TOOLLog, 
-     
-    OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
-    smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:01:28 7776 D:\scratch\condor\execut
+    % condor_who -verbose 
+     
+    LOG directory "D:\scratch\condor\master\test/log" 
+     
+    Daemon       PID      Exit       Addr                     Log, Log.Old 
+    ------       ---      ----       ----                     ---, ------- 
+    Collector    6788                <128.105.136.32:7977> CollectorLog, CollectorLog.old 
+    Credd        8148                <128.105.136.32:9620> CredLog, CredLog.old 
+    Master       5976                <128.105.136.32:64980> MasterLog, 
+    Match MatchLog, MatchLog.old 
+    Negotiator   6600 NegotiatorLog, NegotiatorLog.old 
+    Schedd       6336                <128.105.136.32:64985> SchedLog, SchedLog.old 
+    Shadow ShadowLog, 
+    Slot1 StarterLog.slot1, 
+    Slot2        7272                <128.105.136.32:65026> StarterLog.slot2, 
+    Slot3 StarterLog.slot3, 
+    Slot4 StarterLog.slot4, 
+    SoftKill SoftKillLog, 
+    Startd       7416                <128.105.136.32:64984> StartLog, StartLog.old 
+    Starter StarterLog, 
+    TOOL                                                      TOOLLog, 
+     
+    OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
+    smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:01:28 7776 D:\scratch\condor\execut
 
 Exit Status
 -----------
@@ -200,8 +200,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

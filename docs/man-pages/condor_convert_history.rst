@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_convert\_history*
 ==========================
@@ -45,8 +45,8 @@ platform variants, the easiest way to do this is:
 
 ::
 
-    cd `condor_config_val SPOOL` 
-    condor_convert_history history*
+    cd `condor_config_val SPOOL` 
+    condor_convert_history history*
 
 *condor\_convert\_history* makes a back up of each original history
 files in case of a problem. The names of these back up files are listed;
@@ -69,8 +69,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

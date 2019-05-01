@@ -1,4 +1,4 @@
-      
+      
 
 Priorities and Preemption
 =========================
@@ -24,9 +24,8 @@ a higher job priority than 5.
 
 For the simple case, each job can be given a distinct priority. For an
 already queued job, its priority may be set with the *condor\_prio*
-command; see the example in section \ `Managing a
-Job <../users-manual/managing-a-job.html>`__, or the *condor\_prio*
-manual page \ `condor\_prio <../man-pages/condor_prio.html>`__ for
+command; see the example in the :doc:`/users-manual/managing-a-job` section, or the *condor\_prio*
+manual page \ `condor\_prio <../man-pages/condor_prio.html>`__ for
 details. This sets the value of job ClassAd attribute ``JobPrio``.
 
 A fine-grained categorization of jobs and their ordering is available
@@ -44,7 +43,7 @@ numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor\_userprio*
 command (see
-page \ `condor\_userprio <../man-pages/condor_userprio.html>`__).
+page \ `condor\_userprio <../man-pages/condor_userprio.html>`__).
 :index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ HTCondor
 administrators can set and change individual user priorities with the
 same utility.
@@ -98,7 +97,7 @@ from or even if the user submits jobs from multiple machines.
 :index:`nice job` :index:`nice job<single: nice job; priority>`
 
 An extra feature is the ability to submit a job as a nice job (see
-page \ `condor\_submit <../man-pages/condor_submit.html>`__). Nice jobs
+page \ `condor\_submit <../man-pages/condor_submit.html>`__). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar
@@ -144,4 +143,4 @@ For jobs submitted into the vanilla universe, the default value for
 ``KillSig`` is SIGTERM, the usual method to nicely terminate a Unix
 program.
 
-      
+      

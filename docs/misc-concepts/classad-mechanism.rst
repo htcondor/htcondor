@@ -1,4 +1,4 @@
-      
+      
 
 HTCondor's ClassAd Mechanism
 ============================
@@ -13,27 +13,27 @@ this mechanism is required to harness the full flexibility of the
 HTCondor system.
 
 A ClassAd is is a set of uniquely named expressions. Each named
-expression is called an attribute. Figure \ `4.1 <#x48-3980021>`__ shows
+expression is called an attribute. Figure \ `4.1 <#x48-3980021>`__ shows
 ten attributes, a portion of an example ClassAd.
 
 --------------
 
 ::
 
-    MyType       = "Machine" 
-    TargetType   = "Job" 
-    Machine      = "froth.cs.wisc.edu" 
-    Arch         = "INTEL" 
-    OpSys        = "LINUX" 
-    Disk         = 35882 
-    Memory       = 128 
-    KeyboardIdle = 173 
-    LoadAvg      = 0.1000 
-    Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
+    MyType       = "Machine" 
+    TargetType   = "Job" 
+    Machine      = "froth.cs.wisc.edu" 
+    Arch         = "INTEL" 
+    OpSys        = "LINUX" 
+    Disk         = 35882 
+    Memory       = 128 
+    KeyboardIdle = 173 
+    LoadAvg      = 0.1000 
+    Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
 
 | 
 
-Figure 4.1: An example ClassAd
+Figure 4.1: An example ClassAd
 
 --------------
 
@@ -55,7 +55,7 @@ operators so that they can operate on all possible values in the ClassAd
 system. For example, the multiplication operator which usually only
 operates on numbers, has a well defined behavior if supplied with values
 which are not meaningful to multiply. Thus, the expression
-10 \* "A string" evaluates to the value ``ERROR``. Most operators are
+10 \* "A string" evaluates to the value ``ERROR``. Most operators are
 strict with respect to ``ERROR``, which means that they evaluate to
 ``ERROR`` if any of their operands are ``ERROR``. Similarly, most
 operators are strict with respect to ``UNDEFINED``.
@@ -96,18 +96,18 @@ example ClassAd presented in both forms. The Old form:
 
 ::
 
-    Foo = 3 
-    Bar = "ab\"cd\ef" 
-    Moo = Foo =!= Undefined
+    Foo = 3 
+    Bar = "ab\"cd\ef" 
+    Moo = Foo =!= Undefined
 
 The New form:
 
 ::
 
-    [ 
-    Foo = 3; 
-    Bar = "ab\"cd\\ef"; 
-    Moo = Foo isnt Undefined; 
+    [ 
+    Foo = 3; 
+    Bar = "ab\"cd\\ef"; 
+    Moo = Foo isnt Undefined; 
     ]
 
 HTCondor will convert to and from Old ClassAd syntax as needed.
@@ -215,23 +215,23 @@ New ClassAd Operators
 
 The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
-precedence is shown in figure \ `4.2 <#x48-4040022>`__.
+precedence is shown in figure \ `4.2 <#x48-4040022>`__.
 
 --------------
 
 ::
 
-      - (unary negation)   (high precedence) 
-      *   / 
-      +   - (addition, subtraction) 
-      <   <=   >=   > 
-      ==  !=  =?=  is  =!=  isnt 
-      && 
-      ||                   (low precedence)
+      - (unary negation)   (high precedence) 
+      *   / 
+      +   - (addition, subtraction) 
+      <   <=   >=   > 
+      ==  !=  =?=  is  =!=  isnt 
+      && 
+      ||                   (low precedence)
 
 | 
 
-Figure 4.2: Relative precedence of ClassAd expression operators
+Figure 4.2: Relative precedence of ClassAd expression operators
 
 --------------
 
@@ -261,7 +261,7 @@ given as
 
 ::
 
-    ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
+    ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 
 Optional parameters are given within square brackets.
 :index:`eval()<single: eval(); ClassAd functions>`
@@ -448,18 +448,18 @@ Optional parameters are given within square brackets.
 
     ::
 
-             8     = quantize(3, 8) 
-             4     = quantize(3, 2) 
-             0     = quantize(0, 4) 
-             6.8   = quantize(1.5, 6.8) 
-             7.2   = quantize(6.8, 1.2) 
-             10.2  = quantize(10, 5.1) 
-         
-             4     = quantize(0, {4}) 
-             2     = quantize(2, {1, 2, "A"}) 
-             3.0   = quantize(3, {1, 2, 0.5}) 
-             3.0   = quantize(2.7, {1, 2, 0.5}) 
-             ERROR = quantize(3, {1, 2, "A"})
+             8     = quantize(3, 8) 
+             4     = quantize(3, 2) 
+             0     = quantize(0, 4) 
+             6.8   = quantize(1.5, 6.8) 
+             7.2   = quantize(6.8, 1.2) 
+             10.2  = quantize(10, 5.1) 
+         
+             4     = quantize(0, {4}) 
+             2     = quantize(2, {1, 2, "A"}) 
+             3.0   = quantize(3, {1, 2, 0.5}) 
+             3.0   = quantize(2.7, {1, 2, 0.5}) 
+             ERROR = quantize(3, {1, 2, "A"})
 
     :index:`round()<single: round(); ClassAd functions>`
 
@@ -478,7 +478,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`random()<single: random(); ClassAd functions>`
 
- ``Integer random([ AnyType Expr ])``
+ ``Integer random([ AnyType Expr ])``
     Where the optional argument ``Expr`` evaluates to type ``Integer``
     or type ``Real`` (and called ``x``), the return value is the integer
     or real ``r`` randomly chosen from the interval ``0 <= r < x``. With
@@ -488,14 +488,14 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if greater than 1 argument is given.
     :index:`strcat()<single: strcat(); ClassAd functions>`
 
- ``String strcat(AnyType Expr1 [ , AnyType Expr2 …])``
+ ``String strcat(AnyType Expr1 [ , AnyType Expr2 …])``
     Returns the string which is the concatenation of all arguments,
     where all arguments are converted to type ``String`` by function
     ``string(Expr)``. Returns ``ERROR`` if any argument evaluates to
     ``UNDEFINED`` or ``ERROR``.
     :index:`join()<single: join(); ClassAd functions>`
 
- ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 …])`` OR ``String join(String sep, List list`` OR ``String join(List list``
+ ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 …])`` OR ``String join(String sep, List list`` OR ``String join(List list``
     Returns the string which is the concatenation of all arguments after
     the first one. The first argument is the separator, and it is
     inserted between each of the other arguments during concatenation.
@@ -513,13 +513,13 @@ Optional parameters are given within square brackets.
 
     ::
 
-            "a, b, c" = join(", ", "a", "b", "c") 
-            "abc"   = join(split("a b c")) 
-            "a;b;c" = join(";", split("a b c"))
+            "a, b, c" = join(", ", "a", "b", "c") 
+            "abc"   = join(split("a b c")) 
+            "a;b;c" = join(";", split("a b c"))
 
     :index:`substr()<single: substr(); ClassAd functions>`
 
- ``String substr(String s, Integer offset [ , Integer length ])``
+ ``String substr(String s, Integer offset [ , Integer length ])``
     Returns the substring of ``s``, from the position indicated by
     ``offset``, with (optional) ``length`` characters. The first
     character within ``s`` is at offset 0. If the optional ``length``
@@ -582,7 +582,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`split()<single: split(); ClassAd functions>`
 
- ``List split(String s [ , String tokens ] )``
+ ``List split(String s [ , String tokens ] )``
     Returns a list of the substrings of ``s`` that have been split up by
     using any of the characters within string ``tokens``. If ``tokens``
     is not specified, then all white space characters are used to
@@ -594,10 +594,10 @@ Optional parameters are given within square brackets.
     comes before the ``@`` character, and the second string in the list
     will be the substring that comes after. Thus, if ``Name`` is
     ``"user@domain"``, then the returned list will be
-    {"user", "domain"}. If there is no ``@`` character in ``Name``, then
+    {"user", "domain"}. If there is no ``@`` character in ``Name``, then
     the first string in the list will be ``Name``, and the second string
     in the list will be the empty string. Thus, if ``Name`` is
-    ``"username"``, then the returned list will be {"username", ""}.
+    ``"username"``, then the returned list will be {"username", ""}.
     :index:`splitSlotName()<single: splitSlotName(); ClassAd functions>`
  ``List splitSlotName(String Name)``
     Returns a list of two strings. Where ``Name`` includes an ``@``
@@ -605,16 +605,16 @@ Optional parameters are given within square brackets.
     comes before the ``@`` character, and the second string in the list
     will be the substring that comes after. Thus, if ``Name`` is
     ``"slot1@machine"``, then the returned list will be
-    {"slot1", "machine"}. If there is no ``@`` character in ``Name``,
+    {"slot1", "machine"}. If there is no ``@`` character in ``Name``,
     then the first string in the list will be the empty string, and the
     second string in the list will be ``Name``, Thus, if ``Name`` is
     ``"machinename"``, then the returned list will be
-    {"", "machinename"}. :index:`time()<single: time(); ClassAd functions>`
+    {"", "machinename"}. :index:`time()<single: time(); ClassAd functions>`
  ``Integer time()``
     Returns the current coordinated universal time. This is the time, in
     seconds, since midnight of January 1, 1970.
     :index:`formatTime()<single: formatTime(); ClassAd functions>`
- ``String formatTime([ Integer time ] [ , String format ])``
+ ``String formatTime([ Integer time ] [ , String format ])``
     Returns a formatted string that is a representation of ``time``. The
     argument ``time`` is interpreted as coordinated universal time in
     seconds, since midnight of January 1, 1970. If not specified,
@@ -724,7 +724,7 @@ delimiter contains the comma and space characters. A string within the
 list is ended (delimited) by one or more characters within the delimiter
 string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
 
- ``Integer stringListSize(String list [ , String delimiter ])``
+ ``Integer stringListSize(String list [ , String delimiter ])``
     Returns the number of elements in the string ``list``, as delimited
     by the optional ``delimiter`` string. Returns ``ERROR`` if either
     argument is not a string.
@@ -732,7 +732,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     This function returns ``ERROR`` if other than 1 or 2 arguments are
     given. :index:`stringListSum()<single: stringListSum(); ClassAd functions>`
 
- ``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``    Sums and returns the sum of all items in the string ``list``, as
+ ``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``    Sums and returns the sum of all items in the string ``list``, as
     delimited by the optional ``delimiter`` string. If all items in the
     list are integers, the return value is also an integer. If any item
     in the list is a real value (noninteger), the return value is a
@@ -740,14 +740,14 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     return value is ``ERROR``.
     :index:`stringListAvg()<single: stringListAvg(); ClassAd functions>`
 
- ``Real stringListAvg(String list [ , String delimiter ])``
+ ``Real stringListAvg(String list [ , String delimiter ])``
     Sums and returns the real-valued average of all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If any
     item does not represent an integer or real value, the return value
     is ``ERROR``. A list with 0 items (the empty list) returns the value
     0.0. :index:`stringListMin()<single: stringListMin(); ClassAd functions>`
 
- ``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``    Finds and returns the minimum value from all items in the string
+ ``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``    Finds and returns the minimum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -756,7 +756,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     list) returns the value ``UNDEFINED``.
     :index:`stringListMax()<single: stringListMax(); ClassAd functions>`
 
- ``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``    Finds and returns the maximum value from all items in the string
+ ``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``    Finds and returns the maximum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -765,7 +765,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     list) returns the value ``UNDEFINED``.
     :index:`stringListMember()<single: stringListMember(); ClassAd functions>`
 
-``Boolean stringListMember(String x, String list [ , String delimiter ])``
+``Boolean stringListMember(String x, String list [ , String delimiter ])``
     Returns ``TRUE`` if item ``x`` is in the string ``list``, as
     delimited by the optional ``delimiter`` string. Returns ``FALSE`` if
     item ``x`` is not in the string ``list``. Comparison is done with
@@ -773,12 +773,12 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     are not strings.
     :index:`stringListIMember()<single: stringListIMember(); ClassAd functions>`
 
-``Boolean stringListIMember(String x, String list [ , String delimiter ])``
+``Boolean stringListIMember(String x, String list [ , String delimiter ])``
     Same as ``stringListMember()``, but comparison is done with
     ``stricmp()``, so letter case is not relevant.
     :index:`stringListsIntersect()<single: stringListsIntersect(); ClassAd functions>`
 
-``Integer stringListsIntersect(String list1, String list2 [ , String delimiter ])``
+``Integer stringListsIntersect(String list1, String list2 [ , String delimiter ])``
     Returns ``TRUE`` if the lists contain any matching elements, and
     returns ``FALSE`` if the lists do not contain any matching elements.
     Returns ``ERROR`` if either argument is not a string or if an
@@ -817,7 +817,7 @@ characters other than these as options are ignored.
 
 :index:`regexp()<single: regexp(); ClassAd functions>`
 
- ``Boolean regexp(String pattern, String target [ , String options ])``
+ ``Boolean regexp(String pattern, String target [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns ``TRUE`` when ``target``
     matches the regular expression given by ``pattern``. Returns
@@ -825,7 +825,7 @@ characters other than these as options are ignored.
     ``pattern`` does not describe a valid regular expression, returns
     ``ERROR``. :index:`regexps()<single: regexps(); ClassAd functions>`
  ``String regexps``
-    ``(String pattern, String target, String substitute [ , String options ]) ``
+    ``(String pattern, String target, String substitute [ , String options ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. When ``target`` matches the regular
     expression given by ``pattern``, the string ``substitute`` is
@@ -833,7 +833,7 @@ characters other than these as options are ignored.
     a string, returns ``ERROR``.
     :index:`replace()<single: replace(); ClassAd functions>`
  ``String replace``
-    ``(String pattern, String target, String substitute [ , String options      ]) ``
+    ``(String pattern, String target, String substitute [ , String options      ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where the first substring that matches ``pattern`` is
@@ -842,7 +842,7 @@ characters other than these as options are ignored.
     argument is not a string, returns ``ERROR``.
     :index:`replaceall()<single: replaceall(); ClassAd functions>`
  ``String replaceall``
-    ``(String pattern, String target, String substitute [ ,      String options ]) ``
+    ``(String pattern, String target, String substitute [ ,      String options ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where every substring that matches ``pattern`` is
@@ -851,7 +851,7 @@ characters other than these as options are ignored.
     any argument is not a string, returns ``ERROR``.
     :index:`stringList_regexpMember()<single: stringList_regexpMember(); ClassAd functions>`
  ``Boolean stringList_regexpMember``
-    ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
+    ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
     Uses the description of a regular expression given by string
     ``pattern`` to scan through the list of strings in ``list``. Returns
     ``TRUE`` when one of the strings in ``list`` is a regular expression
@@ -861,7 +861,7 @@ characters other than these as options are ignored.
     any entries in ``list``. The return value is ``ERROR``, if any of
     the arguments are not strings, or if ``pattern`` is not a valid
     regular expression. :index:`userHome()<single: userHome(); ClassAd functions>`
- ``String userHome(String userName [ , String default ])``
+ ``String userHome(String userName [ , String default ])``
     Returns the home directory of the given user as configured on the
     current system (determined using the getpwdnam() call). (Returns
     ``default`` if the ``default`` argument is passed and the home
@@ -886,11 +886,10 @@ characters other than these as options are ignored.
     the user belongs to no groups.
 
     The maps for the ``userMap()`` function are defined by the following
-    configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` (see
-     `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__),
-    ``CLASSAD_USER_MAPFILE_<name> (see  3.5.1)`` and
-    ``CLASSAD_USER_MAPDATA_<name> (see  3.5.1)``.
+    configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES``,
+    ``CLASSAD_USER_MAPFILE_<name> and ``CLASSAD_USER_MAPDATA_<name> (see  3.5.1)``
+    (see the :ref:`admin-manual/configuration-macros:htcondor-wide
+    configuration file entries` section).
 
 Old ClassAd Evaluation Semantics
 --------------------------------
@@ -993,9 +992,9 @@ have these exceptional values.
    #. In addition, the operators =?=, is, =!= and isnt behave similar to
       == and !=, but are not strict. Semantically, the =?= and is test
       if their operands are “identical,” i.e., have the same type and
-      the same value. For example, 10 == UNDEFINED and
-      UNDEFINED == UNDEFINED both evaluate to ``UNDEFINED``, but
-      10 =?= UNDEFINED and UNDEFINED is UNDEFINED evaluate to ``FALSE``
+      the same value. For example, 10 == UNDEFINED and
+      UNDEFINED == UNDEFINED both evaluate to ``UNDEFINED``, but
+      10 =?= UNDEFINED and UNDEFINED is UNDEFINED evaluate to ``FALSE``
       and ``TRUE`` respectively. The =!= and isnt operators test for the
       “is not identical to” condition.
 
@@ -1011,10 +1010,10 @@ have these exceptional values.
       non-zero values ``TRUE``.
    #. The operators are not strict, and exploit the "don't care"
       properties of the operators to squash ``UNDEFINED`` and ``ERROR``
-      values when possible. For example, UNDEFINED && FALSE evaluates to
-      ``FALSE``, but UNDEFINED \|\| FALSE evaluates to ``UNDEFINED``.
+      values when possible. For example, UNDEFINED && FALSE evaluates to
+      ``FALSE``, but UNDEFINED \|\| FALSE evaluates to ``UNDEFINED``.
    #. Any string operand is equivalent to an ``ERROR`` operand for a
-      logical operator. In other words, TRUE && "foobar" evaluates to
+      logical operator. In other words, TRUE && "foobar" evaluates to
       ``ERROR``.
 
 -  **The Ternary operator:**
@@ -1041,9 +1040,9 @@ right hand side operand, returning ``TRUE`` when they are identical.
 case-sensitive with the =?= operator.** A key point in understanding is that 
 the ``=?=`` operator only produces evaluation results of ``TRUE`` and 
 ``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``, 
-``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`__ presents
+``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`__ presents
 examples that define the outcome of the ``==`` operator.
-Table \ `4.2 <#x48-4100032>`__ presents examples that define the outcome
+Table \ `4.2 <#x48-4100032>`__ presents examples that define the outcome
 of the ``=?=`` operator.
 
 +-------------------------------+---------------------------+
@@ -1062,7 +1061,7 @@ of the ``=?=`` operator.
 | ``(UNDEFINED == UNDEFINED)``  | ``UNDEFINED``             |
 +-------------------------------+---------------------------+
 
-Table 4.1: Evaluation examples for the ``==`` operator
+Table 4.1: Evaluation examples for the ``==`` operator
 
 +-------------------------------+----------------------+
 | **expression**                | **evaluated result** |
@@ -1080,7 +1079,7 @@ Table 4.1: Evaluation examples for the ``==`` operator
 | ``(UNDEFINED =?= UNDEFINED)`` | ``TRUE``             |
 +-------------------------------+----------------------+
 
-Table 4.2: Evaluation examples for the ``=?=`` operator
+Table 4.2: Evaluation examples for the ``=?=`` operator
 
 
 The ``=!=`` operator is similar to the ``!=`` operator. It checks if the
@@ -1091,8 +1090,8 @@ operator and case-sensitive with the =!= operator.** A key point in
 understanding is that the ``=!=`` operator only produces evaluation results 
 of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation 
 results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``. 
-Table \ `4.3 <#x48-4100043>`__ presents examples that define the outcome of 
-the ``!=`` operator. Table \ `4.4 <#x48-4100054>`__ presents examples that 
+Table \ `4.3 <#x48-4100043>`__ presents examples that define the outcome of 
+the ``!=`` operator. Table \ `4.4 <#x48-4100054>`__ presents examples that 
 define the outcome of the ``=!=`` operator.
 
 +-------------------------------+----------------------------+
@@ -1111,7 +1110,7 @@ define the outcome of the ``=!=`` operator.
 | ``(UNDEFINED != UNDEFINED)``  | ``UNDEFINED``              |
 +-------------------------------+----------------------------+
 
-Table 4.3: Evaluation examples for the ``!=`` operator
+Table 4.3: Evaluation examples for the ``!=`` operator
 
 
 +-------------------------------+-----------------------+
@@ -1130,7 +1129,7 @@ Table 4.3: Evaluation examples for the ``!=`` operator
 | ``(UNDEFINED =!= UNDEFINED)`` | ``FALSE``             |
 +-------------------------------+-----------------------+
 
-Table 4.4: Evaluation examples for the ``=!=`` operator
+Table 4.4: Evaluation examples for the ``=!=`` operator
 
 --------------
 
@@ -1166,8 +1165,8 @@ For example, a job ClassAd may contain the following expressions:
 
 ::
 
-    Requirements = (Arch == "INTEL") && (OpSys == "LINUX") 
-    Rank         = TARGET.Memory + TARGET.Mips
+    Requirements = (Arch == "INTEL") && (OpSys == "LINUX") 
+    Rank         = TARGET.Memory + TARGET.Mips
 
 In this case, the job requires a 32-bit Intel processor running a Linux
 operating system. Among all such computers, the customer prefers those
@@ -1182,12 +1181,12 @@ that it will run by setting the machine's configuration. For example,
 
 ::
 
-        Friend        = Owner == "tannenba" || Owner == "wright" 
-        ResearchGroup = Owner == "jbasney" || Owner == "raman" 
-        Trusted       = Owner != "rival" && Owner != "riffraff" 
-        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 && 
-                             KeyboardIdle > 15*60 ) 
-        RANK          = Friend + ResearchGroup*10
+        Friend        = Owner == "tannenba" || Owner == "wright" 
+        ResearchGroup = Owner == "jbasney" || Owner == "raman" 
+        Trusted       = Owner != "rival" && Owner != "riffraff" 
+        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 && 
+                             KeyboardIdle > 15*60 ) 
+        RANK          = Friend + ResearchGroup*10
 
 The above policy states that the computer will never run jobs owned by
 users rival and riffraff, while the computer will always run a job
@@ -1226,30 +1225,30 @@ memory, the desired ClassAd expression is
 
 ::
 
-    KeyboardIdle > 60*60 && Memory > 4000
+    KeyboardIdle > 60*60 && Memory > 4000
 
 On a Unix platform, the command appears as
 
 ::
 
-    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000' 
-     
-    Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime 
-    100 
-    slot1@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:46 
-    slot2@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:47 
-    ... 
-    ... 
-    slot1@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:04 
-    slot2@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:05 
-    ... 
+    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000' 
+     
+    Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime 
+    100 
+    slot1@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:46 
+    slot2@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:47 
+    ... 
+    ... 
+    slot1@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:04 
+    slot2@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:05 
+    ... 
     ...
 
 The Windows equivalent command is
 
 ::
 
-    >condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
+    >condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
@@ -1259,30 +1258,30 @@ expression that contains a ClassAd function.
 
 ::
 
-    % cat ad 
-    MyType = "Generic" 
-    FauxType = "DBMS" 
-    Name = "random-test" 
-    Machine = "f05.cs.wisc.edu" 
-    MyAddress = "<128.105.149.105:34000>" 
-    DaemonStartTime = 1153192799 
-    UpdateSequenceNumber = 1 
-     
-    % condor_advertise UPDATE_AD_GENERIC ad 
-     
-    % condor_status -any -constraint 'FauxType=="DBMS" && 
-      regexp("random.*", Name, "i")' 
-     
-    MyType               TargetType           Name 
-     
-    Generic              None                 random-test 
+    % cat ad 
+    MyType = "Generic" 
+    FauxType = "DBMS" 
+    Name = "random-test" 
+    Machine = "f05.cs.wisc.edu" 
+    MyAddress = "<128.105.149.105:34000>" 
+    DaemonStartTime = 1153192799 
+    UpdateSequenceNumber = 1 
+     
+    % condor_advertise UPDATE_AD_GENERIC ad 
+     
+    % condor_status -any -constraint 'FauxType=="DBMS" && 
+      regexp("random.*", Name, "i")' 
+     
+    MyType               TargetType           Name 
+     
+    Generic              None                 random-test 
 
 The ClassAd expression describing a machine that advertises a Windows
 operating system:
 
 ::
 
-    OpSys == "WINDOWS"
+    OpSys == "WINDOWS"
 
 Here are three equivalent ways on a Unix platform to list all machines
 advertising a Windows operating system. Spaces appear in these examples
@@ -1290,15 +1289,15 @@ to show where they are permitted.
 
 ::
 
-    % condor_status -constraint ' OpSys == "WINDOWS"  '
+    % condor_status -constraint ' OpSys == "WINDOWS"  '
 
 ::
 
-    % condor_status -constraint OpSys==\"WINDOWS\"
+    % condor_status -constraint OpSys==\"WINDOWS\"
 
 ::
 
-    % condor_status -constraint "OpSys==\"WINDOWS\""
+    % condor_status -constraint "OpSys==\"WINDOWS\""
 
 The equivalent command on a Windows platform to list all machines
 advertising a Windows operating system must delimit the single argument
@@ -1308,7 +1307,7 @@ example where they are permitted.
 
 ::
 
-    >condor_status -constraint " OpSys == ""WINDOWS"" "
+    >condor_status -constraint " OpSys == ""WINDOWS"" "
 
 Extending ClassAds with User-written Functions
 ----------------------------------------------
@@ -1337,15 +1336,15 @@ the following steps on Linux:
 
    ::
 
-       $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \ 
-         -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
+       $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \ 
+         -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
 
 -  Copy the file ``shared.so`` to a location that all of the HTCondor
    tools and daemons can read.
 
    ::
 
-       $ cp shared.so `condor_config_val LIBEXEC`
+       $ cp shared.so `condor_config_val LIBEXEC`
 
 -  Tell HTCondor to load the shared library into all tools and daemons,
    by setting the ``CLASSAD_USER_LIBS`` :index:`CLASSAD_USER_LIBS`
@@ -1354,15 +1353,15 @@ the following steps on Linux:
 
    ::
 
-       CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
+       CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 
 -  Restart HTCondor.
 -  Test the new functions by running
 
    ::
 
-       $ condor_status -format "%s\n" todays_date()
+       $ condor_status -format "%s\n" todays_date()
 
 :index:`ClassAd`
 
-      
+      

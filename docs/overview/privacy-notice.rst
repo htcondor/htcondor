@@ -1,4 +1,4 @@
-      
+      
 
 Privacy Notice
 ==============
@@ -30,22 +30,22 @@ Example of data reported:
 
 ::
 
-    This is an automated email from the HTCondor system 
-    on machine "your.condor.pool.com".  Do not reply. 
-     
-    This Collector has the following IDs: 
-        HTCondor: 6.6.0 Nov 12 2003 
-        HTCondor: INTEL-LINUX-GLIBC22 
-     
-                         Machines Owner Claimed Unclaimed Matched Preempting 
-     
-             INTEL/LINUX      810    52     716        37       0          5 
-           INTEL/WINDOWS      120     5     115         0       0          0 
-         SUN4u/SOLARIS28      114    12      92         9       0          1 
-         SUN4x/SOLARIS28        5     1       0         4       0          0 
-                   Total     1049    70     923        50       0          6 
-     
-             RunningJobs                IdleJobs 
-                     920                    3868
+    This is an automated email from the HTCondor system 
+    on machine "your.condor.pool.com".  Do not reply. 
+     
+    This Collector has the following IDs: 
+        HTCondor: 6.6.0 Nov 12 2003 
+        HTCondor: INTEL-LINUX-GLIBC22 
+     
+                         Machines Owner Claimed Unclaimed Matched Preempting 
+     
+             INTEL/LINUX      810    52     716        37       0          5 
+           INTEL/WINDOWS      120     5     115         0       0          0 
+         SUN4u/SOLARIS28      114    12      92         9       0          1 
+         SUN4x/SOLARIS28        5     1       0         4       0          0 
+                   Total     1049    70     923        50       0          6 
+     
+             RunningJobs                IdleJobs 
+                     920                    3868
 
-      
+      

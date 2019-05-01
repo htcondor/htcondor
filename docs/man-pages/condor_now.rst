@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_now*
 =============
@@ -11,7 +11,7 @@ Synopsis
 
 **condor\_now** **-help**
 
-**condor\_now** [**-name  **\ **] [**-debug**\ ] *now-job* *vacate-job*
+**condor\_now** [**-name  **\ **] [**-debug**\ ] *now-job* *vacate-job*
 [*vacate-job+*\ ]
 
 Description
@@ -37,7 +37,7 @@ Options
  **-debug**
     Print debugging output. Control the verbosity with the environment
     variables \_CONDOR\_TOOL\_DEBUG, as usual.
- **-name **\ **
+ **-name **\ **
     Specify the scheduler('s name) and (optionally) the pool to find it
     in.
 
@@ -56,7 +56,7 @@ To begin running job 17.3 as soon as possible using job 4.2's slot:
 
 ::
 
-      condor_now 17.3 4.2
+      condor_now 17.3 4.2
 
 To try to figure out why that doesn't work for the ‘magic' scheduler in
 the 'gandalf' pool, set the environment variable \_CONDOR\_TOOL\_DEBUG
@@ -64,7 +64,7 @@ to ‘D\_FULLDEBUG' and then:
 
 ::
 
-      condor_now -debug -schedd magic -pool gandalf 17.3 4.2
+      condor_now -debug -schedd magic -pool gandalf 17.3 4.2
 
 Exit Status
 -----------
@@ -81,8 +81,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

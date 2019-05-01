@@ -1,4 +1,4 @@
-      
+      
 
 Networking (includes sections on Port Usage and CCB)
 ====================================================
@@ -13,7 +13,7 @@ in a pool that spans firewalls and private networks.
 The security section of the manual contains some information that is
 relevant to the discussion of network communication which will not be
 duplicated here, so please see
-section \ `Security <../admin-manual/security.html>`__ as well.
+the :doc:`/admin-manual/security` section as well.
 
 Firewalls, private networks, and network address translation (NAT) pose
 special problems for HTCondor. There are currently two main mechanisms
@@ -89,9 +89,8 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the ``<SUBSYS>_ADDRESS_FILE``
-configuration variables, as described in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+configuration variables, as described in the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__.
 
 NOTE: In the 6.6 stable series, and HTCondor versions earlier than
@@ -122,15 +121,15 @@ Instead of
 
 ::
 
-    CONDOR_HOST = machX.cs.wisc.edu 
-    COLLECTOR_HOST = $(CONDOR_HOST)
+    CONDOR_HOST = machX.cs.wisc.edu 
+    COLLECTOR_HOST = $(CONDOR_HOST)
 
 the configuration might be
 
 ::
 
-    CONDOR_HOST = machX.cs.wisc.edu 
-    COLLECTOR_HOST = $(CONDOR_HOST):9650
+    CONDOR_HOST = machX.cs.wisc.edu 
+    COLLECTOR_HOST = $(CONDOR_HOST):9650
 
 If a non standard port is defined, the same value of ``COLLECTOR_HOST``
 (including the port) must be used for all machines in the HTCondor pool.
@@ -145,7 +144,7 @@ argument can optionally be given a port number. For example:
 
 ::
 
-            % condor_status -pool foo.bar.org:1234
+            % condor_status -pool foo.bar.org:1234
 
 Using a Dynamically Assigned Port for the *condor_collector*
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -172,17 +171,15 @@ example:
 
 ::
 
-    COLLECTOR_HOST = $(CONDOR_HOST):0 
-    COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+    COLLECTOR_HOST = $(CONDOR_HOST):0 
+    COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__, and
-``COLLECTOR_HOST`` is in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+``COLLECTOR_HOST`` is in the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__.
 
 Restricting Port Usage to Operate with Firewalls
@@ -202,8 +199,7 @@ and dynamic (apparently random) ports for everything else. See
 assigned port is desired for the *condor_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
-single port. See section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for more
+single port. See the :doc:`/admin-manual/configuration-macros` section for more
 information.
 
 The configuration variables ``HIGHPORT`` :index:`HIGHPORT` and
@@ -211,8 +207,7 @@ The configuration variables ``HIGHPORT`` :index:`HIGHPORT` and
 of ports that HTCondor will use. This may be useful when some machines
 are behind a firewall. The configuration macros ``HIGHPORT`` and
 ``LOWPORT`` will restrict dynamic ports to the range specified. The
-configuration variables are fully defined in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. All of these
+configuration variables are fully defined in the :doc:`/admin-manual/configuration-macros` section. All of these
 ports must be greater than 0 and less than 65,536. Note that both
 ``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor version
 6.6.8. In general, use ports greater than 1024, in order to avoid port
@@ -227,8 +222,7 @@ The range of ports assigned may be restricted based on incoming
 variables ``IN_HIGHPORT`` :index:`IN_HIGHPORT`, ``IN_LOWPORT``
 :index:`IN_LOWPORT`, ``OUT_HIGHPORT`` :index:`OUT_HIGHPORT`,
 and ``OUT_LOWPORT`` :index:`OUT_LOWPORT`. See
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for complete
+the :doc:`/admin-manual/configuration-macros` section for complete
 definitions of these configuration variables. A range of ports lower
 than 1024 for daemons running as root is appropriate for incoming ports,
 but not for outgoing ports. The use of ports below 1024 (versus above
@@ -280,15 +274,15 @@ those machines not behind a firewall:
 
 ::
 
-    HIGHPORT = UNDEFINED 
-    LOWPORT  = UNDEFINED
+    HIGHPORT = UNDEFINED 
+    LOWPORT  = UNDEFINED
 
 If the maximum number of ports allocated using ``HIGHPORT`` and
 ``LOWPORT`` is too few, socket binding errors of the form
 
 ::
 
-    failed to bind any port within <$LOWPORT> - <$HIGHPORT>
+    failed to bind any port within <$LOWPORT> - <$HIGHPORT>
 
 are likely to appear repeatedly in log files.
 
@@ -363,7 +357,7 @@ setting the configuration variable
 
 ::
 
-      USE_SHARED_PORT = True
+      USE_SHARED_PORT = True
 
 the *condor_shared_port* daemon is treated specially. ``SHARED_PORT``
 :index:`SHARED_PORT` is automatically added to ``DAEMON_LIST``
@@ -380,7 +374,7 @@ shared port number 11000 is
 
 ::
 
-    COLLECTOR_HOST = cm.host.name:11000?sock=collector
+    COLLECTOR_HOST = cm.host.name:11000?sock=collector
 
 This example assumes that the socket name used by the
 *condor_collector* is ``collector``, and it runs on ``cm.host.name``.
@@ -391,7 +385,7 @@ the daemon's invocation arguments, as in the example:
 
 ::
 
-    COLLECTOR_ARGS = -sock collector
+    COLLECTOR_ARGS = -sock collector
 
 When the *condor_collector* address is a shared port, TCP updates will
 be automatically used instead of UDP, because the *condor_shared_port*
@@ -404,7 +398,7 @@ SOAP commands cannot be sent through the *condor_shared_port* daemon.
 However, a daemon may be configured to open a fixed, non-shared port, in
 addition to using a shared port. This is done both by setting
 ``USE_SHARED_PORT = True`` and by specifying a fixed port for the daemon
-using <SUBSYS>_ARGS = -p <portnum>.
+using <SUBSYS>_ARGS = -p <portnum>.
 
 The TCP connections required to manage standard universe jobs do not
 make use of shared ports. Therefore, if the firewall is configured to
@@ -448,7 +442,7 @@ set to ``False``:
 
 ::
 
-    BIND_ALL_INTERFACES = FALSE
+    BIND_ALL_INTERFACES = FALSE
 
 This functionality has limitations. Here are descriptions of the
 limitations.
@@ -542,16 +536,16 @@ In the central manager's global (to the cluster) configuration file:
 
 ::
 
-    CONDOR_HOST = farm-server.farm.org
+    CONDOR_HOST = farm-server.farm.org
 
 In the central manager's local configuration file:
 
 ::
 
-    NETWORK_INTERFACE = <IP address of farm-server.farm.org> 
-    NEGOTIATOR = $(SBIN)/condor_negotiator 
-    COLLECTOR = $(SBIN)/condor_collector 
-    DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
+    NETWORK_INTERFACE = <IP address of farm-server.farm.org> 
+    NEGOTIATOR = $(SBIN)/condor_negotiator 
+    COLLECTOR = $(SBIN)/condor_collector 
+    DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
 
 If the central manager and farm machines are all NT, then only vanilla
 universe will work now. However, if this is set up for Unix, then at
@@ -576,12 +570,12 @@ the farm) configuration file:
 
 ::
 
-    # If you have NFS 
-    USE_NFS = True 
-    # If you have AFS 
-    HAS_AFS = True 
-    USE_AFS = True 
-    # if you want both NFS and AFS, then enable both sets above
+    # If you have NFS 
+    USE_NFS = True 
+    # If you have AFS 
+    HAS_AFS = True 
+    USE_AFS = True 
+    # if you want both NFS and AFS, then enable both sets above
 
 Now, if the cluster is set up so that it is possible for a machine name
 to never have a domain name (for example, there is machine name but no
@@ -599,7 +593,7 @@ configuration file for the client should have
 
 ::
 
-      NETWORK_INTERFACE = <IP address of desired interface>
+      NETWORK_INTERFACE = <IP address of desired interface>
 
 A Checkpoint Server on a Machine with Multiple NICs
 '''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -691,8 +685,8 @@ network causes registration with the CCB server as in the example:
 
 ::
 
-      CCB_ADDRESS = $(COLLECTOR_HOST) 
-      PRIVATE_NETWORK_NAME = cs.wisc.edu
+      CCB_ADDRESS = $(COLLECTOR_HOST) 
+      PRIVATE_NETWORK_NAME = cs.wisc.edu
 
 The definition of ``PRIVATE_NETWORK_NAME`` ensures that all
 communication between nodes within the private network continues to
@@ -719,7 +713,7 @@ then CCB may be disabled in the *condor_master* by assigning
 
 ::
 
-      MASTER.CCB_ADDRESS =
+      MASTER.CCB_ADDRESS =
 
 Completing the count of TCP connections in this example: suppose the
 pool consists of 500 8-slot execute nodes and CCB is not disabled in the
@@ -730,7 +724,7 @@ it twice as many descriptors as needed by CCB alone:
 
 ::
 
-      COLLECTOR.MAX_FILE_DESCRIPTORS = 10000
+      COLLECTOR.MAX_FILE_DESCRIPTORS = 10000
 
 Security and CCB
 ''''''''''''''''
@@ -835,7 +829,7 @@ descriptor can be modified with the configuration:
 
 ::
 
-      COLLECTOR_MAX_FILE_DESCRIPTORS = 40960
+      COLLECTOR_MAX_FILE_DESCRIPTORS = 40960
 
 If there are insufficient file descriptors for all of the daemons
 sending updates to the *condor_collector*, a warning will be printed in
@@ -926,14 +920,14 @@ brackets around the address. For instance:
 
 ::
 
-    COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+    COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
 
 If you do not (or may not) specify a port, do not use the square
 brackets. For instance:
 
 ::
 
-    NETWORK_INTERFACE = 1234:5678::90ab
+    NETWORK_INTERFACE = 1234:5678::90ab
 
 IPv6 without DNS
 ''''''''''''''''
@@ -960,4 +954,4 @@ assuming
 
 :index:`IPv6`
 
-      
+      

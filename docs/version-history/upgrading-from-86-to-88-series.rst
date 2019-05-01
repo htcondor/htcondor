@@ -1,4 +1,4 @@
-      
+      
 
 Upgrading from the 8.6 series to the 8.8 series of HTCondor
 ===========================================================
@@ -9,7 +9,7 @@ Upgrading from the 8.6 series of HTCondor to the 8.8 series will bring
 new features introduced in the 8.7 series of HTCondor. These new
 features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
-version history: \ `Development Release Series
+version history: \ `Development Release Series
 8.7 <../version-history/development-release-series-87.html>`__):
 
 -  *condor\_annex* is tool to help users and administrators use cloud
@@ -64,12 +64,12 @@ is a list of items that administrators should be aware of.
 
    ::
 
-         RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
+         RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
 
    For pools with groups and quotas:
 
    ::
 
-         (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
+         (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
 
-      
+      

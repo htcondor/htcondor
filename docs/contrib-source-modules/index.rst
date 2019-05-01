@@ -7,4 +7,4 @@ Contrib and Source Modules
    
    introduction-contrib-source-modules
    view-client-contrib-module
-   job-monitor-log-viewer  
+   job-monitor-log-viewer  

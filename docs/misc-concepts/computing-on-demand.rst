@@ -1,4 +1,4 @@
-      
+      
 
 Computing On Demand (COD)
 =========================
@@ -87,7 +87,7 @@ the machine (usually in a local configuration file).
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
 authentication methods described in
-section \ `Security <../admin-manual/security.html>`__ on HTCondor's
+the :doc:`/admin-manual/security` section on HTCondor's
 Security Model. If one of these methods cannot be used, then file system
 authentication may be used when directly logging in to that machine (to
 be claimed) and issuing the command locally.
@@ -240,7 +240,7 @@ The following list of attributes are optional:
     :index:`Env<single: Env; optional attributes>`\ set for a given COD
     application. Each environment variable has the form NAME=value.
     Multiple variables are delimited with a semicolon. An example:
-    Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
+    Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
     attribute, and must therefore be enclosed in quotation marks (").
 
 ``Args``
@@ -267,7 +267,7 @@ The following list of attributes are optional:
     :index:`KillSig<single: KillSig; optional attributes>`\ sent whenever the
     HTCondor system needs to gracefully shutdown the COD application. It
     can either be specified as a string containing the signal name (for
-    example KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The
+    example KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The
     default is to use SIGTERM.
 
 ``StarterUserLog``
@@ -314,9 +314,8 @@ When using COD, the job ID is only used to identify the job in various
 log messages and in the COD-specific output of *condor_status*. The COD
 job ID is part of the information included in all events written to the
 ``StarterUserLog`` regarding a given job. The COD job ID is also used in
-the HTCondor debugging logs described in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
+the HTCondor debugging logs described in the :doc:`/admin-manual/configuration-macros` section on
+page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__. For example, in
 the *condor_starter* daemon's log file for COD jobs (called
 ``StarterLog.cod`` by default) or in the *condor_startd* daemon's log
@@ -370,18 +369,18 @@ configuration file may appear as:
 
 ::
 
-    FractGen_Cmd = "/usr/local/bin/fractgen" 
-    FractGen_Iwd = "/tmp/cod-fractgen" 
-    FractGen_Out = "/tmp/cod-fractgen/output" 
-    FractGen_Err = "/tmp/cod-fractgen/error" 
-    FractGen_Args = "mandelbrot -0.65865,-0.56254 -0.45865,-0.71254"
+    FractGen_Cmd = "/usr/local/bin/fractgen" 
+    FractGen_Iwd = "/tmp/cod-fractgen" 
+    FractGen_Out = "/tmp/cod-fractgen/output" 
+    FractGen_Err = "/tmp/cod-fractgen/error" 
+    FractGen_Args = "mandelbrot -0.65865,-0.56254 -0.45865,-0.71254"
 
 In this example, the executable may create other files. The ``Out`` and
 ``Err`` attributes specified in the configuration file are only for
 standard output and standard error redirection.
 
 When the user wishes to spawn an instance of this application, the
-command line condor_cod  activate appears with the -keyword FractGen
+command line condor_cod  activate appears with the -keyword FractGen
 option.
 
 NOTE: If a user is defining all attributes of their COD application in
@@ -458,14 +457,14 @@ tool. A command may be specified as the first argument to this tool, as
 
 ::
 
-    condor_cod request -name c02.cs.wisc.edu
+    condor_cod request -name c02.cs.wisc.edu
 
 or the *condor_cod* tool can be installed in such a way that the same
 binary is used for a set of names, as
 
 ::
 
-    condor_cod_request -name c02.cs.wisc.edu
+    condor_cod_request -name c02.cs.wisc.edu
 
 Other than the command name itself (which must be included in full)
 additional options supported by each tool can be abbreviated to the
@@ -497,7 +496,7 @@ the resource name (usually the host name). For example:
 
 ::
 
-    condor_cod_request -name c02.cs.wisc.edu
+    condor_cod_request -name c02.cs.wisc.edu
 
 If the *condor_startd* daemon desired belongs to a different HTCondor
 pool than the one where executing the COD commands, use the **-pool**
@@ -506,7 +505,7 @@ pool. For example:
 
 ::
 
-    condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
+    condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
 
 An alternative is to provide the IP address and port number where the
 *condor_startd* daemon is listening with the **-addr** option. This
@@ -516,7 +515,7 @@ attribute ``StartdIpAddr`` or by reading the log file when the
 
 ::
 
-    condor_cod_request -addr "<128.105.146.102:40967>"
+    condor_cod_request -addr "<128.105.146.102:40967>"
 
 If neither **-name** or **-addr** are specified, *condor_cod_request*
 attempts to connect to the *condor_startd* daemon running on the local
@@ -529,7 +528,7 @@ host name. For example:
 
 ::
 
-    condor_cod_request -name slot2@c02.cs.wisc.edu
+    condor_cod_request -name slot2@c02.cs.wisc.edu
 
 A constraint on what slot is desired may be provided, instead of
 specifying it by name. For example, to run on machine c02.cs.wisc.edu,
@@ -538,7 +537,7 @@ currently running a job, use something like:
 
 ::
 
-    condor_cod_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
+    condor_cod_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
 
 In general, be careful with shell quoting issues, so that your shell is
 not confused by the ClassAd expression syntax (in particular if the
@@ -558,7 +557,7 @@ provided as a command-line option.
 
 When the *condor_startd* daemon assigns a COD claim, the ClassAd
 describing the resource is returned to the user that requested the
-claim. This ClassAd is a snap-shot of the output of condor_status -long
+claim. This ClassAd is a snap-shot of the output of condor_status -long
 for the given machine. If *condor_cod_request* is invoked with the
 **-classad** option (which takes a file name as an argument), this
 ClassAd will be written out to the given file. Otherwise, the ClassAd is
@@ -571,7 +570,7 @@ example:
 
 ::
 
-    ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
+    ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
 
 When using this claim ID in further commands, include the quote marks as
 well as all the characters in between the quote marks.
@@ -627,18 +626,18 @@ resource, the user provides the keyword (described in
 :ref:`misc-concepts/computing-on-demand:defining a cod application`) that 
 uniquely identifies the application's configuration attributes. To continue
 the example from that section, the user would spawn their job by specifying
--keyword FractGen, for example:
+-keyword FractGen, for example:
 
 ::
 
-    condor_cod_activate -id "<claim_id>" -keyword FractGen
+    condor_cod_activate -id "<claim_id>" -keyword FractGen
 
 Substitute the <claim_id> with the valid Cod Claim Id. Using the same
 example as given above, this example would be:
 
 ::
 
-    condor_cod_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
+    condor_cod_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
 
 If the job attributes are placed into a file to be passed to the
 *condor_cod_activate* tool, the user must provide the name of the file
@@ -648,7 +647,7 @@ using the command:
 
 ::
 
-    condor_cod_activate -id "<claim_id>" -jobad cod-fractgen.txt
+    condor_cod_activate -id "<claim_id>" -jobad cod-fractgen.txt
 
 Alternatively, if the filename specified with **-jobad** is ``-``, the
 *condor_cod_activate* tool reads the job ClassAd from standard input
@@ -664,7 +663,7 @@ or 23.5, the user invokes:
 
 ::
 
-    condor_cod_activate -id "<claim_id>" -key foo -cluster 23 -proc 5
+    condor_cod_activate -id "<claim_id>" -key foo -cluster 23 -proc 5
 
 The **-cluster** and **-proc** arguments are optional, since the job ID
 is not required for COD. If not specified, the job ID defaults to 1.0.
@@ -690,7 +689,7 @@ The interface of *condor_cod_suspend* supports the single option
 
 ::
 
-    condor_cod_suspend -id "<claim_id>"
+    condor_cod_suspend -id "<claim_id>"
 
 If the user attempts to suspend a COD job that is not running,
 *condor_cod_suspend* exits with an error message. The COD job may not
@@ -712,7 +711,7 @@ specify the COD claim ID the user wishes to renew. For example:
 
 ::
 
-    condor_cod_renew -id "<claim_id>"
+    condor_cod_renew -id "<claim_id>"
 
 If the user attempts to renew a COD job that no longer exists,
 *condor_cod_renew* exits with an error message.
@@ -733,7 +732,7 @@ specify the COD claim ID the user wishes to resume. For example:
 
 ::
 
-    condor_cod_resume -id "<claim_id>"
+    condor_cod_resume -id "<claim_id>"
 
 If the user attempts to resume a COD job that is not suspended,
 *condor_cod_resume* exits with an error message.
@@ -751,7 +750,7 @@ option. For example:
 
 ::
 
-    condor_cod_deactivate -id "<claim_id>"
+    condor_cod_deactivate -id "<claim_id>"
 
 By default, *condor_cod_deactivate* attempts to gracefully cleanup the
 COD application and give it time to exit. In this case the COD claim
@@ -768,7 +767,7 @@ Killing state. For example:
 
 ::
 
-    condor_cod_deactivate -id "<claim_id>" -fast
+    condor_cod_deactivate -id "<claim_id>" -fast
 
 In either case, once the COD job has finally exited, the COD claim will
 go into the Idle state and will be available for future COD
@@ -802,7 +801,7 @@ Like most COD commands, *condor_cod_release* requires the claim ID to
 be specified using **-id**. In addition, *condor_cod_release* supports
 the **-fast** option (described above in the section about
 *condor_cod_deactivate*). If there is a job running or suspended on
-the claim when it is released with condor_cod_release -fast, the job
+the claim when it is released with condor_cod_release -fast, the job
 will be immediately killed. If **-fast** is not specified, the default
 behavior is to use a graceful shutdown, sending whatever signal is
 specified in the ``KillSig`` attribute for the job (SIGTERM by default).
@@ -858,4 +857,4 @@ HTCondor's support for COD has a few limitations:
 
 :index:`COD (Computing on Demand)`
 
-      
+      

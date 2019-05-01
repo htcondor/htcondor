@@ -1,7 +1,7 @@
 DaemonCore Command Numbers
 ==========================
 
-Table B.4: DaemonCore Commands
+Table B.4: DaemonCore Commands
 
 +---------+------------------------------+
 | 60000   | DC_RAISESIGNAL               |
@@ -42,4 +42,4 @@ Table B.4: DaemonCore Commands
 +---------+------------------------------+
 | 60018   | DC_PURGE_LOG                 |
 +---------+------------------------------+
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 Chirp
 =====
@@ -18,7 +18,7 @@ submit description file:
 
 ::
 
-    +WantIOProxy = True
+    +WantIOProxy = True
 
 This places the needed attribute into the job ClassAd.
 
@@ -29,4 +29,4 @@ To provide easier access to this wire protocol, the *condor\_chirp*
 command line tool is shipped with HTCondor. This tool provides full
 access to the Chirp commands.
 
-      
+      

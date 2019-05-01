@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_tail*
 ==============
@@ -11,8 +11,8 @@ Synopsis
 
 **condor\_tail** [**-help**\ ] \| [**-version**\ ]
 
-**condor\_tail** [**-pool  **\ *centralmanagerhostname[:portnumber]*]
-[**-name  **\ *name*] [**-debug**\ ] [**-maxbytes  **\ *numbytes*]
+**condor\_tail** [**-pool  **\ *centralmanagerhostname[:portnumber]*]
+[**-name  **\ *name*] [**-debug**\ ] [**-maxbytes  **\ *numbytes*]
 [**-auto-retry**\ ] [**-follow**\ ] [**-no-stdout**\ ] [**-stderr**\ ]
 *job-ID* [*filename1*\ ] [*filename2 …*\ ]
 
@@ -33,14 +33,14 @@ Options
     Display usage information and exit.
  **-version**
     Display version information and exit.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number.
- **-name **\ *name*
+ **-name **\ *name*
     Query the *condor\_schedd* daemon identified with *name*.
  **-debug**
     Display extra debugging information.
- **-maxbytes **\ *numbytes*
+ **-maxbytes **\ *numbytes*
     Limits the maximum number of bytes transferred per tail access. If
     not specified, the maximum number of bytes is 1024.
  **-auto-retry**
@@ -66,8 +66,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

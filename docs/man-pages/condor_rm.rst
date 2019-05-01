@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_rm*
 ============
@@ -12,14 +12,14 @@ Synopsis
 **condor\_rm** [**-help \| -version**\ ]
 
 **condor\_rm** [**-debug**\ ] [**-forcex**\ ] [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
+**-pool **\ *centralmanagerhostname[:portnumber]* \|
+**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*]
 *cluster… \| cluster.process… \| user…* \|
-**-constraint **\ *expression* …
+**-constraint **\ *expression* …
 
 **condor\_rm** [**-debug**\ ] [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*] **-all**
+**-pool **\ *centralmanagerhostname[:portnumber]* \|
+**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*] **-all**
 
 Description
 -----------
@@ -47,12 +47,12 @@ Options
     Display usage information
  **-version**
     Display version information
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool **\ *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *scheddname*
+ **-name **\ *scheddname*
     Send the command to a machine identified by *scheddname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr **\ *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
@@ -66,7 +66,7 @@ Options
     Remove the specific job in the cluster
  *user*
     Remove jobs belonging to specified user
- **-constraint **\ *expression*
+ **-constraint **\ *expression*
     Remove all jobs which match the job ClassAd expression constraint
  **-all**
     Remove all the jobs in the queue
@@ -85,7 +85,7 @@ For a user to remove all their jobs that are not currently running:
 
 ::
 
-    % condor_rm -constraint 'JobStatus =!= 2'
+    % condor_rm -constraint 'JobStatus =!= 2'
 
 Exit Status
 -----------
@@ -101,8 +101,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

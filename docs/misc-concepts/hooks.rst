@@ -1,4 +1,4 @@
-      
+      
 
 Hooks
 =====
@@ -105,7 +105,7 @@ what output is expected, and, when relevant, the exit status expected.
    :index:`FetchWorkDelay` which determines how long the
    *condor_startd* will wait between attempts to fetch work, which is
    described in detail in :ref:`misc-concepts/hooks:job hooks that fetch work`. 
-   ``<Keyword>_HOOK_FETCH_WORK``is the most important hook in the whole system,
+   ``<Keyword>_HOOK_FETCH_WORK`` is the most important hook in the whole system,
    and is the only hook that must be defined for any of the other
    *condor_startd* hooks to operate.
 
@@ -113,10 +113,8 @@ what output is expected, and, when relevant, the exit status expected.
    information for the *condor_starter* to eventually spawn the work.
    The required and optional attributes in this ClassAd are identical to
    the ones described for Computing on Demand (COD) jobs in
-   section \ `Computing On Demand
-   COD <../misc-concepts/computing-on-demand.html>`__ on COD Application
-   Attributes, page \ `Computing On Demand
-   COD <../misc-concepts/computing-on-demand.html>`__.
+   the :ref:`misc-concepts/computing-on-demand:defining a cod application`
+   section.
 
     Command-line arguments passed to the hook
        None.
@@ -376,21 +374,21 @@ custom keyword to handle work fetched from a web service.
 
 ::
 
-      # Most slots fetch and run work from the database system. 
-      STARTD_JOB_HOOK_KEYWORD = DATABASE 
-     
-      # Slot4 fetches and runs work from a web service. 
-      SLOT4_JOB_HOOK_KEYWORD = WEB 
-     
-      # The database system needs to both provide work and know the reply 
-      # for each attempted claim. 
-      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database 
-      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php 
-      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php 
-     
-      # The web system only needs to fetch work. 
-      WEB_HOOK_DIR = /usr/local/condor/fetch/web 
-      WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
+      # Most slots fetch and run work from the database system. 
+      STARTD_JOB_HOOK_KEYWORD = DATABASE 
+     
+      # Slot4 fetches and runs work from a web service. 
+      SLOT4_JOB_HOOK_KEYWORD = WEB 
+     
+      # The database system needs to both provide work and know the reply 
+      # for each attempted claim. 
+      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database 
+      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php 
+      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php 
+     
+      # The web system only needs to fetch work. 
+      WEB_HOOK_DIR = /usr/local/condor/fetch/web 
+      WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
 
 The keywords ``"DATABASE"`` and ``"WEB"`` are completely arbitrary, so
 each site is encouraged to use different (more specific) names as
@@ -432,7 +430,7 @@ immediately:
 
 ::
 
-    FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
+    FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
 
 If the *condor_startd* wants to fetch work, but the time since the last
 attempted fetch is shorter than the current value of the delay
@@ -462,14 +460,14 @@ In the configuration of the execute machine:
 
 ::
 
-    JAVA5_HOOK_PREPARE_JOB = $(LIBEXEC)/java5_prepare_hook
+    JAVA5_HOOK_PREPARE_JOB = $(LIBEXEC)/java5_prepare_hook
 
 With this configuration, a job that sets the ``HookKeyword`` attribute
 with
 
 ::
 
-    +HookKeyword = "JAVA5"
+    +HookKeyword = "JAVA5"
 
 in the submit description file causes the *condor_starter* will run the
 hook specified by ``JAVA5_HOOK_PREPARE_JOB``
@@ -480,11 +478,11 @@ the hook that changes the executable may be
 
 ::
 
-    #!/bin/sh 
-     
-    # Read and discard the job ClassAd 
-    cat > /dev/null 
-    echo 'Cmd = "/usr/java/java5/bin/java"'
+    #!/bin/sh 
+     
+    # Read and discard the job ClassAd 
+    cat > /dev/null 
+    echo 'Cmd = "/usr/java/java5/bin/java"'
 
 If some machines in your pool have this hook and others do not, this
 fact should be advertised. Add to the configuration of every execute
@@ -492,32 +490,32 @@ machine that has the hook:
 
 ::
 
-    HasJava5PrepareHook = True 
-    STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
+    HasJava5PrepareHook = True 
+    STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
 
 The submit description file for this example job may be
 
 ::
 
-    universe = vanilla 
-    executable = /usr/bin/java 
-    arguments = Hello 
-    # match with a machine that has the hook 
-    requirements = HasJava5PrepareHook 
-     
-    should_transfer_files = always 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = Hello.class 
-     
-    output = hello.out 
-    error  = hello.err 
-    log    = hello.log 
-     
-    +HookKeyword="JAVA5" 
-    queue 
+    universe = vanilla 
+    executable = /usr/bin/java 
+    arguments = Hello 
+    # match with a machine that has the hook 
+    requirements = HasJava5PrepareHook 
+     
+    should_transfer_files = always 
+    when_to_transfer_output = on_exit 
+    transfer_input_files = Hello.class 
+     
+    output = hello.out 
+    error  = hello.err 
+    log    = hello.log 
+     
+    +HookKeyword="JAVA5" 
+    queue 
 
 Note that the
-**requirements**\ :index:`requirements<single: requirements; submit commands>` command
+**requirements** :index:`requirements<single: requirements; submit commands>` command
 ensures that this job matches with a machine that has
 ``JAVA5_HOOK_PREPARE_JOB`` defined.
 
@@ -567,7 +565,7 @@ submit description file may cause the hooks to be invoked with
 
 ::
 
-      +HookKeyword = "HOOKNAME"
+      +HookKeyword = "HOOKNAME"
 
 Adding this attribute to the job's ClassAd causes the
 *condor_job_router* daemon on the submit machine to invoke hooks
@@ -580,7 +578,7 @@ submit machine the configuration variable
 
 ::
 
-     JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
+     JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
 
 Like the example attribute above, ``HOOKNAME`` represents a chosen name
 for the hook, replaced as desired or appropriate.
@@ -699,7 +697,7 @@ job exits. When the job outputs the special line:
 
 ::
 
-      - update:true
+      - update:true
 
 the output of the job is merged into all proper ClassAds, and an update
 goes to the *condor_collector* daemon.
@@ -721,7 +719,7 @@ defined below:
 
    In other words, the syntax is:
 
-   - [*name*\ ] [**update:  **\ *bool*]
+   - [*name*\ ] [**update:** *bool*]
 
 -  Each ad can contain one of four possible attributes to control what
    slot ads the ad is merged into when the *condor_startd* sends
@@ -729,29 +727,29 @@ defined below:
    to lower priority (in other words, if ``SlotMergeConstraint``
    matches, the other attributes are not considered, and so on):
 
-   -  **SlotMergeConstraint **\ *expression*: the current ad is merged
+   -  **SlotMergeConstraint** *expression*: the current ad is merged
       into all slot ads for which this expression is true. The
       expression is evaluated with the slot ad as the TARGET ad.
-   -  **SlotName\|Name **\ *string*: the current ad is merged into all
+   -  **SlotName|Name** *string*: the current ad is merged into all
       slots whose ``Name`` attributes match the value of ``SlotName`` up
       to the length of ``SlotName``.
-   -  **SlotTypeId **\ *integer*: the current ad is merged into all ads
+   -  **SlotTypeId** *integer*: the current ad is merged into all ads
       that have the same value for their ``SlotTypeId`` attribute.
-   -  **SlotId **\ *integer*: the current ad is merged into all ads that
+   -  **SlotId** *integer*: the current ad is merged into all ads that
       have the same value for their ``SlotId`` attribute.
 
 For example, if the Startd Cron job returns:
 
 ::
 
-      Value=1 
-      SlotId=1 
-      -s1 
-      Value=2 
-      SlotId=2 
-      -s2 
-      Value=10 
-      - update:true
+      Value=1 
+      SlotId=1 
+      -s1 
+      Value=2 
+      SlotId=2 
+      -s2 
+      Value=10 
+      - update:true
 
 it will set ``Value=10`` for all slots except slot1 and slot2. On those
 slots it will set ``Value=1`` and ``Value=2`` respectively. It will also
@@ -760,7 +758,7 @@ send updates to the collector immediately.
  Configuration
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-section  `Configuration
+section  `Configuration
 Macros <../admin-manual/configuration-macros.html>`__.
 
 Here is a complete configuration example. It defines all three of the
@@ -769,71 +767,71 @@ jobs, and ones that use the *condor_schedd*.
 
 ::
 
-    # 
-    # Startd Cron Stuff 
-    # 
-    # auxiliary variable to use in identifying locations of files 
-    MODULES = $(ROOT)/modules 
-     
-    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
-    STARTD_CRON_MAX_JOB_LOAD = 0.2 
-    STARTD_CRON_JOBLIST = 
-     
-    # Test job 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test 
-    STARTD_CRON_TEST_MODE = OneShot 
-    STARTD_CRON_TEST_RECONFIG_RERUN = True 
-    STARTD_CRON_TEST_PREFIX = test_ 
-    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
-    STARTD_CRON_TEST_KILL = True 
-    STARTD_CRON_TEST_ARGS = abc 123 
-    STARTD_CRON_TEST_SLOTS = 1 
-    STARTD_CRON_TEST_JOB_LOAD = 0.01 
-     
-    # job 'date' 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date 
-    STARTD_CRON_DATE_MODE = Periodic 
-    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date 
-    STARTD_CRON_DATE_PERIOD = 15s 
-    STARTD_CRON_DATE_JOB_LOAD = 0.01 
-     
-    # Job 'foo' 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo 
-    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo 
-    STARTD_CRON_FOO_PREFIX = Foo 
-    STARTD_CRON_FOO_MODE = Periodic 
-    STARTD_CRON_FOO_PERIOD = 10m 
-    STARTD_CRON_FOO_JOB_LOAD = 0.2 
-     
-    # 
-    # Benchmark Stuff 
-    # 
-    BENCHMARKS_JOBLIST = mips kflops 
-     
-    # MIPS benchmark 
-    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips 
-    BENCHMARKS_MIPS_JOB_LOAD = 1.0 
-     
-    # KFLOPS benchmark 
-    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops 
-    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0 
-     
-    # 
-    # Schedd Cron Stuff 
-    # 
-    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
-    SCHEDD_CRON_JOBLIST = 
-     
-    # Test job 
-    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test 
-    SCHEDD_CRON_TEST_MODE = OneShot 
-    SCHEDD_CRON_TEST_RECONFIG_RERUN = True 
-    SCHEDD_CRON_TEST_PREFIX = test_ 
-    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
-    SCHEDD_CRON_TEST_PERIOD = 5m 
-    SCHEDD_CRON_TEST_KILL = True 
-    SCHEDD_CRON_TEST_ARGS = abc 123 
+    # 
+    # Startd Cron Stuff 
+    # 
+    # auxiliary variable to use in identifying locations of files 
+    MODULES = $(ROOT)/modules 
+     
+    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
+    STARTD_CRON_MAX_JOB_LOAD = 0.2 
+    STARTD_CRON_JOBLIST = 
+     
+    # Test job 
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test 
+    STARTD_CRON_TEST_MODE = OneShot 
+    STARTD_CRON_TEST_RECONFIG_RERUN = True 
+    STARTD_CRON_TEST_PREFIX = test_ 
+    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
+    STARTD_CRON_TEST_KILL = True 
+    STARTD_CRON_TEST_ARGS = abc 123 
+    STARTD_CRON_TEST_SLOTS = 1 
+    STARTD_CRON_TEST_JOB_LOAD = 0.01 
+     
+    # job 'date' 
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date 
+    STARTD_CRON_DATE_MODE = Periodic 
+    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date 
+    STARTD_CRON_DATE_PERIOD = 15s 
+    STARTD_CRON_DATE_JOB_LOAD = 0.01 
+     
+    # Job 'foo' 
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo 
+    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo 
+    STARTD_CRON_FOO_PREFIX = Foo 
+    STARTD_CRON_FOO_MODE = Periodic 
+    STARTD_CRON_FOO_PERIOD = 10m 
+    STARTD_CRON_FOO_JOB_LOAD = 0.2 
+     
+    # 
+    # Benchmark Stuff 
+    # 
+    BENCHMARKS_JOBLIST = mips kflops 
+     
+    # MIPS benchmark 
+    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips 
+    BENCHMARKS_MIPS_JOB_LOAD = 1.0 
+     
+    # KFLOPS benchmark 
+    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops 
+    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0 
+     
+    # 
+    # Schedd Cron Stuff 
+    # 
+    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
+    SCHEDD_CRON_JOBLIST = 
+     
+    # Test job 
+    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test 
+    SCHEDD_CRON_TEST_MODE = OneShot 
+    SCHEDD_CRON_TEST_RECONFIG_RERUN = True 
+    SCHEDD_CRON_TEST_PREFIX = test_ 
+    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
+    SCHEDD_CRON_TEST_PERIOD = 5m 
+    SCHEDD_CRON_TEST_KILL = True 
+    SCHEDD_CRON_TEST_ARGS = abc 123 
 
 :index:`Hooks`
 
-      
+      

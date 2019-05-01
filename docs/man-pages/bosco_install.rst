@@ -1,4 +1,4 @@
-      
+      
 
 *bosco\_install*
 ================
@@ -32,13 +32,13 @@ information, please see the Bosco web site:
 
 ::
 
-      bosco_install
+      bosco_install
 
 becomes
 
 ::
 
-      condor_install --bosco
+      condor_install --bosco
 
 Please see the *condor\_install* man page for details of the command
 line options.
@@ -54,8 +54,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

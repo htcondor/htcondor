@@ -1,4 +1,4 @@
-      
+      
 
 Introduction
 ============
@@ -28,7 +28,7 @@ HTCondor has several unique capabilities at its disposal which are
 geared toward effectively utilizing non-dedicated resources that are not
 owned or managed by a centralized resource. These include transparent
 process checkpoint and migration, remote system calls, and ClassAds.
-Read section \ `HTCondor's Power <../overview/htcondors-power.html>`__
+Read section \ `HTCondor's Power <../overview/htcondors-power.html>`__
 for a general discussion of these features before reading any further.
 
-      
+      

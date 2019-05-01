@@ -1,4 +1,4 @@
-      
+      
 
 Stable Release Series 8.8
 =========================
@@ -205,4 +205,4 @@ Bugs Fixed:
    *condor\_ssh\_to\_job* and interactive submits are no longer
    installed in ``/etc/condor``. :ticket:`6770`
 
-      
+      

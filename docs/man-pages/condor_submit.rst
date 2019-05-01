@@ -1,4 +1,4 @@
-      
+      
 
 *condor_submit*
 ================
@@ -10,16 +10,16 @@ Synopsis
 --------
 
 **condor_submit** [**-terse**\ ] [**-verbose**\ ] [**-unused**\ ]
-[**-file  **\ *submit_file*] [**-name  **\ *schedd_name*]
-[**-remote  **\ *schedd_name*] [**-addr  **\ *<ip:port>*]
-[**-pool  **\ *pool_name*] [**-disable**\ ]
-[**-password  **\ *passphrase*] [**-debug**\ ] [**-append** *command*
-**...**][\ **-batch-name  **\ *batch_name*] [**-spool**\ ]
-[**-dump  **\ *filename*] [**-interactive**\ ]
+[**-file  **\ *submit_file*] [**-name  **\ *schedd_name*]
+[**-remote  **\ *schedd_name*] [**-addr  **\ *<ip:port>*]
+[**-pool  **\ *pool_name*] [**-disable**\ ]
+[**-password  **\ *passphrase*] [**-debug**\ ] [**-append** *command*
+**...**][\ **-batch-name  **\ *batch_name*] [**-spool**\ ]
+[**-dump  **\ *filename*] [**-interactive**\ ]
 [**-allow-crlf-script**\ ] [**-dry-run**\ ]
-[**-maxjobs  **\ *number-of-jobs*] [**-single-cluster**\ ]
-[**-stm  **\ *method*] [**<submit-variable>=<value>**\ ] [*submit
-description file*\ ] [**-queue  **\ *queue_arguments*]
+[**-maxjobs  **\ *number-of-jobs*] [**-single-cluster**\ ]
+[**-stm  **\ *method*] [**<submit-variable>=<value>**\ ] [*submit
+description file*\ ] [**-queue  **\ *queue_arguments*]
 
 Description
 -----------
@@ -85,25 +85,25 @@ Options
     default value of ``False``. Printing the warnings can help identify
     spelling errors of submit description file commands. The warnings
     are sent to stderr.
- **-file **\ *submit_file*
+ **-file **\ *submit_file*
     Use *submit_file* as the submit discription file. This is
     equivalent to providing *submit_file* as an argument without the
     preceeding *-file*.
- **-name **\ *schedd_name*
+ **-name **\ *schedd_name*
     Submit to the specified *condor_schedd*. Use this option to submit
     to a *condor_schedd* other than the default local one.
     *schedd_name* is the value of the ``Name`` ClassAd attribute on the
     machine where the *condor_schedd* daemon runs.
- **-remote **\ *schedd_name*
+ **-remote **\ *schedd_name*
     Submit to the specified *condor_schedd*, spooling all required
     input files over the network connection. *schedd_name* is the value
     of the ``Name`` ClassAd attribute on the machine where the
     *condor_schedd* daemon runs. This option is equivalent to using
     both **-name** and **-spool**.
- **-addr **\ *<ip:port>*
+ **-addr **\ *<ip:port>*
     Submit to the *condor_schedd* at the IP address and port given by
     the sinful string argument *<ip:port>*.
- **-pool **\ *pool_name*
+ **-pool **\ *pool_name*
     Look in the specified pool for the *condor_schedd* to submit to.
     This option is used with **-name** or **-remote**.
  **-disable**
@@ -116,12 +116,12 @@ Options
     files defined with
     **output**\ :index:`output<single: output; submit commands>` or
     **transfer_output_files**\ :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
- **-password **\ *passphrase*
+ **-password **\ *passphrase*
     Specify a password to the *MyProxy* server.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-append **\ *command*
+ **-append **\ *command*
     Augment the commands in the submit description file with the given
     *command*. This command will be considered to immediately precede
     the **queue** command within the submit description file, and come
@@ -140,7 +140,7 @@ Options
     command is given in a separate **-append** option. Commands with
     spaces in them will need to be enclosed in double quote marks.
 
- **-batch-name **\ *batch_name*
+ **-batch-name **\ *batch_name*
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
     meaningful names to their jobs and to influence how *condor_q*
@@ -152,7 +152,7 @@ Options
     copies of the files without affecting your jobs. Any output files
     for completed jobs need to be retrieved with
     *condor_transfer_data*.
- **-dump **\ *filename*
+ **-dump **\ *filename*
     Sends all ClassAds to the specified file, instead of to the
     *condor_schedd*.
  **-interactive**
@@ -182,13 +182,13 @@ Options
     ending on the first line of the script. So *condor_submit* will not
     allow such a script to be submitted as the job's executable unless
     this option is supplied.
- **-dry-run **\ *file*
+ **-dry-run **\ *file*
     Parse the submit description file, sending the resulting job ClassAd
     to the file given by *file*, but do not submit the job(s). This
     permits observation of the job specification, and it facilitates
     debugging the submit description file contents. If *file* is **-**,
     the output is written to ``stdout``.
- **-maxjobs **\ *number-of-jobs*
+ **-maxjobs **\ *number-of-jobs*
     If the total number of jobs specified by the submit description file
     is more than the integer value given by *number-of-jobs*, then no
     jobs are submitted for execution and an error message is generated.
@@ -198,7 +198,7 @@ Options
     If the jobs specified by the submit description file causes more
     than a single cluster value to be assigned, then no jobs are
     submitted for execution and an error message is generated.
- **-stm **\ *method*
+ **-stm **\ *method*
     Specify the method use to move a sandbox into HTCondor. *method* is
     one of **stm_use_schedd_only** or **stm_use_transferd**.
  **<submit-variable>=<value>**
@@ -209,7 +209,7 @@ Options
     without white space characters before and after the equals sign
     (``=``), or the entire option must be surrounded by double quote
     marks.
- **-queue **\ *queue_arguments*
+ **-queue **\ *queue_arguments*
     A command line specification of how many jobs to queue, which is
     only permitted if the submit description file does not have a
     **queue** command. The *queue_arguments* are the same as may be
@@ -227,11 +227,11 @@ Submit Description File Commands
 :index:`submit commands`
 
 Note: more information on submitting HTCondor jobs can be found here:
- `Submitting a Job <../users-manual/submitting-a-job.html>`__.
+ `Submitting a Job <../users-manual/submitting-a-job.html>`__.
 
 As of version 8.5.6, the *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
-(see more details here:  `Introduction to
+(see more details here:  `Introduction to
 Configuration <../admin-manual/introduction-to-configuration.html>`__).
 
 Each submit description file describes one or more clusters of jobs to
@@ -291,15 +291,15 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        arguments = one \"two\" 'three'
+        arguments = one \"two\" 'three'
 
     Produces in Unix vanilla universe:
 
     ::
 
-        argument 1: one 
-        argument 2: "two" 
-        argument 3: 'three'
+        argument 1: one 
+        argument 2: "two" 
+        argument 3: 'three'
 
     **New Syntax**
 
@@ -322,43 +322,43 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        arguments = "3 simple arguments"
+        arguments = "3 simple arguments"
 
     Produces:
 
     ::
 
-        argument 1: 3 
-        argument 2: simple 
-        argument 3: arguments
+        argument 1: 3 
+        argument 2: simple 
+        argument 3: arguments
 
     Another example:
 
     ::
 
-        arguments = "one 'two with spaces' 3"
+        arguments = "one 'two with spaces' 3"
 
     Produces:
 
     ::
 
-        argument 1: one 
-        argument 2: two with spaces 
-        argument 3: 3
+        argument 1: one 
+        argument 2: two with spaces 
+        argument 3: 3
 
     And yet another example:
 
     ::
 
-        arguments = "one ""two"" 'spacey ''quoted'' argument'"
+        arguments = "one ""two"" 'spacey ''quoted'' argument'"
 
     Produces:
 
     ::
 
-        argument 1: one 
-        argument 2: "two" 
-        argument 3: spacey 'quoted' argument
+        argument 1: one 
+        argument 2: "two" 
+        argument 3: spacey 'quoted' argument
 
     Notice that in the new syntax, the backslash has no special meaning.
     This is for the convenience of Windows users.
@@ -400,15 +400,15 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
+        environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
 
     Produces the following environment entries:
 
     ::
 
-        one=1 
-        two="2" 
-        three=spacey 'quoted' value
+        one=1 
+        two="2" 
+        three=spacey 'quoted' value
 
     Under the old syntax, there are no double quote marks surrounding
     the environment specification. Each environment entry remains of the
@@ -431,15 +431,15 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        environment = one=1;two=2;three="quotes have no 'special' meaning"
+        environment = one=1;two=2;three="quotes have no 'special' meaning"
 
     This produces the following:
 
     ::
 
-        one=1 
-        two=2 
-        three="quotes have no 'special' meaning"
+        one=1 
+        two=2 
+        three="quotes have no 'special' meaning"
 
     If the environment is set with the
     **environment**\ :index:`environment<single: environment; submit commands>`
@@ -612,7 +612,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  `DAGMan
+    (see  `DAGMan
     Applications <../users-manual/dagman-applications.html>`__ for more
     details). :index:`queue<single: queue; submit commands>`
 
@@ -740,8 +740,8 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     ::
 
-                request_memory = max({60, Target.TotalSlotMemory}) 
-                rank = Memory
+                request_memory = max({60, Target.TotalSlotMemory}) 
+                rank = Memory
 
     asks HTCondor to find all available machines with more than 60
     megabytes of memory and give to the job the machine with the most
@@ -756,7 +756,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     ::
 
-          && (RequestCpus <= Target.Cpus)
+          && (RequestCpus <= Target.Cpus)
 
     is appended to the
     **requirements**\ :index:`requirements<single: requirements; submit commands>`
@@ -774,7 +774,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     ::
 
-          && (RequestDisk <= Target.Disk)
+          && (RequestDisk <= Target.Disk)
 
     is appended to the
     **requirements**\ :index:`requirements<single: requirements; submit commands>`
@@ -813,7 +813,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     ::
 
-          && (RequestMemory <= Target.Memory)
+          && (RequestMemory <= Target.Memory)
 
     is appended to the
     **requirements**\ :index:`requirements<single: requirements; submit commands>`
@@ -874,7 +874,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
     *condor_q -l*; see the command reference for *condor_q* on
-    page \ `condor_q <../man-pages/condor_q.html>`__. Also, see the
+    page \ `condor_q <../man-pages/condor_q.html>`__. Also, see the
     HTCondor Users Manual for complete information on the syntax and
     available attributes that can be used in the ClassAd expression.
 
@@ -918,7 +918,7 @@ FILE TRANSFER COMMANDS
 
     ::
 
-          && (TARGET.HasEncryptExecuteDirectory)
+          && (TARGET.HasEncryptExecuteDirectory)
 
     to ensure the job is matched to a machine that is capable of
     encrypting the contents of the execute directory. This support is
@@ -1295,8 +1295,8 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     ::
 
-        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\ 
-                         (StageOutFinish == 0))
+        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\ 
+                         (StageOutFinish == 0))
 
     :index:`next_job_start_delay<single: next_job_start_delay; submit commands>`
 
@@ -1332,7 +1332,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     ::
 
-          on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
+          on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 
     This expression places the job on hold if it exits for any reason
     before running for an hour. An e-mail will be sent to the user
@@ -1384,7 +1384,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     ::
 
-          on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
+          on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 
     This expression lets the job leave the queue if the job was not
     killed by a signal or if it was killed by a signal other than 11,
@@ -1400,7 +1400,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     ::
 
-          on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+          on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 
     If the job was killed by a signal or exited with a non-zero exit
     status, HTCondor would leave the job in the queue to run again.
@@ -1496,17 +1496,17 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-           #! /bin/sh 
-         
-           # get the host name of the machine 
-           $host=`uname -n` 
-         
-           # grab a standard universe executable designed specifically 
-           # for this host 
-           scp elsewhere@cs.wisc.edu:${host} executable 
-         
-           # The PID MUST stay the same, so exec the new standard universe process. 
-           exec executable ${1+"$@"}
+           #! /bin/sh 
+         
+           # get the host name of the machine 
+           $host=`uname -n` 
+         
+           # grab a standard universe executable designed specifically 
+           # for this host 
+           scp elsewhere@cs.wisc.edu:${host} executable 
+         
+           # The PID MUST stay the same, so exec the new standard universe process. 
+           exec executable ${1+"$@"}
 
     If this command is not present (defined), then the value defaults to
     false. :index:`append_files<single: append_files; submit commands>`
@@ -1546,23 +1546,23 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-        buffer_files = "input.data=(1000000,256000)"
+        buffer_files = "input.data=(1000000,256000)"
 
     Alternatively, you may use these two options to set the default
     sizes for all files used by your job:
 
     ::
 
-        buffer_size = 1000000 
-        buffer_block_size = 256000
+        buffer_size = 1000000 
+        buffer_block_size = 256000
 
     If you do not set these, HTCondor will use the values given by these
     two configuration file macros:
 
     ::
 
-        DEFAULT_IO_BUFFER_SIZE = 1000000 
-        DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
+        DEFAULT_IO_BUFFER_SIZE = 1000000 
+        DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 
     Finally, if no other settings are present, HTCondor will use a
     buffer of 512 KiB and a block size of 32 KiB.
@@ -1582,7 +1582,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-        compress_files = /tmp/data.gz, event.gz, *.gzip
+        compress_files = /tmp/data.gz, event.gz, *.gzip
 
     Due to the nature of the compression format, compressed files must
     only be accessed sequentially. Random access reading is allowed but
@@ -1627,7 +1627,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
         ::
 
-            file_remaps = "dataset.1=other.dataset"
+            file_remaps = "dataset.1=other.dataset"
 
      Example Two:
         Suppose that your run many jobs which all read in the same large
@@ -1640,7 +1640,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
         ::
 
-            file_remaps = "very.big = local:/bigdisk/bigfile"
+            file_remaps = "very.big = local:/bigdisk/bigfile"
 
      Example Three:
         Several remaps can be applied at once by separating each with a
@@ -1648,7 +1648,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
         ::
 
-            file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
+            file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 
     :index:`local_files<single: local_files; submit commands>`
 
@@ -1661,7 +1661,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-        local_files = /tmp/*
+        local_files = /tmp/*
 
     This option only applies to standard universe jobs.
     :index:`want_remote_io<single: want_remote_io; submit commands>`
@@ -2176,8 +2176,8 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
     ::
 
-        remove_kill_sig = SIGUSR1 
-        remove_kill_sig = 10
+        remove_kill_sig = SIGUSR1 
+        remove_kill_sig = 10
 
     If this command is not present, the value of
     **kill_sig**\ :index:`kill_sig<single: kill_sig; submit commands>` is used.
@@ -2197,7 +2197,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
 
     ::
 
-        vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
+        vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
     :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
 
@@ -2502,7 +2502,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
     same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see page \ `Configuration
+    ``EVENT_LOG_INFORMATION_ATTRS`` (see page \ `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), but it
     applies to the job event log, instead of the system event log.
     :index:`JobBatchName<single: JobBatchName; submit commands>`
@@ -2592,8 +2592,8 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
 
     ::
 
-        LastMatchName0 = "most-recent-Name" 
-        LastMatchName1 = "next-most-recent-Name"
+        LastMatchName0 = "most-recent-Name" 
+        LastMatchName1 = "next-most-recent-Name"
 
     The value for each introduced ClassAd is given by the value of the
     ``Name`` attribute from the machine ClassAd of a previous execution
@@ -2734,7 +2734,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
     more complex than simply setting an attribute or attributes. See
-     `Job ClassAd
+     `Job ClassAd
     Attributes <../classad-attributes/job-classad-attributes.html>`__
     for a list of HTCondor job attributes.
 
@@ -2752,7 +2752,7 @@ and comments.
 
     ::
 
-                <macro_name> = <string>
+                <macro_name> = <string>
 
     Two pre-defined macros are supplied by the submit description file
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
@@ -2778,8 +2778,8 @@ and comments.
 
     ::
 
-        foo = bar 
-        foo =  snap $(foo)
+        foo = bar 
+        foo =  snap $(foo)
 
     As a result, ``foo = snap bar``.
 
@@ -2787,8 +2787,8 @@ and comments.
 
     ::
 
-        foo = bar 
-        foo =  $(foo) snap
+        foo = bar 
+        foo =  $(foo) snap
 
     has as its result ``foo = bar snap``.
 
@@ -2796,16 +2796,16 @@ and comments.
 
     ::
 
-        foo = $(foo) bar
+        foo = $(foo) bar
 
     by itself will not work, as it does not have an initial base case.
     Mutually recursive constructions such as:
 
     ::
 
-        B = bar 
-        C = $(B) 
-        B = $(C) boo
+        B = bar 
+        C = $(B) 
+        B = $(C) boo
 
     will not work, and will fill memory with expansions.
 
@@ -2814,14 +2814,14 @@ and comments.
 
     ::
 
-        D = $(E:24)
+        D = $(E:24)
 
     Where ``E`` is not defined within the submit description file, the
     default value 24 is used, resulting in
 
     ::
 
-        D = 24
+        D = 24
 
     This is of limited value, as the scope of macro substitution is the
     submit description file. Thus, either the macro is or is not defined
@@ -2858,7 +2858,7 @@ and comments.
 
     ::
 
-        executable = povray.$$(OpSys).$$(Arch)
+        executable = povray.$$(OpSys).$$(Arch)
 
     Values for the ``OpSys`` and ``Arch`` attributes are substituted at
     match time for any given resource. This example allows HTCondor to
@@ -2879,7 +2879,7 @@ and comments.
 
     ::
 
-        arguments = $$(input_file_path:/usr/foo)
+        arguments = $$(input_file_path:/usr/foo)
 
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
@@ -2893,19 +2893,19 @@ and comments.
 
     ::
 
-        $$([ClassAd expression])
+        $$([ClassAd expression])
 
     An example of a job that uses this syntax may be one that wants to
     know how much memory it can use. The application cannot detect this
     itself, as it would potentially use all of the memory on a
     multi-slot machine. So the job determines the memory per slot,
-    reducing it by 10% to account for miscellaneous overhead, and passes
+    reducing it by 10% to account for miscellaneous overhead, and passes
     this as a command line argument to the application. In the submit
     description file will be
 
     ::
 
-        arguments = --memory $$([TARGET.Memory * 0.9])
+        arguments = --memory $$([TARGET.Memory * 0.9])
 
     :index:`as literal characters in a submit description file<single: as literal characters in a submit description file; $$>`
 
@@ -2934,7 +2934,7 @@ and comments.
 
     ::
 
-        log = $ENV(HOME)/jobs/logfile
+        log = $ENV(HOME)/jobs/logfile
 
     The environment variable is evaluated when the submit description
     file is processed.
@@ -2948,7 +2948,7 @@ and comments.
 
     ::
 
-            $RANDOM_CHOICE(0,1,2,3,4,5,6)
+            $RANDOM_CHOICE(0,1,2,3,4,5,6)
 
     When evaluated, one of the parameters values will be chosen.
 
@@ -3070,57 +3070,57 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # submit description file 
-             # Example 1: queuing multiple jobs with differing 
-             # command line arguments and output files. 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = vanilla 
-        
-             Arguments      = 15 2000 
-             Output  = foo.out0 
-             Error   = foo.err0 
-             Queue 
-        
-             Arguments      = 30 2000 
-             Output  = foo.out1 
-             Error   = foo.err1 
-             Queue 
-        
-             Arguments      = 45 6000 
-             Output  = foo.out2 
-             Error   = foo.err2 
-             Queue
+             #################### 
+             # 
+             # submit description file 
+             # Example 1: queuing multiple jobs with differing 
+             # command line arguments and output files. 
+             # 
+             #################### 
+        
+             Executable     = foo 
+             Universe       = vanilla 
+        
+             Arguments      = 15 2000 
+             Output  = foo.out0 
+             Error   = foo.err0 
+             Queue 
+        
+             Arguments      = 30 2000 
+             Output  = foo.out1 
+             Error   = foo.err1 
+             Queue 
+        
+             Arguments      = 45 6000 
+             Output  = foo.out2 
+             Error   = foo.err2 
+             Queue
 
    Or you can get the same results as the above submit file by using a
    list of arguments with the Queue statement
 
    ::
 
-             #################### 
-             # 
-             # submit description file 
-             # Example 1b: queuing multiple jobs with differing 
-             # command line arguments and output files, alternate syntax 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = vanilla 
-        
-             # generate different output and error filenames for each process 
-             Output  = foo.out$(Process) 
-             Error   = foo.err$(Process) 
-        
-             Queue Arguments From ( 
-               15 2000 
-               30 2000 
-               45 6000 
-             ) 
+             #################### 
+             # 
+             # submit description file 
+             # Example 1b: queuing multiple jobs with differing 
+             # command line arguments and output files, alternate syntax 
+             # 
+             #################### 
+        
+             Executable     = foo 
+             Universe       = vanilla 
+        
+             # generate different output and error filenames for each process 
+             Output  = foo.out$(Process) 
+             Error   = foo.err$(Process) 
+        
+             Queue Arguments From ( 
+               15 2000 
+               30 2000 
+               45 6000 
+             ) 
 
 -  Submit Description File Example 2: This submit description file
    example queues 150 runs of program *foo* which must have been
@@ -3137,25 +3137,25 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # Example 2: Show off some fancy features including 
-             # use of pre-defined macros and logging. 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = standard 
-             Requirements   = OpSys == "LINUX" && Arch =="INTEL" 
-             Rank           = Memory >= 64 
-             Request_Memory = 32 Mb 
-             Image_Size     = 28 Mb 
-        
-             Error   = err.$(Process) 
-             Input   = in.$(Process) 
-             Output  = out.$(Process) 
-             Log = foo.log 
-             Queue 150
+             #################### 
+             # 
+             # Example 2: Show off some fancy features including 
+             # use of pre-defined macros and logging. 
+             # 
+             #################### 
+        
+             Executable     = foo 
+             Universe       = standard 
+             Requirements   = OpSys == "LINUX" && Arch =="INTEL" 
+             Rank           = Memory >= 64 
+             Request_Memory = 32 Mb 
+             Image_Size     = 28 Mb 
+        
+             Error   = err.$(Process) 
+             Input   = in.$(Process) 
+             Output  = out.$(Process) 
+             Log = foo.log 
+             Queue 150
 
 -  Submit Description File Example 3: This example targets the
    */bin/sleep* program to run only on a platform running a RHEL 6
@@ -3165,21 +3165,21 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # Example 3: Run on a RedHat 6 machine 
-             # 
-             #################### 
-             Universe     = vanilla 
-             Executable   = /bin/sleep 
-             Arguments    = 30 
-             Requirements = (OpSysAndVer == "RedHat6") 
-        
-             Error   = err.$(Process) 
-             Input   = in.$(Process) 
-             Output  = out.$(Process) 
-             Log     = sleep.log 
-             Queue
+             #################### 
+             # 
+             # Example 3: Run on a RedHat 6 machine 
+             # 
+             #################### 
+             Universe     = vanilla 
+             Executable   = /bin/sleep 
+             Arguments    = 30 
+             Requirements = (OpSysAndVer == "RedHat6") 
+        
+             Error   = err.$(Process) 
+             Input   = in.$(Process) 
+             Output  = out.$(Process) 
+             Log     = sleep.log 
+             Queue
 
 -  Command Line example: The following command uses the **-append**
    option to add two commands before the job(s) is queued. A log file
@@ -3188,7 +3188,7 @@ Examples
 
    ::
 
-       condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
+       condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
 
    Note that each of the added commands is contained within quote marks
    because there are space characters within the command.
@@ -3201,8 +3201,8 @@ Examples
 
    ::
 
-          periodic_remove = CumulativeSuspensionTime > 
-                            ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
+          periodic_remove = CumulativeSuspensionTime > 
+                            ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
 
    in the submit description file causes this to happen.
 
@@ -3229,7 +3229,7 @@ General Remarks
 
    ::
 
-             +WantCheckpoint = False
+             +WantCheckpoint = False
 
    in the submit description file before the queue command(s).
 
@@ -3246,8 +3246,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,4 +1,4 @@
-      
+      
 
 Scheduler ClassAd Attributes
 ============================
@@ -223,8 +223,8 @@ Scheduler ClassAd Attributes
 
     ::
 
-          JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 
-                  6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
+          JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 
+                  6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
 
     :index:`JobsShadowNoMemory<single: JobsShadowNoMemory; ClassAd Scheduler attribute>`
 
@@ -255,8 +255,8 @@ Scheduler ClassAd Attributes
 
     ::
 
-          JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 
-                  1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
+          JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 
+                  1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
 
     Note that these values imply powers of two in numbers of bytes.
     :index:`JobsStarted<single: JobsStarted; ClassAd Scheduler attribute>`
@@ -275,10 +275,8 @@ Scheduler ClassAd Attributes
  ``MaxJobsRunning``:
     The same integer value as set by the evaluation of the configuration
     variable ``MAX_JOBS_RUNNING`` :index:`MAX_JOBS_RUNNING`. See
-    the definition at section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ on
-    page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    the definition in the :ref:`admin-manual/configuration-macros:condor_schedd
+    configuration file entries` section.
     :index:`MonitorSelfAge<single: MonitorSelfAge; ClassAd Scheduler attribute>`
  ``MonitorSelfAge``:
     The number of seconds that this daemon has been running.
@@ -578,19 +576,15 @@ Scheduler ClassAd Attributes
  ``StartLocalUniverse``:
     The same boolean value as set in the configuration variable
     ``START_LOCAL_UNIVERSE`` :index:`START_LOCAL_UNIVERSE`. See
-    the definition at section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ on
-    page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    the definition in the :ref:`admin-manual/configuration-macros:condor_schedd
+    configuration file entries` section.
     :index:`StartSchedulerUniverse<single: StartSchedulerUniverse; ClassAd Scheduler attribute>`
  ``StartSchedulerUniverse``:
     The same boolean value as set in the configuration variable
     ``START_SCHEDULER_UNIVERSE``
-    :index:`START_SCHEDULER_UNIVERSE`. See the definition at
-    section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ on
-    page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    :index:`START_SCHEDULER_UNIVERSE`. See the definition in
+    the :ref:`admin-manual/configuration-macros:condor_schedd
+    configuration file entries` section.
     :index:`StatsLastUpdateTime<single: StatsLastUpdateTime; ClassAd Scheduler attribute>`
  ``StatsLastUpdateTime``:
     A Statistics attribute defining the time that statistics about jobs
@@ -932,4 +926,4 @@ reported once a full time span has accumulated.
  ``TransferQueueNumWaitingToUpload``
     Number of jobs waiting to transfer input files.
 
-      
+      

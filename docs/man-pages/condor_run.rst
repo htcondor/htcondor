@@ -1,4 +1,4 @@
-      
+      
 
 *condor\_run*
 =============
@@ -9,7 +9,7 @@ Submit a shell command-line as an HTCondor job
 Synopsis
 --------
 
-**condor\_run** [**-u  **\ *universe*] [**-a  **\ *submitcmd*] *"shell
+**condor\_run** [**-u  **\ *universe*] [**-a  **\ *submitcmd*] *"shell
 command"*
 
 Description
@@ -29,7 +29,7 @@ illustrated by the example
 
 ::
 
-    % condor_run "myprog < input.data"
+    % condor_run "myprog < input.data"
 
 *condor\_run* jobs rely on a shared file system for access to any
 necessary input files. The current working directory of the job must be
@@ -54,8 +54,8 @@ submitted with:
 
 ::
 
-    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \ 
-       OpSys == $CONDOR_OPSYS
+    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \ 
+       OpSys == $CONDOR_OPSYS
 
 Without these environment variables, the job receives the default
 requirements expression, which requests a machine of the same platform
@@ -71,12 +71,12 @@ completes.
 Options
 -------
 
- **-u **\ *universe*
+ **-u **\ *universe*
     Submit the job under the specified universe. The default is vanilla.
     While any universe may be specified, only the vanilla, standard,
     scheduler, and local universes result in a submit description file
     that may work properly.
- **-a **\ *submitcmd*
+ **-a **\ *submitcmd*
     Add the specified submit command to the implied submit description
     file for the job. To include spaces within *submitcmd*, enclose the
     submit command in double quote marks. And, to include double quote
@@ -92,27 +92,27 @@ required platform:
 
 ::
 
-    % setenv CONDOR_ARCH "SUN4u" 
-    % setenv CONDOR_OPSYS "SOLARIS28"
+    % setenv CONDOR_ARCH "SUN4u" 
+    % setenv CONDOR_OPSYS "SOLARIS28"
 
 Then, use *condor\_run* to submit the compilation as in the following
 three examples.
 
 ::
 
-    % condor_run "f77 -O -o myprog myprog.f"
+    % condor_run "f77 -O -o myprog myprog.f"
 
 or
 
 ::
 
-    % condor_run "make"
+    % condor_run "make"
 
 or
 
 ::
 
-    % condor_run "condor_compile cc -o myprog.condor myprog.c"
+    % condor_run "condor_compile cc -o myprog.condor myprog.c"
 
 Files
 -----
@@ -166,7 +166,7 @@ explicitly call Perl from the command line:
 
 ::
 
-    % perl path-to-condor/bin/condor_run "shell-cmd"
+    % perl path-to-condor/bin/condor_run "shell-cmd"
 
 Exit Status
 -----------
@@ -184,8 +184,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

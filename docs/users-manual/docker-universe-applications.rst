@@ -1,4 +1,4 @@
-      
+      
 
 Docker Universe Applications
 ============================
@@ -63,7 +63,7 @@ Therefore, the submit description file should contain the submit command
 
 ::
 
-      should_transfer_files = YES
+      should_transfer_files = YES
 
 With this command, all input and output files will be transferred as
 required to and from the scratch directory mounted as a Docker volume.
@@ -80,17 +80,17 @@ job:
 
 ::
 
-      universe                = docker 
-      docker_image            = debian 
-      executable              = /bin/cat 
-      arguments               = /etc/hosts 
-      should_transfer_files   = YES 
-      when_to_transfer_output = ON_EXIT 
-      output                  = out.$(Process) 
-      error                   = err.$(Process) 
-      log                     = log.$(Process) 
-      request_memory          = 100M 
-      queue 1
+      universe                = docker 
+      docker_image            = debian 
+      executable              = /bin/cat 
+      arguments               = /etc/hosts 
+      should_transfer_files   = YES 
+      when_to_transfer_output = ON_EXIT 
+      output                  = out.$(Process) 
+      error                   = err.$(Process) 
+      log                     = log.$(Process) 
+      request_memory          = 100M 
+      queue 1
 
 A debian container is the HTCondor job, and it runs the */bin/cat*
 program on the ``/etc/hosts`` file before exiting.
@@ -100,10 +100,10 @@ network interface. In the job submit file, if the user specifies
 
 ::
 
-    docker_network_type = host
+    docker_network_type = host
 
 then, instead of at NATted interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
 
-      
+      

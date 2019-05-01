@@ -1,4 +1,4 @@
-      
+      
 
 procd\_ctl
 ==========
@@ -11,7 +11,7 @@ Synopsis
 
 **procd\_ctl** **-h**
 
-**procd\_ctl** **-A **\ *address-file* [**command**\ ]
+**procd\_ctl** **-A **\ *address-file* [**command**\ ]
 
 Description
 -----------
@@ -91,8 +91,8 @@ Center for High Throughput Computing, University of Wisconsin–Madison
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      
