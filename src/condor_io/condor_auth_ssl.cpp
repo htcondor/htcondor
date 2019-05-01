@@ -47,6 +47,7 @@
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
 #endif
+static int (*SSL_peek_ptr)(SSL *ssl, void *buf, int num) = NULL;
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
 static int (*SSL_CTX_load_verify_locations_ptr)(SSL_CTX *, const char *, const char *) = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -80,6 +81,15 @@ static SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #else
 static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
+static int (*scitoken_deserialize_ptr)(const char *value, SciToken *token, const char **allowed_issuers, char **err_msg) = nullptr;
+static int (*scitoken_get_claim_string_ptr)(const SciToken token, const char *key, char **value, char **err_msg) = nullptr;
+static void (*scitoken_destroy_ptr)(SciToken token) = nullptr;
+static Enforcer (*enforcer_create_ptr)(const char *issuer, const char **audience, char **err_msg) = nullptr;
+static void (*enforcer_destroy_ptr)(Enforcer) = nullptr;
+static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scitokens, Acl **acls, char **err_msg) = nullptr;
+static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
+
+#define LIBSCITOKENS_SO "libSciTokens.so.0"
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -131,6 +141,7 @@ bool Condor_Auth_SSL::Initialize()
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
 #endif
+		 !(SSL_peek_ptr = (int (*)(SSL *ssl, void *buf, int num))dlsym(dl_hdl, "SSL_peek")) ||
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
 		 !(SSL_CTX_load_verify_locations_ptr = (int (*)(SSL_CTX *, const char *, const char *))dlsym(dl_hdl, "SSL_CTX_load_verify_locations")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -180,10 +191,32 @@ bool Condor_Auth_SSL::Initialize()
 	} else {
 		m_initSuccess = true;
 	}
+
+	dlerror();
+	dl_hdl = nullptr;
+	if (
+		!(dl_hdl = dlopen(LIBSCITOKENS_SO, RTLD_LAZY)) ||
+		!(scitoken_deserialize_ptr = (int (*)(const char *value, SciToken *token, const char **allowed_issuers, char **err_msg))dlsym(dl_hdl, "scitoken_deserialize")) ||
+		!(scitoken_get_claim_string_ptr = (int (*)(const SciToken token, const char *key, char **value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string")) ||
+		!(scitoken_destroy_ptr = (void (*)(SciToken token))dlsym(dl_hdl, "scitoken_destroy")) ||
+		!(enforcer_create_ptr = (Enforcer (*)(const char *issuer, const char **audience, char **err_msg))dlsym(dl_hdl, "enforcer_create")) ||
+		!(enforcer_destroy_ptr = (void (*)(Enforcer))dlsym(dl_hdl, "enforcer_destroy")) ||
+		!(enforcer_generate_acls_ptr = (int (*)(const Enforcer enf, const SciToken scitokens, Acl **acls, char **err_msg))dlsym(dl_hdl, "enforcer_generate_acls")) ||
+		!(enforcer_acl_free_ptr = (void (*)(Acl *acls))dlsym(dl_hdl, "enforcer_acl_free"))
+
+	) {
+		const char *err_msg = dlerror();
+		if ( err_msg ) {
+			dprintf( D_ALWAYS, "Failed to open OpenSSL library: %s\n", err_msg );
+		}
+		m_initSuccess = false;
+	}
+
 #else
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
 #endif
+	SSL_peek_ptr = SSL_peek;
 	SSL_CTX_free_ptr = SSL_CTX_free;
 	SSL_CTX_load_verify_locations_ptr = SSL_CTX_load_verify_locations;
 	SSL_CTX_new_ptr = SSL_CTX_new;
@@ -213,6 +246,13 @@ bool Condor_Auth_SSL::Initialize()
 #else
 	SSL_method_ptr = TLS_method;
 #endif
+	scitoken_deserialize_ptr = scitoken_deserialize;
+	scitoken_get_claim_string_ptr = scitoken_get_claim_string;
+	scitoken_destroy_ptr = scitoken_destroy;
+	enforcer_create_ptr = enforcer_create;
+	enforcer_destroy_ptr = enforcer_destroy;
+	enforcer_generate_acls_ptr = enforcer_generate_acls;
+	enforcer_acl_free_ptr = enforcer_acl_free;
 	m_initSuccess = true;
 #endif
 
@@ -837,7 +877,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 		if( m_auth_state->m_server_status != AUTH_SSL_HOLDING ) {
 			if (m_auth_state->m_token_length == -1) {
 				uint32_t token_length = 0;
-				m_auth_state->m_ssl_status = SSL_peek(m_auth_state->m_ssl,
+				m_auth_state->m_ssl_status = SSL_peek_ptr(m_auth_state->m_ssl,
 					static_cast<void*>(&token_length), sizeof(token_length));
 				if (m_auth_state->m_ssl_status >= 1) {
 					m_auth_state->m_token_length = ntohl(token_length);
@@ -955,42 +995,42 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 					audience_ptr.push_back(audiences.back().c_str());
 				}
 		}
-			if (scitoken_deserialize(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
+			if ((*scitoken_deserialize_ptr)(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
 					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
 				retval = CondorAuthSSLRetval::Fail;
-			} else if (scitoken_get_claim_string(token, "iss", &issuer, &err_msg)) {
+			} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &issuer, &err_msg)) {
 				dprintf(D_SECURITY, "Unable to retrieve token issuer: %s\n",
 					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
-				scitoken_destroy(token);
+				(*scitoken_destroy_ptr)(token);
 				token = nullptr;
 				retval = CondorAuthSSLRetval::Fail;
-			} else if (scitoken_get_claim_string(token, "sub", &sub, &err_msg) || !sub) {
+			} else if ((*scitoken_get_claim_string_ptr)(token, "sub", &sub, &err_msg) || !sub) {
 				dprintf(D_SECURITY, "Unable to retrieve token subject: %s\n",
 					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
-				scitoken_destroy(token);
+				(*scitoken_destroy_ptr)(token);
 				token = nullptr;
 				free(issuer);
 				retval = CondorAuthSSLRetval::Fail;
-			} else if (!(enf = enforcer_create(issuer, &audience_ptr[0], &err_msg))) {
+			} else if (!(enf = (*enforcer_create_ptr)(issuer, &audience_ptr[0], &err_msg))) {
 				dprintf(D_SECURITY, "Failed to create SciTokens enforcer: %s\n",
 					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
-				scitoken_destroy(token);
+				(*scitoken_destroy_ptr)(token);
 				free(issuer);
 				free(sub);
 				retval = CondorAuthSSLRetval::Fail;
-			} else if (enforcer_generate_acls(enf, token, &acls, &err_msg)) {
+			} else if ((*enforcer_generate_acls_ptr)(enf, token, &acls, &err_msg)) {
 				dprintf(D_SECURITY, "Failed to verify token and generate ACLs: %s\n",
 					err_msg ? err_msg : "(unknown failure)");
 				free(err_msg);
-				scitoken_destroy(token);
+				(*scitoken_destroy_ptr)(token);
 				free(issuer);
 				free(sub);
-				enforcer_destroy(enf);
+				(*enforcer_destroy_ptr)(enf);
 				retval = CondorAuthSSLRetval::Fail;
 			} else {
 				if (acls) {
@@ -1018,16 +1058,16 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 						mySock_->setPolicyAd(ad);
 					}
 
-					enforcer_acl_free(acls);
+					(*enforcer_acl_free_ptr)(acls);
 				}
 				setRemoteUser("scitokens");
 				std::string auth_name = std::string(issuer) + "," + sub;
 				setAuthenticatedName( auth_name.c_str() );
 				dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer);
-				scitoken_destroy(token);
+				(*scitoken_destroy_ptr)(token);
 				free(issuer);
 				free(sub);
-				enforcer_destroy(enf);
+				(*enforcer_destroy_ptr)(enf);
 			}
 #else
 			dprintf(D_ALWAYS, "SciTokens auth used but support is not available.\n");
