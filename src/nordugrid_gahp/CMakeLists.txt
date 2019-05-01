@@ -36,6 +36,10 @@ if (HAVE_EXT_GLOBUS)
 				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
 				OFF )
 
+	if ( NOT PROPER )
+		add_dependencies(nordugrid_gahp globus)
+	endif()
+
 	# Check nordugrid_gahp's shared library dependencies and copy a
 	# specific subset of those libraries into <release>/lib/condor
 	if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
