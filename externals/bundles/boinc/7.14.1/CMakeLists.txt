@@ -49,7 +49,7 @@ if ( WITH_BOINC )
 		### set the install
 		install ( PROGRAMS "${BOINC_INSTALL_LOC}/boinc_gahp" DESTINATION ${C_SBIN} )
 
-		condor_post_external( boinc OFF OFF )
+		condor_post_external( boinc OFF OFF "" )
 
 	else( NOT PROPER )
 
