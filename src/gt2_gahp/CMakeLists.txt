@@ -21,6 +21,9 @@ if (HAVE_EXT_GLOBUS)
 
 	condor_exe( gahp_server "gahp_server.cpp;my_ez.cpp" ${C_SBIN}
 	"${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" OFF )
+	if ( NOT PROPER )
+		add_dependencies(gahp_server globus)
+	endif()
 
 else()
 
