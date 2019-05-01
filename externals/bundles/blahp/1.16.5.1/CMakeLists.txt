@@ -130,7 +130,7 @@ if ( WITH_BLAHP )
 				COMMAND xargs strip)" )
 		endif()
 
-		condor_post_external( blahp OFF OFF )
+		condor_post_external( blahp OFF OFF "" )
 
 		set(BLAHP_FOUND ON)
 

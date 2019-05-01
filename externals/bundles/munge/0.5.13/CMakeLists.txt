@@ -44,7 +44,7 @@ if (WITH_MUNGE)
 		set( LIBMUNGE_SO "libmunge.so.2" )
 		set (MUNGE_FOUND "${MUNGE_INSTALL_LOC}/lib/libmunge.so")
 
-		condor_post_external( munge include OFF )
+		condor_post_external( munge include OFF "${MUNGE_INSTALL_LOC}/lib/libmunge.so" )
 
 	else(NOT PROPER)
 

@@ -16,14 +16,33 @@
  # 
  ############################################################### 
  
-MACRO (CONDOR_POST_EXTERNAL _TARGET _INC_DIR _LIB_DIR)
+MACRO (CONDOR_POST_EXTERNAL _TARGET _INC_DIR _LIB_DIR _BUILD_BYPRODUCTS)
 
 	string( TOUPPER "${_TARGET}" _UP_TARGET )
 
 	if (WINDOWS)
 		set_property( TARGET ${_TARGET} PROPERTY FOLDER "externals" )
 	endif()	
-		
+
+	# Workaround for cmake 2.x: register build byproducts.
+	# If an external outputs libfoo.so and HTCondor declares a dependency on libfoo.so,
+	# some build generators (ninja) require you to have a target that explicitly generates a file
+	# named libfoo.so.
+	#
+	# In cmake 3.x, this is handled by an additional property of ExternalProject_add called
+	# "BUILD_BYPRODUCTS"; here, we emulate this by adding a custom target that explicitly
+	# outputs the required libraries.
+	set(LOCAL_PRODUCTS "${_BUILD_BYPRODUCTS}")
+	if (LOCAL_PRODUCTS)
+		message (STATUS "Registering ${_TARGET} byproducts: ${_BUILD_BYPRODUCTS}")
+		add_custom_command(
+			COMMAND ${CMAKE_COMMAND} -E echo "Registering ${_TARGET} byproducts"
+			OUTPUT ${_BUILD_BYPRODUCTS}
+			DEPENDS ${_TARGET})
+		add_custom_target("${_TARGET}_condor_byproducts"
+			DEPENDS ${_BUILD_BYPRODUCTS})
+	endif()
+
 	# if a local built copy exists disable from all build 
 	if ( ${_UP_TARGET}_PREBUILT )  
 		set_target_properties( ${_TARGET} PROPERTIES EXCLUDE_FROM_ALL TRUE)
