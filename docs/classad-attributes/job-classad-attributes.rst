@@ -866,13 +866,8 @@ Job ClassAd Attributes
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-<<<<<<< HEAD
     :ref:`admin-manual/configuration-macros:daemon logging configuration file
     entries`) but it applies to the job event log instead of the system event log.
-=======
-    page \ `619 <ConfigurationMacros.html#x33-1890003.5.2>`_) but it
-    applies to the job event log instead of the system event log.
->>>>>>> jtk-docs
     :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
  ``JobCurrentFinishTransferInputDate``:

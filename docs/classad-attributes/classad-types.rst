@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-
-
->>>>>>> jtk-docs
 ClassAd Types
 =============
 
