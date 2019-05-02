@@ -420,7 +420,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Under Unix, list multiple environment entries by separating them
     with a semicolon (;). Under Windows, separate multiple entries with
-    a vertical bar (\|). There is no way to insert a literal semicolon
+    a vertical bar (|). There is no way to insert a literal semicolon
     under Unix or a literal vertical bar under Windows. Note that spaces
     are accepted, but rarely desired, characters within parameter names
     and values, because they are treated as literal characters, not
@@ -485,7 +485,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     universe, then the argument must be a compiled ``.class`` file.
     :index:`getenv<single: getenv; submit commands>`
 
- getenv = <True \| False>
+ getenv = <True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
     then *condor_submit* will copy all of the user's current shell
@@ -536,7 +536,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     current working directory as the job is submitted or the directory
     specified by submit command **initialdir** on the submit machine.
     :index:`log_xml<single: log_xml; submit commands>`
- log_xml = <True \| False>
+ log_xml = <True | False>
     If **log_xml** :index:`log_xml<single: log_xml; submit commands>` is
     ``True``, then the job event log file will be written in ClassAd
     XML. If not specified, XML is not used. Note that the file is an XML
@@ -547,7 +547,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     :index:`submit command<single: submit command; email notification>`
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
     :index:`notification<single: notification; submit commands>`
- notification = <Always \| Complete \| Error \| Never>
+ notification = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
     occur. If defined by *Always*, the owner will be notified whenever
     the job produces a checkpoint, as well as when the job completes. If
@@ -623,13 +623,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     items>** Places zero or more copies of the job in the queue based on
     items in a **<list of items>**
  queue
-    [**<int expr>** ] [**<varname>** ] **matching** [**files \|
+    [**<int expr>** ] [**<varname>** ] **matching** [**files |
     dirs** ] [**slice** ] **<list of items with file globbing>**]
     Places zero or more copies of the job in the queue based on files
     that match a **<list of items with file globbing>**
  queue
     [**<int expr>** ] [**<list of varnames>** ] **from** [**slice** ]
-    **<file name> \| <list of items>**] Places zero or more copies of
+    **<file name> | <list of items>**] Places zero or more copies of
     the job in the queue based on lines from the submit file or from
     **<file name>**
 
@@ -655,7 +655,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
        -  *files* Only filenames will matched.
        -  *dirs* Only directory names will be matched.
 
-    -  *from* **<file name> \| <list of items>** Each line from **<file
+    -  *from* **<file name> | <list of items>** Each line from **<file
        name>** or **<list of items>** is a single item, this allows for
        multiple variables to be set for each item. Lines from **<file
        name>** or **<list of items>** will be split on comma and/or
@@ -665,7 +665,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
        the list continues until the first line that begins with a close
        paren, and lines beginning with pound sign ('#') will be skipped.
        When using the **<file name>** form, if the **<file name>** ends
-       with \|, then it will be executed as a script whatever the script
+       with |, then it will be executed as a script whatever the script
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
@@ -689,7 +689,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     one submit description file.
     :index:`universe<single: universe; submit commands>`
 
- universe = <vanilla \| standard \| scheduler \| local \| grid \| java\| vm \| parallel \| docker>
+ universe = <vanilla | standard | scheduler | local | grid | java| vm | parallel | docker>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
@@ -906,7 +906,7 @@ FILE TRANSFER COMMANDS
     this specifies the path to the file on the execute side. A single
     wild card character (``*``) may be used in each file name.
     :index:`encrypt_execute_directory<single: encrypt_execute_directory; submit commands>`
- encrypt_execute_directory = <True \| False>
+ encrypt_execute_directory = <True | False>
     Defaults to ``False``. If set to ``True``, HTCondor will encrypt the
     contents of the remote scratch directory of the machine where the
     job is executed. This encryption is transparent to the job itself,
@@ -996,7 +996,7 @@ FILE TRANSFER COMMANDS
     to the submit machine. The HTCondor Administrator's manual has full
     details. :index:`should_transfer_files<single: should_transfer_files; submit commands>`
     :index:`submit command should_transfer_files<single: submit command should_transfer_files; file transfer mechanism>`
- should_transfer_files = <YES \| NO \| IF_NEEDED >
+ should_transfer_files = <YES | NO | IF_NEEDED >
     The
     **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
     setting is used to define if HTCondor should transfer files to and
@@ -1023,7 +1023,7 @@ FILE TRANSFER COMMANDS
     is not supported for jobs submitted to the grid universe.
     :index:`skip_filechecks<single: skip_filechecks; submit commands>`
 
- skip_filechecks = <True \| False>
+ skip_filechecks = <True | False>
     When ``True``, file permission checks for the submitted job are
     disabled. When ``False``, file permissions are checked; this is the
     behavior when this command is not present in the submit description
@@ -1036,7 +1036,7 @@ FILE TRANSFER COMMANDS
     defined with **output** :index:`output<single: output; submit commands>` or
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
     :index:`stream_error<single: stream_error; submit commands>`
- stream_error = <True \| False>
+ stream_error = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
     locally and transferred back when the job completes. This command is
@@ -1046,7 +1046,7 @@ FILE TRANSFER COMMANDS
     otherwise ``stderr`` will sent to ``/dev/null`` on Unix machines and
     ignored on Windows machines.
     :index:`stream_input<single: stream_input; submit commands>`
- stream_input = <True \| False>
+ stream_input = <True | False>
     If ``True``, then ``stdin`` is streamed from the machine on which
     the job was submitted. The default value is ``False``. The command
     is only relevant for jobs submitted to the vanilla or java
@@ -1055,7 +1055,7 @@ FILE TRANSFER COMMANDS
     **input** :index:`input<single: input; submit commands>`, otherwise
     ``stdin`` will be ``/dev/null`` on Unix machines and ignored on
     Windows machines. :index:`stream_output<single: stream_output; submit commands>`
- stream_output = <True \| False>
+ stream_output = <True | False>
     If ``True``, then ``stdout`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stdout`` is stored
     locally and transferred back when the job completes. This command is
@@ -1066,7 +1066,7 @@ FILE TRANSFER COMMANDS
     ``stdout`` will sent to ``/dev/null`` on Unix machines and ignored
     on Windows machines.
     :index:`transfer_executable<single: transfer_executable; submit commands>`
- transfer_executable = <True \| False>
+ transfer_executable = <True | False>
     This command is applicable to jobs submitted to the grid and vanilla
     universes. If **transfer_executable** is set to ``False``, then
     HTCondor looks for the executable on the remote machine, and does
@@ -1186,7 +1186,7 @@ FILE TRANSFER COMMANDS
     backslash. You cannot specify directories to be remapped.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
- when_to_transfer_output = < ON_EXIT \| ON_EXIT_OR_EVICT >
+ when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT >
     Setting
     **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
     equal to *ON_EXIT* will cause HTCondor to transfer the job's output
@@ -1225,7 +1225,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     generated by the retry commands.
     :index:`retry_until<single: retry_until; submit commands>`
 
- retry_until <Integer \| ClassAd Boolean Expression>
+ retry_until <Integer | ClassAd Boolean Expression>
     An integer value or boolean expression that prevents further retries
     from taking place, even if **max_retries** have not been exhausted.
     If **retry_until** is an integer, the job exiting with that exit
@@ -1248,7 +1248,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     there is currently no way to overcome this limitation.
     :index:`hold<single: hold; submit commands>`
 
- hold = <True \| False>
+ hold = <True | False>
     If **hold** is set to ``True``, then the submitted job will be
     placed into the Hold state. Jobs in the Hold state will not run
     until released by *condor_release*. Defaults to ``False``.
@@ -1482,7 +1482,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 :index:`allow_startup_script<single: allow_startup_script; submit commands>`
 
- allow_startup_script = <True \| False>
+ allow_startup_script = <True | False>
     If True, a standard universe job will execute a script instead of
     submitting the job, and the consistency check to see if the
     executable has been linked using *condor_compile* is omitted. The
@@ -1666,7 +1666,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
     This option only applies to standard universe jobs.
     :index:`want_remote_io<single: want_remote_io; submit commands>`
 
- want_remote_io = <True \| False>
+ want_remote_io = <True | False>
     This option controls how a file is opened and manipulated in a
     standard universe job. If this option is true, which is the default,
     then the *condor_shadow* makes all decisions about how each and
@@ -1842,7 +1842,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     the running instance. The tag name will be lower-cased, use
     **ec2_tag_names** :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
     to change the case. :index:`WantNameTag<single: WantNameTag; submit commands>`
- WantNameTag = <True \| False>
+ WantNameTag = <True | False>
     For grid type **ec2** jobs, a job may request that its 'name' tag be
     (not) set by HTCondor. If the job does not otherwise specify any
     tags, not setting its name tag will eliminate a call by the EC2
@@ -1911,7 +1911,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     an HTCondor job. Within the file, each name and value pair is on its
     own line; so, the pairs are separated by the newline character.
     :index:`gce_preemptible<single: gce_preemptible; submit commands>`
- gce_preemptible = <True \| False>
+ gce_preemptible = <True | False>
     For grid type **gce** jobs, specifies whether the virtual machine
     instance should be preemptible. The default is for the instance to
     not be preemptible. :index:`globus_rematch<single: globus_rematch; submit commands>`
@@ -2060,7 +2060,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     covered by regular submit description file parameters. Used when the
     **universe** is **grid**, and the type of grid system is
     **nordugrid**. :index:`transfer_error<single: transfer_error; submit commands>`
- transfer_error = <True \| False>
+ transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
     remote machine back to the submit machine. The name of the file
@@ -2071,7 +2071,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **error** :index:`error<single: error; submit commands>` command. The
     default value is ``True``.
     :index:`transfer_input<single: transfer_input; submit commands>`
- transfer_input = <True \| False>
+ transfer_input = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     job input (``stdin``) is transferred from the machine where the job
     was submitted to the remote machine. The name of the file that is
@@ -2086,7 +2086,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
     :index:`transfer_output<single: transfer_output; submit commands>`
 
- transfer_output = <True \| False>
+ transfer_output = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     output (from ``stdout``) from the job is transferred from the remote
     machine back to the submit machine. The name of the file after
@@ -2101,7 +2101,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
     :index:`use_x509userproxy<single: use_x509userproxy; submit commands>`
 
- use_x509userproxy = <True \| False>
+ use_x509userproxy = <True | False>
     Set this command to ``True`` to indicate that the job requires an
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
@@ -2201,7 +2201,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
 
     :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
 
- vm_checkpoint = <True \| False>
+ vm_checkpoint = <True | False>
     A boolean value specifying whether or not to take checkpoints. If
     not specified, the default value is ``False``. In the current
     implementation, setting both
@@ -2220,7 +2220,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
  vm_memory = <MBytes-of-memory>
     The amount of memory in MBytes that a vm universe job requires.
     :index:`vm_networking<single: vm_networking; submit commands>`
- vm_networking = <True \| False>
+ vm_networking = <True | False>
     Specifies whether to use networking or not. In the current
     implementation, setting both
     **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
@@ -2230,19 +2230,19 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
     used if a vm universe job uses a checkpoint in order to continue
     execution after migration to another machine.
     :index:`vm_networking_type<single: vm_networking_type; submit commands>`
- vm_networking_type = <nat \| bridge >
+ vm_networking_type = <nat | bridge >
     When
     **vm_networking** :index:`vm_networking<single: vm_networking; submit commands>`
     is ``True``, this definition augments the job's requirements to
     match only machines with the specified networking. If not specified,
     then either networking type matches.
     :index:`vm_no_output_vm<single: vm_no_output_vm; submit commands>`
- vm_no_output_vm = <True \| False>
+ vm_no_output_vm = <True | False>
     When ``True``, prevents HTCondor from transferring output files back
     to the machine from which the vm universe job was submitted. If not
     specified, the default value is ``False``.
     :index:`vm_type<single: vm_type; submit commands>`
- vm_type = <vmware \| xen \| kvm>
+ vm_type = <vmware | xen | kvm>
     Specifies the underlying virtual machine software that this job
     expects. :index:`vmware_dir<single: vmware_dir; submit commands>`
  vmware_dir = <pathname>
@@ -2253,7 +2253,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
     to be listed using
     **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
     :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`
- vmware_should_transfer_files = <True \| False>
+ vmware_should_transfer_files = <True | False>
     Specifies whether HTCondor will transfer VMware-specific files
     located as specified by
     **vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` to the
@@ -2262,7 +2262,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
     universe jobs) results in an error message from *condor_submit*,
     and the job will not be submitted.
     :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
- vmware_snapshot_disk = <True \| False>
+ vmware_snapshot_disk = <True | False>
     When ``True``, causes HTCondor to utilize a VMware snapshot disk for
     new or modified files. If not specified, the default value is
     ``True``. :index:`xen_initrd<single: xen_initrd; submit commands>`
@@ -2273,7 +2273,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
     image file will be transferred by HTCondor, then the value should
     just be the simple file name (no path information).
     :index:`xen_kernel<single: xen_kernel; submit commands>`
- xen_kernel = <included \| path-to-kernel>
+ xen_kernel = <included | path-to-kernel>
     A value of **included** :index:`included<single: included; submit commands>`
     specifies that the kernel is included in the disk file. If not one
     of these values, then the value is a path and file name of the
@@ -2334,7 +2334,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     machine ClassAd attributes that are evaluated against a matched
     machine. After evaluation, the list sets **concurrency_limits**.
     :index:`copy_to_spool<single: copy_to_spool; submit commands>`
- copy_to_spool = <True \| False>
+ copy_to_spool = <True | False>
     If
     **copy_to_spool** :index:`copy_to_spool<single: copy_to_spool; submit commands>`
     is ``True``, then *condor_submit* copies the executable to the
@@ -2577,7 +2577,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     value and the configuration variable ``KILLING_TIMEOUT``
     :index:`KILLING_TIMEOUT`, as defined on the execute machine.
     :index:`load_profile<single: load_profile; submit commands>`
- load_profile = <True \| False>
+ load_profile = <True | False>
     When ``True``, loads the account profile of the dedicated run
     account for Windows jobs. May not be used with
     **run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`.
@@ -2661,7 +2661,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     machines, explicitly specify this in the requirements and/or rank
     expressions. :index:`nice_user<single: nice_user; submit commands>`
 
- nice_user = <True \| False>
+ nice_user = <True | False>
     Normally, when a machine becomes available to HTCondor, HTCondor
     decides which job to run based upon user and job priorities. Setting
     **nice_user** equal to ``True`` tells HTCondor not to use your
@@ -2706,7 +2706,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     system authentication when submitting to a remote scheduler. Should
     be a path to a preexisting directory.
     :index:`run_as_owner<single: run_as_owner; submit commands>`
- run_as_owner = <True \| False>
+ run_as_owner = <True | False>
     A boolean value that causes the job to be run under the login of the
     submitter, if supported by the joint configuration of the submit and
     execute machines. On Unix platforms, this defaults to ``True``, and

@@ -9,11 +9,11 @@ suspend jobs from the HTCondor queue
 Synopsis
 --------
 
-**condor_suspend** [**-help \| -version** ]
+**condor_suspend** [**-help | -version** ]
 
 **condor_suspend** [**-debug** ] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] **
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **
 
 Description
 -----------

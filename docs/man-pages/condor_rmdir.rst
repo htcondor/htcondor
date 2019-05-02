@@ -9,7 +9,7 @@ Windows-only no-fail deletion of directories
 Synopsis
 --------
 
-**condor_rmdir** [**/HELP \| /?** ]
+**condor_rmdir** [**/HELP | /?** ]
 
 **condor_rmdir** *@filename*
 

@@ -18,7 +18,7 @@ Synopsis
 [**-maxjobs** *numberOfJobs*] [**-maxpre** *NumberOfPreScripts*]
 [**-maxpost** *NumberOfPostScripts*] [**-noeventchecks** ]
 [**-allowlogerror** ] [**-usedagdir** ] **-lockfile** *filename*
-[**-waitfordebug** ] [**-autorescue** *0\|1*]
+[**-waitfordebug** ] [**-autorescue** *0|1*]
 [**-dorescuefrom** *number*] [**-allowversionmismatch** ]
 [**-DumpRescue** ] [**-verbose** ] [**-force** ]
 [**-notification** *value*] [**-suppress_notification** ]
@@ -151,7 +151,7 @@ Options
     This optional argument causes *condor_dagman* to wait at startup
     until someone attaches to the process with a debugger and sets the
     wait_for_debug variable in main_init() to false.
- **-autorescue** *0\|1*
+ **-autorescue** *0|1*
     Whether to automatically run the newest rescue DAG for the given DAG
     file, if one exists (0 = ``false``, 1 = ``true``).
  **-dorescuefrom** *number*

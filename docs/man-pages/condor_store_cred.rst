@@ -11,14 +11,14 @@ Synopsis
 
 **condor_store_cred** [**-help** ]
 
-**condor_store_cred** *add* [**-c** \| **-u** *username*
+**condor_store_cred** *add* [**-c** | **-u** *username*
 ][\ **-p** *password*] [**-n** *machinename*]
 [**-f** *filename*]
 
-**condor_store_cred** *delete* [**-c** \| **-u** *username*
+**condor_store_cred** *delete* [**-c** | **-u** *username*
 ][\ **-n** *machinename*]
 
-**condor_store_cred** *query* [**-c** \| **-u** *username*
+**condor_store_cred** *query* [**-c** | **-u** *username*
 ][\ **-n** *machinename*]
 
 Description

@@ -9,12 +9,12 @@ Attempt a security negotiation to determine if it succeeds
 Synopsis
 --------
 
-**condor_ping** [**-help \| -version** ]
+**condor_ping** [**-help | -version** ]
 
 **condor_ping** [**-debug** ] [**-address** *<a.b.c.d:port>*]
 [**-pool** *host name*] [**-name** *daemon name*]
-[**-type** *subsystem*] [**-config** *filename*] [**-quiet \|
--table \| -verbose** ] *token* [*token [...]* ]
+[**-type** *subsystem*] [**-config** *filename*] [**-quiet |
+-table | -verbose** ] *token* [*token [...]* ]
 
 Description
 -----------

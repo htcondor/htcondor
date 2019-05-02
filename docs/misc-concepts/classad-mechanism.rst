@@ -987,13 +987,13 @@ have these exceptional values.
 
 -  **Logical operators:**
 
-   #. The logical operators ``&&`` and ``\|\|`` operate on integers and reals.
+   #. The logical operators ``&&`` and ``||`` operate on integers and reals.
       The zero value of these types are considered ``FALSE`` and
       non-zero values ``TRUE``.
    #. The operators are not strict, and exploit the "don't care"
       properties of the operators to squash ``UNDEFINED`` and ``ERROR``
       values when possible. For example, UNDEFINED && FALSE evaluates to
-      ``FALSE``, but ``UNDEFINED \|\| FALSE`` evaluates to ``UNDEFINED``.
+      ``FALSE``, but ``UNDEFINED || FALSE`` evaluates to ``UNDEFINED``.
    #. Any string operand is equivalent to an ``ERROR`` operand for a
       logical operator. In other words, ``TRUE && "foobar"`` evaluates to
       ``ERROR``.

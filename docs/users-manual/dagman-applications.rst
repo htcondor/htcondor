@@ -231,10 +231,10 @@ SCRIPT
 
 The optional *SCRIPT* command specifies processing that is done either
 before a job within a node is submitted or after a job within a node
-completes its execution. :index:`PRE script<single: PRE script; DAGMan>`\ Processing
+completes its execution. :index:`PRE script<single: PRE script; DAGMan>` Processing
 done before a job is submitted is called a *PRE* script. Processing done
 after a job completes its execution is
-:index:`POST script<single: POST script; DAGMan>`\ called a *POST* script. Note that
+:index:`POST script<single: POST script; DAGMan>` called a *POST* script. Note that
 the executable specified does not necessarily have to be a shell script
 (Unix) or batch file (Windows); but it should be relatively light weight
 because it will be run directly on the submit machine, not submitted as
@@ -242,11 +242,11 @@ an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
 
-**SCRIPT** [**DEFER  ** *status time*] **PRE**
-*JobName* \|\ **ALL_NODES** *ExecutableName* [*arguments* ]
+**SCRIPT** [**DEFER** *status time*] **PRE**
+*JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
 
-**SCRIPT** [**DEFER  ** *status time*] **POST**
-*JobName* \|\ **ALL_NODES** *ExecutableName* [*arguments* ]
+**SCRIPT** [**DEFER** *status time*] **POST**
+*JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
 
 The *SCRIPT* command uses the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
@@ -511,7 +511,7 @@ The behavior of DAGMan with respect to node success or failure can be
 changed with the addition of a *PRE_SKIP* command. A *PRE_SKIP* line
 within the DAG input file uses the syntax:
 
-**PRE_SKIP** *JobName* \|\ **ALL_NODES** *non-zero-exit-code*
+**PRE_SKIP** *JobName* | **ALL_NODES** *non-zero-exit-code*
 
 The PRE script of a node identified by *JobName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
@@ -1073,7 +1073,7 @@ Macros defined for DAG nodes can be used within the submit description
 file of the node job. The *VARS* command provides a method for defining
 a macro. Macros are defined on a per-node basis, using the syntax
 
-**VARS** *JobName* \|\ **ALL_NODES** *macroname=* *"string"*
+**VARS** *JobName* | **ALL_NODES** *macroname=* *"string"*
 [*macroname=* *"string"...*]
 
 The macro may be used within the submit description file of the relevant
@@ -1374,7 +1374,7 @@ Setting Priorities for Nodes
 The *PRIORITY* command assigns a priority to a DAG node (and to the
 HTCondor job(s) associated with the node). The syntax for *PRIORITY* is
 
-**PRIORITY** *JobName* \|\ **ALL_NODES** *PriorityValue*
+**PRIORITY** *JobName* | **ALL_NODES** *PriorityValue*
 
 The priority value is an integer (which can be negative). A larger
 numerical priority is better. The default priority is 0.
@@ -1502,7 +1502,7 @@ maximum number of submitted clusters may be specified for each category.
 The *CATEGORY* command assigns a category name to a DAG node. The syntax
 for *CATEGORY* is
 
-**CATEGORY** *JobName* \|\ **ALL_NODES** *CategoryName*
+**CATEGORY** *JobName* | **ALL_NODES** *CategoryName*
 
 Category names cannot contain white space.
 

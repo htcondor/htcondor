@@ -27,7 +27,7 @@ defining configuration, such as in the nonfunctional example:
     LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \ 
       http://www.example.com/htcondor-baseconfig  local.config |
 
-The pipe character (\|) at the end of this definition of the location of
+The pipe character (|) at the end of this definition of the location of
 a configuration file changes the use of the definition. It causes the
 command listed on the right hand side of this assignment statement to be
 invoked, and standard output becomes the configuration. The value of

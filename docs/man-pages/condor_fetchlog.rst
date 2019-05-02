@@ -10,11 +10,11 @@ Retrieve a daemon's log file that is located on another computer
 Synopsis
 --------
 
-**condor_fetchlog** [**-help \| -version** ]
+**condor_fetchlog** [**-help | -version** ]
 
 **condor_fetchlog**
-[**-pool** *centralmanagerhostname[:portnumber]*] [**-master \|
--startd \| -schedd \| -collector \| -negotiator \| -kbdd** ]
+[**-pool** *centralmanagerhostname[:portnumber]*] [**-master |
+-startd | -schedd | -collector | -negotiator | -kbdd** ]
 *machine-name* *subsystem[.extension]*
 
 Description

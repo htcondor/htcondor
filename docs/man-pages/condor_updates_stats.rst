@@ -10,11 +10,11 @@ Display output from *condor_status*
 Synopsis
 --------
 
-**condor_updates_stats** [--**help** \| -**h**] \| [--**version**]
+**condor_updates_stats** [--**help** | -**h**] | [--**version**]
 
-**condor_updates_stats** [--**long** \| -**l**]
+**condor_updates_stats** [--**long** | -**l**]
 [--**history=<min>-<max>**] [--**interval=<seconds>**] [--**notime**]
-[--**time**] [--**summary** \| -**s**]
+[--**time**] [--**summary** | -**s**]
 
 Description
 -----------

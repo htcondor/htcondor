@@ -10,38 +10,38 @@ manage COD machines and jobs
 Synopsis
 --------
 
-**condor_cod** [**-help \| -version** ]
+**condor_cod** [**-help | -version** ]
 
 **condor_cod** *request* [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] [
-[**-help \| -version** ] \| [**-debug \| -timeout N \| -classad
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] [
+[**-help | -version** ] | [**-debug | -timeout N | -classad
 file** ] ] [**-requirements expr** ] [**-lease N** ]
 
-**condor_cod** *release* **-id** *ClaimID* [ [**-help \|
--version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *release* **-id** *ClaimID* [ [**-help |
+-version** ] | [**-debug | -timeout N | -classad file** ] ]
 [**-fast** ]
 
-**condor_cod** *activate* **-id** *ClaimID* [ [**-help \|
--version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
-[**-keyword string \| -jobad filename \| -cluster N \| -proc N \|
+**condor_cod** *activate* **-id** *ClaimID* [ [**-help |
+-version** ] | [**-debug | -timeout N | -classad file** ] ]
+[**-keyword string | -jobad filename | -cluster N | -proc N |
 -requirements expr** ]
 
-**condor_cod** *deactivate* **-id** *ClaimID* [ [**-help \|
--version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *deactivate* **-id** *ClaimID* [ [**-help |
+-version** ] | [**-debug | -timeout N | -classad file** ] ]
 [**-fast** ]
 
-**condor_cod** *suspend* **-id** *ClaimID* [ [**-help \|
--version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *suspend* **-id** *ClaimID* [ [**-help |
+-version** ] | [**-debug | -timeout N | -classad file** ] ]
 
-**condor_cod** *renew* **-id** *ClaimID* [ [**-help \| -version** ]
-\| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *renew* **-id** *ClaimID* [ [**-help | -version** ]
+| [**-debug | -timeout N | -classad file** ] ]
 
-**condor_cod** *resume* **-id** *ClaimID* [ [**-help \| -version** ]
-\| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *resume* **-id** *ClaimID* [ [**-help | -version** ]
+| [**-debug | -timeout N | -classad file** ] ]
 
-**condor_cod** *delegate_proxy* **-id** *ClaimID* [ [**-help \|
--version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+**condor_cod** *delegate_proxy* **-id** *ClaimID* [ [**-help |
+-version** ] | [**-debug | -timeout N | -classad file** ] ]
 [**-x509proxy** *ProxyFile*]
 
 Description

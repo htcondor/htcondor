@@ -3,12 +3,12 @@
 HTCondor Annex Customization Guide
 ==================================
 
-Aside from the configuration macros (see section `HTCondor Annex
-Configuration <../cloud-computing/annex-configuration.html>`_, below),
-the major way to customize *condor_annex* is my customizing the default
-disk image. Because the implementation of *condor_annex* varies from
-service to service, and that implementation determines the constraints
-on the disk image, the this section is divided by service.
+Aside from the configuration macros (see the 
+:doc:`/cloud-computing/annex-configuration` section), the major way to 
+ustomize *condor_annex* is my customizing the default disk image. Because
+the implementation of *condor_annex* varies from service to service, and that
+implementation determines the constraints on the disk image, the this section
+is divided by service.
 
 Amazon Web Services
 -------------------

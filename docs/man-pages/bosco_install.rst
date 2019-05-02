@@ -9,7 +9,7 @@
 Synopsis
 --------
 
-**bosco_install** [--**help**] \| [--**usage**]
+**bosco_install** [--**help**] | [--**usage**]
 
 **bosco_install** [--**install[=<path/to/release_dir>]**]
 [--**prefix=<path>**] [--**install-dir=<path>**]

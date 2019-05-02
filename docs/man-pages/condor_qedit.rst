@@ -10,7 +10,7 @@ Synopsis
 --------
 
 **condor_qedit** [**-debug** ] [**-n** *schedd-name*]
-[**-pool** *pool-name*] *{cluster \| cluster.proc \| owner \|
+[**-pool** *pool-name*] *{cluster | cluster.proc | owner |
 -constraint constraint}* *attribute-name* *attribute-value* *...*
 
 Description

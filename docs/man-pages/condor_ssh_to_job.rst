@@ -15,7 +15,7 @@ Synopsis
 [**-pool** *pool-name*] [**-ssh** *ssh-command*]
 [**-keygen-options** *ssh-keygen-options*]
 [**-shells** *shell1,shell2,...*] [**-auto-retry** ]
-[**-remove-on-interrupt** ] *cluster \| cluster.process \|
+[**-remove-on-interrupt** ] *cluster | cluster.process |
 cluster.process.node* [*remote-command* ]
 
 Description

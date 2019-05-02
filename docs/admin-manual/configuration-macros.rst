@@ -333,8 +333,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
           USER_CONFIG_FILE =
 
-``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP``
-:index:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`
+``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`` :index:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`
     A regular expression that specifies file names to be ignored when
     looking for configuration files within the directories specified via
     ``LOCAL_CONFIG_DIR``. The default expression ignores files with
@@ -816,8 +815,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
           STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 
-``STATISTICS_TO_PUBLISH_LIST``
-:index:`STATISTICS_TO_PUBLISH_LIST`
+``STATISTICS_TO_PUBLISH_LIST`` :index:`STATISTICS_TO_PUBLISH_LIST`
     A comma and/or space separated list of statistics attribute names
     that should be published in updates to the *condor_collector*
     daemon, even though the verbosity specified in
@@ -841,8 +839,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The window is broken into smaller time pieces called quantum. The
     window advances one quantum at a time.
 
-``STATISTICS_WINDOW_SECONDS_<collection>``
-:index:`STATISTICS_WINDOW_SECONDS_<collection>`
+``STATISTICS_WINDOW_SECONDS_<collection>`` :index:`STATISTICS_WINDOW_SECONDS_<collection>`
     The same as ``STATISTICS_WINDOW_SECONDS``, but used to override the
     global setting for a particular statistic collection. Collection
     names currently implemented are ``DC`` or ``DAEMONCORE`` and

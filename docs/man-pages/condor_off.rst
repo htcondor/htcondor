@@ -9,13 +9,13 @@ Shutdown HTCondor daemons
 Synopsis
 --------
 
-**condor_off** [**-help \| -version** ]
+**condor_off** [**-help | -version** ]
 
-**condor_off** [**-graceful \| -fast \| -peaceful \|
+**condor_off** [**-graceful | -fast | -peaceful |
 -force-graceful** ] [**-annex** *name*] [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 [**-daemon** *daemonname*]
 
 Description

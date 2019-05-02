@@ -9,8 +9,8 @@ Display and summarize job statistics from job log files.
 Synopsis
 --------
 
-**condor_userlog** [**-help** ] [**-total \| -raw** ] [**-debug** ]
-[**-evict** ] [**-j** *cluster \| cluster.proc*] [**-all** ]
+**condor_userlog** [**-help** ] [**-total | -raw** ] [**-debug** ]
+[**-evict** ] [**-j** *cluster | cluster.proc*] [**-all** ]
 [**-hostname** ] *logfile ...*
 
 Description

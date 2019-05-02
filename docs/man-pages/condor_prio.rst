@@ -9,10 +9,10 @@ change priority of jobs in the HTCondor queue
 Synopsis
 --------
 
-**condor_prio** **-p** *priority* \| **+ ** *value* \|
+**condor_prio** **-p** *priority* | **+ ** *value* |
 **-** *value* [**-n** *schedd_name*] **
 
-**condor_prio** **-p** *priority* \| **+ ** *value* \|
+**condor_prio** **-p** *priority* | **+ ** *value* |
 **-** *value* [**-pool** *pool_name* **-n** *schedd_name* ]\ **
 
 Description

@@ -9,17 +9,17 @@ vacate jobs in the HTCondor queue from the hosts where they are running
 Synopsis
 --------
 
-**condor_vacate_job** [**-help \| -version** ]
+**condor_vacate_job** [**-help | -version** ]
 
 **condor_vacate_job** [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*]
-[**-fast** ] *cluster... \| cluster.process... \| user...* \|
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
+[**-fast** ] *cluster... | cluster.process... | user...* |
 **-constraint** *expression* ...
 
 **condor_vacate_job** [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*]
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
 [**-fast** ] **-all**
 
 Description

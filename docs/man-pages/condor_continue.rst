@@ -9,11 +9,11 @@ continue suspended jobs from the HTCondor queue
 Synopsis
 --------
 
-**condor_continue** [**-help \| -version** ]
+**condor_continue** [**-help | -version** ]
 
 **condor_continue** [**-debug** ] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] **
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **
 
 Description
 -----------

@@ -176,7 +176,7 @@ following way:
     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
 
     X86_64/LINUX     2     0       0         2       0          0        0      0
-    Total     2     0       0         2       0          0        0      0
+    Total            2     0       0         2       0          0        0      0
 
 This example shows that the annex instance you requested has joined your
 pool. (The default annex image configures one static slot for each CPU
@@ -192,7 +192,7 @@ You may instead use *condor_status*:
 
      Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
     X86_64/LINUX     2     0       0         2       0          0        0      0
-    Total     2     0       0         2       0          0        0      0
+    Total            2     0       0         2       0          0        0      0
 
 You can also get a report about the instances which have not joined your
 pool:
@@ -222,7 +222,7 @@ the pool, regardless of which annex they're from:
 
     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
     X86_64/LINUX     4     0       0         4       0          0        0      0
-    Total     4     0       0         4       0          0        0      0
+    Total            4     0       0         4       0          0        0      0
 
 The following command reports about instance which have not joined the
 pool, regardless of which annex they're from:
@@ -258,7 +258,7 @@ The following command combines these two reports:
     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
 
     X86_64/LINUX     2     0       0         2       0          0        0      0
-    Total     2     0       0         2       0          0        0      0
+    Total            2     0       0         2       0          0        0      0
 
     Instance ID         not in Annex  Status  Reason (if known)
     i-075af9ccb40efb162 NamelessTestA running -
@@ -466,7 +466,7 @@ with instance types, but this is not required.
 Expert Mode
 '''''''''''
 
-The man page (in section `12 <Condorannex.html#x99-68500012>`_) lists
+The man page (:doc:`/man-pages/condor_annex`) lists
 the "expert mode" options.
 
 Four of the "expert mode" options set the URLs used to access AWS

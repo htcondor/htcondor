@@ -9,12 +9,12 @@ Set a program to execute upon *condor_master* shut down
 Synopsis
 --------
 
-**condor_set_shutdown** [**-help \| -version** ]
+**condor_set_shutdown** [**-help | -version** ]
 
 **condor_set_shutdown** **-exec** *programname* [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 
 Description
 -----------

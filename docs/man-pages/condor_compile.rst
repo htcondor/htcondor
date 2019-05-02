@@ -10,7 +10,7 @@ create a relinked executable for use as a standard universe job
 Synopsis
 --------
 
-**condor_compile** *cc \| CC \| gcc \| f77 \| g++ \| ld \| make \| ...*
+**condor_compile** *cc | CC | gcc | f77 | g++ | ld | make | ...*
 
 Description
 -----------

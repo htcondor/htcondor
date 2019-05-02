@@ -12,7 +12,7 @@ Synopsis
 **condor_drain** [**-help** ]
 
 **condor_drain** [**-debug** ] [**-pool** *pool-name*] [**-graceful
-\| -quick \| -fast** ] [**-resume-on-completion** ]
+| -quick | -fast** ] [**-resume-on-completion** ]
 [**-check** *expr*] [**-start** *expr*] *machine-name*
 
 **condor_drain** [**-debug** ] [**-pool** *pool-name*] **-cancel**

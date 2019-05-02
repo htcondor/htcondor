@@ -13,7 +13,7 @@ Synopsis
 
 **condor_userprio** [**-name** *negotiatorname*]
 [**-pool** *centralmanagerhostname[:portnumber]*] [**Edit option** ]
-\| [**Display options** ] [**-inputfile** *filename*]
+| [**Display options** ] [**-inputfile** *filename*]
 
 Description
 -----------

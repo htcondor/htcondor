@@ -9,7 +9,7 @@ Send a ClassAd to the *condor_collector* daemon
 Synopsis
 --------
 
-**condor_advertise** [**-help \| -version** ]
+**condor_advertise** [**-help | -version** ]
 
 **condor_advertise** [**-pool** *centralmanagerhostname[:portname]*]
 [**-debug** ] [**-tcp** ] [**-udp** ] [**-multiple** ]

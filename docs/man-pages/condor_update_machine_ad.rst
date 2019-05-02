@@ -9,7 +9,7 @@ update a machine ClassAd
 Synopsis
 --------
 
-**condor_update_machine_ad** [**-help \| -version** ]
+**condor_update_machine_ad** [**-help | -version** ]
 
 **condor_update_machine_ad**
 [**-pool** *centralmanagerhostname[:portnumber]*]

@@ -9,7 +9,7 @@ Display the last contents of a running job's standard output or file
 Synopsis
 --------
 
-**condor_tail** [**-help** ] \| [**-version** ]
+**condor_tail** [**-help** ] | [**-version** ]
 
 **condor_tail** [**-pool** *centralmanagerhostname[:portnumber]*]
 [**-name** *name*] [**-debug** ] [**-maxbytes** *numbytes*]

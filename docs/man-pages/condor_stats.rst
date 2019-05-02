@@ -78,7 +78,7 @@ specification as given by an argument.
     A query of a single list of resources to provide a list of all the
     machines for which the *condor_collector* daemon has historic
     information within the query's time range.
- **-resgroupquery** *arch/opsys \| "Total"*
+ **-resgroupquery** *arch/opsys | "Total"*
     A query of a specified group to provide information about a group of
     machines based on their platform (operating system and
     architecture). The architecture is defined by the machine ClassAd
@@ -107,7 +107,7 @@ specification as given by an argument.
     Queries for the list of all submitters for which the
     *condor_collector* daemon has historic information within the
     query's time range.
- **-usergroupquery** *email_address \| "Total"*
+ **-usergroupquery** *email_address | "Total"*
     Query for all jobs submitted by the specific user, regardless of the
     machine they were submitted from, or all jobs. The information
     displayed includes the number of running jobs and the number of idle

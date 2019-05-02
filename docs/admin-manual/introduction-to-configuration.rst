@@ -475,7 +475,7 @@ Executing a Program to Produce Configuration Macros
 ---------------------------------------------------
 
 Instead of reading from a file, HTCondor can run a program to obtain
-configuration macros. The vertical bar character (\|) as the last
+configuration macros. The vertical bar character (|) as the last
 character defining a file name provides the syntax necessary to tell
 HTCondor to run a program. This syntax may only be used in the
 definition of the ``CONDOR_CONFIG`` environment variable, or the
@@ -531,7 +531,7 @@ incorporated into the configuration. Unless the ifexist option is
 specified, the non-existence of the file is a fatal error.
 
 In the command line form of the ``include`` command (specified with
-either the command option or by appending a bar (\|) character after the
+either the command option or by appending a bar (|) character after the
 <cmdline> specification), the <cmdline> specification must describe a
 command line (program and arguments); the command line will be executed,
 and the output will be parsed and incorporated into the configuration.

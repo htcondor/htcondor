@@ -1023,13 +1023,13 @@ Each property corresponds to answers that would have been supplied while
 running an interactive installer. The following is a brief explanation
 of each property as it applies to unattended installations:
 
- NEWPOOL = < Y \| N >
+ NEWPOOL = < Y | N >
     determines whether the installer will create a new pool with the
     target machine as the central manager.
  POOLNAME
     sets the name of the pool, if a new pool is to be created. Possible
     values are either the name or the empty string "".
- RUNJOBS = < N \| A \| I \| C >
+ RUNJOBS = < N | A | I | C >
     determines when HTCondor will run jobs. This can be set to:
 
     -  Never run jobs (N)
@@ -1038,13 +1038,13 @@ of each property as it applies to unattended installations:
     -  Only run jobs when the keyboard and mouse are idle and the CPU
        usage is low (C)
 
- VACATEJOBS = < Y \| N >
+ VACATEJOBS = < Y | N >
     determines what HTCondor should do when it has to stop the execution
     of a user job. When set to Y, HTCondor will vacate the job and start
     it somewhere else if possible. When set to N, HTCondor will merely
     suspend the job in memory and wait for the machine to become
     available again.
- SUBMITJOBS = < Y \| N >
+ SUBMITJOBS = < Y | N >
     will cause the installer to configure the machine as a submit node
     when set to Y.
  CONDOREMAIL
@@ -1086,7 +1086,7 @@ of each property as it applies to unattended installations:
  VMMAXNUMBER
     an integer value that defines the number of VMs that can be run in
     parallel on the target machine.
- VMNETWORKING = < N \| A \| B \| C >
+ VMNETWORKING = < N | A | B | C >
     determines if VM Universe can use networking. This can be set to:
 
     -  None (N)
@@ -1094,7 +1094,7 @@ of each property as it applies to unattended installations:
     -  Bridged (B)
     -  NAT and Bridged (C)
 
- USEVMUNIVERSE = < Y \| N >
+ USEVMUNIVERSE = < Y | N >
     will cause the installer to enable VM Universe jobs on the target
     machine.
  LOCALCONFIG

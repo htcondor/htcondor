@@ -9,12 +9,12 @@ Vacate jobs that are running on the specified hosts
 Synopsis
 --------
 
-**condor_vacate** [**-help \| -version** ]
+**condor_vacate** [**-help | -version** ]
 
-**condor_vacate** [**-graceful \| -fast** ] [**-debug** ]
+**condor_vacate** [**-graceful | -fast** ] [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 
 Description
 -----------

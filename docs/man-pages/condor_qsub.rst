@@ -190,7 +190,7 @@ Options
     A size value is an integer specified in bytes, following the
     PBS/Torque default. Append ``Kb``, ``Mb``, ``Gb``, or ``Tb`` to
     specify the value in powers of two quantities greater than bytes.
- **-m** *a\|e\|n*
+ **-m** *a|e|n*
     (Notification option) Identify when HTCondor sends notification
     e-mail. If *a*, send e-mail when the job terminates abnormally. If
     *e*, send e-mail when the job terminates. If *n*, never send e-mail.
@@ -213,7 +213,7 @@ Options
  **-print**
     (Specific option) Send to ``stdout`` the contents of the HTCondor
     submit description file that *condor_qsub* generates.
- **-r** *y\|n*
+ **-r** *y|n*
     (Status option) The default value of *y* implements the default
     HTCondor policy of assuming that jobs that do not complete are
     placed back in the queue to be run again. When *n*, job submission

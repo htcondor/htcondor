@@ -9,7 +9,7 @@ Discover and display information related to job routing
 Synopsis
 --------
 
-**condor_job_router_info** [**-help \| -version** ]
+**condor_job_router_info** [**-help | -version** ]
 
 **condor_job_router_info** **-config**
 

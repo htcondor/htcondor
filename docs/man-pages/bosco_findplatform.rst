@@ -9,10 +9,10 @@
 Synopsis
 --------
 
-**bosco_findplatform** [-**h** \|\| --**help**]
+**bosco_findplatform** [-**h** || --**help**]
 
-**bosco_findplatform** [-**u** \|\| --**url**] [-**b** \|\| --**bit**]
-[-**f** \|\| --**full**] [--**force=<platformstring>**] [-**i** \|\|
+**bosco_findplatform** [-**u** || --**url**] [-**b** || --**bit**]
+[-**f** || --**full**] [--**force=<platformstring>**] [-**i** ||
 --**install <installoptions>**]
 
 Description

@@ -10,7 +10,7 @@ Display information about jobs in queue
 Synopsis
 --------
 
-**condor_q** [**-help [Universe \| State]** ]
+**condor_q** [**-help [Universe | State]** ]
 
 **condor_q** [**-debug** ] [*general options* ] [*restriction
 list* ] [*output options* ] [*analyze options* ]
@@ -461,7 +461,7 @@ Options
     default.
  **-goodput**
     (output option) Display job goodput statistics.
- **-help [Universe \| State]**
+ **-help [Universe | State]**
     (output option) Print usage info, and, optionally, additionally
     print job universes or job states.
  **-hold**

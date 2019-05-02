@@ -9,7 +9,7 @@ Wait for jobs to finish :index:`condor_wait<single: condor_wait; HTCondor comman
 Synopsis
 --------
 
-**condor_wait** [**-help \| -version** ]
+**condor_wait** [**-help | -version** ]
 
 **condor_wait** [**-debug** ] [**-status** ] [**-echo** ]
 [**-wait** *seconds*] [**-num** *number-of-jobs*] *log-file*

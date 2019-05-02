@@ -10,12 +10,12 @@ Update scheduling information to the central manager
 Synopsis
 --------
 
-**condor_reschedule** [**-help \| -version** ]
+**condor_reschedule** [**-help | -version** ]
 
 **condor_reschedule** [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 
 Description
 -----------

@@ -12,7 +12,7 @@ Synopsis
 **condor_annex** **-help**
 
 **condor_annex** [**-aws-region** *<region>*] **-setup** *[FROM
-INSTANCE\|[/full/path/to/access/key/file
+INSTANCE|[/full/path/to/access/key/file
 [/full/path/to/secret/key/file]]]*
 
 **condor_annex** [**-aws-on-demand** ] **-annex-name** *<name of the

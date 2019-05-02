@@ -224,11 +224,11 @@ identifying a set of jobs. Square brackets identify an optional item.
 **queue** [**<int expr>** ] [**<varname>** ] **in** [**slice** ]
 **<list of items>**
 
-**queue** [**<int expr>** ] [**<varname>** ] **matching** [**files \|
+**queue** [**<int expr>** ] [**<varname>** ] **matching** [**files |
 dirs** ] [**slice** ] **<list of items with file globbing>**
 
 **queue** [**<int expr>** ] [**<list of varnames>** ] **from**
-[**slice** ] **<file name> \| <list of items>**
+[**slice** ] **<file name> | <list of items>**
 
 All optional items have defaults:
 

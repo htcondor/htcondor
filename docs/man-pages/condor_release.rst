@@ -9,17 +9,17 @@ release held jobs in the HTCondor queue
 Synopsis
 --------
 
-**condor_release** [**-help \| -version** ]
+**condor_release** [**-help | -version** ]
 
 **condor_release** [**-debug** ] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*]
-*cluster... \| cluster.process... \| user...* \|
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
+*cluster... | cluster.process... | user...* |
 **-constraint** *expression* ...
 
 **condor_release** [**-debug** ] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] **-all**
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **-all**
 
 Description
 -----------

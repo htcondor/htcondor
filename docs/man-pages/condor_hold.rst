@@ -9,19 +9,19 @@ put jobs in the queue into the hold state
 Synopsis
 --------
 
-**condor_hold** [**-help \| -version** ]
+**condor_hold** [**-help | -version** ]
 
 **condor_hold** [**-debug** ] [**-reason** *reasonstring*]
 [**-subcode** *number*] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*]
-*cluster... \| cluster.process... \| user...* \|
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
+*cluster... | cluster.process... | user...* |
 **-constraint** *expression* ...
 
 **condor_hold** [**-debug** ] [**-reason** *reasonstring*]
 [**-subcode** *number*] [
-**-pool** *centralmanagerhostname[:portnumber]* \|
-**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] **-all**
+**-pool** *centralmanagerhostname[:portnumber]* |
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **-all**
 
 Description
 -----------

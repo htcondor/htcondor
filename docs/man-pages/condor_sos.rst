@@ -9,7 +9,7 @@ Issue a command that will be serviced with a higher priority
 Synopsis
 --------
 
-**condor_sos** [**-help \| -version** ]
+**condor_sos** [**-help | -version** ]
 
 **condor_sos** [**-debug** ] [**-timeoutmult** *value*]
 *condor_command*

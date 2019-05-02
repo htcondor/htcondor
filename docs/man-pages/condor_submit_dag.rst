@@ -10,7 +10,7 @@ machines
 Synopsis
 --------
 
-**condor_submit_dag** [**-help \| -version** ]
+**condor_submit_dag** [**-help | -version** ]
 
 **condor_submit_dag** [**-no_submit** ] [**-verbose** ]
 [**-force** ] [**-maxidle** *NumberOfProcs*]
@@ -21,7 +21,7 @@ Synopsis
 [**-debug** *level*] [**-usedagdir** ]
 [**-outfile_dir** *directory*] [**-config** *ConfigFileName*]
 [**-insert_sub_file** *FileName*] [**-append** *Command*]
-[**-batch-name** *batch_name*] [**-autorescue** *0\|1*]
+[**-batch-name** *batch_name*] [**-autorescue** *0|1*]
 [**-dorescuefrom** *number*] [**-allowversionmismatch** ]
 [**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
 [**-import_env** ] [**-DumpRescue** ] [**-valgrind** ]
@@ -224,7 +224,7 @@ Options
     the top-level DAGMan, and *cluster* is the HTCondor cluster of the
     top-level DAGMan); the default will override any lower-level batch
     names.
- **-autorescue** *0\|1*
+ **-autorescue** *0|1*
     Whether to automatically run the newest rescue DAG for the given DAG
     file, if one exists (0 = ``false``, 1 = ``true``).
  **-dorescuefrom** *number*

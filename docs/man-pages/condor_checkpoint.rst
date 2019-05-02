@@ -9,12 +9,12 @@ send a checkpoint command to jobs running on specified hosts
 Synopsis
 --------
 
-**condor_checkpoint** [**-help \| -version** ]
+**condor_checkpoint** [**-help | -version** ]
 
 **condor_checkpoint** [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 
 Description
 -----------

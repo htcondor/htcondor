@@ -701,7 +701,7 @@ If, however, the ``START`` expression is
     START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 
 and ``KeyboardIdle`` is 34 seconds, then the machine leaves the Owner
-state and becomes Unclaimed. This is because FALSE \|\| UNDEFINED is
+state and becomes Unclaimed. This is because FALSE || UNDEFINED is
 UNDEFINED. So, while this machine is not available to just anybody, if
 user coltrane has jobs submitted, the machine is willing to run them.
 Any other user's jobs have to wait until ``KeyboardIdle`` exceeds 15

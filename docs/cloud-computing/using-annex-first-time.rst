@@ -89,9 +89,8 @@ You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
-**
-
 ::
+
     # ~/condor-annex/sleep.submit
 
     executable = /bin/sleep

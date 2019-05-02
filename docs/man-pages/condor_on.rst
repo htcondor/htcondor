@@ -9,12 +9,12 @@ Start up HTCondor daemons
 Synopsis
 --------
 
-**condor_on** [**-help \| -version** ]
+**condor_on** [**-help | -version** ]
 
 **condor_on** [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
-**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 [**-daemon** *daemonname*]
 
 Description
