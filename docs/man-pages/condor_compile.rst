@@ -1,5 +1,3 @@
-      
-
 *condor_compile*
 =================
 
@@ -46,12 +44,12 @@ example, the following would all work:
 
 ::
 
-      condor_compile make 
-     
-      condor_compile make install 
-     
-      condor_compile f77 -O mysolver.f 
-     
+      condor_compile make
+
+      condor_compile make install
+
+      condor_compile f77 -O mysolver.f
+
       condor_compile /bin/csh compile-me-shellscript
 
 If the HTCondor administrator has opted to only do a partial install of
@@ -60,28 +58,30 @@ If the HTCondor administrator has opted to only do a partial install of
 
 ::
 
-      cc (the system C compiler) 
-     
-      c89 (POSIX compliant C compiler, on some systems) 
-     
-      CC (the system C++ compiler) 
-     
-      f77 (the system FORTRAN compiler) 
-     
-      gcc (the GNU C compiler) 
-     
-      g++ (the GNU C++ compiler) 
-     
-      g77 (the GNU FORTRAN compiler) 
-     
+      cc (the system C compiler)
+
+      c89 (POSIX compliant C compiler, on some systems)
+
+      CC (the system C++ compiler)
+
+      f77 (the system FORTRAN compiler)
+
+      gcc (the GNU C compiler)
+
+      g++ (the GNU C++ compiler)
+
+      g77 (the GNU FORTRAN compiler)
+
       ld (the system linker)
 
-NOTE: If you explicitly call *ld* when you normally create your binary,
-instead use:
+.. note::
 
-::
+    If you explicitly call *ld* when you normally create your binary,
+    instead use:
 
-      condor_compile ld <ld arguments and options>
+    ::
+
+          condor_compile ld <ld arguments and options>
 
 Exit Status
 -----------
@@ -103,4 +103,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

@@ -1,5 +1,3 @@
-
-
 Stable Release Series 8.6
 =========================
 

@@ -1,5 +1,3 @@
-
-
 *condor_dagman*
 ===============
 
@@ -94,7 +92,7 @@ Options
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` (see 
+    :index:`DAGMAN_MAX_JOBS_IDLE` (see
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 1000. To disable this limit, set *NumberOfProcs*
     to 0. Note that submit description files that queue multiple procs can
@@ -111,7 +109,7 @@ Options
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
-    :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see 
+    :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 0 (unlimited).
  **-maxpre** *NumberOfPreScripts*
@@ -127,7 +125,7 @@ Options
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    :index:`DAGMAN_MAX_POST_SCRIPTS` (see 
+    :index:`DAGMAN_MAX_POST_SCRIPTS` (see
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 20.
  **-noeventchecks**
@@ -285,7 +283,7 @@ Examples
 --------
 
 *condor_dagman* is normally not run directly, but submitted as an
-HTCondor job by running condor_submit_dag. See the 
+HTCondor job by running condor_submit_dag. See the
 :doc:`/man-pages/condor_submit_dag` manual page for examples.
 
 Author

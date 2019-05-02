@@ -1,5 +1,3 @@
-
-
 HTCondor Annex Configuration
 ============================
 

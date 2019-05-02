@@ -1,5 +1,3 @@
-      
-
 Introduction to HTCondor Versions
 =================================
 
@@ -75,4 +73,4 @@ have fully tested this version, we will release a new stable series,
 resetting the minor version number, and start work on a new development
 release from there.
 
-      
+

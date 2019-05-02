@@ -1,5 +1,3 @@
-
-
 Development Release Series 8.7
 ==============================
 

@@ -1,5 +1,3 @@
-
-
 Upgrading from the 8.6 series to the 8.8 series of HTCondor
 ===========================================================
 

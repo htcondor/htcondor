@@ -1,5 +1,3 @@
-
-
 HTCondor Annex User's Guide
 ===========================
 
