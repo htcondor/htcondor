@@ -689,8 +689,9 @@ especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of strong authentication between the submit and execute
 daemons. See the description of
-``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` on
-`797 <ConfigurationMacros.html#x33-2200003.5.24>`__ for details.
+``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in 
+:ref:`admin-manual/configuration-macros:configuration file entries relating to
+security` for details.
 
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION``, then HTCondor uses a default
@@ -1931,8 +1932,8 @@ pool to grant or deny certain levels of access to various machines.
 Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
-Inside the HTCondor daemons or tools that use DaemonCore (see
-section \ `3.11 <DaemonCore.html#x39-3300003.11>`__ for details), most
+Inside the HTCondor daemons or tools that use DaemonCore (see the 
+:doc:`/admin-manual/daemoncore` section), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
 command is being requested, followed by any optional information that

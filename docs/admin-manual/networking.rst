@@ -89,9 +89,9 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the ``<SUBSYS>_ADDRESS_FILE``
-configuration variables, as described in the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+configuration variables, as described in the 
+:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
+section.
 
 NOTE: In the 6.6 stable series, and HTCondor versions earlier than
 6.7.5, the *condor_negotiator* also listened on a fixed, well-known
@@ -174,13 +174,11 @@ example:
     COLLECTOR_HOST = $(CONDOR_HOST):0 
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
-Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in
-the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__, and
-``COLLECTOR_HOST`` is in the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the 
+:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
+section and ``COLLECTOR_HOST`` is in the
+:ref:admin-manual/configuration-macros:htcondor-wide configuration file entries`
+section.
 
 Restricting Port Usage to Operate with Firewalls
 ''''''''''''''''''''''''''''''''''''''''''''''''

@@ -1,5 +1,3 @@
-      
-
 Introduction to Configuration
 =============================
 
@@ -11,12 +9,10 @@ configuration, relating to all parts of the HTCondor system. If you're
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
--  Section \ `Configuration
-   Templates <../admin-manual/configuration-templates.html>`__ contains
+-  The :doc:`/admin-manual/configuration-templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  Section \ `Configuration
-   Macros <../admin-manual/configuration-macros.html>`__ contains
+-  The :doc:`/admin-manual/configuration-macros` section contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
    using configuration templates before resorting to setting individual
@@ -1031,9 +1027,7 @@ determined automatically at run time but which can be overwritten.
     it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
     it was submitted, unless the user specifies ``ARCH`` and/or
     ``OPSYS`` explicitly in their submit file. See the *condor_submit*
-    manual page on
-    page \ `condor_submit <../man-pages/condor_submit.html>`__ for
-    details.
+    manual page (doc:`/man-pages/condor_submit`) for details.
 
 ``$(OPSYS)``\ :index:`OPSYS`
     Defines the string used to identify the operating system of the
@@ -1089,5 +1083,3 @@ determined automatically at run time but which can be overwritten.
 
 Since ``$(ARCH)`` and ``$(OPSYS)`` will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-
-      

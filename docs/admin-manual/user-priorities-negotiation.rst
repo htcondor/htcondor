@@ -96,8 +96,7 @@ EUP may be useful:
 
 The priority boost factors for individual users can be set with the
 **setfactor** option of *condor_userprio*. Details may be found in the
-*condor_userprio* manual page on
-page \ `condor_userprio <../man-pages/condor_userprio.html>`__.
+*condor_userprio* manual page (:doc:`/man-pages/condor_userprio`).
 
 Priorities in Negotiation and Preemption
 ----------------------------------------
@@ -126,9 +125,8 @@ interval. Note that ``PREEMPTION_REQUIREMENTS`` only applies to
 preemptions due to user priority. It does not have any effect if the
 machine's ``RANK`` expression prefers a different job, or if the
 machine's policy causes the job to vacate due to other activity on the
-machine. See section `Policy Configuration for Execute Hosts and for
-Submit Hosts <../admin-manual/policy-configuration.html>`__ for the
-current default policy on preemption.
+machine. See the :ref:`admin-manual/policy-configuration:*condor_startd* policy
+configuration` section for the current default policy on preemption.
 
 The following ephemeral attributes may be used within policy
 definitions. Care should be taken when using these attributes, due to
@@ -152,10 +150,8 @@ negotiation cycle. Therefore, the configuration variables
 :index:`PREEMPTION_REQUIREMENTS_STABLE` and and
 ``PREEMPTION_RANK_STABLE`` :index:`PREEMPTION_RANK_STABLE` exist
 to inform the *condor_negotiator* daemon that values may change. See
-the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for definitions of
-these configuration variables.
+the :ref:`admin-manual/configuration-macros:condor_negotiator configuration
+file entries section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``:

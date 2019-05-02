@@ -5,7 +5,7 @@ HTCondor Annex Configuration
 
 While the configuration macros in this section may be set by the
 HTCondor administrator, they are intended for the user-specific HTCondor
-configuration file (usually ~/.condor/user_config). Although we
+configuration file (usually ``~/.condor/user_config``). Although we
 document every macro, we expect that users will generally only want to
 change a few of them, listed in the 
 :ref:`cloud-computing/annex-configuration:user settings` section;
@@ -61,26 +61,26 @@ user-specific HTCondor configuration file (usually
 configuration.
 
 The *condor_annex* log is a daemon-style log. It is configured as if
-*condor_annex* were a daemon with subsystem type ``ANNEX``; see section
-`Configuration Macros <../admin-manual/configuration-macros.html>`__ for
-details.
+*condor_annex* were a daemon with subsystem type ``ANNEX``; see
+:ref:`admin-manual/configuration-macros:daemon logging configuration file
+entries` for details.
 
 *condor_annex* uses special helper programs, called GAHPs, to interact
 with the different cloud services. These programs do their own logging,
 writing to the annex GAHP log. The annex GAHP log is configured as if it
-were a daemon, but with subsystem type ``ANNEX_GAHP``; see section
-`Configuration Macros <../admin-manual/configuration-macros.html>`__ for
-details.
+were a daemon, but with subsystem type ``ANNEX_GAHP``; see
+:ref:`admin-manual/configuration-macros:daemon logging configuration file
+entries` for details.
 
 The annex audit log records two lines for each invocation of
 *condor_annex*: the command as issued and the results as returned. The
 location of the audit log is set by ``ANNEX_AUDIT_LOG``
 :index:`ANNEX_AUDIT_LOG`, which is the ``AUDIT``-level log for the
-``ANNEX`` subsystem; see ``<SUBSYS>_<LEVEL>_LOG`` (`Configuration
-Macros <../admin-manual/configuration-macros.html>`__) for details.
-Because annex creation commands typically make extensive use of values
-set in configuration, *condor_annex* will write the configuration it
-used for annex creation commands into the audit log if ``ANNEX_DEBUG``
+``ANNEX`` subsystem; see ``<SUBSYS>_<LEVEL>_LOG`` (in
+:ref:`admin-manual/configuration-macros:daemon logging configuration file
+entries`) for details. Because annex creation commands typically make extensive
+use of values set in configuration, *condor_annex* will write the configuration
+it used for annex creation commands into the audit log if ``ANNEX_DEBUG``
 includes ``D_AUDIT:2``.
 
 Expert Settings

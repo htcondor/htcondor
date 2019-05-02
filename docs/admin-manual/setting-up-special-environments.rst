@@ -1336,9 +1336,8 @@ perform backfill computations, it will spawn a *condor_starter* to
 directly launch and monitor the *boinc_client* program. This
 *condor_starter* is just like the one used to invoke any other HTCondor
 jobs. In fact, the argv[0] of the *boinc_client* will be renamed to
-*condor_exec*, as described in
-section \ `2.15.1 <PotentialProblems.html#x27-1460002.15.1>`__ on
-page \ `448 <PotentialProblems.html#x27-1460002.15.1>`__.
+*condor_exec*, as described in the 
+:ref:`users-manual/potential-problems:renaming of argv[0]` section.
 
 This *condor_starter* reads values out of the HTCondor configuration
 files to define the job it should run, as opposed to getting these
@@ -1627,8 +1626,8 @@ processes running using the given account. Administrators must specify
 in HTCondor's configuration what accounts can be considered dedicated
 via the ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
 :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
-Section \ `3.8.13 <Security.html#x36-2980003.8.13>`__ for further
-details.
+:ref:`admin-manual/security:user accounts in htcondor on unix platforms` for
+further details.
 
 Ideally, jobs can be reliably tracked regardless of the user account
 they execute under. This can be accomplished with group ID-based

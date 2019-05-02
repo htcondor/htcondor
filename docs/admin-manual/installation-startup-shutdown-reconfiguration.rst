@@ -8,7 +8,7 @@ Sections of the manual below explain customization.
 Please read this entire section before starting installation.
 
 Please read the copyright and disclaimer information in
-section \ ` <contentsname.html#x2-2000doc>`__. Installation and use of
+:ref:`index:licensing and copyright`. Installation and use of
 HTCondor is acknowledgment that you have read and agree to the terms.
 
 Before installing HTCondor, please consider joining the htcondor-world
@@ -565,8 +565,7 @@ pool, run
     --local-dir=/scratch/condor --type=execute,submit
 
 See the *condor_configure* manual
-page \ `condor_configure <../man-pages/condor_configure.html>`__ for
-details.
+page (:doc:`/man-pages/condor_configure`) for details.
 
 Starting HTCondor Under Unix After Installation
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -1348,7 +1347,7 @@ All of the commands described in this section are subject to the
 security policy chosen for the HTCondor pool. As such, the commands must
 be either run from a machine that has the proper authorization, or run
 by a user that is authorized to issue the commands.
-Section \ `Security <../admin-manual/security.html>`__ details the
+The :doc:`/admin-manual/security` section details the
 implementation of security in HTCondor.
 
  Shutting Down HTCondor

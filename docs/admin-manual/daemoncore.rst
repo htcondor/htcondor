@@ -1,5 +1,3 @@
-      
-
 DaemonCore
 ==========
 
@@ -82,11 +80,8 @@ no chance to write a checkpoint.
 
 For all daemons, a reconfigure results in the daemon re-reading its
 configuration file(s), causing any settings that have changed to take
-effect. See the :doc:`/admin-manual/introduction-to-configuration` section on
-page \ `Introduction to
-Configuration <../admin-manual/introduction-to-configuration.html>`__,
-Configuring HTCondor for full details on what settings are in the
-configuration files and what they do.
+effect. See the :doc:`/admin-manual/introduction-to-configuration` section for
+full details on what settings are in the configuration files and what they do.
 
 DaemonCore and Command-line Arguments
 -------------------------------------
@@ -163,9 +158,8 @@ These arguments and what they do are described below:
 -local-name name
     Specify a local name for this instance of the daemon. This local
     name will be used to look up configuration parameters.
-    Section \ `Introduction to
-    Configuration <../admin-manual/introduction-to-configuration.html>`__
-    contains details on how this local name will be used in the
+    The :ref:`admin-manual/introduction-to-configuration:configuration file
+    macros` section contains details on how this local name will be used in the
     configuration.
 
 -p port
@@ -202,5 +196,3 @@ These arguments and what they do are described below:
     Causes the daemon to print out version information and exit.
 
 :index:`daemoncore`
-
-      

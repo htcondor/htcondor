@@ -866,8 +866,8 @@ Job ClassAd Attributes
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    page \ `619 <ConfigurationMacros.html#x33-1890003.5.2>`__) but it
-    applies to the job event log instead of the system event log.
+    :ref:`admin-manual/configuration-macros:daemon logging configuration file
+    entries`) but it applies to the job event log instead of the system event log.
     :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
  ``JobCurrentFinishTransferInputDate``:
@@ -1341,15 +1341,14 @@ Job ClassAd Attributes
     :index:`ClassAd job attribute<single: ClassAd job attribute; PostArgs>`
  ``PostArgs``:
     Defines the command-line arguments for the post command using the
-    old argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
-    ``PostArgs`` and ``PostArguments`` exists, the former is ignored.
+    old argument syntax, as specified in :doc:`/man-pages/condor_submit`.
+    If both ``PostArgs`` and ``PostArguments`` exists, the former is ignored.
     :index:`PostArguments<single: PostArguments; ClassAd job attribute>`
     :index:`ClassAd job attribute<single: ClassAd job attribute; PostArguments>`
  ``PostArguments``:
     Defines the command-line arguments for the post command using the
     new argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
+    :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escaped with a backslash instead of another
     double quote. If both ``PostArgs`` and ``PostArguments`` exists, the
     former is ignored. :index:`PostCmd<single: PostCmd; ClassAd job attribute>`
@@ -1421,15 +1420,14 @@ Job ClassAd Attributes
     :index:`ClassAd job attribute<single: ClassAd job attribute; PreArgs>`
  ``PreArgs``:
     Defines the command-line arguments for the pre command using the old
-    argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__. If both
+    argument syntax, as specified in :doc:`/man-pages/condor_submit`. If both
     ``PreArgs`` and ``PreArguments`` exists, the former is ignored.
     :index:`PreArguments<single: PreArguments; ClassAd job attribute>`
     :index:`ClassAd job attribute<single: ClassAd job attribute; PreArguments>`
  ``PreArguments``:
     Defines the command-line arguments for the pre command using the new
     argument syntax, as specified in
-    section \ `12 <Condorsubmit.html#x149-108400012>`__, excepting that
+    :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escape with a backslash instead of another
     double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
     former is ignored. :index:`PreCmd<single: PreCmd; ClassAd job attribute>`

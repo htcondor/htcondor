@@ -1,11 +1,9 @@
-      
-
 Policy Configuration for Execute Hosts and for Submit Hosts
 ===========================================================
 
 Note: configuration templates make it easier to implement certain
-policies; see information on policy templates here: \ `Configuration
-Templates <../admin-manual/configuration-templates.html>`__.
+policies; see information on policy templates here: 
+:ref:`admin-manual/configuration-templates:available configuration templates`.
 
 *condor_startd* Policy Configuration
 -------------------------------------
@@ -28,8 +26,8 @@ the owners of machines in the pool or the users of the pool.
 ''''''''''''''''''''''''''''
 
 Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in section \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__.
+expressions, which are detailed in the :doc:`/misc-concepts/classad-mechanism`
+section.
 :index:`condor_startd`
 
 Each machine runs one *condor_startd* daemon. Each machine may contain
@@ -92,8 +90,7 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-section \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__ for specifics on
+theh :doc:`/misc-concepts/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
 A note of caution is in order when modifying the ``START`` expression to
@@ -1058,11 +1055,11 @@ If the machine enters the Killing activity, (because either
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
 of which is defined by the ``KILLING_TIMEOUT``
-:index:`KILLING_TIMEOUT`  `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ macro. This macro
-is defined in seconds and defaults to 30. If this timer expires and the
-machine is still in the Killing activity, something has gone seriously
-wrong with the *condor_starter* and the startd tries to vacate the job
+:index:`KILLING_TIMEOUT` macro 
+(:ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros`). This macro is defined in seconds and defaults to 30. If this timer
+expires and the machine is still in the Killing activity, something has gone
+seriously wrong with the *condor_starter* and the startd tries to vacate the job
 immediately by sending SIGKILL to all of the *condor_starter* 's
 children, and then to the *condor_starter* itself.
 
@@ -1081,13 +1078,12 @@ etc), the machine will enter the Owner state (transition **25**).
 
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
-about backfill support in HTCondor, see the :doc:`/admin-manual/setting-up-special-environments` section
-on page \ `Setting Up for Special
-Environments <../admin-manual/setting-up-special-environments.html>`__.
-This state is only used if the machine has been configured to enable
-backfill computation, if a specific backfill manager has been installed
-and configured, and if the machine is otherwise idle (not being used
-interactively or for regular HTCondor computations). If the machine
+about backfill support in HTCondor, see the 
+:ref:`admin-manual/setting-up-special-environments:configuring htcondor for
+running backfill jobs` section. This state is only used if the machine has been
+configured to enable backfill computation, if a specific backfill manager has
+been installed and configured, and if the machine is otherwise idle (not being
+used interactively or for regular HTCondor computations). If the machine
 meets all these requirements, and the ``START_BACKFILL`` expression
 evaluates to TRUE, the machine will move from the Unclaimed/Idle state
 to Backfill/Idle (transition **7**).
@@ -1211,8 +1207,8 @@ It serves as a quick reference.
 ``CLAIM_WORKLIFE`` :index:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. This configuration macro is
-    fully documented here:  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    fully documented here: :ref:`admin-manual/configuration-macros:condor_startd
+    configuration file macros`.
 
 ``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
@@ -2723,9 +2719,9 @@ For each entry in this list there must be a corresponding
 configuration variable that specifies the transform rules. Transforms
 use the same syntax as *condor_job_router* transforms; although unlike
 the *condor_job_router* there is no default transform, and all
-matching transforms are applied - not just the first one. (See `The
-HTCondor Job Router <../grid-computing/job-router.html>`__ for
-information on the *condor_job_router*.)
+matching transforms are applied - not just the first one. (See the
+:doc:`/grid-computing/job-router` section for information on the
+*condor_job_router*.)
 
 The following example shows a set of two transforms: one that
 automatically assigns an accounting group to jobs based on the

@@ -225,8 +225,9 @@ Machine ClassAd Attributes
  ``HasFileTransferPluginMethods``:
     A string of comma-separated file transfer protocols that the machine
     can support. The value can be modified with ``FILETRANSFER_PLUGINS``
-    :index:`FILETRANSFER_PLUGINS` as defined at  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    :index:`FILETRANSFER_PLUGINS` as defined in
+    :ref:`admin-manual/configuration-macros:condor_starter configuration file
+    entries`.
     :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
  ``Has_sse4_1``:
     A boolean value set to ``True`` if the machine being advertised

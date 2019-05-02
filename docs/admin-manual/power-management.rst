@@ -1,5 +1,3 @@
-      
-
 Power Management
 ================
 
@@ -25,11 +23,9 @@ that a low power state is desired.
 
 A slot's readiness to hibernate is determined by the evaluating the
 ``HIBERNATE`` :index:`HIBERNATE` configuration variable (see
-the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__) within the
-context of the slot. Readiness is evaluated at fixed intervals, as
-determined by the ``HIBERNATE_CHECK_INTERVAL``
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section) within the context of the slot. Readiness is evaluated at
+fixed intervals, as determined by the ``HIBERNATE_CHECK_INTERVAL``
 :index:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
@@ -98,8 +94,7 @@ Returning From a Low Power State
 
 The HTCondor command line tool *condor_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
-*condor_power* manual page on
-page \ `condor_power <../man-pages/condor_power.html>`__.
+*condor_power* manual page (:doc:`/man-pages/condor_power`).
 :index:`condor_rooster daemon`
 
 To automatically call *condor_power* under specific conditions,
@@ -117,17 +112,13 @@ the offline machines.
 
 To do this, define a log file using the ``OFFLINE_LOG``
 :index:`OFFLINE_LOG` configuration variable. See
-the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
-definition. An optional expiration time for each ClassAd can be
-specified with ``OFFLINE_EXPIRE_ADS_AFTER``
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section for the definition. An optional expiration time for each
+ClassAd can be specified with ``OFFLINE_EXPIRE_ADS_AFTER``
 :index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
 the hibernating machine's ClassAd enters the *condor_collector* daemon.
-See the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
-definition.
+See the :ref:`admin-manual/configuration-macros:condor_startd configuration
+file macros` section for the definition.
 
 Linux Platform Details
 ----------------------
@@ -154,12 +145,10 @@ chosen.
 This ordered detection may be bypassed, to use a specified method
 instead by setting the configuration variable
 ``LINUX_HIBERNATION_METHOD`` with one of the defined strings. This
-variable is defined in the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. If no usable
-methods are detected or the method specified by
-``LINUX_HIBERNATION_METHOD`` is either not detected or invalid,
-hibernation is disabled.
+variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section. If no usable methods are detected or the
+method specified by ``LINUX_HIBERNATION_METHOD`` is either not detected or
+invalid, hibernation is disabled.
 
 The details of this selection process, and the final method selected can
 be logged via enabling ``D_FULLDEBUG`` in the relevant subsystem's log
