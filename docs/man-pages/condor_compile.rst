@@ -94,7 +94,7 @@ the exit status will be that given by the executed program.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

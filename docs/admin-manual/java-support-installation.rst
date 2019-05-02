@@ -10,7 +10,7 @@ some details of the JVM installation.
 
 Begin by installing a Java distribution according to the vendor's
 instructions. Your machine may have been delivered with a JVM already
-installed – installed code is frequently found in ``/usr/bin/java``.
+installed - installed code is frequently found in ``/usr/bin/java``.
 
 HTCondor's configuration includes the location of the installed JVM.
 Edit the configuration file. Modify the ``JAVA`` :index:`JAVA`

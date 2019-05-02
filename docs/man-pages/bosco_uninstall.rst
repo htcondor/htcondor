@@ -23,7 +23,7 @@ There are no command line arguments to this script.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

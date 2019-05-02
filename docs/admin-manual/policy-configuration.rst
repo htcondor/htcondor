@@ -332,11 +332,11 @@ point in the negotiations has been reached. The possible states are
     have been divided in a partitionable slot. Consolidating the
     resources gives large jobs a chance to run.
 
-.. image:: /_images/machine-states-transitions.png
+.. figure:: /_images/machine-states-transitions.png
   :width: 600
   :alt: Machine states and the possible transitions between the states
-
-Figure 3.1: Machine states and the possible transitions between the states.
+  
+  Machine states and the possible transitions between the states.
 
 
 Each transition is labeled with a letter. The cause of each transition
@@ -605,20 +605,19 @@ The following list describes all the possible state/activity pairs.
        This slot has been drained. It is waiting for other slots to
        finish draining.
 
-Figure `3.2 <#x35-2490162>`_ on page `882 <#x35-2490162>`_ gives
-the overall view of all machine states and activities and shows the
-possible transitions from one to another within the HTCondor system.
-Each transition is labeled with a number on the diagram, and transition
-numbers referred to in this manual will be **bold**.
+The following diagram gives the overall view of all machine states and
+activities and shows the possible transitions from one to another within the
+HTCondor system. Each transition is labeled with a number on the diagram, and
+transition numbers referred to in this manual will be **bold**.
 :index:`machine state and activities figure`
 :index:`state and activities figure`
 :index:`activities and state figure`
 
-.. image:: /_images/machine-states-activities.png
+.. figure:: /_images/machine-states-activities.png
   :width: 700
-  :alt: Figure 3.2: Machine States and Activities
+  :alt: Machine States and Activities
 
-Figure 3.2: Machine States and Activities
+  Machine States and Activities
 
 
 Various expressions are used to determine when and if many of these
@@ -2670,8 +2669,8 @@ their ``MaxRetirementTime``. Instead, when the last retiring job
 finishes (either terminates or runs out of retirement time), all other
 jobs on machine will be evicted with a retirement time of 0. (Those jobs
 will be given their ``MaxVacateTime``, as usual.) The machine's
-``START`` expression will become ``FALSE`` and stay that way until – as
-usual – the machine exits the draining state.
+``START`` expression will become ``FALSE`` and stay that way until - as
+usual - the machine exits the draining state.
 
 We recommend that you allow only interruptible jobs to start on draining
 machines. Different pools may have different ways of denoting

@@ -105,7 +105,7 @@ time order, displays in this condensed version.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

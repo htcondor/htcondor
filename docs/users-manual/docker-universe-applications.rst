@@ -48,7 +48,7 @@ to a directory of the same name inside the container, and sets the IWD
 of the contained job to that directory. The assumption is that the job
 will look in the cwd for input files, and drop output files in the same
 directory. In docker terms, we docker run with the -v
-/some_scratch_directory -w /some_scratch_directory –user
+/some_scratch_directory -w /some_scratch_directory -user
 non-root-user command line options (along with many others).
 
 The executable file can come from one of two places: either from within

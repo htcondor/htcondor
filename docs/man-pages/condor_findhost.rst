@@ -96,7 +96,7 @@ To find and list 24 machines, considering only those where the
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

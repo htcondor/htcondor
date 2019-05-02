@@ -63,7 +63,7 @@ and it will exit with the standard HRESULT error code upon failure.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

@@ -13,7 +13,7 @@ To view a user log file, select it using the open file command in the
 File menu. After the file is parsed, it will be visually represented.
 Each horizontal line represents an individual job. The x-axis is time.
 Whether a job is running at a particular time is represented by its
-color at that time – white for running, black for idle. For example, a
+color at that time - white for running, black for idle. For example, a
 job which appears predominantly white has made efficient progress,
 whereas a job which appears predominantly black has received an
 inordinately small proportion of computational time.

@@ -523,7 +523,7 @@ syntax:
 
 (Note that the ifexist and into options were added in version 8.5.7.
 Also note that the command option must be specified in order to use the
-into option – just using the bar after <cmdline> will not work.)
+into option - just using the bar after <cmdline> will not work.)
 
 In the file form of the ``include`` command, the <file> specification
 must describe a single file, the contents of which will be parsed and

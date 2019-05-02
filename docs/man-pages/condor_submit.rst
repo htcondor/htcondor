@@ -2349,7 +2349,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     **coresize** specifies the maximum size in bytes of the core file
     which the user wishes to keep. If **coresize** is not specified in
     the command file, the system's user resource limit ``coredumpsize``
-    is used (note that ``coredumpsize`` is not an HTCondor parameter –
+    is used (note that ``coredumpsize`` is not an HTCondor parameter -
     it is an operating system parameter that can be viewed with the
     *limit* or *ulimit* command on Unix and in the Registry on Windows).
     A value of -1 results in no limits being applied to the core file
@@ -3238,7 +3238,7 @@ HTCondor User Manual
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

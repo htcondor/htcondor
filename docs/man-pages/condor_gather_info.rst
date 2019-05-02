@@ -59,7 +59,7 @@ The information gathered by this tool:
    -  Contents of ``$(LOG)/MasterLog``
    -  Contents of ``$(LOG)/ShadowLog``
    -  Contents of ``$(LOG)/SchedLog``
-   -  Output of ``ps -auxww –forest``
+   -  Output of ``ps -auxww -forest``
    -  Output of ``df -h``
    -  Output of ``iptables -L``
    -  Output of ``ls ‘condor_config_val LOG‘``
@@ -94,10 +94,10 @@ The information gathered by this tool:
 Options
 -------
 
- **—jobid** *<ClusterId.ProcId>*
+ **-jobid** *<ClusterId.ProcId>*
     Data mine information about this HTCondor job from the local
     HTCondor installation and *condor_schedd*.
- **—scratch** */path/to/directory*
+ **-scratch** */path/to/directory*
     A path to temporary space needed when building the output tar file.
     Defaults to ``/tmp/cgi-<PID>``, where ``<PID>`` is replaced by the
     process ID of *condor_gather_info*.
@@ -120,7 +120,7 @@ success, and it will exit with the value 1 (one) upon failure.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

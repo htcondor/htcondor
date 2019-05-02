@@ -1379,8 +1379,8 @@ statistics related to resource's rate limit.
 ``NumExpiredSignatures``:
     The number of requests which the EC2 GAHP did not even attempt to
     send to the service because signature expired. Signatures should
-    not, generally, expire; a request's retries will usually –
-    eventually – succeed.
+    not, generally, expire; a request's retries will usually -
+    eventually - succeed.
 
 The GCE Grid Type
 -----------------

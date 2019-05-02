@@ -117,7 +117,7 @@ the log file, or the user-specified waiting time has expired.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

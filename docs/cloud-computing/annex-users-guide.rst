@@ -37,8 +37,7 @@ collector (usually port 9618) before starting an annex (it does not
 support other network topologies). When checking connectivity from AWS,
 the IP(s) used by the AWS Lambda function implementing this check may
 not be in the same range(s) as those used by AWS instance; please
-consult AWS's list of all their IP
-ranges\ `:sup:`2` <ref62.html#fn2x7>`_ when configuring your firewall.
+consult AWS's list of all their IP [2]_ when configuring your firewall.
 
 Starting in v8.7.2, *condor_annex* requires that the AWS secret
 (private) key file be owned by the submitting user and not readable by
@@ -337,7 +336,7 @@ Advanced Usage
 The previous section covered using what AWS calls "on-demand" instances.
 (An "instance" is "a single occurrence of something," in this case, a
 virtual machine. The intent is to distinguish between the active process
-that's pretending to be a real piece of hardware – the "instance" – and
+that's pretending to be a real piece of hardware - the "instance" - and
 the template it used to start it up, which may also be called a virtual
 machine.) An on-demand instance has a price fixed by AWS; once acquired,
 AWS will let you keep it running as long as you continue to pay for it.
@@ -370,15 +369,15 @@ Using AWS Spot Fleet
 "Spot Fleet". Normally, when you request instances, you request a
 specific type of instance (the default on-demand instance is, for
 instance, ‘m4.large'.) However, in many cases, you don't care too much
-about how many cores an intance has – HTCondor will automatically
+about how many cores an intance has - HTCondor will automatically
 advertise the right number and schedule jobs appropriately, so why would
-you? In such cases – or in other cases where your jobs will run
-acceptably on more than one type of instance – you can make a Spot Fleet
+you? In such cases - or in other cases where your jobs will run
+acceptably on more than one type of instance - you can make a Spot Fleet
 request which says something like "give me a thousand cores as cheaply
 as possible", and specify that an ‘m4.large' instance has two cores,
 while ‘m4.xlarge' has four, and so on. (The interface actually allows
-you to assign arbitrary values – like HTCondor slot weights – to each
-instance type\ `:sup:`3` <ref63.html#fn3x7>`_ , but the default value
+you to assign arbitrary values - like HTCondor slot weights - to each
+instance type [1]_, but the default value
 is core count.) AWS will then divide the current price for each instance
 type by its core count and request spot instances at the cheapest
 per-core rate until the number of cores (not the number of instances!)
@@ -476,7 +475,7 @@ flag. You may change the CloudFormation URL by changing the HTCondor
 configuration macro ANNEX_DEFAULT_CF_URL
 :index:`ANNEX_DEFAULT_CF_URL`, or by supplying the URL as the
 third parameter after the **-setup** flag. If you change any of the
-URLs, you may need to change all of the URLs – Lambda functions and
+URLs, you may need to change all of the URLs - Lambda functions and
 CloudWatch events in one region don't work with instances in another
 region.
 
@@ -489,4 +488,7 @@ The options labeled "developers only" control implementation details and
 may change without warning; they are probably best left unused unless
 you're a developer.
 
+.. rubric: Footnotes
 
+.. [1] Strictly speaking, to each "launch specification"; see the explanation below, in the section AWS Instance User Data.
+.. [2] https://ip-ranges.amazonaws.com/ip-ranges.json

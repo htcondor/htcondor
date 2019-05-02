@@ -5,7 +5,7 @@ Microsoft Windows
 
 Windows is a strategic platform for HTCondor, and therefore we have been
 working toward a complete port to Windows. Our goal is to make HTCondor
-every bit as capable on Windows as it is on Unix – or even more capable.
+every bit as capable on Windows as it is on Unix - or even more capable.
 
 Porting HTCondor from Unix to Windows is a formidable task, because many
 components of HTCondor must interact closely with the underlying

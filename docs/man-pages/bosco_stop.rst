@@ -25,7 +25,7 @@ running as part of the Personal HTCondor. It is the equivalent of
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

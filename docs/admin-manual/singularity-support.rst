@@ -40,7 +40,7 @@ quoting):
 
       +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-Finally, let's pick an image based on the OS – not the filename:
+Finally, let's pick an image based on the OS - not the filename:
 
 ::
 
@@ -84,14 +84,14 @@ expression could be
 
 Also, note that if the slot the job runs in is provisioned with GPUs,
 perhaps in response to a RequestGPU line in the submit file, the
-Singularity flag "–nv" will be passed to Singularity, which should make
+Singularity flag "-nv" will be passed to Singularity, which should make
 the appropriate nvidia devices visible inside the container.
 
 Finally, if an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
 parameter SINGULARITY_EXTRA_ARGUMENTS allows arbitraty additional
 parameters to be passed to the singularity exec command. For example, to
-pass the –nv argument, to allow the GPUs on the host to be visible
+pass the -nv argument, to allow the GPUs on the host to be visible
 inside the container, an administrator could set
 
 ::
