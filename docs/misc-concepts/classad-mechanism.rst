@@ -1,5 +1,3 @@
-
-
 HTCondor's ClassAd Mechanism
 ============================
 
@@ -250,7 +248,7 @@ given as
 Optional parameters are given within square brackets.
 :index:`eval()<single: eval(); ClassAd functions>`
 
- ``AnyType eval(AnyType Expr)``
+``AnyType eval(AnyType Expr)``
     Evaluates ``Expr`` as a string and then returns the result of
     evaluating the contents of the string as a ClassAd expression. This
     is useful when referring to an attribute such as ``slotX_State``
@@ -272,7 +270,7 @@ Optional parameters are given within square brackets.
     within the string passed to eval() will not be counted.
     :index:`unparse()<single: unparse(); ClassAd functions>`
 
- ``String unparse(Attribute attr)``
+``String unparse(Attribute attr)``
     This function looks up the value of the provided attribute and
     returns the unparsed version as a string. The attribute's value is
     not evaluated. If the attribute's value is ``x + 3``, then the
@@ -304,49 +302,49 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 3 arguments
     are given. :index:`isUndefined()<single: isUndefined(); ClassAd functions>`
 
- ``Boolean isUndefined(AnyType Expr)``
+``Boolean isUndefined(AnyType Expr)``
     Returns ``True``, if ``Expr`` evaluates to ``UNDEFINED``. Returns
     ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isError()<single: isError(); ClassAd functions>`
 
- ``Boolean isError(AnyType Expr)``
+``Boolean isError(AnyType Expr)``
     Returns ``True``, if ``Expr`` evaluates to ``ERROR``. Returns
     ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isString()<single: isString(); ClassAd functions>`
 
- ``Boolean isString(AnyType Expr)``
+``Boolean isString(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``String``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isInteger()<single: isInteger(); ClassAd functions>`
 
- ``Boolean isInteger(AnyType Expr)``
+``Boolean isInteger(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``Integer``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isReal()<single: isReal(); ClassAd functions>`
 
- ``Boolean isReal(AnyType Expr)``
+``Boolean isReal(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives a value of
     type ``Real``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isBoolean()<single: isBoolean(); ClassAd functions>`
 
- ``Boolean isBoolean(AnyType Expr)``
+``Boolean isBoolean(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives the integer
     value 0 or 1. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`int()<single: int(); ClassAd functions>`
 
- ``Integer int(AnyType Expr)``
+``Integer int(AnyType Expr)``
     Returns the integer value as defined by ``Expr``. Where the type of
     the evaluated ``Expr`` is ``Real``, the value is truncated (round
     towards zero) to an integer. Where the type of the evaluated
@@ -358,7 +356,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`real()<single: real(); ClassAd functions>`
 
- ``Real real(AnyType Expr)``
+``Real real(AnyType Expr)``
     Returns the real value as defined by ``Expr``. Where the type of the
     evaluated ``Expr`` is ``Integer``, the return value is the converted
     integer. Where the type of the evaluated ``Expr`` is ``String``, the
@@ -370,7 +368,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`string()<single: string(); ClassAd functions>`
 
- ``String string(AnyType Expr)``
+``String string(AnyType Expr)``
     Returns the string that results from the evaluation of ``Expr``.
     Converts a non-string value to a string. Where the evaluated
     ``Expr`` is ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
@@ -378,7 +376,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`floor()<single: floor(); ClassAd functions>`
 
- ``Integer floor(AnyType Expr)``
+``Integer floor(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
     where the type of the evaluated ``Expr`` is ``Integer``. Where the
     type of the evaluated ``Expr`` is not ``Integer``, function
@@ -390,7 +388,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`ceiling()<single: ceiling(); ClassAd functions>`
 
- ``Integer ceiling(AnyType Expr)``
+``Integer ceiling(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
     where the type of the evaluated ``Expr`` is ``Integer``. Where the
     type of the evaluated ``Expr`` is not ``Integer``, function
@@ -447,7 +445,7 @@ Optional parameters are given within square brackets.
 
     :index:`round()<single: round(); ClassAd functions>`
 
- ``Integer round(AnyType Expr)``
+``Integer round(AnyType Expr)``
     Returns the integer that results from the evaluation of ``Expr``,
     where the type of the evaluated ``Expr`` is ``Integer``. Where the
     type of the evaluated ``Expr`` is not ``Integer``, function
@@ -462,7 +460,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`random()<single: random(); ClassAd functions>`
 
- ``Integer random([ AnyType Expr ])``
+``Integer random([ AnyType Expr ])``
     Where the optional argument ``Expr`` evaluates to type ``Integer``
     or type ``Real`` (and called ``x``), the return value is the integer
     or real ``r`` randomly chosen from the interval ``0 <= r < x``. With
@@ -472,14 +470,14 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if greater than 1 argument is given.
     :index:`strcat()<single: strcat(); ClassAd functions>`
 
- ``String strcat(AnyType Expr1 [ , AnyType Expr2 ...])``
+``String strcat(AnyType Expr1 [ , AnyType Expr2 ...])``
     Returns the string which is the concatenation of all arguments,
     where all arguments are converted to type ``String`` by function
     ``string(Expr)``. Returns ``ERROR`` if any argument evaluates to
     ``UNDEFINED`` or ``ERROR``.
     :index:`join()<single: join(); ClassAd functions>`
 
- ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 ...])`` OR ``String join(String sep, List list`` OR ``String join(List list``
+``String join(String sep, AnyType Expr1 [ , AnyType Expr2 ...])`` OR ``String join(String sep, List list`` OR ``String join(List list``
     Returns the string which is the concatenation of all arguments after
     the first one. The first argument is the separator, and it is
     inserted between each of the other arguments during concatenation.
@@ -503,7 +501,7 @@ Optional parameters are given within square brackets.
 
     :index:`substr()<single: substr(); ClassAd functions>`
 
- ``String substr(String s, Integer offset [ , Integer length ])``
+``String substr(String s, Integer offset [ , Integer length ])``
     Returns the substring of ``s``, from the position indicated by
     ``offset``, with (optional) ``length`` characters. The first
     character within ``s`` is at offset 0. If the optional ``length``
@@ -521,7 +519,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if greater than 3 or less than 2
     arguments are given. :index:`strcmp()<single: strcmp(); ClassAd functions>`
 
- ``Integer strcmp(AnyType Expr1, AnyType Expr2)``
+``Integer strcmp(AnyType Expr1, AnyType Expr2)``
     Both arguments are converted to type ``String`` by function
     ``string(Expr)``. The return value is an integer that will be
 
@@ -537,10 +535,10 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than 2 arguments are given.
     :index:`stricmp()<single: stricmp(); ClassAd functions>`
 
- ``Integer stricmp(AnyType Expr1, AnyType Expr2)``
+``Integer stricmp(AnyType Expr1, AnyType Expr2)``
     This function is the same as ``strcmp``, except that letter case is
     not significant. :index:`toUpper()<single: toUpper(); ClassAd functions>`
- ``String toUpper(AnyType Expr)``
+``String toUpper(AnyType Expr)``
     The single argument is converted to type ``String`` by function
     ``string(Expr)``. The return value is this string, with all lower
     case letters converted to upper case. If the argument evaluates to
@@ -549,7 +547,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`toLower()<single: toLower(); ClassAd functions>`
 
- ``String toLower(AnyType Expr)``
+``String toLower(AnyType Expr)``
     The single argument is converted to type ``String`` by function
     ``string(Expr)``. The return value is this string, with all upper
     case letters converted to lower case. If the argument evaluates to
@@ -558,7 +556,7 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`size()<single: size(); ClassAd functions>`
 
- ``Integer size(AnyType Expr)``
+``Integer size(AnyType Expr)``
     Returns the number of characters in the string, after calling
     function ``string(Expr)``. If the argument evaluates to ``ERROR`` or
     ``UNDEFINED``, ``ERROR`` is returned.
@@ -566,13 +564,13 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`split()<single: split(); ClassAd functions>`
 
- ``List split(String s [ , String tokens ] )``
+``List split(String s [ , String tokens ] )``
     Returns a list of the substrings of ``s`` that have been split up by
     using any of the characters within string ``tokens``. If ``tokens``
     is not specified, then all white space characters are used to
     delimit the string.
     :index:`splitUserName()<single: splitUserName(); ClassAd functions>`
- ``List splitUserName(String Name)``
+``List splitUserName(String Name)``
     Returns a list of two strings. Where ``Name`` includes an ``@``
     character, the first string in the list will be the substring that
     comes before the ``@`` character, and the second string in the list
@@ -583,7 +581,7 @@ Optional parameters are given within square brackets.
     in the list will be the empty string. Thus, if ``Name`` is
     ``"username"``, then the returned list will be {"username", ""}.
     :index:`splitSlotName()<single: splitSlotName(); ClassAd functions>`
- ``List splitSlotName(String Name)``
+``List splitSlotName(String Name)``
     Returns a list of two strings. Where ``Name`` includes an ``@``
     character, the first string in the list will be the substring that
     comes before the ``@`` character, and the second string in the list
@@ -594,11 +592,11 @@ Optional parameters are given within square brackets.
     second string in the list will be ``Name``, Thus, if ``Name`` is
     ``"machinename"``, then the returned list will be
     {"", "machinename"}. :index:`time()<single: time(); ClassAd functions>`
- ``Integer time()``
+``Integer time()``
     Returns the current coordinated universal time. This is the time, in
     seconds, since midnight of January 1, 1970.
     :index:`formatTime()<single: formatTime(); ClassAd functions>`
- ``String formatTime([ Integer time ] [ , String format ])``
+``String formatTime([ Integer time ] [ , String format ])``
     Returns a formatted string that is a representation of ``time``. The
     argument ``time`` is interpreted as coordinated universal time in
     seconds, since midnight of January 1, 1970. If not specified,
@@ -661,14 +659,14 @@ Optional parameters are given within square brackets.
 
     :index:`interval()<single: interval(); ClassAd functions>`
 
- ``String interval(Integer seconds)``
+``String interval(Integer seconds)``
     Uses ``seconds`` to return a string of the form ``days+hh:mm:ss``.
     This represents an interval of time. Leading values that are zero
     are omitted from the string. For example, ``seconds`` of 67 becomes
     "1:07". A second example, ``seconds`` of 1472523 = 17\*24\*60\*60 +
     1\*60\*60 + 2\*60 + 3, results in the string "17+1:02:03".
     :index:`debug()<single: debug(); ClassAd functions>`
- ``AnyType debug(AnyType expression)``
+``AnyType debug(AnyType expression)``
     This function evaluates its argument, and it returns the result.
     Thus, it is a no-operation. However, a side-effect of the function
     is that information about the evaluation is logged to the evaluating
@@ -680,7 +678,7 @@ Optional parameters are given within square brackets.
     information about each component of the expression to the log file,
     making it easier to understand the expression.
     :index:`envV1ToV2()<single: envV1ToV2(); ClassAd functions>`
- ``String envV1ToV2(String old_env)``
+``String envV1ToV2(String old_env)``
     This function converts a set of environment variables from the old
     HTCondor syntax to the new syntax. The single argument should
     evaluate to a string that represents a set of environment variables
@@ -690,7 +688,7 @@ Optional parameters are given within square brackets.
     ClassAd attribute ``Environment``). If the argument evaluates to
     ``UNDEFINED``, then the result is also ``UNDEFINED``.
     :index:`mergeEnvironment()<single: mergeEnvironment(); ClassAd functions>`
- ``String mergeEnvironment(String env1 [ , String env2, ... ])``
+``String mergeEnvironment(String env1 [ , String env2, ... ])``
     This function merges multiple sets of environment variables into a
     single set. If multiple arguments include the same variable, the one
     that appears last in the argument list is used. Each argument should
@@ -708,7 +706,7 @@ delimiter contains the comma and space characters. A string within the
 list is ended (delimited) by one or more characters within the delimiter
 string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
 
- ``Integer stringListSize(String list [ , String delimiter ])``
+``Integer stringListSize(String list [ , String delimiter ])``
     Returns the number of elements in the string ``list``, as delimited
     by the optional ``delimiter`` string. Returns ``ERROR`` if either
     argument is not a string.
@@ -716,7 +714,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     This function returns ``ERROR`` if other than 1 or 2 arguments are
     given. :index:`stringListSum()<single: stringListSum(); ClassAd functions>`
 
- ``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``    Sums and returns the sum of all items in the string ``list``, as
+``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``    Sums and returns the sum of all items in the string ``list``, as
     delimited by the optional ``delimiter`` string. If all items in the
     list are integers, the return value is also an integer. If any item
     in the list is a real value (noninteger), the return value is a
@@ -724,14 +722,14 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     return value is ``ERROR``.
     :index:`stringListAvg()<single: stringListAvg(); ClassAd functions>`
 
- ``Real stringListAvg(String list [ , String delimiter ])``
+``Real stringListAvg(String list [ , String delimiter ])``
     Sums and returns the real-valued average of all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If any
     item does not represent an integer or real value, the return value
     is ``ERROR``. A list with 0 items (the empty list) returns the value
     0.0. :index:`stringListMin()<single: stringListMin(); ClassAd functions>`
 
- ``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``    Finds and returns the minimum value from all items in the string
+``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``    Finds and returns the minimum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -740,7 +738,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     list) returns the value ``UNDEFINED``.
     :index:`stringListMax()<single: stringListMax(); ClassAd functions>`
 
- ``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``    Finds and returns the maximum value from all items in the string
+``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``    Finds and returns the maximum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -777,7 +775,7 @@ The ``options`` argument to these functions is a string of special
 characters that modify the use of the regular expressions. Inclusion of
 characters other than these as options are ignored.
 
- ``I`` or ``i``
+``I`` or ``i``
     Ignore letter case.
 
 ``M`` or ``m``
@@ -801,14 +799,14 @@ characters other than these as options are ignored.
 
 :index:`regexp()<single: regexp(); ClassAd functions>`
 
- ``Boolean regexp(String pattern, String target [ , String options ])``
+``Boolean regexp(String pattern, String target [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns ``TRUE`` when ``target``
     matches the regular expression given by ``pattern``. Returns
     ``FALSE`` otherwise. If any argument is not a string, or if
     ``pattern`` does not describe a valid regular expression, returns
     ``ERROR``. :index:`regexps()<single: regexps(); ClassAd functions>`
- ``String regexps``
+``String regexps``
     ``(String pattern, String target, String substitute [ , String options ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. When ``target`` matches the regular
@@ -816,7 +814,7 @@ characters other than these as options are ignored.
     returned, with backslash expansion performed. If any argument is not
     a string, returns ``ERROR``.
     :index:`replace()<single: replace(); ClassAd functions>`
- ``String replace``
+``String replace``
     ``(String pattern, String target, String substitute [ , String options      ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
@@ -825,7 +823,7 @@ characters other than these as options are ignored.
     performed. Equivalent to ``regexps()`` with the ``f`` option. If any
     argument is not a string, returns ``ERROR``.
     :index:`replaceall()<single: replaceall(); ClassAd functions>`
- ``String replaceall``
+``String replaceall``
     ``(String pattern, String target, String substitute [ ,      String options ]) ``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
@@ -834,7 +832,7 @@ characters other than these as options are ignored.
     performed. Equivalent to ``regexps()`` with the ``fg`` options. If
     any argument is not a string, returns ``ERROR``.
     :index:`stringList_regexpMember()<single: stringList_regexpMember(); ClassAd functions>`
- ``Boolean stringList_regexpMember``
+``Boolean stringList_regexpMember``
     ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
     Uses the description of a regular expression given by string
     ``pattern`` to scan through the list of strings in ``list``. Returns
@@ -845,13 +843,13 @@ characters other than these as options are ignored.
     any entries in ``list``. The return value is ``ERROR``, if any of
     the arguments are not strings, or if ``pattern`` is not a valid
     regular expression. :index:`userHome()<single: userHome(); ClassAd functions>`
- ``String userHome(String userName [ , String default ])``
+``String userHome(String userName [ , String default ])``
     Returns the home directory of the given user as configured on the
     current system (determined using the getpwdnam() call). (Returns
     ``default`` if the ``default`` argument is passed and the home
     directory of the user is not defined.)
     :index:`userMap()<single: userMap(); ClassAd functions>`
- ``List userMap(String mapSetName, String userName)``
+``List userMap(String mapSetName, String userName)``
     Map an input string using the given mapping set. Returns a list of
     groups to which the user belongs.
     :index:`userMap()<single: userMap(); ClassAd functions>`
@@ -949,7 +947,7 @@ have these exceptional values.
 
 -  **Arithmetic operators:**
 
-   #. The operators \*, /, + and - operate arithmetically only on
+   #. The operators ``\*``, ``/``, ``+`` and ``-`` operate arithmetically only on
       integers and reals.
    #. Arithmetic is carried out in the same type as both operands, and
       type promotions from integers to reals are performed if one
@@ -961,52 +959,52 @@ have these exceptional values.
 
 -  **Comparison operators:**
 
-   #. The comparison operators ==, !=, <=, <, >= and > operate on
+   #. The comparison operators ``==``, ``!=``, ``<=``, ``<``, ``>=`` and ``>`` operate on
       integers, reals and strings.
    #. String comparisons are case insensitive for most operators. The
-      only exceptions are the operators =?= and =!=, which do case
+      only exceptions are the operators ``=?=`` and ``=!=``, which do case
       sensitive comparisons assuming both sides are strings.
    #. Comparisons are carried out in the same type as both operands, and
       type promotions from integers to reals are performed if one
       operand is a real, and the other an integer. Strings may not be
       converted to any other type, so comparing a string and an integer
       or a string and a real results in ``ERROR``.
-   #. The operators ==, !=, <=, < and >= > are strict with respect to
+   #. The operators ``==``, ``!=``, ``<=``, ``<``, ``>=``, and ``>`` are strict with respect to
       both ``UNDEFINED`` and ``ERROR``.
-   #. In addition, the operators =?=, is, =!= and isnt behave similar to
-      == and !=, but are not strict. Semantically, the =?= and is test
+   #. In addition, the operators ``=?=``, ``is``, ``=!=``, and ``isnt`` behave similar to
+      ``==`` and !=, but are not strict. Semantically, the ``=?=`` and is test
       if their operands are "identical," i.e., have the same type and
-      the same value. For example, 10 == UNDEFINED and
-      UNDEFINED == UNDEFINED both evaluate to ``UNDEFINED``, but
-      10 =?= UNDEFINED and UNDEFINED is UNDEFINED evaluate to ``FALSE``
-      and ``TRUE`` respectively. The =!= and isnt operators test for the
+      the same value. For example, ``10 == UNDEFINED`` and
+      ``UNDEFINED == UNDEFINED`` both evaluate to ``UNDEFINED``, but
+      ``10 =?= UNDEFINED`` and ``UNDEFINED`` is ``UNDEFINED`` evaluate to ``FALSE``
+      and ``TRUE`` respectively. The ``=!=`` and ``isnt`` operators test for the
       "is not identical to" condition.
 
-      =?= and is have the same behavior as each other. And isnt and =!=
+      ``=?=`` and ``is`` have the same behavior as each other. And ``isnt`` and ``=!=``
       behave the same as each other. The ClassAd unparser will always
-      use =?= in preference to is and =!= in preference to isnt when
+      use ``=?=`` in preference to ``is`` and ``=!=`` in preference to ``isnt`` when
       printing out ClassAds.
 
 -  **Logical operators:**
 
-   #. The logical operators && and \|\| operate on integers and reals.
+   #. The logical operators ``&&`` and ``\|\|`` operate on integers and reals.
       The zero value of these types are considered ``FALSE`` and
       non-zero values ``TRUE``.
    #. The operators are not strict, and exploit the "don't care"
       properties of the operators to squash ``UNDEFINED`` and ``ERROR``
       values when possible. For example, UNDEFINED && FALSE evaluates to
-      ``FALSE``, but UNDEFINED \|\| FALSE evaluates to ``UNDEFINED``.
+      ``FALSE``, but ``UNDEFINED \|\| FALSE`` evaluates to ``UNDEFINED``.
    #. Any string operand is equivalent to an ``ERROR`` operand for a
-      logical operator. In other words, TRUE && "foobar" evaluates to
+      logical operator. In other words, ``TRUE && "foobar"`` evaluates to
       ``ERROR``.
 
 -  **The Ternary operator:**
 
-   #. The Ternary operator (``expr1`` ? ``expr2`` : ``expr3``) operate
+   #. The Ternary operator (``expr1 ? expr2 : expr3``) operate
       with expressions. If all three expressions are given, the
       operation is strict.
-   #. However, if the middle expression is missing, eg. ``expr1`` ?:
-      ``expr3``, then, when expr1 is defined, that defined value is
+   #. However, if the middle expression is missing, eg. ``expr1 ?:
+      expr3``, then, when expr1 is defined, that defined value is
       returned. Otherwise, when expr1 evaluated to ``UNDEFINED``, the
       value of expr3 is evaluated and returned. This can be a convenient
       shortcut for writing what would otherwise be a much longer classad
@@ -1020,13 +1018,18 @@ Expression Examples
 The ``=?=`` operator is similar to the ``==`` operator. It checks if the
 left hand side operand is identical in both type and value to the the
 right hand side operand, returning ``TRUE`` when they are identical.
-**For strings, the comparison is case-insensitive with the == operator and
-case-sensitive with the =?= operator.** A key point in understanding is that
-the ``=?=`` operator only produces evaluation results of ``TRUE`` and
-``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``,
-``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`_ presents
+
+.. caution::
+
+    For strings, the comparison is case-insensitive with the ``==`` operator and
+    case-sensitive with the ``=?=`` operator. A key point in understanding is that
+    the ``=?=`` operator only produces evaluation results of ``TRUE`` and
+    ``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``,
+    ``FALSE``, ``UNDEFINED``, or ``ERROR``.
+
+Table `4.1 <#x48-4100021>`_ presents
 examples that define the outcome of the ``==`` operator.
-Table \ `4.2 <#x48-4100032>`_ presents examples that define the outcome
+Table `4.2 <#x48-4100032>`_ presents examples that define the outcome
 of the ``=?=`` operator.
 
 +-------------------------------+---------------------------+
@@ -1069,13 +1072,18 @@ Table 4.2: Evaluation examples for the ``=?=`` operator
 The ``=!=`` operator is similar to the ``!=`` operator. It checks if the
 left hand side operand is not identical in both type and value to the
 the right hand side operand, returning ``FALSE`` when they are
-identical. **For strings, the comparison is case-insensitive with the !=
-operator and case-sensitive with the =!= operator.** A key point in
-understanding is that the ``=!=`` operator only produces evaluation results
-of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation
-results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``.
-Table \ `4.3 <#x48-4100043>`_ presents examples that define the outcome of
-the ``!=`` operator. Table \ `4.4 <#x48-4100054>`_ presents examples that
+identical.
+
+.. caution::
+
+    For strings, the comparison is case-insensitive with the !=
+    operator and case-sensitive with the =!= operator. A key point in
+    understanding is that the ``=!=`` operator only produces evaluation results
+    of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation
+    results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``.
+
+Table `4.3 <#x48-4100043>`_ presents examples that define the outcome of
+the ``!=`` operator. Table `4.4 <#x48-4100054>`_ presents examples that
 define the outcome of the ``=!=`` operator.
 
 +-------------------------------+----------------------------+
@@ -1114,8 +1122,6 @@ Table 4.3: Evaluation examples for the ``!=`` operator
 +-------------------------------+-----------------------+
 
 Table 4.4: Evaluation examples for the ``=!=`` operator
-
---------------
 
 Old ClassAds in the HTCondor System
 -----------------------------------

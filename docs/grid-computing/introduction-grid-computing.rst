@@ -1,5 +1,3 @@
-      
-
 Introduction
 ============
 
@@ -67,4 +65,4 @@ done within the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command in a submit description file.
 
-      
+

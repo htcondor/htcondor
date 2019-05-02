@@ -62,12 +62,12 @@ setup procedure includes permission to read files matching the pattern
 config-\*.tar.gz from a particular private S3 bucket. If the instance
 finds permissions matching that pattern, it assumes that the
 corresponding S3 bucket is the one from which it should download, and
-does so; if successful, it untars the file in /etc/condor/config.d.
+does so; if successful, it untars the file in ``/etc/condor/config.d``.
 
-In v8.7.1, the script executing these steps is named 49ec2-instance.sh,
+In v8.7.1, the script executing these steps is named ``49ec2-instance.sh``,
 and is called during configuration when HTCondor first starts up.
 
-In v8.7.2, the script executing these steps is named condor-annex-ec2,
+In v8.7.2, the script executing these steps is named ``condor-annex-ec2``,
 and is called during system start-up.
 
 The HTCondor configuration and security tokens are at this point
@@ -115,8 +115,8 @@ Instance Roles
 
 To explain the last point immediately above, EC2 stores (temporary)
 credentials for the role, if any, associated with an instance on that
-instance's meta-data server, which may be accessed via HTTP at a well-
-known address (currently 169.254.169.254). Unless otherwise configured,
+instance's meta-data server, which may be accessed via HTTP at a well-known
+address (currently ``169.254.169.254``). Unless otherwise configured,
 any process in the instance can access the meta-data server and thereby
 make use of the instance's credentials.
 

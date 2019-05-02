@@ -1,5 +1,3 @@
-      
-
 The Command Line Interface
 ==========================
 
@@ -15,4 +13,4 @@ tools acceptable. Even some of the HTCondor tools themselves work this
 way. For example, when *condor_dagman* needs to submit a job, it
 invokes the *condor_submit* program, just as an interactive user would.
 
-      
+

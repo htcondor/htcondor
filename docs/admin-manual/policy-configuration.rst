@@ -1,9 +1,10 @@
 Policy Configuration for Execute Hosts and for Submit Hosts
 ===========================================================
 
-Note: configuration templates make it easier to implement certain
-policies; see information on policy templates here: 
-:ref:`admin-manual/configuration-templates:available configuration templates`.
+.. note::
+    Configuration templates make it easier to implement certain
+    policies; see information on policy templates here:
+    :ref:`admin-manual/configuration-templates:available configuration templates`.
 
 *condor_startd* Policy Configuration
 -------------------------------------
@@ -112,18 +113,19 @@ the ``START`` expression is modified to reference job ClassAd
 attributes, the ``IS_OWNER`` expression should also be modified to
 reference only machine ClassAd attributes.
 
-NOTE: If you have machines with lots of real memory and swap space such
-that the only scarce resource is CPU time, consider defining
-``JOB_RENICE_INCREMENT`` :index:`JOB_RENICE_INCREMENT` so that
-HTCondor starts jobs on the machine with low priority. Then, further
-configure to set up the machines with:
+.. note::
+    If you have machines with lots of real memory and swap space such
+    that the only scarce resource is CPU time, consider defining
+    ``JOB_RENICE_INCREMENT`` :index:`JOB_RENICE_INCREMENT` so that
+    HTCondor starts jobs on the machine with low priority. Then, further
+    configure to set up the machines with:
 
-::
+    ::
 
-      START = True
-      SUSPEND = False
-      PREEMPT = False
-      KILL = False
+          START = True
+          SUSPEND = False
+          PREEMPT = False
+          KILL = False
 
 In this way, HTCondor jobs always run and can never be kicked off from
 activity on the machine. However, because they would run with the low
@@ -639,7 +641,8 @@ write expressions that determine when further transitions occurred. For
 example, enter the Killing activity if a machine has been in the
 Vacating activity longer than a specified amount of time.
 
- Owner State
+Owner State
+"""""""""""
 
 :index:`Owner<single: Owner; machine state>` :index:`owner state`
 
@@ -695,7 +698,7 @@ If, however, the ``START`` expression is
 
 ::
 
-            START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
+    START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 
 and ``KeyboardIdle`` is 34 seconds, then the machine leaves the Owner
 state and becomes Unclaimed. This is because FALSE \|\| UNDEFINED is
@@ -731,7 +734,8 @@ Claimed Busy.
 If draining of the machine is initiated while in the Owner state, the
 slot transitions to Drained/Retiring (transition **36**).
 
- Unclaimed State
+Unclaimed State
+"""""""""""""""
 
 :index:`Unclaimed<single: Unclaimed; machine state>`
 :index:`unclaimed state`
@@ -765,7 +769,7 @@ terms of this attribute, for example:
 
 ::
 
-            RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
+    RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 
 This macro calculates the time since the last benchmark, so when this
 time exceeds 4 hours, we run the benchmarks again. The startd keeps a
@@ -773,16 +777,18 @@ weighted average of these benchmarking results to try to get the most
 accurate numbers possible. This is why it is desirable for the startd to
 run them more than once in its lifetime.
 
-NOTE: ``LastBenchmark`` is initialized to 0 before benchmarks have ever
-been run. To have the *condor_startd* run benchmarks as soon as the
-machine is Unclaimed (if it has not done so already), include a term
-using ``LastBenchmark`` as in the example above.
+.. note::
+    ``LastBenchmark`` is initialized to 0 before benchmarks have ever
+    been run. To have the *condor_startd* run benchmarks as soon as the
+    machine is Unclaimed (if it has not done so already), include a term
+    using ``LastBenchmark`` as in the example above.
 
-NOTE: If ``RUNBENCHMARKS`` is defined and set to something other than
-FALSE, the startd will automatically run one set of benchmarks when it
-first starts up. To disable benchmarks, both at startup and at any time
-thereafter, set ``RUNBENCHMARKS`` to FALSE or comment it out of the
-configuration file.
+.. note::
+    If ``RUNBENCHMARKS`` is defined and set to something other than
+    FALSE, the startd will automatically run one set of benchmarks when it
+    first starts up. To disable benchmarks, both at startup and at any time
+    thereafter, set ``RUNBENCHMARKS`` to FALSE or comment it out of the
+    configuration file.
 
 From the Unclaimed state, the machine can go to four other possible
 states: Owner (transition **2**), Backfill/Idle, Matched, or
@@ -807,7 +813,8 @@ evaluates to TRUE, the machine will enter the Backfill/Idle state
 If draining of the machine is initiated while in the Unclaimed state,
 the slot transitions to Drained/Retiring (transition **37**).
 
- Matched State
+Matched State
+"""""""""""""
 
 :index:`Matched<single: Matched; machine state>` :index:`matched state`
 
@@ -832,7 +839,8 @@ If the schedd that was matched with the machine claims it before the
 ``MATCH_TIMEOUT`` expires, the machine goes into the Claimed/Idle state
 (transition **9**).
 
- Claimed State
+Claimed State
+"""""""""""""
 
 :index:`Claimed<single: Claimed; machine state>` :index:`claimed state`
 
@@ -846,20 +854,20 @@ expressions are the normal expressions. For example:
 
 ::
 
-            WANT_SUSPEND            = True
-            WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
-            SUSPEND                 = $(KeyboardBusy) || $(CPUBusy)
-            ...
+    WANT_SUSPEND            = True
+    WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
+    SUSPEND                 = $(KeyboardBusy) || $(CPUBusy)
+    ...
 
 The vanilla expressions have the string"_VANILLA" appended to their
 names. For example:
 
 ::
 
-            WANT_SUSPEND_VANILLA    = True
-            WANT_VACATE_VANILLA     = True
-            SUSPEND_VANILLA         = $(KeyboardBusy) || $(CPUBusy)
-            ...
+    WANT_SUSPEND_VANILLA    = True
+    WANT_VACATE_VANILLA     = True
+    SUSPEND_VANILLA         = $(KeyboardBusy) || $(CPUBusy)
+    ...
 
 Without specific vanilla versions, the normal versions will be used for
 all jobs, including vanilla jobs. In this manual, the normal expressions
@@ -930,11 +938,11 @@ startd will evaluate the ``PREEMPT`` expression and skip the Suspended
 activity entirely. By transition, the possible state/activity
 destinations from Claimed/Busy:
 
- Claimed/Idle
+Claimed/Idle
     If the starter that is serving a given job exits (for example
     because the jobs completes), the machine will go to Claimed/Idle
     (transition **12**).
- Claimed/Retiring
+    Claimed/Retiring
     If ``WANT_SUSPEND`` is FALSE and the ``PREEMPT`` expression is
     ``True``, the machine enters the Retiring activity (transition
     **13**). From there, it waits for a configurable amount of time for
@@ -951,7 +959,7 @@ destinations from Claimed/Busy:
     the startd is being shut down. The only exception is a "fast"
     shutdown, which bypasses retirement completely.
 
- Claimed/Suspended
+Claimed/Suspended
     If both the ``WANT_SUSPEND`` and ``SUSPEND`` expressions evaluate to
     TRUE, the machine suspends the job (transition **14**).
 
@@ -963,15 +971,17 @@ remains in the Claimed/Busy state and appears as a running job.
 
 From the Claimed/Suspended state, the following transitions may occur:
 
- Claimed/Busy
+Claimed/Busy
     If the ``CONTINUE`` expression evaluates to TRUE, the machine
     resumes the job and enters the Claimed/Busy state (transition
     **15**) or the Claimed/Retiring state (transition **16**), depending
     on whether the claim has been preempted.
- Claimed/Retiring
+
+Claimed/Retiring
     If the ``PREEMPT`` expression is TRUE, the machine will enter the
     Claimed/Retiring activity (transition **16**).
- Preempting
+
+Preempting
     If the claim is in suspended retirement and the retirement time
     expires, the job enters the Preempting state (transition **17**).
     This is only possible if ``MaxJobRetirementTime`` decreases during
@@ -979,7 +989,7 @@ From the Claimed/Suspended state, the following transitions may occur:
 
 For the Claimed/Retiring state, the following transitions may occur:
 
- Preempting
+Preempting
     If the job finishes or the job's run time exceeds the value defined
     for the job ClassAd attribute ``MaxJobRetirementTime``, the
     Preempting state is entered (transition **18**). The run time is
@@ -990,20 +1000,23 @@ For the Claimed/Retiring state, the following transitions may occur:
     effectively be infinite, avoiding any killing of jobs. It is also
     possible for the administrator to issue a fast shutdown command,
     which causes ``MaxJobRetirementTime`` to be effectively 0.
- Claimed/Busy
+
+Claimed/Busy
     If the startd was retiring because of a preempting claim only and
     the preempting claim goes away, the normal Claimed/Busy state is
     resumed (transition **19**). If instead the retirement is due to
     owner activity (``PREEMPT``) or the startd is being shut down, no
     unretirement is possible.
- Claimed/Suspended
+
+Claimed/Suspended
     In exactly the same way that suspension may happen from the
     Claimed/Busy state, it may also happen during the Claimed/Retiring
     state (transition **20**). In this case, when the job continues from
     suspension, it moves back into Claimed/Retiring (transition **16**)
     instead of Claimed/Busy (transition **15**).
 
- Preempting State
+Preempting State
+""""""""""""""""
 
 :index:`Preempting<single: Preempting; machine state>`
 :index:`preempting state`
@@ -1054,7 +1067,7 @@ If the machine enters the Killing activity, (because either
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
 of which is defined by the ``KILLING_TIMEOUT``
-:index:`KILLING_TIMEOUT` macro 
+:index:`KILLING_TIMEOUT` macro
 (:ref:`admin-manual/configuration-macros:condor_startd configuration file
 macros`). This macro is defined in seconds and defaults to 30. If this timer
 expires and the machine is still in the Killing activity, something has gone
@@ -1071,13 +1084,14 @@ match was found, the machine will enter Claimed/Idle (transition
 ``PREEMPT`` expression evaluated to TRUE, *condor_vacate* was used,
 etc), the machine will enter the Owner state (transition **25**).
 
- Backfill State
+Backfill State
+""""""""""""""
 
 :index:`Backfill<single: Backfill; machine state>` :index:`backfill state`
 
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
-about backfill support in HTCondor, see the 
+about backfill support in HTCondor, see the
 :ref:`admin-manual/setting-up-special-environments:configuring htcondor for
 running backfill jobs` section. This state is only used if the machine has been
 configured to enable backfill computation, if a specific backfill manager has
@@ -1094,14 +1108,15 @@ the BOINC client is running, the machine will enter Backfill/Busy
 (transition **26**) to indicate that it is now performing a backfill
 computation.
 
-NOTE: On multi-core machines, the *condor_startd* will only spawn a
-single instance of the BOINC client, even if multiple slots are
-available to run backfill jobs. Therefore, only the first machine to
-enter Backfill/Idle will cause a copy of the BOINC client to start
-running. If a given slot on a multi-core enters the Backfill state and a
-BOINC client is already running under this *condor_startd*, the slot
-will immediately enter Backfill/Busy without waiting to spawn another
-copy of the BOINC client.
+.. note::
+    On multi-core machines, the *condor_startd* will only spawn a
+    single instance of the BOINC client, even if multiple slots are
+    available to run backfill jobs. Therefore, only the first machine to
+    enter Backfill/Idle will cause a copy of the BOINC client to start
+    running. If a given slot on a multi-core enters the Backfill state and a
+    BOINC client is already running under this *condor_startd*, the slot
+    will immediately enter Backfill/Busy without waiting to spawn another
+    copy of the BOINC client.
 
 If the BOINC client ever exits on its own (which normally wouldn't
 happen), the machine will go back to Backfill/Idle (transition **27**)
@@ -1146,7 +1161,8 @@ notification from the *condor_negotiator* will reach the
 this case, once the BOINC client exits, the machine will enter
 Matched/Idle (transition **32**).
 
- Drained State
+Drained State
+"""""""""""""
 
 :index:`Drained<single: Drained; machine state>` :index:`drained state`
 

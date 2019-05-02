@@ -17,7 +17,7 @@ where ``YYY`` is the exit code, or
 
     Shadow pid XXXXX for job XX.X reports job exit reason 100.
 
-where the exit code is the value 100. Table \ `B.1 <#x181-12450021>`_
+where the exit code is the value 100. Table `B.1 <#x181-12450021>`_
 lists these codes.
 
 Table B.1: *condor_shadow* Exit Codes

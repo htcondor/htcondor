@@ -1,4 +1,4 @@
-      
+
 
 *condor_run*
 =============
@@ -54,7 +54,7 @@ submitted with:
 
 ::
 
-    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \ 
+    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \
        OpSys == $CONDOR_OPSYS
 
 Without these environment variables, the job receives the default
@@ -92,7 +92,7 @@ required platform:
 
 ::
 
-    % setenv CONDOR_ARCH "SUN4u" 
+    % setenv CONDOR_ARCH "SUN4u"
     % setenv CONDOR_OPSYS "SOLARIS28"
 
 Then, use *condor_run* to submit the compilation as in the following
@@ -121,7 +121,7 @@ Files
 working directory. The placeholder <pid> is replaced by the process id
 of *condor_run*.
 
- ``.condor_run.<pid>``
+``.condor_run.<pid>``
     A shell script containing the shell command line.
 
 ``.condor_submit.<pid>``
@@ -188,4 +188,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

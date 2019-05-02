@@ -66,7 +66,7 @@ Ordinarily, this program will be run by *condor_dagman*, and users do
 not need to interact with it. This program uses the following
 environment variables:
 
- ``PEGASUS_USER_METRICS_DEFAULT_SERVER``
+``PEGASUS_USER_METRICS_DEFAULT_SERVER``
     The URL of the default server to which to send the data. It defaults
     to ``http://metrics.pegasus.isi.edu/metrics``. It can be overridden
     at the command line with the **-u** option.

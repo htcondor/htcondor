@@ -818,7 +818,7 @@ are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
 Section `HTCondor's ClassAd
 Mechanism <../misc-concepts/classad-mechanism.html>`_ on
-page \ `HTCondor's ClassAd
+page `HTCondor's ClassAd
 Mechanism <../misc-concepts/classad-mechanism.html>`_.
 
 All of the commands in the submit description file are case insensitive,
@@ -846,10 +846,10 @@ command. This shows all the defined attributes for current jobs in the
 queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
-unnumbered Appendix on page \ `Job ClassAd
+unnumbered Appendix on page `Job ClassAd
 Attributes <../classad-attributes/job-classad-attributes.html>`_. A
 list of defined ClassAd attributes for machine ClassAds is given in the
-unnumbered Appendix on page \ `Machine ClassAd
+unnumbered Appendix on page `Machine ClassAd
 Attributes <../classad-attributes/machine-classad-attributes.html>`_.
 
 Rank Expression Examples

@@ -408,7 +408,7 @@ Platform-Specific Configuration File Settings
 
 The configuration variables that are truly platform-specific are:
 
- ``RELEASE_DIR`` :index:`RELEASE_DIR`
+``RELEASE_DIR`` :index:`RELEASE_DIR`
     Full path to to the installed HTCondor binaries. While the
     configuration files may be shared among different platforms, the
     binaries certainly cannot. Therefore, maintain separate release
@@ -679,7 +679,7 @@ HTCondorView collector. These configuration variables are described in
 :ref:`admin-manual/configuration-macros:condor_collector configuration file
 entries`. Here are brief explanations of the entries that must be customized:
 
- ``POOL_HISTORY_DIR`` :index:`POOL_HISTORY_DIR`
+``POOL_HISTORY_DIR`` :index:`POOL_HISTORY_DIR`
     The directory where historical data will be stored. This directory
     must be writable by whatever user the HTCondorView collector is
     running as (usually the user condor). There is a configurable limit
@@ -692,7 +692,7 @@ entries`. Here are brief explanations of the entries that must be customized:
     are a few problems putting these files into either of those
     directories.
 
- ``KEEP_POOL_HISTORY`` :index:`KEEP_POOL_HISTORY`
+``KEEP_POOL_HISTORY`` :index:`KEEP_POOL_HISTORY`
     A boolean value that determines if the HTCondorView collector should
     store the historical information. It is ``False`` by default, and
     must be specified as ``True`` in the local configuration file to
@@ -1178,7 +1178,7 @@ so, to control the transitions in to and out of the Backfill state. This
 section briefly lists these expressions. More detail can be found in
 :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`.
 
- ``ENABLE_BACKFILL`` :index:`ENABLE_BACKFILL`
+``ENABLE_BACKFILL`` :index:`ENABLE_BACKFILL`
     A boolean value to determine if any backfill functionality should be
     used. The default value is ``False``.
 
@@ -1334,7 +1334,7 @@ perform backfill computations, it will spawn a *condor_starter* to
 directly launch and monitor the *boinc_client* program. This
 *condor_starter* is just like the one used to invoke any other HTCondor
 jobs. In fact, the argv[0] of the *boinc_client* will be renamed to
-*condor_exec*, as described in the 
+*condor_exec*, as described in the
 :ref:`users-manual/potential-problems:renaming of argv[0]` section.
 
 This *condor_starter* reads values out of the HTCondor configuration
@@ -1348,7 +1348,7 @@ required or an optional configuration variable.
 
 Required configuration variables:
 
- ``BOINC_Executable`` :index:`BOINC_Executable`
+``BOINC_Executable`` :index:`BOINC_Executable`
     The full path and executable name of the *boinc_client* binary to
     use.
 
@@ -1369,7 +1369,7 @@ Required configuration variables:
 
 Optional configuration variables:
 
- ``BOINC_Arguments`` :index:`BOINC_Arguments`
+``BOINC_Arguments`` :index:`BOINC_Arguments`
     Command-line arguments that should be passed to the *boinc_client*
     program. For example, one way to specify the BOINC project to join
     is to use the **-attach_project** argument to specify a project URL
@@ -1379,7 +1379,7 @@ Optional configuration variables:
 
         BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
- ``BOINC_Environment`` :index:`BOINC_Environment`
+``BOINC_Environment`` :index:`BOINC_Environment`
     Environment variables that should be set for the *boinc_client*.
 
 ``BOINC_Output`` :index:`BOINC_Output`
@@ -1812,7 +1812,7 @@ The following variables are set in the environment of the the
 ``USER_JOB_WRAPPER`` script by the *condor_starter* daemon, when the
 ``USER_JOB_WRAPPER`` is defined.
 
- ``_CONDOR_MACHINE_AD`` :index:`_CONDOR_MACHINE_AD<single: _CONDOR_MACHINE_AD; environment variables>`
+``_CONDOR_MACHINE_AD`` :index:`_CONDOR_MACHINE_AD<single: _CONDOR_MACHINE_AD; environment variables>`
     The full path and file name of the file containing the machine
     ClassAd.
 

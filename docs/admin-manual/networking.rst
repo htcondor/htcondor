@@ -49,12 +49,12 @@ character.
 HTCondor currently recognizes the following parameters with an IPv4 port
 specification:
 
- ``CCBID``
+``CCBID``
     Provides contact information for forming a CCB connection to a
     daemon, or a space separated list, if the daemon is registered with
     more than one CCB server. Each contact information is specified in
     the form of IP:port#ID. Note that spaces between list items will be
-    URL encoded by  .
+    URL encoded by ``%20``.
 
 ``PrivNet``
     Provides the name of the daemon's private network. This value is
@@ -87,7 +87,7 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the ``<SUBSYS>_ADDRESS_FILE``
-configuration variables, as described in the 
+configuration variables, as described in the
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
 section.
 
@@ -172,7 +172,7 @@ example:
     COLLECTOR_HOST = $(CONDOR_HOST):0
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
-Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the 
+Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
 section and ``COLLECTOR_HOST`` is in the
 :ref:admin-manual/configuration-macros:htcondor-wide configuration file entries`
@@ -443,7 +443,7 @@ set to ``False``:
 This functionality has limitations. Here are descriptions of the
 limitations.
 
- Using all network interfaces does not work with Kerberos.
+Using all network interfaces does not work with Kerberos.
     Every Kerberos ticket contains a specific IP address within it.
     Authentication over a socket (using Kerberos) requires the socket to
     also specify that same specific IP address. Use of
@@ -457,7 +457,8 @@ limitations.
     functionality supports using multiple Kerberos tickets together with
     finding the right one to match the IP address a given socket is
     bound to.
- There is a potential security risk.
+
+There is a potential security risk.
     Consider the following example of a security risk. A multi-homed
     machine is at a network boundary. One interface is on the public
     Internet, while the other connects to a private network. Both the
@@ -473,7 +474,8 @@ limitations.
     to access the HTCondor daemons on the multi-homed machine.
     Therefore, there is no reason to have HTCondor daemons listening on
     ports on the public Internet, causing a potential security threat.
- Up to two IP addresses will be advertised.
+
+Up to two IP addresses will be advertised.
     At present, even though a given HTCondor daemon will be listening to
     ports on multiple interfaces, each with their own IP address, there
     is currently no mechanism for that daemon to advertise all of the
@@ -949,5 +951,3 @@ assuming
     DEFAULT_DOMAIN_NAME=example.com
 
 :index:`IPv6`
-
-

@@ -1,5 +1,3 @@
-
-
 The DRMAA API
 =============
 
@@ -57,16 +55,16 @@ read, write, and traverse rights to the spool space.
 The library currently supports the following specification-defined job
 attributes:
 
-    DRMAA_REMOTE_COMMAND
-    DRMAA_JS_STATE
-    DRMAA_NATIVE_SPECIFICATION
-    DRMAA_BLOCK_EMAIL
-    DRMAA_INPUT_PATH
-    DRMAA_OUTPUT_PATH
-    DRMAA_ERROR_PATH
-    DRMAA_V_ARGV
-    DRMAA_V_ENV
-    DRMAA_V_EMAIL
+- DRMAA_REMOTE_COMMAND
+- DRMAA_JS_STATE
+- DRMAA_NATIVE_SPECIFICATION
+- DRMAA_BLOCK_EMAIL
+- DRMAA_INPUT_PATH
+- DRMAA_OUTPUT_PATH
+- DRMAA_ERROR_PATH
+- DRMAA_V_ARGV
+- DRMAA_V_ENV
+- DRMAA_V_EMAIL
 
 The attribute ``DRMAA_NATIVE_SPECIFICATION`` can be used to direct all
 commands supported within submit description files. See the
@@ -76,7 +74,7 @@ complete list. Multiple commands can be specified if separated by
 newlines.
 
 As in the normal submit file, arbitrary attributes can be added to the
-job's ClassAd by prefixing the attribute with +. In this case, you will
+job's ClassAd by prefixing the attribute with ``+``. In this case, you will
 need to put string values in quotation marks, the same as in a submit
 file.
 

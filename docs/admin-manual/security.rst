@@ -25,7 +25,7 @@ transmissions are not examined or tampered with while in transit.
 Broadly speaking, the aspects of security in HTCondor may be categorized
 and described:
 
- Users
+Users
     Authorization or capability in an operating system is based on a
     process owner. Both those that submit jobs and HTCondor daemons
     become process owners. The HTCondor system prefers that HTCondor
@@ -34,19 +34,22 @@ and described:
     root or an HTCondor user are often owned by the condor user. See
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     for more detail.
- Authentication
+
+Authentication
     Proper identification of a user is accomplished by the process of
     authentication. It attempts to distinguish between real users and
     impostors. By default, HTCondor's authentication uses the user id
     (UID) to determine identity, but HTCondor can choose among a variety
     of authentication mechanisms, including the stronger authentication
     methods Kerberos and GSI.
- Authorization
+
+Authorization
     Authorization specifies who is allowed to do what. Some users are
     allowed to submit jobs, while other users are allowed administrative
     privileges over HTCondor itself. HTCondor provides authorization on
     either a per-user or on a per-machine basis.
- Privacy
+
+Privacy
     HTCondor may encrypt data sent across the network, which prevents
     others from viewing the data. With persistence and sufficient
     computing power, decryption is possible. HTCondor can encrypt the
@@ -56,7 +59,8 @@ and described:
     ``ENCRYPT_EXECUTE_DIRECTORY``
     :index:`ENCRYPT_EXECUTE_DIRECTORY` setting for how to encrypt
     job data on the disk of an execute node.
- Integrity
+
+Integrity
     The man-in-the-middle attack tampers with data without the awareness
     of either side of the communication. HTCondor's integrity check
     sends additional cryptographic data to verify that network data
@@ -122,7 +126,7 @@ levels implement a partial hierarchy; a higher level often implies a
 ``READ`` or both a ``WRITE`` and a ``READ`` level of access as
 described.
 
- ``READ``
+``READ``
     This access level can obtain or read information about HTCondor.
     Examples that require only ``READ`` access are viewing the status of
     the pool with *condor_status*, checking a job queue with
@@ -216,24 +220,24 @@ given machine.
 
 ALL DAEMONS:
 
- ``WRITE``
+``WRITE``
     The command sent as a result of *condor_reconfig* to reconfigure a
     daemon.
 
 STARTD:
 
- ``WRITE``
+``WRITE``
     All commands that relate to a *condor_schedd* daemon claiming a
     machine, starting jobs there, or stopping those jobs.
 
     The command that *condor_checkpoint* sends to periodically
     checkpoint all running jobs.
 
- ``READ``
+``READ``
     The command that *condor_preen* sends to request the current state
     of the *condor_startd* daemon.
 
- ``OWNER``
+``OWNER``
     The command that *condor_vacate* sends to cause any running jobs to
     stop running.
 
@@ -244,7 +248,7 @@ STARTD:
 
 NEGOTIATOR:
 
- ``WRITE``
+``WRITE``
     The command that initiates a new negotiation cycle. It is sent by
     the *condor_schedd* when new jobs are submitted or a
     *condor_reschedule* command is issued.
@@ -259,7 +263,7 @@ NEGOTIATOR:
 
 COLLECTOR:
 
- ``ADVERTISE_MASTER``
+``ADVERTISE_MASTER``
     Commands that update the *condor_collector* daemon with new
     *condor_master* ClassAds.
 
@@ -282,7 +286,7 @@ COLLECTOR:
 
 SCHEDD:
 
- ``NEGOTIATOR``
+``NEGOTIATOR``
     The command that the *condor_negotiator* sends to begin negotiating
     with this *condor_schedd* to match its jobs with available
     *condor_startds*.
@@ -299,7 +303,7 @@ SCHEDD:
     user-level authentication prevents, for example, an ordinary user
     from removing a different user's jobs.
 
- ``READ``
+``READ``
     The command from any tool to view the status of the job queue.
 
     The commands that a *condor_startd* sends to the *condor_schedd*
@@ -321,14 +325,17 @@ SCHEDD:
 
 MASTER: All commands are registered with ``ADMINISTRATOR`` access:
 
- restart
-    : Master restarts itself (and all its children)
- off
-    : Master shuts down all its children
- off -master
-    : Master shuts down all its children and exits
- on
-    : Master spawns all the daemons it is configured to spawn
+restart
+    Master restarts itself (and all its children)
+
+off
+    Master shuts down all its children
+
+off -master
+    Master shuts down all its children and exits
+
+on
+    Master spawns all the daemons it is configured to spawn
 
 Security Negotiation
 --------------------
@@ -439,7 +446,7 @@ by ``SEC_*_NEGOTIATION``. ``SEC_DEFAULT_NEGOTIATION`` is a variable
 representing the entire set of configuration variables for
 ``NEGOTIATION``. For the client side setting, the only definitions that
 make sense are ``REQUIRED`` and ``NEVER``. For the daemon side setting,
-the ``PREFERRED`` value makes no sense. Table \ `3.2 <#x36-2720012>`_
+the ``PREFERRED`` value makes no sense. Table `3.2 <#x36-2720012>`_
 shows how security negotiation resolves various client-daemon
 combinations of security negotiation policy settings. Within the table,
 Yes means the security negotiation will take place. No means it will
@@ -463,9 +470,9 @@ Table 3.2: Resolution of security negotiation.
 Enabling authentication, encryption, and integrity checks is dependent
 on security negotiation taking place. The enabled security negotiation
 further sets the policy for these other features.
-Table \ `3.3 <#x36-2720023>`_ shows how security features are resolved
+Table `3.3 <#x36-2720023>`_ shows how security features are resolved
 for client-daemon combinations of security feature policy settings. Like
-Table \ `3.2 <#x36-2720012>`_, Yes means the feature will be utilized.
+Table `3.2 <#x36-2720012>`_, Yes means the feature will be utilized.
 No means it will not. Fail implies incompatibility and the feature
 cannot be resolved.
 
@@ -687,7 +694,7 @@ especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of strong authentication between the submit and execute
 daemons. See the description of
-``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in 
+``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
 security` for details.
 
@@ -1136,48 +1143,52 @@ access, if the pool password is known. Local daemons authenticated as
 condor@mydomain are also allowed access. This is done so local
 authentication can be done using another method such as FS.
 
- Example Security Configuration Using Pool Password
-    :index:`sample configuration using pool password<single: sample configuration using pool password; security>`
-    The following example configuration uses pool password
-    authentication and network message integrity checking for all
-    communication between HTCondor daemons.
+Example Security Configuration Using Pool Password
+""""""""""""""""""""""""""""""""""""""""""""""""""
 
-    ::
+:index:`sample configuration using pool password<single: sample configuration using pool password; security>`
+The following example configuration uses pool password
+authentication and network message integrity checking for all
+communication between HTCondor daemons.
 
-        SEC_PASSWORD_FILE = $(LOCK)/pool_password
-        SEC_DAEMON_AUTHENTICATION = REQUIRED
-        SEC_DAEMON_INTEGRITY = REQUIRED
-        SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
-        SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
-        SEC_NEGOTIATOR_INTEGRITY = REQUIRED
-        SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
-        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
-        ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \
-                       condor@$(UID_DOMAIN)/$(IP_ADDRESS)
-        ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
+::
 
- Example Using Pool Password for *condor_startd* Advertisement
-    :index:`sample configuration using pool password for startd advertisement<single: sample configuration using pool password for startd advertisement; security>`
+    SEC_PASSWORD_FILE = $(LOCK)/pool_password
+    SEC_DAEMON_AUTHENTICATION = REQUIRED
+    SEC_DAEMON_INTEGRITY = REQUIRED
+    SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
+    SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
+    SEC_NEGOTIATOR_INTEGRITY = REQUIRED
+    SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+    ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \
+                   condor@$(UID_DOMAIN)/$(IP_ADDRESS)
+    ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
 
-    One problem with the pool password method of authentication is that
-    it involves a single, shared secret. This does not scale well with
-    the addition of remote users who flock to the local pool. However,
-    the pool password may still be used for authenticating portions of
-    the local pool, while others (such as the remote *condor_schedd*
-    daemons involved in flocking) are authenticated by other means.
+Example Using Pool Password for *condor_startd* Advertisement
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-    In this example, only the *condor_startd* daemons in the local pool
-    are required to have the pool password when they advertise
-    themselves to the *condor_collector* daemon.
+:index:`sample configuration using pool password for startd advertisement<single: sample configuration using pool password for startd advertisement; security>`
 
-    ::
+One problem with the pool password method of authentication is that
+it involves a single, shared secret. This does not scale well with
+the addition of remote users who flock to the local pool. However,
+the pool password may still be used for authenticating portions of
+the local pool, while others (such as the remote *condor_schedd*
+daemons involved in flocking) are authenticated by other means.
 
-        SEC_PASSWORD_FILE = $(LOCK)/pool_password
-        SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED
-        SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED
-        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD
-        SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
-        ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
+In this example, only the *condor_startd* daemons in the local pool
+are required to have the pool password when they advertise
+themselves to the *condor_collector* daemon.
+
+::
+
+    SEC_PASSWORD_FILE = $(LOCK)/pool_password
+    SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED
+    SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED
+    SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+    ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1355,8 +1366,8 @@ The client uses one of two macros to enable or disable encryption:
 
 ::
 
-        SEC_DEFAULT_ENCRYPTION
-        SEC_CLIENT_ENCRYPTION
+    SEC_DEFAULT_ENCRYPTION
+    SEC_CLIENT_ENCRYPTION
 
 For the daemon, there are seven macros to enable or disable encryption:
 :index:`SEC_DEFAULT_ENCRYPTION` :index:`SEC_READ_ENCRYPTION`
@@ -1371,17 +1382,17 @@ For the daemon, there are seven macros to enable or disable encryption:
 
 ::
 
-        SEC_DEFAULT_ENCRYPTION
-        SEC_READ_ENCRYPTION
-        SEC_WRITE_ENCRYPTION
-        SEC_ADMINISTRATOR_ENCRYPTION
-        SEC_CONFIG_ENCRYPTION
-        SEC_OWNER_ENCRYPTION
-        SEC_DAEMON_ENCRYPTION
-        SEC_NEGOTIATOR_ENCRYPTION
-        SEC_ADVERTISE_MASTER_ENCRYPTION
-        SEC_ADVERTISE_STARTD_ENCRYPTION
-        SEC_ADVERTISE_SCHEDD_ENCRYPTION
+    SEC_DEFAULT_ENCRYPTION
+    SEC_READ_ENCRYPTION
+    SEC_WRITE_ENCRYPTION
+    SEC_ADMINISTRATOR_ENCRYPTION
+    SEC_CONFIG_ENCRYPTION
+    SEC_OWNER_ENCRYPTION
+    SEC_DAEMON_ENCRYPTION
+    SEC_NEGOTIATOR_ENCRYPTION
+    SEC_ADVERTISE_MASTER_ENCRYPTION
+    SEC_ADVERTISE_STARTD_ENCRYPTION
+    SEC_ADVERTISE_SCHEDD_ENCRYPTION
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1410,8 +1421,8 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 
 ::
 
-        SEC_DEFAULT_CRYPTO_METHODS
-        SEC_CLIENT_CRYPTO_METHODS
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_CLIENT_CRYPTO_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
 macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
@@ -1428,17 +1439,17 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 
 ::
 
-        SEC_DEFAULT_CRYPTO_METHODS
-        SEC_READ_CRYPTO_METHODS
-        SEC_WRITE_CRYPTO_METHODS
-        SEC_ADMINISTRATOR_CRYPTO_METHODS
-        SEC_CONFIG_CRYPTO_METHODS
-        SEC_OWNER_CRYPTO_METHODS
-        SEC_DAEMON_CRYPTO_METHODS
-        SEC_NEGOTIATOR_CRYPTO_METHODS
-        SEC_ADVERTISE_MASTER_CRYPTO_METHODS
-        SEC_ADVERTISE_STARTD_CRYPTO_METHODS
-        SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_READ_CRYPTO_METHODS
+    SEC_WRITE_CRYPTO_METHODS
+    SEC_ADMINISTRATOR_CRYPTO_METHODS
+    SEC_CONFIG_CRYPTO_METHODS
+    SEC_OWNER_CRYPTO_METHODS
+    SEC_DAEMON_CRYPTO_METHODS
+    SEC_NEGOTIATOR_CRYPTO_METHODS
+    SEC_ADVERTISE_MASTER_CRYPTO_METHODS
+    SEC_ADVERTISE_STARTD_CRYPTO_METHODS
+    SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the encryption methods that are available to be
@@ -1447,8 +1458,8 @@ list indicates the highest preference. Possible values are
 
 ::
 
-        3DES
-        BLOWFISH
+    3DES
+    BLOWFISH
 
 Integrity
 ---------
@@ -1472,8 +1483,8 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 
 ::
 
-        SEC_DEFAULT_INTEGRITY
-        SEC_CLIENT_INTEGRITY
+    SEC_DEFAULT_INTEGRITY
+    SEC_CLIENT_INTEGRITY
 
 For the daemon, there are seven macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
@@ -1488,17 +1499,17 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 
 ::
 
-        SEC_DEFAULT_INTEGRITY
-        SEC_READ_INTEGRITY
-        SEC_WRITE_INTEGRITY
-        SEC_ADMINISTRATOR_INTEGRITY
-        SEC_CONFIG_INTEGRITY
-        SEC_OWNER_INTEGRITY
-        SEC_DAEMON_INTEGRITY
-        SEC_NEGOTIATOR_INTEGRITY
-        SEC_ADVERTISE_MASTER_INTEGRITY
-        SEC_ADVERTISE_STARTD_INTEGRITY
-        SEC_ADVERTISE_SCHEDD_INTEGRITY
+    SEC_DEFAULT_INTEGRITY
+    SEC_READ_INTEGRITY
+    SEC_WRITE_INTEGRITY
+    SEC_ADMINISTRATOR_INTEGRITY
+    SEC_CONFIG_INTEGRITY
+    SEC_OWNER_INTEGRITY
+    SEC_DAEMON_INTEGRITY
+    SEC_NEGOTIATOR_INTEGRITY
+    SEC_ADVERTISE_MASTER_INTEGRITY
+    SEC_ADVERTISE_STARTD_INTEGRITY
+    SEC_ADVERTISE_SCHEDD_INTEGRITY
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1565,20 +1576,20 @@ authorization macros: :index:`ALLOW_READ`
 
 ::
 
-        ALLOW_READ
-        ALLOW_WRITE
-        ALLOW_ADMINISTRATOR
-        ALLOW_CONFIG
-        ALLOW_OWNER
-        ALLOW_NEGOTIATOR
-        ALLOW_DAEMON
-        DENY_READ
-        DENY_WRITE
-        DENY_ADMINISTRATOR
-        DENY_CONFIG
-        DENY_OWNER
-        DENY_NEGOTIATOR
-        DENY_DAEMON
+    ALLOW_READ
+    ALLOW_WRITE
+    ALLOW_ADMINISTRATOR
+    ALLOW_CONFIG
+    ALLOW_OWNER
+    ALLOW_NEGOTIATOR
+    ALLOW_DAEMON
+    DENY_READ
+    DENY_WRITE
+    DENY_ADMINISTRATOR
+    DENY_CONFIG
+    DENY_OWNER
+    DENY_NEGOTIATOR
+    DENY_DAEMON
 
 In addition, the following are used to control authorization of specific
 types of HTCondor daemons when advertising themselves to the pool. If
@@ -1592,12 +1603,12 @@ unspecified, these default to the broader ``ALLOW_DAEMON`` and
 
 ::
 
-        ALLOW_ADVERTISE_MASTER
-        ALLOW_ADVERTISE_STARTD
-        ALLOW_ADVERTISE_SCHEDD
-        DENY_ADVERTISE_MASTER
-        DENY_ADVERTISE_STARTD
-        DENY_ADVERTISE_SCHEDD
+    ALLOW_ADVERTISE_MASTER
+    ALLOW_ADVERTISE_STARTD
+    ALLOW_ADVERTISE_SCHEDD
+    DENY_ADVERTISE_MASTER
+    DENY_ADVERTISE_STARTD
+    DENY_ADVERTISE_SCHEDD
 
 Each client side of a connection may also specify its own list of
 trusted servers. This is done using the following settings. Note that
@@ -1624,7 +1635,7 @@ following format:
 
 ::
 
-        username@domain/hostname
+    username@domain/hostname
 
 The information to the left of the slash character describes a user
 within a domain. The information to the right of the slash character
@@ -1735,11 +1746,11 @@ This flexible set of configuration macros could be used to define
 conflicting authorization. Therefore, the following protocol defines the
 precedence of the configuration macros.
 
-    1. ``DENY_*`` macros take precedence over ``ALLOW_* macros``
+1.  ``DENY_*`` macros take precedence over ``ALLOW_* macros``
     :index:`ALLOW_* macros` where there is a conflict. This
     implies that if a specific user is both denied and granted
     authorization, the conflict is resolved by denying access.
-    2. If macros are omitted, the default behavior is to deny
+2.  If macros are omitted, the default behavior is to deny
     authorization for all users.
 
 In addition, there are some hard-coded authorization rules that cannot
@@ -1930,7 +1941,7 @@ pool to grant or deny certain levels of access to various machines.
 Configuration examples and the settings of configuration variables using
 the *condor_config_val* command complete this section.
 
-Inside the HTCondor daemons or tools that use DaemonCore (see the 
+Inside the HTCondor daemons or tools that use DaemonCore (see the
 :doc:`/admin-manual/daemoncore` section), most
 tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which
@@ -1955,7 +1966,7 @@ foo in bar's configuration file access list (not the other way around).
 The following are the various access levels that commands within
 HTCondor can be registered with:
 
- ``READ``
+``READ``
     Machines with ``READ`` access can read information from the HTCondor
     daemons. For example, they can view the status of the pool, see the
     job queue(s), and view user permissions. ``READ`` access does not
@@ -1983,7 +1994,7 @@ HTCondor can be registered with:
     must have both ``WRITE`` permission **AND** ``READ`` permission.
     ``WRITE`` permission is not enough.
 
- ``ADMINISTRATOR``
+``ADMINISTRATOR``
     Machines with ``ADMINISTRATOR`` access are granted additional
     HTCondor administrator rights to the pool. This includes the ability
     to change user priorities with the command *condor_userprio*, and
@@ -1999,7 +2010,7 @@ HTCondor can be registered with:
     machine. It is recommended that ``ADMINISTRATOR`` access is granted
     with due diligence.
 
- ``OWNER``
+``OWNER``
     This level of access is required for commands that the owner of a
     machine (any local user) should be able to use, in addition to the
     HTCondor administrators. For example, the *condor_vacate* command
@@ -2408,7 +2419,7 @@ running as root.
 The effects of HTCondor of running both with and without root access are
 classified for each daemon:
 
- *condor_startd*
+*condor_startd*
     An HTCondor machine set up to execute jobs where the
     *condor_startd* is not started as root relies on the good will of
     the HTCondor users to agree to the policy configured for the
@@ -2446,7 +2457,7 @@ classified for each daemon:
     ``/dev/kmem`` on the system. That would solve the system information
     problem.
 
- *condor_schedd*
+*condor_schedd*
     The biggest problem with running the *condor_schedd* without root
     access is that the *condor_shadow* processes which it spawns are
     stuck with the same UID that the *condor_schedd* has. This requires
@@ -2464,14 +2475,16 @@ classified for each daemon:
     programs that open their own files, they will need to know and set
     the proper permissions on the directories they submit from.
 
- *condor_master*
+*condor_master*
     The *condor_master* spawns both the *condor_startd* and the
     *condor_schedd*. To have both running as root, have the
     *condor_master* run as root. This happens automatically if the
     *condor_master* is started from boot scripts.
- *condor_negotiator* and *condor_collector*
+
+*condor_negotiator* and *condor_collector*
     There is no need to have either of these daemons running as root.
- *condor_kbdd*
+
+*condor_kbdd*
     On platforms that need the *condor_kbdd*, the *condor_kbdd* must
     run as root. If it is started as any other user, it will not work.
     Consider installing this program as a setuid root binary if the

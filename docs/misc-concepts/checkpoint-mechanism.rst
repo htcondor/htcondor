@@ -1,5 +1,3 @@
-
-
 HTCondor's Checkpoint Mechanism
 ===============================
 
@@ -28,9 +26,8 @@ provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
 HTCondor's resource management functionality. See Section `Running a
-Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_ on
-page \ `Running a Job: the Steps To
-Take <../users-manual/running-a-job-steps.html>`_ for a description of
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_
+for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
 services. :index:`implementation<single: implementation; checkpoint>`
 
@@ -90,8 +87,8 @@ compression is used. The default is to not compress.
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted. An HTCondor pool can also be
 configured with a checkpoint server or servers that serve as a
-repository for checkpoints, as described in the :doc:`/admin-manual/checkpoint-server` section on page \ `The
-Checkpoint Server <../admin-manual/checkpoint-server.html>`_. When a
+repository for checkpoints, as described in the :doc:`/admin-manual/checkpoint-server` section on page
+`The Checkpoint Server <../admin-manual/checkpoint-server.html>`_. When a
 host is configured to use a checkpoint server, jobs submitted on that
 machine write and read checkpoints to and from the server, rather than
 the local disk of the submitting machine, taking the burden of storing
@@ -123,7 +120,7 @@ The message is of the form:
 Platforms that use address space randomization will need a modified
 invocation of the program, as described in
 the :doc:`/platform-specific/linux` section on
-page \ `Linux <../platform-specific/linux.html>`_. The invocation
+page `Linux <../platform-specific/linux.html>`_. The invocation
 disables the address space randomization.
 
 To force the program to write a checkpoint image and stop, send it the
