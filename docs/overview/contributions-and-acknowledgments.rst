@@ -1,5 +1,3 @@
-
-
 Contributions and Acknowledgments
 =================================
 

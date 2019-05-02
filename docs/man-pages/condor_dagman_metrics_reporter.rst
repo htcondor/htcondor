@@ -1,5 +1,3 @@
-
-
 *condor_dagman_metrics_reporter*
 ===================================
 

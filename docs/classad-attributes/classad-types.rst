@@ -13,7 +13,7 @@ in the unnumbered subsection labeled ClassAd Attributes Added by the
 Here is a list of defined values for ``MyType``, as well as a reference
 to a list attributes relevant to that type.
 
- ``Job``
+``Job``
     Each submitted job describes its state, for use by the
     *condor_negotiator* daemon in finding a machine upon which to run
     the job. ClassAd attributes that appear in a job ClassAd are listed
@@ -66,9 +66,9 @@ to a list attributes relevant to that type.
     page.
 
 ``Query``
-    This section has not yet been written
+    This section has not yet been written.
 
 In addition, statistics are published for each DaemonCore daemon. These
 attributes are listed and described in the unnumbered subsection labeled
-DaemonCore Statistics Attributes on the 
+DaemonCore Statistics Attributes on the
 :doc:/classad-attributes/daemon-core-statistics-attributes` page.
