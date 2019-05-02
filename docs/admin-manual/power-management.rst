@@ -61,9 +61,9 @@ macro called ``ShouldHibernate``.
 
 ::
 
-    TimeToWait  = (2 * $(HOUR)) 
-    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \ 
-                        && $(CPUIdle) \ 
+    TimeToWait  = (2 * $(HOUR))
+    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                        && $(CPUIdle) \
                         && ($(StateTimer) > $(TimeToWait)) )
 
 This macro evaluates to ``True`` if the following are all ``True``:
@@ -78,7 +78,7 @@ current state otherwise is
 
 ::
 
-    HibernateState  = "RAM" 
+    HibernateState  = "RAM"
     HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
 
 If any slot returns "NONE", that slot vetoes the decision to enter a low
@@ -172,13 +172,13 @@ power states of the machine:
 
 ::
 
-    > powercfg -A 
-    The following sleep states are available on this system: 
-    Standby (S3) Hibernate Hybrid Sleep 
-    The following sleep states are not available on this system: 
-    Standby (S1) 
-            The system firmware does not support this standby state. 
-    Standby (S2) 
+    > powercfg -A
+    The following sleep states are available on this system:
+    Standby (S3) Hibernate Hybrid Sleep
+    The following sleep states are not available on this system:
+    Standby (S1)
+            The system firmware does not support this standby state.
+    Standby (S2)
             The system firmware does not support this standby state.
 
 Note that the ``HIBERNATE`` expression is written in terms of the Sn
@@ -199,4 +199,4 @@ lack the *powercfg* program, so all configuration must be done via the
 :index:`green computing` :index:`power management`
 :index:`administrators manual`
 
-      
+

@@ -1,4 +1,4 @@
-      
+
 
 Job ClassAd Attributes
 ======================
@@ -249,7 +249,7 @@ Job ClassAd Attributes
 
     ::
 
-          # 1 megabyte initial value 
+          # 1 megabyte initial value
           +DiskUsage = 1024
 
     **vm** universe jobs will default to an initial value of the disk
@@ -866,8 +866,13 @@ Job ClassAd Attributes
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
+<<<<<<< HEAD
     :ref:`admin-manual/configuration-macros:daemon logging configuration file
     entries`) but it applies to the job event log instead of the system event log.
+=======
+    page \ `619 <ConfigurationMacros.html#x33-1890003.5.2>`_) but it
+    applies to the job event log instead of the system event log.
+>>>>>>> jtk-docs
     :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
  ``JobCurrentFinishTransferInputDate``:
@@ -975,7 +980,7 @@ Job ClassAd Attributes
 
     +-------+---------------------+
     | Value | Idle                |
-    +=======+=====================+ 
+    +=======+=====================+
     | 1     | Idle                |
     +-------+---------------------+
     | 2     | Running             |
@@ -2087,4 +2092,4 @@ written to the job's execute directory while the job is running.
     upon the job attribute ``Request<Name>``, but may be larger due to
     the minimum given to a dynamic slot.
 
-      
+

@@ -1,4 +1,4 @@
-      
+
 
 Contributions and Acknowledgments
 =================================
@@ -10,23 +10,23 @@ external organizations. We gratefully acknowledge the following
 contributions.
 
 -  The Globus Alliance
-   (`http://www.globus.org <http://www.globus.org>`__), for code and
+   (`http://www.globus.org <http://www.globus.org>`_), for code and
    assistance in developing HTCondor-G and the Grid Security
    Infrastructure (GSI) for authentication and authorization.
 -  The GOZAL Project from the Computer Science Department of the
    Technion Israel Institute of Technology
-   (`http://www.technion.ac.il/ <http://www.technion.ac.il/>`__), for
+   (`http://www.technion.ac.il/ <http://www.technion.ac.il/>`_), for
    their enhancements for HTCondor's High Availability. The
    *condor_had* daemon allows one of multiple machines to function as
    the central manager for a HTCondor pool. Therefore, if an acting
    central manager fails, another can take its place.
 -  Micron Corporation
-   (`http://www.micron.com/ <http://www.micron.com/>`__) for the
+   (`http://www.micron.com/ <http://www.micron.com/>`_) for the
    MSI-based installer for HTCondor on Windows.
 -  Paradyn Project
-   (`http://www.paradyn.org/ <http://www.paradyn.org/>`__) and the
+   (`http://www.paradyn.org/ <http://www.paradyn.org/>`_) and the
    Universitat Autònoma de Barcelona
-   (`http://www.caos.uab.es/ <http://www.caos.uab.es/>`__) for work on
+   (`http://www.caos.uab.es/ <http://www.caos.uab.es/>`_) for work on
    the Tool Daemon Protocol (TDP).
 
 Our Web Services API acknowledges the use of gSOAP with their requested
@@ -59,4 +59,4 @@ The HTCondor project wishes to acknowledge the following:
    and do not necessarily reflect the views of the National Science
    Foundation.
 
-      
+

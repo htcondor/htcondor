@@ -1,10 +1,10 @@
-      
+
 
 HTCondor Annex Customization Guide
 ==================================
 
 Aside from the configuration macros (see section `HTCondor Annex
-Configuration <../cloud-computing/annex-configuration.html>`__, below),
+Configuration <../cloud-computing/annex-configuration.html>`_, below),
 the major way to customize *condor_annex* is my customizing the default
 disk image. Because the implementation of *condor_annex* varies from
 service to service, and that implementation determines the constraints
@@ -150,4 +150,4 @@ Google Cloud Platform
 
 Not implemented as of v8.7.8.
 
-      
+

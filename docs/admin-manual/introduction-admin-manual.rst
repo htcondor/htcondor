@@ -1,5 +1,3 @@
-      
-
 Introduction
 ============
 
@@ -279,4 +277,4 @@ to provide optional functionality. :index:`condor_hdfs daemon`
     This daemon manages the configuration of a Hadoop file system as
     well as the invocation of a properly configured Hadoop file system.
 
-      
+

@@ -1,5 +1,3 @@
-      
-
 The Checkpoint Server
 =====================
 
@@ -71,7 +69,7 @@ The files relevant to a checkpoint server are
 
 ::
 
-            sbin/condor_ckpt_server 
+            sbin/condor_ckpt_server
             etc/examples/condor_config.local.ckpt.server
 
 ``condor_ckpt_server`` is the checkpoint server binary.
@@ -257,7 +255,7 @@ add the following configuration to each machine:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
+      CkptServer = "$(CKPT_SERVER_HOST)"
       STARTD_ATTRS = $(STARTD_ATTRS), CkptServer
 
 For convenience, set these variables in the global configuration file.
@@ -267,7 +265,7 @@ configuration instead:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
+      CkptServer = "$(CKPT_SERVER_HOST)"
       STARTD_ATTRS = CkptServer
 
 With this configuration, all machine ClassAds will include a

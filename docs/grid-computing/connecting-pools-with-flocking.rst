@@ -1,4 +1,4 @@
-      
+
 
 Connecting HTCondor Pools with Flocking
 =======================================
@@ -17,7 +17,7 @@ flocking.
 
 NOTE: Flocking to pools which use HTCondor's high availability
 mechanisms is not advised. See section  `The High Availability of
-Daemons <../admin-manual/high-availability.html>`__ for a discussion of
+Daemons <../admin-manual/high-availability.html>`_ for a discussion of
 the issues.
 
 Flocking Configuration
@@ -40,8 +40,8 @@ configuration, set the following configuration variables:
 
     ::
 
-          FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO) 
-          
+          FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+
 
  ``FLOCK_NEGOTIATOR_HOSTS`` :index:`FLOCK_NEGOTIATOR_HOSTS`
     is the list of *condor_negotiator* daemons within the pools that
@@ -50,8 +50,8 @@ configuration, set the following configuration variables:
 
     ::
 
-          FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO) 
-          
+          FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
+
 
  ``ALLOW_NEGOTIATOR_SCHEDD`` :index:`ALLOW_NEGOTIATOR_SCHEDD`
     provides an access level and authorization list for the
@@ -62,16 +62,16 @@ configuration, set the following configuration variables:
 
     ::
 
-          ##  Now, with flocking we need to let the SCHEDD trust the other 
-          ##  negotiators we are flocking with as well.  You should normally 
-          ##  not have to change this either. 
-        ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS) 
-          
+          ##  Now, with flocking we need to let the SCHEDD trust the other
+          ##  negotiators we are flocking with as well.  You should normally
+          ##  not have to change this either.
+        ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
+
 
     This example configuration presumes that the *condor_collector* and
     *condor_negotiator* daemons are running on the same machine. See
     the :doc:`/admin-manual/security` section on
-    page \ `Security <../admin-manual/security.html>`__ for a discussion
+    page \ `Security <../admin-manual/security.html>`_ for a discussion
     of security macros and their use.
 
 The configuration macros that must be set in pool B are ones that
@@ -85,9 +85,9 @@ do authorization:
 
 ::
 
-    ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM) 
-    ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM) 
-    ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM) 
+    ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+    ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+    ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
     ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 
 Wild cards may be used when setting the ``FLOCK_FROM`` configuration
@@ -116,6 +116,6 @@ that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
 the :doc:`/users-manual/submitting-a-job` section
-on page \ `Submitting a Job <../users-manual/submitting-a-job.html>`__.
+on page \ `Submitting a Job <../users-manual/submitting-a-job.html>`_.
 
-      
+

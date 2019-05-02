@@ -14,7 +14,7 @@ HTCondor is acknowledgment that you have read and agree to the terms.
 Before installing HTCondor, please consider joining the htcondor-world
 mailing list. Traffic on this list is kept to an absolute minimum; it is
 only used to announce new releases of HTCondor. To subscribe, go to
-`https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world <https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world>`__,
+`https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world <https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world>`_,
 and fill out the online form.
 
 You might also want to consider joining the htcondor-users mailing list.
@@ -22,7 +22,7 @@ This list is meant to be a forum for HTCondor users to learn from each
 other and discuss using HTCondor. It is an excellent place to ask the
 HTCondor community about using and configuring HTCondor. To subscribe,
 go to
-`https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users <https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users>`__,
+`https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users <https://lists.cs.wisc.edu/mailman/listinfo/htcondor-users>`_,
 and fill out the online form.
 
 **Note that forward and reverse DNS lookup must be enabled for HTCondor
@@ -35,9 +35,9 @@ Obtaining the HTCondor Software
 :index:`download<single: download; Unix installation>` :index:`download`
 
 The first step to installing HTCondor is to download it from the
-HTCondor web site, `http://htcondor.org/ <http://htcondor.org/>`__. The
+HTCondor web site, `http://htcondor.org/ <http://htcondor.org/>`_. The
 downloads are available from the downloads page, at
-`http://htcondor.org/downloads/ <http://htcondor.org/downloads/>`__.
+`http://htcondor.org/downloads/ <http://htcondor.org/downloads/>`_.
 
 Installation on Unix
 --------------------
@@ -45,12 +45,14 @@ Installation on Unix
 The HTCondor binary distribution is packaged in the following files and
 directories:
 
- ``LICENSE-2.0.txt``
+``LICENSE-2.0.txt``
     the licensing agreement. By installing HTCondor, you agree to the
     contents of this file
- ``README``
+
+``README``
     general information
- ``bin``
+
+``bin``
     directory which contains the distribution HTCondor user programs.
 
 ``bosco_install``
@@ -398,7 +400,7 @@ questions:
         in HTML, Postscript and PDF (Adobe Acrobat). It can be locally
         installed wherever is customary at your site. You can also find
         the HTCondor documentation on the web at:
-        `http://htcondor.org/manual <http://htcondor.org/manual>`__.
+        `http://htcondor.org/manual <http://htcondor.org/manual>`_.
 
  8. Am I using AFS?
     If you are using AFS at your site, be sure to read the
@@ -435,7 +437,7 @@ instructions below.
 Repositories are available Red Hat Enterprise Linux and derivatives such
 as CentOS and Scientific Linux. Repositories are also available for
 Debian and Ubuntu LTS. Visit the installation documentation at
-`https://research.cs.wisc.edu/htcondor/instructions/ <https://research.cs.wisc.edu/htcondor/instructions/>`__
+`https://research.cs.wisc.edu/htcondor/instructions/ <https://research.cs.wisc.edu/htcondor/instructions/>`_
 
 Unix Installation from a Tarball
 ''''''''''''''''''''''''''''''''
@@ -538,7 +540,7 @@ central manager machine, run *condor_install* as follows.
 
 ::
 
-    % condor_install --prefix=~condor \ 
+    % condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=manager
 
 To update the above HTCondor installation, for example, to also be
@@ -546,7 +548,7 @@ submit machine:
 
 ::
 
-    % condor_configure --prefix=~condor \ 
+    % condor_configure --prefix=~condor \
     --local-dir=/scratch/condor --type=manager,submit
 
 As in the above example, the central manager can also be a submit point
@@ -561,7 +563,7 @@ pool, run
 
 ::
 
-    % condor_install --prefix=~condor \ 
+    % condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=execute,submit
 
 See the *condor_configure* manual
@@ -856,7 +858,7 @@ and choosing options within the following steps.
     last two in the list, HTCondor needs to further know what to do with
     the currently running jobs. There are two choices:
 
-     - Keep the job in memory and continue when the machine meets the 
+     - Keep the job in memory and continue when the machine meets the
        condition chosen for when to run jobs.
      - Restart the job on a different machine.
 
@@ -993,28 +995,28 @@ properties necessary for an unattended install.
 
 ::
 
-    @echo on 
-    set ARGS= 
-    set ARGS=NEWPOOL="N" 
-    set ARGS=%ARGS% POOLNAME="" 
-    set ARGS=%ARGS% RUNJOBS="C" 
-    set ARGS=%ARGS% VACATEJOBS="Y" 
-    set ARGS=%ARGS% SUBMITJOBS="Y" 
-    set ARGS=%ARGS% CONDOREMAIL="you@yours.com" 
-    set ARGS=%ARGS% SMTPSERVER="smtp.localhost" 
-    set ARGS=%ARGS% ALLOWREAD="*" 
-    set ARGS=%ARGS% ALLOWWRITE="*" 
-    set ARGS=%ARGS% ALLOWADMINISTRATOR="$(IP_ADDRESS)" 
-    set ARGS=%ARGS% INSTALLDIR="C:\Condor" 
-    set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)" 
-    set ARGS=%ARGS% ACCOUNTINGDOMAIN="none" 
-    set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe" 
-    set ARGS=%ARGS% USEVMUNIVERSE="N" 
-    set ARGS=%ARGS% VMMEMORY="128" 
-    set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)" 
-    set ARGS=%ARGS% VMNETWORKING="N" 
-    REM set ARGS=%ARGS% LOCALCONFIG="http://my.example.com/condor_config.$(FULL_HOSTNAME)" 
-     
+    @echo on
+    set ARGS=
+    set ARGS=NEWPOOL="N"
+    set ARGS=%ARGS% POOLNAME=""
+    set ARGS=%ARGS% RUNJOBS="C"
+    set ARGS=%ARGS% VACATEJOBS="Y"
+    set ARGS=%ARGS% SUBMITJOBS="Y"
+    set ARGS=%ARGS% CONDOREMAIL="you@yours.com"
+    set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
+    set ARGS=%ARGS% ALLOWREAD="*"
+    set ARGS=%ARGS% ALLOWWRITE="*"
+    set ARGS=%ARGS% ALLOWADMINISTRATOR="$(IP_ADDRESS)"
+    set ARGS=%ARGS% INSTALLDIR="C:\Condor"
+    set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)"
+    set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
+    set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe"
+    set ARGS=%ARGS% USEVMUNIVERSE="N"
+    set ARGS=%ARGS% VMMEMORY="128"
+    set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
+    set ARGS=%ARGS% VMNETWORKING="N"
+    REM set ARGS=%ARGS% LOCALCONFIG="http://my.example.com/condor_config.$(FULL_HOSTNAME)"
+
     msiexec /qb /l* condor-install-log.txt /i condor-8.0.0-133173-Windows-x86.msi %ARGS%
 
 Each property corresponds to answers that would have been supplied while
@@ -1116,7 +1118,7 @@ of the installer's progress to a log file:
 
 More information on the features of *msiexec* can be found at
 Microsoft's website at
-`http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`__.
+`http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`_.
 
 Manual Installation HTCondor on Windows
 '''''''''''''''''''''''''''''''''''''''
@@ -1403,7 +1405,7 @@ implementation of security in HTCondor.
 
           MAX_JOBS_SUBMITTED = 0
 
-    See instructions below in 
+    See instructions below in
     :ref:`admin-manual/installation-startup-shutdown-reconfiguration:reconfiguring
     an htcondor pool` for how to reconfigure a pool. After the reconfiguration,
     the command to wait for all jobs to complete and shut down the submission of

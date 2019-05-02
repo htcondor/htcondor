@@ -1,4 +1,4 @@
-      
+
 
 *condor_history*
 =================
@@ -155,7 +155,7 @@ Options
     Display job ClassAds in XML format. The XML format is fully defined
     in the reference manual, obtained from the ClassAds web page, with a
     link at
-    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
+    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_.
  **-json**
     Display job ClassAds in JSON format.
 
@@ -177,4 +177,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

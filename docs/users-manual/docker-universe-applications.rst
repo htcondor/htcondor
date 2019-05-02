@@ -1,5 +1,3 @@
-      
-
 Docker Universe Applications
 ============================
 
@@ -80,16 +78,16 @@ job:
 
 ::
 
-      universe                = docker 
-      docker_image            = debian 
-      executable              = /bin/cat 
-      arguments               = /etc/hosts 
-      should_transfer_files   = YES 
-      when_to_transfer_output = ON_EXIT 
-      output                  = out.$(Process) 
-      error                   = err.$(Process) 
-      log                     = log.$(Process) 
-      request_memory          = 100M 
+      universe                = docker
+      docker_image            = debian
+      executable              = /bin/cat
+      arguments               = /etc/hosts
+      should_transfer_files   = YES
+      when_to_transfer_output = ON_EXIT
+      output                  = out.$(Process)
+      error                   = err.$(Process)
+      log                     = log.$(Process)
+      request_memory          = 100M
       queue 1
 
 A debian container is the HTCondor job, and it runs the */bin/cat*
@@ -106,4 +104,4 @@ then, instead of at NATted interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
 
-      
+

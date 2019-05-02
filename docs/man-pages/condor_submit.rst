@@ -1,4 +1,4 @@
-      
+
 
 *condor_submit*
 ================
@@ -227,12 +227,12 @@ Submit Description File Commands
 :index:`submit commands`
 
 Note: more information on submitting HTCondor jobs can be found here:
- `Submitting a Job <../users-manual/submitting-a-job.html>`__.
+ `Submitting a Job <../users-manual/submitting-a-job.html>`_.
 
 As of version 8.5.6, the *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
 (see more details here:  `Introduction to
-Configuration <../admin-manual/introduction-to-configuration.html>`__).
+Configuration <../admin-manual/introduction-to-configuration.html>`_).
 
 Each submit description file describes one or more clusters of jobs to
 be placed in the HTCondor execution pool. All jobs in a cluster must
@@ -246,9 +246,9 @@ The submit description file must contain at least one *executable*
 command and at least one *queue* command. All of the other commands have
 default actions.
 
-**Note that a submit file that contains more than one executable command 
-will produce multiple clusters when submitted. This is not generally 
-recommended, and is not allowed for submit files that are run as DAG node 
+**Note that a submit file that contains more than one executable command
+will produce multiple clusters when submitted. This is not generally
+recommended, and is not allowed for submit files that are run as DAG node
 jobs by condor_dagman.**
 
 The commands which can appear in the submit description file are
@@ -297,8 +297,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        argument 1: one 
-        argument 2: "two" 
+        argument 1: one
+        argument 2: "two"
         argument 3: 'three'
 
     **New Syntax**
@@ -328,8 +328,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        argument 1: 3 
-        argument 2: simple 
+        argument 1: 3
+        argument 2: simple
         argument 3: arguments
 
     Another example:
@@ -342,8 +342,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        argument 1: one 
-        argument 2: two with spaces 
+        argument 1: one
+        argument 2: two with spaces
         argument 3: 3
 
     And yet another example:
@@ -356,8 +356,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        argument 1: one 
-        argument 2: "two" 
+        argument 1: one
+        argument 2: "two"
         argument 3: spacey 'quoted' argument
 
     Notice that in the new syntax, the backslash has no special meaning.
@@ -406,8 +406,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        one=1 
-        two="2" 
+        one=1
+        two="2"
         three=spacey 'quoted' value
 
     Under the old syntax, there are no double quote marks surrounding
@@ -437,8 +437,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-        one=1 
-        two=2 
+        one=1
+        two=2
         three="quotes have no 'special' meaning"
 
     If the environment is set with the
@@ -613,7 +613,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
     (see  `DAGMan
-    Applications <../users-manual/dagman-applications.html>`__ for more
+    Applications <../users-manual/dagman-applications.html>`_ for more
     details). :index:`queue<single: queue; submit commands>`
 
  queue [**<int expr>** ]
@@ -740,7 +740,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     ::
 
-                request_memory = max({60, Target.TotalSlotMemory}) 
+                request_memory = max({60, Target.TotalSlotMemory})
                 rank = Memory
 
     asks HTCondor to find all available machines with more than 60
@@ -874,7 +874,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
     *condor_q -l*; see the command reference for *condor_q* on
-    page \ `condor_q <../man-pages/condor_q.html>`__. Also, see the
+    page \ `condor_q <../man-pages/condor_q.html>`_. Also, see the
     HTCondor Users Manual for complete information on the syntax and
     available attributes that can be used in the ClassAd expression.
 
@@ -1236,8 +1236,8 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
-    **Note: non-zero values of success_exit_code should generally not be 
-    used for DAG node jobs.** 
+    **Note: non-zero values of success_exit_code should generally not be
+    used for DAG node jobs.**
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if
     **success_exit_code** is set to a non-zero value, *condor_dagman*
@@ -1295,7 +1295,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     ::
 
-        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\ 
+        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
                          (StageOutFinish == 0))
 
     :index:`next_job_start_delay<single: next_job_start_delay; submit commands>`
@@ -1496,16 +1496,16 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-           #! /bin/sh 
-         
-           # get the host name of the machine 
-           $host=`uname -n` 
-         
-           # grab a standard universe executable designed specifically 
-           # for this host 
-           scp elsewhere@cs.wisc.edu:${host} executable 
-         
-           # The PID MUST stay the same, so exec the new standard universe process. 
+           #! /bin/sh
+
+           # get the host name of the machine
+           $host=`uname -n`
+
+           # grab a standard universe executable designed specifically
+           # for this host
+           scp elsewhere@cs.wisc.edu:${host} executable
+
+           # The PID MUST stay the same, so exec the new standard universe process.
            exec executable ${1+"$@"}
 
     If this command is not present (defined), then the value defaults to
@@ -1553,7 +1553,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-        buffer_size = 1000000 
+        buffer_size = 1000000
         buffer_block_size = 256000
 
     If you do not set these, HTCondor will use the values given by these
@@ -1561,7 +1561,7 @@ COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
 
     ::
 
-        DEFAULT_IO_BUFFER_SIZE = 1000000 
+        DEFAULT_IO_BUFFER_SIZE = 1000000
         DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 
     Finally, if no other settings are present, HTCondor will use a
@@ -2176,7 +2176,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
     ::
 
-        remove_kill_sig = SIGUSR1 
+        remove_kill_sig = SIGUSR1
         remove_kill_sig = 10
 
     If this command is not present, the value of
@@ -2503,7 +2503,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     whenever any event is being written to the log. This implements the
     same thing as the configuration variable
     ``EVENT_LOG_INFORMATION_ATTRS`` (see page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), but it
+    Macros <../admin-manual/configuration-macros.html>`_), but it
     applies to the job event log, instead of the system event log.
     :index:`JobBatchName<single: JobBatchName; submit commands>`
  JobBatchName = <batch_name>
@@ -2592,7 +2592,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
 
     ::
 
-        LastMatchName0 = "most-recent-Name" 
+        LastMatchName0 = "most-recent-Name"
         LastMatchName1 = "next-most-recent-Name"
 
     The value for each introduced ClassAd is given by the value of the
@@ -2777,7 +2777,7 @@ and comments.
 
     ::
 
-        foo = bar 
+        foo = bar
         foo =  snap $(foo)
 
     As a result, ``foo = snap bar``.
@@ -2786,7 +2786,7 @@ and comments.
 
     ::
 
-        foo = bar 
+        foo = bar
         foo =  $(foo) snap
 
     has as its result ``foo = bar snap``.
@@ -2802,8 +2802,8 @@ and comments.
 
     ::
 
-        B = bar 
-        C = $(B) 
+        B = bar
+        C = $(B)
         B = $(C) boo
 
     will not work, and will fill memory with expansions.
@@ -3069,30 +3069,30 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # submit description file 
-             # Example 1: queuing multiple jobs with differing 
-             # command line arguments and output files. 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = vanilla 
-        
-             Arguments      = 15 2000 
-             Output  = foo.out0 
-             Error   = foo.err0 
-             Queue 
-        
-             Arguments      = 30 2000 
-             Output  = foo.out1 
-             Error   = foo.err1 
-             Queue 
-        
-             Arguments      = 45 6000 
-             Output  = foo.out2 
-             Error   = foo.err2 
+             ####################
+             #
+             # submit description file
+             # Example 1: queuing multiple jobs with differing
+             # command line arguments and output files.
+             #
+             ####################
+
+             Executable     = foo
+             Universe       = vanilla
+
+             Arguments      = 15 2000
+             Output  = foo.out0
+             Error   = foo.err0
+             Queue
+
+             Arguments      = 30 2000
+             Output  = foo.out1
+             Error   = foo.err1
+             Queue
+
+             Arguments      = 45 6000
+             Output  = foo.out2
+             Error   = foo.err2
              Queue
 
    Or you can get the same results as the above submit file by using a
@@ -3100,26 +3100,26 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # submit description file 
-             # Example 1b: queuing multiple jobs with differing 
-             # command line arguments and output files, alternate syntax 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = vanilla 
-        
-             # generate different output and error filenames for each process 
-             Output  = foo.out$(Process) 
-             Error   = foo.err$(Process) 
-        
-             Queue Arguments From ( 
-               15 2000 
-               30 2000 
-               45 6000 
-             ) 
+             ####################
+             #
+             # submit description file
+             # Example 1b: queuing multiple jobs with differing
+             # command line arguments and output files, alternate syntax
+             #
+             ####################
+
+             Executable     = foo
+             Universe       = vanilla
+
+             # generate different output and error filenames for each process
+             Output  = foo.out$(Process)
+             Error   = foo.err$(Process)
+
+             Queue Arguments From (
+               15 2000
+               30 2000
+               45 6000
+             )
 
 -  Submit Description File Example 2: This submit description file
    example queues 150 runs of program *foo* which must have been
@@ -3136,24 +3136,24 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # Example 2: Show off some fancy features including 
-             # use of pre-defined macros and logging. 
-             # 
-             #################### 
-        
-             Executable     = foo 
-             Universe       = standard 
-             Requirements   = OpSys == "LINUX" && Arch =="INTEL" 
-             Rank           = Memory >= 64 
-             Request_Memory = 32 Mb 
-             Image_Size     = 28 Mb 
-        
-             Error   = err.$(Process) 
-             Input   = in.$(Process) 
-             Output  = out.$(Process) 
-             Log = foo.log 
+             ####################
+             #
+             # Example 2: Show off some fancy features including
+             # use of pre-defined macros and logging.
+             #
+             ####################
+
+             Executable     = foo
+             Universe       = standard
+             Requirements   = OpSys == "LINUX" && Arch =="INTEL"
+             Rank           = Memory >= 64
+             Request_Memory = 32 Mb
+             Image_Size     = 28 Mb
+
+             Error   = err.$(Process)
+             Input   = in.$(Process)
+             Output  = out.$(Process)
+             Log = foo.log
              Queue 150
 
 -  Submit Description File Example 3: This example targets the
@@ -3164,20 +3164,20 @@ Examples
 
    ::
 
-             #################### 
-             # 
-             # Example 3: Run on a RedHat 6 machine 
-             # 
-             #################### 
-             Universe     = vanilla 
-             Executable   = /bin/sleep 
-             Arguments    = 30 
-             Requirements = (OpSysAndVer == "RedHat6") 
-        
-             Error   = err.$(Process) 
-             Input   = in.$(Process) 
-             Output  = out.$(Process) 
-             Log     = sleep.log 
+             ####################
+             #
+             # Example 3: Run on a RedHat 6 machine
+             #
+             ####################
+             Universe     = vanilla
+             Executable   = /bin/sleep
+             Arguments    = 30
+             Requirements = (OpSysAndVer == "RedHat6")
+
+             Error   = err.$(Process)
+             Input   = in.$(Process)
+             Output  = out.$(Process)
+             Log     = sleep.log
              Queue
 
 -  Command Line example: The following command uses the **-append**
@@ -3200,7 +3200,7 @@ Examples
 
    ::
 
-          periodic_remove = CumulativeSuspensionTime > 
+          periodic_remove = CumulativeSuspensionTime >
                             ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
 
    in the submit description file causes this to happen.
@@ -3249,4 +3249,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

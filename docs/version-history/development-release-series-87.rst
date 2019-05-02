@@ -1,4 +1,4 @@
-      
+
 
 Development Release Series 8.7
 ==============================
@@ -136,7 +136,7 @@ Known Issues:
    update your account to use the new runtime. Follow the link below for
    simple instructions. Accounts setup with this version of HTCondor
    will use the new runtime.
-   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime>`__
+   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime>`_
    :ticket:`6665`
 -  Policies implemented by the startd may not function as desired while
    the machine is draining. Specifically, if the ``PREEMPT`` expression
@@ -177,9 +177,9 @@ New Features:
    *condor_drain* command, or configure the *condor_defrag* daemon, to
    set a different ``START`` expression for the duration of the
    draining. See the definition of ``DEFRAG_DRAINING_START_EXPR`` (
-   `Configuration Macros <../admin-manual/configuration-macros.html>`__)
+   `Configuration Macros <../admin-manual/configuration-macros.html>`_)
    and the *condor_drain* manual (
-   `condor_drain <../man-pages/condor_drain.html>`__) for details. See
+   `condor_drain <../man-pages/condor_drain.html>`_) for details. See
    also the known issues above for information which may influence your
    choice of ``START`` expressions. :ticket:`6664`
 -  Docker universe jobs now run with the supplemental group ids of the
@@ -455,7 +455,7 @@ Bugs Fixed:
 
 -  *Security Item*: This release of HTCondor fixes a security-related
    bug described at
-   `http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html>`__.
+   `http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html>`_.
    :ticket:`6455`
 
 Version 8.7.4
@@ -509,7 +509,7 @@ New Features:
    well as connectivity. :ticket:`6322`
 -  Added submit warnings. See section `Policy Configuration for Execute
    Hosts and for Submit
-   Hosts <../admin-manual/policy-configuration.html>`__. :ticket:`5971`
+   Hosts <../admin-manual/policy-configuration.html>`_. :ticket:`5971`
 -  ``openmpiscript`` now uses *condor_chirp* to run Open MPI's execute
    daemons (orted) directly under the *condor_starter* (instead of
    using SSH). ``openmpiscript`` now also puts information about the
@@ -736,13 +736,13 @@ New Features:
    user invocations of *condor_status*. :ticket:`6192`
 -  Introduced configuration macro ``COLLECTOR_QUERY_MAX_WORKTIME`` to
    define the maximum amount of time the collector may service a query
-   from a client like condor_status. See 
+   from a client like condor_status. See
    :doc:`/classad-attributes/collector-classad-attributes` :ticket:`6192`
 -  Added several new statistics on collector query performance into the
    Collector ClassAd, including ``ActiveQueryWorkers``,
    ``ActiveQueryWorkersPeak``, ``PendingQueries``,
    ``PendingQueriesPeak``, ``DroppedQueries``, and
-   ``RecentDroppedQueries``. See 
+   ``RecentDroppedQueries``. See
    :doc:`/classad-attributes/collector-classad-attributes` :ticket:`6192`
 -  Further refinement and initial documentation of the HTCondor Annex.
    :ticket:`6147`
@@ -831,7 +831,7 @@ New Features:
 
 -  Technology preview of the HTCondor Annex. The HTCondor Annex allows
    one to extend their HTCondor pool into the cloud.
-   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances>`__
+   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances>`_
    :ticket:`6121`
 -  Added **-annex** option to *condor_status* and *condor_off*.
    Requires an argument; the request is constrained to match machines

@@ -1,5 +1,3 @@
-      
-
 Special Environment Considerations
 ==================================
 
@@ -74,7 +72,7 @@ job may disable the flushing by setting
       +IwdFlushNFSCache = False
 
 in the job's submit description file. See page \ `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`__ for a
+Attributes <../classad-attributes/job-classad-attributes.html>`_ for a
 definition of the job ClassAd attribute.
 
 HTCondor Daemons That Do Not Run as root
@@ -179,4 +177,4 @@ undefined. This has the further effect of changing the duration of a
 claim lease, the amount of time that the execution machine waits before
 dropping a claim due to missing keep alive messages.
 
-      
+

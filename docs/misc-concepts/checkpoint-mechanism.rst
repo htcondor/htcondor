@@ -1,4 +1,4 @@
-      
+
 
 HTCondor's Checkpoint Mechanism
 ===============================
@@ -27,10 +27,10 @@ program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
-HTCondor's resource management functionality. See section \ `Running a
-Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
+HTCondor's resource management functionality. See Section `Running a
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_ on
 page \ `Running a Job: the Steps To
-Take <../users-manual/running-a-job-steps.html>`__ for a description of
+Take <../users-manual/running-a-job-steps.html>`_ for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
 services. :index:`implementation<single: implementation; checkpoint>`
 
@@ -91,7 +91,7 @@ By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted. An HTCondor pool can also be
 configured with a checkpoint server or servers that serve as a
 repository for checkpoints, as described in the :doc:`/admin-manual/checkpoint-server` section on page \ `The
-Checkpoint Server <../admin-manual/checkpoint-server.html>`__. When a
+Checkpoint Server <../admin-manual/checkpoint-server.html>`_. When a
 host is configured to use a checkpoint server, jobs submitted on that
 machine write and read checkpoints to and from the server, rather than
 the local disk of the submitting machine, taking the burden of storing
@@ -117,13 +117,13 @@ The message is of the form:
 
 ::
 
-    HTCondor: Notice: Will checkpoint to program_name.ckpt 
+    HTCondor: Notice: Will checkpoint to program_name.ckpt
     HTCondor: Notice: Remote system calls disabled.
 
 Platforms that use address space randomization will need a modified
 invocation of the program, as described in
 the :doc:`/platform-specific/linux` section on
-page \ `Linux <../platform-specific/linux.html>`__. The invocation
+page \ `Linux <../platform-specific/linux.html>`_. The invocation
 disables the address space randomization.
 
 To force the program to write a checkpoint image and stop, send it the
@@ -174,8 +174,8 @@ future, and yield unexpected results.
 
 To prevent this sort of accident, HTCondor displays a warning if a file
 is used for both reading and writing. You can ignore or disable these
-warnings if you choose as described in 
-:ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings`, but please 
+warnings if you choose as described in
+:ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings`, but please
 understand that your program may compute incorrect results.
 
 Checkpoint Warnings
@@ -265,7 +265,7 @@ functions are provided.
 -  ``int _condor_warning_config( const char *kind, const char *mode )``
    This function controls what warnings are displayed by HTCondor. The
    ``kind`` and ``mode`` arguments are the same as for the
-   ``-_condor_warning`` option described in the 
+   ``-_condor_warning`` option described in the
    :ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings` section.
    This function returns ``true`` if the arguments are understood and accepted.
    Otherwise, it returns ``false``.
@@ -273,4 +273,4 @@ functions are provided.
    Setting this variable to 1 (one) causes checkpoint images to be
    compressed. Setting it to 0 (zero) disables compression.
 
-      
+

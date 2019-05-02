@@ -1,4 +1,4 @@
-      
+
 
 Stable Release Series 8.6
 =========================
@@ -358,7 +358,7 @@ Bugs Fixed:
 -  Fixed a bug on 32 bit Linux systems that caused the starter to crash
    on startup if cgroup limits were enabled. :ticket:`6501`
 -  Fixed a bug in Startd Cron (see
-   `Hooks <../misc-concepts/hooks.html>`__) where, in effect,
+   `Hooks <../misc-concepts/hooks.html>`_) where, in effect,
    ``SlotMergeConstraint`` was ignored. :ticket:`6488`
 -  Fixed a bug when IPv6 is enabled which could cause the
    *condor_startd* to crash when spawning a starter. :ticket:`6462`
@@ -389,7 +389,7 @@ Bugs Fixed:
 
 -  *Security Item*: This release of HTCondor fixes a security-related
    bug described at
-   `http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html>`__.
+   `http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html>`_.
    :ticket:`6455`
 
 Version 8.6.7
@@ -870,4 +870,4 @@ Bugs Fixed:
    ``RequestMemory``, and the number of CPUs defaults to
    ``RequestCPUs``. :ticket:`5998`
 
-      
+

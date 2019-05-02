@@ -48,8 +48,8 @@ Example:
 
 ::
 
-    MINUTE          = 60 
-    HOUR            = (60 * $(MINUTE)) 
+    MINUTE          = 60
+    HOUR            = (60 * $(MINUTE))
     SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 
 Ordered Evaluation to Set the Configuration
@@ -174,7 +174,7 @@ themselves.
 
 ::
 
-    A = xxx 
+    A = xxx
     C = $(A)
 
 is a legal set of macro definitions, and the resulting value of ``C`` is
@@ -184,8 +184,8 @@ As a further example,
 
 ::
 
-    A = xxx 
-    C = $(A) 
+    A = xxx
+    C = $(A)
     A = yyy
 
 is also a legal set of macro definitions, and the resulting value of
@@ -196,9 +196,9 @@ definition. For example,
 
 ::
 
-    A = xxx 
-    B = $(A) 
-    A = $(A)yyy 
+    A = xxx
+    B = $(A)
+    A = $(A)yyy
     A = $(A)zzz
 
 is a legal set of macro definitions, and the resulting value of ``A`` is
@@ -211,7 +211,7 @@ Recursively defined macros such as
 
 ::
 
-    A = $(B) 
+    A = $(B)
     B = $(A)
 
 are not allowed. They create definitions that HTCondor refuses to parse.
@@ -266,7 +266,7 @@ line.
 
 ::
 
-    [HTCondor Settings] 
+    [HTCondor Settings]
     my_classad = [ foo=bar ]
 
 To simplify pool administration, any configuration variable name may be
@@ -279,7 +279,7 @@ the ports that HTCondor may use can be restricted to a range using the
 
 ::
 
-      MASTER.LOWPORT   = 20000 
+      MASTER.LOWPORT   = 20000
       MASTER.HIGHPORT  = 20100
 
 Note that all configuration variables may utilize this syntax, but
@@ -310,7 +310,7 @@ the subsystem name and a period. Consider the example
 
 ::
 
-      FILESPEC = A 
+      FILESPEC = A
       MASTER.FILESPEC = B
 
 combined with a later definition that incorporates ``FILESPEC`` in a
@@ -352,10 +352,10 @@ daemons. The *condor_master* daemon needs the configuration:
 
 ::
 
-      XYZZY           = $(SCHEDD) 
-      XYZZY_ARGS      = -local-name xyzzy 
-      DAEMON_LIST     = $(DAEMON_LIST) XYZZY 
-      DC_DAEMON_LIST  = + XYZZY 
+      XYZZY           = $(SCHEDD)
+      XYZZY_ARGS      = -local-name xyzzy
+      DAEMON_LIST     = $(DAEMON_LIST) XYZZY
+      DC_DAEMON_LIST  = + XYZZY
       XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 
 Using this example configuration, the *condor_master* starts up a
@@ -369,8 +369,8 @@ those specified separately.
 
 ::
 
-      SCHEDD.XYZZY.SCHEDD_NAME = XYZZY 
-      SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG) 
+      SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
+      SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
       SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
@@ -399,16 +399,16 @@ line continuation are
 
 ::
 
-      START = (KeyboardIdle > 15 * $(MINUTE)) && \ 
+      START = (KeyboardIdle > 15 * $(MINUTE)) && \
       ((LoadAvg - CondorLoadAvg) <= 0.3)
 
 and
 
 ::
 
-      ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \ 
-      stork.cs.wisc.edu, ostrich.cs.wisc.edu, \ 
-      bigbird.cs.wisc.edu 
+      ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
+      stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
+      bigbird.cs.wisc.edu
       ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 
 Where a line continuation character directly precedes a comment, the
@@ -419,16 +419,16 @@ Both this example
 
 ::
 
-      A = $(B) \ 
-      # $(C) 
+      A = $(B) \
+      # $(C)
       $(D)
 
 and this example
 
 ::
 
-      A = $(B) \ 
-      # $(C) \ 
+      A = $(B) \
+      # $(C) \
       $(D)
 
 result in the same value for A:
@@ -445,27 +445,27 @@ of text. The syntax for this is as follows:
 
 ::
 
-    <macro_name> @=<tag> 
-    <macro_definition lines> 
+    <macro_name> @=<tag>
+    <macro_definition lines>
     @<tag>
 
 For example:
 
 ::
 
-    JOB_ROUTER_DEFAULTS @=jrd 
-      [ 
-        requirements=target.WantJobRouter is True; 
-        MaxIdleJobs = 10; 
-        MaxJobs = 200; 
-     
-        /* now modify routed job attributes */ 
-        /* remove routed job if it goes on hold or stays idle for over 6 hours */ 
-        set_PeriodicRemove = JobStatus == 5 || 
-                            (JobStatus == 1 && (time() - QDate) > 3600*6); 
-        delete_WantJobRouter = true; 
-        set_requirements = true; 
-      ] 
+    JOB_ROUTER_DEFAULTS @=jrd
+      [
+        requirements=target.WantJobRouter is True;
+        MaxIdleJobs = 10;
+        MaxJobs = 200;
+
+        /* now modify routed job attributes */
+        /* remove routed job if it goes on hold or stays idle for over 6 hours */
+        set_PeriodicRemove = JobStatus == 5 ||
+                            (JobStatus == 1 && (time() - QDate) > 3600*6);
+        delete_WantJobRouter = true;
+        set_requirements = true;
+      ]
       @jrd
 
 Note that in this example, the square brackets are part of the
@@ -517,8 +517,8 @@ syntax:
 
 ::
 
-      include [ifexist] : <file> 
-      include : <cmdline>| 
+      include [ifexist] : <file>
+      include : <cmdline>|
       include [ifexist] command [into <cache-file>] : <cmdline>
 
 (Note that the ifexist and into options were added in version 8.5.7.
@@ -556,7 +556,7 @@ Consider the example
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
+      FILE = config.$(FULL_HOSTNAME)
       include : $(LOCAL_DIR)/$(FILE)
 
 Values are acquired for configuration variables ``FILE``, and
@@ -573,7 +573,7 @@ Consider the further example
 
 ::
 
-      SCRIPT_FILE = script.$(IP_ADDRESS) 
+      SCRIPT_FILE = script.$(IP_ADDRESS)
       include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
 
 In this example, the bar character at the end of the line causes a
@@ -594,7 +594,7 @@ to fail when reading it.
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
+      FILE = config.$(FULL_HOSTNAME)
       @include : $(LOCAL_DIR)/$(FILE)
 
 A daemon older than version 8.1.6 will fail to start. Running an older
@@ -603,7 +603,7 @@ daemon of HTCondor version 8.1.6 or more recent sees:
 
 ::
 
-      FILE = config.$(FULL_HOSTNAME) 
+      FILE = config.$(FULL_HOSTNAME)
       include : $(LOCAL_DIR)/$(FILE)
 
 and starts up successfully.
@@ -612,7 +612,7 @@ Here is an example using the new ifexist and into options:
 
 ::
 
-      # stuff.pl writes "STUFF=1" to stdout 
+      # stuff.pl writes "STUFF=1" to stdout
       include ifexist command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
 
 Reporting Errors and Warnings
@@ -628,7 +628,7 @@ The syntax for warning and error messages is as follows:
 
 ::
 
-      warning : <warning message> 
+      warning : <warning message>
       error : <error message>
 
 The warning and error messages will be printed when the configuration
@@ -642,10 +642,10 @@ Here's an example of using an error message in a configuration file
 
 ::
 
-    # stuff.pl writes "STUFF=1" to stdout 
-    include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl 
-    if ! defined stuff 
-      error : stuff is needed! 
+    # stuff.pl writes "STUFF=1" to stdout
+    include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
+    if ! defined stuff
+      error : stuff is needed!
     endif
 
 Conditionals in Configuration
@@ -659,14 +659,14 @@ syntax:
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         <statement> 
-         . . . 
-         <statement> 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      else
+         <statement>
+         . . .
+         <statement>
       endif
 
 An else key word and statements are not required, such that simple if
@@ -681,10 +681,10 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if defined MY_UNDEFINED_VARIABLE 
-            X = 12 
-         else 
-            X = -1 
+         if defined MY_UNDEFINED_VARIABLE
+            X = 12
+         else
+            X = -1
          endif
 
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
@@ -708,10 +708,10 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if version >= 8.1.6 
-            DO_X = True 
-         else 
-            DO_Y = True 
+         if version >= 8.1.6
+            DO_X = True
+         else
+            DO_Y = True
          endif
 
    results in defining ``DO_X`` as ``True`` if the current version of
@@ -729,30 +729,30 @@ The syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      elif <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      elif <simple condition>
+         <statement>
+         . . .
+         <statement>
       endif
 
 is the same as syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         if <simple condition> 
-            <statement> 
-            . . . 
-            <statement> 
-         endif 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      else
+         if <simple condition>
+            <statement>
+            . . .
+            <statement>
+         endif
       endif
 
 Function Macros in Configuration

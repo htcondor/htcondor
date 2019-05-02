@@ -1,4 +1,4 @@
-      
+
 
 HTCondor's ClassAd Mechanism
 ============================
@@ -13,25 +13,25 @@ this mechanism is required to harness the full flexibility of the
 HTCondor system.
 
 A ClassAd is is a set of uniquely named expressions. Each named
-expression is called an attribute. Figure \ `4.1 <#x48-3980021>`__ shows
+expression is called an attribute. Figure `4.1 <#x48-3980021>`_ shows
 ten attributes, a portion of an example ClassAd.
 
 --------------
 
 ::
 
-    MyType       = "Machine" 
-    TargetType   = "Job" 
-    Machine      = "froth.cs.wisc.edu" 
-    Arch         = "INTEL" 
-    OpSys        = "LINUX" 
-    Disk         = 35882 
-    Memory       = 128 
-    KeyboardIdle = 173 
-    LoadAvg      = 0.1000 
+    MyType       = "Machine"
+    TargetType   = "Job"
+    Machine      = "froth.cs.wisc.edu"
+    Arch         = "INTEL"
+    OpSys        = "LINUX"
+    Disk         = 35882
+    Memory       = 128
+    KeyboardIdle = 173
+    LoadAvg      = 0.1000
     Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
 
-| 
+|
 
 Figure 4.1: An example ClassAd
 
@@ -81,7 +81,7 @@ syntax and behavior differences between Old and New ClassAds, all of
 which should remain invisible to users of HTCondor.
 
 A complete description of New ClassAds can be found at
-`http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__,
+`http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_,
 and in the ClassAd Language Reference Manual found on that web page.
 
 Some of the features of New ClassAds that are not in Old ClassAds are
@@ -96,18 +96,18 @@ example ClassAd presented in both forms. The Old form:
 
 ::
 
-    Foo = 3 
-    Bar = "ab\"cd\ef" 
+    Foo = 3
+    Bar = "ab\"cd\ef"
     Moo = Foo =!= Undefined
 
 The New form:
 
 ::
 
-    [ 
-    Foo = 3; 
-    Bar = "ab\"cd\\ef"; 
-    Moo = Foo isnt Undefined; 
+    [
+    Foo = 3;
+    Bar = "ab\"cd\\ef";
+    Moo = Foo isnt Undefined;
     ]
 
 HTCondor will convert to and from Old ClassAd syntax as needed.
@@ -215,21 +215,21 @@ New ClassAd Operators
 
 The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
-precedence is shown in figure \ `4.2 <#x48-4040022>`__.
+precedence is shown in Figure `4.2 <#x48-4040022>`_.
 
 --------------
 
 ::
 
-      - (unary negation)   (high precedence) 
-      *   / 
-      +   - (addition, subtraction) 
-      <   <=   >=   > 
-      ==  !=  =?=  is  =!=  isnt 
-      && 
+      - (unary negation)   (high precedence)
+      *   /
+      +   - (addition, subtraction)
+      <   <=   >=   >
+      ==  !=  =?=  is  =!=  isnt
+      &&
       ||                   (low precedence)
 
-| 
+|
 
 Figure 4.2: Relative precedence of ClassAd expression operators
 
@@ -448,17 +448,17 @@ Optional parameters are given within square brackets.
 
     ::
 
-             8     = quantize(3, 8) 
-             4     = quantize(3, 2) 
-             0     = quantize(0, 4) 
-             6.8   = quantize(1.5, 6.8) 
-             7.2   = quantize(6.8, 1.2) 
-             10.2  = quantize(10, 5.1) 
-         
-             4     = quantize(0, {4}) 
-             2     = quantize(2, {1, 2, "A"}) 
-             3.0   = quantize(3, {1, 2, 0.5}) 
-             3.0   = quantize(2.7, {1, 2, 0.5}) 
+             8     = quantize(3, 8)
+             4     = quantize(3, 2)
+             0     = quantize(0, 4)
+             6.8   = quantize(1.5, 6.8)
+             7.2   = quantize(6.8, 1.2)
+             10.2  = quantize(10, 5.1)
+
+             4     = quantize(0, {4})
+             2     = quantize(2, {1, 2, "A"})
+             3.0   = quantize(3, {1, 2, 0.5})
+             3.0   = quantize(2.7, {1, 2, 0.5})
              ERROR = quantize(3, {1, 2, "A"})
 
     :index:`round()<single: round(); ClassAd functions>`
@@ -513,8 +513,8 @@ Optional parameters are given within square brackets.
 
     ::
 
-            "a, b, c" = join(", ", "a", "b", "c") 
-            "abc"   = join(split("a b c")) 
+            "a, b, c" = join(", ", "a", "b", "c")
+            "abc"   = join(split("a b c"))
             "a;b;c" = join(";", split("a b c"))
 
     :index:`substr()<single: substr(); ClassAd functions>`
@@ -786,7 +786,7 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
 
 The following three functions utilize regular expressions as defined and
 supported by the PCRE library. See
-`http://www.pcre.org <http://www.pcre.org>`__ for complete documentation
+`http://www.pcre.org <http://www.pcre.org>`_ for complete documentation
 of regular expressions.
 
 The ``options`` argument to these functions is a string of special
@@ -1036,13 +1036,13 @@ Expression Examples
 The ``=?=`` operator is similar to the ``==`` operator. It checks if the
 left hand side operand is identical in both type and value to the the
 right hand side operand, returning ``TRUE`` when they are identical.
-**For strings, the comparison is case-insensitive with the == operator and 
-case-sensitive with the =?= operator.** A key point in understanding is that 
-the ``=?=`` operator only produces evaluation results of ``TRUE`` and 
-``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``, 
-``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`__ presents
+**For strings, the comparison is case-insensitive with the == operator and
+case-sensitive with the =?= operator.** A key point in understanding is that
+the ``=?=`` operator only produces evaluation results of ``TRUE`` and
+``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``,
+``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`_ presents
 examples that define the outcome of the ``==`` operator.
-Table \ `4.2 <#x48-4100032>`__ presents examples that define the outcome
+Table \ `4.2 <#x48-4100032>`_ presents examples that define the outcome
 of the ``=?=`` operator.
 
 +-------------------------------+---------------------------+
@@ -1085,13 +1085,13 @@ Table 4.2: Evaluation examples for the ``=?=`` operator
 The ``=!=`` operator is similar to the ``!=`` operator. It checks if the
 left hand side operand is not identical in both type and value to the
 the right hand side operand, returning ``FALSE`` when they are
-identical. **For strings, the comparison is case-insensitive with the != 
-operator and case-sensitive with the =!= operator.** A key point in 
-understanding is that the ``=!=`` operator only produces evaluation results 
-of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation 
-results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``. 
-Table \ `4.3 <#x48-4100043>`__ presents examples that define the outcome of 
-the ``!=`` operator. Table \ `4.4 <#x48-4100054>`__ presents examples that 
+identical. **For strings, the comparison is case-insensitive with the !=
+operator and case-sensitive with the =!= operator.** A key point in
+understanding is that the ``=!=`` operator only produces evaluation results
+of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation
+results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``.
+Table \ `4.3 <#x48-4100043>`_ presents examples that define the outcome of
+the ``!=`` operator. Table \ `4.4 <#x48-4100054>`_ presents examples that
 define the outcome of the ``=!=`` operator.
 
 +-------------------------------+----------------------------+
@@ -1165,7 +1165,7 @@ For example, a job ClassAd may contain the following expressions:
 
 ::
 
-    Requirements = (Arch == "INTEL") && (OpSys == "LINUX") 
+    Requirements = (Arch == "INTEL") && (OpSys == "LINUX")
     Rank         = TARGET.Memory + TARGET.Mips
 
 In this case, the job requires a 32-bit Intel processor running a Linux
@@ -1181,11 +1181,11 @@ that it will run by setting the machine's configuration. For example,
 
 ::
 
-        Friend        = Owner == "tannenba" || Owner == "wright" 
-        ResearchGroup = Owner == "jbasney" || Owner == "raman" 
-        Trusted       = Owner != "rival" && Owner != "riffraff" 
-        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 && 
-                             KeyboardIdle > 15*60 ) 
+        Friend        = Owner == "tannenba" || Owner == "wright"
+        ResearchGroup = Owner == "jbasney" || Owner == "raman"
+        Trusted       = Owner != "rival" && Owner != "riffraff"
+        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 &&
+                             KeyboardIdle > 15*60 )
         RANK          = Friend + ResearchGroup*10
 
 The above policy states that the computer will never run jobs owned by
@@ -1231,17 +1231,17 @@ On a Unix platform, the command appears as
 
 ::
 
-    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000' 
-     
-    Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime 
-    100 
-    slot1@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:46 
-    slot2@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:47 
-    ... 
-    ... 
-    slot1@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:04 
-    slot2@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:05 
-    ... 
+    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
+
+    Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime
+    100
+    slot1@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:46
+    slot2@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:47
+    ...
+    ...
+    slot1@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:04
+    slot2@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:05
+    ...
     ...
 
 The Windows equivalent command is
@@ -1258,23 +1258,23 @@ expression that contains a ClassAd function.
 
 ::
 
-    % cat ad 
-    MyType = "Generic" 
-    FauxType = "DBMS" 
-    Name = "random-test" 
-    Machine = "f05.cs.wisc.edu" 
-    MyAddress = "<128.105.149.105:34000>" 
-    DaemonStartTime = 1153192799 
-    UpdateSequenceNumber = 1 
-     
-    % condor_advertise UPDATE_AD_GENERIC ad 
-     
-    % condor_status -any -constraint 'FauxType=="DBMS" && 
-      regexp("random.*", Name, "i")' 
-     
-    MyType               TargetType           Name 
-     
-    Generic              None                 random-test 
+    % cat ad
+    MyType = "Generic"
+    FauxType = "DBMS"
+    Name = "random-test"
+    Machine = "f05.cs.wisc.edu"
+    MyAddress = "<128.105.149.105:34000>"
+    DaemonStartTime = 1153192799
+    UpdateSequenceNumber = 1
+
+    % condor_advertise UPDATE_AD_GENERIC ad
+
+    % condor_status -any -constraint 'FauxType=="DBMS" &&
+      regexp("random.*", Name, "i")'
+
+    MyType               TargetType           Name
+
+    Generic              None                 random-test
 
 The ClassAd expression describing a machine that advertises a Windows
 operating system:
@@ -1327,7 +1327,7 @@ implement their own functions. To deploy this example extension, follow
 the following steps on Linux:
 
 -  Download the ClassAd source distribution from
-   `http://www.cs.wisc.edu/condor/classad <http://www.cs.wisc.edu/condor/classad>`__.
+   `http://www.cs.wisc.edu/condor/classad <http://www.cs.wisc.edu/condor/classad>`_.
 -  Unpack the tarball.
 -  Inspect the source file ``shared.cpp``. This one file contains the
    whole extension.
@@ -1336,7 +1336,7 @@ the following steps on Linux:
 
    ::
 
-       $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \ 
+       $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
          -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
 
 -  Copy the file ``shared.so`` to a location that all of the HTCondor
@@ -1364,4 +1364,4 @@ the following steps on Linux:
 
 :index:`ClassAd`
 
-      
+

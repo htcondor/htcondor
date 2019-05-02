@@ -111,7 +111,7 @@ changes.
 
    ::
 
-       ALLOW_READ = * 
+       ALLOW_READ = *
        ALLOW_DAEMON = $(ALLOW_WRITE)
 
    The main configuration file (``/etc/condor/condor_config``) already
@@ -156,7 +156,7 @@ New Features:
    By default, any user with access to a privileged EC2 instance has
    access to that instance's privileges. If you would like to make use
    of this feature, please read `HTCondor Annex Customization
-   Guide <../cloud-computing/annex-customization-guide.html>`__ before
+   Guide <../cloud-computing/annex-customization-guide.html>`_ before
    adding privileges (an instance role) to an instance which allows
    access by other users, specifically including the submitting of jobs
    to or running jobs on that instance. :ticket:`6789`
@@ -166,8 +166,8 @@ New Features:
    which the now-job will be run. :ticket:`6694`
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements
-   ``__enter__`` and ``__exit__``). The ``JobEvent`` class now
-   implements ``__str__`` and ``__repr__``. :ticket:`6814`
+   ``_enter__`` and ``_exit__``). The ``JobEvent`` class now
+   implements ``_str__`` and ``_repr__``. :ticket:`6814`
 -  the *condor_hdfs* daemon which allowed the hdfs daemons to run under
    the *condor_master* has been removed from the contributed source.
    :ticket:`6809`
@@ -178,4 +178,4 @@ Bugs Fixed:
    and *condor_startd* when multiple *condor_startd* s are using the
    same shared port server. :ticket:`5604`
 
-      
+

@@ -39,7 +39,7 @@ Step-by-Step Installation of the HTCondorView Client
 
    ::
 
-           POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data 
+           POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data
            KEEP_POOL_HISTORY = True
 
 #. Create a directory where HTCondorView is to place the HTML files.
@@ -48,7 +48,7 @@ Step-by-Step Installation of the HTCondorView Client
    browser. This directory is referred to as the ``VIEWDIR`` directory.
 #. Download the *view_client* contrib module. Follow links for contrib
    modules from the wiki at
-   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki>`__.
+   `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki>`_.
 #. Unpack or untar this contrib module into the directory ``VIEWDIR``.
    This creates several files and subdirectories. Further unpack the jar
    file within the ``VIEWDIR`` directory with:
@@ -85,8 +85,8 @@ Step-by-Step Installation of the HTCondorView Client
 
        ::
 
-                   PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin 
-                   
+                   PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin
+
 
 #. To create all of the initial HTML files, run
 

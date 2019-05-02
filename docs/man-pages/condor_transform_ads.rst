@@ -1,4 +1,4 @@
-      
+
 
 *condor_transform_ads*
 ========================
@@ -31,7 +31,7 @@ transforms them according to rules defined in a rules file, and outputs
 the resulting transformed ClassAds.
 
 See
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage>`__
+`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage>`_
 for a description of the transform language.
 
 Options
@@ -104,29 +104,29 @@ according to the given rules:
 
 ::
 
-      # File: my_input 
-      ResidentSetSize = 500 
-      DiskUsage = 2500000 
-      NumCkpts = 0 
-      TransferrErr = false 
-      Err = "/dev/null" 
-     
-      # File: my_rules 
-      EVALSET MemoryUsage ( ResidentSetSize / 100 ) 
-      EVALMACRO WantDisk = ( DiskUsage * 2 ) 
-      SET RequestDisk ( $(WantDisk) / 1024 ) 
-      RENAME NumCkpts NumCheckPoints 
-      DELETE /(.+)Err/ 
-     
-      # Command: 
-      condor_transform_ads -rules my_rules -in my_input 
-     
-      # Output: 
-      DiskUsage = 2500000 
-      Err = "/dev/null" 
-      MemoryUsage = 5 
-      NumCheckPoints = 0 
-      RequestDisk = ( 5000000 / 1024 ) 
+      # File: my_input
+      ResidentSetSize = 500
+      DiskUsage = 2500000
+      NumCkpts = 0
+      TransferrErr = false
+      Err = "/dev/null"
+
+      # File: my_rules
+      EVALSET MemoryUsage ( ResidentSetSize / 100 )
+      EVALMACRO WantDisk = ( DiskUsage * 2 )
+      SET RequestDisk ( $(WantDisk) / 1024 )
+      RENAME NumCkpts NumCheckPoints
+      DELETE /(.+)Err/
+
+      # Command:
+      condor_transform_ads -rules my_rules -in my_input
+
+      # Output:
+      DiskUsage = 2500000
+      Err = "/dev/null"
+      MemoryUsage = 5
+      NumCheckPoints = 0
+      RequestDisk = ( 5000000 / 1024 )
       ResidentSetSize = 500
 
 Author
@@ -141,4 +141,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

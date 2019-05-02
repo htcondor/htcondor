@@ -1,5 +1,3 @@
-      
-
 Potential Problems
 ==================
 
@@ -18,4 +16,4 @@ name and get confused if they find something unexpected like
 condor_exec. :index:`user manual<single: user manual; HTCondor>`
 :index:`user manual`
 
-      
+

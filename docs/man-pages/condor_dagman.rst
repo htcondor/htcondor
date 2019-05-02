@@ -1,4 +1,4 @@
-      
+
 
 *condor_dagman*
 ===============
@@ -94,10 +94,17 @@ Options
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
+<<<<<<< HEAD
     :index:`DAGMAN_MAX_JOBS_IDLE` (see 
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 1000. To disable this limit, set *NumberOfProcs*
     to 0. Note that submit description files that queue multiple procs can
+=======
+    :index:`DAGMAN_MAX_JOBS_IDLE` (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`_), which
+    defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
+    Note that submit description files that queue multiple procs can
+>>>>>>> jtk-docs
     cause the *NumberOfProcs* limit to be exceeded. Setting
     ``queue 5000`` in the submit description file, where *-maxidle* is
     set to 250 will result in a cluster of 5000 new procs being
@@ -111,25 +118,43 @@ Options
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
+<<<<<<< HEAD
     :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see 
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 0 (unlimited).
+=======
+    :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`_), which
+    defaults to 0 (unlimited).
+>>>>>>> jtk-docs
  **-maxpre** *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
     the configuration variable
     ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS`
+<<<<<<< HEAD
     (see :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 20.
+=======
+    (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`_), which
+    defaults to 20.
+>>>>>>> jtk-docs
  **-maxpost** *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
+<<<<<<< HEAD
     :index:`DAGMAN_MAX_POST_SCRIPTS` (see 
     :ref:`admin-manual/configuration-macros:configuration file entries for
     dagman`), which defaults to 20.
+=======
+    :index:`DAGMAN_MAX_POST_SCRIPTS` (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`_), which
+    defaults to 20.
+>>>>>>> jtk-docs
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
     functionality is now implemented by the ``DAGMAN_ALLOW_EVENTS``
@@ -285,8 +310,14 @@ Examples
 --------
 
 *condor_dagman* is normally not run directly, but submitted as an
+<<<<<<< HEAD
 HTCondor job by running condor_submit_dag. See the 
 :doc:`/man-pages/condor_submit_dag` manual page for examples.
+=======
+HTCondor job by running condor_submit_dag. See the condor_submit_dag
+manual page \ `condor_submitdag <../man-pages/condor_submitdag.html>`_
+for examples.
+>>>>>>> jtk-docs
 
 Author
 ------
@@ -300,4 +331,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

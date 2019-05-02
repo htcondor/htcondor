@@ -1,5 +1,3 @@
-      
-
 Setting Up the VM and Docker Universes
 ======================================
 
@@ -67,7 +65,7 @@ options would look like this:
 
 ::
 
-    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe 
+    VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
     VM_GAHP_LOG = $(LOG)/VMGahpLog
 
 VMware-Specific Configuration
@@ -113,12 +111,12 @@ may appear in such a job's event log:
 
 ::
 
-    Error from starter on master_vmuniverse_strtd@nostos.cs.wisc 
-    .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con 
-    dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c 
-    ondor.vmx) = 1/Error: Command failed: A file was not found/( 
-    ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g 
-    it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute 
+    Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
+    .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
+    dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c
+    ondor.vmx) = 1/Error: Command failed: A file was not found/(
+    ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g
+    it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
     /dir_31534/vmN3hylp_condor.vmx)
 
 To work around this problem:
@@ -256,9 +254,9 @@ For example,
 
 ::
 
-    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
-    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
-    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
     DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
 
 The *condor_startd* will advertise which docker volumes it has
@@ -283,10 +281,10 @@ Extending the above example,
 
 ::
 
-    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR 
-    DOCKER_VOLUME_DIR_SOME_DIR = /path1 
-    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith" 
-    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2 
+    DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+    DOCKER_VOLUME_DIR_SOME_DIR = /path1
+    DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith"
+    DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
     DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
 
 In this case, the directory /path1 will get mounted inside the container
@@ -315,7 +313,7 @@ Enterprise Linux machine.
 
    ::
 
-         systemctl start docker 
+         systemctl start docker
          systemctl enable docker
 
 #. Reconfigure the execute machine, such that it can set the machine
@@ -337,7 +335,7 @@ Enterprise Linux machine.
 
    ::
 
-         HasDocker = true 
+         HasDocker = true
          DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
 By default, HTCondor will keep the 20 most recently used Docker images
@@ -372,4 +370,4 @@ on the execute directories for all the startd machines:
 
     # chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
 
-      
+

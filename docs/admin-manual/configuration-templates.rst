@@ -1,5 +1,3 @@
-      
-
 Configuration Templates
 =======================
 
@@ -205,7 +203,7 @@ incorporates.
        (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
-        
+
 
     -  ``UWCS_Desktop_Policy_Values``
 

@@ -1,5 +1,3 @@
-      
-
 User Priorities and Negotiation
 ===============================
 
@@ -75,7 +73,7 @@ according to the inverse ratio rule.
 HTCondor supplies mechanisms to directly support two policies in which
 EUP may be useful:
 
- Nice users
+Nice users
     A job may be submitted with the submit command
     **nice_user** :index:`nice_user<single: nice_user; submit commands>` set to
     ``True``. This nice user job will have its RUP boosted by the
@@ -83,7 +81,8 @@ EUP may be useful:
     priority factor specified in the configuration, leading to a very
     large EUP. This corresponds to a low priority for resources,
     therefore using resources not used by other HTCondor users.
- Remote Users
+
+Remote Users
     HTCondor's flocking feature (see the :doc:`/grid-computing/connecting-pools-with-flocking` section)
     allows jobs to run in a pool other than the local one. In addition,
     the submit-only feature allows a user to submit jobs to another
@@ -154,68 +153,68 @@ the :ref:`admin-manual/configuration-macros:condor_negotiator configuration
 file entries section for definitions of these configuration variables.
 
 
-:index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``:
+:index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
     A floating point value representing the user priority of the
     candidate job.
 
-:index:`SubmitterUserResourcesInUse<single: SubmitterUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``SubmitterUserResourcesInUse``:
+:index:`SubmitterUserResourcesInUse<single: SubmitterUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``SubmitterUserResourcesInUse``
     The integer number of slots currently utilized by the user
     submitting the candidate job.
 
-:index:`RemoteUserPrio<single: RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``RemoteUserPrio``:
+:index:`RemoteUserPrio<single: RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``RemoteUserPrio``
     A floating point value representing the user priority of the job
     currently running on the machine. This version of the attribute,
     with no slot represented in the attribute name, refers to the
     current slot being evaluated.
 
-:index:`Slot_RemoteUserPrio<single: Slot_RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``:
+:index:`Slot_RemoteUserPrio<single: Slot_RemoteUserPrio; ClassAd attribute, ephemeral>`\ ``Slot<N>_RemoteUserPrio``
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
     machine.
 
-:index:`RemoteUserResourcesInUse<single: RemoteUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``:
+:index:`RemoteUserResourcesInUse<single: RemoteUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``
     The integer number of slots currently utilized by the user of the
     job currently running on the machine.
 
-:index:`SubmitterGroupResourcesInUse<single: SubmitterGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``SubmitterGroupResourcesInUse``:
+:index:`SubmitterGroupResourcesInUse<single: SubmitterGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``SubmitterGroupResourcesInUse``
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots currently utilized by the group.
 
-:index:`SubmitterGroup<single: SubmitterGroup; ClassAd attribute, ephemeral>`\ ``SubmitterGroup``:
+:index:`SubmitterGroup<single: SubmitterGroup; ClassAd attribute, ephemeral>`\ ``SubmitterGroup``
     The accounting group name of the requesting submitter.
 
-:index:`SubmitterGroupQuota<single: SubmitterGroupQuota; ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``:
+:index:`SubmitterGroupQuota<single: SubmitterGroupQuota; ClassAd attribute, ephemeral>`\ ``SubmitterGroupQuota``
     If the owner of the candidate job is a member of a valid accounting
     group, with a defined group quota, then this attribute is the
     integer number of slots defined as the group's quota.
 
-:index:`RemoteGroupResourcesInUse<single: RemoteGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteGroupResourcesInUse``:
+:index:`RemoteGroupResourcesInUse<single: RemoteGroupResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteGroupResourcesInUse``
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots currently utilized by the group.
 
-:index:`RemoteGroup<single: RemoteGroup; ClassAd attribute, ephemeral>`\ ``RemoteGroup``:
+:index:`RemoteGroup<single: RemoteGroup; ClassAd attribute, ephemeral>`\ ``RemoteGroup``
     The accounting group name of the owner of the currently running job.
 
-:index:`RemoteGroupQuota<single: RemoteGroupQuota; ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``:
+:index:`RemoteGroupQuota<single: RemoteGroupQuota; ClassAd attribute, ephemeral>`\ ``RemoteGroupQuota``
     If the owner of the currently running job is a member of a valid
     accounting group, with a defined group quota, then this attribute is
     the integer number of slots defined as the group's quota.
 
-:index:`SubmitterNegotiatingGroup<single: SubmitterNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``:
+:index:`SubmitterNegotiatingGroup<single: SubmitterNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``SubmitterNegotiatingGroup``
     The accounting group name that the candidate job is negotiating
     under.
 
-:index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``RemoteNegotiatingGroup``:
+:index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd attribute, ephemeral>`\ ``RemoteNegotiatingGroup``
     The accounting group name that the currently running job negotiated
     under.
 
-:index:`SubmitterAutoregroup<single: SubmitterAutoregroup; ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``:
+:index:`SubmitterAutoregroup<single: SubmitterAutoregroup; ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``
     Boolean attribute is ``True`` if candidate job is negotiated via
     autoregoup.
 
-:index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``:
+:index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``
     Boolean attribute is ``True`` if currently running job negotiated
     via autoregoup.
 
@@ -225,30 +224,30 @@ Priority Calculation
 This section may be skipped if the reader so feels, but for the curious,
 here is HTCondor's priority calculation algorithm.
 
-The RUP of a user u at time t, π\ :sub:`r`\ (u,t), is calculated every
-time interval δt using the formula
+The RUP of a user :math:`u` at time :math:`t`, :math:`\pi_{r}(u,t)`, is calculated every
+time interval :math:`\delta t` using the formula
 
 .. math::
 
-    π_r(u,t) = β × π_r(u,t- δt) + (1- β) × ρ(u, t)
+    \pi_r(u,t) = \beta × \pi_r(u, t - \delta t) + (1 - \beta) × \rho(u, t)
 
-where ρ(u,t) is the number of resources used by user u at time t, and β
-= 0.5\ :sup:`δt∕h`. h is the half life period set by
-``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`.
+where :math:`\rho (u,t)` is the number of resources used by user :math:`u` at time :math:`t`,
+and :math:`\beta = 0.5^{\delta t / h}`.
+:math:`h` is the half life period set by ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`.
 
-The EUP of user u at time t, π\ :sub:`e`\ (u,t) is calculated by
+The EUP of user :math:`u` at time :math:`t`, :math:`\pi_{e}(u,t)` is calculated by
 
 .. math::
 
-    π_e(u,t) = π_r(u,t) × f(u,t)
+    \pi_e(u,t) = \pi_r(u,t) \times f(u,t)
 
-where f(u,t) is the priority boost factor for user u at time t.
+where :math:`f(u,t)` is the priority boost factor for user :math:`u` at time :math:`t`.
 
 As mentioned previously, the RUP calculation is designed so that at
 steady state, each user's RUP stabilizes at the number of resources used
-by that user. The definition of β ensures that the calculation of
-π\ :sub:`r`\ (u,t) can be calculated over non-uniform time intervals δt
-without affecting the calculation. The time interval δt varies due to
+by that user. The definition of :math:`\beta` ensures that the calculation of
+:math:`\pi_{r}(u,t)` can be calculated over non-uniform time intervals :math:`\delta t`
+without affecting the calculation. The time interval :math:`\delta t` varies due to
 events internal to the system, but HTCondor guarantees that unless the
 central manager machine is down, no matches will be unaccounted for due
 to this variance.
@@ -440,12 +439,12 @@ the appended domain, for example
 
 ::
 
-                                        Effective 
-    User Name                           Priority 
-    ------------------------------      --------- 
-    group_physics@example.com                0.50 
-    user@example.com                        23.11 
-    heavyuser@example.com                  111.13 
+                                        Effective
+    User Name                           Priority
+    ------------------------------      ---------
+    group_physics@example.com                0.50
+    user@example.com                        23.11
+    heavyuser@example.com                  111.13
     ...
 
 Additionally, the *condor_userprio* command allows administrators to
@@ -500,8 +499,8 @@ quotas in the configuration of the central manager:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry 
-      GROUP_QUOTA_group_physics =   20 
+      GROUP_NAMES = group_physics, group_chemistry
+      GROUP_QUOTA_group_physics =   20
       GROUP_QUOTA_group_chemistry = 10
 
 The implementation of quotas is hierarchical, such that quotas may be
@@ -546,11 +545,11 @@ many groups. Jobs identify which group they are in by setting the
 and
 **accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 commands within the submit description file, as specified in
-section \ `3.6.7 <#x34-2390003.6.7>`__. For example:
+Section `3.6.7 <#x34-2390003.6.7>`_. For example:
 
 ::
 
-    accounting_group = group_physics 
+    accounting_group = group_physics
     accounting_group_user = einstein
 
 The size of the quotas may instead be expressed as a proportion. This is
@@ -566,8 +565,8 @@ same. Configuration on the central manager becomes:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry 
-      GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33 
+      GROUP_NAMES = group_physics, group_chemistry
+      GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33
       GROUP_QUOTA_DYNAMIC_group_physics =   0.66
 
 The values of the quotas must be less than 1.0, indicating fractions of
@@ -585,10 +584,10 @@ Static quotas for these subgroups extend the example configuration:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_group_physics     =   20 
-      GROUP_QUOTA_group_physics.hep =   15 
-      GROUP_QUOTA_group_physics.lep =    5 
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+      GROUP_QUOTA_group_physics     =   20
+      GROUP_QUOTA_group_physics.hep =   15
+      GROUP_QUOTA_group_physics.lep =    5
       GROUP_QUOTA_group_chemistry   =   10
 
 This hierarchy may be more useful when dynamic quotas are used. Here is
@@ -596,10 +595,10 @@ the example, using dynamic quotas:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334 
-      GROUP_QUOTA_DYNAMIC_group_physics     =   0.66667 
-      GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75 
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+      GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334
+      GROUP_QUOTA_DYNAMIC_group_physics     =   0.66667
+      GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75
       GROUP_QUOTA_DYNAMIC_group_physics.lep =   0.25
 
 The fraction of a subgroup's quota is expressed with respect to its
@@ -613,7 +612,7 @@ with the submit description file identification:
 
 ::
 
-    accounting_group = group_physics.hep 
+    accounting_group = group_physics.hep
     accounting_group_user = higgs
 
 In all these examples so far, the hierarchy is merely a notational
@@ -633,14 +632,14 @@ the following example:
 
 ::
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry 
-      GROUP_QUOTA_group_physics     =   20 
-      GROUP_QUOTA_group_physics.hep =   15 
-      GROUP_QUOTA_group_physics.lep =    5 
-      GROUP_QUOTA_group_chemistry   =   10 
-      GROUP_ACCEPT_SURPLUS = false 
-      GROUP_ACCEPT_SURPLUS_group_physics = false 
-      GROUP_ACCEPT_SURPLUS_group_physics.lep = true 
+      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+      GROUP_QUOTA_group_physics     =   20
+      GROUP_QUOTA_group_physics.hep =   15
+      GROUP_QUOTA_group_physics.lep =    5
+      GROUP_QUOTA_group_chemistry   =   10
+      GROUP_ACCEPT_SURPLUS = false
+      GROUP_ACCEPT_SURPLUS_group_physics = false
+      GROUP_ACCEPT_SURPLUS_group_physics.lep = true
       GROUP_ACCEPT_SURPLUS_group_physics.hep = true
 
 This configuration is the same as above for the chemistry users.
@@ -713,14 +712,14 @@ and the current usage by group. For example:
 
 ::
 
-    $ condor_userprio -quotas 
-    Last Priority Update: 11/12 15:18 
-    Group                    Effective  Config     Use    Subtree  Requested 
-    Name                       Quota     Quota   Surplus   Quota   Resources 
-    ------------------------ --------- --------- ------- --------- ---------- 
-    group_physics.hep            15.00     15.00 no          15.00         60 
-    group_physics.lep             5.00      5.00 no           5.00         60 
-    ------------------------ --------- --------- ------- --------- ---------- 
+    $ condor_userprio -quotas
+    Last Priority Update: 11/12 15:18
+    Group                    Effective  Config     Use    Subtree  Requested
+    Name                       Quota     Quota   Surplus   Quota   Resources
+    ------------------------ --------- --------- ------- --------- ----------
+    group_physics.hep            15.00     15.00 no          15.00         60
+    group_physics.lep             5.00      5.00 no           5.00         60
+    ------------------------ --------- --------- ------- --------- ----------
     Number of users: 2                                 ByQuota
 
 This shows that there are two groups, each with 60 jobs in the queue.

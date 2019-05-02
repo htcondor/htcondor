@@ -1,4 +1,4 @@
-      
+
 
 Hooks
 =====
@@ -104,7 +104,7 @@ what output is expected, and, when relevant, the exit status expected.
    a related configuration variable called ``FetchWorkDelay``
    :index:`FetchWorkDelay` which determines how long the
    *condor_startd* will wait between attempts to fetch work, which is
-   described in detail in :ref:`misc-concepts/hooks:job hooks that fetch work`. 
+   described in detail in :ref:`misc-concepts/hooks:job hooks that fetch work`.
    ``<Keyword>_HOOK_FETCH_WORK`` is the most important hook in the whole system,
    and is the only hook that must be defined for any of the other
    *condor_startd* hooks to operate.
@@ -374,20 +374,20 @@ custom keyword to handle work fetched from a web service.
 
 ::
 
-      # Most slots fetch and run work from the database system. 
-      STARTD_JOB_HOOK_KEYWORD = DATABASE 
-     
-      # Slot4 fetches and runs work from a web service. 
-      SLOT4_JOB_HOOK_KEYWORD = WEB 
-     
-      # The database system needs to both provide work and know the reply 
-      # for each attempted claim. 
-      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database 
-      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php 
-      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php 
-     
-      # The web system only needs to fetch work. 
-      WEB_HOOK_DIR = /usr/local/condor/fetch/web 
+      # Most slots fetch and run work from the database system.
+      STARTD_JOB_HOOK_KEYWORD = DATABASE
+
+      # Slot4 fetches and runs work from a web service.
+      SLOT4_JOB_HOOK_KEYWORD = WEB
+
+      # The database system needs to both provide work and know the reply
+      # for each attempted claim.
+      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
+      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
+      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
+
+      # The web system only needs to fetch work.
+      WEB_HOOK_DIR = /usr/local/condor/fetch/web
       WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
 
 The keywords ``"DATABASE"`` and ``"WEB"`` are completely arbitrary, so
@@ -478,10 +478,10 @@ the hook that changes the executable may be
 
 ::
 
-    #!/bin/sh 
-     
-    # Read and discard the job ClassAd 
-    cat > /dev/null 
+    #!/bin/sh
+
+    # Read and discard the job ClassAd
+    cat > /dev/null
     echo 'Cmd = "/usr/java/java5/bin/java"'
 
 If some machines in your pool have this hook and others do not, this
@@ -490,29 +490,29 @@ machine that has the hook:
 
 ::
 
-    HasJava5PrepareHook = True 
+    HasJava5PrepareHook = True
     STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
 
 The submit description file for this example job may be
 
 ::
 
-    universe = vanilla 
-    executable = /usr/bin/java 
-    arguments = Hello 
-    # match with a machine that has the hook 
-    requirements = HasJava5PrepareHook 
-     
-    should_transfer_files = always 
-    when_to_transfer_output = on_exit 
-    transfer_input_files = Hello.class 
-     
-    output = hello.out 
-    error  = hello.err 
-    log    = hello.log 
-     
-    +HookKeyword="JAVA5" 
-    queue 
+    universe = vanilla
+    executable = /usr/bin/java
+    arguments = Hello
+    # match with a machine that has the hook
+    requirements = HasJava5PrepareHook
+
+    should_transfer_files = always
+    when_to_transfer_output = on_exit
+    transfer_input_files = Hello.class
+
+    output = hello.out
+    error  = hello.err
+    log    = hello.log
+
+    +HookKeyword="JAVA5"
+    queue
 
 Note that the
 **requirements** :index:`requirements<single: requirements; submit commands>` command
@@ -742,13 +742,13 @@ For example, if the Startd Cron job returns:
 
 ::
 
-      Value=1 
-      SlotId=1 
-      -s1 
-      Value=2 
-      SlotId=2 
-      -s2 
-      Value=10 
+      Value=1
+      SlotId=1
+      -s1
+      Value=2
+      SlotId=2
+      -s2
+      Value=10
       - update:true
 
 it will set ``Value=10`` for all slots except slot1 and slot2. On those
@@ -759,7 +759,7 @@ send updates to the collector immediately.
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
 section  `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+Macros <../admin-manual/configuration-macros.html>`_.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark
@@ -767,71 +767,71 @@ jobs, and ones that use the *condor_schedd*.
 
 ::
 
-    # 
-    # Startd Cron Stuff 
-    # 
-    # auxiliary variable to use in identifying locations of files 
-    MODULES = $(ROOT)/modules 
-     
-    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
-    STARTD_CRON_MAX_JOB_LOAD = 0.2 
-    STARTD_CRON_JOBLIST = 
-     
-    # Test job 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test 
-    STARTD_CRON_TEST_MODE = OneShot 
-    STARTD_CRON_TEST_RECONFIG_RERUN = True 
-    STARTD_CRON_TEST_PREFIX = test_ 
-    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
-    STARTD_CRON_TEST_KILL = True 
-    STARTD_CRON_TEST_ARGS = abc 123 
-    STARTD_CRON_TEST_SLOTS = 1 
-    STARTD_CRON_TEST_JOB_LOAD = 0.01 
-     
-    # job 'date' 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date 
-    STARTD_CRON_DATE_MODE = Periodic 
-    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date 
-    STARTD_CRON_DATE_PERIOD = 15s 
-    STARTD_CRON_DATE_JOB_LOAD = 0.01 
-     
-    # Job 'foo' 
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo 
-    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo 
-    STARTD_CRON_FOO_PREFIX = Foo 
-    STARTD_CRON_FOO_MODE = Periodic 
-    STARTD_CRON_FOO_PERIOD = 10m 
-    STARTD_CRON_FOO_JOB_LOAD = 0.2 
-     
-    # 
-    # Benchmark Stuff 
-    # 
-    BENCHMARKS_JOBLIST = mips kflops 
-     
-    # MIPS benchmark 
-    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips 
-    BENCHMARKS_MIPS_JOB_LOAD = 1.0 
-     
-    # KFLOPS benchmark 
-    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops 
-    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0 
-     
-    # 
-    # Schedd Cron Stuff 
-    # 
-    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val 
-    SCHEDD_CRON_JOBLIST = 
-     
-    # Test job 
-    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test 
-    SCHEDD_CRON_TEST_MODE = OneShot 
-    SCHEDD_CRON_TEST_RECONFIG_RERUN = True 
-    SCHEDD_CRON_TEST_PREFIX = test_ 
-    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test 
-    SCHEDD_CRON_TEST_PERIOD = 5m 
-    SCHEDD_CRON_TEST_KILL = True 
-    SCHEDD_CRON_TEST_ARGS = abc 123 
+    #
+    # Startd Cron Stuff
+    #
+    # auxiliary variable to use in identifying locations of files
+    MODULES = $(ROOT)/modules
+
+    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+    STARTD_CRON_MAX_JOB_LOAD = 0.2
+    STARTD_CRON_JOBLIST =
+
+    # Test job
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test
+    STARTD_CRON_TEST_MODE = OneShot
+    STARTD_CRON_TEST_RECONFIG_RERUN = True
+    STARTD_CRON_TEST_PREFIX = test_
+    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+    STARTD_CRON_TEST_KILL = True
+    STARTD_CRON_TEST_ARGS = abc 123
+    STARTD_CRON_TEST_SLOTS = 1
+    STARTD_CRON_TEST_JOB_LOAD = 0.01
+
+    # job 'date'
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date
+    STARTD_CRON_DATE_MODE = Periodic
+    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date
+    STARTD_CRON_DATE_PERIOD = 15s
+    STARTD_CRON_DATE_JOB_LOAD = 0.01
+
+    # Job 'foo'
+    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo
+    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo
+    STARTD_CRON_FOO_PREFIX = Foo
+    STARTD_CRON_FOO_MODE = Periodic
+    STARTD_CRON_FOO_PERIOD = 10m
+    STARTD_CRON_FOO_JOB_LOAD = 0.2
+
+    #
+    # Benchmark Stuff
+    #
+    BENCHMARKS_JOBLIST = mips kflops
+
+    # MIPS benchmark
+    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips
+    BENCHMARKS_MIPS_JOB_LOAD = 1.0
+
+    # KFLOPS benchmark
+    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops
+    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
+
+    #
+    # Schedd Cron Stuff
+    #
+    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+    SCHEDD_CRON_JOBLIST =
+
+    # Test job
+    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test
+    SCHEDD_CRON_TEST_MODE = OneShot
+    SCHEDD_CRON_TEST_RECONFIG_RERUN = True
+    SCHEDD_CRON_TEST_PREFIX = test_
+    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+    SCHEDD_CRON_TEST_PERIOD = 5m
+    SCHEDD_CRON_TEST_KILL = True
+    SCHEDD_CRON_TEST_ARGS = abc 123
 
 :index:`Hooks`
 
-      
+

@@ -1,5 +1,3 @@
-      
-
 Networking (includes sections on Port Usage and CCB)
 ====================================================
 
@@ -121,14 +119,14 @@ Instead of
 
 ::
 
-    CONDOR_HOST = machX.cs.wisc.edu 
+    CONDOR_HOST = machX.cs.wisc.edu
     COLLECTOR_HOST = $(CONDOR_HOST)
 
 the configuration might be
 
 ::
 
-    CONDOR_HOST = machX.cs.wisc.edu 
+    CONDOR_HOST = machX.cs.wisc.edu
     COLLECTOR_HOST = $(CONDOR_HOST):9650
 
 If a non standard port is defined, the same value of ``COLLECTOR_HOST``
@@ -171,7 +169,7 @@ example:
 
 ::
 
-    COLLECTOR_HOST = $(CONDOR_HOST):0 
+    COLLECTOR_HOST = $(CONDOR_HOST):0
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the 
@@ -272,7 +270,7 @@ those machines not behind a firewall:
 
 ::
 
-    HIGHPORT = UNDEFINED 
+    HIGHPORT = UNDEFINED
     LOWPORT  = UNDEFINED
 
 If the maximum number of ports allocated using ``HIGHPORT`` and
@@ -540,9 +538,9 @@ In the central manager's local configuration file:
 
 ::
 
-    NETWORK_INTERFACE = <IP address of farm-server.farm.org> 
-    NEGOTIATOR = $(SBIN)/condor_negotiator 
-    COLLECTOR = $(SBIN)/condor_collector 
+    NETWORK_INTERFACE = <IP address of farm-server.farm.org>
+    NEGOTIATOR = $(SBIN)/condor_negotiator
+    COLLECTOR = $(SBIN)/condor_collector
     DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
 
 If the central manager and farm machines are all NT, then only vanilla
@@ -568,11 +566,11 @@ the farm) configuration file:
 
 ::
 
-    # If you have NFS 
-    USE_NFS = True 
-    # If you have AFS 
-    HAS_AFS = True 
-    USE_AFS = True 
+    # If you have NFS
+    USE_NFS = True
+    # If you have AFS
+    HAS_AFS = True
+    USE_AFS = True
     # if you want both NFS and AFS, then enable both sets above
 
 Now, if the cluster is set up so that it is possible for a machine name
@@ -683,7 +681,7 @@ network causes registration with the CCB server as in the example:
 
 ::
 
-      CCB_ADDRESS = $(COLLECTOR_HOST) 
+      CCB_ADDRESS = $(COLLECTOR_HOST)
       PRIVATE_NETWORK_NAME = cs.wisc.edu
 
 The definition of ``PRIVATE_NETWORK_NAME`` ensures that all
@@ -952,4 +950,4 @@ assuming
 
 :index:`IPv6`
 
-      
+

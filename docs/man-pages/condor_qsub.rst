@@ -1,4 +1,4 @@
-      
+
 
 *condor_qsub*
 ==============
@@ -39,13 +39,13 @@ For a full listing of *qsub* options, please see
 
  POSIX
     :
-    `http://pubs.opengroup.org/onlinepubs/9699919799/utilities/qsub.html <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/qsub.html>`__
+    `http://pubs.opengroup.org/onlinepubs/9699919799/utilities/qsub.html <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/qsub.html>`_
  SGE
     :
-    `http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html <http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html>`__
+    `http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html <http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html>`_
  PBS/Torque
     :
-    `http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/commands/qsub.htm <http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/commands/qsub.htm>`__
+    `http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/commands/qsub.htm <http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/commands/qsub.htm>`_
 
 *condor_qsub* accepts either command line options or the single file,
 *commandfile*, that contains all of the commands.
@@ -177,7 +177,7 @@ Options
     |                          |                          | tp://docs.adaptivecomput |
     |                          |                          | ing.com/torque/4-1-3/Con |
     |                          |                          | tent/topics/2-jobs/reque |
-    |                          |                          | stingRes.htm#qsub>`__    |
+    |                          |                          | stingRes.htm#qsub>`_    |
     +--------------------------+--------------------------+--------------------------+
     | opsys                    | string                   | Sets ``OpSys`` machine   |
     |                          |                          | attribute. Enclose in    |
@@ -277,4 +277,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+
