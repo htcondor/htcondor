@@ -143,8 +143,18 @@ extern const char * const ATTR_XACTION_NAME;
 #if defined(__cplusplus)
 struct CaseIgnLTStr {
    inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
+	// For short strings, calling into strcasecmp can be expensive.
+	// First sort by length, which is inlined into a field lookup
+	// The containers that use this don't need the strings lexigraphically
+	// sorted, just sorted somehow
+	int s1len = s1.length();
+	int s2len = s2.length();
+	if (s1len == s2len) {
        return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
+	} else {
+		return s1len < s2len;
 	}
+ }
 };
 
 struct CaseIgnEqStr {
