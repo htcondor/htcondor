@@ -1,5 +1,3 @@
-      
-
 Docker Universe Applications
 ============================
 
@@ -20,7 +18,7 @@ settings.
 
 The image from which the container is instantiated is defined by
 specifying a Docker image with the submit command
-**docker\_image**\ :index:`docker_image<single: docker_image; submit commands>`. This
+**docker_image** :index:`docker_image<single: docker_image; submit commands>`. This
 image must be pre-staged on a docker hub that the execute machine can
 access.
 
@@ -50,7 +48,7 @@ to a directory of the same name inside the container, and sets the IWD
 of the contained job to that directory. The assumption is that the job
 will look in the cwd for input files, and drop output files in the same
 directory. In docker terms, we docker run with the -v
-/some\_scratch\_directory -w /some\_scratch\_directory –user
+/some_scratch_directory -w /some_scratch_directory -user
 non-root-user command line options (along with many others).
 
 The executable file can come from one of two places: either from within
@@ -63,12 +61,12 @@ Therefore, the submit description file should contain the submit command
 
 ::
 
-      should_transfer_files = YES
+      should_transfer_files = YES
 
 With this command, all input and output files will be transferred as
 required to and from the scratch directory mounted as a Docker volume.
 
-If no **executable**\ :index:`executable<single: executable; submit commands>` is
+If no **executable** :index:`executable<single: executable; submit commands>` is
 specified in the submit description file, it is presumed that the Docker
 container has a default command to run.
 
@@ -80,17 +78,17 @@ job:
 
 ::
 
-      universe                = docker 
-      docker_image            = debian 
-      executable              = /bin/cat 
-      arguments               = /etc/hosts 
-      should_transfer_files   = YES 
-      when_to_transfer_output = ON_EXIT 
-      output                  = out.$(Process) 
-      error                   = err.$(Process) 
-      log                     = log.$(Process) 
-      request_memory          = 100M 
-      queue 1
+      universe                = docker
+      docker_image            = debian
+      executable              = /bin/cat
+      arguments               = /etc/hosts
+      should_transfer_files   = YES
+      when_to_transfer_output = ON_EXIT
+      output                  = out.$(Process)
+      error                   = err.$(Process)
+      log                     = log.$(Process)
+      request_memory          = 100M
+      queue 1
 
 A debian container is the HTCondor job, and it runs the */bin/cat*
 program on the ``/etc/hosts`` file before exiting.
@@ -100,10 +98,10 @@ network interface. In the job submit file, if the user specifies
 
 ::
 
-    docker_network_type = host
+    docker_network_type = host
 
 then, instead of at NATted interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
 
-      
+

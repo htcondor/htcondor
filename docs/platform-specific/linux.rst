@@ -1,5 +1,3 @@
-      
-
 Linux
 =====
 
@@ -45,7 +43,7 @@ possibility of security exploits. This makes it impossible for standard
 universe jobs to resume execution using a checkpoint. When starting or
 resuming a standard universe job, HTCondor disables the randomization.
 
-To run a binary compiled with *condor\_compile* in standalone mode,
+To run a binary compiled with *condor_compile* in standalone mode,
 either initially or in resumption mode, manually disable the address
 space randomization by modifying the command line. For a 32-bit
 architecture, assuming an HTCondor-linked binary called *myapp*, invoke
@@ -53,13 +51,13 @@ the standalone executable with:
 
 ::
 
-      setarch i386 -L -R ./myapp
+      setarch i386 -L -R ./myapp
 
 For a 64-bit architecture, the resumption command will be:
 
 ::
 
-      setarch x86_64 -L -R ./myapp
+      setarch x86_64 -L -R ./myapp
 
 Some applications will also need the **-B** option.
 
@@ -68,6 +66,4 @@ address space randomization, as the 32-bit architecture example:
 
 ::
 
-      setarch i386 -L -R myapp -_condor_restart myapp.ckpt
-
-      
+      setarch i386 -L -R myapp -_condor_restart myapp.ckpt

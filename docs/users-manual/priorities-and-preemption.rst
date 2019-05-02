@@ -1,5 +1,3 @@
-      
-
 Priorities and Preemption
 =========================
 
@@ -23,10 +21,9 @@ a higher job priority than 5.
 :index:`condor_prio<single: condor_prio; HTCondor commands>`
 
 For the simple case, each job can be given a distinct priority. For an
-already queued job, its priority may be set with the *condor\_prio*
-command; see the example in section \ `Managing a
-Job <../users-manual/managing-a-job.html>`__, or the *condor\_prio*
-manual page \ `condor\_prio <../man-pages/condor_prio.html>`__ for
+already queued job, its priority may be set with the *condor_prio*
+command; see the example in the :doc:`/users-manual/managing-a-job` section, or the *condor_prio*
+manual page `condor_prio <../man-pages/condor_prio.html>`_ for
 details. This sets the value of job ClassAd attribute ``JobPrio``.
 
 A fine-grained categorization of jobs and their ordering is available
@@ -42,9 +39,9 @@ User priority
 Machines are allocated to users based upon a user's priority. A lower
 numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
-priorities in HTCondor can be examined with the *condor\_userprio*
+priorities in HTCondor can be examined with the *condor_userprio*
 command (see
-page \ `condor\_userprio <../man-pages/condor_userprio.html>`__).
+page `condor_userprio <../man-pages/condor_userprio.html>`_).
 :index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ HTCondor
 administrators can set and change individual user priorities with the
 same utility.
@@ -87,7 +84,7 @@ worse case it could take up to a maximum of one hour until the higher
 priority user receives a fair share of machines. For a general
 discussion of limiting preemption, please see section `Policy
 Configuration for Execute Hosts and for Submit
-Hosts <../admin-manual/policy-configuration.html>`__ of the
+Hosts <../admin-manual/policy-configuration.html>`_ of the
 Administrator's manual.
 
 User priorities are keyed on ``<username>@<domain>``, for example
@@ -98,7 +95,7 @@ from or even if the user submits jobs from multiple machines.
 :index:`nice job` :index:`nice job<single: nice job; priority>`
 
 An extra feature is the ability to submit a job as a nice job (see
-page \ `condor\_submit <../man-pages/condor_submit.html>`__). Nice jobs
+page `condor_submit <../man-pages/condor_submit.html>`_). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar
@@ -115,19 +112,19 @@ Details About How HTCondor Jobs Vacate Machines
 When HTCondor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig``
 attribute of the job's ClassAd. The value of this attribute can be
-specified by the user at submit time by placing the **kill\_sig** option
+specified by the user at submit time by placing the **kill_sig** option
 in the HTCondor submit description file.
 
 If a program wanted to do some special work when required to vacate a
 machine, the program may set up a signal handler to use a trappable
 signal as an indication to clean up. When submitting this job, this
-clean up signal is specified to be used with **kill\_sig**. Note that
+clean up signal is specified to be used with **kill_sig**. Note that
 the clean up work needs to be quick. If the job takes too long to go
 away, HTCondor follows up with a SIGKILL signal which immediately
 terminates the process.
 :index:`condor_compile<single: condor_compile; HTCondor commands>`
 
-A job that is linked using *condor\_compile* and is subsequently
+A job that is linked using *condor_compile* and is subsequently
 submitted into the standard universe, will checkpoint and exit upon
 receipt of a SIGTSTP signal. Thus, SIGTSTP is the default value for
 ``KillSig`` when submitting to the standard universe. The user's code
@@ -136,7 +133,7 @@ functions exported by the HTCondor libraries:
 
  ckpt()()
     Performs a checkpoint and then returns.
- ckpt\_and\_exit()()
+ ckpt_and_exit()()
     Checkpoints and exits; HTCondor will then restart the process again
     later, potentially on a different machine.
 
@@ -144,4 +141,4 @@ For jobs submitted into the vanilla universe, the default value for
 ``KillSig`` is SIGTERM, the usual method to nicely terminate a Unix
 program.
 
-      
+

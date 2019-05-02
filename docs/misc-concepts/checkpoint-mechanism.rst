@@ -1,5 +1,3 @@
-      
-
 HTCondor's Checkpoint Mechanism
 ===============================
 
@@ -27,10 +25,9 @@ program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
-HTCondor's resource management functionality. See section \ `Running a
-Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
-page \ `Running a Job: the Steps To
-Take <../users-manual/running-a-job-steps.html>`__ for a description of
+HTCondor's resource management functionality. See Section `Running a
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_
+for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
 services. :index:`implementation<single: implementation; checkpoint>`
 
@@ -84,16 +81,14 @@ mechanism` section.
 :index:`compression<single: compression; checkpoint>`
 
 HTCondor can produce and use compressed checkpoints. Configuration
-variables (detailed in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ control whether
+variables (detailed in the :doc:`/admin-manual/configuration-macros` section control whether
 compression is used. The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted. An HTCondor pool can also be
 configured with a checkpoint server or servers that serve as a
-repository for checkpoints, as described in section \ `The Checkpoint
-Server <../admin-manual/checkpoint-server.html>`__ on page \ `The
-Checkpoint Server <../admin-manual/checkpoint-server.html>`__. When a
+repository for checkpoints, as described in the :doc:`/admin-manual/checkpoint-server` section on page
+`The Checkpoint Server <../admin-manual/checkpoint-server.html>`_. When a
 host is configured to use a checkpoint server, jobs submitted on that
 machine write and read checkpoints to and from the server, rather than
 the local disk of the submitting machine, taking the burden of storing
@@ -119,13 +114,13 @@ The message is of the form:
 
 ::
 
-    HTCondor: Notice: Will checkpoint to program_name.ckpt 
-    HTCondor: Notice: Remote system calls disabled.
+    HTCondor: Notice: Will checkpoint to program_name.ckpt
+    HTCondor: Notice: Remote system calls disabled.
 
 Platforms that use address space randomization will need a modified
 invocation of the program, as described in
-section \ `Linux <../platform-specific/linux.html>`__ on
-page \ `Linux <../platform-specific/linux.html>`__. The invocation
+the :doc:`/platform-specific/linux` section on
+page `Linux <../platform-specific/linux.html>`_. The invocation
 disables the address space randomization.
 
 To force the program to write a checkpoint image and stop, send it the
@@ -139,11 +134,11 @@ the checkpoint is called ``P1.ckpt``, use
 
 ::
 
-    P1 -_condor_restart P1.ckpt
+    P1 -_condor_restart P1.ckpt
 
 Again, platforms that implement address space randomization will need a
 modified invocation, as described in
-section \ `Linux <../platform-specific/linux.html>`__.
+the :doc:`/platform-specific/linux` section.
 
 By default, the program will restart in the same directory in which it
 originally ran, and the program will fail if it can not change to that
@@ -155,7 +150,7 @@ be
 
 ::
 
-    P1 -_condor_restart P1.ckpt -_condor_relocatable
+    P1 -_condor_restart P1.ckpt -_condor_relocatable
 
 Checkpoint Safety
 -----------------
@@ -176,8 +171,8 @@ future, and yield unexpected results.
 
 To prevent this sort of accident, HTCondor displays a warning if a file
 is used for both reading and writing. You can ignore or disable these
-warnings if you choose as described in 
-:ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings`, but please 
+warnings if you choose as described in
+:ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings`, but please
 understand that your program may compute incorrect results.
 
 Checkpoint Warnings
@@ -189,7 +184,7 @@ reading and writing, this message will be displayed:
 
 ::
 
-    HTCondor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
+    HTCondor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
 
 Control how these messages are displayed with the -_condor_warning
 command line argument. This argument accepts a warning category and a
@@ -205,13 +200,13 @@ warnings to one instance is
 
 ::
 
-    -_condor_warning READWRITE ONCE
+    -_condor_warning READWRITE ONCE
 
 To turn all ordinary notices off:
 
 ::
 
-    -_condor_warning NOTICE OFF
+    -_condor_warning NOTICE OFF
 
 The same effect can be accomplished within a program by using the
 function _condor_warning_config().
@@ -267,7 +262,7 @@ functions are provided.
 -  ``int _condor_warning_config( const char *kind, const char *mode )``
    This function controls what warnings are displayed by HTCondor. The
    ``kind`` and ``mode`` arguments are the same as for the
-   ``-_condor_warning`` option described in the 
+   ``-_condor_warning`` option described in the
    :ref:`misc-concepts/checkpoint-mechanism:checkpoint warnings` section.
    This function returns ``true`` if the arguments are understood and accepted.
    Otherwise, it returns ``false``.
@@ -275,4 +270,4 @@ functions are provided.
    Setting this variable to 1 (one) causes checkpoint images to be
    compressed. Setting it to 0 (zero) disables compression.
 
-      
+

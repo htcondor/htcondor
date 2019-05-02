@@ -1,5 +1,3 @@
-      
-
 Availability
 ============
 
@@ -10,10 +8,10 @@ Availability
 
 HTCondor is currently available as a free download from the Internet via
 the World Wide Web at URL
-`http://htcondor.org/downloads/ <http://htcondor.org/downloads/>`__.
-Binary distributions of this HTCondor Version 8.9.1 release are
-available for the platforms detailed in Table \ `1.1 <#x8-80071>`__. A
-platform is an architecture/operating system combination.
+`http://htcondor.org/downloads/ <http://htcondor.org/downloads/>`_.
+Binary distributions of this HTCondor Version 8.9.1 release are
+available for the platforms detailed in Table `1.1 <#x8-80071>`_.
+A platform is an architecture/operating system combination.
 :index:`definition of<single: definition of; clipped platform>`
 :index:`availability<single: availability; clipped platform>`
 
@@ -21,10 +19,8 @@ In the table, clipped means that HTCondor does not support checkpointing
 or remote system calls on the given platform. This means that standard
 universe jobs are not supported. Some clipped platforms will have
 further limitations with respect to supported universes. See
-section \ `Running a Job: the Steps To
-Take <../users-manual/running-a-job-steps.html>`__ on page \ `Running a
-Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ for
-more details on job universes within HTCondor and their abilities and
+section `Running a Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_
+for more details on job universes within HTCondor and their abilities and
 limitations.
 
 The HTCondor source code is available for public download alongside the
@@ -53,7 +49,7 @@ binary distributions.
 |                                      |   (clipped)                          |
 +--------------------------------------+--------------------------------------+
 
-Table 1.1: Supported platforms in HTCondor Version 8.9.1
+Table 1.1: Supported platforms in HTCondor Version 8.9.1
 
 
 NOTE: Other Linux distributions likely work, but are not tested or
@@ -61,13 +57,12 @@ supported.
 
 For more platform-specific information about HTCondor's support for
 various operating systems, see
-Chapter \ `8 <PlatformSpecificInformation.html#x74-5700008>`__ on
-page \ `1624 <PlatformSpecificInformation.html#x74-5700008>`__.
+Chapter `8 <PlatformSpecificInformation.html#x74-5700008>`_.
 
 Jobs submitted to the standard universe utilize *condor_compile* to
 relink programs with libraries provided by HTCondor.
-Table \ `1.2 <#x8-80112>`__ lists supported compilers by platform for
-this Version 8.9.1 release. Other compilers may work, but are not
+Table `1.2 <#x8-80112>`_ lists supported compilers by platform for
+this Version 8.9.1 release. Other compilers may work, but are not
 supported.
 :index:`list of supported compilers<single: list of supported compilers; condor_compile>`
 :index:`list of supported compilers<single: list of supported compilers; condor_compile command>`
@@ -85,6 +80,6 @@ supported.
 | Ubuntu 14.04 on x86_64               | gcc, g++, gfortran | as shipped |
 +--------------------------------------+--------------------+------------+
 
-Table 1.2: Supported compilers in HTCondor Version 8.9.1
+Table 1.2: Supported compilers in HTCondor Version 8.9.1
 
-      
+

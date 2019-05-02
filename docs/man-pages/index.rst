@@ -81,4 +81,4 @@ Command Reference Manual (man pages)
    condor_wait
    condor_who
    giddalloc
-   procdctl      
+   procdctl      

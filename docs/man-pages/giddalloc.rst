@@ -1,6 +1,6 @@
-      
+      
 
-gidd\_alloc
+gidd_alloc
 ===========
 
 find a GID within the specified range which is not used by any process
@@ -9,7 +9,7 @@ find a GID within the specified range which is not used by any process
 Synopsis
 --------
 
-**gidd\_alloc** *min-gid* *max-gid*
+**gidd_alloc** *min-gid* *max-gid*
 
 Description
 -----------
@@ -29,19 +29,19 @@ This is a program only available for the Linux ports of HTCondor.
 Exit Status
 -----------
 
-*gidd\_alloc* will exit with a status value of 0 (zero) upon success,
+*gidd_alloc* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

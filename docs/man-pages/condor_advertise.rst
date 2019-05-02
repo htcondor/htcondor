@@ -1,4 +1,4 @@
-      
+      
 
 *condor_advertise*
 ===================
@@ -9,10 +9,10 @@ Send a ClassAd to the *condor_collector* daemon
 Synopsis
 --------
 
-**condor_advertise** [**-help \| -version**\ ]
+**condor_advertise** [**-help | -version** ]
 
-**condor_advertise** [**-pool  **\ *centralmanagerhostname[:portname]*]
-[**-debug**\ ] [**-tcp**\ ] [**-udp**\ ] [**-multiple**\ ]
+**condor_advertise** [**-pool** *centralmanagerhostname[:portname]*]
+[**-debug** ] [**-tcp** ] [**-udp** ] [**-multiple** ]
 [*update-command [classad-filename]*]
 
 Description
@@ -73,9 +73,9 @@ consists of three entries. The file contents will be similar to:
 
 ::
 
-    MyType = "Query" 
-    TargetType = "Machine" 
-    Requirements = Name == "condor.example.com"
+    MyType = "Query" 
+    TargetType = "Machine" 
+    Requirements = Name == "condor.example.com"
 
 The definition for ``MyType`` is always ``Query``. ``TargetType`` is set
 to the ``MyType`` of the ad to be deleted. This ``MyType`` is
@@ -99,7 +99,7 @@ Options
  **-multiple**
     Send more than one ClassAd, where the boundary between ClassAds is
     one or more blank lines.
- **-pool **\ *centralmanagerhostname[:portname]*
+ **-pool** *centralmanagerhostname[:portname]*
     Specify a pool by giving the central manager's host name and an
     optional port number. The default is the ``COLLECTOR_HOST``
     specified in the configuration file.
@@ -148,15 +148,15 @@ machine's *condor_startd* ClassAd. Create a file (called
 
 ::
 
-    MyType = "Query" 
-    TargetType = "Machine" 
-    Requirements = Name == "condor.example.com"
+    MyType = "Query" 
+    TargetType = "Machine" 
+    Requirements = Name == "condor.example.com"
 
 This file is used with the command:
 
 ::
 
-    % condor_advertise INVALIDATE_STARTD_ADS remove_file
+    % condor_advertise INVALIDATE_STARTD_ADS remove_file
 
 Exit Status
 -----------
@@ -172,13 +172,13 @@ failure.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

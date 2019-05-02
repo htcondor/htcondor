@@ -1,5 +1,3 @@
-      
-
 Logging in HTCondor
 ===================
 
@@ -13,18 +11,18 @@ identification.
 Job and Daemon Logs
 -------------------
 
- job event log
+job event log
     The job event log is an optional, chronological list of events that
     occur as a job runs. The job event log is written on the submit
     machine. The submit description file for the job requests a job
     event log with the submit command
-    **log**\ :index:`log<single: log; submit commands>`. The log is created
+    **log** :index:`log<single: log; submit commands>`. The log is created
     and remains on the submit machine. Contents of the log are detailed
-    in section \ `Managing a
-    Job <../users-manual/managing-a-job.html>`__. Examples of events are
+    in the :doc:`/users-manual/managing-a-job` section. Examples of events are
     that the job is running, that the job is placed on hold, or that the
     job completed.
- daemon logs
+
+daemon logs
     Each daemon configured to have a log writes events relevant to that
     daemon. Each event written consists of a timestamp and message. The
     name of the log file is set by the value of configuration variable
@@ -54,17 +52,17 @@ Job and Daemon Logs
      ``LOG_TO_SYSLOG`` :index:`LOG_TO_SYSLOG`
 
     Daemon logs are often investigated to accomplish administrative
-    debugging. *condor\_config\_val* can be used to determine the
+    debugging. *condor_config_val* can be used to determine the
     location and file name of the daemon log. For example, to display
-    the location of the log for the *condor\_collector* daemon, use
+    the location of the log for the *condor_collector* daemon, use
 
     ::
 
-          condor_config_val COLLECTOR_LOG
+          condor_config_val COLLECTOR_LOG
 
- job queue log
+job queue log
     The job queue log is a transactional representation of the current
-    job queue. If the *condor\_schedd* crashes, the job queue can be
+    job queue. If the *condor_schedd* crashes, the job queue can be
     rebuilt using this log. The file name is set by configuration
     variable ``JOB_QUEUE_LOG`` :index:`JOB_QUEUE_LOG`, and
     defaults to ``$(SPOOL)/job_queue.log``.
@@ -85,11 +83,11 @@ Job and Daemon Logs
      ``QUEUE_CLEAN_INTERVAL`` :index:`QUEUE_CLEAN_INTERVAL`
      ``MAX_JOB_QUEUE_LOG_ROTATIONS`` :index:`MAX_JOB_QUEUE_LOG_ROTATIONS`
 
- *condor\_schedd* audit log
-    The optional *condor\_schedd* audit log records user-initiated
+*condor_schedd* audit log
+    The optional *condor_schedd* audit log records user-initiated
     events that modify the job queue, such as invocations of
-    *condor\_submit*, *condor\_rm*, *condor\_hold* and
-    *condor\_release*. Each event has a time stamp and a message that
+    *condor_submit*, *condor_rm*, *condor_hold* and
+    *condor_release*. Each event has a time stamp and a message that
     describes details of the event.
 
     This log exists to help administrators track the activities of pool
@@ -103,8 +101,8 @@ Job and Daemon Logs
      ``MAX_SCHEDD_AUDIT_LOG`` :index:`MAX_SCHEDD_AUDIT_LOG`
      ``MAX_NUM_SCHEDD_AUDIT_LOG`` :index:`MAX_NUM_SCHEDD_AUDIT_LOG`
 
- *condor\_shared\_port* audit log
-    The optional *condor\_shared\_port* audit log records connections
+*condor_shared_port* audit log
+    The optional *condor_shared_port* audit log records connections
     made through the ``DAEMON_SOCKET_DIR``
     :index:`DAEMON_SOCKET_DIR`. Each record includes the source
     address, the socket file name, and the target process's PID, UID,
@@ -121,7 +119,7 @@ Job and Daemon Logs
      ``MAX_SHARED_PORT_AUDIT_LOG``:index:`MAX_SHARED_PORT_AUDIT_LOG`
      ``MAX_NUM_SHARED_PORT_AUDIT_LOG`` :index:`MAX_NUM_SHARED_PORT_AUDIT_LOG`
 
- event log
+event log
     The event log is an optional, chronological list of events that
     occur for all jobs and all users. The events logged are the same as
     those that would go into a job event log. The file name is set by
@@ -140,12 +138,12 @@ Job and Daemon Logs
      ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS`` :index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS`
      ``EVENT_LOG_USE_XML`` :index:`EVENT_LOG_USE_XML`
 
- accountant log
+accountant log
     The accountant log is a transactional representation of the
-    *condor\_negotiator* daemon's database of accounting information,
+    *condor_negotiator* daemon's database of accounting information,
     which are user priorities. The file name of the accountant log is
     ``$(SPOOL)/Accountantnew.log``. Within the log, users are identified
-    by username@uid\_domain.
+    by username@uid_domain.
 
     To reduce the size and remove information that is no longer
     relevant, a copy of the log is made when its size hits the number of
@@ -154,22 +152,23 @@ Job and Daemon Logs
     more compact form.
 
     Administrators can change user priorities kept in this log by using
-    the command line tool *condor\_userprio*.
+    the command line tool *condor_userprio*.
 
- negotiator match log
+negotiator match log
     The negotiator match log is a second daemon log from the
-    *condor\_negotiator* daemon. Events written to this log are those
+    *condor_negotiator* daemon. Events written to this log are those
     with debug level of ``D_MATCH``. The file name is set by
     configuration variable ``NEGOTIATOR_MATCH_LOG``
     :index:`NEGOTIATOR_MATCH_LOG`, and defaults to
     ``$(LOG)/MatchLog``.
- history log
+
+history log
     This optional log contains information about all jobs that have been
-    completed. It is written by the *condor\_schedd* daemon. The file
+    completed. It is written by the *condor_schedd* daemon. The file
     name is ``$(SPOOL)/history``.
 
     Administrators can change view this historical information by using
-    the command line tool *condor\_history*.
+    the command line tool *condor_history*.
 
     Configuration variables that affect the history log, setting details
     such as the maximum size to which this log may grow are
@@ -181,7 +180,7 @@ Job and Daemon Logs
 DAGMan Logs
 -----------
 
- default node log
+default node log
     A job event log of all node jobs within a single DAG. It is used to
     enforce the dependencies of the DAG.
 
@@ -191,15 +190,14 @@ DAGMan Logs
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    section \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__ for the
+    the :doc:`/admin-manual/configuration-macros` section for the
     complete definition.
 
     Configuration variables that affect this log are
 
      ``DAGMAN_ALWAYS_USE_NODE_LOG`` :index:`DAGMAN_ALWAYS_USE_NODE_LOG`
 
- the ``.dagman.out`` file
+the ``.dagman.out`` file
     A log created or appended to for each DAG submitted with timestamped
     events and extra information about the configuration applied to the
     DAG. The name of this log is formed by appending ``.dagman.out`` to
@@ -215,12 +213,12 @@ DAGMan Logs
      ``DAGMAN_VERBOSITY`` :index:`DAGMAN_VERBOSITY`
      ``DAGMAN_PENDING_REPORT_INTERVAL`` :index:`DAGMAN_PENDING_REPORT_INTERVAL`
 
- the ``jobstate.log`` file
+the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. Section \ `DAGMan
-    Applications <../users-manual/dagman-applications.html>`__ details
+    DAG. Section `DAGMan
+    Applications <../users-manual/dagman-applications.html>`_ details
     this log.
 
 :index:`logging`
 
-      
+

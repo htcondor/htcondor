@@ -1,5 +1,3 @@
-      
-
 The HTCondor User and Job Log Reader API
 ========================================
 
@@ -10,7 +8,7 @@ The HTCondor User and Job Log Reader API
 
 HTCondor has the ability to log an HTCondor job's significant events
 during its lifetime. This is enabled in the job's submit description
-file with the **Log**\ :index:`Log<single: Log; submit commands>` command.
+file with the **Log** :index:`Log<single: Log; submit commands>` command.
 
 This section describes the API defined by the C++ ``ReadUserLog`` class,
 which provides a programming interface for applications to read and
@@ -65,7 +63,7 @@ will be removed. The application will need to call the appropriate
       NOTE: The ``isEventLog`` parameter will be removed in the future.
 
 -  | ReadUserLog::ReadUserLog(FILE \*fp, bool is_xml, bool enable_close
-   | **Synopsis:** Constructor of a limited functionality reader: 
+   | **Synopsis:** Constructor of a limited functionality reader:
      no rotation handling, no locking
    | **Returns:** None
    | **Constructor** parameters:
@@ -152,7 +150,7 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.
@@ -174,7 +172,7 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.
@@ -279,19 +277,19 @@ To save the state, do something like this:
 
 ::
 
-      ReadUserLog                reader; 
-      ReadUserLog::FileState     statebuf; 
-     
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-     
-      status = UninitFileState( statebuf );
+      ReadUserLog                reader;
+      ReadUserLog::FileState     statebuf;
+
+      status = ReadUserLog::InitFileState( statebuf );
+
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+
+      status = UninitFileState( statebuf );
 
 Restore state from persistent storage
 -------------------------------------
@@ -300,16 +298,16 @@ To restore the state, do something like this:
 
 ::
 
-      ReadUserLog::FileState     statebuf; 
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      read( fd, statebuf.buf, statebuf.size ); 
-     
-      ReadUserLog                reader; 
-      status = reader.initialize( statebuf ); 
-     
-      status = UninitFileState( statebuf ); 
-      ....
+      ReadUserLog::FileState     statebuf;
+      status = ReadUserLog::InitFileState( statebuf );
+
+      read( fd, statebuf.buf, statebuf.size );
+
+      ReadUserLog                reader;
+      status = reader.initialize( statebuf );
+
+      status = UninitFileState( statebuf );
+      ....
 
 API Reference
 -------------
@@ -538,4 +536,4 @@ initialize.
 Additionally, the functionality of ``ReadUserLogStateAccess`` will be
 integrated into this class.
 
-      
+

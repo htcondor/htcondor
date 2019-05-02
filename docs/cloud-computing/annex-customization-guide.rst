@@ -1,20 +1,18 @@
-      
-
 HTCondor Annex Customization Guide
 ==================================
 
-Aside from the configuration macros (see section `HTCondor Annex
-Configuration <../cloud-computing/annex-configuration.html>`__, below),
-the major way to customize *condor\_annex* is my customizing the default
-disk image. Because the implementation of *condor\_annex* varies from
-service to service, and that implementation determines the constraints
-on the disk image, the this section is divided by service.
+Aside from the configuration macros (see the 
+:doc:`/cloud-computing/annex-configuration` section), the major way to 
+ustomize *condor_annex* is my customizing the default disk image. Because
+the implementation of *condor_annex* varies from service to service, and that
+implementation determines the constraints on the disk image, the this section
+is divided by service.
 
 Amazon Web Services
 -------------------
 
 Requirements for an Annex-compatible AMI are driven by how
-*condor\_annex* securely transports HTCondor configuration and security
+*condor_annex* securely transports HTCondor configuration and security
 tokens to the instances; we will discuss that implementation briefly, to
 help you understand the requirements, even though it will hopefully
 never matter to you.
@@ -62,12 +60,12 @@ setup procedure includes permission to read files matching the pattern
 config-\*.tar.gz from a particular private S3 bucket. If the instance
 finds permissions matching that pattern, it assumes that the
 corresponding S3 bucket is the one from which it should download, and
-does so; if successful, it untars the file in /etc/condor/config.d.
+does so; if successful, it untars the file in ``/etc/condor/config.d``.
 
-In v8.7.1, the script executing these steps is named 49ec2-instance.sh,
+In v8.7.1, the script executing these steps is named ``49ec2-instance.sh``,
 and is called during configuration when HTCondor first starts up.
 
-In v8.7.2, the script executing these steps is named condor-annex-ec2,
+In v8.7.2, the script executing these steps is named ``condor-annex-ec2``,
 and is called during system start-up.
 
 The HTCondor configuration and security tokens are at this point
@@ -80,7 +78,7 @@ to forbid any non-root process from accessing the metadata server.
 Image Requirements
 ''''''''''''''''''
 
-Thus, to work with *condor\_annex*, an AWS AMI must:
+Thus, to work with *condor_annex*, an AWS AMI must:
 
 -  Fetch the HTCondor configuration and security tokens from S3;
 -  configure HTCondor to turn off after it's been idle for too long;
@@ -96,10 +94,10 @@ The default disk image implements the above as follows:
    :index:`STARTD_NOCLAIM_SHUTDOWN`);
 -  with a configuration item (``DEFAULT_MASTER_SHUTDOWN_SCRIPT``
    :index:`DEFAULT_MASTER_SHUTDOWN_SCRIPT`) and the corresponding
-   script (/etc/condor/master\_shutdown.sh), which just turns around and
+   script (/etc/condor/master_shutdown.sh), which just turns around and
    runs shutdown -h now.
 
-We also strongly recommend that every *condor\_annex* disk image:
+We also strongly recommend that every *condor_annex* disk image:
 
 -  Advertise, in the master and startd, the instance ID.
 -  Use the instance's public IP, by setting ``TCP_FORWARDING_HOST``
@@ -115,15 +113,15 @@ Instance Roles
 
 To explain the last point immediately above, EC2 stores (temporary)
 credentials for the role, if any, associated with an instance on that
-instance's meta-data server, which may be accessed via HTTP at a well-
-known address (currently 169.254.169.254). Unless otherwise configured,
+instance's meta-data server, which may be accessed via HTTP at a well-known
+address (currently ``169.254.169.254``). Unless otherwise configured,
 any process in the instance can access the meta-data server and thereby
 make use of the instance's credentials.
 
 Until version 8.9.0, there was no HTCondor-based reason to run an EC2
 instance with an instance role. Starting in 8.9.0, however, HTCondor
 gained the ability to use the instance role's credentials to run EC2
-universe jobs and *condor\_annex* commands. This has several advantages
+universe jobs and *condor_annex* commands. This has several advantages
 over copying credentials into the instance: it may be more convenient,
 and if you're the only user of the instance, it's more secure, because
 the instance's credentials expire when the instance does.
@@ -132,7 +130,7 @@ However, wanting to allow (other) users to run jobs on or submit jobs to
 your instance may not mean you want them to able to act with the
 instance's privileges (e.g., starting more instances on your account).
 Although securing your instances ultimately remains your responsibility,
-the default images we provide for *condor\_annex*, and the
+the default images we provide for *condor_annex*, and the
 condor-annex-ec2 package, both use the kernel-level firewall to prevent
 access to the metadata server by any process not owned by root. Because
 this firewall rule is added during the boot sequence, it will be in
@@ -150,4 +148,4 @@ Google Cloud Platform
 
 Not implemented as of v8.7.8.
 
-      
+

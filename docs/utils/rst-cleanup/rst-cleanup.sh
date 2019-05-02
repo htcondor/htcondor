@@ -137,11 +137,11 @@
 ./rst-cleanup.py ../../man-pages/condor_run.rst ../../man-pages/condor_run.rst
 ./rst-cleanup.py ../../man-pages/condor_set_shutdown.rst ../../man-pages/condor_set_shutdown.rst
 ./rst-cleanup.py ../../man-pages/condor_sos.rst ../../man-pages/condor_sos.rst
-./rst-cleanup.py ../../man-pages/condor_sshtojob.rst ../../man-pages/condor_sshtojob.rst
+./rst-cleanup.py ../../man-pages/condor_ssh_to_job.rst ../../man-pages/condor_ssh_to_job.rst
 ./rst-cleanup.py ../../man-pages/condor_stats.rst ../../man-pages/condor_stats.rst
 ./rst-cleanup.py ../../man-pages/condor_status.rst ../../man-pages/condor_status.rst
-./rst-cleanup.py ../../man-pages/condor_storecred.rst ../../man-pages/condor_storecred.rst
-./rst-cleanup.py ../../man-pages/condor_submitdag.rst ../../man-pages/condor_submitdag.rst
+./rst-cleanup.py ../../man-pages/condor_store_cred.rst ../../man-pages/condor_store_cred.rst
+./rst-cleanup.py ../../man-pages/condor_submit_dag.rst ../../man-pages/condor_submit_dag.rst
 ./rst-cleanup.py ../../man-pages/condor_submit.rst ../../man-pages/condor_submit.rst
 ./rst-cleanup.py ../../man-pages/condor_suspend.rst ../../man-pages/condor_suspend.rst
 ./rst-cleanup.py ../../man-pages/condor_tail.rst ../../man-pages/condor_tail.rst
@@ -173,7 +173,7 @@
 ./rst-cleanup.py ../../classad-attributes/classad-attributes-added-by-collector.rst ../../classad-attributes/classad-attributes-added-by-collector.rst
 ./rst-cleanup.py ../../classad-attributes/daemon-core-statistics-attributes.rst ../../classad-attributes/daemon-core-statistics-attributes.rst
 ./rst-cleanup.py ../../codes-other-values/index.rst ../../codes-other-values/index.rst
-./rst-cleanup.py ../../man-pages/condor_shadow-exit-codes.rst ../../man-pages/condor_shadow-exit-codes.rst
+./rst-cleanup.py ../../codes-other-values/condor_shadow-exit-codes.rst ../../codes-other-values/condor_shadow-exit-codes.rst
 ./rst-cleanup.py ../../codes-other-values/job-event-log-codes.rst ../../codes-other-values/job-event-log-codes.rst
 ./rst-cleanup.py ../../codes-other-values/well-known-port-numbers.rst ../../codes-other-values/well-known-port-numbers.rst
 ./rst-cleanup.py ../../codes-other-values/daemoncore-command-numbers.rst ../../codes-other-values/daemoncore-command-numbers.rst

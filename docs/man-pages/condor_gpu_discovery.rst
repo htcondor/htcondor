@@ -1,4 +1,4 @@
-      
+      
 
 *condor_gpu_discovery*
 ========================
@@ -11,7 +11,7 @@ Synopsis
 
 **condor_gpu_discovery** **-help**
 
-**condor_gpu_discovery** [**<options>**\ ]
+**condor_gpu_discovery** [**<options>** ]
 
 Description
 -----------
@@ -43,7 +43,7 @@ output
 
 ::
 
-    DetectedGPUs="CUDA0, CUDA1"
+    DetectedGPUs="CUDA0, CUDA1"
 
 Further command line options use ``"CUDA"`` either with or without one
 of the integer values 0 or 1 as the *prefix string* in attribute names.
@@ -77,19 +77,19 @@ Options
     When displaying attribute values, assume that the machine has a
     heterogeneous set of GPUs, so always include the integer value in
     the *prefix string*.
- **-device **\ *<N>*
+ **-device** *<N>*
     Display properties only for GPU device *<N>*, where *<N>* is the
     integer value defined for the *prefix string*. This option may be
     specified more than once; additional *<N>* are listed along with the
     first. This option adds to the devices(s) specified by the
     environment variables ``CUDA_VISIBLE_DEVICES`` and
     ``GPU_DEVICE_ORDINAL``, if any.
- **-tag **\ *string*
+ **-tag** *string*
     Set the resource tag portion of the intended machine ClassAd
     attribute ``Detected<ResourceTag>`` to be *string*. If this option
     is not specified, the resource tag is ``"GPUs"``, resulting in
     attribute name ``DetectedGPUs``.
- **-prefix **\ *str*
+ **-prefix** *str*
     When naming attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
     ``OCL``.
@@ -120,8 +120,8 @@ Options
 
     ::
 
-          use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron) 
-          
+          use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron) 
+          
 
  **-verbose**
     For interactive use of the tool, output extra information to show
@@ -138,13 +138,13 @@ success, and it will exit with the value 1 (one) upon failure.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

@@ -1,5 +1,3 @@
-      
-
 *condor_dagman*
 ===============
 
@@ -13,20 +11,20 @@ Synopsis
 
 **condor_dagman** **-version**
 
-**condor_dagman** *-f* *-l .* **-csdversion **\ *version_string*
-[**-debug  **\ *level*] [**-maxidle  **\ *numberOfProcs*]
-[**-maxjobs  **\ *numberOfJobs*] [**-maxpre  **\ *NumberOfPreScripts*]
-[**-maxpost  **\ *NumberOfPostScripts*] [**-noeventchecks**\ ]
-[**-allowlogerror**\ ] [**-usedagdir**\ ] **-lockfile **\ *filename*
-[**-waitfordebug**\ ] [**-autorescue  **\ *0\|1*]
-[**-dorescuefrom  **\ *number*] [**-allowversionmismatch**\ ]
-[**-DumpRescue**\ ] [**-verbose**\ ] [**-force**\ ]
-[**-notification  **\ *value*] [**-suppress_notification**\ ]
-[**-dont_suppress_notification**\ ]
-[**-dagman  **\ *DagmanExecutable*] [**-outfile_dir  **\ *directory*]
-[**-update_submit**\ ] [**-import_env**\ ] [**-priority  **\ *number*]
-[**-dont_use_default_node_log**\ ] [**-DontAlwaysRunPost**\ ]
-[**-AlwaysRunPost**\ ] [**-DoRecovery**\ ] **-dag **\ *dag_file*
+**condor_dagman** *-f* *-l .* **-csdversion** *version_string*
+[**-debug** *level*] [**-maxidle** *numberOfProcs*]
+[**-maxjobs** *numberOfJobs*] [**-maxpre** *NumberOfPreScripts*]
+[**-maxpost** *NumberOfPostScripts*] [**-noeventchecks** ]
+[**-allowlogerror** ] [**-usedagdir** ] **-lockfile** *filename*
+[**-waitfordebug** ] [**-autorescue** *0|1*]
+[**-dorescuefrom** *number*] [**-allowversionmismatch** ]
+[**-DumpRescue** ] [**-verbose** ] [**-force** ]
+[**-notification** *value*] [**-suppress_notification** ]
+[**-dont_suppress_notification** ]
+[**-dagman** *DagmanExecutable*] [**-outfile_dir** *directory*]
+[**-update_submit** ] [**-import_env** ] [**-priority** *number*]
+[**-dont_use_default_node_log** ] [**-DontAlwaysRunPost** ]
+[**-AlwaysRunPost** ] [**-DoRecovery** ] **-dag** *dag_file*
 [**-dag** *dag_file_2* ... **-dag** *dag_file_n* ]
 
 Description
@@ -55,10 +53,10 @@ Arguments to *condor_dagman* are either automatically set by
 which the arguments are set is given in their description below.
 
 *condor_dagman* can run multiple, independent DAGs. This is done by
-specifying multiple **-dag **\ *a*\ rguments. Pass multiple DAG input
+specifying multiple **-dag** *a* rguments. Pass multiple DAG input
 files as command-line arguments to *condor_submit_dag*.
 
-Debugging output may be obtained by using the **-debug **\ *level*
+Debugging output may be obtained by using the **-debug** *level*
 option. Level values and what they produce is described as
 
 -  level = 0; never produce output, except for usage info
@@ -79,58 +77,57 @@ Options
     Display usage information and exit.
  **-version**
     Display version information and exit.
- **-debug **\ *level*
+ **-debug** *level*
     An integer level of debugging output. *level* is an integer, with
     values of 0-7 inclusive, where 7 is the most verbose output. This
     command-line option to *condor_submit_dag* is passed to
     *condor_dagman* or defaults to the value 3.
- **-maxidle **\ *NumberOfProcs*
+ **-maxidle** *NumberOfProcs*
     Sets the maximum number of idle procs allowed before
     *condor_dagman* stops submitting more node jobs. Note that for this
     argument, each individual proc within a cluster counts as a towards
-    the limit, which is inconsistent with **-maxjobs **\ *.* Once idle
+    the limit, which is inconsistent with **-maxjobs** *.* Once idle
     procs start to run, *condor_dagman* will resume submitting jobs
     once the number of idle procs falls below the specified limit.
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
-    defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
-    Note that submit description files that queue multiple procs can
+    :index:`DAGMAN_MAX_JOBS_IDLE` (see
+    :ref:`admin-manual/configuration-macros:configuration file entries for
+    dagman`), which defaults to 1000. To disable this limit, set *NumberOfProcs*
+    to 0. Note that submit description files that queue multiple procs can
     cause the *NumberOfProcs* limit to be exceeded. Setting
     ``queue 5000`` in the submit description file, where *-maxidle* is
     set to 250 will result in a cluster of 5000 new procs being
     submitted to the *condor_schedd*, not 250. In this case,
     *condor_dagman* will resume submitting jobs when the number of idle
     procs falls below 250.
- **-maxjobs **\ *NumberOfClusters*
+ **-maxjobs** *NumberOfClusters*
     Sets the maximum number of clusters within the DAG that will be
     submitted to HTCondor at one time. Note that for this argument, each
     cluster counts as one job, no matter how many individual procs are
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
-    :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
-    defaults to 0 (unlimited).
- **-maxpre **\ *NumberOfPreScripts*
+    :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see
+    :ref:`admin-manual/configuration-macros:configuration file entries for
+    dagman`), which defaults to 0 (unlimited).
+ **-maxpre** *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
     the configuration variable
     ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS`
-    (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
-    defaults to 20.
- **-maxpost **\ *NumberOfPostScripts*
+    (see :ref:`admin-manual/configuration-macros:configuration file entries for
+    dagman`), which defaults to 20.
+ **-maxpost** *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    :index:`DAGMAN_MAX_POST_SCRIPTS` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
-    defaults to 20.
+    :index:`DAGMAN_MAX_POST_SCRIPTS` (see
+    :ref:`admin-manual/configuration-macros:configuration file entries for
+    dagman`), which defaults to 20.
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
     functionality is now implemented by the ``DAGMAN_ALLOW_EVENTS``
@@ -143,7 +140,7 @@ Options
     DAG as if the directory containing that DAG file was the current
     working directory. This option is most useful when running multiple
     DAGs in a single *condor_dagman*.
- **-lockfile **\ *filename*
+ **-lockfile** *filename*
     Names the file created and used as a lock file. The lock file
     prevents execution of two of the same DAG, as defined by a DAG input
     file. A default lock file ending with the suffix ``.dag.lock`` is
@@ -152,10 +149,10 @@ Options
     This optional argument causes *condor_dagman* to wait at startup
     until someone attaches to the process with a debugger and sets the
     wait_for_debug variable in main_init() to false.
- **-autorescue **\ *0\|1*
+ **-autorescue** *0|1*
     Whether to automatically run the newest rescue DAG for the given DAG
     file, if one exists (0 = ``false``, 1 = ``true``).
- **-dorescuefrom **\ *number*
+ **-dorescuefrom** *number*
     Forces *condor_dagman* to run the specified rescue DAG number for
     the given DAG. A value of 0 is the same as not specifying this
     option. Specifying a nonexistent rescue DAG is a fatal error.
@@ -194,7 +191,7 @@ Options
     existing old-style rescue DAGs will be deleted, and the original DAG
     will be run. See the HTCondor manual section on Rescue DAGs for more
     information.
- **-notification **\ *value*
+ **-notification** *value*
     This argument is only included to be passed to *condor_submit_dag*
     if lazy submit file generation is used for nested DAGs. Sets the
     e-mail notification for DAGMan itself. This information will be used
@@ -221,13 +218,13 @@ Options
     job itself. If both **-dont_suppress_notification** and
     **-suppress_notification** are specified within the same command
     line, the last argument is used.
- **-dagman **\ *DagmanExecutable*
+ **-dagman** *DagmanExecutable*
     (This argument is included only to be passed to
     *condor_submit_dag* if lazy submit file generation is used for
     nested DAGs.) Allows the specification of an alternate
     *condor_dagman* executable to be used instead of the one found in
     the user's path. This must be a fully qualified path.
- **-outfile_dir **\ *directory*
+ **-outfile_dir** *directory*
     (This argument is included only to be passed to
     *condor_submit_dag* if lazy submit file generation is used for
     nested DAGs.) Specifies the directory in which the ``.dagman.out``
@@ -250,7 +247,7 @@ Options
     nested DAGs.) This optional argument causes *condor_submit_dag* to
     import the current environment into the **environment** command of
     the ``.condor.sub`` file it generates.
- **-priority **\ *number*
+ **-priority** *number*
     Sets the minimum job priority of node jobs submitted and running
     under this *condor_dagman* job.
  **-dont_use_default_node_log**
@@ -272,7 +269,7 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     it reads the relevant job user log(s) and catches up to the given
     DAG's previous state before submitting any new jobs.
- **-dag **\ *filename*
+ **-dag** *filename*
     *filename* is the name of the DAG input file that is set as an
     argument to *condor_submit_dag*, and passed to *condor_dagman*.
 
@@ -286,20 +283,19 @@ Examples
 --------
 
 *condor_dagman* is normally not run directly, but submitted as an
-HTCondor job by running condor_submit_dag. See the condor_submit_dag
-manual page \ `condor_submitdag <../man-pages/condor_submitdag.html>`__
-for examples.
+HTCondor job by running condor_submit_dag. See the
+:doc:`/man-pages/condor_submit_dag` manual page for examples.
 
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

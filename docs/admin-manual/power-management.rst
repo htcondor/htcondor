@@ -1,5 +1,3 @@
-      
-
 Power Management
 ================
 
@@ -25,12 +23,9 @@ that a low power state is desired.
 
 A slot's readiness to hibernate is determined by the evaluating the
 ``HIBERNATE`` :index:`HIBERNATE` configuration variable (see
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__) within the
-context of the slot. Readiness is evaluated at fixed intervals, as
-determined by the ``HIBERNATE_CHECK_INTERVAL``
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section) within the context of the slot. Readiness is evaluated at
+fixed intervals, as determined by the ``HIBERNATE_CHECK_INTERVAL``
 :index:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
@@ -43,7 +38,7 @@ configuration:
 
 ::
 
-    HIBERNATE_CHECK_INTERVAL = 20
+    HIBERNATE_CHECK_INTERVAL = 20
 
 This checks each slot's readiness every 20 seconds. A more common value
 for frequency of checks is 300 (5 minutes). A value of 300 loses some
@@ -66,10 +61,10 @@ macro called ``ShouldHibernate``.
 
 ::
 
-    TimeToWait  = (2 * $(HOUR)) 
-    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \ 
-                        && $(CPUIdle) \ 
-                        && ($(StateTimer) > $(TimeToWait)) )
+    TimeToWait  = (2 * $(HOUR))
+    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                        && $(CPUIdle) \
+                        && ($(StateTimer) > $(TimeToWait)) )
 
 This macro evaluates to ``True`` if the following are all ``True``:
 
@@ -83,8 +78,8 @@ current state otherwise is
 
 ::
 
-    HibernateState  = "RAM" 
-    HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
+    HibernateState  = "RAM"
+    HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
 
 If any slot returns "NONE", that slot vetoes the decision to enter a low
 power state. Only when values returned by all slots are all non-zero is
@@ -97,41 +92,33 @@ Returning From a Low Power State
 
 :index:`leaving a low power state<single: leaving a low power state; power management>`
 
-The HTCondor command line tool *condor\_power* may wake a machine from a
+The HTCondor command line tool *condor_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
-*condor\_power* manual page on
-page \ `condor\_power <../man-pages/condor_power.html>`__.
+*condor_power* manual page (:doc:`/man-pages/condor_power`).
 :index:`condor_rooster daemon`
 
-To automatically call *condor\_power* under specific conditions,
-*condor\_rooster* may be used. The configuration options for
-*condor\_rooster* are described in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__.
+To automatically call *condor_power* under specific conditions,
+*condor_rooster* may be used. The configuration options for
+*condor_rooster* are described in the :doc:`/admin-manual/configuration-macros` section.
 
 Keeping a ClassAd for a Hibernating Machine
 -------------------------------------------
 
-A pool's *condor\_collector* daemon can be configured to keep a
+A pool's *condor_collector* daemon can be configured to keep a
 persistent ClassAd entry for each machine, once it has entered
-hibernation. This is required by *condor\_rooster* so that it can
+hibernation. This is required by *condor_rooster* so that it can
 evaluate the ``UNHIBERNATE`` :index:`UNHIBERNATE` expression of
 the offline machines.
 
 To do this, define a log file using the ``OFFLINE_LOG``
 :index:`OFFLINE_LOG` configuration variable. See
-section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
-definition. An optional expiration time for each ClassAd can be
-specified with ``OFFLINE_EXPIRE_ADS_AFTER``
+the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+macros` section for the definition. An optional expiration time for each
+ClassAd can be specified with ``OFFLINE_EXPIRE_ADS_AFTER``
 :index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
-the hibernating machine's ClassAd enters the *condor\_collector* daemon.
-See section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
-definition.
+the hibernating machine's ClassAd enters the *condor_collector* daemon.
+See the :ref:`admin-manual/configuration-macros:condor_startd configuration
+file macros` section for the definition.
 
 Linux Platform Details
 ----------------------
@@ -158,13 +145,10 @@ chosen.
 This ordered detection may be bypassed, to use a specified method
 instead by setting the configuration variable
 ``LINUX_HIBERNATION_METHOD`` with one of the defined strings. This
-variable is defined in section \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ on
-page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. If no usable
-methods are detected or the method specified by
-``LINUX_HIBERNATION_METHOD`` is either not detected or invalid,
-hibernation is disabled.
+variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section. If no usable methods are detected or the
+method specified by ``LINUX_HIBERNATION_METHOD`` is either not detected or
+invalid, hibernation is disabled.
 
 The details of this selection process, and the final method selected can
 be logged via enabling ``D_FULLDEBUG`` in the relevant subsystem's log
@@ -188,14 +172,14 @@ power states of the machine:
 
 ::
 
-    > powercfg -A 
-    The following sleep states are available on this system: 
-    Standby (S3) Hibernate Hybrid Sleep 
-    The following sleep states are not available on this system: 
-    Standby (S1) 
-            The system firmware does not support this standby state. 
-    Standby (S2) 
-            The system firmware does not support this standby state.
+    > powercfg -A
+    The following sleep states are available on this system:
+    Standby (S3) Hibernate Hybrid Sleep
+    The following sleep states are not available on this system:
+    Standby (S1)
+            The system firmware does not support this standby state.
+    Standby (S2)
+            The system firmware does not support this standby state.
 
 Note that the ``HIBERNATE`` expression is written in terms of the Sn
 state, where n is the value evaluated from the expression.
@@ -205,7 +189,7 @@ This example turns hibernation on.
 
 ::
 
-    > powercfg -h on
+    > powercfg -h on
 
 If this tool is insufficient for configuring the machine in the manner
 required, the *Power Options* control panel application offers the full
@@ -215,4 +199,4 @@ lack the *powercfg* program, so all configuration must be done via the
 :index:`green computing` :index:`power management`
 :index:`administrators manual`
 
-      
+

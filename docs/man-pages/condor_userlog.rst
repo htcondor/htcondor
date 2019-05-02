@@ -1,6 +1,6 @@
-      
+      
 
-*condor\_userlog*
+*condor_userlog*
 =================
 
 Display and summarize job statistics from job log files.
@@ -9,19 +9,19 @@ Display and summarize job statistics from job log files.
 Synopsis
 --------
 
-**condor\_userlog** [**-help**\ ] [**-total \| -raw**\ ] [**-debug**\ ]
-[**-evict**\ ] [**-j  **\ *cluster \| cluster.proc*] [**-all**\ ]
-[**-hostname**\ ] *logfile …*
+**condor_userlog** [**-help** ] [**-total | -raw** ] [**-debug** ]
+[**-evict** ] [**-j** *cluster | cluster.proc*] [**-all** ]
+[**-hostname** ] *logfile ...*
 
 Description
 -----------
 
-*condor\_userlog* parses the information in job log files and displays
+*condor_userlog* parses the information in job log files and displays
 summaries for each workstation allocation and for each job. See the
-*condor\_submit* manual page for instructions for specifying that
+*condor_submit* manual page for instructions for specifying that
 HTCondor write a log file for your jobs.
 
-If **-total** is not specified, *condor\_userlog* will first display a
+If **-total** is not specified, *condor_userlog* will first display a
 record for each workstation allocation, which includes the following
 information:
 
@@ -43,18 +43,18 @@ information:
  Good Time
     The allocated time (days+hours:min) which contributed to the
     completion of this job. If the job exited during the allocation,
-    then this value will equal “Wall Time.” If the job performed a
+    then this value will equal "Wall Time." If the job performed a
     checkpoint, then the value equals the work saved in the checkpoint
     during this allocation. If the job did not exit or perform a
     checkpoint during this allocation, the value will be 0+00:00. This
-    value can be greater than 0 and less than “Wall Time” if the
+    value can be greater than 0 and less than "Wall Time" if the
     application completed a periodic checkpoint during the allocation
     but failed to checkpoint when evicted.
  CPU Usage
     The CPU time (days+hours:min) which contributed to the completion of
     this job.
 
-*condor\_userlog* will then display summary statistics per host:
+*condor_userlog* will then display summary statistics per host:
 
  Host/Job
     The IP address or host name for the host.
@@ -79,7 +79,7 @@ information:
  Util.
     This percentage is computed as CPU Usage divided by Good Time.
 
-*condor\_userlog* will then display summary statistics per job:
+*condor_userlog* will then display summary statistics per job:
 
  Host/Job
     The cluster/process id of the HTCondor job.
@@ -104,7 +104,7 @@ information:
  Util.
     This percentage is computed as CPU Usage divided by Good Time.
 
-Finally, *condor\_userlog* will display a summary for all hosts and
+Finally, *condor_userlog* will display a summary for all hosts and
 jobs.
 
 Options
@@ -138,19 +138,19 @@ ignored.
 Exit Status
 -----------
 
-*condor\_userlog* will exit with a status value of 0 (zero) upon
+*condor_userlog* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

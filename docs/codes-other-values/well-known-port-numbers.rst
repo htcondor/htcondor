@@ -1,7 +1,7 @@
 Well-known Port Numbers
 =======================
 
-Table B.3: Well-Known Port Numbers
+Table B.3: Well-Known Port Numbers
 
 +------------------------+----------------------------------------------+
 | Server                 | Port Number                                  |
@@ -18,4 +18,4 @@ Table B.3: Well-Known Port Numbers
 +------------------------+----------------------------------------------+
 
 
-      
+      

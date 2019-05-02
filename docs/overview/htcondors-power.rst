@@ -1,4 +1,4 @@
-      
+      
 
 HTCondor's Power
 ================
@@ -70,4 +70,4 @@ values: the priority the user assigned to the resource request ad, the
 priority of the user which submitted the ad, and desire of machines in
 the pool to accept certain types of ads over others.
 
-      
+      

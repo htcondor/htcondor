@@ -1,4 +1,4 @@
-      
+      
 
 High-Throughput Computing (HTC) and its Requirements
 ====================================================
@@ -51,4 +51,4 @@ personal desktop machines sit idle for very long periods of time while
 their owners are busy doing other things (such as being away at lunch,
 in meetings, or at home sleeping).
 
-      
+      

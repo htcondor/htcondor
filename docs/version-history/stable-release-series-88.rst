@@ -1,5 +1,3 @@
-      
-
 Stable Release Series 8.8
 =========================
 
@@ -21,7 +19,7 @@ New Features:
 
 -  Added a new parameter ``SINGULARITY_IS_SETUID``
    :index:`SINGULARITY_IS_SETUID`, which defaults to true. If
-   false, allows *condor\_ssh\_to\_job* to work when Singularity is
+   false, allows *condor_ssh_to_job* to work when Singularity is
    configured to run without the setuid wrapper. :ticket:`6931`
 -  The negotiator parameter ``NEGOTIATOR_DEPTH_FIRST``
    :index:`NEGOTIATOR_DEPTH_FIRST` has been added which, when
@@ -32,20 +30,20 @@ New Features:
 
 Bugs Fixed:
 
--  Support for the *condor\_ssh\_to\_job* command, when ssh'ing to a
+-  Support for the *condor_ssh_to_job* command, when ssh'ing to a
    Singularity job, requires the nsenter command. Previous versions of
    HTCondor relied on features of nsenter not universally available.
    8.8.2 now works with all known versions of nsenter. :ticket:`6934`
 -  Moved the execution of ``USER_JOB_WRAPPER``
    :index:`USER_JOB_WRAPPER` with Singularity jobs to be executed
    outside the container, not inside the container. :ticket:`6904`
--  Fixed a bug where *condor\_ssh\_to\_job* would not work to a Docker
+-  Fixed a bug where *condor_ssh_to_job* would not work to a Docker
    universe job when file transfer was off. :ticket:`6945`
 -  Included a patch from the development series that fixes problems that
-   could crash *condor\_annex* to crash. :ticket:`6980`
+   could crash *condor_annex* to crash. :ticket:`6980`
 -  Fixed a bug that could cause the ``job_queue.log`` file to be
-   corrupted when the *condor\_schedd* compacts it. :ticket:`6929`
--  The *condor\_userprio* command, when given the -negotiator and -l
+   corrupted when the *condor_schedd* compacts it. :ticket:`6929`
+-  The *condor_userprio* command, when given the -negotiator and -l
    options used to emit the value of the concurrency limits in the one
    large ClassAd it printed. This was removed in 8.8.0, but has been
    restored in 8.8.2. :ticket:`6948`
@@ -60,26 +58,26 @@ Bugs Fixed:
    neither singular nor a prefix. Also resolved a problem where
    administrators had to specify each attribute in that list, rather
    than via prefixes or via wildcards. :ticket:`6958`
--  The Condormaster now waits until the *condor\_procd* has exited
+-  The Condormaster now waits until the *condor_procd* has exited
    before exiting itself. This change helps to prevent problems on
    Windows with using the Service Control Manager to restart the Condor
    service. :ticket:`6952`
 -  Fixed a bug on Windows that could cause a delay of up to 2 minutes in
-   responding to *condor\_reconfig*, *condor\_restart* or *condor\_off*
+   responding to *condor_reconfig*, *condor_restart* or *condor_off*
    commands when using shared port. :ticket:`6960`
--  Fixed a bug that could cause the *condor\_schedd* on Windows to to
-   restart with the message "fd\_set is full". This change reduces that
-   maximum number of active connections that a *condor\_collector* or
-   *condor\_schedd* on Windows will allow from 1023 to 1014. :ticket:`6957`
+-  Fixed a bug that could cause the *condor_schedd* on Windows to to
+   restart with the message "fd_set is full". This change reduces that
+   maximum number of active connections that a *condor_collector* or
+   *condor_schedd* on Windows will allow from 1023 to 1014. :ticket:`6957`
 -  Fixed a bug where local universe jobs where unable to run
-   *condor\_submit* to their local schedd. :ticket:`6920`
+   *condor_submit* to their local schedd. :ticket:`6920`
 -  Restored the old Python bindings for reading the job event log
    (``EventIterator`` and ``read_events()``). These bindings are marked
    as deprecated, are not available in Python 3, and will likely be
    removed permanently in the 8.9 series. Users should transition to the
    replacement bindings (``JobEventLog``) :ticket:`6939`
 -  Fixed a bug that could cause entries in the job event log to be
-   written with the wrong job id when a *condor\_shadow* process is used
+   written with the wrong job id when a *condor_shadow* process is used
    to run multiple jobs. :ticket:`6919`
 -  In some situations, the bytes sent and bytes received values in the
    termination event of the job event log could be reversed. This has
@@ -107,7 +105,7 @@ Known Issues:
    :ticket:`6857`
 
 -  Discovered a bug in DAGMan where graph metrics reporting could
-   sometimes send the *condor\_dagman* process into an infinite loop. We
+   sometimes send the *condor_dagman* process into an infinite loop. We
    worked around this by disabling graph metrics reporting by default,
    via the new ``DAGMAN_REPORT_GRAPH_METRICS``
    :index:`DAGMAN_REPORT_GRAPH_METRICS` configuration knob.
@@ -119,7 +117,7 @@ New Features:
 
 Bugs Fixed:
 
--  Fixed a bug that caused *condor\_gpu\_discovery* to report the wrong
+-  Fixed a bug that caused *condor_gpu_discovery* to report the wrong
    value for DeviceMemory and possibly other attributes of the GPU when
    CUDA 10 was installed as the default run-time. Also fixed a bug that
    would sometimes cause the reported value of DeviceMemory to be
@@ -127,19 +125,19 @@ Bugs Fixed:
 -  Fixed bug that prevented HTCondor on Windows from running jobs in the
    default configuration when started as a service. :ticket:`6853`
 -  The Job Router no longer sets an incorrect ``User`` job attribute
-   when routing a job between two *condor\_schedd*\ s with different
+   when routing a job between two *condor_schedd* s with different
    values for configuration parameter ``UID_DOMAIN``. :ticket:`6856`
 -  Made Collector.locateAll() method more efficient in the Python
    bindings. :ticket:`6831`
--  Improved efficiency of negotiation code in the *condor\_schedd*.
+-  Improved efficiency of negotiation code in the *condor_schedd*.
    :ticket:`6834`
 -  The new ``minihtcondor`` package now starts HTCondor automatically at
    after installation. :ticket:`6888`
--  The *condor\_master* now sends status updates to *systemd* every 10
+-  The *condor_master* now sends status updates to *systemd* every 10
    seconds. :ticket:`6888`
--  *condor\_q* -autocluster data is now much more up-to-date. :ticket:`6833`
+-  *condor_q* -autocluster data is now much more up-to-date. :ticket:`6833`
 -  In order to work better with HTCondor 8.9.1 and later, remove support
-   for remote submission to *condor\_schedd*\ s older than version
+   for remote submission to *condor_schedd* s older than version
    7.5.0. :ticket:`6844`
 -  Fixed a bug that would cause DAGMan jobs to fail when using Kerberos
    Authentication on Debian or Ubuntu. :ticket:`6917`
@@ -166,18 +164,18 @@ New Features:
 -  Made the Python bindings' ``JobEvent`` API more Pythonic by handling
    optional event attributes as if the ``JobEvent`` object were a
    dictionary, instead. See section `Python
-   Bindings <../apis/python-bindings.html>`__ for details. :ticket:`6820`
+   Bindings <../apis/python-bindings.html>`_ for details. :ticket:`6820`
 -  Added job ad attribute ``BlockReadKbytes`` and ``BlockWriteKybtes``
    which describe the number of kbytes read and written by the job to
    the sandbox directory. These are only defined on Linux machines with
    cgroup support enabled for vanilla jobs. :ticket:`6826`
 -  The new ``IOWait`` attribute gives the I/O Wait time recorded by the
    cgroup controller. :ticket:`6830`
--  *condor\_ssh\_to\_job* is now configured to be more secure. In
+-  *condor_ssh_to_job* is now configured to be more secure. In
    particular, it will only use FIPS 140-2 approved algorithms. :ticket:`6822`
 -  Added configuration parameter ``CRED_SUPER_USERS``, a list of users
    who are permitted to store credentials for any user when using the
-   *condor\_store\_credd* command. Normally, users can only store
+   *condor_store_credd* command. Normally, users can only store
    credentials for themselves. :ticket:`6346`
 -  For packaged HTCondor installations, the package version is now
    present in the HTCondor version string. :ticket:`6828`
@@ -186,14 +184,14 @@ Bugs Fixed:
 
 -  Fixed a problem where a daemon would queue updates indefinitely when
    another daemon is offline. This is most noticeable as excess memory
-   utilization when a *condor\_schedd* is trying to flock to an offline
+   utilization when a *condor_schedd* is trying to flock to an offline
    HTCondor pool. :ticket:`6837`
 -  Fixed a bug where invoking the Python bindings as root could change
    the effective uid of the calling process. :ticket:`6817`
 -  Jobs in REMOVED status now properly leave the queue when evaluation
    of their ``LeaveJobInQueue`` attribute changes from ``True`` to
    ``False``. :ticket:`6808`
--  Fixed a rarely occurring bug where the *condor\_schedd* would crash
+-  Fixed a rarely occurring bug where the *condor_schedd* would crash
    when jobs were submitted with a ``queue`` statement with multiple
    keys. The bug was introduced in the 8.7.10 release. :ticket:`6827`
 -  Fixed a couple of bugs in the job event log reader code that were
@@ -202,7 +200,7 @@ Bugs Fixed:
    information from the job log correctly. :ticket:`6816`
    :ticket:`6836`
 -  On Debian and Ubuntu systems, the templates for
-   *condor\_ssh\_to\_job* and interactive submits are no longer
+   *condor_ssh_to_job* and interactive submits are no longer
    installed in ``/etc/condor``. :ticket:`6770`
 
-      
+
