@@ -3,7 +3,7 @@ Job Event Log Codes
 
 :index:`event codes for jobs<single: event codes for jobs; log files>`
 
-Table \ `B.2 <#x182-12460022>`_ lists codes that appear as the first
+Table `B.2 <#x182-12460022>`_ lists codes that appear as the first
 field within a job event log file. See more detailed descriptions of
 these values in the :doc:`/users-manual/managing-a-job` section.
 

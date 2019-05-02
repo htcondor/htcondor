@@ -294,14 +294,14 @@ nodes within the DAG. The success of a node is based upon the success of
 the job(s), PRE script, and POST script. A job, PRE script, or POST
 script with an exit value not equal to 0 is considered failed. **The
 exit value of whatever component of the node was run last determines the
-success or failure of the node.** Table \ `2.1 <#x22-810051>`_ lists
+success or failure of the node.** Table `2.1 <#x22-810051>`_ lists
 the definition of node success and failure for all variations of script
 and job success and failure, when ``DAGMAN_ALWAYS_RUN_POST`` is set to
 ``False``. In this table, a dash (``-``) represents the case where a
 script does not exist for the DAG, **S** represents success, and **F**
 represents failure.
 
-Table \ `2.2 <#x22-810062>`_ lists the definition of node success and
+Table `2.2 <#x22-810062>`_ lists the definition of node success and
 failure only for the cases where the PRE script fails, when
 ``DAGMAN_ALWAYS_RUN_POST`` is set to ``True``.
 

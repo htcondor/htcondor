@@ -1040,9 +1040,9 @@ right hand side operand, returning ``TRUE`` when they are identical.
 case-sensitive with the =?= operator.** A key point in understanding is that
 the ``=?=`` operator only produces evaluation results of ``TRUE`` and
 ``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``,
-``FALSE``, ``UNDEFINED``, or ``ERROR``. Table \ `4.1 <#x48-4100021>`_ presents
+``FALSE``, ``UNDEFINED``, or ``ERROR``. Table `4.1 <#x48-4100021>`_ presents
 examples that define the outcome of the ``==`` operator.
-Table \ `4.2 <#x48-4100032>`_ presents examples that define the outcome
+Table `4.2 <#x48-4100032>`_ presents examples that define the outcome
 of the ``=?=`` operator.
 
 +-------------------------------+---------------------------+
@@ -1090,8 +1090,8 @@ operator and case-sensitive with the =!= operator.** A key point in
 understanding is that the ``=!=`` operator only produces evaluation results
 of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation
 results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``.
-Table \ `4.3 <#x48-4100043>`_ presents examples that define the outcome of
-the ``!=`` operator. Table \ `4.4 <#x48-4100054>`_ presents examples that
+Table `4.3 <#x48-4100043>`_ presents examples that define the outcome of
+the ``!=`` operator. Table `4.4 <#x48-4100054>`_ presents examples that
 define the outcome of the ``=!=`` operator.
 
 +-------------------------------+----------------------------+
