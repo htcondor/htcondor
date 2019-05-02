@@ -116,17 +116,17 @@ the job is submitted to the machine where the job is executed. Each file
 to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
-**transfer_input_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
+**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
 see the :doc:`/users-manual/submitting-a-job` section for details.
 
 For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
 subset of these files, as specified by the submit description file
 command
-**transfer_output_files**\ :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+**transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-**output_destination**\ :index:`output_destination<single: output_destination; submit commands>`;
+**output_destination** :index:`output_destination<single: output_destination; submit commands>`;
 see the :doc:`/users-manual/submitting-a-job` section for details. The plug-in
 is invoked once for each output file to be transferred.
 
@@ -182,9 +182,9 @@ plug-in handles. So, for example
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
 given within a URL in a
-**transfer_input_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
 command or within a URL in an
-**output_destination**\ :index:`output_destination<single: output_destination; submit commands>`
+**output_destination** :index:`output_destination<single: output_destination; submit commands>`
 command in a submit description file for a job.
 
 When a job specifies a URL transfer, the plug-in is invoked, without the
@@ -255,7 +255,7 @@ behavior for these cases that cannot be backward compatible.
 -  If the *condor_starter* version is earlier than 7.6.0, then
    regardless of the *condor_shadow* version, transfer of output files,
    as identified in the submit description file with the command
-   **output_destination**\ :index:`output_destination<single: output_destination; submit commands>`
+   **output_destination** :index:`output_destination<single: output_destination; submit commands>`
    is ignored. The files are transferred back to the submit machine.
 -  If the *condor_starter* version is 7.6.0 or later, but the
    *condor_shadow* version is earlier than 7.6.0, then the
@@ -491,7 +491,7 @@ universe. However, these jobs cannot take checkpoints and migrate.
 To relink programs with HTCondor, we provide the *condor_compile* tool.
 As installed by default, *condor_compile* works with the following
 commands: *gcc*, *g++*, *g77*, *cc*, *acc*, *c89*, *CC*, *f77*,
-*fort77*, *ld*. See the *condor_compile*\ (1) man page for details on
+*fort77*, *ld*. See the *condor_compile* (1) man page for details on
 using *condor_compile*.
 
 *condor_compile* can work transparently with all commands on the
@@ -2044,9 +2044,9 @@ A concurrency limit may be evaluated against the attributes of a matched
 machine. This allows a job to vary what concurrency limits it requires
 based on the machine to which it is matched. To implement this, the job
 uses submit command
-**concurrency_limits_expr**\ :index:`concurrency_limits_expr<single: concurrency_limits_expr; submit commands>`
+**concurrency_limits_expr** :index:`concurrency_limits_expr<single: concurrency_limits_expr; submit commands>`
 instead of
-**concurrency_limits**\ :index:`concurrency_limits<single: concurrency_limits; submit commands>`.
+**concurrency_limits** :index:`concurrency_limits<single: concurrency_limits; submit commands>`.
 Consider an example in which execute machines are located on one of two
 local networks. The administrator sets a concurrency limit to limit the
 number of network intensive jobs on each network to 10. Configuration of

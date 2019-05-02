@@ -21,9 +21,9 @@ are familiar with that, it should seem quite natural.
 
 There will usually be two HTCondor versions available at any given time,
 the stable version, and the development version. Gone are the days of
-“patch level 3”, “beta2”, or any other random words in the version
+"patch level 3", "beta2", or any other random words in the version
 string. All versions of HTCondor now have exactly three numbers,
-separated by “.”
+separated by "."
 
 -  The first number represents the major version number, and will change
    very infrequently.

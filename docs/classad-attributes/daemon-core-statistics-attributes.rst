@@ -10,11 +10,11 @@ which are common to all daemons, others are specific to the running of a
 particular daemon. In some cases, the statistics can reveal buggy or
 slow performance of the HTCondor system. The following statistics are
 available for all daemons, and can be accessed directly with the
-condor\_status command with a direct query, such as
+condor_status command with a direct query, such as
 
 ::
 
-    condor\_status -direct somehostname.example.com -schedd -statistics DC:2 -l
+    condor_status -direct somehostname.example.com -schedd -statistics DC:2 -l
 
 :index:`DCUdpQueueDepth<single: DCUdpQueueDepth; ClassAd statistics attribute>`
 

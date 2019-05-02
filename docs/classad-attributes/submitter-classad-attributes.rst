@@ -34,7 +34,7 @@ Submitter ClassAd Attributes
     running. :index:`MyAddress<single: MyAddress; ClassAd submitter attribute>`
     :index:`submitter ClassAd attribute`
  ``MyAddress``:
-    The IP address associated with the *condor\_schedd* daemon used by
+    The IP address associated with the *condor_schedd* daemon used by
     the submitter. :index:`Name<single: Name; ClassAd submitter attribute>`
     :index:`submitter ClassAd attribute`
  ``Name``:
@@ -48,7 +48,7 @@ Submitter ClassAd Attributes
     :index:`ScheddIpAddr<single: ScheddIpAddr; ClassAd submitter attribute>`
     :index:`submitter ClassAd attribute`
  ``ScheddIpAddr``:
-    The IP address associated with the *condor\_schedd* daemon used by
+    The IP address associated with the *condor_schedd* daemon used by
     the submitter. This attribute is obsolete Use MyAddress instead.
     :index:`ScheddName<single: ScheddName; ClassAd submitter attribute>`
     :index:`submitter ClassAd attribute`

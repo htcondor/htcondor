@@ -10,10 +10,10 @@ Display information about jobs in queue
 Synopsis
 --------
 
-**condor_q** [**-help [Universe \| State]**\ ]
+**condor_q** [**-help [Universe \| State]** ]
 
-**condor_q** [**-debug**\ ] [*general options*\ ] [*restriction
-list*\ ] [*output options*\ ] [*analyze options*\ ]
+**condor_q** [**-debug** ] [*general options* ] [*restriction
+list* ] [*output options* ] [*analyze options* ]
 
 Description
 -----------
@@ -359,7 +359,7 @@ restriction options may be supplied. Each restriction may be one of:
 -  **-constraint expression**, which matches all jobs that satisfy the 
    specified ClassAd expression;
 -  **-unmatchable expression**, which matches all jobs that do not match 
-   any slot that would be considered by **-better-analyze **\ *;*
+   any slot that would be considered by **-better-analyze** *;*
 -  **-allusers**, which overrides the default restriction of only
    matching jobs submitted by the current user.
 
@@ -402,22 +402,22 @@ Options
     option).
  **-global**
     (general option) Queries all job queues in the pool.
- **-submitter **\ *submitter*
+ **-submitter** *submitter*
     (general option) List jobs of a specific submitter in the entire
     pool, not just for a single *condor_schedd*.
- **-name **\ *name*
+ **-name** *name*
     (general option) Query only the job queue of the named
     *condor_schedd* daemon.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     (general option) Use the *centralmanagerhostname* as the central
     manager to locate *condor_schedd* daemons. The default is the
     ``COLLECTOR_HOST``, as specified in the configuration.
- **-jobads **\ *file*
+ **-jobads** *file*
     (general option) Display jobs from a list of ClassAds from a file,
     instead of the real ClassAds from the *condor_schedd* daemon. This
     is most useful for debugging purposes. The ClassAds appear as if
     *condor_q* **-long** is used with the header stripped out.
- **-userlog **\ *file*
+ **-userlog** *file*
     (general option) Display jobs, with job information coming from a
     job event log, instead of from the real ClassAds from the
     *condor_schedd* daemon. This is most useful for automated testing
@@ -468,7 +468,7 @@ Options
     (output option) Get information about jobs in the hold state. Also
     displays the time the job was placed into the hold state and the
     reason why the job was placed in the hold state.
- **-limit **\ *Number*
+ **-limit** *Number*
     (output option) Limit the number of items output to *Number*.
  **-io**
     (output option) Display job input/output summaries.
@@ -500,12 +500,12 @@ Options
     `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
  **-json**
     (output option) Display entire job ClassAds in JSON format.
- **-attributes **\ *Attr1[,Attr2 …]*
+ **-attributes** *Attr1[,Attr2 ...]*
     (output option) Explicitly list the attributes, by name in a comma
     separated list, which should be displayed when using the **-xml**,
     **-json** or **-long** options. Limiting the number of attributes
     increases the efficiency of the query.
- **-format **\ *fmt attr*
+ **-format** *fmt attr*
     (output option) Display attribute or expression *attr* in format
     *fmt*. To display the attribute or expression the format must
     contain a single ``printf(3)``-style conversion specifier.
@@ -530,7 +530,7 @@ Options
     directly. A format without any conversion specifiers may be
     specified, but an attribute is still required. Include a backslash
     followed by an ‘n' to specify a line break.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]* or **-af[:jlhVr,tng]** *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -604,20 +604,20 @@ Options
 
     | **reverse** to analyze machines, rather than jobs
 
- **-machine **\ *name*
+ **-machine** *name*
     (analyze option) When doing matchmaking analysis, analyze only
     machine ClassAds that have slot or machine names that match the
     given name.
- **-mconstraint **\ *expression*
+ **-mconstraint** *expression*
     (analyze option) When doing matchmaking analysis, match only machine
     ClassAds which match the ClassAd expression constraint.
- **-slotads **\ *file*
+ **-slotads** *file*
     (analyze option) When doing matchmaking analysis, use the machine
     ClassAds from the file instead of the ones from the
     *condor_collector* daemon. This is most useful for debugging
     purposes. The ClassAds appear as if *condor_status* **-long** is
     used.
- **-userprios **\ *file*
+ **-userprios** *file*
     (analyze option) When doing matchmaking analysis with priority, read
     user priorities from the file rather than the ones from the
     *condor_negotiator* daemon. This is most useful for debugging
@@ -656,7 +656,7 @@ standard universe jobs, since they rely on values computed when a job
 produces a checkpoint.
 
 It is possible to to hold jobs that are in the X state. To avoid this it
-is best to construct a **-constraint **\ *expression* that option
+is best to construct a **-constraint** *expression* that option
 contains ``JobStatus != 3`` if the user wishes to avoid this condition.
 
 Examples

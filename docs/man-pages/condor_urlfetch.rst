@@ -1,6 +1,6 @@
       
 
-*condor\_urlfetch*
+*condor_urlfetch*
 ==================
 
 fetch configuration given a URL
@@ -9,17 +9,17 @@ fetch configuration given a URL
 Synopsis
 --------
 
-**condor\_urlfetch** [**-<daemon>**\ ] *url* *local-url-cache-file*
+**condor_urlfetch** [**-<daemon>** ] *url* *local-url-cache-file*
 
 Description
 -----------
 
-Depending on the command line arguments, *condor\_urlfetch* sends the
+Depending on the command line arguments, *condor_urlfetch* sends the
 result of a query from the *url* to both standard output and to a file
 specified by *local-url-cache-file*, or it sends the contents of the
 file specified by *local-url-cache-file* to standard output.
 
-*condor\_urlfetch* is intended to be used as the program to run when
+*condor_urlfetch* is intended to be used as the program to run when
 defining configuration, such as in the nonfunctional example:
 
 ::
@@ -59,7 +59,7 @@ Options
 Exit Status
 -----------
 
-*condor\_urlfetch* will exit with a status value of 0 (zero) upon
+*condor_urlfetch* will exit with a status value of 0 (zero) upon
 success and non zero otherwise.
 
 Author

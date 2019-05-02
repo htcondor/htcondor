@@ -10,34 +10,34 @@ machines
 Synopsis
 --------
 
-**condor_submit_dag** [**-help \| -version**\ ]
+**condor_submit_dag** [**-help \| -version** ]
 
-**condor_submit_dag** [**-no_submit**\ ] [**-verbose**\ ]
-[**-force**\ ] [**-maxidle  **\ *NumberOfProcs*]
-[**-maxjobs  **\ *NumberOfClusters*] [**-dagman  **\ *DagmanExecutable*]
-[**-maxpre  **\ *NumberOfPreScripts*]
-[**-maxpost  **\ *NumberOfPostScripts*] [**-notification  **\ *value*]
-[**-noeventchecks**\ ] [**-allowlogerror**\ ] [**-r  **\ *schedd_name*]
-[**-debug  **\ *level*] [**-usedagdir**\ ]
-[**-outfile_dir  **\ *directory*] [**-config  **\ *ConfigFileName*]
-[**-insert_sub_file  **\ *FileName*] [**-append  **\ *Command*]
-[**-batch-name  **\ *batch_name*] [**-autorescue  **\ *0\|1*]
-[**-dorescuefrom  **\ *number*] [**-allowversionmismatch**\ ]
-[**-no_recurse**\ ] [**-do_recurse**\ ] [**-update_submit**\ ]
-[**-import_env**\ ] [**-DumpRescue**\ ] [**-valgrind**\ ]
-[**-DontAlwaysRunPost**\ ] [**-AlwaysRunPost**\ ]
-[**-priority  **\ *number*] [**-dont_use_default_node_log**\ ]
-[**-schedd-daemon-ad-file  **\ *FileName*]
-[**-schedd-address-file  **\ *FileName*] [**-suppress_notification**\ ]
-[**-dont_suppress_notification**\ ] [**-DoRecovery**\ ]
-*DAGInputFile1* [*DAGInputFile2 …DAGInputFileN*\ ]
+**condor_submit_dag** [**-no_submit** ] [**-verbose** ]
+[**-force** ] [**-maxidle** *NumberOfProcs*]
+[**-maxjobs** *NumberOfClusters*] [**-dagman** *DagmanExecutable*]
+[**-maxpre** *NumberOfPreScripts*]
+[**-maxpost** *NumberOfPostScripts*] [**-notification** *value*]
+[**-noeventchecks** ] [**-allowlogerror** ] [**-r** *schedd_name*]
+[**-debug** *level*] [**-usedagdir** ]
+[**-outfile_dir** *directory*] [**-config** *ConfigFileName*]
+[**-insert_sub_file** *FileName*] [**-append** *Command*]
+[**-batch-name** *batch_name*] [**-autorescue** *0\|1*]
+[**-dorescuefrom** *number*] [**-allowversionmismatch** ]
+[**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
+[**-import_env** ] [**-DumpRescue** ] [**-valgrind** ]
+[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
+[**-priority** *number*] [**-dont_use_default_node_log** ]
+[**-schedd-daemon-ad-file** *FileName*]
+[**-schedd-address-file** *FileName*] [**-suppress_notification** ]
+[**-dont_suppress_notification** ] [**-DoRecovery** ]
+*DAGInputFile1* [*DAGInputFile2 ...DAGInputFileN* ]
 
 Description
 -----------
 
 *condor_submit_dag* is the program for submitting a DAG (directed
 acyclic graph) of jobs for execution under HTCondor. The program
-enforces the job dependencies defined in one or more *DAGInputFile*\ s.
+enforces the job dependencies defined in one or more *DAGInputFile* s.
 Each *DAGInputFile* contains commands to direct the submission of jobs
 implied by the nodes of a DAG to HTCondor. Extensive documentation is in
 the HTCondor User Manual section on DAGMan.
@@ -79,11 +79,11 @@ Options
     will cause them to be renamed, and the original DAG will be run. If
     old-style rescue DAG mode is in effect, any existing old-style
     rescue DAGs will be deleted, and the original DAG will be run.
- **-maxidle **\ *NumberOfProcs*
+ **-maxidle** *NumberOfProcs*
     Sets the maximum number of idle procs allowed before
     *condor_dagman* stops submitting more node jobs. Note that for this
     argument, each individual proc within a cluster counts as a towards
-    the limit, which is inconsistent with **-maxjobs **\ *.* Once idle
+    the limit, which is inconsistent with **-maxjobs** *.* Once idle
     procs start to run, *condor_dagman* will resume submitting jobs
     once the number of idle procs falls below the specified limit.
     *NumberOfProcs* is a non-negative integer. If this option is
@@ -99,7 +99,7 @@ Options
     submitted to the *condor_schedd*, not 250. In this case,
     *condor_dagman* will resume submitting jobs when the number of idle
     procs falls below 250.
- **-maxjobs **\ *NumberOfClusters*
+ **-maxjobs** *NumberOfClusters*
     Sets the maximum number of clusters within the DAG that will be
     submitted to HTCondor at one time. Note that for this argument, each
     cluster counts as one job, no matter how many individual procs are
@@ -109,11 +109,11 @@ Options
     :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 0 (unlimited).
- **-dagman **\ *DagmanExecutable*
+ **-dagman** *DagmanExecutable*
     Allows the specification of an alternate *condor_dagman* executable
     to be used instead of the one found in the user's path. This must be
     a fully qualified path.
- **-maxpre **\ *NumberOfPreScripts*
+ **-maxpre** *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
@@ -122,7 +122,7 @@ Options
     (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
- **-maxpost **\ *NumberOfPostScripts*
+ **-maxpost** *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
@@ -130,11 +130,11 @@ Options
     :index:`DAGMAN_MAX_POST_SCRIPTS` (see  `Configuration
     Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
- **-notification **\ *value*
+ **-notification** *value*
     Sets the e-mail notification for DAGMan itself. This information
     will be used within the HTCondor submit description file for DAGMan.
     This file is produced by *condor_submit_dag*. See the description
-    of **notification**\ :index:`notification<single: notification; submit commands>`
+    of **notification** :index:`notification<single: notification; submit commands>`
     within *condor_submit* manual page for a specification of *value*.
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
@@ -143,7 +143,7 @@ Options
  **-allowlogerror**
     As of verson 8.5.5 this argument is no longer supported, and setting
     it will generate a warning.
- **-r **\ *schedd_name*
+ **-r** *schedd_name*
     Submit *condor_dagman* to a remote machine, specifically the
     *condor_schedd* daemon on that machine. The *condor_dagman* job
     will not run on the local *condor_schedd* (the submit machine), but
@@ -155,17 +155,17 @@ Options
     between the local computer and the remote computer. It is also
     necessary that the user has appropriate permissions to submit a job
     to the remote machine; the permissions are the same as those
-    required to use *condor_submit*\ 's **-remote** option. If other
+    required to use *condor_submit* 's **-remote** option. If other
     options are desired, including transfer of other input files,
     consider using the **-no_submit** option, modifying the resulting
     submit file for specific needs, and then using *condor_submit* on
     that.
- **-debug **\ *level*
+ **-debug** *level*
     Passes the the *level* of debugging output desired to
     *condor_dagman*. *level* is an integer, with values of 0-7
     inclusive, where 7 is the most verbose output. See the
     *condor_dagman* manual page for detailed descriptions of these
-    values. If not specified, no **-debug **\ *v*\ alue is passed to
+    values. If not specified, no **-debug** *v* alue is passed to
     *condor_dagman*.
  **-usedagdir**
     This optional argument causes *condor_dagman* to run each specified
@@ -174,21 +174,21 @@ Options
     multiple DAGs in a single *condor_dagman*. Note that the
     **-usedagdir** flag must not be used when running an old-style
     Rescue DAG.
- **-outfile_dir **\ *directory*
+ **-outfile_dir** *directory*
     Specifies the directory in which the ``.dagman.out`` file will be
     written. The *directory* may be specified relative to the current
     working directory as *condor_submit_dag* is executed, or specified
     with an absolute path. Without this option, the ``.dagman.out`` file
     is placed in the same directory as the first DAG input file listed
     on the command line.
- **-config **\ *ConfigFileName*
+ **-config** *ConfigFileName*
     Specifies a configuration file to be used for this DAGMan run. Note
     that the options specified in the configuration file apply to all
     DAGs if multiple DAGs are specified. Further note that it is a fatal
     error if the configuration file specified by this option conflicts
     with a configuration file specified in any of the DAG files, if they
     specify one.
- **-insert_sub_file **\ *FileName*
+ **-insert_sub_file** *FileName*
     Specifies a file to insert into the ``.condor.sub`` file created by
     *condor_submit_dag*. The specified file must contain only legal
     submit file commands. Only one file can be inserted. (If both the
@@ -197,7 +197,7 @@ Options
     overrides DAGMAN_INSERT_SUB_FILE.) The specified file is inserted
     into the ``.condor.sub`` file before the Queue command and before
     any commands specified with the **-append** option.
- **-append **\ *Command*
+ **-append** *Command*
     Specifies a command to append to the ``.condor.sub`` file created by
     *condor_submit_dag*. The specified command is appended to the
     ``.condor.sub`` file immediately before the Queue command. Multiple
@@ -210,7 +210,7 @@ Options
     DAGMAN_INSERT_SUB_FILE configuration variable, so the **-append**
     command(s) will override commands from the inserted file if the
     commands conflict.
- **-batch-name **\ *batch_name*
+ **-batch-name** *batch_name*
     Set the batch name for this DAG/workflow. The batch name is
     displayed by *condor_q* **-batch**. It is intended for use by users
     to give meaningful names to their workflows and to influence how
@@ -220,14 +220,14 @@ Options
     the individual submit files. Note: set the batch name to ' ' (space)
     to avoid overriding batch names specified in node job submit files.
     If no batch name is set, the batch name defaults to
-    *DagFile*\ +\ *cluster* (where *DagFile* is the primary DAG file of
+    *DagFile* +\ *cluster* (where *DagFile* is the primary DAG file of
     the top-level DAGMan, and *cluster* is the HTCondor cluster of the
     top-level DAGMan); the default will override any lower-level batch
     names.
- **-autorescue **\ *0\|1*
+ **-autorescue** *0\|1*
     Whether to automatically run the newest rescue DAG for the given DAG
     file, if one exists (0 = ``false``, 1 = ``true``).
- **-dorescuefrom **\ *number*
+ **-dorescuefrom** *number*
     Forces *condor_dagman* to run the specified rescue DAG number for
     the given DAG. A value of 0 is the same as not specifying this
     option. Specifying a non-existent rescue DAG is a fatal error.
@@ -293,7 +293,7 @@ Options
     *condor_dagman* to always run the POST script of a node, even if
     the PRE script fails. (This was the default behavior for HTCondor
     version 7.7.2 through version 8.5.3.)
- **-priority **\ *number*
+ **-priority** *number*
     Sets the minimum job priority of node jobs submitted and running
     under the *condor_dagman* job submitted by this
     *condor_submit_dag* command.
@@ -304,13 +304,13 @@ Options
     the job ClassAd attribute ``UserLog`` to monitor job status. If this command
     line argument is used, then the job event log file cannot be defined
     with a macro.
- **-schedd-daemon-ad-file **\ *FileName*
+ **-schedd-daemon-ad-file** *FileName*
     Specifies a full path to a daemon ad file dropped by a
     *condor_schedd*. Therefore this allows submission to a specific
     scheduler if several are available without repeatedly querying the
     *condor_collector*. The value for this argument defaults to the
     configuration attribute ``SCHEDD_DAEMON_AD_FILE``.
- **-schedd-address-file **\ *FileName*
+ **-schedd-address-file** *FileName*
     Specifies a full path to an address file dropped by a
     *condor_schedd*. Therefore this allows submission to a specific
     scheduler if several are available without repeatedly querying the

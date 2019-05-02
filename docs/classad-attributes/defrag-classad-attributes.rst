@@ -11,7 +11,7 @@ Defrag ClassAd Attributes
     killed during draining of the machine. This is calculated in each
     polling interval by looking at ``TotalMachineDrainingBadput``.
     Therefore, it treats evictions of jobs that do and do not produce
-    checkpoints the same. When the *condor\_startd* restarts, its
+    checkpoints the same. When the *condor_startd* restarts, its
     counters start over from 0, so the average is only over the time
     since the daemons have been alive.
     :index:`AvgDrainingUnclaimedTime<single: AvgDrainingUnclaimedTime; ClassAd Defrag attribute>`
@@ -19,7 +19,7 @@ Defrag ClassAd Attributes
     Fraction of time CPUs in the pool have spent unclaimed by a user
     during draining of the machine. This is calculated in each polling
     interval by looking at ``TotalMachineDrainingUnclaimedTime``. When
-    the *condor\_startd* restarts, its counters start over from 0, so
+    the *condor_startd* restarts, its counters start over from 0, so
     the average is only over the time since the daemons have been alive.
     :index:`DaemonStartTime<single: DaemonStartTime; ClassAd Defrag attribute>`
  ``DaemonStartTime``:
@@ -32,15 +32,15 @@ Defrag ClassAd Attributes
     :index:`DrainedMachines<single: DrainedMachines; ClassAd Defrag attribute>`
  ``DrainedMachines``:
     A count of the number of fully drained machines which have arrived
-    during the run time of this *condor\_defrag* daemon.
+    during the run time of this *condor_defrag* daemon.
     :index:`DrainFailures<single: DrainFailures; ClassAd Defrag attribute>`
  ``DrainFailures``:
     Total count of failed attempts to initiate draining during the
-    lifetime of this *condor\_defrag* daemon.
+    lifetime of this *condor_defrag* daemon.
     :index:`DrainSuccesses<single: DrainSuccesses; ClassAd Defrag attribute>`
  ``DrainSuccesses``:
     Total count of successful attempts to initiate draining during the
-    lifetime of this *condor\_defrag* daemon.
+    lifetime of this *condor_defrag* daemon.
     :index:`Machine<single: Machine; ClassAd Defrag attribute>`
  ``Machine``:
     A string with the machine's fully qualified host name.
@@ -80,14 +80,14 @@ Defrag ClassAd Attributes
     ``MonitorSelf``.
     :index:`MyAddress<single: MyAddress; ClassAd Defrag attribute>`
  ``MyAddress``:
-    String with the IP and port address of the *condor\_defrag* daemon
+    String with the IP and port address of the *condor_defrag* daemon
     which is publishing this ClassAd.
     :index:`MyCurrentTime<single: MyCurrentTime; ClassAd Defrag attribute>`
  ``MyCurrentTime``:
     The time, represented as the number of seconds elapsed since the
     Unix epoch (00:00:00 UTC, Jan 1, 1970), at which the
-    *condor\_defrag* daemon last sent a ClassAd update to the
-    *condor\_collector*.
+    *condor_defrag* daemon last sent a ClassAd update to the
+    *condor_collector*.
     :index:`Name<single: Name; ClassAd Defrag attribute>`
  ``Name``:
     The name of this daemon; typically the same value as the ``Machine``
@@ -109,7 +109,7 @@ Defrag ClassAd Attributes
     :index:`UpdateSequenceNumber<single: UpdateSequenceNumber; ClassAd Defrag attribute>`
  ``UpdateSequenceNumber``:
     An integer, starting at zero, and incremented with each ClassAd
-    update sent to the *condor\_collector*. The *condor\_collector* uses
+    update sent to the *condor_collector*. The *condor_collector* uses
     this value to sequence the updates it receives.
     :index:`WholeMachines<single: WholeMachines; ClassAd Defrag attribute>`
  ``WholeMachines``:

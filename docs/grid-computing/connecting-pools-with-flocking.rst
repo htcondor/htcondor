@@ -11,7 +11,7 @@ on a different HTCondor pool. If a machine within HTCondor pool A can
 send jobs to be run on HTCondor pool B, then we say that jobs from
 machine A flock to pool B. Flocking can occur in a one way manner, such
 as jobs from machine A flocking to pool B, or it can be set up to flock
-in both directions. Configuration variables allow the *condor\_schedd*
+in both directions. Configuration variables allow the *condor_schedd*
 daemon (which runs on each machine that may submit jobs) to implement
 flocking.
 
@@ -34,7 +34,7 @@ configuration, set the following configuration variables:
     pools that jobs from machine A may flock to.
 
 ``FLOCK_COLLECTOR_HOSTS`` :index:`FLOCK_COLLECTOR_HOSTS`
-    is the list of *condor\_collector* daemons within the pools that
+    is the list of *condor_collector* daemons within the pools that
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
 
@@ -44,7 +44,7 @@ configuration, set the following configuration variables:
           
 
  ``FLOCK_NEGOTIATOR_HOSTS`` :index:`FLOCK_NEGOTIATOR_HOSTS`
-    is the list of *condor\_negotiator* daemons within the pools that
+    is the list of *condor_negotiator* daemons within the pools that
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
 
@@ -55,7 +55,7 @@ configuration, set the following configuration variables:
 
  ``ALLOW_NEGOTIATOR_SCHEDD`` :index:`ALLOW_NEGOTIATOR_SCHEDD`
     provides an access level and authorization list for the
-    *condor\_schedd* daemon to allow negotiation (for security reasons)
+    *condor_schedd* daemon to allow negotiation (for security reasons)
     with the machines within the pools that jobs from machine A may
     flock to. This configuration variable will not likely need to change
     from its default value as given in the sample configuration:
@@ -68,8 +68,8 @@ configuration, set the following configuration variables:
         ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS) 
           
 
-    This example configuration presumes that the *condor\_collector* and
-    *condor\_negotiator* daemons are running on the same machine. See
+    This example configuration presumes that the *condor_collector* and
+    *condor_negotiator* daemons are running on the same machine. See
     the :doc:`/admin-manual/security` section on
     page \ `Security <../admin-manual/security.html>`__ for a discussion
     of security macros and their use.

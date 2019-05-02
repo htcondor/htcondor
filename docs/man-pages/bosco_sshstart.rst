@@ -1,6 +1,6 @@
       
 
-*bosco\_ssh\_start*
+*bosco_ssh_start*
 ===================
 
 :index:`bosco_ssh_start<single: bosco_ssh_start; Bosco commands>`
@@ -9,12 +9,12 @@
 Synopsis
 --------
 
-**bosco\_ssh\_start**
+**bosco_ssh_start**
 
 Description
 -----------
 
-*bosco\_ssh\_start* is part of the Bosco system for accessing high
+*bosco_ssh_start* is part of the Bosco system for accessing high
 throughput computing resources from a local desktop.
 
 This command is not meant to be executed on the command line by users.

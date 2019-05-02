@@ -66,14 +66,14 @@ What You'll Need to Know
 To create a HTCondor annex with on-demand instances, you'll need to know
 two things:
 
-#. A name for it. “MyFirstAnnex” is a fine name for your first annex.
+#. A name for it. "MyFirstAnnex" is a fine name for your first annex.
 #. How many instances you want. For your first annex, when you're
    checking to make sure things work, you may only want one instance.
 
 Start an Annex
 --------------
 
-Entering the following command will start an annex named “MyFirstAnnex”
+Entering the following command will start an annex named "MyFirstAnnex"
 with one instance. *condor_annex* will print out what it's going to do,
 and then ask you if that's OK. You must type ‘yes' (and hit enter) at
 the prompt to start an annex; if you do not, *condor_annex* will print
@@ -125,7 +125,7 @@ decimal hours) with the -duration flag.
 If you need to adjust the lease for a particular annex, you may do so by
 specifying an annex name and a duration, but not a count. When you do
 so, the new duration is set starting at the current time. For example,
-if you'd like “MyFirstAnnex” to expire eight hours from now:
+if you'd like "MyFirstAnnex" to expire eight hours from now:
 
 ::
 
@@ -336,16 +336,16 @@ may have zero or more annexes active simultaneously.
 Advanced Usage
 --------------
 
-The previous section covered using what AWS calls “on-demand” instances.
-(An “instance” is “a single occurrence of something,” in this case, a
+The previous section covered using what AWS calls "on-demand" instances.
+(An "instance" is "a single occurrence of something," in this case, a
 virtual machine. The intent is to distinguish between the active process
-that's pretending to be a real piece of hardware – the “instance” – and
+that's pretending to be a real piece of hardware – the "instance" – and
 the template it used to start it up, which may also be called a virtual
 machine.) An on-demand instance has a price fixed by AWS; once acquired,
 AWS will let you keep it running as long as you continue to pay for it.
 
-In constrast, a “Spot” instance has a price determined by an (automated)
-auction; when you request a “Spot” instance, you specify the most (per
+In constrast, a "Spot" instance has a price determined by an (automated)
+auction; when you request a "Spot" instance, you specify the most (per
 hour) you're willing to pay for that instance. If you get an instance,
 however, you pay only what the spot price is for that instance; in
 effect, AWS determines the spot price by lowering it until they run out
@@ -369,15 +369,15 @@ Using AWS Spot Fleet
 ''''''''''''''''''''
 
 *condor_annex* supports Spot instances via an AWS technology called
-“Spot Fleet”. Normally, when you request instances, you request a
+"Spot Fleet". Normally, when you request instances, you request a
 specific type of instance (the default on-demand instance is, for
 instance, ‘m4.large'.) However, in many cases, you don't care too much
 about how many cores an intance has – HTCondor will automatically
 advertise the right number and schedule jobs appropriately, so why would
 you? In such cases – or in other cases where your jobs will run
 acceptably on more than one type of instance – you can make a Spot Fleet
-request which says something like “give me a thousand cores as cheaply
-as possible”, and specify that an ‘m4.large' instance has two cores,
+request which says something like "give me a thousand cores as cheaply
+as possible", and specify that an ‘m4.large' instance has two cores,
 while ‘m4.xlarge' has four, and so on. (The interface actually allows
 you to assign arbitrary values – like HTCondor slot weights – to each
 instance type\ `:sup:`3` <ref63.html#fn3x7>`__ , but the default value
@@ -420,7 +420,7 @@ file. You should remove the references to ‘ValidFrom' and ‘ValidTo' in
 the JSON file to avoid confusing surprises later.
 
 Additionally, be aware that *condor_annex* uses the Spot Fleet API in
-its “request” mode, which means that an annex created with Spot Fleet
+its "request" mode, which means that an annex created with Spot Fleet
 has the same semantics with respect to replacement as it would
 otherwise: if an instance terminates for any reason, including AWS
 taking it away to give to someone else, it is not replaced.
@@ -461,7 +461,7 @@ correspond to the absence or presence of a trailing **-file** and the
 absence or presence of **-default** immediately preceding
 **-user-data**.
 
-A “launch specification,” in this context, means one of the virtual
+A "launch specification," in this context, means one of the virtual
 machine templates you told Spot Fleet would be an acceptable way to
 accomodate your resource request. This usually corresponds one-to-one
 with instance types, but this is not required.
@@ -470,9 +470,9 @@ Expert Mode
 '''''''''''
 
 The man page (in section `12 <Condorannex.html#x99-68500012>`__) lists
-the “expert mode” options.
+the "expert mode" options.
 
-Four of the “expert mode” options set the URLs used to access AWS
+Four of the "expert mode" options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**
 flag. You may change the CloudFormation URL by changing the HTCondor
 configuration macro ANNEX_DEFAULT_CF_URL
@@ -487,7 +487,7 @@ access (**-aws-access-key-file**) and secret key
 (**-aws-secret-key-file**) options. Regular users may have an accounting
 reason to do this.
 
-The options labeled “developers only” control implementation details and
+The options labeled "developers only" control implementation details and
 may change without warning; they are probably best left unused unless
 you're a developer.
 

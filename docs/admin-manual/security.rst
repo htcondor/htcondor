@@ -317,7 +317,7 @@ SCHEDD:
     claim. Therefore, if one desires to only authorize specific execute
     machines to run jobs, one must either limit which machines are
     allowed to advertise themselves to the pool (most common) or
-    configure the *condor_schedd*\ 's ``ALLOW_CLIENT``
+    configure the *condor_schedd* 's ``ALLOW_CLIENT``
     :index:`ALLOW_CLIENT` setting to only allow connections from
     the *condor_schedd* to the trusted execute machines.
 
@@ -1615,9 +1615,9 @@ the specific identity of the server. :index:`ALLOW_CLIENT`
       DENY_CLIENT
 
 The names ``ALLOW_CLIENT`` and ``DENY_CLIENT`` should be thought of as
-“when I am acting as a client, these are the servers I allow or deny.”
-It should not be confused with the incorrect thought “when I am the
-server, these are the clients I allow or deny.”
+"when I am acting as a client, these are the servers I allow or deny."
+It should not be confused with the incorrect thought "when I am the
+server, these are the clients I allow or deny."
 
 All authorization settings are defined by a comma-separated list of
 fully qualified users. Each fully qualified user is described using the
@@ -1759,9 +1759,9 @@ be modified by configuration. :index:`unauthenticated`
    is the authenticated name (if available) and IP address of the
    *condor_startd* when the *condor_schedd* initially connects to it
    to request the claim. It is important that only trusted
-   *condor_startd*\ s are allowed to publish themselves to the
-   collector or that the *condor_schedd*\ 's ``ALLOW_CLIENT`` setting
-   prevent it from allowing connections to *condor_startd*\ s that it
+   *condor_startd* s are allowed to publish themselves to the
+   collector or that the *condor_schedd* 's ``ALLOW_CLIENT`` setting
+   prevent it from allowing connections to *condor_startd* s that it
    does not trust to run jobs.
 #. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
    :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
@@ -2673,7 +2673,7 @@ There are two current working directories for any HTCondor job: one
 where the job is submitted and a second where the job executes. When a
 user submits a job, the submit-side current working directory is the
 same as for the user when the *condor_submit* command is issued. The
-**initialdir**\ :index:`initialdir<single: initialdir; submit commands>` submit
+**initialdir** :index:`initialdir<single: initialdir; submit commands>` submit
 command may change this, thereby allowing different jobs to have
 different working directories. This is useful when submitting large
 numbers of jobs. This submit-side current working directory remains

@@ -74,7 +74,7 @@ library for all use of ClassAds within HTCondor. The library is placed
 into a compatibility mode so that HTCondor 7.5.1 is still able to
 exchange ClassAds with older versions of HTCondor.
 
-All user interaction with tools (such as *condor\_q*) as well as output
+All user interaction with tools (such as *condor_q*) as well as output
 of tools is still compatible with Old ClassAds. Before HTCondor version
 7.5.1, New ClassAds were used only in the Job Router. There are some
 syntax and behavior differences between Old and New ClassAds, all of
@@ -488,14 +488,14 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if greater than 1 argument is given.
     :index:`strcat()<single: strcat(); ClassAd functions>`
 
- ``String strcat(AnyType Expr1 [ , AnyType Expr2 …])``
+ ``String strcat(AnyType Expr1 [ , AnyType Expr2 ...])``
     Returns the string which is the concatenation of all arguments,
     where all arguments are converted to type ``String`` by function
     ``string(Expr)``. Returns ``ERROR`` if any argument evaluates to
     ``UNDEFINED`` or ``ERROR``.
     :index:`join()<single: join(); ClassAd functions>`
 
- ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 …])`` OR ``String join(String sep, List list`` OR ``String join(List list``
+ ``String join(String sep, AnyType Expr1 [ , AnyType Expr2 ...])`` OR ``String join(String sep, List list`` OR ``String join(List list``
     Returns the string which is the concatenation of all arguments after
     the first one. The first argument is the separator, and it is
     inserted between each of the other arguments during concatenation.
@@ -690,7 +690,7 @@ Optional parameters are given within square brackets.
     is that information about the evaluation is logged to the evaluating
     program's log file, at the ``D_FULLDEBUG`` debug level. This is
     useful for determining why a given ClassAd expression is evaluating
-    the way it does. For example, if a *condor\_startd* ``START``
+    the way it does. For example, if a *condor_startd* ``START``
     expression is unexpectedly evaluating to ``UNDEFINED``, then
     wrapping the expression in this debug() function will log
     information about each component of the expression to the log file,
@@ -898,7 +898,7 @@ The ClassAd mechanism's primary purpose is for matching entities that
 supply constraints on candidate matches. The mechanism is therefore
 defined to carry out expression evaluations in the context of two
 ClassAds that are testing each other for a potential match. For example,
-the *condor\_negotiator* evaluates the ``Requirements`` expressions of
+the *condor_negotiator* evaluates the ``Requirements`` expressions of
 machine and job ClassAds to test if they can be matched. The semantics
 of evaluating such constraints is defined below.
 
@@ -991,12 +991,12 @@ have these exceptional values.
       both ``UNDEFINED`` and ``ERROR``.
    #. In addition, the operators =?=, is, =!= and isnt behave similar to
       == and !=, but are not strict. Semantically, the =?= and is test
-      if their operands are “identical,” i.e., have the same type and
+      if their operands are "identical," i.e., have the same type and
       the same value. For example, 10 == UNDEFINED and
       UNDEFINED == UNDEFINED both evaluate to ``UNDEFINED``, but
       10 =?= UNDEFINED and UNDEFINED is UNDEFINED evaluate to ``FALSE``
       and ``TRUE`` respectively. The =!= and isnt operators test for the
-      “is not identical to” condition.
+      "is not identical to" condition.
 
       =?= and is have the same behavior as each other. And isnt and =!=
       behave the same as each other. The ClassAd unparser will always
@@ -1172,7 +1172,7 @@ In this case, the job requires a 32-bit Intel processor running a Linux
 operating system. Among all such computers, the customer prefers those
 with large physical memories and high MIPS ratings. Since the ``Rank``
 is a user-specified metric, any expression may be used to specify the
-perceived desirability of the match. The *condor\_negotiator* daemon
+perceived desirability of the match. The *condor_negotiator* daemon
 runs algorithms to deliver the best resource (as defined by the ``rank``
 expression), while satisfying other required criteria.
 
@@ -1205,7 +1205,7 @@ Querying with ClassAd Expressions
 '''''''''''''''''''''''''''''''''
 
 The flexibility of this system may also be used when querying ClassAds
-through the *condor\_status* and *condor\_q* tools which allow users to
+through the *condor_status* and *condor_q* tools which allow users to
 supply ClassAd constraint expressions from the command line.
 
 Needed syntax is different on Unix and Windows platforms, due to the
@@ -1252,8 +1252,8 @@ The Windows equivalent command is
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
-contains ClassAd information. *condor\_advertise* is used to inject this
-information, and *condor\_status* constrains the search with an
+contains ClassAd information. *condor_advertise* is used to inject this
+information, and *condor_status* constrains the search with an
 expression that contains a ClassAd function.
 
 ::
@@ -1322,7 +1322,7 @@ library lives.
 While the details of the ClassAd implementation are beyond the scope of
 this document, the ClassAd source distribution ships with an example
 source file that extends ClassAds by adding two new functions, named
-todays\_date() and double(). This can be used as a model for users to
+todays_date() and double(). This can be used as a model for users to
 implement their own functions. To deploy this example extension, follow
 the following steps on Linux:
 

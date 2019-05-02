@@ -11,7 +11,7 @@ Synopsis
 
 **condor_gpu_discovery** **-help**
 
-**condor_gpu_discovery** [**<options>**\ ]
+**condor_gpu_discovery** [**<options>** ]
 
 Description
 -----------
@@ -77,19 +77,19 @@ Options
     When displaying attribute values, assume that the machine has a
     heterogeneous set of GPUs, so always include the integer value in
     the *prefix string*.
- **-device **\ *<N>*
+ **-device** *<N>*
     Display properties only for GPU device *<N>*, where *<N>* is the
     integer value defined for the *prefix string*. This option may be
     specified more than once; additional *<N>* are listed along with the
     first. This option adds to the devices(s) specified by the
     environment variables ``CUDA_VISIBLE_DEVICES`` and
     ``GPU_DEVICE_ORDINAL``, if any.
- **-tag **\ *string*
+ **-tag** *string*
     Set the resource tag portion of the intended machine ClassAd
     attribute ``Detected<ResourceTag>`` to be *string*. If this option
     is not specified, the resource tag is ``"GPUs"``, resulting in
     attribute name ``DetectedGPUs``.
- **-prefix **\ *str*
+ **-prefix** *str*
     When naming attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
     ``OCL``.

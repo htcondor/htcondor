@@ -10,12 +10,12 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the number of active autoclusters.
     :index:`CollectorHost<single: CollectorHost; ClassAd Scheduler attribute>`
  ``CollectorHost``:
-    The name of the main *condor\_collector* which this *condor\_schedd*
+    The name of the main *condor_collector* which this *condor_schedd*
     daemon reports to, as copied from ``COLLECTOR_HOST``
-    :index:`COLLECTOR_HOST`. If a *condor\_schedd* flocks to other
-    *condor\_collector* daemons, this attribute still represents the
-    "home" *condor\_collector*, so this value can be used to discover if
-    a *condor\_schedd* is currently flocking.
+    :index:`COLLECTOR_HOST`. If a *condor_schedd* flocks to other
+    *condor_collector* daemons, this attribute still represents the
+    "home" *condor_collector*, so this value can be used to discover if
+    a *condor_schedd* is currently flocking.
     :index:`CondorVersion<single: CondorVersion; ClassAd Scheduler attribute>`
  ``CondorVersion``:
     A string containing the HTCondor version number, the release date,
@@ -24,7 +24,7 @@ Scheduler ClassAd Attributes
  ``DaemonCoreDutyCycle``:
     A Statistics attribute defining the ratio of the time spent handling
     messages and events to the elapsed time for the time period defined
-    by ``StatsLifetime`` of this *condor\_schedd*. A value near 0.0
+    by ``StatsLifetime`` of this *condor_schedd*. A value near 0.0
     indicates an idle daemon, while a value near 1.0 indicates a daemon
     running at or above capacity.
     :index:`DaemonStartTime<single: DaemonStartTime; ClassAd Scheduler attribute>`
@@ -48,13 +48,13 @@ Scheduler ClassAd Attributes
  ``JobsAccumBadputTime``:
     A Statistics attribute defining the sum of the all of the time jobs
     which did not complete successfully have spent running over the
-    lifetime of this *condor\_schedd*.
+    lifetime of this *condor_schedd*.
     :index:`JobsAccumExceptionalBadputTime<single: JobsAccumExceptionalBadputTime; ClassAd Scheduler attribute>`
  ``JobsAccumExceptionalBadputTime``:
     A Statistics attribute defining the sum of the all of the time jobs
-    which did not complete successfully due to *condor\_shadow*
+    which did not complete successfully due to *condor_shadow*
     exceptions have spent running over the lifetime of this
-    *condor\_schedd*.
+    *condor_schedd*.
     :index:`JobsAccumRunningTime<single: JobsAccumRunningTime; ClassAd Scheduler attribute>`
  ``JobsAccumRunningTime``:
     A Statistics attribute defining the sum of the all of the time jobs
@@ -69,7 +69,7 @@ Scheduler ClassAd Attributes
  ``JobsBadputRuntimes``:
     A Statistics attribute defining a histogram count of jobs that did
     not complete successfully, as classified by time spent running, over
-    the lifetime of this *condor\_schedd*. Counts within the histogram
+    the lifetime of this *condor_schedd*. Counts within the histogram
     are separated by a comma and a space, where the time interval
     classification is defined in the ClassAd attribute
     ``JobsRuntimesHistogramBuckets``.
@@ -77,13 +77,13 @@ Scheduler ClassAd Attributes
  ``JobsBadputSizes``:
     A Statistics attribute defining a histogram count of jobs that did
     not complete successfully, as classified by image size, over the
-    lifetime of this *condor\_schedd*. Counts within the histogram are
+    lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the size classification is
     defined in the ClassAd attribute ``JobsSizesHistogramBuckets``.
     :index:`JobsCheckpointed<single: JobsCheckpointed; ClassAd Scheduler attribute>`
  ``JobsCheckpointed``:
     A Statistics attribute defining the number of times jobs that have
-    exited with a *condor\_shadow* exit code of ``JOB_CKPTED`` in the
+    exited with a *condor_shadow* exit code of ``JOB_CKPTED`` in the
     time interval defined by attribute ``StatsLifetime``.
     :index:`JobsCompleted<single: JobsCompleted; ClassAd Scheduler attribute>`
  ``JobsCompleted``:
@@ -94,7 +94,7 @@ Scheduler ClassAd Attributes
  ``JobsCompletedRuntimes``:
     A Statistics attribute defining a histogram count of jobs that
     completed successfully as classified by time spent running, over the
-    lifetime of this *condor\_schedd*. Counts within the histogram are
+    lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the time interval
     classification is defined in the ClassAd attribute
     ``JobsRuntimesHistogramBuckets``.
@@ -102,23 +102,23 @@ Scheduler ClassAd Attributes
  ``JobsCompletedSizes``:
     A Statistics attribute defining a histogram count of jobs that
     completed successfully as classified by image size, over the
-    lifetime of this *condor\_schedd*. Counts within the histogram are
+    lifetime of this *condor_schedd*. Counts within the histogram are
     separated by a comma and a space, where the size classification is
     defined in the ClassAd attribute ``JobsSizesHistogramBuckets``.
     :index:`JobsCoredumped<single: JobsCoredumped; ClassAd Scheduler attribute>`
  ``JobsCoredumped``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_COREDUMPED`` in
+    exited with a *condor_shadow* exit code of ``JOB_COREDUMPED`` in
     the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsDebugLogError<single: JobsDebugLogError; ClassAd Scheduler attribute>`
  ``JobsDebugLogError``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``DPRINTF_ERROR`` in the
+    exited with a *condor_shadow* exit code of ``DPRINTF_ERROR`` in the
     time interval defined by attribute ``StatsLifetime``.
     :index:`JobsExecFailed<single: JobsExecFailed; ClassAd Scheduler attribute>`
  ``JobsExecFailed``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXEC_FAILED`` in
+    exited with a *condor_shadow* exit code of ``JOB_EXEC_FAILED`` in
     the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsExited<single: JobsExited; ClassAd Scheduler attribute>`
  ``JobsExited``:
@@ -128,76 +128,76 @@ Scheduler ClassAd Attributes
     :index:`JobsExitedAndClaimClosing<single: JobsExitedAndClaimClosing; ClassAd Scheduler attribute>`
  ``JobsExitedAndClaimClosing``:
     A Statistics attribute defining the number of times jobs have exited
-    with a *condor\_shadow* exit code of
+    with a *condor_shadow* exit code of
     ``JOB_EXITED_AND_CLAIM_CLOSING`` in the time interval defined by
     attribute ``StatsLifetime``.
     :index:`JobsExitedNormally<single: JobsExitedNormally; ClassAd Scheduler attribute>`
  ``JobsExitedNormally``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXITED`` or with
+    exited with a *condor_shadow* exit code of ``JOB_EXITED`` or with
     an exit code of ``JOB_EXITED_AND_CLAIM_CLOSING`` in the time
     interval defined by attribute ``StatsLifetime``.
     :index:`JobsExitException<single: JobsExitException; ClassAd Scheduler attribute>`
  ``JobsExitException``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXCEPTION`` or
+    exited with a *condor_shadow* exit code of ``JOB_EXCEPTION`` or
     with an unknown status in the time interval defined by attribute
     ``StatsLifetime``.
     :index:`JobsKilled<single: JobsKilled; ClassAd Scheduler attribute>`
  ``JobsKilled``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_KILLED`` in the
+    exited with a *condor_shadow* exit code of ``JOB_KILLED`` in the
     time interval defined by attribute ``StatsLifetime``.
     :index:`JobsMissedDeferralTime<single: JobsMissedDeferralTime; ClassAd Scheduler attribute>`
  ``JobsMissedDeferralTime``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of
+    exited with a *condor_shadow* exit code of
     ``JOB_MISSED_DEFERRAL_TIME`` in the time interval defined by
     attribute ``StatsLifetime``.
     :index:`JobsNotStarted<single: JobsNotStarted; ClassAd Scheduler attribute>`
  ``JobsNotStarted``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_NOT_STARTED`` in
+    exited with a *condor_shadow* exit code of ``JOB_NOT_STARTED`` in
     the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsRestartReconnectsAttempting<single: JobsRestartReconnectsAttempting; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsAttempting``:
-    A Statistics attribute defining the number of *condor\_startd*
-    daemons the *condor\_schedd* is currently attempting to reconnect
+    A Statistics attribute defining the number of *condor_startd*
+    daemons the *condor_schedd* is currently attempting to reconnect
     to, in order to recover a job that was running when the
-    *condor\_schedd* was restarted.
+    *condor_schedd* was restarted.
     :index:`JobsRestartReconnectsBadput<single: JobsRestartReconnectsBadput; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsBadput``:
     A Statistics attribute defining a histogram count of
-    *condor\_startd* daemons that the *condor\_schedd* could not
+    *condor_startd* daemons that the *condor_schedd* could not
     reconnect to in order to recover a job that was running when the
-    *condor\_schedd* was restarted, as classified by the time the job
+    *condor_schedd* was restarted, as classified by the time the job
     spent running. Counts within the histogram are separated by a comma
     and a space, where the time interval classification is defined in
     the ClassAd attribute ``JobsRuntimesHistogramBuckets``.
     :index:`JobsRestartReconnectsFailed<single: JobsRestartReconnectsFailed; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsFailed``:
-    A Statistics attribute defining the number of *condor\_startd*
-    daemons the *condor\_schedd* tried and failed to reconnect to in
-    order to recover a job that was running when the *condor\_schedd*
+    A Statistics attribute defining the number of *condor_startd*
+    daemons the *condor_schedd* tried and failed to reconnect to in
+    order to recover a job that was running when the *condor_schedd*
     was restarted.
     :index:`JobsRestartReconnectsInterrupted<single: JobsRestartReconnectsInterrupted; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsInterrupted``:
-    A Statistics attribute defining the number of *condor\_startd*
-    daemons the *condor\_schedd* attempted to reconnect to, in order to
-    recover a job that was running when the *condor\_schedd* was
+    A Statistics attribute defining the number of *condor_startd*
+    daemons the *condor_schedd* attempted to reconnect to, in order to
+    recover a job that was running when the *condor_schedd* was
     restarted, but the attempt was interrupted, for example, because the
     job was removed.
     :index:`JobsRestartReconnectsLeaseExpired<single: JobsRestartReconnectsLeaseExpired; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsLeaseExpired``:
-    A Statistics attribute defining the number of *condor\_startd*
-    daemons the *condor\_schedd* could not attempt to reconnect to, in
-    order to recover a job that was running when the *condor\_schedd*
+    A Statistics attribute defining the number of *condor_startd*
+    daemons the *condor_schedd* could not attempt to reconnect to, in
+    order to recover a job that was running when the *condor_schedd*
     was restarted, because the job lease had already expired.
     :index:`JobsRestartReconnectsSucceeded<single: JobsRestartReconnectsSucceeded; ClassAd Scheduler attribute>`
  ``JobsRestartReconnectsSucceeded``:
-    A Statistics attribute defining the number of *condor\_startd*
-    daemons the *condor\_schedd* has successfully reconnected to, in
-    order to recover a job that was running when the *condor\_schedd*
+    A Statistics attribute defining the number of *condor_startd*
+    daemons the *condor_schedd* has successfully reconnected to, in
+    order to recover a job that was running when the *condor_schedd*
     was restarted.
     :index:`JobsRunning<single: JobsRunning; ClassAd Scheduler attribute>`
  ``JobsRunning``:
@@ -231,22 +231,22 @@ Scheduler ClassAd Attributes
  ``JobsShadowNoMemory``:
     A Statistics attribute defining the number of times that jobs have
     exited because there was not enough memory to start the
-    *condor\_shadow* in the time interval defined by attribute
+    *condor_shadow* in the time interval defined by attribute
     ``StatsLifetime``.
     :index:`JobsShouldHold<single: JobsShouldHold; ClassAd Scheduler attribute>`
  ``JobsShouldHold``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_HOLD`` in
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_HOLD`` in
     the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsShouldRemove<single: JobsShouldRemove; ClassAd Scheduler attribute>`
  ``JobsShouldRemove``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_REMOVE`` in
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_REMOVE`` in
     the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsShouldRequeue<single: JobsShouldRequeue; ClassAd Scheduler attribute>`
  ``JobsShouldRequeue``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_REQUEUE``
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_REQUEUE``
     in the time interval defined by attribute ``StatsLifetime``.
     :index:`JobsSizesHistogramBuckets<single: JobsSizesHistogramBuckets; ClassAd Scheduler attribute>`
  ``JobsSizesHistogramBuckets``:
@@ -303,38 +303,38 @@ Scheduler ClassAd Attributes
     ``MonitorSelf``.
     :index:`MyAddress<single: MyAddress; ClassAd Scheduler attribute>`
  ``MyAddress``:
-    String with the IP and port address of the *condor\_schedd* daemon
+    String with the IP and port address of the *condor_schedd* daemon
     which is publishing this ClassAd.
     :index:`MyCurrentTime<single: MyCurrentTime; ClassAd Scheduler attribute>`
  ``MyCurrentTime``:
     The time, represented as the number of second elapsed since the Unix
-    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor\_schedd*
-    daemon last sent a ClassAd update to the *condor\_collector*.
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_schedd*
+    daemon last sent a ClassAd update to the *condor_collector*.
     :index:`Name<single: Name; ClassAd Scheduler attribute>`
  ``Name``:
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
-    administrator. On SMP machines, the *condor\_startd* will divide the
+    administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
-    names will be of the form “slot#@full.hostname”, for example,
-    “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
+    names will be of the form "slot#@full.hostname", for example,
+    "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
     :index:`NumJobStartsDelayed<single: NumJobStartsDelayed; ClassAd Scheduler attribute>`
  ``NumJobStartsDelayed``:
-    The number times a job requiring a *condor\_shadow* daemon could
+    The number times a job requiring a *condor_shadow* daemon could
     have been started, but was not started because of the values of
     configuration variables ``JOB_START_COUNT``
     :index:`JOB_START_COUNT` and ``JOB_START_DELAY``
     :index:`JOB_START_DELAY`.
     :index:`NumPendingClaims<single: NumPendingClaims; ClassAd Scheduler attribute>`
  ``NumPendingClaims``:
-    The number of machines (*condor\_startd* daemons) matched to this
-    *condor\_schedd* daemon, which this *condor\_schedd* knows about,
+    The number of machines (*condor_startd* daemons) matched to this
+    *condor_schedd* daemon, which this *condor_schedd* knows about,
     but has not yet managed to claim.
     :index:`NumUsers<single: NumUsers; ClassAd Scheduler attribute>`
  ``NumUsers``:
     The integer number of distinct users with jobs in this
-    *condor\_schedd*\ 's queue.
+    *condor_schedd* 's queue.
     :index:`PublicNetworkIpAddr<single: PublicNetworkIpAddr; ClassAd Scheduler attribute>`
  ``PublicNetworkIpAddr``:
     Description is not yet written.
@@ -377,7 +377,7 @@ Scheduler ClassAd Attributes
     :index:`RecentJobsCheckpointed<single: RecentJobsCheckpointed; ClassAd Scheduler attribute>`
  ``RecentJobsCheckpointed``:
     A Statistics attribute defining the number of times jobs that have
-    exited with a *condor\_shadow* exit code of ``JOB_CKPTED`` in the
+    exited with a *condor_shadow* exit code of ``JOB_CKPTED`` in the
     previous time interval defined by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsCompleted<single: RecentJobsCompleted; ClassAd Scheduler attribute>`
  ``RecentJobsCompleted``:
@@ -403,18 +403,18 @@ Scheduler ClassAd Attributes
     :index:`RecentJobsCoredumped<single: RecentJobsCoredumped; ClassAd Scheduler attribute>`
  ``RecentJobsCoredumped``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_COREDUMPED`` in
+    exited with a *condor_shadow* exit code of ``JOB_COREDUMPED`` in
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsDebugLogError<single: RecentJobsDebugLogError; ClassAd Scheduler attribute>`
  ``RecentJobsDebugLogError``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``DPRINTF_ERROR`` in the
+    exited with a *condor_shadow* exit code of ``DPRINTF_ERROR`` in the
     previous time interval defined by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsExecFailed<single: RecentJobsExecFailed; ClassAd Scheduler attribute>`
  ``RecentJobsExecFailed``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXEC_FAILED`` in
+    exited with a *condor_shadow* exit code of ``JOB_EXEC_FAILED`` in
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsExited<single: RecentJobsExited; ClassAd Scheduler attribute>`
@@ -425,60 +425,60 @@ Scheduler ClassAd Attributes
     :index:`RecentJobsExitedAndClaimClosing<single: RecentJobsExitedAndClaimClosing; ClassAd Scheduler attribute>`
  ``RecentJobsExitedAndClaimClosing``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of
+    exited with a *condor_shadow* exit code of
     ``JOB_EXITED_AND_CLAIM_CLOSING`` in the previous time interval
     defined by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsExitedNormally<single: RecentJobsExitedNormally; ClassAd Scheduler attribute>`
  ``RecentJobsExitedNormally``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXITED`` or with
+    exited with a *condor_shadow* exit code of ``JOB_EXITED`` or with
     an exit code of ``JOB_EXITED_AND_CLAIM_CLOSING`` in the previous
     time interval defined by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsExitException<single: RecentJobsExitException; ClassAd Scheduler attribute>`
  ``RecentJobsExitException``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_EXCEPTION`` or
+    exited with a *condor_shadow* exit code of ``JOB_EXCEPTION`` or
     with an unknown status in the previous time interval defined by
     attribute ``RecentStatsLifetime``.
     :index:`RecentJobsKilled<single: RecentJobsKilled; ClassAd Scheduler attribute>`
  ``RecentJobsKilled``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_KILLED`` in the
+    exited with a *condor_shadow* exit code of ``JOB_KILLED`` in the
     previous time interval defined by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsMissedDeferralTime<single: RecentJobsMissedDeferralTime; ClassAd Scheduler attribute>`
  ``RecentJobsMissedDeferralTime``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of
+    exited with a *condor_shadow* exit code of
     ``JOB_MISSED_DEFERRAL_TIME`` in the previous time interval defined
     by attribute ``RecentStatsLifetime``.
     :index:`RecentJobsNotStarted<single: RecentJobsNotStarted; ClassAd Scheduler attribute>`
  ``RecentJobsNotStarted``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_NOT_STARTED`` in
+    exited with a *condor_shadow* exit code of ``JOB_NOT_STARTED`` in
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsShadowNoMemory<single: RecentJobsShadowNoMemory; ClassAd Scheduler attribute>`
  ``RecentJobsShadowNoMemory``:
     A Statistics attribute defining the number of times that jobs have
     exited because there was not enough memory to start the
-    *condor\_shadow* in the previous time interval defined by attribute
+    *condor_shadow* in the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsShouldHold<single: RecentJobsShouldHold; ClassAd Scheduler attribute>`
  ``RecentJobsShouldHold``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_HOLD`` in
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_HOLD`` in
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsShouldRemove<single: RecentJobsShouldRemove; ClassAd Scheduler attribute>`
  ``RecentJobsShouldRemove``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_REMOVE`` in
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_REMOVE`` in
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsShouldRequeue<single: RecentJobsShouldRequeue; ClassAd Scheduler attribute>`
  ``RecentJobsShouldRequeue``:
     A Statistics attribute defining the number of times that jobs have
-    exited with a *condor\_shadow* exit code of ``JOB_SHOULD_REQUEUE``
+    exited with a *condor_shadow* exit code of ``JOB_SHOULD_REQUEUE``
     in the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentJobsStarted<single: RecentJobsStarted; ClassAd Scheduler attribute>`
@@ -492,7 +492,7 @@ Scheduler ClassAd Attributes
     :index:`RecentShadowsReconnections<single: RecentShadowsReconnections; ClassAd Scheduler attribute>`
  ``RecentShadowsReconnections``:
     A Statistics attribute defining the number of times that
-    *condor\_shadow* daemons lost connection to their *condor\_starter*
+    *condor_shadow* daemons lost connection to their *condor_starter*
     daemons and successfully reconnected in the previous time interval
     defined by attribute ``RecentStatsLifetime``. This statistic only
     appears in the Scheduler ClassAd if the level of verbosity set by
@@ -500,7 +500,7 @@ Scheduler ClassAd Attributes
     higher.
     :index:`RecentShadowsRecycled<single: RecentShadowsRecycled; ClassAd Scheduler attribute>`
  ``RecentShadowsRecycled``:
-    A Statistics attribute defining the number of times *condor\_shadow*
+    A Statistics attribute defining the number of times *condor_shadow*
     processes have been recycled for use with a new job in the previous
     time interval defined by attribute ``RecentStatsLifetime``. This
     statistic only appears in the Scheduler ClassAd if the level of
@@ -508,7 +508,7 @@ Scheduler ClassAd Attributes
     ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
     :index:`RecentShadowsStarted<single: RecentShadowsStarted; ClassAd Scheduler attribute>`
  ``RecentShadowsStarted``:
-    A Statistics attribute defining the number of *condor\_shadow*
+    A Statistics attribute defining the number of *condor_shadow*
     daemons started in the previous time interval defined by attribute
     ``RecentStatsLifetime``.
     :index:`RecentStatsLifetime<single: RecentStatsLifetime; ClassAd Scheduler attribute>`
@@ -538,7 +538,7 @@ Scheduler ClassAd Attributes
     ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
     :index:`ScheddIpAddr<single: ScheddIpAddr; ClassAd Scheduler attribute>`
  ``ScheddIpAddr``:
-    String with the IP and port address of the *condor\_schedd* daemon
+    String with the IP and port address of the *condor_schedd* daemon
     which is publishing this Scheduler ClassAd.
     :index:`ServerTime<single: ServerTime; ClassAd Scheduler attribute>`
  ``ServerTime``:
@@ -546,30 +546,30 @@ Scheduler ClassAd Attributes
     :index:`ShadowsReconnections<single: ShadowsReconnections; ClassAd Scheduler attribute>`
  ``ShadowsReconnections``:
     A Statistics attribute defining the number of times
-    *condor\_shadow*\ s lost connection to their *condor\_starter*\ s
+    *condor_shadow* s lost connection to their *condor_starter* s
     and successfully reconnected in the previous ``StatsLifetime``
     seconds. This statistic only appears in the Scheduler ClassAd if the
     level of verbosity set by the configuration variable
     ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
     :index:`ShadowsRecycled<single: ShadowsRecycled; ClassAd Scheduler attribute>`
  ``ShadowsRecycled``:
-    A Statistics attribute defining the number of times *condor\_shadow*
+    A Statistics attribute defining the number of times *condor_shadow*
     processes have been recycled for use with a new job in the previous
     ``StatsLifetime`` seconds. This statistic only appears in the
     Scheduler ClassAd if the level of verbosity set by the configuration
     variable ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
     :index:`ShadowsRunning<single: ShadowsRunning; ClassAd Scheduler attribute>`
  ``ShadowsRunning``:
-    A Statistics attribute defining the number of *condor\_shadow*
-    daemons currently running that are owned by this *condor\_schedd*.
+    A Statistics attribute defining the number of *condor_shadow*
+    daemons currently running that are owned by this *condor_schedd*.
     :index:`ShadowsRunningPeak<single: ShadowsRunningPeak; ClassAd Scheduler attribute>`
  ``ShadowsRunningPeak``:
     A Statistics attribute defining the maximum number of
-    *condor\_shadow* daemons running at one time that were owned by this
-    *condor\_schedd* over the lifetime of this *condor\_schedd*.
+    *condor_shadow* daemons running at one time that were owned by this
+    *condor_schedd* over the lifetime of this *condor_schedd*.
     :index:`ShadowsStarted<single: ShadowsStarted; ClassAd Scheduler attribute>`
  ``ShadowsStarted``:
-    A Statistics attribute defining the number of *condor\_shadow*
+    A Statistics attribute defining the number of *condor_shadow*
     daemons started in the previous time interval defined by attribute
     ``StatsLifetime``.
     :index:`StartLocalUniverse<single: StartLocalUniverse; ClassAd Scheduler attribute>`
@@ -602,68 +602,68 @@ Scheduler ClassAd Attributes
     ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
     :index:`TotalFlockedJobs<single: TotalFlockedJobs; ClassAd Scheduler attribute>`
  ``TotalFlockedJobs``:
-    The total number of jobs from this *condor\_schedd* daemon that are
+    The total number of jobs from this *condor_schedd* daemon that are
     currently flocked to other pools.
     :index:`TotalHeldJobs<single: TotalHeldJobs; ClassAd Scheduler attribute>`
  ``TotalHeldJobs``:
-    The total number of jobs from this *condor\_schedd* daemon that are
+    The total number of jobs from this *condor_schedd* daemon that are
     currently on hold.
     :index:`TotalIdleJobs<single: TotalIdleJobs; ClassAd Scheduler attribute>`
  ``TotalIdleJobs``:
-    The total number of jobs from this *condor\_schedd* daemon that are
+    The total number of jobs from this *condor_schedd* daemon that are
     currently idle, not including local or scheduler universe jobs.
     :index:`TotalJobAds<single: TotalJobAds; ClassAd Scheduler attribute>`
  ``TotalJobAds``:
     The total number of all jobs (in all states) from this
-    *condor\_schedd* daemon.
+    *condor_schedd* daemon.
     :index:`TotalLocalJobsIdle<single: TotalLocalJobsIdle; ClassAd Scheduler attribute>`
  ``TotalLocalJobsIdle``:
     The total number of **local**
-    **universe**\ :index:`universe<single: universe; submit commands>` jobs from
-    this *condor\_schedd* daemon that are currently idle.
+    **universe** :index:`universe<single: universe; submit commands>` jobs from
+    this *condor_schedd* daemon that are currently idle.
     :index:`TotalLocalJobsRunning<single: TotalLocalJobsRunning; ClassAd Scheduler attribute>`
  ``TotalLocalJobsRunning``:
     The total number of **local**
-    **universe**\ :index:`universe<single: universe; submit commands>` jobs from
-    this *condor\_schedd* daemon that are currently running.
+    **universe** :index:`universe<single: universe; submit commands>` jobs from
+    this *condor_schedd* daemon that are currently running.
     :index:`TotalRemovedJobs<single: TotalRemovedJobs; ClassAd Scheduler attribute>`
  ``TotalRemovedJobs``:
-    The current number of all running jobs from this *condor\_schedd*
+    The current number of all running jobs from this *condor_schedd*
     daemon that have remove requests.
     :index:`TotalRunningJobs<single: TotalRunningJobs; ClassAd Scheduler attribute>`
  ``TotalRunningJobs``:
-    The total number of jobs from this *condor\_schedd* daemon that are
+    The total number of jobs from this *condor_schedd* daemon that are
     currently running, not including local or scheduler universe jobs.
     :index:`TotalSchedulerJobsIdle<single: TotalSchedulerJobsIdle; ClassAd Scheduler attribute>`
  ``TotalSchedulerJobsIdle``:
     The total number of **scheduler**
-    **universe**\ :index:`universe<single: universe; submit commands>` jobs from
-    this *condor\_schedd* daemon that are currently idle.
+    **universe** :index:`universe<single: universe; submit commands>` jobs from
+    this *condor_schedd* daemon that are currently idle.
     :index:`TotalSchedulerJobsRunning<single: TotalSchedulerJobsRunning; ClassAd Scheduler attribute>`
  ``TotalSchedulerJobsRunning``:
     The total number of **scheduler**
-    **universe**\ :index:`universe<single: universe; submit commands>` jobs from
-    this *condor\_schedd* daemon that are currently running.
+    **universe** :index:`universe<single: universe; submit commands>` jobs from
+    this *condor_schedd* daemon that are currently running.
     :index:`TransferQueueUserExpr<single: TransferQueueUserExpr; ClassAd Scheduler attribute>`
  ``TransferQueueUserExpr``
     A ClassAd expression that provides the name of the transfer queue
-    that the *condor\_schedd* will be using for job file transfer.
+    that the *condor_schedd* will be using for job file transfer.
     :index:`UpdateInterval<single: UpdateInterval; ClassAd Scheduler attribute>`
  ``UpdateInterval``:
     The interval, in seconds, between publication of this
-    *condor\_schedd* ClassAd and the previous publication.
+    *condor_schedd* ClassAd and the previous publication.
     :index:`UpdateSequenceNumber<single: UpdateSequenceNumber; ClassAd Scheduler attribute>`
  ``UpdateSequenceNumber``:
     An integer, starting at zero, and incremented with each ClassAd
-    update sent to the *condor\_collector*. The *condor\_collector* uses
+    update sent to the *condor_collector*. The *condor_collector* uses
     this value to sequence the updates it receives.
     :index:`VirtualMemory<single: VirtualMemory; ClassAd Scheduler attribute>`
  ``VirtualMemory``:
     Description is not yet written.
     :index:`WantResAd<single: WantResAd; ClassAd Scheduler attribute>`
  ``WantResAd``:
-    A boolean value that when ``True`` causes the *condor\_negotiator*
-    daemon to send to this *condor\_schedd* daemon a full machine
+    A boolean value that when ``True`` causes the *condor_negotiator*
+    daemon to send to this *condor_schedd* daemon a full machine
     ClassAd corresponding to a matched job.
 
 When using file transfer concurrency limits, the following additional
@@ -723,7 +723,7 @@ reported once a full time span has accumulated.
     :index:`FileTransferDownloadBytes<single: FileTransferDownloadBytes; ClassAd Scheduler attribute>`
  ``FileTransferDownloadBytes``
     Total number of bytes downloaded as output from jobs since this
-    *condor\_schedd* was started. If ``STATISTICS_TO_PUBLISH``
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
     :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
@@ -769,7 +769,7 @@ reported once a full time span has accumulated.
  ``FileTransferFileReadSeconds``
     Total number of submit-side transfer process seconds spent reading
     from files to be transferred as input to jobs since this
-    *condor\_schedd* was started. If ``STATISTICS_TO_PUBLISH``
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
     :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
@@ -798,7 +798,7 @@ reported once a full time span has accumulated.
     :index:`FileTransferFileWriteSeconds<single: FileTransferFileWriteSeconds; ClassAd Scheduler attribute>`
  ``FileTransferFileWriteSeconds``
     Total number of submit-side transfer process seconds spent writing
-    to files transferred as output from jobs since this *condor\_schedd*
+    to files transferred as output from jobs since this *condor_schedd*
     was started. If ``STATISTICS_TO_PUBLISH``
     :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
@@ -833,7 +833,7 @@ reported once a full time span has accumulated.
  ``FileTransferNetReadSeconds``
     Total number of submit-side transfer process seconds spent reading
     from the network when transferring output from jobs since this
-    *condor\_schedd* was started. The reason a file transfer process may
+    *condor_schedd* was started. The reason a file transfer process may
     spend a long time writing to the network could be a network
     bottleneck on the path between the submit and execute machine. It
     could also be caused by slow reads from the disk on the execute
@@ -870,7 +870,7 @@ reported once a full time span has accumulated.
  ``FileTransferNetWriteSeconds``
     Total number of submit-side transfer process seconds spent writing
     to the network when transferring input to jobs since this
-    *condor\_schedd* was started. The reason a file transfer process may
+    *condor_schedd* was started. The reason a file transfer process may
     spend a long time writing to the network could be a network
     bottleneck on the path between the submit and execute machine. It
     could also be caused by slow writes to the disk on the execute side.
@@ -889,7 +889,7 @@ reported once a full time span has accumulated.
     :index:`FileTransferUploadBytes<single: FileTransferUploadBytes; ClassAd Scheduler attribute>`
  ``FileTransferUploadBytes``
     Total number of bytes uploaded as input to jobs since this
-    *condor\_schedd* was started. If ``STATISTICS_TO_PUBLISH``
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
     :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name

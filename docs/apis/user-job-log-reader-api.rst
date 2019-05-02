@@ -10,7 +10,7 @@ The HTCondor User and Job Log Reader API
 
 HTCondor has the ability to log an HTCondor job's significant events
 during its lifetime. This is enabled in the job's submit description
-file with the **Log**\ :index:`Log<single: Log; submit commands>` command.
+file with the **Log** :index:`Log<single: Log; submit commands>` command.
 
 This section describes the API defined by the C++ ``ReadUserLog`` class,
 which provides a programming interface for applications to read and
@@ -152,7 +152,7 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.
@@ -174,7 +174,7 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.

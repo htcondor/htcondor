@@ -54,10 +54,10 @@ Current Limitations
        server can be designated for storing all the checkpoint images
        for a pool. :index:`dynamic<single: dynamic; linking>`
        :index:`static<single: static; linking>`
-    #. On Linux, the job must be statically linked. *condor\_compile*
+    #. On Linux, the job must be statically linked. *condor_compile*
        does this by default. :index:`large files<single: large files; Unix>`
     #. Reading to or writing from files larger than 2 GBytes is only
-       supported when the submit side *condor\_shadow* and the standard
+       supported when the submit side *condor_shadow* and the standard
        universe user job application itself are both 64-bit executables.
 
     Note: these limitations only apply to jobs which HTCondor has been

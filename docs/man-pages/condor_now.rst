@@ -1,6 +1,6 @@
       
 
-*condor\_now*
+*condor_now*
 =============
 
 Start a job now.
@@ -9,20 +9,20 @@ Start a job now.
 Synopsis
 --------
 
-**condor\_now** **-help**
+**condor_now** **-help**
 
-**condor\_now** [**-name  **\ **] [**-debug**\ ] *now-job* *vacate-job*
-[*vacate-job+*\ ]
+**condor_now** [**-name** **] [**-debug** ] *now-job* *vacate-job*
+[*vacate-job+* ]
 
 Description
 -----------
 
-*condor\_now* tries to run the *now-job* now. The *vacate-job* is
+*condor_now* tries to run the *now-job* now. The *vacate-job* is
 immediately vacated; after it terminates, if the schedd still has the
 claim to the vacated job's slot – and it usually will – the schedd will
 immediately start the now-job on that slot.
 
-If you specify multiple *vacate-job*\ s, each will be immediately
+If you specify multiple *vacate-job* s, each will be immediately
 vacated; after they all terminate, the schedd will try to coalesce their
 slots into a single, larger, slot and then use that slot to run the
 now-job.
@@ -36,8 +36,8 @@ Options
     Print a usage reminder.
  **-debug**
     Print debugging output. Control the verbosity with the environment
-    variables \_CONDOR\_TOOL\_DEBUG, as usual.
- **-name **\ **
+    variables _CONDOR_TOOL_DEBUG, as usual.
+ **-name** **
     Specify the scheduler('s name) and (optionally) the pool to find it
     in.
 
@@ -59,8 +59,8 @@ To begin running job 17.3 as soon as possible using job 4.2's slot:
       condor_now 17.3 4.2
 
 To try to figure out why that doesn't work for the ‘magic' scheduler in
-the 'gandalf' pool, set the environment variable \_CONDOR\_TOOL\_DEBUG
-to ‘D\_FULLDEBUG' and then:
+the 'gandalf' pool, set the environment variable _CONDOR_TOOL_DEBUG
+to ‘D_FULLDEBUG' and then:
 
 ::
 
@@ -69,7 +69,7 @@ to ‘D\_FULLDEBUG' and then:
 Exit Status
 -----------
 
-*condor\_now* will exit with a status value of 0 (zero) if the schedd
+*condor_now* will exit with a status value of 0 (zero) if the schedd
 accepts its request to vacate the vacate-job and start the now-job in
 its place. It does not wait for the now-job to have started running.
 

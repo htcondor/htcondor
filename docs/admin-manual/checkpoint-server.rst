@@ -106,7 +106,7 @@ There are three steps necessary towards running a checkpoint server:
 
      ``DAEMON_LIST`` :index:`DAEMON_LIST`
         Described in the :doc:`/admin-manual/configuration-macros` section. To have
-        the checkpoint server managed by the *condor\_master*, the
+        the checkpoint server managed by the *condor_master*, the
         ``DAEMON_LIST`` variable's value must list both ``MASTER`` and
         ``CKPT_SERVER``. Also add ``STARTD`` to allow jobs to run on the
         checkpoint server machine. Similarly, add ``SCHEDD`` to permit
@@ -129,14 +129,14 @@ There are three steps necessary towards running a checkpoint server:
 
  Start the Checkpoint Server
     To start the newly configured checkpoint server, restart HTCondor on
-    that host to enable the *condor\_master* to notice the new
-    configuration. Do this by sending a *condor\_restart* command from
+    that host to enable the *condor_master* to notice the new
+    configuration. Do this by sending a *condor_restart* command from
     any machine with administrator access to the pool. See
     the :doc:`/admin-manual/security` section on
     page \ `Security <../admin-manual/security.html>`__ for full details
     about security in HTCondor.
 
-    Note that when the *condor\_ckpt\_server* starts up, it will
+    Note that when the *condor_ckpt_server* starts up, it will
     immediately inspect any checkpoint files in the location described
     by the ``CKPT_SERVER_DIR`` variable, and determine if any of them
     are stale. Stale checkpoint files will be removed.
@@ -162,7 +162,7 @@ There are three steps necessary towards running a checkpoint server:
     ``False``, the submission machine will not use a checkpoint server.
 
     Once these variables are in place, send the command
-    *condor\_reconfig* to all machines in the pool, so the changes take
+    *condor_reconfig* to all machines in the pool, so the changes take
     effect. This is described in section \ `Installation, Start Up, Shut
     Down and
     Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
@@ -212,7 +212,7 @@ machine, and should be the host name of the nearest server to the
 machine. In the case of multiple checkpoint servers, set this in the
 local configuration file.
 
-Third, send a *condor\_reconfig* command to all machines in the pool, so
+Third, send a *condor_reconfig* command to all machines in the pool, so
 that the changes take effect. This is described in
 section \ `Installation, Start Up, Shut Down and
 Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__

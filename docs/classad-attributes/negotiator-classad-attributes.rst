@@ -19,7 +19,7 @@ Negotiator ClassAd Attributes
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
     :index:`LastNegotiationCycleActiveSubmitterCount<single: LastNegotiationCycleActiveSubmitterCount; ClassAd Negotiator attribute>`
  ``LastNegotiationCycleActiveSubmitterCount<X>``:
-    The integer number of submitters the *condor\_negotiator* attempted
+    The integer number of submitters the *condor_negotiator* attempted
     to negotiate with in the negotiation cycle. The number ``<X>``
     appended to the attribute name indicates how many negotiation cycles
     ago this cycle happened.
@@ -85,7 +85,7 @@ Negotiator ClassAd Attributes
  ``LastNegotiationCyclePhase1Duration<X>``:
     The duration, in seconds, of Phase 1 of the negotiation cycle: the
     process of getting submitter and machine ClassAds from the
-    *condor\_collector*. The number ``<X>`` appended to the attribute
+    *condor_collector*. The number ``<X>`` appended to the attribute
     name indicates how many negotiation cycles ago this cycle happened.
     :index:`LastNegotiationCyclePhase2Duration<single: LastNegotiationCyclePhase2Duration; ClassAd Negotiator attribute>`
  ``LastNegotiationCyclePhase2Duration<X>``:
@@ -155,7 +155,7 @@ Negotiator ClassAd Attributes
     :index:`LastNegotiationCycleTotalSlots<single: LastNegotiationCycleTotalSlots; ClassAd Negotiator attribute>`
  ``LastNegotiationCycleTotalSlots<X>``:
     The total number of slot ClassAds received by the
-    *condor\_negotiator*. The number ``<X>`` appended to the attribute
+    *condor_negotiator*. The number ``<X>`` appended to the attribute
     name indicates how many negotiation cycles ago this cycle happened.
     :index:`LastNegotiationCycleTrimmedSlots<single: LastNegotiationCycleTrimmedSlots; ClassAd Negotiator attribute>`
  ``LastNegotiationCycleTrimmedSlots<X>``:
@@ -167,25 +167,25 @@ Negotiator ClassAd Attributes
     A string with the machine's fully qualified host name.
     :index:`MyAddress<single: MyAddress; ClassAd Negotiator attribute>`
  ``MyAddress``:
-    String with the IP and port address of the *condor\_negotiator*
+    String with the IP and port address of the *condor_negotiator*
     daemon which is publishing this ClassAd.
     :index:`MyCurrentTime<single: MyCurrentTime; ClassAd Negotiator attribute>`
  ``MyCurrentTime``:
     The time, represented as the number of second elapsed since the Unix
-    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor\_schedd*
-    daemon last sent a ClassAd update to the *condor\_collector*.
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_schedd*
+    daemon last sent a ClassAd update to the *condor_collector*.
     :index:`Name<single: Name; ClassAd Negotiator attribute>`
  ``Name``:
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
-    administrator. On SMP machines, the *condor\_startd* will divide the
+    administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
     names will be of the form ``slot#@full.hostname``, for example,
     ``slot1@vulture.cs.wisc.edu``, which signifies slot number 1 from
     ``vulture.cs.wisc.edu``.
     :index:`NegotiatorIpAddr<single: NegotiatorIpAddr; ClassAd Negotiator attribute>`
  ``NegotiatorIpAddr``:
-    String with the IP and port address of the *condor\_negotiator*
+    String with the IP and port address of the *condor_negotiator*
     daemon which is publishing this Negotiator ClassAd.
     :index:`PublicNetworkIpAddr<single: PublicNetworkIpAddr; ClassAd Negotiator attribute>`
  ``PublicNetworkIpAddr``:
@@ -193,7 +193,7 @@ Negotiator ClassAd Attributes
     :index:`UpdateSequenceNumber<single: UpdateSequenceNumber; ClassAd Negotiator attribute>`
  ``UpdateSequenceNumber``:
     An integer, starting at zero, and incremented with each ClassAd
-    update sent to the *condor\_collector*. The *condor\_collector* uses
+    update sent to the *condor_collector*. The *condor_collector* uses
     this value to sequence the updates it receives.
 
       

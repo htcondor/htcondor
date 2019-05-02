@@ -20,14 +20,14 @@ The Submit Description File
 
 Different than all other universe jobs, the **vm** universe job
 specifies a disk image, not an executable. Therefore, the submit
-commands **input**\ :index:`input<single: input; submit commands>`,
-**output**\ :index:`output<single: output; submit commands>`, and
-**error**\ :index:`error<single: error; submit commands>` do not apply. If
-specified, *condor\_submit* rejects the job with an error. The
-**executable**\ :index:`executable<single: executable; submit commands>` command
+commands **input** :index:`input<single: input; submit commands>`,
+**output** :index:`output<single: output; submit commands>`, and
+**error** :index:`error<single: error; submit commands>` do not apply. If
+specified, *condor_submit* rejects the job with an error. The
+**executable** :index:`executable<single: executable; submit commands>` command
 changes definition within a **vm** universe job. It no longer specifies
 an executable file, but instead provides a string that identifies the
-job for tools such as *condor\_q*. Other commands specific to the type
+job for tools such as *condor_q*. Other commands specific to the type
 of virtual machine software identify the disk image.
 
 VMware, Xen, and KVM virtual machine software are supported. As these
@@ -50,7 +50,7 @@ or
       vm_type = kvm
 
 The job is required to specify its memory needs for the disk image with
-**vm\_memory**\ :index:`vm_memory<single: vm_memory; submit commands>`, which is
+**vm_memory** :index:`vm_memory<single: vm_memory; submit commands>`, which is
 given in Mbytes. HTCondor uses this number to assure a match with a
 machine that can provide the needed memory space.
 
@@ -61,13 +61,13 @@ Virtual machine networking is enabled with the command
       vm_networking = true
 
 And, when networking is enabled, a definition of
-**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
+**vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 as **bridge** matches the job only with a machine that is configured to
 use bridge networking. A definition of
-**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
+**vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 as **nat** matches the job only with a machine that is configured to use
 NAT networking. When no definition of
-**vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
+**vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 is given, HTCondor may match the job with a machine that enables
 networking, and further, the choice of bridge or NAT networking is
 determined by the machine's configuration.
@@ -85,7 +85,7 @@ its own files, the submit command to prevent the transfer is
       vm_no_output_vm = true
 
 The required disk image must be identified for a virtual machine. This
-**vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>` command specifies
+**vm_disk** :index:`vm_disk<single: vm_disk; submit commands>` command specifies
 a list of comma-separated files. Each disk file is specified by
 colon-separated fields. The first field is the path and file name of the
 disk file. The second field specifies the device. The third field
@@ -97,7 +97,7 @@ Here is an example that identifies a single file:
       vm_disk = swap.img:sda2:w:raw
 
 If HTCondor will be transferring the disk file, then the file name given
-in **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>` should not
+in **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>` should not
 contain any path information. Otherwise, the full path to the file
 should be given.
 
@@ -105,11 +105,11 @@ Setting values in the submit description file for some commands have
 consequences for the virtual machine description file. These commands
 are
 
--  **vm\_memory**\ :index:`vm_memory<single: vm_memory; submit commands>`
--  **vm\_macaddr**\ :index:`vm_macaddr<single: vm_macaddr; submit commands>`
--  **vm\_networking**\ :index:`vm_networking<single: vm_networking; submit commands>`
--  **vm\_networking\_type**\ :index:`vm_networking_type<single: vm_networking_type; submit commands>`
--  **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>`
+-  **vm_memory** :index:`vm_memory<single: vm_memory; submit commands>`
+-  **vm_macaddr** :index:`vm_macaddr<single: vm_macaddr; submit commands>`
+-  **vm_networking** :index:`vm_networking<single: vm_networking; submit commands>`
+-  **vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
+-  **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>`
 
 For VMware virtual machines, setting values for these commands causes
 HTCondor to modify the ``.vmx`` file, overwriting existing values. For
@@ -139,7 +139,7 @@ VMware-Specific Submit Commands
 :index:`submit commands specific to VMware<single: submit commands specific to VMware; vm universe>`
 
 Specific to VMware, the submit description file command
-**vmware\_dir**\ :index:`vmware_dir<single: vmware_dir; submit commands>` gives the
+**vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` gives the
 path and directory (on the machine from which the job is submitted) to
 where VMware-specific files and applications reside. One example of a
 VMware-specific application is the VMDK files, which form a virtual hard
@@ -147,10 +147,10 @@ drive (disk image) for the virtual machine. VMX files containing the
 primary configuration for the virtual machine would also be in this
 directory.
 
-HTCondor must be told whether or not the contents of the **vmware\_dir**
+HTCondor must be told whether or not the contents of the **vmware_dir**
 directory must be transferred to the machine where the job is to be
 executed. This required information is given with the submit command
-**vmware\_should\_transfer\_files**\ :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`.
+**vmware_should_transfer_files** :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`.
 With a value of ``True``, HTCondor does transfer the contents of the
 directory. With a value of ``False``, HTCondor does not transfer the
 contents of the directory, and instead presumes that access to this
@@ -159,7 +159,7 @@ directory is available through a shared file system.
 By default, HTCondor uses a snapshot disk for new and modified files.
 They may also be utilized for checkpoints. The snapshot disk is
 initially quite small, growing only as new files are created or files
-are modified. When **vmware\_should\_transfer\_files** is ``True``, a
+are modified. When **vmware_should_transfer_files** is ``True``, a
 job may specify that a snapshot disk is not to be used with the command
 
 ::
@@ -167,21 +167,21 @@ job may specify that a snapshot disk is not to be used with the command
       vmware_snapshot_disk = False
 
 In this case, HTCondor will utilize original disk files in producing
-checkpoints. Note that *condor\_submit* issues an error message and does
-not submit the job if both **vmware\_should\_transfer\_files** and
-**vmware\_snapshot\_disk**\ :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
+checkpoints. Note that *condor_submit* issues an error message and does
+not submit the job if both **vmware_should_transfer_files** and
+**vmware_snapshot_disk** :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
 are ``False``.
 
 Because *VMware Player* does not support snapshots, machines using
 *VMware Player* may only run **vm** jobs that set
-**vmware\_snapshot\_disk** to ``False``. These jobs will also set
-**vmware\_should\_transfer\_files** to ``True``. A job using *VMware
+**vmware_snapshot_disk** to ``False``. These jobs will also set
+**vmware_should_transfer_files** to ``True``. A job using *VMware
 Player* will go on hold if it attempts to use a snapshot. The pool
 administrator should have configured the pool such that machines will
 not start jobs they can not run.
 
 Note that if snapshot disks are requested and file transfer is not being
-used, the **vmware\_dir** setting given in the submit description file
+used, the **vmware_dir** setting given in the submit description file
 should not contain any symbolic link path components, as described on
 the
 `https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes>`__
@@ -200,7 +200,7 @@ Here is a sample submit description file for a VMware virtual machine:
     vmware_should_transfer_files = True 
     queue
 
-This sample uses the **vmware\_dir** command to identify the location of
+This sample uses the **vmware_dir** command to identify the location of
 the disk image to be executed as an HTCondor job. The contents of this
 directory are transferred to the machine assigned to execute the
 HTCondor job.
@@ -211,23 +211,23 @@ Xen-Specific Submit Commands
 :index:`submit commands specific to Xen<single: submit commands specific to Xen; vm universe>`
 
 A Xen **vm** universe job requires specification of the guest kernel.
-The **xen\_kernel**\ :index:`xen_kernel<single: xen_kernel; submit commands>` command
+The **xen_kernel** :index:`xen_kernel<single: xen_kernel; submit commands>` command
 accomplishes this, utilizing one of the following definitions.
 
 #. ``xen_kernel = included`` implies that the kernel is to be found in
    disk image given by the definition of the single file specified in
-   **vm\_disk**\ :index:`vm_disk<single: vm_disk; submit commands>`.
+   **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>`.
 #. ``xen_kernel = path-to-kernel`` gives the file name of the required
    kernel. If this kernel must be transferred to machine on which the
    **vm** universe job will execute, it must also be included in the
-   **transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+   **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
    command.
 
    This form of the
-   **xen\_kernel**\ :index:`xen_kernel<single: xen_kernel; submit commands>` command
+   **xen_kernel** :index:`xen_kernel<single: xen_kernel; submit commands>` command
    also requires further definition of the
-   **xen\_root**\ :index:`xen_root<single: xen_root; submit commands>` command.
-   **xen\_root** defines the device containing files needed by root.
+   **xen_root** :index:`xen_root<single: xen_root; submit commands>` command.
+   **xen_root** defines the device containing files needed by root.
 
 Checkpoints
 -----------
@@ -256,7 +256,7 @@ Periodic creation of checkpoints is not supported at this time.
 
 Enabling both networking and checkpointing for a **vm** universe job can
 cause networking problems when the job restarts, particularly if the job
-migrates to a different machine. *condor\_submit* will normally reject
+migrates to a different machine. *condor_submit* will normally reject
 such jobs. To enable both, then add the command
 
 ::
@@ -288,7 +288,7 @@ While the following web page contains instructions specific to Fedora on
 how to create a virtual guest image, it should provide a good starting
 point for other platforms as well.
 
-`http://fedoraproject.org/wiki/Virtualization\_Quick\_Start <http://fedoraproject.org/wiki/Virtualization_Quick_Start>`__
+`http://fedoraproject.org/wiki/Virtualization_Quick_Start <http://fedoraproject.org/wiki/Virtualization_Quick_Start>`__
 
 Job Completion in the vm Universe
 ---------------------------------

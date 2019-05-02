@@ -65,7 +65,7 @@ specific additional directories to be bind mounted into the container.
 For example, if there is some common shared input data located on a
 machine, or on a shared filesystem, this directory can be bind-mounted
 and be visible inside the container. This is controlled by the
-configuration parameter SINGULARITY\_BIND\_EXPR. This is an expression,
+configuration parameter SINGULARITY_BIND_EXPR. This is an expression,
 which is evaluated in the context of the machine and job ads, and which
 should evaluated to a string which contains a space separated list of
 directories to mount.
@@ -91,7 +91,7 @@ the appropriate nvidia devices visible inside the container.
 
 Finally, if an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
-parameter SINGULARITY\_EXTRA\_ARGUMENTS allows arbitraty additional
+parameter SINGULARITY_EXTRA_ARGUMENTS allows arbitraty additional
 parameters to be passed to the singularity exec command. For example, to
 pass the –nv argument, to allow the GPUs on the host to be visible
 inside the container, an administrator could set
@@ -101,7 +101,7 @@ inside the container, an administrator could set
     SINGULARITY_EXTRA_ARGUMENTS = --nv
 
 If Singularity is installed as non-setuid, the following flag must be
-set for *condor\_ssh\_to\_job* to work.
+set for *condor_ssh_to_job* to work.
 
 ::
 

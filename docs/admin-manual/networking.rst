@@ -102,7 +102,7 @@ dynamically assigned port the *condor_negotiator* is listening on. All
 HTCondor tools and daemons that need to communicate with the
 *condor_negotiator* will either use the ``NEGOTIATOR_ADDRESS_FILE``
 :index:`NEGOTIATOR_ADDRESS_FILE` or will query the
-*condor_collector* for the *condor_negotiator*\ 's ClassAd.
+*condor_collector* for the *condor_negotiator* 's ClassAd.
 
 Sites that configure any checkpoint servers will introduce other fixed
 ports into their network. Each *condor_ckpt_server* will listen to 4
@@ -871,8 +871,8 @@ daemon.
 A daemon may be listening on one, some, or all of its machine's
 addresses. (See ``NETWORK_INTERFACE`` :index:`NETWORK_INTERFACE`.)
 Daemons may presently list at most two addresses, one IPv6 and one IPv4.
-Each address is the “most public” address of its protocol; by default,
-the IPv6 address is listed first. HTCondor selects the “most public”
+Each address is the "most public" address of its protocol; by default,
+the IPv6 address is listed first. HTCondor selects the "most public"
 address heuristically.
 
 Nonetheless, there are two cases in which HTCondor may not use an IPv6
@@ -886,7 +886,7 @@ address when one is available:
 You may force HTCondor to prefer IPv4 in all three of these situations
 by setting the macro ``PREFER_IPV4`` :index:`PREFER_IPV4` to true;
 this is the default. With ``PREFER_IPV4`` :index:`PREFER_IPV4`
-set, HTCondor daemons will list their “most public” IPv4 address first;
+set, HTCondor daemons will list their "most public" IPv4 address first;
 prefer the IPv4 address when choosing from another's daemon list; and
 prefer the IPv4 address when looking up a host name in DNS.
 

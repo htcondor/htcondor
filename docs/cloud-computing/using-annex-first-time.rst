@@ -32,7 +32,7 @@ want to install HTCondor somewhere else.
 
 Start by downloading (from
 `https://research.cs.wisc.edu/htcondor/downloads/ <https://research.cs.wisc.edu/htcondor/downloads/>`__)
-the 8.7.8 release from the “tarballs” section that matches your Linux
+the 8.7.8 release from the "tarballs" section that matches your Linux
 version. (If you don't know your Linux version, ask your system
 administrator.) These instructions assume that the file you downloaded
 is located in your home directory on the Linux machine, so copy it there
@@ -122,7 +122,7 @@ After a little while:
 Configure Public Interface
 ''''''''''''''''''''''''''
 
-The default personal HTCondor uses the “loopback” interface, which
+The default personal HTCondor uses the "loopback" interface, which
 basically just means it won't talk to anyone other than itself. For
 *condor_annex* to work, your personal HTCondor needs to use the Linux
 machine's public interface. In most cases, that's as simple as adding
@@ -230,8 +230,8 @@ Obtaining an Access Key
 '''''''''''''''''''''''
 
 In order to use AWS, *condor_annex* needs a pair of security tokens
-(like a user name and password). Like a user name, the “access key” is
-(more or less) public information; the corresponding “secret key” is
+(like a user name and password). Like a user name, the "access key" is
+(more or less) public information; the corresponding "secret key" is
 like a password and must be kept a secret. To help keep both halves
 secret, *condor_annex* (and HTCondor) are never told these keys
 directly; instead, you tell HTCondor which file to look in to find each
@@ -259,22 +259,22 @@ The following instructions assume you are logged in as a user with the
 privilege to create new users. (The ‘root' user for any account has this
 privilege; other accounts may as well.)
 
-#. Click the “Add User” button.
-#. Enter name in the **User name** box; “annex-user” is a fine choice.
-#. Click the check box labelled “Programmatic access”.
-#. Click the button labelled “Next: Permissions”.
-#. Select “Attach existing policies directly”.
-#. Type “AdministratorAccess” in the box labelled “Filter”.
+#. Click the "Add User" button.
+#. Enter name in the **User name** box; "annex-user" is a fine choice.
+#. Click the check box labelled "Programmatic access".
+#. Click the button labelled "Next: Permissions".
+#. Select "Attach existing policies directly".
+#. Type "AdministratorAccess" in the box labelled "Filter".
 #. Click the check box on the single line that will appear below
-   (labelled “AdministratorAccess”).
-#. Click the “Next: review” button (you may need to scroll down).
-#. Click the “Create user” button.
-#. From the line labelled “annex-user”, copy the value in the column
-   labelled “Access key ID” to the file publicKeyFile.
-#. On the line labelled “annex-user”, click the “Show” link in the
-   column labelled “Secret access key”; copy the revealed value to the
+   (labelled "AdministratorAccess").
+#. Click the "Next: review" button (you may need to scroll down).
+#. Click the "Create user" button.
+#. From the line labelled "annex-user", copy the value in the column
+   labelled "Access key ID" to the file publicKeyFile.
+#. On the line labelled "annex-user", click the "Show" link in the
+   column labelled "Secret access key"; copy the revealed value to the
    file privateKeyFile.
-#. Hit the “Close” button.
+#. Hit the "Close" button.
 
 The ‘annex-user' now has full privileges to your account.
 

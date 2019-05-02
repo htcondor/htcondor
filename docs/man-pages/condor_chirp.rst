@@ -45,32 +45,32 @@ java universes.
 Chirp Commands
 --------------
 
- **fetch **\ *RemoteFileName LocalFileName*
+ **fetch** *RemoteFileName LocalFileName*
     Copy the *RemoteFileName* from the submit machine to the execute
     machine, naming it *LocalFileName*.
- **put** [**-mode  **\ *mode*] [**-perm  **\ *UnixPerm*] *LocalFileName* *RemoteFileName*
+ **put** [**-mode** *mode*] [**-perm** *UnixPerm*] *LocalFileName* *RemoteFileName*
     Copy the *LocalFileName* from the execute machine to the submit
     machine, naming it *RemoteFileName*. The optional
-    **-perm **\ *UnixPerm* argument describes the file access
+    **-perm** *UnixPerm* argument describes the file access
     permissions in a Unix format; 660 is an example Unix format.
 
-    The optional **-mode **\ *mode* argument is one or more of the
+    The optional **-mode** *mode* argument is one or more of the
     following characters describing the *RemoteFileName* file: ``w``,
     open for writing; ``a``, force all writes to append; ``t``, truncate
     before use; ``c``, create the file, if it does not exist; ``x``,
     fail if ``c`` is given and the file already exists.
 
- **remove **\ *RemoteFileName*
+ **remove** *RemoteFileName*
     Remove the *RemoteFileName* file from the submit machine.
- **get_job_attr **\ *JobAttributeName*
+ **get_job_attr** *JobAttributeName*
     Prints the named job ClassAd attribute to standard output.
- **set_job_attr **\ *JobAttributeName AttributeValue*
+ **set_job_attr** *JobAttributeName AttributeValue*
     Sets the named job ClassAd attribute with the given attribute value.
- **get_job_attr_delayed **\ *JobAttributeName*
+ **get_job_attr_delayed** *JobAttributeName*
     Prints the named job ClassAd attribute to standard output,
     potentially reading the cached value from a recent
     set_job_attr_delayed.
- **set_job_attr_delayed **\ *JobAttributeName AttributeValue*
+ **set_job_attr_delayed** *JobAttributeName AttributeValue*
     Sets the named job ClassAd attribute with the given attribute value,
     but does not immediately synchronize the value with the submit side.
     It can take 15 minutes before the synchronization occurs. This has
@@ -78,60 +78,60 @@ Chirp Commands
     jobs do not need ClassAd attribute ``WantIOProxy`` set. With this
     option, job attribute names are restricted to begin with the case
     sensitive substring ``Chirp``.
- **ulog **\ *Message*
+ **ulog** *Message*
     Appends *Message* to the job event log.
- **read** [**-offset  **\ *offset*] [**-stride  **\ *length skip*] *RemoteFileName* *Length*
+ **read** [**-offset** *offset*] [**-stride** *length skip*] *RemoteFileName* *Length*
     Read *Length* bytes from *RemoteFileName*. Optionally, implement a
     stride by starting the read at *offset* and reading *length* bytes
     with a stride of *skip* bytes.
- **write** [**-offset  **\ *offset*] [**-stride  **\ *length skip*] *RemoteFileName* *LocalFileName* [*numbytes*
+ **write** [**-offset** *offset*] [**-stride** *length skip*] *RemoteFileName* *LocalFileName* [*numbytes*
     ] Write the contents of *LocalFileName* to *RemoteFileName*.
     Optionally, start writing to the remote file at *offset* and write
     *length* bytes with a stride of *skip* bytes. If the optional
     *numbytes* follows *LocalFileName*, then the write will halt after
     *numbytes* input bytes have been written. Otherwise, the entire
     contents of *LocalFileName* will be written.
- **rmdir** [**-r**\ ] *RemotePath*
+ **rmdir** [**-r** ] *RemotePath*
     Delete the directory specified by *RemotePath*. If the optional
     **-r** is specified, recursively delete the entire directory.
- **getdir** [**-l**\ ] *RemotePath*
+ **getdir** [**-l** ] *RemotePath*
     List the contents of the directory specified by *RemotePath*. If
     *-l* is specified, list all metadata as well.
  **whoami**
     Get the user's current identity.
- **whoareyou **\ *RemoteHost*
+ **whoareyou** *RemoteHost*
     Get the identity of *RemoteHost*.
- **link** [**-s**\ ] *OldRemotePath* *NewRemotePath*
+ **link** [**-s** ] *OldRemotePath* *NewRemotePath*
     Create a hard link from *OldRemotePath* to *NewRemotePath*. If the
     optional *-s* is specified, create a symbolic link instead.
- **readlink **\ *RemoteFileName*
+ **readlink** *RemoteFileName*
     Read the contents of the file defined by the symbolic link
     *RemoteFileName*.
- **stat **\ *RemotePath*
+ **stat** *RemotePath*
     Get metadata for *RemotePath*. Examines the target, if it is a
     symbolic link.
- **lstat **\ *RemotePath*
+ **lstat** *RemotePath*
     Get metadata for *RemotePath*. Examines the file, if it is a
     symbolic link.
- **statfs **\ *RemotePath*
+ **statfs** *RemotePath*
     Get file system metadata for *RemotePath*.
- **access **\ *RemotePath Mode*
+ **access** *RemotePath Mode*
     Check access permissions for *RemotePath*. *Mode* is one or more of
     the characters ``r``, ``w``, ``x``, or ``f``, representing read,
     write, execute, and existence, respectively.
- **chmod **\ *RemotePath UnixPerm*
+ **chmod** *RemotePath UnixPerm*
     Change the permissions of *RemotePath* to *UnixPerm*. *UnixPerm*
     describes the file access permissions in a Unix format; 660 is an
     example Unix format.
- **chown **\ *RemotePath UID GID*
+ **chown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     target of *RemotePath*, if it is a symbolic link.
- **chown **\ *RemotePath UID GID*
+ **chown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     link, if *RemotePath* is a symbolic link.
- **truncate **\ *RemoteFileName Length*
+ **truncate** *RemoteFileName Length*
     Truncates *RemoteFileName* to *Length* bytes.
- **utime **\ *RemotePath AccessTime ModifyTime*
+ **utime** *RemotePath AccessTime ModifyTime*
     Change the access to *AccessTime* and modification time to
     *ModifyTime* of *RemotePath*.
 

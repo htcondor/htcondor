@@ -96,22 +96,22 @@ Returning From a Low Power State
 
 :index:`leaving a low power state<single: leaving a low power state; power management>`
 
-The HTCondor command line tool *condor\_power* may wake a machine from a
+The HTCondor command line tool *condor_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
-*condor\_power* manual page on
-page \ `condor\_power <../man-pages/condor_power.html>`__.
+*condor_power* manual page on
+page \ `condor_power <../man-pages/condor_power.html>`__.
 :index:`condor_rooster daemon`
 
-To automatically call *condor\_power* under specific conditions,
-*condor\_rooster* may be used. The configuration options for
-*condor\_rooster* are described in the :doc:`/admin-manual/configuration-macros` section.
+To automatically call *condor_power* under specific conditions,
+*condor_rooster* may be used. The configuration options for
+*condor_rooster* are described in the :doc:`/admin-manual/configuration-macros` section.
 
 Keeping a ClassAd for a Hibernating Machine
 -------------------------------------------
 
-A pool's *condor\_collector* daemon can be configured to keep a
+A pool's *condor_collector* daemon can be configured to keep a
 persistent ClassAd entry for each machine, once it has entered
-hibernation. This is required by *condor\_rooster* so that it can
+hibernation. This is required by *condor_rooster* so that it can
 evaluate the ``UNHIBERNATE`` :index:`UNHIBERNATE` expression of
 the offline machines.
 
@@ -123,7 +123,7 @@ Macros <../admin-manual/configuration-macros.html>`__ for the
 definition. An optional expiration time for each ClassAd can be
 specified with ``OFFLINE_EXPIRE_ADS_AFTER``
 :index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
-the hibernating machine's ClassAd enters the *condor\_collector* daemon.
+the hibernating machine's ClassAd enters the *condor_collector* daemon.
 See the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__ for the

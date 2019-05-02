@@ -1,6 +1,6 @@
       
 
-*condor\_version*
+*condor_version*
 =================
 
 print HTCondor version and platform information
@@ -9,14 +9,14 @@ print HTCondor version and platform information
 Synopsis
 --------
 
-**condor\_version** [**-help**\ ]
+**condor_version** [**-help** ]
 
-**condor\_version** [**-arch**\ ] [**-opsys**\ ] [**-syscall**\ ]
+**condor_version** [**-arch** ] [**-opsys** ] [**-syscall** ]
 
 Description
 -----------
 
-With no arguments, *condor\_version* prints the currently installed
+With no arguments, *condor_version* prints the currently installed
 HTCondor version number and platform information. The version number
 includes a build identification number, as well as the date built.
 
@@ -39,7 +39,7 @@ Options
 Exit Status
 -----------
 
-*condor\_version* will exit with a status value of 0 (zero) upon
+*condor_version* will exit with a status value of 0 (zero) upon
 success, and it should never exit with a failing value.
 
 Author

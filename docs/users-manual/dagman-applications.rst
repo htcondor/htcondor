@@ -107,8 +107,8 @@ JOB
 The *JOB* command specifies an HTCondor job. The syntax used for each
 *JOB* command is
 
-**JOB** *JobName* *SubmitDescriptionFileName* [**DIR  **\ *directory*]
-[**NOOP**\ ] [**DONE**\ ]
+**JOB** *JobName* *SubmitDescriptionFileName* [**DIR  ** *directory*]
+[**NOOP** ] [**DONE** ]
 
 A *JOB* entry maps a *JobName* to an HTCondor submit description file.
 The *JobName* uniquely identifies nodes within the DAG input file and in
@@ -143,7 +143,7 @@ The optional *NOOP* keyword identifies that the HTCondor job within the
 node is not to be submitted to HTCondor. This optimization is useful in
 cases such as debugging a complex DAG structure, where some of the
 individual jobs are long-running. For this debugging of structure, some
-jobs are marked as *NOOP*\ s, and the DAG is initially run to verify
+jobs are marked as *NOOP* s, and the DAG is initially run to verify
 that the control flow through the DAG is correct. The *NOOP* keywords
 are then removed before submitting the DAG. Any PRE and POST scripts for
 jobs specified with *NOOP* are executed; to avoid running the PRE and
@@ -174,8 +174,8 @@ DATA
 
 As of version 8.3.5, *condor_dagman* no longer supports DATA nodes.
 
-PARENT …CHILD
-'''''''''''''
+PARENT ... CHILD
+''''''''''''''''
 
 :index:`PARENT CHILD command<single: PARENT CHILD command; DAG input file>`
 
@@ -187,10 +187,10 @@ only be started once all its parents have successfully completed.
 
 The syntax used for each dependency (PARENT/CHILD) command is
 
-**PARENT** *ParentJobName…* **CHILD** *ChildJobName…*
+**PARENT** *ParentJobName...* **CHILD** *ChildJobName...*
 
-The *PARENT* keyword is followed by one or more *ParentJobName*\ s. The
-*CHILD* keyword is followed by one or more *ChildJobName*\ s. Each child
+The *PARENT* keyword is followed by one or more *ParentJobName* s. The
+*CHILD* keyword is followed by one or more *ChildJobName* s. Each child
 job depends on every parent job within the line. A single line in the
 input file can specify the dependencies from one or more parents to one
 or more children. The diamond-shaped DAG example may specify the
@@ -242,11 +242,11 @@ an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
 
-**SCRIPT** [**DEFER  **\ *status time*] **PRE**
-*JobName*\ \|\ **ALL_NODES** *ExecutableName* [*arguments*\ ]
+**SCRIPT** [**DEFER  ** *status time*] **PRE**
+*JobName* \|\ **ALL_NODES** *ExecutableName* [*arguments* ]
 
-**SCRIPT** [**DEFER  **\ *status time*] **POST**
-*JobName*\ \|\ **ALL_NODES** *ExecutableName* [*arguments*\ ]
+**SCRIPT** [**DEFER  ** *status time*] **POST**
+*JobName* \|\ **ALL_NODES** *ExecutableName* [*arguments* ]
 
 The *SCRIPT* command uses the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
@@ -353,7 +353,7 @@ Table 2.1: Node success or failure definition with
 | F   | not run   | F      | **F** |
 +-----+-----------+--------+-------+
 
-Table 2.2: Node **S**\ uccess or **F**\ ailure definition with
+Table 2.2: Node **S** uccess or **F** ailure definition with
 ``DAGMAN_ALWAYS_RUN_POST = True``
 
 
@@ -513,7 +513,7 @@ The behavior of DAGMan with respect to node success or failure can be
 changed with the addition of a *PRE_SKIP* command. A *PRE_SKIP* line
 within the DAG input file uses the syntax:
 
-**PRE_SKIP** *JobName*\ \|\ **ALL_NODES** *non-zero-exit-code*
+**PRE_SKIP** *JobName* \|\ **ALL_NODES** *non-zero-exit-code*
 
 The PRE script of a node identified by *JobName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
@@ -588,9 +588,9 @@ The job ClassAd attribute ``DAGParentNodeNames`` is also available for
 use within the submit description file. It defines a comma separated
 list of each *JobName* which is a parent node of this job's node. This
 attribute may be used in the
-**arguments**\ :index:`arguments<single: arguments; submit commands>` command for
+**arguments** :index:`arguments<single: arguments; submit commands>` command for
 all but scheduler universe jobs. For example, if the job has two
-parents, with *JobName*\ s B and C, the submit description file command
+parents, with *JobName* s B and C, the submit description file command
 
 ::
 
@@ -1075,8 +1075,8 @@ Macros defined for DAG nodes can be used within the submit description
 file of the node job. The *VARS* command provides a method for defining
 a macro. Macros are defined on a per-node basis, using the syntax
 
-**VARS** *JobName*\ \|\ **ALL_NODES** *macroname=*\ *"string"*
-[*macroname=*\ *"string"…*]
+**VARS** *JobName* \|\ **ALL_NODES** *macroname=* *"string"*
+[*macroname=* *"string"...*]
 
 The macro may be used within the submit description file of the relevant
 node. A *macroname* may contain alphanumeric characters (a-z, A-Z, and
@@ -1232,7 +1232,7 @@ the macro ``second`` contains a tab.
      
         VARS NodeB first="Lance_Armstrong" 
         VARS NodeB second="\\\"Andreas_Kloden\\\"" 
-        VARS NodeB third="Ivan\_Basso" 
+        VARS NodeB third="Ivan_Basso" 
         VARS NodeB fourth="Bernard_'The_Badger'_Hinault" 
         VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/" 
      
@@ -1373,7 +1373,7 @@ Setting Priorities for Nodes
 The *PRIORITY* command assigns a priority to a DAG node (and to the
 HTCondor job(s) associated with the node). The syntax for *PRIORITY* is
 
-**PRIORITY** *JobName*\ \|\ **ALL_NODES** *PriorityValue*
+**PRIORITY** *JobName* \|\ **ALL_NODES** *PriorityValue*
 
 The priority value is an integer (which can be negative). A larger
 numerical priority is better. The default priority is 0.
@@ -1481,7 +1481,7 @@ node SB will be 120.
 The effective priorities listed above are assigned by DAGMan. There is
 no way to change the priority in the submit description file for a job,
 as DAGMan will override any
-**priority**\ :index:`priority<single: priority; submit commands>` command placed
+**priority** :index:`priority<single: priority; submit commands>` command placed
 in a submit description file (unless the effective node priority is 0;
 in this case, any priority specified in the submit file will take
 effect).
@@ -1500,7 +1500,7 @@ maximum number of submitted clusters may be specified for each category.
 The *CATEGORY* command assigns a category name to a DAG node. The syntax
 for *CATEGORY* is
 
-**CATEGORY** *JobName*\ \|\ **ALL_NODES** *CategoryName*
+**CATEGORY** *JobName* \|\ **ALL_NODES** *CategoryName*
 
 Category names cannot contain white space.
 
@@ -1608,7 +1608,7 @@ The *SET_JOB_ATTR* keyword within the DAG input file specifies an
 attribute/value pair to be set in the DAGMan job's ClassAd. The syntax
 for *SET_JOB_ATTR* is
 
-**SET_JOB_ATTR** *AttributeName*\ =\ *AttributeValue*
+**SET_JOB_ATTR** *AttributeName* =\ *AttributeValue*
 
 As an example, if the DAG input file contains:
 
@@ -1670,7 +1670,7 @@ that claims are not held idle for a running DAG. If a DAG node has no
 children, the value of ``DAGMAN_HOLD_CLAIM_TIME`` will be ignored; the
 ``KeepClaimIdle`` attribute will not be defined in the job ClassAd of
 the node job, unless the job requests it using the submit command
-**keep_claim_idle**\ :index:`keep_claim_idle<single: keep_claim_idle; submit commands>`.
+**keep_claim_idle** :index:`keep_claim_idle<single: keep_claim_idle; submit commands>`.
 
 Single Submission of Multiple, Independent DAGs
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -1756,7 +1756,7 @@ are many cases where a valid included DAG file will cause a parse error,
 such as the including and included files defining nodes with the same
 name.
 
-*INCLUDE*\ s can be nested to any depth (be sure not to create a cycle
+*INCLUDE* s can be nested to any depth (be sure not to create a cycle
 of includes!).
 
  Example: Using INCLUDE to simplify multiple similar workflows
@@ -1864,8 +1864,8 @@ file to be run by a separate instance of *condor_dagman*, with the
 
 The syntax for the SUBDAG command is
 
-**SUBDAG** **EXTERNAL** *JobName* *DagFileName* [**DIR  **\ *directory*]
-[**NOOP**\ ] [**DONE**\ ]
+**SUBDAG** **EXTERNAL** *JobName* *DagFileName* [**DIR  ** *directory*]
+[**NOOP** ] [**DONE** ]
 
 The optional specifications of **DIR**, **NOOP**, and **DONE**, if used,
 must appear in this order within the entry. **NOOP** and **DONE** for
@@ -2678,8 +2678,8 @@ input file specifies a node job to be run at the end of the DAG.
 
 The syntax used for the *FINAL* command is
 
-**FINAL** *JobName* *SubmitDescriptionFileName* [**DIR  **\ *directory*]
-[**NOOP**\ ]
+**FINAL** *JobName* *SubmitDescriptionFileName* [**DIR  ** *directory*]
+[**NOOP** ]
 
 The FINAL node within the DAG is identified by *JobName*, and the
 HTCondor job is described by the contents of the HTCondor submit
@@ -3164,7 +3164,7 @@ parameters:
    option to visualize the history of the DAG after it has finished
    executing.
 
--  **INCLUDE **\ *path-to-filename* Includes the contents of a file
+-  **INCLUDE ** *path-to-filename* Includes the contents of a file
    given by ``path-to-filename`` in the file produced by the **DOT**
    command. The include file contents are always placed after the line
    of the form label=. This may be useful if further editing of the
@@ -3189,8 +3189,8 @@ enable this feature, the DAG input file must contain a line with the
 
 The syntax for a *NODE_STATUS_FILE* command is
 
-**NODE_STATUS_FILE** *statusFileName* [*minimumUpdateTime*\ ]
-[**ALWAYS-UPDATE**\ ]
+**NODE_STATUS_FILE** *statusFileName* [*minimumUpdateTime* ]
+[**ALWAYS-UPDATE** ]
 
 The status file is written on the machine on which the DAG is submitted;
 its location is given by *statusFileName*, and it may be a full path and
@@ -3350,7 +3350,7 @@ within each line are separated by a single space character.
     This line identifies the *condor_dagman* job. The formatting of the
     line is
 
-    *timestamp* INTERNAL \*\*\* DAGMAN_STARTED *dagmanCondorID* \*\*\*
+    *timestamp* INTERNAL \*** DAGMAN_STARTED *dagmanCondorID* \***
 
     The *dagmanCondorID* field is the *condor_dagman* job's
     ``ClusterId`` attribute, a period, and the ``ProcId`` attribute.
@@ -3359,7 +3359,7 @@ within each line are separated by a single space character.
     This line identifies the completion of the *condor_dagman* job. The
     formatting of the line is
 
-    *timestamp* INTERNAL \*\*\* DAGMAN_FINISHED *exitCode* \*\*\*
+    *timestamp* INTERNAL \*** DAGMAN_FINISHED *exitCode* \***
 
     The *exitCode* field is value the *condor_dagman* job returns upon
     exit.
@@ -3370,7 +3370,7 @@ within each line are separated by a single space character.
     file if they were not already printed before recovery mode started.
     The formatting of the line is
 
-    *timestamp* INTERNAL \*\*\* RECOVERY_STARTED \*\*\*
+    *timestamp* INTERNAL \*** RECOVERY_STARTED \***
 
  Recovery finished or Recovery failure
     At the end of recovery mode, either a RECOVERY_FINISHED or
@@ -3378,11 +3378,11 @@ within each line are separated by a single space character.
 
     The formatting of the line is
 
-    *timestamp* INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*
+    *timestamp* INTERNAL \*** RECOVERY_FINISHED \***
 
     or
 
-    *timestamp* INTERNAL \*\*\* RECOVERY_FAILURE \*\*\*
+    *timestamp* INTERNAL \*** RECOVERY_FAILURE \***
 
  Normal
     This line is used for all other event and meta-event types. The
@@ -3713,13 +3713,13 @@ the same directory as the DAG input file.
 
 One item to care about with this set up is the underlying file system
 for the pool. The transfer of files (or not) when using
-**initialdir**\ :index:`initialdir<single: initialdir; submit commands>` differs
+**initialdir** :index:`initialdir<single: initialdir; submit commands>` differs
 based upon the job
-**universe**\ :index:`universe<single: universe; submit commands>` and whether or
+**universe** :index:`universe<single: universe; submit commands>` and whether or
 not there is a shared file system. See
 :doc:`/man-pages/condor_submit` for the details on
 the submit command
-**initialdir**\ :index:`initialdir<single: initialdir; submit commands>`.
+**initialdir** :index:`initialdir<single: initialdir; submit commands>`.
 
 Submission of this set of jobs is no different than the previous
 examples. With the current working directory the same as the one
@@ -3866,16 +3866,16 @@ DAGMan and Accounting Groups
 :index:`accounting groups<single: accounting groups; DAGMan>`
 
 As of version 8.5.6, *condor_dagman* propagates
-**accounting_group**\ :index:`accounting_group<single: accounting_group; submit commands>`
+**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
 and
-**accounting_group_user**\ :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 values specified for *condor_dagman* itself to all jobs within the DAG
 (including sub-DAGs).
 
 The
-**accounting_group**\ :index:`accounting_group<single: accounting_group; submit commands>`
+**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
 and
-**accounting_group_user**\ :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 values can be specified using the **-append** flag to
 *condor_submit_dag*, for example:
 

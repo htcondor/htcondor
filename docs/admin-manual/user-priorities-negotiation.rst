@@ -77,7 +77,7 @@ EUP may be useful:
 
  Nice users
     A job may be submitted with the submit command
-    **nice_user**\ :index:`nice_user<single: nice_user; submit commands>` set to
+    **nice_user** :index:`nice_user<single: nice_user; submit commands>` set to
     ``True``. This nice user job will have its RUP boosted by the
     ``NICE_USER_PRIO_FACTOR``\ :index:`NICE_USER_PRIO_FACTOR`
     priority factor specified in the configuration, leading to a very
@@ -273,8 +273,9 @@ the following ordered list of items.
 #. Build a list of all possible resources, regardless of the state of
    those resources.
 #. Obtain a list of all job submitters (for the entire pool).
-#. Sort the list of all job submitters based on EUP (see section
-    `3.6.2 <#x34-2340003.6.2>`__ for an explanation of EUP). The
+#. Sort the list of all job submitters based on EUP (see
+   :ref:`admin-manual/user-priorities-negotiation:the layperson's description
+   of the pie spin and pie slice` for an explanation of EUP). The
    submitter with the best priority is first within the sorted list.
 #. Iterate until there are either no more resources to match, or no more
    jobs to match.
@@ -545,9 +546,9 @@ description file. Jobs that do not identify themselves as a group member
 are negotiated for as part of the "<none>" group. Note that this
 requirement is per job, not per user. A given user may be a member of
 many groups. Jobs identify which group they are in by setting the
-**accounting_group**\ :index:`accounting_group<single: accounting_group; submit commands>`
+**accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
 and
-**accounting_group_user**\ :index:`accounting_group_user<single: accounting_group_user; submit commands>`
+**accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
 commands within the submit description file, as specified in
 section \ `3.6.7 <#x34-2390003.6.7>`__. For example:
 

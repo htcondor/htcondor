@@ -9,8 +9,8 @@ Display status of the HTCondor pool
 Synopsis
 --------
 
-**condor_status** [**-debug**\ ] [*help options*\ ] [*query options*\ ]
-[*display options*\ ] [*custom options*\ ] [*name …*\ ]
+**condor_status** [**-debug** ] [*help options* ] [*query options* ]
+[*display options* ] [*custom options* ] [*name ...* ]
 
 Description
 -----------
@@ -49,10 +49,10 @@ Options
     (Help option) Print out ClassAd query without performing the query.
  **-absent**
     (Query option) Query for and display only absent resources.
- **-ads **\ *filename*
+ **-ads** *filename*
     (Query option) Read the set of ClassAds in the file specified by
     *filename*, instead of querying the *condor_collector*.
- **-annex **\ *name*
+ **-annex** *name*
     (Query option) Query for and display only resources in the named
     annex.
  **-any**
@@ -76,7 +76,7 @@ Options
     attributes.
  **-defrag**
     (Query option) Query *condor_defrag* ClassAds.
- **-direct **\ *hostname*
+ **-direct** *hostname*
     (Query option) Go directly to the given host name to get the
     ClassAds to display. By default, returns the *condor_startd*
     ClassAd. If **-schedd** is also given, return the *condor_schedd*
@@ -91,7 +91,7 @@ Options
  **-negotiator**
     (Query option) Query *condor_negotiator* ClassAds and display
     attributes.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     (Query option) Query the specified central manager using an optional
     port number. *condor_status* queries the machine specified by the
     configuration variable ``COLLECTOR_HOST`` by default.
@@ -109,7 +109,7 @@ Options
  **-state**
     (Query option) Query *condor_startd* ClassAds and display resource
     state information.
- **-statistics **\ *WhichStatistics*
+ **-statistics** *WhichStatistics*
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
@@ -123,11 +123,11 @@ Options
  **-submitters**
     (Query option) Query ClassAds sent by submitters and display
     important submitter attributes.
- **-subsystem **\ *type*
+ **-subsystem** *type*
     (Query option) If *type* is one of *collector*, *negotiator*,
     *master*, *schedd*, or *startd*, then behavior is the same as the
     query option without the **-subsystem** option. For example,
-    **-subsystem **\ *collector* is the same as **-collector**. A value
+    **-subsystem** *collector* is the same as **-collector**. A value
     of *type* of *CkptServer*, *Machine*, *DaemonMaster*, or *Scheduler*
     targets that type of ClassAd.
  **-vm**
@@ -139,7 +139,7 @@ Options
     (Query option) Query *condor_startd* ClassAds, and display, for
     each machine with at least one offline universe, which universes are
     offline for it.
- **-attributes **\ *Attr1[,Attr2 …]*
+ **-attributes** *Attr1[,Attr2 ...]*
     (Display option) Explicitly list the attributes in a comma separated
     list which should be displayed when using the **-xml**, **-json** or
     **-long** options. Limiting the number of attributes increases the
@@ -149,9 +149,9 @@ Options
  **-long**
     (Display option) Display entire ClassAds. Implies that totals will
     not be displayed.
- **-limit**\ num
+ **-limit** num
     (Query option) At most *num* results should be displayed.
- **-sort **\ *expr*
+ **-sort** *expr*
     (Display option) Change the display order to be based on ascending
     values of an evaluated expression given by *expr*. Evaluated
     expressions of a string type are in a case insensitive alphabetical
@@ -174,12 +174,12 @@ Options
     `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
  **-json**
     (Display option) Display entire ClassAds in JSON format.
- **-constraint **\ *const*
+ **-constraint** *const*
     (Custom option) Add constraint expression.
- **-compact **\ **
+ **-compact**
     (Custom option) Show compact form, rolling up slots into a single
     line.
- **-format **\ *fmt attr*
+ **-format** *fmt attr*
     (Custom option) Display attribute or expression *attr* in format
     *fmt*. To display the attribute or expression the format must
     contain a single ``printf(3)``-style conversion specifier.
@@ -205,7 +205,7 @@ Options
     conversion specifiers may be specified, but an attribute is still
     required. Include a backslash followed by an ‘n' to specify a line
     break.
- **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
     (Output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -246,15 +246,16 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
- **-target **\ *filename*
+ **-target** *filename*
     (Custom option) Where evaluation requires a target ClassAd to
     evaluate against, file *filename* contains the target ClassAd.
- **-merge **\ *filename*
+
+ **-merge** *filename*
     (Custom option) Ads will be read from *filename*, which may be ``-``
     to indicate standard in, and compared to the ads selected by the
     query specified by the remainder of the command line. Ads will be
     considered the same if their sort keys match; sort keys may be
-    specified with [**-sort  **\ *<key>*]. This option will cause up to
+    specified with [**-sort** *<key>*]. This option will cause up to
     three tables to print, in the following order, depending on where a
     given ad appeared: first, the ads which appeared in the query but
     not in *filename*; second, the ads which appeared in both the query
@@ -299,7 +300,7 @@ General Remarks
 -  If you specify host names, without domains, HTCondor will
    automatically try to resolve those host names into fully qualified
    host names for you. This also works when specifying specific nodes of
-   an SMP machine. In this case, everything after the “@” sign is
+   an SMP machine. In this case, everything after the "@" sign is
    treated as a host name and that is what is resolved.
 -  You can use the **-direct** option in conjunction with almost any
    other set of options. However, at this time, the only daemon that

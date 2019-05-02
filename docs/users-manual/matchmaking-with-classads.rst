@@ -50,15 +50,15 @@ job ClassAds and all the machine ClassAds, matching and ranking job ads
 with machine ads. HTCondor makes certain that all requirements in both
 ClassAds are satisfied.
 
-Inspecting Machine ClassAds with condor\_status
+Inspecting Machine ClassAds with condor_status
 -----------------------------------------------
 
 :index:`condor_status<single: condor_status; HTCondor commands>`
 
 Once HTCondor is installed, you will get a feel for what a machine
-ClassAd does by trying the *condor\_status* command. Try the
-*condor\_status* command to get a summary of information from ClassAds
-about the resources available in your pool. Type *condor\_status* and
+ClassAd does by trying the *condor_status* command. Try the
+*condor_status* command to get a summary of information from ClassAds
+about the resources available in your pool. Type *condor_status* and
 hit enter to see a summary similar to the following:
 
 ::
@@ -74,21 +74,21 @@ hit enter to see a summary similar to the following:
     arragon.cs.wisc.ed LINUX      INTEL  Claimed   Busy     0.980   873  0+00:04:29 
     bamba.cs.wisc.edu  LINUX      INTEL  Owner     Idle     0.040  3032 15+20:10:19
 
-…
+...
 
-The *condor\_status* command has options that summarize machine ads in a
+The *condor_status* command has options that summarize machine ads in a
 variety of ways. For example,
 
- *condor\_status -available*
+ *condor_status -available*
     shows only machines which are willing to run jobs now.
- *condor\_status -run*
+ *condor_status -run*
     shows only machines which are currently running jobs.
- *condor\_status -long*
+ *condor_status -long*
     lists the machine ClassAds for all machines in the pool.
 
-Refer to the *condor\_status* command reference page located on
-page \ `condor\_status <../man-pages/condor_status.html>`__ for a
-complete description of the *condor\_status* command.
+Refer to the *condor_status* command reference page located on
+page \ `condor_status <../man-pages/condor_status.html>`__ for a
+complete description of the *condor_status* command.
 
 The following shows a portion of a machine ClassAd
 :index:`machine example<single: machine example; ClassAd>`\ :index:`machine ClassAd`

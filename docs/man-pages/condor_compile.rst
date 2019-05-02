@@ -1,6 +1,6 @@
       
 
-*condor\_compile*
+*condor_compile*
 =================
 
 create a relinked executable for use as a standard universe job
@@ -10,23 +10,23 @@ create a relinked executable for use as a standard universe job
 Synopsis
 --------
 
-**condor\_compile** *cc \| CC \| gcc \| f77 \| g++ \| ld \| make \| …*
+**condor_compile** *cc \| CC \| gcc \| f77 \| g++ \| ld \| make \| ...*
 
 Description
 -----------
 
-Use *condor\_compile* to relink a program with the HTCondor libraries
+Use *condor_compile* to relink a program with the HTCondor libraries
 for submission as a standard universe job. The HTCondor libraries
 provide the program with additional support, such as the capability to
 produce checkpoints, which facilitate the standard universe mode of
-operation. *condor\_compile* requires access to the source or object
+operation. *condor_compile* requires access to the source or object
 code of the program to be submitted; if source or object code for the
 program is not available, then the program must use another universe,
 such as vanilla. Source or object code may not be available if there is
 only an executable binary, or if a shell script is to be executed as an
 HTCondor job.
 
-To use *condor\_compile*, issue the command *condor\_compile* with
+To use *condor_compile*, issue the command *condor_compile* with
 command line arguments that form the normally entered command to compile
 or link the application. Resulting executables will have the HTCondor
 libraries linked in. For example,
@@ -40,7 +40,7 @@ HTCondor, capable of checkpoint/migration/remote system calls, and ready
 to submit as a standard universe job.
 
 If the HTCondor administrator has opted to fully install
-*condor\_compile*, then *condor\_compile* can be followed by practically
+*condor_compile*, then *condor_compile* can be followed by practically
 any command or program, including make or shell script programs. For
 example, the following would all work:
 
@@ -55,8 +55,8 @@ example, the following would all work:
       condor_compile /bin/csh compile-me-shellscript
 
 If the HTCondor administrator has opted to only do a partial install of
-*condor\_compile*, then you are restricted to following
-*condor\_compile* with one of these programs:
+*condor_compile*, then you are restricted to following
+*condor_compile* with one of these programs:
 
 ::
 
@@ -86,9 +86,9 @@ instead use:
 Exit Status
 -----------
 
-*condor\_compile* is a script that executes specified compilers and/or
+*condor_compile* is a script that executes specified compilers and/or
 linkers. If an error is encountered before calling these other programs,
-*condor\_compile* will exit with a status value of 1 (one). Otherwise,
+*condor_compile* will exit with a status value of 1 (one). Otherwise,
 the exit status will be that given by the executed program.
 
 Author

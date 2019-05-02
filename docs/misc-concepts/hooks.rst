@@ -719,7 +719,7 @@ defined below:
 
    In other words, the syntax is:
 
-   - [*name*\ ] [**update:** *bool*]
+   - [*name* ] [**update:** *bool*]
 
 -  Each ad can contain one of four possible attributes to control what
    slot ads the ad is merged into when the *condor_startd* sends

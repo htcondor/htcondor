@@ -772,7 +772,7 @@ and configuration files.
 Case is significant in the function's name, so use the same letter case
 as given in these definitions.
 
- ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
+ ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, ...)``
     An item within the list is returned. The list is represented by a
     parameter name, or the list items are the parameters. The ``index``
     parameter determines which item. The first item in the list is at
@@ -840,7 +840,7 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
 
-``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
+``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
     :index:`$RANDOM_CHOICE() function macro` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
@@ -940,11 +940,11 @@ restart of HTCondor in order to use the changed value.
     The host name of the local machine, without a domain name.
 
 ``$(IP_ADDRESS)``\ :index:`IP_ADDRESS`
-    The ASCII string version of the local machine's “most public” IP
+    The ASCII string version of the local machine's "most public" IP
     address. This address may be IPv4 or IPv6, but the macro will always
     be set.
 
-    HTCondor selects the “most public” address heuristically. Your
+    HTCondor selects the "most public" address heuristically. Your
     configuration should not depend on HTCondor picking any particular
     IP address for this macro; this macro's value may not even be one of
     the IP addresses HTCondor is configured to advertise.
@@ -952,16 +952,16 @@ restart of HTCondor in order to use the changed value.
     labelparam:IPv4Address
 
  ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS`
-    The ASCII string version of the local machine's “most public” IPv4
+    The ASCII string version of the local machine's "most public" IPv4
     address; unset if the local machine has no IPv4 address.
 
-    See ``IP_ADDRESS`` about “most public”.
+    See ``IP_ADDRESS`` about "most public".
 
  ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS`
-    The ASCII string version of the local machine's “most public” IPv6
+    The ASCII string version of the local machine's "most public" IPv6
     address; unset if the local machine has no IPv6 address.
 
-    See ``IP_ADDRESS`` about “most public”.
+    See ``IP_ADDRESS`` about "most public".
 
  ``$(IP_ADDRESS_IS_V6)``\ :index:`IP_ADDRESS_IS_V6`
     A boolean which is true if and only if ``IP_ADDRESS``
@@ -1050,11 +1050,11 @@ determined automatically at run time but which can be overwritten.
     ``$(OPSYS)``.
 
 ``$(UNAME_ARCH)``\ :index:`UNAME_ARCH`
-    The architecture as reported by *uname*\ (2)'s ``machine`` field.
+    The architecture as reported by *uname* (2)'s ``machine`` field.
     Always the same as ``ARCH`` on Windows.
 
 ``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS`
-    The operating system as reported by *uname*\ (2)'s ``sysname``
+    The operating system as reported by *uname* (2)'s ``sysname``
     field. Always the same as ``OPSYS`` on Windows.
 
 ``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY`

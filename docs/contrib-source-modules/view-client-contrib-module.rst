@@ -1,5 +1,3 @@
-      
-
 The HTCondorView Client Contrib Module
 ======================================
 
@@ -30,8 +28,7 @@ Step-by-Step Installation of the HTCondorView Client
 :index:`Client installation<single: Client installation; HTCondorView>`
 
 #. Make certain that the HTCondorView Server is configured. Section
-    `Setting Up for Special
-   Environments <../admin-manual/setting-up-special-environments.html>`__
+   :doc:`/admin-manual/setting-up-special-environments`
    describes configuration of the server. The server logs information on
    disk in order to provide a persistent, historical database of pool
    statistics. The HTCondorView Client makes queries over the network to

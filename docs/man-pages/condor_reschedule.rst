@@ -1,6 +1,6 @@
       
 
-*condor\_reschedule*
+*condor_reschedule*
 ====================
 
 Update scheduling information to the central manager
@@ -10,21 +10,21 @@ Update scheduling information to the central manager
 Synopsis
 --------
 
-**condor\_reschedule** [**-help \| -version**\ ]
+**condor_reschedule** [**-help \| -version** ]
 
-**condor\_reschedule** [**-debug**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
-**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
+**condor_reschedule** [**-debug** ]
+[**-pool** *centralmanagerhostname[:portnumber]*] [
+**-name** *hostname* \| *hostname* \| **-addr** *"<a.b.c.d:port>"*
+\| *"<a.b.c.d:port>"* \| **-constraint** *expression* \| **-all** ]
 
 Description
 -----------
 
-*condor\_reschedule* updates the information about a set of machines'
+*condor_reschedule* updates the information about a set of machines'
 resources and jobs to the central manager. This command is used to force
 an update before viewing the current status of a machine. Viewing the
-status of a machine is done with the *condor\_status* command.
-*condor\_reschedule* also starts a new negotiation cycle between
+status of a machine is done with the *condor_status* command.
+*condor_reschedule* also starts a new negotiation cycle between
 resource owners and resource providers on the central managers, so that
 jobs can be matched with machines right away. This can be useful in
 situations where the time between negotiation cycles is somewhat long,
@@ -45,18 +45,18 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *hostname*
+ **-name** *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr** *"<a.b.c.d:port>"*
     Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-constraint **\ *expression*
+ **-constraint** *expression*
     Apply this command only to machines matching the given ClassAd
     *expression*
  **-all**
@@ -65,7 +65,7 @@ Options
 Exit Status
 -----------
 
-*condor\_reschedule* will exit with a status value of 0 (zero) upon
+*condor_reschedule* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Examples

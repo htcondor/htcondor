@@ -52,7 +52,7 @@ New Features:
 -  Improved error handling during SSL authentication. :ticket:`6720`
 -  Improved throughput when submitting a large number of Condor-C jobs.
    Previously, Condor-C jobs could remain held for a long time in the
-   remote *condor_schedd*\ 's queue while other jobs were being
+   remote *condor_schedd* 's queue while other jobs were being
    submitted. :ticket:`6716`
 -  Updated default configuration parameters to improve performance for
    large pools and gives users a better experience. :ticket:`6768`
@@ -202,8 +202,8 @@ Bugs Fixed:
    using Singularity version 2.4 and greater. :ticket:`6656`
 -  Fixed a problem where a *condor_vacate_job*, when passed the
    **-fast** flag, would leave the corresponding slot stuck in
-   “Preempting/Vacating” state until the job lease expired. :ticket:`6663`
--  Fixed a problem where *condor_annex*\ 's setup routine, if no region
+   "Preempting/Vacating" state until the job lease expired. :ticket:`6663`
+-  Fixed a problem where *condor_annex* 's setup routine, if no region
    had been specified on the command line, would write a configuration
    for a bogus region rather than the default one. :ticket:`6666`
 -  The *condor_history_helper* program was removed. *condor_history*
@@ -269,7 +269,7 @@ Bugs Fixed:
    after a docker job exits. :ticket:`6623`
 -  Fixed a bug where *condor_userprio* would always show zero resources
    in use when NEGOTIATOR_CONSIDER_PREEMPTION=false was set. :ticket:`6621`
--  Fixed a bug where “.update.ad” was not being updated atomically.
+-  Fixed a bug where ".update.ad" was not being updated atomically.
    :ticket:`6591`
 -  Fixed a bug that could cause a machine slot to become stuck in the
    Claimed/Busy state after a job completes. :ticket:`6597`
@@ -309,8 +309,8 @@ New Features:
    which is like ``GPUsUsage``, except for the custom machine resource
    in question. :ticket:`6477`
 -  The *condor_startd* now periodically writes a file to each job's
-   sandbox named “.update.ad”. This file is a copy of the slot's machine
-   ad, but unlike “.machine.ad”, it is regularly updated. Jobs may read
+   sandbox named ".update.ad". This file is a copy of the slot's machine
+   ad, but unlike ".machine.ad", it is regularly updated. Jobs may read
    this file to observe their own usage attributes. :ticket:`6477`
 -  A new option **-unmatchable** was added to *condor_q* that causes
    *condor_q* to show only jobs that will not match any of the
@@ -339,7 +339,7 @@ New Features:
    ``NETWORK_INTERFACE`` now works properly when ``NO_DNS`` is set to
    ``True``. :ticket:`6518`
 -  Python bindings installed via pip on a system without a HTCondor
-   install (i.e. without a ``condor_config`` present) will use a “null”
+   install (i.e. without a ``condor_config`` present) will use a "null"
    config and print a warning. :ticket:`6515`
 -  The new configuration parameter ``NEGOTIATOR_JOB_CONSTRAINT`` defines
    an expression which constrains which job ads are considered for
@@ -491,7 +491,7 @@ New Features:
    do not apply to the *status* command of *condor_annex*. See
    the :doc:`/cloud-computing/index` section for
    details. :ticket:`6321`
--  Added a “merge” mode to *condor_status*. When invoked with the
+-  Added a "merge" mode to *condor_status*. When invoked with the
    [**-merge** *<file>*] option, ads will be read from *file*, which
    can be ``-`` to indicate standard in, and compared to the ads
    selected by the query specified as usual by the remainder of the
@@ -667,11 +667,11 @@ New Features:
 -  The *condor_advertise* tool now assumes an update command if one is
    not specified on the command-line and attempts to determine exact
    command by inspecting the first ad to be advertised. :ticket:`6296`
--  Improved support for running several *condor_negotiator*\ s in a
+-  Improved support for running several *condor_negotiator* s in a
    single pool. ``NEGOTIATOR_NAME`` now works like ``MASTER_NAME``.
    *condor_userprio* has a -name option to select a specific
    *condor_negotiator*. Accounting ads from multiple
-   *condor_negotiator*\ s can co-exist in the *condor_collector*.
+   *condor_negotiator* s can co-exist in the *condor_collector*.
    :ticket:`5717`
 -  Package EC2 Annex components in the condor-annex-ec2 sub RPM.
    :ticket:`6202`

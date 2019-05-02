@@ -31,8 +31,8 @@ Here are all the steps needed to run a job using HTCondor.
     completed job, should the machine on which the job is executing
     become unavailable. To use the standard universe, it is necessary to
     relink the program with the HTCondor library using the
-    *condor\_compile* command. The manual page for *condor\_compile* on
-    page \ `condor\_compile <../man-pages/condor_compile.html>`__ has
+    *condor_compile* command. The manual page for *condor_compile* on
+    page \ `condor_compile <../man-pages/condor_compile.html>`__ has
     details.
 
     The vanilla universe provides a way to run jobs that cannot be
@@ -56,15 +56,15 @@ Here are all the steps needed to run a job using HTCondor.
     examples provided in the :doc:`/users-manual/submitting-a-job` section for guidance.
 
  Submit the Job.
-    Submit the program to HTCondor with the *condor\_submit* command.
+    Submit the program to HTCondor with the *condor_submit* command.
     :index:`condor_submit<single: condor_submit; HTCondor commands>`
 
 Once submitted, HTCondor does the rest toward running the job. Monitor
-the job's progress with the *condor\_q*
-:index:`condor_q<single: condor_q; HTCondor commands>`\ and *condor\_status*
+the job's progress with the *condor_q*
+:index:`condor_q<single: condor_q; HTCondor commands>`\ and *condor_status*
 commands. :index:`condor_status<single: condor_status; HTCondor commands>`\ You may
 modify the order in which HTCondor will run your jobs with
-*condor\_prio*. If desired, HTCondor can even inform you in a log file
+*condor_prio*. If desired, HTCondor can even inform you in a log file
 every time your job is checkpointed and/or migrated to a different
 machine.
 
@@ -73,7 +73,7 @@ preferred) the exit status of your program and various statistics about
 its performances, including time used and I/O performed. If you are
 using a log file for the job (which is recommended) the exit status will
 be recorded in the log file. You can remove a job from the queue
-prematurely with *condor\_rm*.
+prematurely with *condor_rm*.
 :index:`condor_rm<single: condor_rm; HTCondor commands>`
 
 Choosing an HTCondor Universe
@@ -94,7 +94,7 @@ universes for user jobs:
 -  vm
 -  docker
 
-The **universe**\ :index:`universe<single: universe; submit commands>` under which
+The **universe** :index:`universe<single: universe; submit commands>` under which
 a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla, unless your HTCondor
 administrator has changed the default. However, we strongly encourage
@@ -131,7 +131,7 @@ In the standard universe, HTCondor provides checkpointing and remote
 system calls. These features make a job more reliable and allow it
 uniform access to resources from anywhere in the pool. To prepare a
 program as a standard universe job, it must be relinked with
-*condor\_compile*. Most programs can be prepared as a standard universe
+*condor_compile*. Most programs can be prepared as a standard universe
 job, but there are a few restrictions. :index:`checkpoint`
 :index:`checkpoint image`
 
@@ -148,19 +148,19 @@ or years even in the face of occasional computer failures.
 Remote system calls make a job perceive that it is executing on its home
 machine, even though the job may execute on many different machines over
 its lifetime. When a job runs on a remote machine, a second process,
-called a *condor\_shadow* runs on the machine where the job was
+called a *condor_shadow* runs on the machine where the job was
 submitted.
 :index:`condor_shadow`\ :index:`condor_shadow<single: condor_shadow; agents>`
 :index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
-When the job attempts a system call, the *condor\_shadow* performs the
+When the job attempts a system call, the *condor_shadow* performs the
 system call instead and sends the results to the remote machine. For
 example, if a job attempts to open a file that is stored on the
-submitting machine, the *condor\_shadow* will find the file, and send
+submitting machine, the *condor_shadow* will find the file, and send
 the data to the machine where the job is running.
 
 To convert your program into a standard universe job, you must use
-*condor\_compile* to relink it with the HTCondor libraries. Put
-*condor\_compile* in front of your usual link command. You do not need
+*condor_compile* to relink it with the HTCondor libraries. Put
+*condor_compile* in front of your usual link command. You do not need
 to modify the program's source code, but you do need access to the
 unlinked object files. A commercial program that is packaged as a single
 executable file cannot be converted into a standard universe job.
@@ -219,10 +219,10 @@ There are a few restrictions on standard universe jobs:
    runs. If disk space is short, a special checkpoint server can be
    designated for storing all the checkpoint images for a pool.
    :index:`dynamic<single: dynamic; linking>` :index:`static<single: static; linking>`
-#. On Linux, the job must be statically linked. *condor\_compile* does
+#. On Linux, the job must be statically linked. *condor_compile* does
    this by default. :index:`large files<single: large files; Unix>`
 #. Reading to or writing from files larger than 2 GBytes is only
-   supported when the submit side *condor\_shadow* and the standard
+   supported when the submit side *condor_shadow* and the standard
    universe user job application itself are both 64-bit executables.
 
 Vanilla Universe
@@ -267,8 +267,8 @@ HTCondor interface to users who wish to start jobs intended for remote
 management systems. Section \ `The Grid
 Universe <../grid-computing/grid-universe.html>`__ on page \ `The Grid
 Universe <../grid-computing/grid-universe.html>`__ has details on using
-the Grid universe. The manual page for *condor\_submit* on
-page \ `condor\_submit <../man-pages/condor_submit.html>`__ has detailed
+the Grid universe. The manual page for *condor_submit* on
+page \ `condor_submit <../man-pages/condor_submit.html>`__ has detailed
 descriptions of the grid-related attributes.
 
 Java Universe
@@ -287,17 +287,17 @@ Scheduler Universe
 :index:`scheduler<single: scheduler; universe>` :index:`scheduler universe`
 
 The scheduler universe allows users to submit lightweight jobs to be run
-immediately, alongside the *condor\_schedd* daemon on the submit host
+immediately, alongside the *condor_schedd* daemon on the submit host
 itself. Scheduler universe jobs are not matched with a remote machine,
 and will never be preempted. The job's requirements expression is
-evaluated against the *condor\_schedd*\ 's ClassAd.
+evaluated against the *condor_schedd* 's ClassAd.
 
-Originally intended for meta-schedulers such as *condor\_dagman*, the
+Originally intended for meta-schedulers such as *condor_dagman*, the
 scheduler universe can also be used to manage jobs of any sort that must
 run on the submit host.
 
 However, unlike the local universe, the scheduler universe does not use
-a *condor\_starter* daemon to manage the job, and thus offers limited
+a *condor_starter* daemon to manage the job, and thus offers limited
 features and policy support. The local universe is a better choice for
 most jobs which must run on the submit host, as it offers a richer set
 of job management features, and is more consistent with other universes
@@ -314,7 +314,7 @@ with different assumptions for the execution conditions of the job. The
 job does not wait to be matched with a machine. It instead executes
 right away, on the machine where the job is submitted. The job will
 never be preempted. The job's requirements expression is evaluated
-against the *condor\_schedd*\ 's ClassAd.
+against the *condor_schedd* 's ClassAd.
 
 Parallel Universe
 '''''''''''''''''

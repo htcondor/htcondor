@@ -374,8 +374,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 ``CONDOR_SUPPORT_EMAIL`` :index:`CONDOR_SUPPORT_EMAIL`
     The email address to be included at the bottom of all email HTCondor
-    sends out under the label “Email address of the local HTCondor
-    administrator:”. This is the address where HTCondor users at your
+    sends out under the label "Email address of the local HTCondor
+    administrator:". This is the address where HTCondor users at your
     site should send their questions about HTCondor and get technical
     support. If this setting is not defined, HTCondor will use the
     address specified in ``CONDOR_ADMIN`` (described above).
@@ -1442,10 +1442,10 @@ a file that receives job events, but across all users and user's jobs.
 ``EVENT_LOG_MAX_ROTATIONS`` :index:`EVENT_LOG_MAX_ROTATIONS`
     Controls the maximum number of rotations of the event log that will
     be stored. If this value is 1 (the default), the event log will be
-    rotated to a “.old” file as described above. However, if this is
+    rotated to a ".old" file as described above. However, if this is
     greater than 1, then multiple rotation files will be stores, up to
     ``EVENT_LOG_MAX_ROTATIONS`` of them. These files will be named,
-    instead of the “.old” suffix, “.1”, “.2”, with the “.1” being the
+    instead of the ".old" suffix, ".1", ".2", with the ".1" being the
     most recent rotation. This is an integer parameter with a default
     value of 1. If ``EVENT_LOG`` is not defined, or if
     ``EVENT_LOG_MAX_SIZE`` has a value of 0 (which disables event log
@@ -1501,7 +1501,7 @@ that DaemonCore uses which affect all HTCondor daemons (except the
 checkpoint server, standard universe shadow, and standard universe
 starter, none of which use DaemonCore).
 
- ``ALLOW…`` :index:`ALLOW`
+ ``ALLOW...`` :index:`ALLOW`
     All macros that begin with either ``ALLOW`` :index:`ALLOW` or
     ``DENY`` :index:`DENY` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
@@ -1516,7 +1516,7 @@ starter, none of which use DaemonCore).
     HTCondor daemons will not honor these requests. To use this
     functionality, HTCondor administrators must specifically enable it
     by setting ``ENABLE_RUNTIME_CONFIG`` to ``True``, and specify what
-    configuration variables can be changed using the ``SETTABLE_ATTRS…``
+    configuration variables can be changed using the ``SETTABLE_ATTRS...``
     family of configuration options. Defaults to ``False``.
 
 ``ENABLE_PERSISTENT_CONFIG`` :index:`ENABLE_PERSISTENT_CONFIG`
@@ -1530,7 +1530,7 @@ starter, none of which use DaemonCore).
     directory where the HTCondor daemons will hold these
     dynamically-generated persistent configuration files (declared using
     ``PERSISTENT_CONFIG_DIR``, described below) and specify what
-    configuration variables can be changed using the ``SETTABLE_ATTRS…``
+    configuration variables can be changed using the ``SETTABLE_ATTRS...``
     family of configuration options. Defaults to ``False``.
 
 ``PERSISTENT_CONFIG_DIR`` :index:`PERSISTENT_CONFIG_DIR`
@@ -1543,7 +1543,7 @@ starter, none of which use DaemonCore).
     setting. This directory must not be shared by multiple HTCondor
     installations, though it can be shared by all HTCondor daemons on
     the same host. Keep in mind that this directory should not be placed
-    on an NFS mount where “root-squashing” is in effect, or else
+    on an NFS mount where "root-squashing" is in effect, or else
     HTCondor daemons running as root will not be able to write to them.
     A directory (only writable by root) on the local file system is
     usually the best location for this directory.
@@ -2303,7 +2303,7 @@ using a shared file system`.
     spawn processes that HTCondor fails to detect. Therefore, a
     dedicated execution account provides more reliable tracking of CPU
     usage by the job and it also guarantees that when the job exits, no
-    “lurker” processes are left behind. When the job exits, condor will
+    "lurker" processes are left behind. When the job exits, condor will
     attempt to kill all processes owned by the dedicated execution
     account. Example:
 
@@ -2336,7 +2336,7 @@ using a shared file system`.
  ``FILESYSTEM_DOMAIN`` :index:`FILESYSTEM_DOMAIN`
     An arbitrary string that is used to decide if the two machines, a
     submit machine and an execute machine, share a file system. Although
-    this configuration variable name contains the word “DOMAIN”, its
+    this configuration variable name contains the word "DOMAIN", its
     value is not required to be a domain name. It often is a domain
     name.
 
@@ -2864,7 +2864,7 @@ for calculating this backoff time is given by:
     t = c + k^n
 
 where t is the calculated time, c is the constant defined by
-``$(MASTER_BACKOFF_CONSTANT)``, k is the “factor” defined by
+``$(MASTER_BACKOFF_CONSTANT)``, k is the "factor" defined by
 ``$(MASTER_BACKOFF_FACTOR)``, and n is the number of restarts already
 attempted (0 for the first restart, 1 for the next, etc.).
 
@@ -3386,7 +3386,7 @@ section.
     portion of the path name. The defaults vary from platform to
     platform, and are usually correct.
 
-    One possible exception to this is on Linux, where we use “mouse” as
+    One possible exception to this is on Linux, where we use "mouse" as
     one of the entries. Most Linux installations put in a soft link from
     ``/dev/mouse`` that points to the appropriate device (for example,
     ``/dev/psaux`` for a PS/2 bus mouse, or ``/dev/tty00`` for a serial
@@ -3640,7 +3640,7 @@ section.
     other, and because jobs will not be able to fill up the real
     ``/tmp`` directory. Another use case might be for home directories,
     which some jobs might want to write to, but that should be cleaned
-    up after each job run. The default value is ``”/tmp,/var/tmp”``.
+    up after each job run. The default value is ``"/tmp,/var/tmp"``.
 
     If the job's execute directory is encrypted, ``/tmp`` and
     ``/var/tmp`` are automatically added to ``MOUNT_UNDER_SCRATCH`` when
@@ -4868,14 +4868,14 @@ These macros control the *condor_schedd*.
     defined in terms of seconds and defaults to 86400 (once a day).
 
 ``WALL_CLOCK_CKPT_INTERVAL`` :index:`WALL_CLOCK_CKPT_INTERVAL`
-    The job queue contains a counter for each job's “wall clock” run
+    The job queue contains a counter for each job's "wall clock" run
     time, i.e., how long each job has executed so far. This counter is
     displayed by *condor_q*. The counter is updated when the job is
     evicted or when the job completes. When the *condor_schedd*
     crashes, the run time for jobs that are currently running will not
     be added to the counter (and so, the run time counter may become
     smaller than the CPU time counter). The *condor_schedd* saves run
-    time “checkpoints” periodically for running jobs so if the
+    time "checkpoints" periodically for running jobs so if the
     *condor_schedd* crashes, only run time since the last checkpoint is
     lost. This macro controls how often the *condor_schedd* saves run
     time checkpoints. It is defined in terms of seconds and defaults to
@@ -5177,7 +5177,7 @@ These macros control the *condor_schedd*.
 
     When the schedd rounds up an attribute value, it will save the raw
     (un-rounded) actual value in an attribute with the same name
-    appended with “_RAW". So in the above example, the raw value will
+    appended with "_RAW". So in the above example, the raw value will
     be stored in attribute ``foo_RAW`` in the job ClassAd. The following
     are set by default:
 
@@ -6639,7 +6639,7 @@ These macros affect the *condor_collector*.
     to only service high priority query requests. Currently, high
     priority queries are defined as those coming from the
     *condor_negotiator* during the course of matchmaking, or via a
-    “condor_sos condor_status” command. The idea here is the critical
+    "condor_sos condor_status" command. The idea here is the critical
     operation of matchmaking machines to jobs will take precedence over
     user condor_status invocations. Defaults to a value of 1. The
     maximum allowable value for this macro is equal to
@@ -6808,7 +6808,7 @@ These macros affect the *condor_negotiator*.
     it to indicate how long ago the cycle happened, for example:
     ``LastNegotiationCycleDuration0``,
     ``LastNegotiationCycleDuration1``,
-    ``LastNegotiationCycleDuration2``, …. The attribute numbered 0
+    ``LastNegotiationCycleDuration2``, .... The attribute numbered 0
     applies to the most recent negotiation cycle. The attribute numbered
     1 applies to the next most recent negotiation cycle, and so on. See
     :doc:`/classad-attributes/negotiator-classad-attributes` for a list of
@@ -9193,7 +9193,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     levels in these daemons when needed.
 
 ``SEC_USE_FAMILY_SESSION`` :index:`SEC_USE_FAMILY_SESSION`
-    The “family” session is a special security session that's shared
+    The "family" session is a special security session that's shared
     between an HTCondor daemon and all of its descendant daemons. It
     allows a family of daemons to communicate securely without an
     expensive authentication negotiation on each network connection. It
@@ -9438,7 +9438,7 @@ These macros affect the high availability operation of HTCondor.
 
     To use this feature, the lock URL must be set with ``HA_LOCK_URL``.
 
-    Currently, only file URLs are supported (those with ``file:…``). The
+    Currently, only file URLs are supported (those with ``file:...``). The
     default value for ``MASTER_HA_LIST`` is the empty string, which
     disables the feature.
 

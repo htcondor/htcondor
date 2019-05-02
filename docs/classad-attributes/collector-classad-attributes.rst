@@ -33,7 +33,7 @@ Collector ClassAd Attributes
     (default of 20 minutes).
     :index:`CollectorIpAddr<single: CollectorIpAddr; ClassAd Collector attribute>`
  ``CollectorIpAddr``:
-    String with the IP and port address of the *condor\_collector*
+    String with the IP and port address of the *condor_collector*
     daemon which is publishing this ClassAd.
     :index:`CondorVersion<single: CondorVersion; ClassAd Collector attribute>`
  ``CondorVersion``:
@@ -57,7 +57,7 @@ Collector ClassAd Attributes
 
           CurrentJobsRunningVanilla = 567
 
-    identifies that the *condor\_collector* counts 567 vanilla universe
+    identifies that the *condor_collector* counts 567 vanilla universe
     jobs currently running. ``<universe>`` is one of ``Unknown``,
     ``Standard``, ``Vanilla``, ``Scheduler``, ``Java``, ``Parallel``,
     ``VM``, or ``Local``. There are other universes, but they are not
@@ -195,13 +195,13 @@ Collector ClassAd Attributes
  ``MaxJobsRunning<universe>``:
     An integer value representing largest number of currently running
     jobs ever seen under the universe which forms the attribute name,
-    over the life of this *condor\_collector* process. For example
+    over the life of this *condor_collector* process. For example
 
     ::
 
           MaxJobsRunningVanilla = 401
 
-    identifies that the *condor\_collector* saw 401 vanilla universe
+    identifies that the *condor_collector* saw 401 vanilla universe
     jobs currently running at one point in time, and that was the
     largest number it had encountered. ``<universe>`` is one of
     ``Unknown``, ``Standard``, ``Vanilla``, ``Scheduler``, ``Java``,
@@ -211,21 +211,21 @@ Collector ClassAd Attributes
     :index:`MyAddress<single: MyAddress; ClassAd Collector attribute>`
 
  ``MyAddress``:
-    String with the IP and port address of the *condor\_collector*
+    String with the IP and port address of the *condor_collector*
     daemon which is publishing this ClassAd.
     :index:`MyCurrentTime<single: MyCurrentTime; ClassAd Collector attribute>`
  ``MyCurrentTime``:
     The time, represented as the number of second elapsed since the Unix
-    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor\_schedd*
-    daemon last sent a ClassAd update to the *condor\_collector*.
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_schedd*
+    daemon last sent a ClassAd update to the *condor_collector*.
     :index:`Name<single: Name; ClassAd Collector attribute>`
  ``Name``:
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
-    administrator. On SMP machines, the *condor\_startd* will divide the
+    administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
-    names will be of the form “slot#@full.hostname”, for example,
-    “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
+    names will be of the form "slot#@full.hostname", for example,
+    "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
     :index:`PeakForkWorkers<single: PeakForkWorkers; ClassAd Collector attribute>`
  ``CondorVersion``:
@@ -237,22 +237,22 @@ Collector ClassAd Attributes
     Definition not yet written.
     :index:`StartdAds<single: StartdAds; ClassAd Collector attribute>`
  ``StartdAds``:
-    The integer number of unique *condor\_startd* daemon ClassAds
-    counted at the most recent time the *condor\_collector* updated its
+    The integer number of unique *condor_startd* daemon ClassAds
+    counted at the most recent time the *condor_collector* updated its
     own ClassAd.
     :index:`StartdAdsPeak<single: StartdAdsPeak; ClassAd Collector attribute>`
  ``StartdAdsPeak``:
-    The largest integer number of unique *condor\_startd* daemon
-    ClassAds seen at any one time, since the *condor\_collector* began
+    The largest integer number of unique *condor_startd* daemon
+    ClassAds seen at any one time, since the *condor_collector* began
     executing.
     :index:`SubmitterAds<single: SubmitterAds; ClassAd Collector attribute>`
  ``SubmitterAds``:
     The integer number of unique submitters counted at the most recent
-    time the *condor\_collector* updated its own ClassAd.
+    time the *condor_collector* updated its own ClassAd.
     :index:`SubmitterAdsPeak<single: SubmitterAdsPeak; ClassAd Collector attribute>`
  ``SubmitterAdsPeak``:
     The largest integer number of unique submitters seen at any one
-    time, since the *condor\_collector* began executing.
+    time, since the *condor_collector* began executing.
     :index:`UpdateInterval<single: UpdateInterval; ClassAd Collector attribute>`
  ``UpdateInterval``:
     Description is not yet written.
@@ -263,7 +263,7 @@ Collector ClassAd Attributes
     :index:`UpdatesInitial<single: UpdatesInitial; ClassAd Collector attribute>`
  ``UpdatesInitial``:
     A Statistics attribute representing a count of unique ClassAds seen,
-    over the lifetime of this *condor\_collector*. Counts per ClassAd
+    over the lifetime of this *condor_collector*. Counts per ClassAd
     are advertised in attributes named by ClassAd type as
     ``UpdatesInitial_<ClassAd-Name>``. ``<ClassAd-Name>`` is each of
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
@@ -271,7 +271,7 @@ Collector ClassAd Attributes
     :index:`UpdatesLost<single: UpdatesLost; ClassAd Collector attribute>`
  ``UpdatesLost``:
     A Statistics attribute representing the count of updates lost, over
-    the lifetime of this *condor\_collector*. Counts per ClassAd are
+    the lifetime of this *condor_collector*. Counts per ClassAd are
     advertised in attributes named by ClassAd type as
     ``UpdatesLost_<ClassAd-Name>``. ``<ClassAd-Name>`` is each of
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
@@ -279,20 +279,20 @@ Collector ClassAd Attributes
     :index:`UpdatesLostMax<single: UpdatesLostMax; ClassAd Collector attribute>`
  ``UpdatesLostMax``:
     A Statistics attribute defining the largest number of updates lost
-    at any point in time, over the lifetime of this *condor\_collector*.
+    at any point in time, over the lifetime of this *condor_collector*.
     ClassAd sequence numbers are used to detect lost ClassAds.
     :index:`UpdatesLostRatio<single: UpdatesLostRatio; ClassAd Collector attribute>`
  ``UpdatesLostRatio``:
     A Statistics attribute defining the floating point ratio of the
     total number of updates to the number of updates lost over the
-    lifetime of this *condor\_collector*. ClassAd sequence numbers are
+    lifetime of this *condor_collector*. ClassAd sequence numbers are
     used to detect lost ClassAds. A value of 1 indicates that all
     ClassAds have been lost.
     :index:`UpdatesTotal<single: UpdatesTotal; ClassAd Collector attribute>`
  ``UpdatesTotal``:
     A Statistics attribute representing the count of the number of
     ClassAd updates received over the lifetime of this
-    *condor\_collector*. Counts per ClassAd are advertised in attributes
+    *condor_collector*. Counts per ClassAd are advertised in attributes
     named by ClassAd type as ``UpdatesTotal_<ClassAd-Name>``.
     ``<ClassAd-Name>`` is each of ``CkptSrvr``, ``Collector``,
     ``Defrag``, ``Master``, ``Schedd``, ``Start``, ``StartdPvt``, and

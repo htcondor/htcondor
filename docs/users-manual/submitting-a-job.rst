@@ -616,7 +616,7 @@ and configuration files.
 Case is significant in the function's name, so use the same letter case
 as given in these definitions.
 
-``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, …)``
+``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, ...)``
     An item within the list is returned. The list is represented by a
     parameter name, or the list items are the parameters. The ``index``
     parameter determines which item. The first item in the list is at
@@ -684,7 +684,7 @@ as given in these definitions.
     a C language or Perl format specifier. If no ``format-specifier`` is
     specified, "%d" is used as the format specifier.
 
-``$RANDOM_CHOICE(choice1, choice2, choice3, …)``
+``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
     :index:`$RANDOM_CHOICE() function macro` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly

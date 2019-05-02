@@ -10,8 +10,8 @@ machine
 Synopsis
 --------
 
-**condor_who** [*help options*\ ] [*address options*\ ] [*display
-options*\ ]
+**condor_who** [*help options* ] [*address options* ] [*display
+options* ]
 
 Description
 -----------
@@ -61,15 +61,15 @@ Options
     (help option) Display extra information helpful for debugging
  **-verbose**
     (help option) Display PIDs and addresses of daemons
- **-address **\ *hostaddress*
+ **-address** *hostaddress*
     (address option) Identify the *condor_startd* host address to query
  **-allpids**
     (address option) Query all local *condor_startd* daemons
- **-logdir **\ *directoryname*
+ **-logdir** *directoryname*
     (address option) Specifies the directory containing log and address
     files that *condor_who* will scan to search for command ports of
     *condor_start* daemons to query
- **-pid **\ *PID*
+ **-pid** *PID*
     (address option) Use the given *PID* to identify the
     *condor_startd* daemon to query
  **-long**
@@ -77,7 +77,7 @@ Options
  **-wide**
     (display option) Displays fields without truncating them in order to
     fit screen width
- **-format **\ *fmt attr*
+ **-format** *fmt attr*
     (display option) Display attribute *attr* in format *fmt*. To
     display the attribute or expression the format must contain a single
     ``printf(3)``-style conversion specifier. Attributes must be from
@@ -102,7 +102,7 @@ Options
     conversion specifiers may be specified, but an attribute is still
     required. Include a backslash followed by an ‘n' to specify a line
     break.
- **-autoformat[:lhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:lhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
     (display option) Display attribute(s) or expression(s) formatted in
     a default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out

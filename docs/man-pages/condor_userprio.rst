@@ -11,9 +11,9 @@ Synopsis
 
 **condor_userprio** **-help**
 
-**condor_userprio** [**-name  **\ *negotiatorname*]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [**Edit option**\ ]
-\| [**Display options**\ ] [**-inputfile  **\ *filename*]
+**condor_userprio** [**-name** *negotiatorname*]
+[**-pool** *centralmanagerhostname[:portnumber]*] [**Edit option** ]
+\| [**Display options** ] [**-inputfile** *filename*]
 
 Description
 -----------
@@ -69,10 +69,10 @@ Options
 
  **-help**
     Display usage information and exit.
- **-name **\ *negotiatorname*
+ **-name** *negotiatorname*
     When querying ads from the *condor_collector*, only retrieve ads
     that came from the negotiator with the given name.
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     Contact the specified *centralmanagerhostname* with an optional port
     number, instead of the local central manager. This can be used to
     check other pools. NOTE: The host name (and optional port) specified
@@ -80,35 +80,35 @@ Options
     query for user priorities. This is slightly different than most
     HTCondor tools that support a **-pool** option, and instead expect
     the host name (and port) of the *condor_collector*.
- **-inputfile **\ *filename*
+ **-inputfile** *filename*
     Introduced for debugging purposes, read priority information from
     *filename*. The contents of *filename* are expected to be the same
     as captured output from running a ``condor_userprio      -long``
     command.
- **-delete **\ *username*
+ **-delete** *username*
     (Edit option) Remove the specified *username* from HTCondor's
     accounting.
  **-resetall**
     (Edit option) Reset the accumulated usage of all the users to zero.
- **-resetusage **\ *username*
+ **-resetusage** *username*
     (Edit option) Reset the accumulated usage of the user specified by
     *username* to zero.
- **-setaccum **\ *username value*
+ **-setaccum** *username value*
     (Edit option) Set the accumulated usage of the user specified by
     *username* to the specified floating point *value*.
- **-setbegin **\ *username value*
+ **-setbegin** *username value*
     (Edit option) Set the begin usage time of the user specified by
     *username* to the specified *value*.
- **-setfactor **\ *username value*
+ **-setfactor** *username value*
     (Edit option) Set the priority factor of the user specified by
     *username* to the specified *value*.
- **-setlast **\ *username value*
+ **-setlast** *username value*
     (Edit option) Set the last usage time of the user specified by
     *username* to the specified *value*.
- **-setprio **\ *username value*
+ **-setprio** *username value*
     (Edit option) Set the real priority of the user specified by
     *username* to the specified *value*.
- **-activefrom **\ *month day year*
+ **-activefrom** *month day year*
     (Display option) Display information for users who have some
     recorded accumulated usage since the specified date.
  **-all**
@@ -120,7 +120,7 @@ Options
  **-negotiator**
     (Display option) Force the query to come from the negotiator instead
     of the collector.
- **-autoformat[:jlhVr,tng] **\ *attr1 [attr2 ...]* or **-af[:jlhVr,tng] **\ *attr1 [attr2 ...]*
+ **-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]* or **-af[:jlhVr,tng]** *attr1 [attr2 ...]*
     (Display option) Display attribute(s) or expression(s) formatted in
     a default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -162,7 +162,7 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
- **-constraint **\ *<expr>*
+ **-constraint** *<expr>*
     (Display option) To be used in conjunction with the **-long**
     **-modular** or the **-autoformat** options. Displays users and
     groups that match the ``<expr>``.
@@ -175,7 +175,7 @@ Options
  **-flat**
     (Display option) Display information such that users within
     hierarchical groups are not listed with their group.
- **-getreslist **\ *username*
+ **-getreslist** *username*
     (Display option) Display all the resources currently allocated to
     the user specified by *username*.
  **-grouporder**

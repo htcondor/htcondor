@@ -17,20 +17,20 @@ Synopsis
 
 **condor_transfer_data** [
 **-pool** *centralmanagerhostname[:portnumber]* |
-**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]**-all**
+**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **-all**
 
 Description
 -----------
 
 *condor_transfer_data* causes HTCondor to transfer spooled data. It is
-meant to be used in conjunction with the**-spool** option of
+meant to be used in conjunction with the **-spool** option of
 *condor_submit*, as in
 
 ::
 
     condor_submit -spool mysubmitfile
 
-Submission of a job with the**-spool** option causes HTCondor to spool
+Submission of a job with the **-spool** option causes HTCondor to spool
 all input files, the job event log, and any proxy across a connection to
 the machine where the *condor_schedd* daemon is running. After spooling
 these files, the machine from which the job is submitted may disconnect
@@ -58,7 +58,7 @@ Options
     Transfer spooled data belonging to the specified cluster
 *cluster.process*
     Transfer spooled data belonging to a specific job in the cluster
-**user*
+*user*
     Transfer spooled data belonging to the specified user
 **-constraint** *expression*
     Transfer spooled data for jobs which match the job ClassAd

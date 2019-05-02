@@ -72,7 +72,7 @@ Machine ClassAd Attributes
     universe may resume.
     :index:`ClockDay<single: ClockDay; ClassAd machine attribute>`
  ``ClockDay``:
-    The day of the week, where 0 = Sunday, 1 = Monday, …, and 6 =
+    The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
     Saturday. :index:`ClockMin<single: ClockMin; ClassAd machine attribute>`
  ``ClockMin``:
     The number of minutes passed since midnight.
@@ -285,7 +285,7 @@ Machine ClassAd Attributes
     :index:`JobBusyTimeMax<single: JobBusyTimeMax; ClassAd machine attribute>`
  ``JobBusyTimeMax``:
     The Maximum lifetime of all jobs, including transfer time. This is
-    determined by measuring the lifetime of each *condor_starter*\ s
+    determined by measuring the lifetime of each *condor_starter* s
     that has exited. This attribute will be undefined until the first
     time a *condor_starter* has exited.
     :index:`JobBusyTimeMin<single: JobBusyTimeMin; ClassAd machine attribute>`
@@ -310,7 +310,7 @@ Machine ClassAd Attributes
  ``RecentJobBusyTimeMax``:
     The Maximum lifetime of all jobs that have exited in the last 20
     minutes, including transfer time. This is determined by measuring
-    the lifetime of each *condor_starter*\ s that has exited in the
+    the lifetime of each *condor_starter* s that has exited in the
     last 20 minutes. This attribute will be undefined if no
     *condor_starter* has exited in the last 20 minutes.
     :index:`RecentJobBusyTimeMin<single: RecentJobBusyTimeMin; ClassAd machine attribute>`
@@ -482,8 +482,8 @@ Machine ClassAd Attributes
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
-    names will be of the form “slot#@full.hostname”, for example,
-    “slot1@vulture.cs.wisc.edu”, which signifies slot number 1 from
+    names will be of the form "slot#@full.hostname", for example,
+    "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
     :index:`Offline<single: Offline; ClassAd machine attribute>`
  ``Offline<name>``:

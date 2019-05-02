@@ -1,6 +1,6 @@
       
 
-*condor\_preen*
+*condor_preen*
 ===============
 
 remove extraneous files from HTCondor directories
@@ -9,24 +9,24 @@ remove extraneous files from HTCondor directories
 Synopsis
 --------
 
-**condor\_preen** [**-mail**\ ] [**-remove**\ ] [**-verbose**\ ]
-[**-debug**\ ]
+**condor_preen** [**-mail** ] [**-remove** ] [**-verbose** ]
+[**-debug** ]
 
 Description
 -----------
 
-*condor\_preen* examines the directories belonging to HTCondor, and
+*condor_preen* examines the directories belonging to HTCondor, and
 removes extraneous files and directories which may be left over from
 HTCondor processes which terminated abnormally either due to internal
 errors or a system crash. The directories checked are the ``LOG``,
 ``EXECUTE``, and ``SPOOL`` directories as defined in the HTCondor
-configuration files. *condor\_preen* is intended to be run as user root
+configuration files. *condor_preen* is intended to be run as user root
 or user condor periodically as a backup method to ensure reasonable file
 system cleanliness in the face of errors. This is done automatically by
-default by the *condor\_master* daemon. It may also be explicitly
+default by the *condor_master* daemon. It may also be explicitly
 invoked on an as needed basis.
 
-When *condor\_preen* cleans the ``SPOOL`` directory, it always leaves
+When *condor_preen* cleans the ``SPOOL`` directory, it always leaves
 behind the files specified in the configuration variables
 ``VALID_SPOOL_FILES`` :index:`VALID_SPOOL_FILES` and
 ``SYSTEM_VALID_SPOOL_FILES`` :index:`SYSTEM_VALID_SPOOL_FILES`, as
@@ -58,7 +58,7 @@ Options
 Exit Status
 -----------
 
-*condor\_preen* will exit with a status value of 0 (zero) upon success,
+*condor_preen* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
 Author

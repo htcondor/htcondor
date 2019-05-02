@@ -276,7 +276,7 @@ The following list of attributes are optional:
     the *condor_starter* daemon can write with entries for relevant
     events in the life of a given COD application. It is similar to the
     job event log file specified for regular HTCondor jobs with the
-    **Log**\ :index:`Log<single: Log; submit commands>` command in a submit
+    **Log** :index:`Log<single: Log; submit commands>` command in a submit
     description file. However, certain attributes that are placed in a
     job event log do not make sense in the COD environment, and are
     therefore omitted. The default is not to write this log file. It is

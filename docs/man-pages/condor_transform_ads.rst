@@ -1,6 +1,6 @@
       
 
-*condor\_transform\_ads*
+*condor_transform_ads*
 ========================
 
 Transform ClassAds according to specified rules, and output the
@@ -10,14 +10,14 @@ transformed ClassAds.
 Synopsis
 --------
 
-**condor\_transform\_ads** [**-help [rules]**\ ]
+**condor_transform_ads** [**-help [rules]** ]
 
-**condor\_transform\_ads** **-rules **\ *rules-file*
-[**-in[:<form>]  **\ *infile*] [**-out[:<form>[,
-nosort]]  **\ *outfile*] [*<key>=<value>*\ ] [**-long**\ ] [**-json**\ ]
-[**-xml**\ ] [**-verbose**\ ] [**-terse**\ ] [**-debug**\ ]
-[**-unit-test**\ ] [**-testing**\ ] [**-convertoldroutes**\ ] [*infile1
-…infileN*\ ]
+**condor_transform_ads** **-rules** *rules-file*
+[**-in[:<form>]  ** *infile*] [**-out[:<form>[,
+nosort]]  ** *outfile*] [*<key>=<value>* ] [**-long** ] [**-json** ]
+[**-xml** ] [**-verbose** ] [**-terse** ] [**-debug** ]
+[**-unit-test** ] [**-testing** ] [**-convertoldroutes** ] [*infile1
+...infileN* ]
 
 Note that exactly one rules file, and at least one input file, must be
 specified. If no output file is specified, output will be written to
@@ -26,7 +26,7 @@ specified. If no output file is specified, output will be written to
 Description
 -----------
 
-*condor\_transform\_ads* reads ClassAds from a set of input files,
+*condor_transform_ads* reads ClassAds from a set of input files,
 transforms them according to rules defined in a rules file, and outputs
 the resulting transformed ClassAds.
 
@@ -40,10 +40,10 @@ Options
  **-help [rules]**
     Display usage information and exit. **-help rules** displays
     information about the available transformation rules.
- **-rules **\ *rules-file*
+ **-rules** *rules-file*
     Specifies the file containing definitions of the transformation
     rules.
- **-in[:<form>] **\ *infile*
+ **-in[:<form>]** *infile*
     Specifies an input file containing ClassAd(s) to be transformed.
     **<form>**, if specified, is one of:
 
@@ -55,7 +55,7 @@ Options
 
     | If ``-`` is specified for *infile*, input is read from ``stdin``.
 
- **-out[:<form>[, nosort] **\ *outfile*
+ **-out[:<form>[, nosort]** *outfile*
     Specifies an output file to receive the transformed ClassAd(s).
     **<form>**, if specified, is one of:
 
@@ -67,7 +67,7 @@ Options
 
     | ClassAds are storted by attribute unless **nosort** is specified.
 
- [*<key>=<value>*\ ]
+ [*<key>=<value>* ]
     Assign key/value pairs before rules file is parsed; can be used to
     pass arguments to rules. (More detail needed here.)
  **-long**
@@ -93,7 +93,7 @@ Options
 Exit Status
 -----------
 
-*condor\_transform\_ads* will exit with a status value of 0 (zero) upon
+*condor_transform_ads* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Examples

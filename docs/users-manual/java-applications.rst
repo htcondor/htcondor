@@ -17,7 +17,7 @@ Compiled Java programs can be submitted to HTCondor, and HTCondor can
 execute the programs on any machine in the pool that will run the Java
 Virtual Machine.
 
-The *condor\_status* command can be used to see a list of machines in
+The *condor_status* command can be used to see a list of machines in
 the pool for which HTCondor can use the Java Virtual Machine.
 
 ::
@@ -32,7 +32,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
     slot2@bio.cs.wisc. Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28 
     ...
 
-If there is no output from the *condor\_status* command, then HTCondor
+If there is no output from the *condor_status* command, then HTCondor
 does not know the location details of the Java Virtual Machine on
 machines in the pool, or no machines have Java correctly installed. In
 this case, contact your system administrator or see section `Java
@@ -85,7 +85,7 @@ submit description file works:
 The Java universe must be explicitly selected.
 
 The main class of the program is given in the
-**executable**\ :index:`executable<single: executable; submit commands>` statement.
+**executable** :index:`executable<single: executable; submit commands>` statement.
 This is a file name which contains the entry point of the program. The
 name of the main class (not a file name) must be specified as the first
 argument to the program.
@@ -122,7 +122,7 @@ To submit the job, where the submit description file is named
 
     condor_submit Hello.cmd
 
-To monitor the job, the commands *condor\_q* and *condor\_rm* are used
+To monitor the job, the commands *condor_q* and *condor_rm* are used
 as with all jobs.
 
 Less Simple Java Specifications
@@ -138,7 +138,7 @@ Less Simple Java Specifications
         executable = Stooges.class 
         transfer_input_files = Larry.class,Curly.class,Moe.class
 
-    The **executable**\ :index:`executable<single: executable; submit commands>`
+    The **executable** :index:`executable<single: executable; submit commands>`
     command does not change. It still identifies the class file that
     contains the program's entry point.
 
@@ -154,9 +154,9 @@ Less Simple Java Specifications
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
-    with the **executable**\ :index:`executable<single: executable; submit commands>`
+    with the **executable** :index:`executable<single: executable; submit commands>`
     command. All JAR files are specified with the
-    **jar\_files**\ :index:`jar_files<single: jar_files; submit commands>` command.
+    **jar_files** :index:`jar_files<single: jar_files; submit commands>` command.
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
@@ -170,12 +170,12 @@ Less Simple Java Specifications
     pass the information on to the JVM. That is why there is a
     difference in submit description file commands for the two ways of
     specifying files
-    (**transfer\_input\_files**\ :index:`transfer_input_files<single: transfer_input_files; submit commands>`
-    and **jar\_files**\ :index:`jar_files<single: jar_files; submit commands>`).
+    (**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+    and **jar_files** :index:`jar_files<single: jar_files; submit commands>`).
 
     If there are multiple JAR files, the **executable** command
     specifies the JAR file that contains the program's entry point. This
-    file is also listed with the **jar\_files** command:
+    file is also listed with the **jar_files** command:
 
     ::
 
@@ -198,7 +198,7 @@ Less Simple Java Specifications
  An executable JAR file.
     When the JAR file is an executable, specify the program's entry
     point in the
-    **arguments**\ :index:`arguments<single: arguments; submit commands>` command:
+    **arguments** :index:`arguments<single: arguments; submit commands>` command:
 
     ::
 

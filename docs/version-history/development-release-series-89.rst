@@ -13,8 +13,8 @@ Release Notes:
 
 New Features:
 
--  The deprecated ``HOSTALLOW…`` and ``HOSTDENY…`` configuration knobs
-   have been removed. Please use ``ALLOW…`` and ``DENY…``. :ticket:`6921`
+-  The deprecated ``HOSTALLOW...`` and ``HOSTDENY...`` configuration knobs
+   have been removed. Please use ``ALLOW...`` and ``DENY...``. :ticket:`6921`
 -  Implemented a new version of the curl_plugin with multi-file
    support, allowing it to transfer many files in a single invocation of
    the plugin. :ticket:`6499`
@@ -132,7 +132,7 @@ New Features:
    reading configuration files. :ticket:`6824`
 -  A family of HTCondor daemons can now share a security session that
    allows them to trust each other without doing a security negotiation
-   when a network connection is made amongst them. This “family”
+   when a network connection is made amongst them. This "family"
    security session can be disabled by setting the new configuration
    parameter ``SEC_USE_FAMILY_SESSION`` to ``False``. :ticket:`6788`
 -  Scheduler Universe jobs now start in order of priority, instead of
@@ -175,7 +175,7 @@ New Features:
 Bugs Fixed:
 
 -  Fixed potential authentication failures between the *condor_schedd*
-   and *condor_startd* when multiple *condor_startd*\ s are using the
+   and *condor_startd* when multiple *condor_startd* s are using the
    same shared port server. :ticket:`5604`
 
       

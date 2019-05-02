@@ -1,6 +1,6 @@
       
 
-*condor\_dagman\_metrics\_reporter*
+*condor_dagman_metrics_reporter*
 ===================================
 
 Report the statistics of a DAGMan run to a central HTTP server
@@ -10,17 +10,17 @@ Report the statistics of a DAGMan run to a central HTTP server
 Synopsis
 --------
 
-**condor\_dagman\_metrics\_reporter** [**-s**\ ] [**-u  **\ *URL*]
-[**-t  **\ *maxtime*] **-f **\ */path/to/metrics/file*
+**condor_dagman_metrics_reporter** [**-s** ] [**-u** *URL*]
+[**-t** *maxtime*] **-f** */path/to/metrics/file*
 
 Description
 -----------
 
-*condor\_dagman\_metrics\_reporter* anonymously reports metrics from a
+*condor_dagman_metrics_reporter* anonymously reports metrics from a
 DAGMan workflow to a central server. The reporting of workflow metrics
 is only enabled for DAGMan workflows run under Pegasus; metrics
 reporting has been requested by Pegasus' funding sources: see
-`http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php#usage\_statistics <http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics>`__
+`http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics <http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics>`__
 and
 `https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting <https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting>`__
 for the requirements to collect this data.
@@ -57,12 +57,12 @@ what is sent:
         "dag_status":2 
     }
 
-Metrics are sent only if the *condor\_dagman* process has
+Metrics are sent only if the *condor_dagman* process has
 ``PEGASUS_METRICS`` set to ``True`` in its environment, and the
 ``CONDOR_DEVELOPERS`` :index:`CONDOR_DEVELOPERS` configuration
 variable does not have the value ``NONE``.
 
-Ordinarily, this program will be run by *condor\_dagman*, and users do
+Ordinarily, this program will be run by *condor_dagman*, and users do
 not need to interact with it. This program uses the following
 environment variables:
 
@@ -85,24 +85,24 @@ Options
     Sleep for a random number of seconds between 1 and 10, before
     attempting to send data. This option is used to space out the
     reporting from any sub-DAGs when a DAG is removed.
- **-u **\ *URL*
+ **-u** *URL*
     Overrides setting of the environment variable
     ``PEGASUS_USER_METRICS_DEFAULT_SERVER``. This option is unused by
-    *condor\_dagman*; it is for testing by developers.
- **-t **\ *maxtime*
+    *condor_dagman*; it is for testing by developers.
+ **-t** *maxtime*
     A maximum time in seconds that defaults to 100 seconds, setting a
     limit on the amount of time this program will wait for communication
     from the server. A setting of zero will result in a single attempt
-    per server. *condor\_dagman* retrieves this value from the
+    per server. *condor_dagman* retrieves this value from the
     ``DAGMAN_PEGASUS_REPORT_TIMEOUT``
     :index:`DAGMAN_PEGASUS_REPORT_TIMEOUT` configuration variable.
- **-f **\ *metrics\_file*
+ **-f** *metrics_file*
     The name of the file containing the metrics values to be reported.
 
 Exit Status
 -----------
 
-*condor\_dagman\_metrics\_reporter* will exit with a status value of 0
+*condor_dagman_metrics_reporter* will exit with a status value of 0
 (zero) upon success, and it will exit with a value of 1 (one) upon
 failure.
 

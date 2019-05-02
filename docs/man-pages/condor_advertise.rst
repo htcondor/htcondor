@@ -9,10 +9,10 @@ Send a ClassAd to the *condor_collector* daemon
 Synopsis
 --------
 
-**condor_advertise** [**-help \| -version**\ ]
+**condor_advertise** [**-help \| -version** ]
 
-**condor_advertise** [**-pool  **\ *centralmanagerhostname[:portname]*]
-[**-debug**\ ] [**-tcp**\ ] [**-udp**\ ] [**-multiple**\ ]
+**condor_advertise** [**-pool** *centralmanagerhostname[:portname]*]
+[**-debug** ] [**-tcp** ] [**-udp** ] [**-multiple** ]
 [*update-command [classad-filename]*]
 
 Description
@@ -99,7 +99,7 @@ Options
  **-multiple**
     Send more than one ClassAd, where the boundary between ClassAds is
     one or more blank lines.
- **-pool **\ *centralmanagerhostname[:portname]*
+ **-pool** *centralmanagerhostname[:portname]*
     Specify a pool by giving the central manager's host name and an
     optional port number. The default is the ``COLLECTOR_HOST``
     specified in the configuration file.

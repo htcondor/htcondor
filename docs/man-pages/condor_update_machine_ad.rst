@@ -1,6 +1,6 @@
       
 
-*condor\_update\_machine\_ad*
+*condor_update_machine_ad*
 =============================
 
 update a machine ClassAd
@@ -9,20 +9,20 @@ update a machine ClassAd
 Synopsis
 --------
 
-**condor\_update\_machine\_ad** [**-help \| -version**\ ]
+**condor_update_machine_ad** [**-help \| -version** ]
 
-**condor\_update\_machine\_ad**
-[**-pool  **\ *centralmanagerhostname[:portnumber]*]
-[**-name  **\ *startdname*] *path/to/update-ad*
+**condor_update_machine_ad**
+[**-pool** *centralmanagerhostname[:portnumber]*]
+[**-name** *startdname*] *path/to/update-ad*
 
 Description
 -----------
 
-*condor\_update\_machine\_ad* modifies the specified *condor\_startd*
+*condor_update_machine_ad* modifies the specified *condor_startd*
 daemon's machine ClassAd. The ClassAd in the file given by
 ``path/to/update-ad`` represents the changed attributes. The changes
-persists until the *condor\_startd* restarts. If no file is specified on
-the command line, *condor\_update\_machine\_ad* reads the update ClassAd
+persists until the *condor_startd* restarts. If no file is specified on
+the command line, *condor_update_machine_ad* reads the update ClassAd
 from ``stdin``.
 
 Contents of the file or ``stdin`` must contain a complete ClassAd. Each
@@ -33,7 +33,7 @@ of the file. Lines are of the form
 
     <attribute> = <value>
 
-Changes to certain ClassAd attributes will cause the *condor\_startd* to
+Changes to certain ClassAd attributes will cause the *condor_startd* to
 regenerate values for other ClassAd attributes. An example of this is
 setting ``HasVM``. This will cause ``OfflineUniverses``,
 ``VMOfflineTime``, and ``VMOfflineReason`` to change.
@@ -45,10 +45,10 @@ Options
     Display usage information and exit
  **-version**
     Display the HTCondor version and exit
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *startdname*
+ **-name** *startdname*
     Send the command to a machine identified by *startdname*
 
 General Remarks
@@ -93,7 +93,7 @@ nor escape characters are needed.
 Exit Status
 -----------
 
-*condor\_update\_machine\_ad* will exit with a status value of 0 (zero)
+*condor_update_machine_ad* will exit with a status value of 0 (zero)
 upon success, and it will exit with the value 1 (one) upon failure.
 
 Author

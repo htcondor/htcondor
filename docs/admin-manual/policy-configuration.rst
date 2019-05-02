@@ -74,7 +74,7 @@ role in determining the state and activity of a machine.
 The ``Requirements`` expression is used for matching machines with jobs.
 
 For platforms that support standard universe jobs, the *condor_startd*
-defines the ``Requirements`` expression by logically **and**\ ing the
+defines the ``Requirements`` expression by logically **and** ing the
 ``START`` expression and the ``IS_VALID_CHECKPOINT_PLATFORM``
 expression.
 
@@ -155,7 +155,7 @@ information.
 At a high level, ``IS_VALID_CHECKPOINT_PLATFORM`` is an expression which
 becomes true when a job's checkpoint platform matches the current
 checkpointing platform of the machine. Since this expression is
-**and**\ ed with the ``START`` expression to produce the
+**and** ed with the ``START`` expression to produce the
 ``REQUIREMENTS`` expression, it must also behave correctly when
 evaluating in the context of jobs that are not standard universe.
 
@@ -512,7 +512,7 @@ Machine Activities
 
 Within some machine states, activities of the machine are defined. The
 state has meaning regardless of activity. Differences between activities
-are significant. Therefore, a “state/activity” pair describes a machine.
+are significant. Therefore, a "state/activity" pair describes a machine.
 The following list describes all the possible state/activity pairs.
 
 -  Owner :index:`Idle<single: Idle; machine activity>`
@@ -855,7 +855,7 @@ expressions are the normal expressions. For example:
             SUSPEND                 = $(KeyboardBusy) || $(CPUBusy) 
             ...
 
-The vanilla expressions have the string“_VANILLA” appended to their
+The vanilla expressions have the string"_VANILLA" appended to their
 names. For example:
 
 ::
@@ -946,13 +946,13 @@ destinations from Claimed/Busy:
 
     Another reason the machine would go from Claimed/Busy to
     Claimed/Retiring is if the *condor_negotiator* matched the machine
-    with a “better” match. This better match could either be from the
+    with a "better" match. This better match could either be from the
     machine's perspective using the startd ``RANK`` expression, or it
     could be from the negotiator's perspective due to a job with a
     higher user priority.
 
     Another case resulting in a transition to Claimed/Retiring is when
-    the startd is being shut down. The only exception is a “fast”
+    the startd is being shut down. The only exception is a "fast"
     shutdown, which bypasses retirement completely.
 
  Claimed/Suspended
@@ -1063,7 +1063,7 @@ Macros <../admin-manual/configuration-macros.html>`__ macro. This macro
 is defined in seconds and defaults to 30. If this timer expires and the
 machine is still in the Killing activity, something has gone seriously
 wrong with the *condor_starter* and the startd tries to vacate the job
-immediately by sending SIGKILL to all of the *condor_starter*\ 's
+immediately by sending SIGKILL to all of the *condor_starter* 's
 children, and then to the *condor_starter* itself.
 
 Once the *condor_starter* has killed off all the processes associated
@@ -1470,7 +1470,7 @@ at ``CONTINUE``. Similarly, if they never preempt, they never look at
 HTCondor can be configured to only run jobs at certain times of the day.
 In general, we discourage configuring a system like this, since there
 will often be lots of good cycles on machines, even when their owners
-say “I'm always using my machine during the day.” However, if you submit
+say "I'm always using my machine during the day." However, if you submit
 mostly vanilla jobs or other jobs that cannot produce checkpoints, it
 might be a good idea to only allow the jobs to run when you know the
 machines will be idle and when they will not be interrupted.
@@ -1973,7 +1973,7 @@ ways to go about dividing the resources of a multi-core machine:
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
-    **request_<name>**\ :index:`request_<name><single: request_<name>; submit commands>`,
+    **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
     as described in :ref:`admin-manual/policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
     file that requests GPUs and an actuator:

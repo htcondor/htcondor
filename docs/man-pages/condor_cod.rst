@@ -1,6 +1,6 @@
       
 
-*condor\_cod*
+*condor_cod*
 =============
 
 manage COD machines and jobs
@@ -10,49 +10,49 @@ manage COD machines and jobs
 Synopsis
 --------
 
-**condor\_cod** [**-help \| -version**\ ]
+**condor_cod** [**-help \| -version** ]
 
-**condor\_cod** *request* [
-**-pool **\ *centralmanagerhostname[:portnumber]* \|
-**-name **\ *scheddname* ] \| [**-addr  **\ *"<a.b.c.d:port>"*] [
-[**-help \| -version**\ ] \| [**-debug \| -timeout N \| -classad
-file**\ ] ] [**-requirements expr**\ ] [**-lease N**\ ]
+**condor_cod** *request* [
+**-pool** *centralmanagerhostname[:portnumber]* \|
+**-name** *scheddname* ] \| [**-addr** *"<a.b.c.d:port>"*] [
+[**-help \| -version** ] \| [**-debug \| -timeout N \| -classad
+file** ] ] [**-requirements expr** ] [**-lease N** ]
 
-**condor\_cod** *release* **-id **\ *ClaimID* [ [**-help \|
--version**\ ] \| [**-debug \| -timeout N \| -classad file**\ ] ]
-[**-fast**\ ]
+**condor_cod** *release* **-id** *ClaimID* [ [**-help \|
+-version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+[**-fast** ]
 
-**condor\_cod** *activate* **-id **\ *ClaimID* [ [**-help \|
--version**\ ] \| [**-debug \| -timeout N \| -classad file**\ ] ]
+**condor_cod** *activate* **-id** *ClaimID* [ [**-help \|
+-version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
 [**-keyword string \| -jobad filename \| -cluster N \| -proc N \|
--requirements expr**\ ]
+-requirements expr** ]
 
-**condor\_cod** *deactivate* **-id **\ *ClaimID* [ [**-help \|
--version**\ ] \| [**-debug \| -timeout N \| -classad file**\ ] ]
-[**-fast**\ ]
+**condor_cod** *deactivate* **-id** *ClaimID* [ [**-help \|
+-version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+[**-fast** ]
 
-**condor\_cod** *suspend* **-id **\ *ClaimID* [ [**-help \|
--version**\ ] \| [**-debug \| -timeout N \| -classad file**\ ] ]
+**condor_cod** *suspend* **-id** *ClaimID* [ [**-help \|
+-version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
 
-**condor\_cod** *renew* **-id **\ *ClaimID* [ [**-help \| -version**\ ]
-\| [**-debug \| -timeout N \| -classad file**\ ] ]
+**condor_cod** *renew* **-id** *ClaimID* [ [**-help \| -version** ]
+\| [**-debug \| -timeout N \| -classad file** ] ]
 
-**condor\_cod** *resume* **-id **\ *ClaimID* [ [**-help \| -version**\ ]
-\| [**-debug \| -timeout N \| -classad file**\ ] ]
+**condor_cod** *resume* **-id** *ClaimID* [ [**-help \| -version** ]
+\| [**-debug \| -timeout N \| -classad file** ] ]
 
-**condor\_cod** *delegate\_proxy* **-id **\ *ClaimID* [ [**-help \|
--version**\ ] \| [**-debug \| -timeout N \| -classad file**\ ] ]
-[**-x509proxy  **\ *ProxyFile*]
+**condor_cod** *delegate_proxy* **-id** *ClaimID* [ [**-help \|
+-version** ] \| [**-debug \| -timeout N \| -classad file** ] ]
+[**-x509proxy** *ProxyFile*]
 
 Description
 -----------
 
-*condor\_cod* issues commands that manage and use COD claims on
+*condor_cod* issues commands that manage and use COD claims on
 machines, given proper authorization.
 
 Instead of specifying an argument of *request*, *release*, *activate*,
 *deactivate*, *suspend*, *renew*, or *resume*, the user may invoke the
-*condor\_cod* tool by appending an underscore followed by one of these
+*condor_cod* tool by appending an underscore followed by one of these
 arguments. As an example, the following two commands are equivalent:
 
 ::
@@ -64,7 +64,7 @@ arguments. As an example, the following two commands are equivalent:
         condor_cod_release -id "<128.105.121.21:49973>#1073352104#4"
 
 To make these extended-name commands work, hard link the extended name
-to the *condor\_cod* executable. For example on a Unix machine:
+to the *condor_cod* executable. For example on a Unix machine:
 
 ::
 
@@ -94,14 +94,14 @@ Options
     Display usage information
  **-version**
     Display version information
- **-pool **\ *centralmanagerhostname[:portnumber]*
+ **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *scheddname*
+ **-name** *scheddname*
     Send the command to a machine identified by *scheddname*
- **-addr **\ *"<a.b.c.d:port>"*
+ **-addr** *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-lease **\ *N*
+ **-lease** *N*
     For the **request** of a new claim, automatically release the claim
     after *N* seconds.
  **request**
@@ -118,7 +118,7 @@ Options
     Renew the lease to the COD claim
  **resume**
     Resume the job on a given claim
- **delegate\_proxy**
+ **delegate_proxy**
     Delegate an X509 proxy for the given claim
 
 General Remarks
@@ -130,7 +130,7 @@ Examples
 Exit Status
 -----------
 
-*condor\_cod* will exit with a status value of 0 (zero) upon success,
+*condor_cod* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
 Author

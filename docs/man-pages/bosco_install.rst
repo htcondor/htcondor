@@ -1,6 +1,6 @@
       
 
-*bosco\_install*
+*bosco_install*
 ================
 
 :index:`bosco_install<single: bosco_install; Bosco commands>`
@@ -9,9 +9,9 @@
 Synopsis
 --------
 
-**bosco\_install** [--**help**] \| [--**usage**]
+**bosco_install** [--**help**] \| [--**usage**]
 
-**bosco\_install** [--**install[=<path/to/release\_dir>]**]
+**bosco_install** [--**install[=<path/to/release_dir>]**]
 [--**prefix=<path>**] [--**install-dir=<path>**]
 [--**local-dir=<path>**] [--**make-personal-condor**] [--**bosco**]
 [--**type=<[submit][,execute][,manager]>**]
@@ -23,12 +23,12 @@ Synopsis
 Description
 -----------
 
-*bosco\_install* is part of the Bosco system for accessing high
+*bosco_install* is part of the Bosco system for accessing high
 throughput computing resources from a local desktop. For detailed
 information, please see the Bosco web site:
 `https://osg-bosco.github.io/docs/ <https://osg-bosco.github.io/docs/>`__
 
-*bosco\_install* is linked to *condor\_install*. The command
+*bosco_install* is linked to *condor_install*. The command
 
 ::
 
@@ -40,7 +40,7 @@ becomes
 
       condor_install --bosco
 
-Please see the *condor\_install* man page for details of the command
+Please see the *condor_install* man page for details of the command
 line options.
 
 A Personal HTCondor specialized for Bosco is installed, permitting

@@ -9,7 +9,7 @@ notice and charge in small increments (by the minute or the hour). In
 2016, the four largest such services\ `:sup:`1` <ref60.html#fn1x7>`__
 were (in alphabetical order) Amazon Web Services (‘AWS'), (Microsoft)
 Azure, Google Cloud Platform (‘GCP'), and (IBM) SoftLayer; as of version
-8.7.8, the *condor\_annex* tool supports only AWS. AWS can start booting
+8.7.8, the *condor_annex* tool supports only AWS. AWS can start booting
 a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM
 until you stop paying the hourly charge. The other cloud services are
@@ -21,11 +21,11 @@ advantages over the Grid: first, cloud resources are typically available
 more quickly and in greater quantity than from the Grid; and second,
 because cloud resources are virtual machines, they are considerably more
 customizable than Grid resources. The major disadvantages are, of
-course, cost and complexity (although we hope that *condor\_annex*
+course, cost and complexity (although we hope that *condor_annex*
 reduces the latter).
 
 We illustrate these advantages with what we anticipate will be the most
-common uses for *condor\_annex*.
+common uses for *condor_annex*.
 
 Use Case: Deadlines
 -------------------
