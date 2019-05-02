@@ -1,5 +1,3 @@
-
-
 Hooks
 =====
 
@@ -565,7 +563,7 @@ submit description file may cause the hooks to be invoked with
 
 ::
 
-      +HookKeyword = "HOOKNAME"
+    +HookKeyword = "HOOKNAME"
 
 Adding this attribute to the job's ClassAd causes the
 *condor_job_router* daemon on the submit machine to invoke hooks
@@ -674,7 +672,8 @@ Daemon ClassAd Hooks
 :index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Startd Cron functionality>`
 :index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Schedd Cron functionality>`
 
- Overview
+Overview
+''''''''
 
 The *Daemon ClassAd Hook* mechanism is used to run executables (called
 jobs) directly from the *condor_startd* and *condor_schedd* daemons.
@@ -690,7 +689,8 @@ ClassAd attributes as their output; these ClassAds are then incorporated
 into the machine ClassAd. Policy expressions can then reference dynamic
 attributes (created by the ClassAd hook jobs) in the machine ClassAd.
 
- Job output
+Job output
+''''''''''
 
 The output of the job is incorporated into one or more ClassAds when the
 job exits. When the job outputs the special line:
@@ -755,7 +755,8 @@ it will set ``Value=10`` for all slots except slot1 and slot2. On those
 slots it will set ``Value=1`` and ``Value=2`` respectively. It will also
 send updates to the collector immediately.
 
- Configuration
+Configuration
+'''''''''''''
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
 section  `Configuration
@@ -833,5 +834,3 @@ jobs, and ones that use the *condor_schedd*.
     SCHEDD_CRON_TEST_ARGS = abc 123
 
 :index:`Hooks`
-
-

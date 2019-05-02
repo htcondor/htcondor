@@ -1,5 +1,3 @@
-      
-
 Macintosh OS X
 ==============
 
@@ -20,5 +18,3 @@ HTCondor on the Macintosh has a few shortcomings:
 -  No Macintosh-based installer is provided.
 -  The example start up scripts do not follow Macintosh conventions.
 -  Kerberos is not supported.
-
-      

@@ -89,9 +89,10 @@ You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
-*~/condor-annex/sleep.submit*
+**
 
 ::
+    # ~/condor-annex/sleep.submit
 
     executable = /bin/sleep
     arguments = 600
@@ -128,9 +129,8 @@ basically just means it won't talk to anyone other than itself. For
 machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
-*~/condor-8.7.8/local/condor_config.local*
-
 ::
+    # ~/condor-8.7.8/local/condor_config.local
 
     NETWORK_INTERFACE = *
     CONDOR_HOST = $(FULL_HOSTNAME)
@@ -155,9 +155,9 @@ communications to AWS.
 
 Add the following lines:
 
-*~/condor-8.7.8/local/condor_config.local*
-
 ::
+
+    # ~/condor-8.7.8/local/condor_config.local
 
     SEC_PASSWORD_FILE = $(LOCAL_DIR)/condor_pool_password
 
@@ -189,9 +189,9 @@ port, then you don't have to do anything. Otherwise, you'll need to add
 a line like the following, replacing ‘9618' with whatever port the
 administrator opened for you.
 
-*~/condor-8.7.8/local/condor_config.local*
-
 ::
+
+    # ~/condor-8.7.8/local/condor_config.local
 
     COLLECTOR_HOST = $(FULL_HOSTNAME):9618
 

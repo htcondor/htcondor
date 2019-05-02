@@ -1,5 +1,3 @@
-      
-
 The HTCondor User and Job Log Reader API
 ========================================
 
@@ -65,7 +63,7 @@ will be removed. The application will need to call the appropriate
       NOTE: The ``isEventLog`` parameter will be removed in the future.
 
 -  | ReadUserLog::ReadUserLog(FILE \*fp, bool is_xml, bool enable_close
-   | **Synopsis:** Constructor of a limited functionality reader: 
+   | **Synopsis:** Constructor of a limited functionality reader:
      no rotation handling, no locking
    | **Returns:** None
    | **Constructor** parameters:
@@ -279,18 +277,18 @@ To save the state, do something like this:
 
 ::
 
-      ReadUserLog                reader; 
-      ReadUserLog::FileState     statebuf; 
-     
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-     
+      ReadUserLog                reader;
+      ReadUserLog::FileState     statebuf;
+
+      status = ReadUserLog::InitFileState( statebuf );
+
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+
       status = UninitFileState( statebuf );
 
 Restore state from persistent storage
@@ -300,15 +298,15 @@ To restore the state, do something like this:
 
 ::
 
-      ReadUserLog::FileState     statebuf; 
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      read( fd, statebuf.buf, statebuf.size ); 
-     
-      ReadUserLog                reader; 
-      status = reader.initialize( statebuf ); 
-     
-      status = UninitFileState( statebuf ); 
+      ReadUserLog::FileState     statebuf;
+      status = ReadUserLog::InitFileState( statebuf );
+
+      read( fd, statebuf.buf, statebuf.size );
+
+      ReadUserLog                reader;
+      status = reader.initialize( statebuf );
+
+      status = UninitFileState( statebuf );
       ....
 
 API Reference
@@ -538,4 +536,4 @@ initialize.
 Additionally, the functionality of ``ReadUserLogStateAccess`` will be
 integrated into this class.
 
-      
+

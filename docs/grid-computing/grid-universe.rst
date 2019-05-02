@@ -1,5 +1,3 @@
-
-
 The Grid Universe
 =================
 
@@ -212,7 +210,7 @@ If the remote *condor_collector* is not listening on the standard port
 
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
-HTCondor's file transfer mechanism (see the :doc:`/users-manual/submitting-a-job` section on page \ `Submitting a
+HTCondor's file transfer mechanism (see the :doc:`/users-manual/submitting-a-job` section on page `Submitting a
 Job <../users-manual/submitting-a-job.html>`_), the mechanism is
 applied based on the resulting job universe on the remote machine.
 
@@ -268,7 +266,7 @@ HTCondor (and Globus) utilize the following protocols and terminology.
 The protocols allow HTCondor to interact with grid machines toward the
 end result of executing jobs.
 
- GSI
+GSI
     :index:`GSI (Grid Security Infrastructure)` The Globus
     Toolkit's Grid Security Infrastructure (GSI) provides essential
     :index:`GSI<single: GSI; HTCondor-G>`\ building blocks for other grid
@@ -278,7 +276,8 @@ end result of executing jobs.
     grid credential. GSI then handles the mapping of the grid credential
     to the diverse local credentials and authentication/authorization
     mechanisms that apply at each site.
- GRAM
+
+GRAM
     The Grid Resource Allocation and Management (GRAM) protocol supports
     remote
     :index:`GRAM<single: GRAM; HTCondor-G>`\ :index:`GRAM (Grid Resource Allocation and Management)`
@@ -287,7 +286,8 @@ end result of executing jobs.
     subsequent monitoring and control of the computation. GRAM is the
     Globus protocol that HTCondor-G uses to talk to remote Globus
     jobmanagers.
- GASS
+
+GASS
     The Globus Toolkit's Global Access to Secondary Storage (GASS)
     service provides
     :index:`GASS<single: GASS; HTCondor-G>`\ :index:`GASS (Global Access to Secondary Storage)`
@@ -295,18 +295,22 @@ end result of executing jobs.
     GASS server. GASS is used by HTCondor for the **gt2** grid type to
     transfer a job's files to and from the machine where the job is
     submitted and the remote resource.
- GridFTP
+
+GridFTP
     GridFTP is an extension of FTP that provides strong security and
     high-performance options for large data transfers.
- RSL
+
+RSL
     RSL (Resource Specification Language) is the language GRAM accepts
     to specify job information.
- gatekeeper
+
+gatekeeper
     A gatekeeper is a software daemon executing on a remote machine on
     the grid. It is relevant only to the **gt2** grid type, and this
     daemon handles the initial communication between HTCondor and a
     remote resource.
- jobmanager
+
+jobmanager
     A jobmanager is the Globus service that is initiated at a remote
     resource to submit, keep track of, and manage grid I/O for jobs
     running on an underlying batch system. There is a specific
@@ -324,12 +328,13 @@ such as if the remote resource crashes.
 There are now two different versions of the GRAM protocol in common
 usage: **gt2** and **gt5**. HTCondor supports both of them.
 
- gt2
+gt2
     This initial GRAM protocol is used in Globus Toolkit versions 1 and
     2. It is still used by many production systems. Where available in
     the other, more recent versions of the protocol, **gt2** is referred
     to as the pre-web services GRAM (or pre-WS GRAM) or GRAM2.
- gt5
+
+gt5
     This latest GRAM protocol is an extension of GRAM2 that is intended
     to be more scalable and robust. It is usually referred to as GRAM5.
 
@@ -895,10 +900,11 @@ Unicore uses certificates stored in a Java keystore file for
 authentication. The following submit description file commands are
 required to properly use the keystore file.
 
- **keystore_file** :index:`keystore_file<single: keystore_file; submit commands>`
+**keystore_file** :index:`keystore_file<single: keystore_file; submit commands>`
     Specifies the complete path and file name of the Java keystore file
     to use.
- **keystore_alias** :index:`keystore_alias<single: keystore_alias; submit commands>`
+
+**keystore_alias** :index:`keystore_alias<single: keystore_alias; submit commands>`
     A string that specifies which certificate in the Java keystore file
     to use.
 
@@ -1350,24 +1356,27 @@ statistics related to resource's rate limit.
 :index:`NumRequests<single: NumRequests; EC2 GAHP Statistics>`
 :index:`EC2 GAHP Statistics<single: EC2 GAHP Statistics; NumRequests>`
 
- ``NumRequests``:
+``NumRequests``:
     The total number of requests made by HTCondor to this resource.
     :index:`NumDistinctRequests<single: NumDistinctRequests; EC2 GAHP Statistics>`
     :index:`EC2 GAHP Statistics<single: EC2 GAHP Statistics; NumDistinctRequests>`
- ``NumDistinctRequests``:
+
+``NumDistinctRequests``:
     The number of distinct requests made by HTCondor to this resource.
     The difference between this and NumRequests is the total number of
     retries. Retries are not unusual.
     :index:`NumRequestsExceedingLimit<single: NumRequestsExceedingLimit; EC2 GAHP Statistics>`
     :index:`EC2 GAHP Statistics<single: EC2 GAHP Statistics; NumRequestsExceedingLimit>`
- ``NumRequestsExceedingLimit``:
+
+``NumRequestsExceedingLimit``:
     The number of requests which exceeded the service's rate limit. Each
     such request will cause a retry, unless the maximum number of
     retries is exceeded, or if the retries have already taken so long
     that the signature on the original request has expired.
     :index:`NumExpiredSignatures<single: NumExpiredSignatures; EC2 GAHP Statistics>`
     :index:`EC2 GAHP Statistics<single: EC2 GAHP Statistics; NumExpiredSignatures>`
- ``NumExpiredSignatures``:
+
+``NumExpiredSignatures``:
     The number of requests which the EC2 GAHP did not even attempt to
     send to the service because signature expired. Signatures should
     not, generally, expire; a request's retries will usually –
@@ -1989,7 +1998,7 @@ independent of **match_list_length**.
 There are some new attributes that will be added to the Job ClassAd, and
 may be useful to you when you write your rank, requirements,
 globus_resubmit or globus_rematch option. Please refer to the Appendix
-on page \ `2364 <JobClassAdAttributes.html#x170-1234000A.2>`_ to see a
+on page `2364 <JobClassAdAttributes.html#x170-1234000A.2>`_ to see a
 list containing the following attributes:
 
 -  NumJobMatches
@@ -2026,5 +2035,3 @@ held 4 times per Globus submission.
 If you are concerned about unknown or malicious grid sites reporting to
 your *condor_collector*, you should use HTCondor's security options,
 documented in the :doc:`/admin-manual/security` section.
-
-

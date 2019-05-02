@@ -30,7 +30,7 @@ Here are all the steps needed to run a job using HTCondor.
     become unavailable. To use the standard universe, it is necessary to
     relink the program with the HTCondor library using the
     *condor_compile* command. The manual page for *condor_compile* on
-    page \ `condor_compile <../man-pages/condor_compile.html>`_ has
+    page `condor_compile <../man-pages/condor_compile.html>`_ has
     details.
 
     The vanilla universe provides a way to run jobs that cannot be
@@ -250,9 +250,9 @@ Under Unix, HTCondor presumes a shared file system for vanilla jobs.
 However, if a shared file system is unavailable, a user can enable the
 HTCondor File Transfer mechanism. On Windows platforms, the default is
 to use the File Transfer mechanism. For details on running a job with a
-shared file system, see the :doc:`/users-manual/submitting-a-job` section on page \ `Submitting a
+shared file system, see the :doc:`/users-manual/submitting-a-job` section on page `Submitting a
 Job <../users-manual/submitting-a-job.html>`_. For details on using the
-HTCondor File Transfer mechanism, see the :doc:`/users-manual/submitting-a-job` section on page \ `Submitting a
+HTCondor File Transfer mechanism, see the :doc:`/users-manual/submitting-a-job` section on page `Submitting a
 Job <../users-manual/submitting-a-job.html>`_.
 
 Grid Universe
@@ -263,10 +263,10 @@ Grid Universe
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
 management systems. Section `The Grid
-Universe <../grid-computing/grid-universe.html>`_ on page \ `The Grid
+Universe <../grid-computing/grid-universe.html>`_ on page `The Grid
 Universe <../grid-computing/grid-universe.html>`_ has details on using
 the Grid universe. The manual page for *condor_submit* on
-page \ `condor_submit <../man-pages/condor_submit.html>`_ has detailed
+page `condor_submit <../man-pages/condor_submit.html>`_ has detailed
 descriptions of the grid-related attributes.
 
 Java Universe

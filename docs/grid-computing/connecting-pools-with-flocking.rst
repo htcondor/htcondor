@@ -1,5 +1,3 @@
-
-
 Connecting HTCondor Pools with Flocking
 =======================================
 
@@ -29,7 +27,7 @@ The simplest flocking configuration sets a few configuration variables.
 If jobs from machine A are to flock to pool B, then in machine A's
 configuration, set the following configuration variables:
 
- ``FLOCK_TO`` :index:`FLOCK_TO`
+``FLOCK_TO`` :index:`FLOCK_TO`
     is a comma separated list of the central manager machines of the
     pools that jobs from machine A may flock to.
 
@@ -43,7 +41,7 @@ configuration, set the following configuration variables:
           FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 
 
- ``FLOCK_NEGOTIATOR_HOSTS`` :index:`FLOCK_NEGOTIATOR_HOSTS`
+``FLOCK_NEGOTIATOR_HOSTS`` :index:`FLOCK_NEGOTIATOR_HOSTS`
     is the list of *condor_negotiator* daemons within the pools that
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
@@ -53,7 +51,7 @@ configuration, set the following configuration variables:
           FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
 
 
- ``ALLOW_NEGOTIATOR_SCHEDD`` :index:`ALLOW_NEGOTIATOR_SCHEDD`
+``ALLOW_NEGOTIATOR_SCHEDD`` :index:`ALLOW_NEGOTIATOR_SCHEDD`
     provides an access level and authorization list for the
     *condor_schedd* daemon to allow negotiation (for security reasons)
     with the machines within the pools that jobs from machine A may
@@ -71,7 +69,7 @@ configuration, set the following configuration variables:
     This example configuration presumes that the *condor_collector* and
     *condor_negotiator* daemons are running on the same machine. See
     the :doc:`/admin-manual/security` section on
-    page \ `Security <../admin-manual/security.html>`_ for a discussion
+    page `Security <../admin-manual/security.html>`_ for a discussion
     of security macros and their use.
 
 The configuration macros that must be set in pool B are ones that
@@ -115,7 +113,4 @@ the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
-the :doc:`/users-manual/submitting-a-job` section
-on page \ `Submitting a Job <../users-manual/submitting-a-job.html>`_.
-
-
+the :doc:`/users-manual/submitting-a-job` section.

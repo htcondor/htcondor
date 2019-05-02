@@ -605,7 +605,7 @@ The following list describes all the possible state/activity pairs.
        This slot has been drained. It is waiting for other slots to
        finish draining.
 
-Figure `3.2 <#x35-2490162>`_ on page \ `882 <#x35-2490162>`_ gives
+Figure `3.2 <#x35-2490162>`_ on page `882 <#x35-2490162>`_ gives
 the overall view of all machine states and activities and shows the
 possible transitions from one to another within the HTCondor system.
 Each transition is labeled with a number on the diagram, and transition

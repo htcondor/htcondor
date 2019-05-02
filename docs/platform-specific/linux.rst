@@ -1,5 +1,3 @@
-      
-
 Linux
 =====
 
@@ -69,5 +67,3 @@ address space randomization, as the 32-bit architecture example:
 ::
 
       setarch i386 -L -R myapp -_condor_restart myapp.ckpt
-
-      

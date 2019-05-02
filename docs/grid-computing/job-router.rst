@@ -1,5 +1,3 @@
-
-
 The HTCondor Job Router
 =======================
 
@@ -293,17 +291,19 @@ The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
 :index:`GridResource<single: GridResource; Job Router Routing Table ClassAd attribute>`
 
- GridResource
+``GridResource``
     Specifies the value for the ``GridResource`` attribute that will be
     inserted into the routed copy of the job's ClassAd.
     :index:`Name<single: Name; Job Router Routing Table ClassAd attribute>`
- Name
+
+``Name``
     An optional identifier that will be used in log messages concerning
     this route. If no name is specified, the default used will be the
     value of ``GridResource``. The *condor_job_router* distinguishes
     routes and advertises statistics based on this attribute's value.
     :index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
- Requirements
+
+``Requirements``
     A ``Requirements`` expression that identifies jobs that may be
     matched to the route. Note that, as with all settings, requirements
     specified in the configuration variable ``JOB_ROUTER_ENTRIES``
@@ -311,11 +311,13 @@ may appear in a Routing Table entry.
     requirements that are not overridden by ``JOB_ROUTER_ENTRIES``, use
     ``JOB_ROUTER_SOURCE_JOB_CONSTRAINT``.
     :index:`MaxJobs<single: MaxJobs; Job Router Routing Table ClassAd attribute>`
- MaxJobs
+
+``MaxJobs``
     An integer maximum number of jobs permitted on the route at one
     time. The default is 100.
     :index:`MaxIdleJobs<single: MaxIdleJobs; Job Router Routing Table ClassAd attribute>`
- MaxIdleJobs
+
+``MaxIdleJobs``
     An integer maximum number of routed jobs in the idle state. At or
     above this value, no more jobs will be sent to this site. This is
     intended to prevent too many jobs from being sent to sites which are
@@ -327,7 +329,8 @@ may appear in a Routing Table entry.
     that a lot of jobs may be sent to a site, only to site idle for
     hours or days. The default value is 50.
     :index:`FailureRateThreshold<single: FailureRateThreshold; Job Router Routing Table ClassAd attribute>`
- FailureRateThreshold
+
+``FailureRateThreshold``
     A maximum tolerated rate of job failures. Failure is determined by
     the expression sets for the attribute ``JobFailureTest`` expression.
     The default threshold is 0.03 jobs/second. If the threshold is
@@ -336,7 +339,8 @@ may appear in a Routing Table entry.
     This attribute implements black hole throttling, such that a site at
     which jobs are sent only to fail (a black hole) receives fewer jobs.
     :index:`JobFailureTest<single: JobFailureTest; Job Router Routing Table ClassAd attribute>`
- JobFailureTest
+
+``JobFailureTest``
     An expression evaluated for each job that finishes, to determine
     whether it was a failure. The default value if no expression is
     defined assumes all jobs are successful. Routed jobs that are
@@ -346,11 +350,13 @@ may appear in a Routing Table entry.
     might reference a property or expression of the job that specifies a
     failure condition specific to the type of job.
     :index:`TargetUniverse<single: TargetUniverse; Job Router Routing Table ClassAd attribute>`
- TargetUniverse
+
+``TargetUniverse``
     An integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
     :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
- UseSharedX509UserProxy
+
+``UseSharedX509UserProxy``
     A boolean expression that when ``True`` causes the value of
     ``SharedX509UserProxy`` to be the X.509 user proxy for the routed
     job. Note that if the *condor_job_router* daemon is running as
@@ -365,11 +371,13 @@ may appear in a Routing Table entry.
     shared proxy, the job must also turn on sandboxing by having the
     attribute ``JobShouldBeSandboxed``.
     :index:`SharedX509UserProxy<single: SharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
- SharedX509UserProxy
+
+``SharedX509UserProxy``
     A string representing file containing the X.509 user proxy for the
     routed job.
     :index:`JobShouldBeSandboxed<single: JobShouldBeSandboxed; Job Router Routing Table ClassAd attribute>`
- JobShouldBeSandboxed
+
+``JobShouldBeSandboxed``
     A boolean expression that when ``True`` causes the created copy of
     the job to be sandboxed. A copy of the input files will be placed in
     the *condor_schedd* daemon's spool area for the target job, and
@@ -381,39 +389,45 @@ may appear in a Routing Table entry.
     user proxy or if direct staging of remote output files back to the
     final output locations is not desired.
     :index:`OverrideRoutingEntry<single: OverrideRoutingEntry; Job Router Routing Table ClassAd attribute>`
- OverrideRoutingEntry
+
+``OverrideRoutingEntry``
     A boolean value that when ``True``, indicates that this entry in the
     routing table replaces any previous entry in the table with the same
     name. When ``False``, it indicates that if there is a previous entry
     by the same name, the previous entry should be retained and this
     entry should be ignored. The default value is ``True``.
     :index:`Set_ATTR><single: Set_ATTR>; Job Router Routing Table ClassAd attribute>`
- Set_<ATTR>
+
+``Set_<ATTR>``
     Sets the value of ``<ATTR>`` in the routed copy's job ClassAd to the
     specified value. An example of an attribute that might be set is
     ``PeriodicRemove``. For example, if the routed job goes on hold or
     stays idle for too long, remove it and return the original copy of
     the job to a normal state.
     :index:`Eval_Set_ATTR><single: Eval_Set_ATTR>; Job Router Routing Table ClassAd attribute>`
- Eval_Set_<ATTR>
+
+``Eval_Set_<ATTR>``
     Defines an expression. The expression is evaluated, and the
     resulting value sets the value of the routed copy's job ClassAd
     attribute ``<ATTR>``. Use this attribute to set a custom or local
     value, especially for modifying an attribute which may have been
     already specified in a default routing table.
     :index:`Copy_ATTR><single: Copy_ATTR>; Job Router Routing Table ClassAd attribute>`
- Copy_<ATTR>
+
+``Copy_<ATTR>``
     Defined with the name of a routed copy ClassAd attribute. Copies the
     value of ``<ATTR>`` from the original job ClassAd into the specified
     attribute named of the routed copy. Useful to save the value of an
     expression, before replacing it with something else that references
     the original expression.
     :index:`Delete_ATTR><single: Delete_ATTR>; Job Router Routing Table ClassAd attribute>`
- Delete_<ATTR>
+
+``Delete_<ATTR>``
     Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
     this attribute in the routing table entry is ignored.
     :index:`EditJobInPlace<single: EditJobInPlace; Job Router Routing Table ClassAd attribute>`
- EditJobInPlace
+
+``EditJobInPlace``
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
@@ -446,7 +460,7 @@ we tell the *condor_job_router* daemon to call a simple script which
 queries the collector and outputs a routing table. The script, called
 osg_ress_routing_table.sh, is just this:
 
-::
+.. code:: bash
 
     #!/bin/sh
 
@@ -455,9 +469,9 @@ osg_ress_routing_table.sh, is just this:
     # if no command line arguments specify -pool, use this:
     export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov
 
-    $condor_status -format '[ ' BeginAd \
+    condor_status -format '[ ' BeginAd \
                   -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
-          -format ']\n' EndAd "$@" | uniq
+                  -format ']\n' EndAd "$@" | uniq
 
 Save this script to a file and make sure the permissions on the file
 mark it as executable. Test this script by calling it by hand before

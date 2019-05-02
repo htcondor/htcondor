@@ -1,5 +1,3 @@
-
-
 Microsoft Windows
 =================
 
@@ -571,7 +569,7 @@ access.
 Finally, HTCondor has all the security mechanisms present in the
 full-blown version of HTCondor. See
 the :doc:`/admin-manual/security` section starting on
-page \ `Security <../admin-manual/security.html>`_ for complete
+page `Security <../admin-manual/security.html>`_ for complete
 information on how to allow/deny access to HTCondor.
 
 Network files and HTCondor
@@ -733,5 +731,3 @@ Some differences between HTCondor for Unix -vs- HTCondor for Windows
    developers to fix the problem.
 
 :index:`Windows<single: Windows; platform-specific information>`
-
-

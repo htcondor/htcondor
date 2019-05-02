@@ -71,7 +71,7 @@ job may disable the flushing by setting
 
       +IwdFlushNFSCache = False
 
-in the job's submit description file. See page \ `Job ClassAd
+in the job's submit description file. See page `Job ClassAd
 Attributes <../classad-attributes/job-classad-attributes.html>`_ for a
 definition of the job ClassAd attribute.
 

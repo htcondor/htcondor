@@ -621,7 +621,7 @@ DAG Submission
 :index:`DAG submission<single: DAG submission; DAGMan>`
 
 A DAG is submitted using the tool *condor_submit_dag*. The manual
-page \ `2248 <Condorsubmitdag.html#x150-109200012>`_ details the
+page `2248 <Condorsubmitdag.html#x150-109200012>`_ details the
 command. The simplest of DAG submissions has the syntax
 
 *condor_submit_dag* *DAGInputFileName*

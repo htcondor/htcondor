@@ -1,5 +1,3 @@
-
-
 Computing On Demand (COD)
 =========================
 
@@ -137,7 +135,7 @@ Attributes for a COD application are either required or optional. The
 following attributes are required:
 :index:`required attributes<single: required attributes; COD>`
 
- ``Cmd``
+``Cmd``
     This attribute :index:`Cmd<single: Cmd; required attributes>`\ defines the
     full path to the executable program to be run as a COD application.
     Since HTCondor does not currently provide any mechanism to transfer
@@ -187,7 +185,7 @@ following attributes are required:
 
 The following list of attributes are optional:
 
- ``JobUniverse``
+``JobUniverse``
     This attribute defines what HTCondor job
     :index:`JobUniverse<single: JobUniverse; optional attributes>`\ universe to use
     for the given COD application. The only tested universes are vanilla
@@ -315,7 +313,7 @@ log messages and in the COD-specific output of *condor_status*. The COD
 job ID is part of the information included in all events written to the
 ``StarterUserLog`` regarding a given job. The COD job ID is also used in
 the HTCondor debugging logs described in the :doc:`/admin-manual/configuration-macros` section on
-page \ `Configuration
+page `Configuration
 Macros <../admin-manual/configuration-macros.html>`_. For example, in
 the *condor_starter* daemon's log file for COD jobs (called
 ``StarterLog.cod`` by default) or in the *condor_startd* daemon's log
@@ -326,7 +324,7 @@ helps a user with the accounting or debugging of their own application.
 In this case, it is the user's responsibility to ensure uniqueness, if
 so desired.
 
- ``ClusterId``
+``ClusterId``
     This integer defines the
     :index:`ClusterId<single: ClusterId; attributes>`\ cluster identifier for a COD
     job. The default value is 1. The ``ClusterId`` can also be defined
@@ -430,23 +428,23 @@ applications interact with the rest of the HTCondor system. They should
 be issued by the controller application to manage its compute nodes.
 Here is a list of the commands:
 
- Request
+Request
     Create a new COD claim on a given resource.
- Activate
+Activate
     Spawn a specific application on a specific COD claim.
- Suspend
+Suspend
     Suspend a running application within a specific COD claim.
- Renew
+Renew
     Renew the lease to a COD claim.
- Resume
+Resume
     Resume a suspended application on a specific COD claim.
- Deactivate
+Deactivate
     Shut down an application, but hold onto the COD claim for future
     use.
- Release
+Release
     Destroy a specific COD claim, and shut down any job that is
     currently running on it.
- Delegate proxy
+Delegate proxy
     Send an x509 proxy credential to the specific COD claim (optional,
     only required in rare cases like using glexec to spawn the
     *condor_starter* at the execute machine where the COD job is

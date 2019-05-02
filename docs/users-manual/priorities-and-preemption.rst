@@ -23,7 +23,7 @@ a higher job priority than 5.
 For the simple case, each job can be given a distinct priority. For an
 already queued job, its priority may be set with the *condor_prio*
 command; see the example in the :doc:`/users-manual/managing-a-job` section, or the *condor_prio*
-manual page \ `condor_prio <../man-pages/condor_prio.html>`_ for
+manual page `condor_prio <../man-pages/condor_prio.html>`_ for
 details. This sets the value of job ClassAd attribute ``JobPrio``.
 
 A fine-grained categorization of jobs and their ordering is available
@@ -41,7 +41,7 @@ numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor_userprio*
 command (see
-page \ `condor_userprio <../man-pages/condor_userprio.html>`_).
+page `condor_userprio <../man-pages/condor_userprio.html>`_).
 :index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ HTCondor
 administrators can set and change individual user priorities with the
 same utility.
@@ -95,7 +95,7 @@ from or even if the user submits jobs from multiple machines.
 :index:`nice job` :index:`nice job<single: nice job; priority>`
 
 An extra feature is the ability to submit a job as a nice job (see
-page \ `condor_submit <../man-pages/condor_submit.html>`_). Nice jobs
+page `condor_submit <../man-pages/condor_submit.html>`_). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar

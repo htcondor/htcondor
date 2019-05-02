@@ -880,7 +880,7 @@ Machine ClassAd Attributes
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
     two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
-    on page \ `Configuration
+    on page `Configuration
     Macros <../admin-manual/configuration-macros.html>`_.
     :index:`StartdIpAddr<single: StartdIpAddr; ClassAd machine attribute>`
  ``StartdIpAddr``:

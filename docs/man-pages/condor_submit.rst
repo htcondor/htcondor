@@ -874,7 +874,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
     *condor_q -l*; see the command reference for *condor_q* on
-    page \ `condor_q <../man-pages/condor_q.html>`_. Also, see the
+    page `condor_q <../man-pages/condor_q.html>`_. Also, see the
     HTCondor Users Manual for complete information on the syntax and
     available attributes that can be used in the ClassAd expression.
 
@@ -2502,7 +2502,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
     same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see page \ `Configuration
+    ``EVENT_LOG_INFORMATION_ATTRS`` (see page `Configuration
     Macros <../admin-manual/configuration-macros.html>`_), but it
     applies to the job event log, instead of the system event log.
     :index:`JobBatchName<single: JobBatchName; submit commands>`
