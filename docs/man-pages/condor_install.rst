@@ -91,14 +91,14 @@ Options
     where it already is installed. The default is the current working
     directory.
  **-prefix=<path>**
-    This is an alias for **–install-dir**.
+    This is an alias for **-install-dir**.
  **-local-dir=<path>**
     Specifies the location of the local directory, which is the
     directory that generally contains the local (machine-specific)
     configuration file as well as the directories where HTCondor daemons
     write their run-time information (``spool``, ``log``, ``execute``).
     This location is indicated by the ``LOCAL_DIR`` variable in the
-    configuration file. When installing (that is, if **–install** is
+    configuration file. When installing (that is, if **-install** is
     specified), *condor_configure* will properly create the local
     directory in the location specified. If none is specified, the
     default value is given by the evaluation of
@@ -128,7 +128,7 @@ Options
     variable ``COLLECTOR_HOST`` to point to the given host name. The
     central manager machine's HTCondor configuration needs to be
     independently configured to act as a manager using the option
-    **–type=manager**.
+    **-type=manager**.
  **-owner=<ownername>**
     Set configuration such that HTCondor daemons will be executed as the
     given owner. This modifies the ownership on the ``log``, ``spool``
@@ -138,7 +138,7 @@ Options
     *condor_configure* is run by root. If not run as root, the owner is
     the user running the *condor_configure* command.
  **-maybe-daemon-owner**
-    If **–owner** is not specified and no appropriate user can be found
+    If **-owner** is not specified and no appropriate user can be found
     to run Condor, then this option will allow the daemon user to be
     selected. This option is rarely needed by users but can be useful
     for scripts that invoke condor_configure to install Condor.
@@ -151,18 +151,18 @@ Options
     installation directory. By default, *condor_install* will not
     install if it finds an existing ``sbin`` directory with HTCondor
     programs in it. In this case, *condor_install* will exit with an
-    error message. Specify **–overwrite** or **–backup** to tell
+    error message. Specify **-overwrite** or **-backup** to tell
     *condor_install* what to do.
 
     This prevents *condor_install* from moving an ``sbin`` directory
     out of the way that it should not move. This is particularly useful
     when trying to install HTCondor in a location used by other things
     (``/usr``, ``/usr/local``, etc.) For example: *condor_install*
-    **–prefix=/usr** will not move ``/usr/sbin`` out of the way unless
-    you specify the **–backup** option.
+    **-prefix=/usr** will not move ``/usr/sbin`` out of the way unless
+    you specify the **-backup** option.
 
-    The **–backup** behavior is used to prevent *condor_install* from
-    overwriting running daemons – Unix semantics will keep the existing
+    The **-backup** behavior is used to prevent *condor_install* from
+    overwriting running daemons - Unix semantics will keep the existing
     binaries running, even if they have been moved to a new directory.
 
  **-backup**
@@ -170,18 +170,18 @@ Options
     By default, *condor_install* will not install if it finds an
     existing ``sbin`` directory with HTCondor programs in it. In this
     case, *condor_install* with exit with an error message. You must
-    specify **–overwrite** or **–backup** to tell *condor_install* what
+    specify **-overwrite** or **-backup** to tell *condor_install* what
     to do.
 
     This prevents *condor_install* from moving an ``sbin`` directory
     out of the way that it should not move. This is particularly useful
     if you're trying to install HTCondor in a location used by other
     things (``/usr``, ``/usr/local``, etc.) For example:
-    *condor_install* **–prefix=/usr** will not move ``/usr/sbin`` out
-    of the way unless you specify the **–backup** option.
+    *condor_install* **-prefix=/usr** will not move ``/usr/sbin`` out
+    of the way unless you specify the **-backup** option.
 
-    The **–backup** behavior is used to prevent *condor_install* from
-    overwriting running daemons – Unix semantics will keep the existing
+    The **-backup** behavior is used to prevent *condor_install* from
+    overwriting running daemons - Unix semantics will keep the existing
     binaries running, even if they have been moved to a new directory.
 
  **-ignore-missing-libs**
@@ -255,7 +255,7 @@ This will move the ``log``,\ ``spool``,\ ``execute`` directories to
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

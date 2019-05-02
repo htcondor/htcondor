@@ -27,14 +27,14 @@ DAGMan Terminology
 :index:`terminology<single: terminology; DAGMan>`
 
 A node within a DAG may encompass more than a single program submitted
-to run under HTCondor. Figure `2.1 <#x22-760021>`_ illustrates the
+to run under HTCondor. The following diagram illustrates the
 elements of a node.
 
-.. image:: /_images/dagman-node.png
+.. figure:: /_images/dagman-node.png
   :width: 400
-  :alt: Figure 2.1: One Node within a DAG
+  :alt: One Node within a DAG
 
-Figure 2.1: One Node within a DAG
+  One Node within a DAG
 
 More than one HTCondor job may belong to a single node. All HTCondor
 jobs within a node must be within a single cluster, as given by the job
@@ -72,15 +72,15 @@ Comments may be placed in the DAG input file. The pound character (#) as
 the first character on a line identifies the line as a comment. Comments
 do not span lines.
 
-A simple diamond-shaped DAG, as shown in Figure `2.2 <#x22-770022>`_
+A simple diamond-shaped DAG, as shown in the following image
 is presented as a starting point for examples. This DAG contains 4
 nodes.
 
-.. image:: /_images/dagman-diamond-dag.png
+.. figure:: /_images/dagman-diamond-dag.png
   :width: 300
-  :alt: Figure 2.2: Diamond DAG
+  :alt: Diamond DAG
 
-Figure 2.2: Diamond DAG
+  Diamond DAG
 
 
 A very simple DAG input file for this diamond-shaped DAG is
@@ -1398,7 +1398,7 @@ individual nodes within a splice can be assigned priorities.
 Note that node priority does not override the DAG dependencies. Also
 note that node priorities are not guarantees of the relative order in
 which nodes will be run, even among nodes that become ready at the same
-time – so node priorities should not be used as a substitute for
+time - so node priorities should not be used as a substitute for
 parent/child dependencies. In other words, priorities should be used
 when it is preferable, but not required, that some jobs run before
 others. (The order in which jobs are run once they are submitted can be
@@ -1622,7 +1622,7 @@ the ClassAd of the DAGMan job itself will have an attribute
 ``TestNumber`` with the value ``17``.
 
 The attribute set by the *SET_JOB_ATTR* command is set only in the
-ClassAd of the DAGMan job itself – it is not propagated to node jobs of
+ClassAd of the DAGMan job itself - it is not propagated to node jobs of
 the DAG.
 
 Values with spaces can be set by surrounding the string containing a
@@ -1657,8 +1657,7 @@ Configuration variable ``DAGMAN_HOLD_CLAIM_TIME``
 :index:`DAGMAN_HOLD_CLAIM_TIME` avoids the wait for a negotiation
 cycle. When set to a non zero value, the *condor_schedd* keeps a claim
 idle, such that the *condor_startd* delays in shifting from the Claimed
-to the Preempting state (see
-Figure `3.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2470231>`_).
+to the Preempting state (see :doc:`/admin-manual/policy-configuration`).
 Thus, if another job appears that is suitable for the claimed resource,
 then the *condor_schedd* will submit the job directly to the
 *condor_startd*, avoiding the wait and overhead of a negotiation cycle.
@@ -1804,7 +1803,7 @@ Then, to run our workflow on dataset 57, we run the following command:
         condor_submit_dag run_dataset57.dag
 
 This avoids having to duplicate the *JOB* and *PARENT/CHILD* commands
-for every dataset – we can just re-use the ``workflow.dag`` file, in
+for every dataset - we can just re-use the ``workflow.dag`` file, in
 combination with a dataset-specific vars file.
 
 Composing workflows from multiple DAG files
@@ -1881,7 +1880,7 @@ run within its own instance of *condor_dagman*.
 
 Since more than one DAG is being discussed, here is terminology
 introduced to clarify which DAG is which. Reuse the example
-diamond-shaped DAG as given in Figure `2.2 <#x22-770022>`_. Assume
+diamond-shaped DAG as given in the following description. Assume
 that node B of this diamond-shaped DAG will itself be a DAG. The DAG of
 node B is called a SUBDAG, inner DAG, or lower-level DAG. The
 diamond-shaped DAG is called the outer or top-level DAG.
@@ -2198,18 +2197,18 @@ The top level DAG incorporates the diamond-shaped splice:
 
       # END DAG FILE toplevel.dag
 
-Figure `2.3 <#x22-1030033>`_ illustrates the resulting top level DAG
+The following example illustrates the resulting top level DAG
 and the dependencies produced. Notice the naming of nodes scoped with
 the splice name. This hierarchy of splice names assures unique names
 associated with all nodes.
 
-.. image:: /_images/dagman-diamond-spliced.png
+.. figure:: /_images/dagman-diamond-spliced.png
   :width: 350
-  :alt: Figure 2.3: The diamond-shaped DAG spliced between two nodes.
+  :alt: The diamond-shaped DAG spliced between two nodes.
 
-Figure 2.3: The diamond-shaped DAG spliced between two nodes.
+  The diamond-shaped DAG spliced between two nodes.
 
-Figure `2.4 <#x22-1030044>`_ illustrates the starting point for a
+The next example illustrates the starting point for a
 more complex example. The DAG input file ``X.dag`` describes this
 X-shaped DAG. The completed example displays more of the spatial
 constructs provided by splices. Pay particular attention to the notion
@@ -2247,16 +2246,16 @@ file is specified.
 
       # END DAG FILE X.dag
 
-.. image:: /_images/dagman-x-shaped-dag.png
+.. figure:: /_images/dagman-x-shaped-dag.png
   :width: 350
-  :alt: Figure 2.4: The X-shaped DAG.
+  :alt: The X-shaped DAG.
 
-Figure 2.4: The X-shaped DAG.
+  The X-shaped DAG.
 
 
 File ``s1.dag`` continues the example, presenting the DAG input file
 that incorporates two separate splices of the X-shaped DAG.
-Figure `2.5 <#x22-1030055>`_ illustrates the resulting DAG.
+The next description illustrates the resulting DAG.
 
 ::
 
@@ -2283,18 +2282,17 @@ Figure `2.5 <#x22-1030055>`_ illustrates the resulting DAG.
 
       # END DAG FILE s1.dag
 
-.. image:: /_images/dagman-s1-dag.png
+.. figure:: /_images/dagman-s1-dag.png
   :width: 350
-  :alt: Figure 2.5: The DAG described by s1.dag.
+  :alt: The DAG described by s1.dag.
 
-Figure 2.5: The DAG described by ``s1.dag``.
+  The DAG described by ``s1.dag``.
 
 
 The top level DAG in the hierarchy of this complex example is described
-by the DAG input file ``toplevel.dag``. Figure `2.6 <#x22-1030066>`_
-illustrates the final DAG. Notice that the DAG has two disjoint graphs
-in it as a result of splice S3 not having any dependencies associated
-with it in this top level DAG.
+by the DAG input file ``toplevel.dag``, which illustrates the final DAG. 
+Notice that the DAG has two disjoint graphs in it as a result of splice S3 not
+having any dependencies associated with it in this top level DAG.
 
 ::
 
@@ -2327,11 +2325,11 @@ with it in this top level DAG.
 
       # END DAG FILE toplevel.dag
 
-.. image:: /_images/dagman-complex-splice.png
+.. figure:: /_images/dagman-complex-splice.png
   :width: 750
-  :alt: Figure 2.6: The complex splice example DAG.
+  :alt: The complex splice example DAG.
 
-Figure 2.6: The complex splice example DAG.
+  The complex splice example DAG.
 
 
 Splices and rescue DAGs
@@ -2587,7 +2585,7 @@ Furthermore, a splice can appear in any number of CONNECT commands (for
 example, a given splice could be the output splice in two CONNECT
 commands that have different input splices). It is not an error for a
 splice to have PIN_IN or PIN_OUT definitions that are not associated
-with a CONNECT command – such PIN_IN and PIN_OUT commands are simply
+with a CONNECT command - such PIN_IN and PIN_OUT commands are simply
 ignored.
 
 Note that the pin_ins and pin_outs must be defined within the relevant
@@ -2608,7 +2606,7 @@ Violating any of these restrictions will result in an error during the
 parsing of the DAG files.
 
 Note: it is probably desireable for any "terminal" node (a node with no
-children) in the output splice to be connected to a pin_out – but this
+children) in the output splice to be connected to a pin_out - but this
 is not required.
 
 **Here is a simple example:**
@@ -2660,12 +2658,11 @@ parents of C1.
 
 A diagram of the above example:
 
-.. image:: /_images/dagman-splice-connect.png
+.. figure:: /_images/dagman-splice-connect.png
   :width: 600
-  :alt: Figure 2.7: Diagram of the splice connect example
+  :alt: Diagram of the splice connect example
 
-Figure 2.7: Diagram of the splice connect example
-
+  Diagram of the splice connect example
 
 
 FINAL node
@@ -3557,8 +3554,8 @@ Retry of jobs that fail
     conditions under which retry occurs are user-defined. In addition,
     the administrative support that facilitates the rerunning of only
     those jobs that fail is automatically generated.
-Scripts associated with node jobs
 
+Scripts associated with node jobs
     PRE and POST scripts run on the submit host before and/or after the
     execution of specified node jobs.
 

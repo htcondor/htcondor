@@ -384,7 +384,7 @@ To run two DAGs, each of which is set up to run in its own directory:
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

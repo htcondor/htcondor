@@ -212,7 +212,7 @@ which will prepare your AWS account.
 
 If, and only if, you will be using *condor_annex* from an EC2 instance
 to which you have assigned an IAM role with sufficient
-privileges\ `:sup:`4` <ref65.html#fn4x7>`_ , you may skip down to the
+privileges [1]_, you may skip down to the
 **Checking the Setup** heading after running the following command.
 
 ::
@@ -333,4 +333,10 @@ URL and delete the ‘HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`_
 
+.. rubric: Footnotes
 
+.. [1] You may assign an IAM role to an EC2 instance when you launch it, or
+   at any subsequent time, through the AWS web console (or other interfaces
+   with which you may be familiar). If you start the instance using HTCondor's
+   EC2 universe, you may specify the IAM instance profile with the
+   **ec2_iam_profile_name** or **ec2_iam_profile_arn** submit commands.

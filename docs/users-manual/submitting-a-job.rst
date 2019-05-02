@@ -1471,7 +1471,7 @@ example work correctly.
     Arguments       = in1 in2 out1
     Queue
 
-**Example 4 – Illustrates an Error**
+**Example 4 - Illustrates an Error**
 
 This example illustrates a job that will fail. The files specified
 using the
@@ -1507,7 +1507,7 @@ This example fails with the following error:
 
     err: files/out1: No such file or directory.
 
-**Example 5 – Illustrates an Error**
+**Example 5 - Illustrates an Error**
 
 As with Example 4, this example illustrates a job that will fail.
 The executing program's use of absolute paths cannot work.
@@ -2040,7 +2040,7 @@ in the common case, this additional policy is now automatically added to
 the ``requirements`` expression. The additional expression is added
 provided the user does not use ``CkptArch`` in the ``requirements``
 expression. HTCondor will remain backward compatible for those users who
-have explicitly specified ``CkptRequirements``–implying use of
+have explicitly specified ``CkptRequirements``-implying use of
 ``CkptArch``, in their ``requirements`` expression.
 
 The expression added when the attribute ``CkptArch`` is not specified

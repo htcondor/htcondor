@@ -61,7 +61,7 @@ The exit status of *condor_tail* is zero on success.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

@@ -53,7 +53,7 @@ live mode is similar to the \*nix top command, with stats updating every
 *condor_top* can be passed two files containing ClassAds from the same
 HTCondor daemon, in which case the *condor_collector* will not be
 queried but rather the statistics will be computed and displayed
-immediately from the two ClassAds. Only -c, -s, and –attrs options are
+immediately from the two ClassAds. Only -c, -s, and -attrs options are
 considered when passing ClassAds via files.
 
 The following subprocess stat columns may be displayed (\*default):
@@ -144,7 +144,7 @@ Options
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

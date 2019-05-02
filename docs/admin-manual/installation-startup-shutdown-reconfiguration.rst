@@ -1249,7 +1249,7 @@ Once HTCondor services are running, try submitting test jobs. Example 2
 within the :doc:`/users-manual/submitting-a-job` section presents a vanilla
 universe job.
 
-Upgrading – Installing a New Version on an Existing Pool
+Upgrading - Installing a New Version on an Existing Pool
 --------------------------------------------------------
 
 :index:`installing a new version on an existing pool<single: installing a new version on an existing pool; pool management>`

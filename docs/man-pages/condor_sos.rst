@@ -66,7 +66,7 @@ value of the invoked command when the command is successfully invoked.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

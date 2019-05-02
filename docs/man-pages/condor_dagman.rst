@@ -291,7 +291,7 @@ HTCondor job by running condor_submit_dag. See the
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

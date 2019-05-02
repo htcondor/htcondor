@@ -19,7 +19,7 @@ Description
 
 *condor_now* tries to run the *now-job* now. The *vacate-job* is
 immediately vacated; after it terminates, if the schedd still has the
-claim to the vacated job's slot – and it usually will – the schedd will
+claim to the vacated job's slot - and it usually will - the schedd will
 immediately start the now-job on that slot.
 
 If you specify multiple *vacate-job* s, each will be immediately
@@ -76,7 +76,7 @@ its place. It does not wait for the now-job to have started running.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

@@ -1372,7 +1372,7 @@ Optional configuration variables:
  ``BOINC_Arguments`` :index:`BOINC_Arguments`
     Command-line arguments that should be passed to the *boinc_client*
     program. For example, one way to specify the BOINC project to join
-    is to use the **–attach_project** argument to specify a project URL
+    is to use the **-attach_project** argument to specify a project URL
     and account key. For example:
 
     ::
@@ -1434,14 +1434,14 @@ writable by other processes running as nobody. Alternatively, the
 There are a few ways to attach an HTCondor/BOINC installation to a given
 BOINC project:
 
--  Use the **–attach_project** argument to the *boinc_client* program,
+-  Use the **-attach_project** argument to the *boinc_client* program,
    defined via the ``BOINC_Arguments`` variable. The *boinc_client*
-   will only accept a single **–attach_project** argument, so this
+   will only accept a single **-attach_project** argument, so this
    method can only be used to attach to one project.
 -  The *boinc_cmd* command-line tool can perform various BOINC
    administrative tasks, including attaching to a BOINC project. Using
    *boinc_cmd*, the appropriate argument to use is called
-   **–project_attach**. Unfortunately, the *boinc_client* must be
+   **-project_attach**. Unfortunately, the *boinc_client* must be
    running for *boinc_cmd* to work, so this method can only be used
    once the HTCondor resource has entered the Backfill state and has
    spawned the *boinc_client*.

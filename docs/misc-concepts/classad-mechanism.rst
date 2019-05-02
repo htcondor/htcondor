@@ -13,10 +13,8 @@ this mechanism is required to harness the full flexibility of the
 HTCondor system.
 
 A ClassAd is is a set of uniquely named expressions. Each named
-expression is called an attribute. Figure `4.1 <#x48-3980021>`_ shows
+expression is called an attribute. The following shows
 ten attributes, a portion of an example ClassAd.
-
---------------
 
 ::
 
@@ -30,12 +28,6 @@ ten attributes, a portion of an example ClassAd.
     KeyboardIdle = 173
     LoadAvg      = 0.1000
     Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
-
-|
-
-Figure 4.1: An example ClassAd
-
---------------
 
 ClassAd expressions look very much like expressions in C, and are
 composed of literals and attribute references composed with operators
@@ -215,9 +207,7 @@ New ClassAd Operators
 
 The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
-precedence is shown in Figure `4.2 <#x48-4040022>`_.
-
---------------
+precedence is shown in the following example:
 
 ::
 
@@ -228,12 +218,6 @@ precedence is shown in Figure `4.2 <#x48-4040022>`_.
       ==  !=  =?=  is  =!=  isnt
       &&
       ||                   (low precedence)
-
-|
-
-Figure 4.2: Relative precedence of ClassAd expression operators
-
---------------
 
 The operator with the highest precedence is the unary minus operator.
 The only operators which are unfamiliar are the =?=, is, =!= and isnt

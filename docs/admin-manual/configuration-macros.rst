@@ -1098,7 +1098,7 @@ subsystem corresponding to the daemon.
     directory.
 
 ``FILE_LOCK_VIA_MUTEX`` :index:`FILE_LOCK_VIA_MUTEX`
-    This macro setting only works on Win32 – it is ignored on Unix. If
+    This macro setting only works on Win32 - it is ignored on Unix. If
     set to be ``True``, then log locking is implemented via a kernel
     mutex instead of via file locking. On Win32, mutex access is FIFO,
     while obtaining a file lock is non-deterministic. Thus setting to
@@ -2721,7 +2721,7 @@ These macros control the *condor_master*.
     will immediately exit upon startup. This appears strange, but
     perhaps you do not want HTCondor to run on certain machines in your
     pool, yet the boot scripts for your entire pool are handled by a
-    centralized set of files – setting ``START_MASTER`` to ``False`` for
+    centralized set of files - setting ``START_MASTER`` to ``False`` for
     those machines would allow this. Note that ``START_MASTER`` is an
     entry you would most likely find in a local configuration file, not
     a global configuration file. If not defined, ``START_MASTER``
@@ -4275,7 +4275,7 @@ details.
 ``DOCKER_DROP_ALL_CAPABILITIES`` :index:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
     context of the job ad and the machine ad, when true, runs the docker
-    container with the command line option –drop-all-capabilities.
+    container with the command line option -drop-all-capabilities.
     Admins should be very careful with this setting, and only allow
     trusted users to run with full linux capabilities within the
     container.
@@ -4887,7 +4887,7 @@ These macros control the *condor_schedd*.
     ``Owner`` value is set to be by the client in the job ad. This was
     added so users can continue to use the SOAP web-services interface
     over HTTP (w/o authenticating) to submit jobs in a secure,
-    controlled environment – for instance, in a portal setting.
+    controlled environment - for instance, in a portal setting.
 
 ``QUEUE_SUPER_USERS`` :index:`QUEUE_SUPER_USERS`
     A comma and/or space separated list of user names on a given machine
@@ -4895,7 +4895,7 @@ These macros control the *condor_schedd*.
     can modify or delete the job ClassAds of other users. When not on
     this list, users can only modify or delete their own ClassAds from
     the job queue. Whatever user name corresponds with the UID that
-    HTCondor is running as – usually user condor – will automatically be
+    HTCondor is running as - usually user condor - will automatically be
     included in this list, because that is needed for HTCondor's proper
     functioning. See
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`

@@ -27,7 +27,7 @@ New Features:
 -  If a job requests GPUs and is a Docker Universe job, HTCondor
    automatically mounts the nVidia GPU devices. :ticket:`6910`
 -  If a job requests GPUs, and Singularity is enabled, HTCondor
-   automatically passes the **–nv** flag to Singularity to tell it to
+   automatically passes the **-nv** flag to Singularity to tell it to
    mount the nVidia GPUs. :ticket:`6898`
 -  Added a new submit file option, ``docker_network_type = host``, which
    causes a docker universe job to use the host's network, instead of

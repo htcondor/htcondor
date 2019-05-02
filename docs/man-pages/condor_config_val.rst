@@ -285,7 +285,7 @@ Getting the definition of **role:personal** configuration template:
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

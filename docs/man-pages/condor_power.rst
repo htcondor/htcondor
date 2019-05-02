@@ -66,7 +66,7 @@ and it will exit with the value 1 (one) upon failure.
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------

@@ -150,7 +150,7 @@ negotiation cycle. Therefore, the configuration variables
 ``PREEMPTION_RANK_STABLE`` :index:`PREEMPTION_RANK_STABLE` exist
 to inform the *condor_negotiator* daemon that values may change. See
 the :ref:`admin-manual/configuration-macros:condor_negotiator configuration
-file entries section for definitions of these configuration variables.
+file entries` section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
