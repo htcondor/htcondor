@@ -1,5 +1,3 @@
-      
-
 Java Support Installation
 =========================
 
@@ -67,9 +65,9 @@ This command will display a short list of cryptic properties, such as:
 
 ::
 
-    IsDaemonCore = True 
-    HasFileTransfer = True 
-    HasMPI = True 
+    IsDaemonCore = True
+    HasFileTransfer = True
+    HasMPI = True
     CondorVersion = "$CondorVersion: 7.1.0 Mar 26 2008 BuildID: 80210 $"
 
 If the Java configuration is correct, there will also be a short list of
@@ -77,9 +75,9 @@ Java properties, such as:
 
 ::
 
-    JavaVendor = "Sun Microsystems Inc." 
-    JavaVersion = "1.2.2" 
-    JavaMFlops = 9.279696 
+    JavaVendor = "Sun Microsystems Inc."
+    JavaVersion = "1.2.2"
+    JavaMFlops = 9.279696
     HasJava = True
 
 If the Java installation is incorrect, then any error messages from the
@@ -100,4 +98,4 @@ file, using the submit command
 **java_vm_args** :index:`java_vm_args<single: java_vm_args; submit commands>`, the
 job's value takes precedence over a configured value.
 
-      
+

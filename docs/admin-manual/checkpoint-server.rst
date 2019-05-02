@@ -1,5 +1,3 @@
-      
-
 The Checkpoint Server
 =====================
 
@@ -57,9 +55,9 @@ results in the jobs with checkpoints remaining indefinitely queued, due
 to the lack of finding their checkpoints. It is therefore best to either
 remove jobs from the queues or let them complete before installing a
 checkpoint server. It is advisable to shut the pool down before doing
-any maintenance on the checkpoint server. See section \ `Installation,
+any maintenance on the checkpoint server. See Section `Installation,
 Start Up, Shut Down and
-Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`_
 for details on shutting down the pool.
 
 A graduated installation of the checkpoint server may be accomplished by
@@ -72,7 +70,7 @@ The files relevant to a checkpoint server are
 
 ::
 
-            sbin/condor_ckpt_server 
+            sbin/condor_ckpt_server
             etc/examples/condor_config.local.ckpt.server
 
 ``condor_ckpt_server`` is the checkpoint server binary.
@@ -116,7 +114,7 @@ There are three steps necessary towards running a checkpoint server:
     versions of the HTCondor logging entries, as described in
     the :doc:`/admin-manual/configuration-macros` section on
     page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    Macros <../admin-manual/configuration-macros.html>`_.
 
      ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG`
         The location of the checkpoint server log.
@@ -133,7 +131,7 @@ There are three steps necessary towards running a checkpoint server:
     configuration. Do this by sending a *condor_restart* command from
     any machine with administrator access to the pool. See
     the :doc:`/admin-manual/security` section on
-    page \ `Security <../admin-manual/security.html>`__ for full details
+    page \ `Security <../admin-manual/security.html>`_ for full details
     about security in HTCondor.
 
     Note that when the *condor_ckpt_server* starts up, it will
@@ -163,11 +161,11 @@ There are three steps necessary towards running a checkpoint server:
 
     Once these variables are in place, send the command
     *condor_reconfig* to all machines in the pool, so the changes take
-    effect. This is described in section \ `Installation, Start Up, Shut
+    effect. This is described in Section `Installation, Start Up, Shut
     Down and
-    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
+    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`_
     on page \ `Installation, Start Up, Shut Down and
-    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
+    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`_.
 
 Configuring the Pool to Use Multiple Checkpoint Servers
 -------------------------------------------------------
@@ -200,7 +198,7 @@ specifies that the checkpoint server specified by the machine running
 the job should be used instead of the checkpoint server specified by the
 submitting machine. See the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for more details.
+Macros <../admin-manual/configuration-macros.html>`_ for more details.
 This allows the job to use the checkpoint server closest to the machine
 on which it is running, instead of the server closest to the submitting
 machine. For convenience, set these parameters in the global
@@ -214,10 +212,10 @@ local configuration file.
 
 Third, send a *condor_reconfig* command to all machines in the pool, so
 that the changes take effect. This is described in
-section \ `Installation, Start Up, Shut Down and
-Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
+Section `Installation, Start Up, Shut Down and
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`_
 on page \ `Installation, Start Up, Shut Down and
-Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`_.
 
 After completing these three steps, the jobs in the pool will send their
 checkpoints to the nearest checkpoint server. On restart, a job will
@@ -264,7 +262,7 @@ add the following configuration to each machine:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
+      CkptServer = "$(CKPT_SERVER_HOST)"
       STARTD_ATTRS = $(STARTD_ATTRS), CkptServer
 
 For convenience, set these variables in the global configuration file.
@@ -274,7 +272,7 @@ configuration instead:
 
 ::
 
-      CkptServer = "$(CKPT_SERVER_HOST)" 
+      CkptServer = "$(CKPT_SERVER_HOST)"
       STARTD_ATTRS = CkptServer
 
 With this configuration, all machine ClassAds will include a
@@ -318,7 +316,7 @@ can be automatically appended to all standard universe jobs submitted in
 the pool using the configuration variables ``APPEND_REQ_STANDARD`` or
 ``APPEND_RANK_STANDARD``. See the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for more details.
+Macros <../admin-manual/configuration-macros.html>`_ for more details.
 :index:`installation<single: installation; checkpoint server>`
 
-      
+

@@ -1,5 +1,3 @@
-      
-
 Virtual Machine Applications
 ============================
 
@@ -123,8 +121,8 @@ file transfer attributes:
 
 ::
 
-      should_transfer_files = YES 
-      when_to_transfer_output = ON_EXIT 
+      should_transfer_files = YES
+      when_to_transfer_output = ON_EXIT
       transfer_input_files = /myxen/diskfile.img,/myxen/swap.img
 
 Any and all needed files that will not accessible directly from the
@@ -184,20 +182,20 @@ Note that if snapshot disks are requested and file transfer is not being
 used, the **vmware_dir** setting given in the submit description file
 should not contain any symbolic link path components, as described on
 the
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes>`__
+`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes>`_
 page under the answer to why VMware jobs with symbolic links fail.
 
 Here is a sample submit description file for a VMware virtual machine:
 
 ::
 
-    universe                     = vm 
-    executable                   = vmware_sample_job 
-    log                          = simple.vm.log.txt 
-    vm_type                      = vmware 
-    vm_memory                    = 64 
-    vmware_dir                   = C:\condor-test 
-    vmware_should_transfer_files = True 
+    universe                     = vm
+    executable                   = vmware_sample_job
+    log                          = simple.vm.log.txt
+    vm_type                      = vmware
+    vm_memory                    = 64
+    vmware_dir                   = C:\condor-test
+    vmware_should_transfer_files = True
     queue
 
 This sample uses the **vmware_dir** command to identify the location of
@@ -278,7 +276,7 @@ VMware on Windows and Linux
 
 Following the platform-specific guest OS installation instructions found
 at
-`http://partnerweb.vmware.com/GOSIG/home.html <http://partnerweb.vmware.com/GOSIG/home.html>`__,
+`http://partnerweb.vmware.com/GOSIG/home.html <http://partnerweb.vmware.com/GOSIG/home.html>`_,
 creates a VMware disk image.
 
 Xen and KVM
@@ -288,7 +286,7 @@ While the following web page contains instructions specific to Fedora on
 how to create a virtual guest image, it should provide a good starting
 point for other platforms as well.
 
-`http://fedoraproject.org/wiki/Virtualization_Quick_Start <http://fedoraproject.org/wiki/Virtualization_Quick_Start>`__
+`http://fedoraproject.org/wiki/Virtualization_Quick_Start <http://fedoraproject.org/wiki/Virtualization_Quick_Start>`_
 
 Job Completion in the vm Universe
 ---------------------------------
@@ -339,101 +337,84 @@ If the VM fails to launch for other reasons, the job will be placed on
 hold and the reason placed in the job ClassAd's ``HoldReason``
 attribute. The following table may help in understanding such reasons.
 
-::
+VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM
+    The attribute JobVMMemory was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually prevent you from submitting a VM universe job
+    without JobVMMemory set.  Examine your job and verify that JobVMMemory is set.
+    If it is, please contact your administrator.
 
-    VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM 
-     
-        The attribute JobVMMemory was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually prevent you from submitting a VM universe job 
-    without JobVMMemory set.  Examine your job and verify that JobVMMemory is set. 
-    If it is, please contact your administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM 
-     
-        The attribute VMPARAM_VMware_Dir was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid 
-    VMWare job (it is derived from vmware_dir).  If you used condor_submit to 
-    submit this job, contact your administrator.  Otherwise, examine your job 
-    and verify that VMPARAM_VMware_Dir is set.  If it is, contact your 
-    administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM 
-     
-        The attribute VMPARAM_vm_Disk was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid 
-    KVM job (it is derived from vm_disk).  Examine your job and verify that 
-    VMPARAM_vm_Disk is set.  If it is, please contact your administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM 
-     
-        The attribute vm_disk was invalid.  Please consult the manual, 
-    or the condor_submit man page, for information about the syntax of 
-    vm_disk.  A syntactically correct value may be invalid if the 
-    on-disk permissions of a file specified in it do not match the requested 
-    permissions.  Presently, files not transferred to the root of the working 
-    directory must be specified with full paths. 
-     
-    VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT 
-     
-        KVM jobs can not presently checkpoint if any of their disk files are not 
-    on a shared filesystem.  Files on a shared filesystem must be specified in 
-    vm_disk with full paths. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM 
-     
-        The attribute VMPARAM_Xen_Kernel was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid 
-    Xen job (it is derived from xen_kernel).  Examine your job and verify that 
-    VMPARAM_Xen_Kernel is set.  If it is, please contact your administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT 
-     
-        Don't use 'vmx' as the name of your kernel image.  Pick something else and 
-    change xen_kernel to match. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND 
-     
-        HTCondor could not read from the file specified by xen_kernel. 
-    Check the path and the file's permissions.  If it's on a shared filesystem, 
-    you may need to alter your job's requirements expression to ensure the 
-    filesystem's availability. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND 
-     
-        HTCondor could not read from the file specified by xen_initrd. 
-    Check the path and the file's permissions.  If it's on a shared filesystem, 
-    you may need to alter your job's requirements expression to ensure the 
-    filesystem's availability. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM 
-     
-        The attribute VMPARAM_Xen_Root was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid 
-    Xen job (it is derived from xen_root).  Examine your job and verify that 
-    VMPARAM_Xen_Root is set.  If it is, please contact your administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM 
-     
-        The attribute VMPARAM_vm_Disk was not set in the job ad sent to the 
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid 
-    Xen job (it is derived from vm_disk).  Examine your job and verify that 
-    VMPARAM_vm_Disk is set.  If it is, please contact your administrator. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM 
-     
-        The attribute vm_disk was invalid.  Please consult the manual, 
-    or the condor_submit man page, for information about the syntax of 
-    vm_disk.  A syntactically correct value may be invalid if the 
-    on-disk permissions of a file specified in it do not match the requested 
-    permissions.  Presently, files not transferred to the root of the working 
-    directory must be specified with full paths. 
-     
-    VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT 
-     
-        Xen jobs can not presently checkpoint if any of their disk files are not 
-    on a shared filesystem.  Files on a shared filesystem must be specified in 
-    vm_disk with full paths. 
+VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM
+    The attribute VMPARAM_VMware_Dir was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+    VMWare job (it is derived from vmware_dir).  If you used condor_submit to
+    submit this job, contact your administrator.  Otherwise, examine your job
+    and verify that VMPARAM_VMware_Dir is set.  If it is, contact your
+    administrator.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM
+    The attribute VMPARAM_vm_Disk was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+    KVM job (it is derived from vm_disk).  Examine your job and verify that
+    VMPARAM_vm_Disk is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM
+    The attribute vm_disk was invalid.  Please consult the manual,
+    or the condor_submit man page, for information about the syntax of
+    vm_disk.  A syntactically correct value may be invalid if the
+    on-disk permissions of a file specified in it do not match the requested
+    permissions.  Presently, files not transferred to the root of the working
+    directory must be specified with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT
+    KVM jobs can not presently checkpoint if any of their disk files are not
+    on a shared filesystem.  Files on a shared filesystem must be specified in
+    vm_disk with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM
+    The attribute VMPARAM_Xen_Kernel was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+    Xen job (it is derived from xen_kernel).  Examine your job and verify that
+    VMPARAM_Xen_Kernel is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT
+    Don't use 'vmx' as the name of your kernel image.  Pick something else and
+    change xen_kernel to match.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND
+    HTCondor could not read from the file specified by xen_kernel.
+    Check the path and the file's permissions.  If it's on a shared filesystem,
+    you may need to alter your job's requirements expression to ensure the
+    filesystem's availability.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND
+    HTCondor could not read from the file specified by xen_initrd.
+    Check the path and the file's permissions.  If it's on a shared filesystem,
+    you may need to alter your job's requirements expression to ensure the
+    filesystem's availability.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM
+    The attribute VMPARAM_Xen_Root was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+    Xen job (it is derived from xen_root).  Examine your job and verify that
+    VMPARAM_Xen_Root is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM
+    The attribute VMPARAM_vm_Disk was not set in the job ad sent to the
+    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+    Xen job (it is derived from vm_disk).  Examine your job and verify that
+    VMPARAM_vm_Disk is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM
+    The attribute vm_disk was invalid.  Please consult the manual,
+    or the condor_submit man page, for information about the syntax of
+    vm_disk.  A syntactically correct value may be invalid if the
+    on-disk permissions of a file specified in it do not match the requested
+    permissions.  Presently, files not transferred to the root of the working
+    directory must be specified with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT
+    Xen jobs can not presently checkpoint if any of their disk files are not
+    on a shared filesystem.  Files on a shared filesystem must be specified in
+    vm_disk with full paths.
 
 :index:`virtual machine universe`
-
-      

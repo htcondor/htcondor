@@ -1,4 +1,4 @@
-      
+
 
 Stable Release Series 8.8
 =========================
@@ -166,7 +166,7 @@ New Features:
 -  Made the Python bindings' ``JobEvent`` API more Pythonic by handling
    optional event attributes as if the ``JobEvent`` object were a
    dictionary, instead. See section `Python
-   Bindings <../apis/python-bindings.html>`__ for details. :ticket:`6820`
+   Bindings <../apis/python-bindings.html>`_ for details. :ticket:`6820`
 -  Added job ad attribute ``BlockReadKbytes`` and ``BlockWriteKybtes``
    which describe the number of kbytes read and written by the job to
    the sandbox directory. These are only defined on Linux machines with
@@ -205,4 +205,4 @@ Bugs Fixed:
    *condor_ssh_to_job* and interactive submits are no longer
    installed in ``/etc/condor``. :ticket:`6770`
 
-      
+

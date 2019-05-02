@@ -1,4 +1,4 @@
-      
+
 
 *condor_dagman_metrics_reporter*
 ===================================
@@ -20,9 +20,9 @@ Description
 DAGMan workflow to a central server. The reporting of workflow metrics
 is only enabled for DAGMan workflows run under Pegasus; metrics
 reporting has been requested by Pegasus' funding sources: see
-`http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics <http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics>`__
+`http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics <http://pegasus.isi.edu/wms/docs/latest/funding_citing_usage.php#usage_statistics>`_
 and
-`https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting <https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting>`__
+`https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting <https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting>`_
 for the requirements to collect this data.
 
 The data sent to the server is in JSON format. Here is an example of
@@ -30,31 +30,31 @@ what is sent:
 
 ::
 
-    { 
-        "client":"condor_dagman", 
-        "version":"8.1.0", 
-        "planner":"/lfs1/devel/Pegasus/pegasus/bin/pegasus-plan", 
-        "planner_version":"4.3.0cvs", 
-        "type":"metrics", 
-        "wf_uuid":"htcondor-test-job_dagman_metrics-A-subdag", 
-        "root_wf_uuid":"htcondor-test-job_dagman_metrics-A", 
-        "start_time":1375313459.603, 
-        "end_time":1375313491.498, 
-        "duration":31.895, 
-        "exitcode":1, 
-        "dagman_id":"26", 
-        "parent_dagman_id":"11", 
-        "rescue_dag_number":0, 
-        "jobs":4, 
-        "jobs_failed":1, 
-        "jobs_succeeded":3, 
-        "dag_jobs":0, 
-        "dag_jobs_failed":0, 
-        "dag_jobs_succeeded":0, 
-        "total_jobs":4, 
-        "total_jobs_run":4, 
-        "total_job_time":0.000, 
-        "dag_status":2 
+    {
+        "client":"condor_dagman",
+        "version":"8.1.0",
+        "planner":"/lfs1/devel/Pegasus/pegasus/bin/pegasus-plan",
+        "planner_version":"4.3.0cvs",
+        "type":"metrics",
+        "wf_uuid":"htcondor-test-job_dagman_metrics-A-subdag",
+        "root_wf_uuid":"htcondor-test-job_dagman_metrics-A",
+        "start_time":1375313459.603,
+        "end_time":1375313491.498,
+        "duration":31.895,
+        "exitcode":1,
+        "dagman_id":"26",
+        "parent_dagman_id":"11",
+        "rescue_dag_number":0,
+        "jobs":4,
+        "jobs_failed":1,
+        "jobs_succeeded":3,
+        "dag_jobs":0,
+        "dag_jobs_failed":0,
+        "dag_jobs_succeeded":0,
+        "total_jobs":4,
+        "total_jobs_run":4,
+        "total_job_time":0.000,
+        "dag_status":2
     }
 
 Metrics are sent only if the *condor_dagman* process has
@@ -118,4 +118,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

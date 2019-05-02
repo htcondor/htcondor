@@ -1,4 +1,4 @@
-      
+
 
 *condor_status*
 ===============
@@ -116,7 +116,7 @@ Options
     defined for ``STATISTICS_TO_PUBLISH``. A definition is in the
     HTCondor Administrator's manual section on configuration
     (section `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__).
+    Macros <../admin-manual/configuration-macros.html>`_).
  **-storage**
     (Query option) Display attributes of machines with network storage
     resources.
@@ -171,7 +171,7 @@ Options
     (Display option) Display entire ClassAds, in XML format. The XML
     format is fully defined in the reference manual, obtained from the
     ClassAds web page, with a link at
-    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`__.
+    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_.
  **-json**
     (Display option) Display entire ClassAds in JSON format.
  **-constraint** *const*
@@ -292,7 +292,7 @@ General Remarks
    amount of time that the machine has been idle. See the section on
    *condor_startd* states in the Administrator's Manual for more
    information (section `Policy Configuration for Execute Hosts and for
-   Submit Hosts <../admin-manual/policy-configuration.html>`__).
+   Submit Hosts <../admin-manual/policy-configuration.html>`_).
 -  When using *condor_status* on a pool with SMP machines, you can
    either provide the host name, in which case you will get back
    information about all slots that are represented on that host, or you
@@ -329,19 +329,19 @@ the host name. For example, if you had a 4-CPU machine, named
 
 ::
 
-    % condor_status vulture 
-     
-    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
-     
-    slot1@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.050   512  0+01:47:42 
-    slot2@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.000   512  0+01:48:19 
-    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:05:32 
-    slot4@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.000   512  1+11:05:34 
-     
-                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
-     
-             INTEL/LINUX     4     0       2         2       0          0        0 
-     
+    % condor_status vulture
+
+    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
+
+    slot1@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.050   512  0+01:47:42
+    slot2@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.000   512  0+01:48:19
+    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:05:32
+    slot4@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.000   512  1+11:05:34
+
+                         Total Owner Claimed Unclaimed Matched Preempting Backfill
+
+             INTEL/LINUX     4     0       2         2       0          0        0
+
                    Total     4     0       2         2       0          0        0
 
 Example 2 To view information from a specific nodes of an SMP machine,
@@ -350,16 +350,16 @@ slot. This has the form ``slot#@hostname``. For example:
 
 ::
 
-    % condor_status slot3@vulture 
-     
-    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime 
-     
-    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32 
-     
-                         Total Owner Claimed Unclaimed Matched Preempting Backfill 
-     
-             INTEL/LINUX     1     0       0         1       0          0        0 
-     
+    % condor_status slot3@vulture
+
+    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
+
+    slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32
+
+                         Total Owner Claimed Unclaimed Matched Preempting Backfill
+
+             INTEL/LINUX     1     0       0         1       0          0        0
+
                    Total     1     0       0         1       0          0        0
 
 Constraint option examples
@@ -406,13 +406,13 @@ HTCondor pool.
 
 ::
 
-    Name        ID   ClaimState TimeInState RemoteUser JobId Keyword 
-    astro.cs.wi COD1 Idle        0+00:00:04 wright 
-    chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen 
-    chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen 
-     
-                   Total  Idle  Running  Suspended  Vacating  Killing 
-     INTEL/LINUX       3     1        1          1         0        0 
+    Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
+    astro.cs.wi COD1 Idle        0+00:00:04 wright
+    chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen
+    chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
+
+                   Total  Idle  Running  Suspended  Vacating  Killing
+     INTEL/LINUX       3     1        1          1         0        0
            Total       3     1        1          1         0        0
 
 -format option example To display the name and memory attributes of each
@@ -446,4 +446,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

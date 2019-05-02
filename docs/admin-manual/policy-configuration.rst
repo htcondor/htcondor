@@ -1,11 +1,9 @@
-      
-
 Policy Configuration for Execute Hosts and for Submit Hosts
 ===========================================================
 
 Note: configuration templates make it easier to implement certain
 policies; see information on policy templates here: \ `Configuration
-Templates <../admin-manual/configuration-templates.html>`__.
+Templates <../admin-manual/configuration-templates.html>`_.
 
 *condor_startd* Policy Configuration
 -------------------------------------
@@ -28,8 +26,8 @@ the owners of machines in the pool or the users of the pool.
 ''''''''''''''''''''''''''''
 
 Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in section \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__.
+expressions, which are detailed in Section `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`_.
 :index:`condor_startd`
 
 Each machine runs one *condor_startd* daemon. Each machine may contain
@@ -92,8 +90,8 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-section \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__ for specifics on
+Section `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`_ for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
 A note of caution is in order when modifying the ``START`` expression to
@@ -123,9 +121,9 @@ configure to set up the machines with:
 
 ::
 
-      START = True 
-      SUSPEND = False 
-      PREEMPT = False 
+      START = True
+      SUSPEND = False
+      PREEMPT = False
       KILL = False
 
 In this way, HTCondor jobs always run and can never be kicked off from
@@ -174,17 +172,17 @@ expression may be overridden in the HTCondor configuration files.
 
 ::
 
-    IS_VALID_CHECKPOINT_PLATFORM = 
-    ( 
-      (TARGET.JobUniverse =!= 1) || 
-     
-      ( 
-        (MY.CheckpointPlatform =!= UNDEFINED) && 
-        ( 
-          (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) || 
-          (TARGET.NumCkpts == 0) 
-        ) 
-      ) 
+    IS_VALID_CHECKPOINT_PLATFORM =
+    (
+      (TARGET.JobUniverse =!= 1) ||
+
+      (
+        (MY.CheckpointPlatform =!= UNDEFINED) &&
+        (
+          (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
+          (TARGET.NumCkpts == 0)
+        )
+      )
     )
 
 ``IS_VALID_CHECKPOINT_PLATFORM`` is a separate policy expression because
@@ -218,7 +216,7 @@ of the people in the group as in
 
 ::
 
-      RANK = Owner == "coltrane" || Owner == "tyner" \ 
+      RANK = Owner == "coltrane" || Owner == "tyner" \
         || Owner == "garrison" || Owner == "jones"
 
 The ``RANK`` expression is evaluated as a floating point number.
@@ -236,7 +234,7 @@ following entry in the local configuration file of machine ``bass``:
 
 ::
 
-      RANK = (Owner == "coltrane") + (Owner == "tyner") \ 
+      RANK = (Owner == "coltrane") + (Owner == "tyner") \
         + ((Owner == "garrison") * 10) + (Owner == "jones")
 
 Note that the parentheses in this expression are important, because the
@@ -606,7 +604,7 @@ The following list describes all the possible state/activity pairs.
        This slot has been drained. It is waiting for other slots to
        finish draining.
 
-Figure \ `3.2 <#x35-2490162>`__ on page \ `882 <#x35-2490162>`__ gives
+Figure `3.2 <#x35-2490162>`_ on page \ `882 <#x35-2490162>`_ gives
 the overall view of all machine states and activities and shows the
 possible transitions from one to another within the HTCondor system.
 Each transition is labeled with a number on the diagram, and transition
@@ -850,9 +848,9 @@ expressions are the normal expressions. For example:
 
 ::
 
-            WANT_SUSPEND            = True 
-            WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE) 
-            SUSPEND                 = $(KeyboardBusy) || $(CPUBusy) 
+            WANT_SUSPEND            = True
+            WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
+            SUSPEND                 = $(KeyboardBusy) || $(CPUBusy)
             ...
 
 The vanilla expressions have the string"_VANILLA" appended to their
@@ -860,9 +858,9 @@ names. For example:
 
 ::
 
-            WANT_SUSPEND_VANILLA    = True 
-            WANT_VACATE_VANILLA     = True 
-            SUSPEND_VANILLA         = $(KeyboardBusy) || $(CPUBusy) 
+            WANT_SUSPEND_VANILLA    = True
+            WANT_VACATE_VANILLA     = True
+            SUSPEND_VANILLA         = $(KeyboardBusy) || $(CPUBusy)
             ...
 
 Without specific vanilla versions, the normal versions will be used for
@@ -1059,7 +1057,7 @@ kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
 of which is defined by the ``KILLING_TIMEOUT``
 :index:`KILLING_TIMEOUT`  `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ macro. This macro
+Macros <../admin-manual/configuration-macros.html>`_ macro. This macro
 is defined in seconds and defaults to 30. If this timer expires and the
 machine is still in the Killing activity, something has gone seriously
 wrong with the *condor_starter* and the startd tries to vacate the job
@@ -1083,7 +1081,7 @@ The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
 about backfill support in HTCondor, see the :doc:`/admin-manual/setting-up-special-environments` section
 on page \ `Setting Up for Special
-Environments <../admin-manual/setting-up-special-environments.html>`__.
+Environments <../admin-manual/setting-up-special-environments.html>`_.
 This state is only used if the machine has been configured to enable
 backfill computation, if a specific backfill manager has been installed
 and configured, and if the machine is otherwise idle (not being used
@@ -1212,7 +1210,7 @@ It serves as a quick reference.
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. This configuration macro is
     fully documented here:  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    Macros <../admin-manual/configuration-macros.html>`_.
 
 ``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
@@ -1383,40 +1381,40 @@ perhaps will go unused by many configurations.
 
 ::
 
-    ##  These macros are here to help write legible expressions: 
-    MINUTE          = 60 
-    HOUR            = (60 * $(MINUTE)) 
-    StateTimer      = (time() - EnteredCurrentState) 
-    ActivityTimer   = (time() - EnteredCurrentActivity) 
-    ActivationTimer = (time() - JobStart) 
-    LastCkpt        = (time() - LastPeriodicCheckpoint) 
-     
-    NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg) 
-    BackgroundLoad          = 0.3 
-    HighLoad                = 0.5 
-    StartIdleTime           = 15 * $(MINUTE) 
-    ContinueIdleTime        = 5 * $(MINUTE) 
-    MaxSuspendTime          = 10 * $(MINUTE) 
-     
-    KeyboardBusy            = KeyboardIdle < $(MINUTE) 
-    ConsoleBusy             = (ConsoleIdle  < $(MINUTE)) 
-    CPUIdle                = $(NonCondorLoadAvg) <= $(BackgroundLoad) 
-    CPUBusy                = $(NonCondorLoadAvg) >= $(HighLoad) 
-    KeyboardNotBusy         = ($(KeyboardBusy) == False) 
+    ##  These macros are here to help write legible expressions:
+    MINUTE          = 60
+    HOUR            = (60 * $(MINUTE))
+    StateTimer      = (time() - EnteredCurrentState)
+    ActivityTimer   = (time() - EnteredCurrentActivity)
+    ActivationTimer = (time() - JobStart)
+    LastCkpt        = (time() - LastPeriodicCheckpoint)
+
+    NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
+    BackgroundLoad          = 0.3
+    HighLoad                = 0.5
+    StartIdleTime           = 15 * $(MINUTE)
+    ContinueIdleTime        = 5 * $(MINUTE)
+    MaxSuspendTime          = 10 * $(MINUTE)
+
+    KeyboardBusy            = KeyboardIdle < $(MINUTE)
+    ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
+    CPUIdle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
+    CPUBusy                = $(NonCondorLoadAvg) >= $(HighLoad)
+    KeyboardNotBusy         = ($(KeyboardBusy) == False)
     MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 
 Preemption is disabled as a default. Always desire to start jobs.
 
 ::
 
-    WANT_SUSPEND         = False 
-    WANT_VACATE          = False 
-    START                = True 
-    SUSPEND              = False 
-    CONTINUE             = True 
-    PREEMPT              = False 
-    # Kill jobs that take too long leaving gracefully. 
-    MachineMaxVacateTime = 10 * $(MINUTE) 
+    WANT_SUSPEND         = False
+    WANT_VACATE          = False
+    START                = True
+    SUSPEND              = False
+    CONTINUE             = True
+    PREEMPT              = False
+    # Kill jobs that take too long leaving gracefully.
+    MachineMaxVacateTime = 10 * $(MINUTE)
     KILL                 = False
 
 Periodic checkpointing specifies that for jobs smaller than 60 Mbytes,
@@ -1425,8 +1423,8 @@ checkpoint every 12 hours.
 
 ::
 
-    PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \ 
-                                ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
+    PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
+                                ($(LastCkpt) > (6 * $(HOUR))) ) || \
                               ( $(LastCkpt) > (12 * $(HOUR)) )
 
 :index:`at UW-Madison<single: at UW-Madison; policy>`
@@ -1454,10 +1452,10 @@ adding the following 5 expressions to the existing configuration:
 
 ::
 
-      START      = ($(START)) || Owner == "coltrane" 
-      SUSPEND    = ($(SUSPEND)) && Owner != "coltrane" 
-      CONTINUE   = $(CONTINUE) 
-      PREEMPT    = ($(PREEMPT)) && Owner != "coltrane" 
+      START      = ($(START)) || Owner == "coltrane"
+      SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
+      CONTINUE   = $(CONTINUE)
+      PREEMPT    = ($(PREEMPT)) && Owner != "coltrane"
       KILL       = $(KILL)
 
 Notice that there is nothing special in either the ``CONTINUE`` or
@@ -1491,9 +1489,9 @@ example, assume regular work hours at your site are from 8:00am until
 
 ::
 
-    WorkHours = ( (ClockMin >= 480 && ClockMin < 1020) && \ 
-                  (ClockDay > 0 && ClockDay < 6) ) 
-    AfterHours = ( (ClockMin < 480 || ClockMin >= 1020) || \ 
+    WorkHours = ( (ClockMin >= 480 && ClockMin < 1020) && \
+                  (ClockDay > 0 && ClockDay < 6) )
+    AfterHours = ( (ClockMin < 480 || ClockMin >= 1020) || \
                    (ClockDay == 0 || ClockDay == 6) )
 
 Of course, you can fine-tune these settings by changing the definition
@@ -1504,11 +1502,11 @@ To force HTCondor jobs to stay off of your machines during work hours:
 
 ::
 
-    # Only start jobs after hours. 
-    START = $(AfterHours) 
-     
-    # Consider the machine busy during work hours, or if the keyboard or 
-    # CPU are busy. 
+    # Only start jobs after hours.
+    START = $(AfterHours)
+
+    # Consider the machine busy during work hours, or if the keyboard or
+    # CPU are busy.
     MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 
 This ``MachineBusy`` macro is convenient if other than the default
@@ -1539,55 +1537,55 @@ the expressions are just the usual default settings.
 
 ::
 
-    # If "IsDesktop" is configured, make it an attribute of the machine ClassAd. 
-    STARTD_ATTRS = IsDesktop 
-     
-    # Only consider starting jobs if: 
-    # 1) the load average is low enough OR the machine is currently 
-    #    running an HTCondor job 
-    # 2) AND the user is not active (if a desktop) 
-    START = ( ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) \ 
-              && (IsDesktop =!= True || (KeyboardIdle > $(StartIdleTime))) ) 
-     
-    # Suspend (instead of vacating/killing) for the following cases: 
-    WANT_SUSPEND = ( $(SmallJob) || $(JustCpu) \ 
-                     || $(IsVanilla) ) 
-     
-    # When preempting, vacate (instead of killing) in the following cases: 
-    WANT_VACATE  = ( $(ActivationTimer) > 10 * $(MINUTE) \ 
-                     || $(IsVanilla) ) 
-     
-    # Suspend jobs if: 
-    # 1) The CPU has been busy for more than 2 minutes, AND 
-    # 2) the job has been running for more than 90 seconds 
-    # 3) OR suspend if this is a desktop and the user is active 
-    SUSPEND = ( ((CpuBusyTime > 2 * $(MINUTE)) && ($(ActivationTimer) > 90)) \ 
-                || ( IsDesktop =?= True && $(KeyboardBusy) ) ) 
-     
-    # Continue jobs if: 
-    # 1) the CPU is idle, AND 
-    # 2) we've been suspended more than 5 minutes AND 
-    # 3) the keyboard has been idle for long enough (if this is a desktop) 
-    CONTINUE = ( $(CPUIdle) && ($(ActivityTimer) > 300) \ 
-                 && (IsDesktop =!= True || (KeyboardIdle > $(ContinueIdleTime))) ) 
-     
-    # Preempt jobs if: 
-    # 1) The job is suspended and has been suspended longer than we want 
-    # 2) OR, we don't want to suspend this job, but the conditions to 
-    #    suspend jobs have been met (someone is using the machine) 
-    PREEMPT = ( ((Activity == "Suspended") && \ 
-                ($(ActivityTimer) > $(MaxSuspendTime))) \ 
-               || (SUSPEND && (WANT_SUSPEND == False)) ) 
-     
-    # Replace 0 in the following expression with whatever amount of 
-    # retirement time you want dedicated machines to provide.  The other part 
-    # of the expression forces the whole expression to 0 on desktop 
-    # machines. 
-    MAXJOBRETIREMENTTIME = (IsDesktop =!= True) * 0 
-     
-    # Kill jobs if they have taken too long to vacate gracefully 
-    MachineMaxVacateTime = 10 * $(MINUTE) 
-    KILL = False 
+    # If "IsDesktop" is configured, make it an attribute of the machine ClassAd.
+    STARTD_ATTRS = IsDesktop
+
+    # Only consider starting jobs if:
+    # 1) the load average is low enough OR the machine is currently
+    #    running an HTCondor job
+    # 2) AND the user is not active (if a desktop)
+    START = ( ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) \
+              && (IsDesktop =!= True || (KeyboardIdle > $(StartIdleTime))) )
+
+    # Suspend (instead of vacating/killing) for the following cases:
+    WANT_SUSPEND = ( $(SmallJob) || $(JustCpu) \
+                     || $(IsVanilla) )
+
+    # When preempting, vacate (instead of killing) in the following cases:
+    WANT_VACATE  = ( $(ActivationTimer) > 10 * $(MINUTE) \
+                     || $(IsVanilla) )
+
+    # Suspend jobs if:
+    # 1) The CPU has been busy for more than 2 minutes, AND
+    # 2) the job has been running for more than 90 seconds
+    # 3) OR suspend if this is a desktop and the user is active
+    SUSPEND = ( ((CpuBusyTime > 2 * $(MINUTE)) && ($(ActivationTimer) > 90)) \
+                || ( IsDesktop =?= True && $(KeyboardBusy) ) )
+
+    # Continue jobs if:
+    # 1) the CPU is idle, AND
+    # 2) we've been suspended more than 5 minutes AND
+    # 3) the keyboard has been idle for long enough (if this is a desktop)
+    CONTINUE = ( $(CPUIdle) && ($(ActivityTimer) > 300) \
+                 && (IsDesktop =!= True || (KeyboardIdle > $(ContinueIdleTime))) )
+
+    # Preempt jobs if:
+    # 1) The job is suspended and has been suspended longer than we want
+    # 2) OR, we don't want to suspend this job, but the conditions to
+    #    suspend jobs have been met (someone is using the machine)
+    PREEMPT = ( ((Activity == "Suspended") && \
+                ($(ActivityTimer) > $(MaxSuspendTime))) \
+               || (SUSPEND && (WANT_SUSPEND == False)) )
+
+    # Replace 0 in the following expression with whatever amount of
+    # retirement time you want dedicated machines to provide.  The other part
+    # of the expression forces the whole expression to 0 on desktop
+    # machines.
+    MAXJOBRETIREMENTTIME = (IsDesktop =!= True) * 0
+
+    # Kill jobs if they have taken too long to vacate gracefully
+    MachineMaxVacateTime = 10 * $(MINUTE)
+    KILL = False
 
 With this policy in the global configuration, the local configuration
 files for desktops can be easily configured with the following line:
@@ -1669,44 +1667,44 @@ policy:
 
 ::
 
-    # Lie to HTCondor, to achieve 2 slots for each real slot 
-    NUM_CPUS = $(DETECTED_CORES)*2 
-    # There is no good way to tell HTCondor that the two slots should be treated 
-    # as though they share the same real memory, so lie about how much 
-    # memory we have. 
-    MEMORY = $(DETECTED_MEMORY)*2 
-     
-    # Slots 1 through DETECTED_CORES are nonsuspendable and the rest are 
-    # suspendable 
-    IsSuspendableSlot = SlotID > $(DETECTED_CORES) 
-     
-    # If I am a suspendable slot, my corresponding nonsuspendable slot is 
-    # my SlotID plus $(DETECTED_CORES) 
-    NonSuspendableSlotState = eval(strcat("slot",SlotID-$(DETECTED_CORES),"_State") 
-     
-    # The above expression looks at slotX_State, so we need to add 
-    # State to the list of slot attributes to advertise. 
-    STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State 
-     
-    # For convenience, advertise these expressions in the machine ad. 
-    STARTD_ATTRS = $(STARTD_ATTRS) IsSuspendableSlot NonSuspendableSlotState 
-     
-    MyNonSuspendableSlotIsIdle = \ 
-      (NonSuspendableSlotState =!= "Claimed" && NonSuspendableSlotState =!= "Preempting") 
-     
-    # NonSuspendable slots are always willing to start jobs. 
-    # Suspendable slots are only willing to start if the NonSuspendable slot is idle. 
-    START = \ 
-      IsSuspendableSlot!=True && IsSuspendableJob=!=True || \ 
-      IsSuspendableSlot && IsSuspendableJob==True && $(MyNonSuspendableSlotIsIdle) 
-     
-    # Suspend the suspendable slot if the other slot is busy. 
-    SUSPEND = \ 
-      IsSuspendableSlot && $(MyNonSuspendableSlotIsIdle)!=True 
-     
-    WANT_SUSPEND = $(SUSPEND) 
-     
-    CONTINUE = ($(SUSPEND)) != True 
+    # Lie to HTCondor, to achieve 2 slots for each real slot
+    NUM_CPUS = $(DETECTED_CORES)*2
+    # There is no good way to tell HTCondor that the two slots should be treated
+    # as though they share the same real memory, so lie about how much
+    # memory we have.
+    MEMORY = $(DETECTED_MEMORY)*2
+
+    # Slots 1 through DETECTED_CORES are nonsuspendable and the rest are
+    # suspendable
+    IsSuspendableSlot = SlotID > $(DETECTED_CORES)
+
+    # If I am a suspendable slot, my corresponding nonsuspendable slot is
+    # my SlotID plus $(DETECTED_CORES)
+    NonSuspendableSlotState = eval(strcat("slot",SlotID-$(DETECTED_CORES),"_State")
+
+    # The above expression looks at slotX_State, so we need to add
+    # State to the list of slot attributes to advertise.
+    STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State
+
+    # For convenience, advertise these expressions in the machine ad.
+    STARTD_ATTRS = $(STARTD_ATTRS) IsSuspendableSlot NonSuspendableSlotState
+
+    MyNonSuspendableSlotIsIdle = \
+      (NonSuspendableSlotState =!= "Claimed" && NonSuspendableSlotState =!= "Preempting")
+
+    # NonSuspendable slots are always willing to start jobs.
+    # Suspendable slots are only willing to start if the NonSuspendable slot is idle.
+    START = \
+      IsSuspendableSlot!=True && IsSuspendableJob=!=True || \
+      IsSuspendableSlot && IsSuspendableJob==True && $(MyNonSuspendableSlotIsIdle)
+
+    # Suspend the suspendable slot if the other slot is busy.
+    SUSPEND = \
+      IsSuspendableSlot && $(MyNonSuspendableSlotIsIdle)!=True
+
+    WANT_SUSPEND = $(SUSPEND)
+
+    CONTINUE = ($(SUSPEND)) != True
 
 Note that in this example, the job ClassAd attribute
 ``IsSuspendableJob`` has no special meaning to HTCondor. It is an
@@ -1849,12 +1847,12 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        SLOT_TYPE_1 = mem=64 
-         
-        SLOT_TYPE_1 = mem=1/2 
-         
-        SLOT_TYPE_1 = mem=50% 
-         
+        SLOT_TYPE_1 = mem=64
+
+        SLOT_TYPE_1 = mem=1/2
+
+        SLOT_TYPE_1 = mem=50%
+
         SLOT_TYPE_1 = mem=auto
 
     Amounts of disk space and swap space are dynamic, as they change
@@ -1891,16 +1889,16 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2 
-         
-          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50% 
-         
-          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2 
-         
-          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25% 
-         
-          SLOT_TYPE_5 = 25% 
-         
+          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
+
+          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
+
+          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
+
+          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
+
+          SLOT_TYPE_5 = 25%
+
           SLOT_TYPE_6 = 1/4
 
     The default value for each resource share is ``auto``. The share may
@@ -1917,8 +1915,8 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50% 
-         
+        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
+
         SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 
     Note that it is possible to set the configuration variables such
@@ -1938,7 +1936,7 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        MACHINE_RESOURCE_gpu = 16 
+        MACHINE_RESOURCE_gpu = 16
         MACHINE_RESOURCE_actuator = 8
 
     If the configuration uses the optional configuration variable
@@ -1948,8 +1946,8 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        if defined MACHINE_RESOURCE_NAMES 
-          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator 
+        if defined MACHINE_RESOURCE_NAMES
+          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
         endif
 
     Local machine resource names defined in this way may now be used in
@@ -1960,16 +1958,16 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        # declare one partitionable slot with half of the GPUs, 6 actuators, and 
-        # 50% of all other resources: 
-        SLOT_TYPE_1 = gpu=50%,actuator=6,50% 
-        SLOT_TYPE_1_PARTITIONABLE = TRUE 
-        NUM_SLOTS_TYPE_1 = 1 
-         
-        # declare two static slots, each with 25% of the GPUs, 1 actuator, and 
-        # 25% of all other resources: 
-        SLOT_TYPE_2 = gpu=25%,actuator=1,25% 
-        SLOT_TYPE_2_PARTITIONABLE = FALSE 
+        # declare one partitionable slot with half of the GPUs, 6 actuators, and
+        # 50% of all other resources:
+        SLOT_TYPE_1 = gpu=50%,actuator=6,50%
+        SLOT_TYPE_1_PARTITIONABLE = TRUE
+        NUM_SLOTS_TYPE_1 = 1
+
+        # declare two static slots, each with 25% of the GPUs, 1 actuator, and
+        # 25% of all other resources:
+        SLOT_TYPE_2 = gpu=25%,actuator=1,25%
+        SLOT_TYPE_2_PARTITIONABLE = FALSE
         NUM_SLOTS_TYPE_2 = 2
 
     A job may request these local machine resources using the syntax
@@ -1980,12 +1978,12 @@ ways to go about dividing the resources of a multi-core machine:
 
     ::
 
-        universe = vanilla 
-         
-        # request two GPUs and one actuator: 
-        request_gpu = 2 
-        request_actuator = 1 
-         
+        universe = vanilla
+
+        # request two GPUs and one actuator:
+        request_gpu = 2
+        request_actuator = 1
+
         queue
 
     The slot ClassAd will represent each local machine resource with the
@@ -2092,7 +2090,7 @@ policy that is different for each of the two slots will be of the form
 
 ::
 
-    SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \ 
+    SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
               ( (SlotID == 2) && (PolicyForSlot2) )
 
 where (PolicyForSlot1) and (PolicyForSlot2) are the desired expressions
@@ -2159,19 +2157,19 @@ the keyboard connected to both slots:
 
 ::
 
-    11/25 18:15 Swap space: 131064 
-    11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063 
-    11/25 18:15 Looking up RESERVED_DISK parameter 
-    11/25 18:15 Reserving 5120 Kbytes for file system 
-    11/25 18:15 Disk space: 1339943 
-    11/25 18:15 Load avg: 0.340000 0.800000 1.170000 
-    11/25 18:15 Idle Time: user= 0 , console= 4 seconds 
-    11/25 18:15 SystemLoad: 0.340   TotalCondorLoad: 0.000  TotalOwnerLoad: 0.340 
-    11/25 18:15 slot1: Idle time: Keyboard: 0        Console: 4 
-    11/25 18:15 slot1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340 
-    11/25 18:15 slot2: Idle time: Keyboard: 0        Console: 4 
-    11/25 18:15 slot2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000 
-    11/25 18:15 slot1: State: Owner           Activity: Idle 
+    11/25 18:15 Swap space: 131064
+    11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063
+    11/25 18:15 Looking up RESERVED_DISK parameter
+    11/25 18:15 Reserving 5120 Kbytes for file system
+    11/25 18:15 Disk space: 1339943
+    11/25 18:15 Load avg: 0.340000 0.800000 1.170000
+    11/25 18:15 Idle Time: user= 0 , console= 4 seconds
+    11/25 18:15 SystemLoad: 0.340   TotalCondorLoad: 0.000  TotalOwnerLoad: 0.340
+    11/25 18:15 slot1: Idle time: Keyboard: 0        Console: 4
+    11/25 18:15 slot1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340
+    11/25 18:15 slot2: Idle time: Keyboard: 0        Console: 4
+    11/25 18:15 slot2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000
+    11/25 18:15 slot1: State: Owner           Activity: Idle
     11/25 18:15 slot2: State: Owner           Activity: Idle
 
 If, on the other hand, this machine only had one slot connected to the
@@ -2180,14 +2178,14 @@ look something like this:
 
 ::
 
-    11/25 18:19 Load avg: 1.250000 0.910000 1.090000 
-    11/25 18:19 Idle Time: user= 0 , console= 0 seconds 
-    11/25 18:19 SystemLoad: 1.250   TotalCondorLoad: 0.996  TotalOwnerLoad: 0.254 
-    11/25 18:19 slot1: Idle time: Keyboard: 0        Console: 0 
-    11/25 18:19 slot1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254 
-    11/25 18:19 slot2: Idle time: Keyboard: 1496     Console: 1496 
-    11/25 18:19 slot2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000 
-    11/25 18:19 slot1: State: Owner           Activity: Idle 
+    11/25 18:19 Load avg: 1.250000 0.910000 1.090000
+    11/25 18:19 Idle Time: user= 0 , console= 0 seconds
+    11/25 18:19 SystemLoad: 1.250   TotalCondorLoad: 0.996  TotalOwnerLoad: 0.254
+    11/25 18:19 slot1: Idle time: Keyboard: 0        Console: 0
+    11/25 18:19 slot1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254
+    11/25 18:19 slot2: Idle time: Keyboard: 1496     Console: 1496
+    11/25 18:19 slot2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000
+    11/25 18:19 slot1: State: Owner           Activity: Idle
     11/25 18:19 slot2: State: Claimed         Activity: Busy
 
 Shared system resources are printed without the header, such as total
@@ -2222,7 +2220,7 @@ which can be used to define additional command line arguments for the
 
 ::
 
-      use feature : GPUs 
+      use feature : GPUs
       GPU_DISCOVERY_EXTRA = -extra
 
 causes the *condor_gpu_discovery* tool to output more attributes that
@@ -2245,8 +2243,8 @@ For example, consider the following configuration:
 
 ::
 
-    STARTD_ATTRS = favorite_color, favorite_season 
-    SLOT1_STARTD_ATTRS = favorite_movie 
+    STARTD_ATTRS = favorite_color, favorite_season
+    SLOT1_STARTD_ATTRS = favorite_movie
     SLOT2_STARTD_ATTRS = favorite_song
 
 This will result in the *condor_startd* ClassAd for slot1 defining
@@ -2259,10 +2257,10 @@ on a per-slot basis. Here is another example:
 
 ::
 
-    favorite_color = "blue" 
-    favorite_season = "spring" 
-    STARTD_ATTRS = favorite_color, favorite_season 
-    SLOT2_favorite_color = "green" 
+    favorite_color = "blue"
+    favorite_season = "spring"
+    STARTD_ATTRS = favorite_color, favorite_season
+    SLOT2_favorite_color = "green"
     SLOT3_favorite_season = "summer"
 
 For this example, the *condor_startd* ClassAds are
@@ -2271,21 +2269,21 @@ For this example, the *condor_startd* ClassAds are
 
     ::
 
-        favorite_color = "blue" 
+        favorite_color = "blue"
         favorite_season = "spring"
 
     slot2:
 
     ::
 
-        favorite_color = "green" 
+        favorite_color = "green"
         favorite_season = "spring"
 
     slot3:
 
     ::
 
-        favorite_color = "blue" 
+        favorite_color = "blue"
         favorite_season = "summer"
 
 Dynamic Provisioning: Partitionable and Dynamic Slots
@@ -2346,9 +2344,9 @@ configuration variables:
 
 ::
 
-    NUM_SLOTS = 1 
-    NUM_SLOTS_TYPE_1 = 1 
-    SLOT_TYPE_1 = 100% 
+    NUM_SLOTS = 1
+    NUM_SLOTS_TYPE_1 = 1
+    SLOT_TYPE_1 = 100%
     SLOT_TYPE_1_PARTITIONABLE = TRUE
 
 In a pool using dynamic provisioning, jobs can have extra, and desired,
@@ -2363,26 +2361,26 @@ when submitting a job to a pool with dynamic provisioning.
 
 ::
 
-    universe = vanilla 
-     
-    request_cpus = 3 
-    request_memory = 1024 
-    request_disk = 10240 
-     
+    universe = vanilla
+
+    request_cpus = 3
+    request_memory = 1024
+    request_disk = 10240
+
     queue
 
 Each partitionable slot will have the ClassAd attributes
 
 ::
 
-      PartitionableSlot = True 
+      PartitionableSlot = True
       SlotType = "Partitionable"
 
 Each dynamic slot will have the ClassAd attributes
 
 ::
 
-      DynamicSlot = True 
+      DynamicSlot = True
       SlotType = "Dynamic"
 
 These attributes may be used in a ``START`` expression for the purposes
@@ -2403,7 +2401,7 @@ large number of jobs requiring 1GB of memory, a pool might be split up
 into 1GB dynamic slots. In this instance a job requiring 2GB of memory
 will be starved and unable to run. A partial solution to this problem is
 provided by defragmentation accomplished by the *condor_defrag* daemon,
-as discussed in 
+as discussed in
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
@@ -2492,7 +2490,7 @@ reuse the newly created slot when the initial job is done using it.
 The *condor_startd* configuration variables which control this and
 their defaults are
 
-    ``MODIFY_REQUEST_EXPR_REQUESTCPUS`` = ``quantize(RequestCpus, {1})`` :index:`MODIFY_REQUEST_EXPR_REQUESTCPUS` 
+    ``MODIFY_REQUEST_EXPR_REQUESTCPUS`` = ``quantize(RequestCpus, {1})`` :index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
     ``MODIFY_REQUEST_EXPR_REQUESTMEMORY`` = ``quantize(RequestMemory, {128})`` :index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
     ``MODIFY_REQUEST_EXPR_REQUESTDISK`` = ``quantize(RequestDisk, {1024})`` :index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 
@@ -2531,8 +2529,8 @@ defined and have these default values:
 
 ::
 
-      CONSUMPTION_CPUS = quantize(target.RequestCpus,{1}) 
-      CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128}) 
+      CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
+      CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
       CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 
 Here is an example-driven definition of a consumption policy. Assume a
@@ -2543,8 +2541,8 @@ and that it is partitionable.
 
 ::
 
-      SLOT_TYPE_1 = cpus=8 
-      SLOT_TYPE_1_PARTITIONABLE = True 
+      SLOT_TYPE_1 = cpus=8
+      SLOT_TYPE_1_PARTITIONABLE = True
       NUM_SLOTS_TYPE_1 = 1
 
 Enable use of the *condor_negotiator*-side resource consumption policy,
@@ -2557,8 +2555,8 @@ must the set to the same value on all machines in the pool.
 
 ::
 
-      SLOT_TYPE_1_CONSUMPTION_POLICY = True 
-      SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus 
+      SLOT_TYPE_1_CONSUMPTION_POLICY = True
+      SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
       SLOT_WEIGHT = Cpus
 
 If custom resources are available within the partitionable slot, they
@@ -2568,18 +2566,18 @@ and include it in the definition of the partitionable slot:
 
 ::
 
-      MACHINE_RESOURCE_NAMES = gpus 
-      MACHINE_RESOURCE_gpus = 4 
-      SLOT_TYPE_2 = cpus=8, gpus=4 
-      SLOT_TYPE_2_PARTITIONABLE = True 
+      MACHINE_RESOURCE_NAMES = gpus
+      MACHINE_RESOURCE_gpus = 4
+      SLOT_TYPE_2 = cpus=8, gpus=4
+      SLOT_TYPE_2_PARTITIONABLE = True
       NUM_SLOTS_TYPE_2 = 1
 
 Add the consumption policy to incorporate availability of the GPUs:
 
 ::
 
-      SLOT_TYPE_2_CONSUMPTION_POLICY = True 
-      SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu 
+      SLOT_TYPE_2_CONSUMPTION_POLICY = True
+      SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
       SLOT_WEIGHT = Cpus
 
 Defragmenting Dynamic Slots
@@ -2615,10 +2613,10 @@ to work:
 
 ::
 
-    DAEMON_LIST = $(DAEMON_LIST) DEFRAG 
-    DEFRAG_INTERVAL = 3600 
-    DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0 
-    DEFRAG_MAX_WHOLE_MACHINES = 20 
+    DAEMON_LIST = $(DAEMON_LIST) DEFRAG
+    DEFRAG_INTERVAL = 3600
+    DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0
+    DEFRAG_MAX_WHOLE_MACHINES = 20
     DEFRAG_MAX_CONCURRENT_DRAINING = 10
 
 This example policy tells *condor_defrag* to initiate draining jobs
@@ -2724,7 +2722,7 @@ configuration variable that specifies the transform rules. Transforms
 use the same syntax as *condor_job_router* transforms; although unlike
 the *condor_job_router* there is no default transform, and all
 matching transforms are applied - not just the first one. (See `The
-HTCondor Job Router <../grid-computing/job-router.html>`__ for
+HTCondor Job Router <../grid-computing/job-router.html>`_ for
 information on the *condor_job_router*.)
 
 The following example shows a set of two transforms: one that
@@ -2734,18 +2732,18 @@ Vanilla jobs to Docker jobs.
 
 ::
 
-    JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker 
-     
-    JOB_TRANSFORM_AssignGroup = [ eval_set_AccountingGroup = userMap("Groups",Owner,AccountingGroup); ] 
-     
-    JOB_TRANSFORM_SL6ToDocker @=end 
-    [ 
-       Requirements = JobUniverse==5 && WantSL6 && DockerImage =?= undefined; 
-       set_WantDocker = true; 
-       set_DockerImage = "SL6"; 
-       copy_Requirements = "VanillaRequrements"; 
-       set_Requirements = TARGET.HasDocker && VanillaRequirements 
-    ] 
+    JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
+
+    JOB_TRANSFORM_AssignGroup = [ eval_set_AccountingGroup = userMap("Groups",Owner,AccountingGroup); ]
+
+    JOB_TRANSFORM_SL6ToDocker @=end
+    [
+       Requirements = JobUniverse==5 && WantSL6 && DockerImage =?= undefined;
+       set_WantDocker = true;
+       set_DockerImage = "SL6";
+       copy_Requirements = "VanillaRequrements";
+       set_Requirements = TARGET.HasDocker && VanillaRequirements
+    ]
     @end
 
 The AssignGroup transform above assumes that a mapfile that can map an
@@ -2789,8 +2787,8 @@ configuration variable definitions:
 
 ::
 
-    SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1 
-    SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512 
+    SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
+    SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
     SUBMIT_REQUIREMENT_NotChris = Owner != "chris"
 
 Submit requirements are evaluated in the listed order; the first
@@ -2807,9 +2805,9 @@ requirement with the ``SUBMIT_REQUIREMENT_<Name>_REASON``
 
 ::
 
-    SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs." 
-    SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \ 
-      RequestMemory, " Megabytes.  If that small amount is really enough, please contact ..." ) 
+    SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
+    SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
+      RequestMemory, " Megabytes.  If that small amount is really enough, please contact ..." )
     SUBMIT_REQUIREMENT_NotChris_REASON = "Chris, you may only submit jobs to the instructional pool."
 
 The value must be a ClassAd expression which evaluates to a string.
@@ -2828,8 +2826,8 @@ attempt to submit a standard universe job, *condor_submit* would print
 
 ::
 
-    Submitting job(s). 
-    ERROR: Failed to commit job submission into the queue. 
+    Submitting job(s).
+    ERROR: Failed to commit job submission into the queue.
     ERROR: This pool does not accept standard universe jobs.
 
 Where there are multiple jobs in a cluster, if any job within the
@@ -2854,9 +2852,9 @@ the minimum request memory, you could use the following configuration.
 
 ::
 
-    SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES) 
-    SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024 
-    SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024." 
+    SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
+    SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
+    SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024."
     SUBMIT_REQUIREMENT_OneGig_IS_WARNING = TRUE
 
 When a user runs *condor_submit* to submit a job with ``RequestMemory``
@@ -2865,18 +2863,18 @@ assuming that the job meets all the other requirements.
 
 ::
 
-    Submitting job(s). 
-    WARNING: Committed job submission into the queue with the following warning: 
-    WARNING: As of <date>, the minimum requested memory will be 1024. 
-     
+    Submitting job(s).
+    WARNING: Committed job submission into the queue with the following warning:
+    WARNING: As of <date>, the minimum requested memory will be 1024.
+
     1 job(s) submitted to cluster 452.
 
 The job will contain (something like) the following:
 
 ::
 
-    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5> 
-        WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024. 
+    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
+        WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
     ...
 
 Marking a submit requirement as a warning does not change when or how it

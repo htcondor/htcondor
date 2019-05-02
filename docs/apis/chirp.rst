@@ -1,4 +1,4 @@
-      
+
 
 Chirp
 =====
@@ -23,10 +23,10 @@ submit description file:
 This places the needed attribute into the job ClassAd.
 
 The Chirp protocol is fully documented at
-`http://ccl.cse.nd.edu/software/chirp/ <http://ccl.cse.nd.edu/software/chirp/>`__.
+`http://ccl.cse.nd.edu/software/chirp/ <http://ccl.cse.nd.edu/software/chirp/>`_.
 
 To provide easier access to this wire protocol, the *condor_chirp*
 command line tool is shipped with HTCondor. This tool provides full
 access to the Chirp commands.
 
-      
+

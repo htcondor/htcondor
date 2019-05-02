@@ -1,5 +1,3 @@
-      
-
 Power Management
 ================
 
@@ -27,7 +25,7 @@ A slot's readiness to hibernate is determined by the evaluating the
 ``HIBERNATE`` :index:`HIBERNATE` configuration variable (see
 the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__) within the
+Macros <../admin-manual/configuration-macros.html>`_) within the
 context of the slot. Readiness is evaluated at fixed intervals, as
 determined by the ``HIBERNATE_CHECK_INTERVAL``
 :index:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
@@ -65,9 +63,9 @@ macro called ``ShouldHibernate``.
 
 ::
 
-    TimeToWait  = (2 * $(HOUR)) 
-    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \ 
-                        && $(CPUIdle) \ 
+    TimeToWait  = (2 * $(HOUR))
+    ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
+                        && $(CPUIdle) \
                         && ($(StateTimer) > $(TimeToWait)) )
 
 This macro evaluates to ``True`` if the following are all ``True``:
@@ -82,7 +80,7 @@ current state otherwise is
 
 ::
 
-    HibernateState  = "RAM" 
+    HibernateState  = "RAM"
     HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
 
 If any slot returns "NONE", that slot vetoes the decision to enter a low
@@ -99,7 +97,7 @@ Returning From a Low Power State
 The HTCondor command line tool *condor_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
 *condor_power* manual page on
-page \ `condor_power <../man-pages/condor_power.html>`__.
+page \ `condor_power <../man-pages/condor_power.html>`_.
 :index:`condor_rooster daemon`
 
 To automatically call *condor_power* under specific conditions,
@@ -119,14 +117,14 @@ To do this, define a log file using the ``OFFLINE_LOG``
 :index:`OFFLINE_LOG` configuration variable. See
 the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
+Macros <../admin-manual/configuration-macros.html>`_ for the
 definition. An optional expiration time for each ClassAd can be
 specified with ``OFFLINE_EXPIRE_ADS_AFTER``
 :index:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
 the hibernating machine's ClassAd enters the *condor_collector* daemon.
 See the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__ for the
+Macros <../admin-manual/configuration-macros.html>`_ for the
 definition.
 
 Linux Platform Details
@@ -156,7 +154,7 @@ instead by setting the configuration variable
 ``LINUX_HIBERNATION_METHOD`` with one of the defined strings. This
 variable is defined in the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. If no usable
+Macros <../admin-manual/configuration-macros.html>`_. If no usable
 methods are detected or the method specified by
 ``LINUX_HIBERNATION_METHOD`` is either not detected or invalid,
 hibernation is disabled.
@@ -183,13 +181,13 @@ power states of the machine:
 
 ::
 
-    > powercfg -A 
-    The following sleep states are available on this system: 
-    Standby (S3) Hibernate Hybrid Sleep 
-    The following sleep states are not available on this system: 
-    Standby (S1) 
-            The system firmware does not support this standby state. 
-    Standby (S2) 
+    > powercfg -A
+    The following sleep states are available on this system:
+    Standby (S3) Hibernate Hybrid Sleep
+    The following sleep states are not available on this system:
+    Standby (S1)
+            The system firmware does not support this standby state.
+    Standby (S2)
             The system firmware does not support this standby state.
 
 Note that the ``HIBERNATE`` expression is written in terms of the Sn
@@ -210,4 +208,4 @@ lack the *powercfg* program, so all configuration must be done via the
 :index:`green computing` :index:`power management`
 :index:`administrators manual`
 
-      
+

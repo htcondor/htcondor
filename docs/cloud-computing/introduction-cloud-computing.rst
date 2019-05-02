@@ -1,4 +1,4 @@
-      
+
 
 Introduction
 ============
@@ -6,7 +6,7 @@ Introduction
 To be clear, our concern throughout this chapter is with commercial
 services which rent computational resources over the Internet at short
 notice and charge in small increments (by the minute or the hour). In
-2016, the four largest such services\ `:sup:`1` <ref60.html#fn1x7>`__
+2016, the four largest such services\ `:sup:`1` <ref60.html#fn1x7>`_
 were (in alphabetical order) Amazon Web Services (‘AWS'), (Microsoft)
 Azure, Google Cloud Platform (‘GCP'), and (IBM) SoftLayer; as of version
 8.7.8, the *condor_annex* tool supports only AWS. AWS can start booting
@@ -67,4 +67,4 @@ It may be possible for an HTCondor administrator to lower the cost of
 their pool by increasing utilization and meeting peak demand with cloud
 computing.
 
-      
+

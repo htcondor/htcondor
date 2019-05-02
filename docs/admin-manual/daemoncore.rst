@@ -1,5 +1,3 @@
-      
-
 DaemonCore
 ==========
 
@@ -84,7 +82,7 @@ For all daemons, a reconfigure results in the daemon re-reading its
 configuration file(s), causing any settings that have changed to take
 effect. See the :doc:`/admin-manual/introduction-to-configuration` section on
 page \ `Introduction to
-Configuration <../admin-manual/introduction-to-configuration.html>`__,
+Configuration <../admin-manual/introduction-to-configuration.html>`_,
 Configuring HTCondor for full details on what settings are in the
 configuration files and what they do.
 
@@ -163,8 +161,8 @@ These arguments and what they do are described below:
 -local-name name
     Specify a local name for this instance of the daemon. This local
     name will be used to look up configuration parameters.
-    Section \ `Introduction to
-    Configuration <../admin-manual/introduction-to-configuration.html>`__
+    Section `Introduction to
+    Configuration <../admin-manual/introduction-to-configuration.html>`_
     contains details on how this local name will be used in the
     configuration.
 
@@ -203,4 +201,4 @@ These arguments and what they do are described below:
 
 :index:`daemoncore`
 
-      
+

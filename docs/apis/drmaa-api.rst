@@ -1,4 +1,4 @@
-      
+
 
 The DRMAA API
 =============
@@ -29,7 +29,7 @@ jobs to a Grid system. The HTCondor implementation of a portion of the
 API allows programs (applications) to use the library functions provided
 to submit, monitor and control HTCondor jobs.
 
-See the DRMAA site (`http://www.drmaa.org <http://www.drmaa.org>`__) to
+See the DRMAA site (`http://www.drmaa.org <http://www.drmaa.org>`_) to
 find the API specification for DRMA 1.0 for further details on the API.
 
 Implementation Details
@@ -71,7 +71,7 @@ attributes:
 The attribute ``DRMAA_NATIVE_SPECIFICATION`` can be used to direct all
 commands supported within submit description files. See the
 *condor_submit* manual page at
-section \ `condor_submit <../man-pages/condor_submit.html>`__ for a
+Section `condor_submit <../man-pages/condor_submit.html>`_ for a
 complete list. Multiple commands can be specified if separated by
 newlines.
 
@@ -87,8 +87,8 @@ would set AttrDRMAA_NATIVE_SPECIFICATION to the C string:
 
 ::
 
-      drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION, 
-          "image_size=65536\nrank=Memory\n+department=\"chemistry\"", 
-          err_buf, sizeof(err_buf)-1); 
+      drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION,
+          "image_size=65536\nrank=Memory\n+department=\"chemistry\"",
+          err_buf, sizeof(err_buf)-1);
 
-      
+

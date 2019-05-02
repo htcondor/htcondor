@@ -1,4 +1,4 @@
-      
+
 
 Logging in HTCondor
 ===================
@@ -215,10 +215,10 @@ DAGMan Logs
 
  the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. Section \ `DAGMan
-    Applications <../users-manual/dagman-applications.html>`__ details
+    DAG. Section `DAGMan
+    Applications <../users-manual/dagman-applications.html>`_ details
     this log.
 
 :index:`logging`
 
-      
+

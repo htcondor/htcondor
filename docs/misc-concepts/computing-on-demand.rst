@@ -1,4 +1,4 @@
-      
+
 
 Computing On Demand (COD)
 =========================
@@ -316,7 +316,7 @@ job ID is part of the information included in all events written to the
 ``StarterUserLog`` regarding a given job. The COD job ID is also used in
 the HTCondor debugging logs described in the :doc:`/admin-manual/configuration-macros` section on
 page \ `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. For example, in
+Macros <../admin-manual/configuration-macros.html>`_. For example, in
 the *condor_starter* daemon's log file for COD jobs (called
 ``StarterLog.cod`` by default) or in the *condor_startd* daemon's log
 file (called ``StartLog`` by default).
@@ -369,10 +369,10 @@ configuration file may appear as:
 
 ::
 
-    FractGen_Cmd = "/usr/local/bin/fractgen" 
-    FractGen_Iwd = "/tmp/cod-fractgen" 
-    FractGen_Out = "/tmp/cod-fractgen/output" 
-    FractGen_Err = "/tmp/cod-fractgen/error" 
+    FractGen_Cmd = "/usr/local/bin/fractgen"
+    FractGen_Iwd = "/tmp/cod-fractgen"
+    FractGen_Out = "/tmp/cod-fractgen/output"
+    FractGen_Err = "/tmp/cod-fractgen/error"
     FractGen_Args = "mandelbrot -0.65865,-0.56254 -0.45865,-0.71254"
 
 In this example, the executable may create other files. The ``Out`` and
@@ -623,7 +623,7 @@ claim ID that the user acquired via *condor_cod_request*.
 
 If the application is defined in the configuration files for the COD
 resource, the user provides the keyword (described in
-:ref:`misc-concepts/computing-on-demand:defining a cod application`) that 
+:ref:`misc-concepts/computing-on-demand:defining a cod application`) that
 uniquely identifies the application's configuration attributes. To continue
 the example from that section, the user would spawn their job by specifying
 -keyword FractGen, for example:
@@ -857,4 +857,4 @@ HTCondor's support for COD has a few limitations:
 
 :index:`COD (Computing on Demand)`
 
-      
+

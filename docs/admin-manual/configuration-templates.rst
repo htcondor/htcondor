@@ -1,5 +1,3 @@
-      
-
 Configuration Templates
 =======================
 
@@ -21,7 +19,7 @@ macro later in the configuration.
 
 Detailed information about configuration templates (such as the macros
 they set) can be obtained using the *condor_config_val* ``use`` option
-(see `condor_configval <../man-pages/condor_config_val.html>`__). (This
+(see `condor_configval <../man-pages/condor_config_val.html>`_). (This
 document does not contain such information because the
 *condor_config_val* command is a better way to obtain it.)
 
@@ -126,7 +124,7 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       `Hooks <../misc-concepts/hooks.html>`__ for the definitions of
+       `Hooks <../misc-concepts/hooks.html>`_ for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
@@ -135,7 +133,7 @@ incorporates.
        and allocation (defaults for slot_type_num and allocation are 1
        and 100% respectively). See \ `Policy Configuration for Execute
        Hosts and for Submit
-       Hosts <../admin-manual/policy-configuration.html>`__ for
+       Hosts <../admin-manual/policy-configuration.html>`_ for
        information on partitionalble slot policies.
 
     -  ``AssignAccountingGroup( map_filename )`` Sets up a
@@ -155,58 +153,58 @@ incorporates.
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
-    -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe          [,hook_args] )``
+    -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
 
        Create a periodic job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
-    -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args]          )``
+    -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
 
        Create a (nearly) continuous job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`_ for more information
        about job hooks.)
 
-        
+
 
     -  ``UWCS_Desktop_Policy_Values``
 
@@ -392,36 +390,36 @@ Configuration Template Examples
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
-           
+       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
+
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
-           
+       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
+
 
 -  Update dynamic GPU information every 15 minutes:
 
    ::
 
-       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
-           
+       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
+
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
    the DetectedGPUs line from textttcondor_gpu_discovery:
 
    ::
 
-       #!/usr/bin/env perl 
-       my @attrs = `@ARGV`; 
-       for (@attrs) { 
-       next if ($_ =~ /^Detected/i); 
-       print $_; 
-       } 
-           
+       #!/usr/bin/env perl
+       my @attrs = `@ARGV`;
+       for (@attrs) {
+       next if ($_ =~ /^Detected/i);
+       print $_;
+       }
 
-      
+
+

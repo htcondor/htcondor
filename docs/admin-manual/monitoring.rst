@@ -1,5 +1,3 @@
-      
-
 Monitoring
 ==========
 
@@ -20,8 +18,8 @@ Ganglia
 :index:`condor_gangliad daemon`
 
 Support for the Ganglia monitoring system
-(`http://ganglia.info/ <http://ganglia.info/>`__) is integral to
-HTCondor. Nagios (`http://www.nagios.org/ <http://www.nagios.org/>`__)
+(`http://ganglia.info/ <http://ganglia.info/>`_) is integral to
+HTCondor. Nagios (`http://www.nagios.org/ <http://www.nagios.org/>`_)
 is often used to provide alerts based on data from the Ganglia
 monitoring system. The *condor_gangliad* daemon provides an efficient
 way to take information from an HTCondor pool and supply it to the
@@ -77,11 +75,11 @@ is an example of a single metric definition given as a New ClassAd:
 
 ::
 
-    [ 
-      Name   = "JobsSubmitted"; 
-      Desc   = "Number of jobs submitted"; 
-      Units  = "jobs"; 
-      TargetType = "Scheduler"; 
+    [
+      Name   = "JobsSubmitted";
+      Desc   = "Number of jobs submitted";
+      Units  = "jobs";
+      TargetType = "Scheduler";
     ]
 
 A nice set of default metrics is in file:
@@ -272,4 +270,4 @@ all invalidated ClassAds to become absent instead of invalidated, set
 ``True``. Invalidated ClassAds will instead be treated as if they
 expired, including when evaluating ``ABSENT_REQUIREMENTS``.
 
-      
+

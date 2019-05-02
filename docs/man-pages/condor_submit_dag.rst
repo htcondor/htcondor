@@ -1,4 +1,4 @@
-      
+
 
 *condor_submit_dag*
 =====================
@@ -90,7 +90,7 @@ Options
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
     :index:`DAGMAN_MAX_JOBS_IDLE` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
     cause the *NumberOfProcs* limit to be exceeded. Setting
@@ -107,7 +107,7 @@ Options
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
     :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 0 (unlimited).
  **-dagman** *DagmanExecutable*
     Allows the specification of an alternate *condor_dagman* executable
@@ -120,7 +120,7 @@ Options
     the configuration variable
     ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS`
     (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 20.
  **-maxpost** *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
@@ -128,7 +128,7 @@ Options
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
     :index:`DAGMAN_MAX_POST_SCRIPTS` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 20.
  **-notification** *value*
     Sets the e-mail notification for DAGMan itself. This information
@@ -298,9 +298,9 @@ Options
     under the *condor_dagman* job submitted by this
     *condor_submit_dag* command.
  **-dont_use_default_node_log**
-    **This option is disabled as of HTCondor version 8.3.1. This causes 
-    a compatibility error if the HTCondor version number of the condor_schedd 
-    is 7.9.0 or older.** Tells *condor_dagman* to use the file specified by 
+    **This option is disabled as of HTCondor version 8.3.1. This causes
+    a compatibility error if the HTCondor version number of the condor_schedd
+    is 7.9.0 or older.** Tells *condor_dagman* to use the file specified by
     the job ClassAd attribute ``UserLog`` to monitor job status. If this command
     line argument is used, then the job event log file cannot be defined
     with a macro.
@@ -393,4 +393,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

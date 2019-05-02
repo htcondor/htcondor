@@ -1,4 +1,4 @@
-      
+
 
 The HTCondor Job Router
 =======================
@@ -63,7 +63,7 @@ internally.
 
 A good place to learn about the syntax of New ClassAds is the Informal
 Language Description in the C++ ClassAds tutorial:
-`http://htcondor.org/classad/c++tut.html <http://htcondor.org/classad/c++tut.html>`__.
+`http://htcondor.org/classad/c++tut.html <http://htcondor.org/classad/c++tut.html>`_.
 Two essential differences distinguish the New ClassAd language from the
 current one. In the New ClassAd language, each ClassAd is surrounded by
 square brackets. And, in the New ClassAd language, each assignment
@@ -94,9 +94,9 @@ for routing.
 
    ::
 
-       should_transfer_files = YES 
-       when_to_transfer_output = ON_EXIT 
-       transfer_input_files = input1, input2 
+       should_transfer_files = YES
+       when_to_transfer_output = ON_EXIT
+       transfer_input_files = input1, input2
        transfer_output_files = output1, output2
 
    Vanilla universe jobs and most types of grid universe jobs differ in
@@ -157,15 +157,15 @@ where ``job1.sub`` might contain:
 
 ::
 
-    universe = vanilla 
-    executable = my_executable 
-    output = job1.stdout 
-    error = job1.stderr 
-    log = job1.ulog 
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    +WantJobRouter = LastRejMatchTime =!= UNDEFINED 
-    x509userproxy = /tmp/x509up_u275 
+    universe = vanilla
+    executable = my_executable
+    output = job1.stdout
+    error = job1.stderr
+    log = job1.ulog
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    +WantJobRouter = LastRejMatchTime =!= UNDEFINED
+    x509userproxy = /tmp/x509up_u275
     queue
 
 The status of the job may be observed as with any other HTCondor job,
@@ -177,10 +177,10 @@ view of routed jobs, as this example shows:
 
 ::
 
-    $ condor_router_q -S 
-       JOBS ST Route      GridResource 
-         40  I Site1      site1.edu/jobmanager-condor 
-         10  I Site2      site2.edu/jobmanager-pbs 
+    $ condor_router_q -S
+       JOBS ST Route      GridResource
+         40  I Site1      site1.edu/jobmanager-condor
+         10  I Site2      site2.edu/jobmanager-pbs
           2  R Site3      condor submit.site3.edu condor.site3.edu
 
 *condor_router_history* summarizes the history of routed jobs, as this
@@ -188,16 +188,16 @@ example shows:
 
 ::
 
-    $ condor_router_history 
-    Routed job history from 2007-06-27 23:38 to 2007-06-28 23:38 
-     
-    Site            Hours    Jobs    Runs 
-                          Completed Aborted 
-    ------------------------------------------------------- 
-    Site1              10       2     0 
-    Site2               8       2     1 
-    Site3              40       6     0 
-    ------------------------------------------------------- 
+    $ condor_router_history
+    Routed job history from 2007-06-27 23:38 to 2007-06-28 23:38
+
+    Site            Hours    Jobs    Runs
+                          Completed Aborted
+    -------------------------------------------------------
+    Site1              10       2     0
+    Site2               8       2     1
+    Site3              40       6     0
+    -------------------------------------------------------
     TOTAL              58      10     1
 
 An Example Configuration
@@ -206,7 +206,7 @@ An Example Configuration
 The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
 specific to the Job Router are in section  `Configuration
-Macros <../admin-manual/configuration-macros.html>`__. One route is an
+Macros <../admin-manual/configuration-macros.html>`_. One route is an
 HTCondor site accessed via the Globus gt2 protocol. A second route is a
 PBS site, also accessed via Globus gt2. The third site is an HTCondor
 site accessed by HTCondor-C. The *condor_job_router* daemon does not
@@ -221,61 +221,61 @@ Router. Typically, the single required element that needs to be added
 for GSI authentication is an X.509 trusted certification authority
 directory, in a place recognized by HTCondor (for example,
 ``/etc/grid-security/certificates``). The VDT
-(`http://vdt.cs.wisc.edu <http://vdt.cs.wisc.edu>`__) project provides a
+(`http://vdt.cs.wisc.edu <http://vdt.cs.wisc.edu>`_) project provides a
 convenient way to set up and install a trusted CA, if needed.
 
 Note that, as of version 8.5.6, the configuration language supports
-multi-line values, as shown in the example below (see the 
+multi-line values, as shown in the example below (see the
 :doc:`/admin-manual/introduction-to-configuration` section for more details).
 
 ::
 
-     
-    # These settings become the default settings for all routes 
-    JOB_ROUTER_DEFAULTS @=jrd 
-      [ 
-        requirements=target.WantJobRouter is True; 
-        MaxIdleJobs = 10; 
-        MaxJobs = 200; 
-     
-        /* now modify routed job attributes */ 
-        /* remove routed job if it goes on hold or stays idle for over 6 hours */ 
-        set_PeriodicRemove = JobStatus == 5 || 
-                            (JobStatus == 1 && (time() - QDate) > 3600*6); 
-        delete_WantJobRouter = true; 
-        set_requirements = true; 
-      ] 
-      @jrd 
-     
-    # This could be made an attribute of the job, rather than being hard-coded 
-    ROUTED_JOB_MAX_TIME = 1440 
-     
-    # Now we define each of the routes to send jobs on 
-    JOB_ROUTER_ENTRIES @=jre 
-      [ GridResource = "gt2 site1.edu/jobmanager-condor"; 
-        name = "Site 1"; 
-      ] 
-      [ GridResource = "gt2 site2.edu/jobmanager-pbs"; 
-        name = "Site 2"; 
-        set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"; 
-      ] 
-      [ GridResource = "condor submit.site3.edu condor.site3.edu"; 
-        name = "Site 3"; 
-        set_remote_jobuniverse = 5; 
-      ] 
-      @jre 
-     
-     
-    # Reminder: you must restart HTCondor for changes to DAEMON_LIST to take effect. 
-    DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER 
-     
-    # For testing, set this to a small value to speed things up. 
-    # Once you are running at large scale, set it to a higher value 
-    # to prevent the JobRouter from using too much cpu. 
-    JOB_ROUTER_POLLING_PERIOD = 10 
-     
-    #It is good to save lots of schedd queue history 
-    #for use with the router_history command. 
+
+    # These settings become the default settings for all routes
+    JOB_ROUTER_DEFAULTS @=jrd
+      [
+        requirements=target.WantJobRouter is True;
+        MaxIdleJobs = 10;
+        MaxJobs = 200;
+
+        /* now modify routed job attributes */
+        /* remove routed job if it goes on hold or stays idle for over 6 hours */
+        set_PeriodicRemove = JobStatus == 5 ||
+                            (JobStatus == 1 && (time() - QDate) > 3600*6);
+        delete_WantJobRouter = true;
+        set_requirements = true;
+      ]
+      @jrd
+
+    # This could be made an attribute of the job, rather than being hard-coded
+    ROUTED_JOB_MAX_TIME = 1440
+
+    # Now we define each of the routes to send jobs on
+    JOB_ROUTER_ENTRIES @=jre
+      [ GridResource = "gt2 site1.edu/jobmanager-condor";
+        name = "Site 1";
+      ]
+      [ GridResource = "gt2 site2.edu/jobmanager-pbs";
+        name = "Site 2";
+        set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)";
+      ]
+      [ GridResource = "condor submit.site3.edu condor.site3.edu";
+        name = "Site 3";
+        set_remote_jobuniverse = 5;
+      ]
+      @jre
+
+
+    # Reminder: you must restart HTCondor for changes to DAEMON_LIST to take effect.
+    DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER
+
+    # For testing, set this to a small value to speed things up.
+    # Once you are running at large scale, set it to a higher value
+    # to prevent the JobRouter from using too much cpu.
+    JOB_ROUTER_POLLING_PERIOD = 10
+
+    #It is good to save lots of schedd queue history
+    #for use with the router_history command.
     MAX_HISTORY_ROTATIONS = 20
 
 Routing Table Entry ClassAd Attributes
@@ -448,15 +448,15 @@ osg_ress_routing_table.sh, is just this:
 
 ::
 
-    #!/bin/sh 
-     
-    # you _MUST_ change this: 
-    export condor_status=/path/to/condor_status 
-    # if no command line arguments specify -pool, use this: 
-    export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov 
-     
-    $condor_status -format '[ ' BeginAd \ 
-                  -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \ 
+    #!/bin/sh
+
+    # you _MUST_ change this:
+    export condor_status=/path/to/condor_status
+    # if no command line arguments specify -pool, use this:
+    export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov
+
+    $condor_status -format '[ ' BeginAd \
+                  -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
           -format ']\n' EndAd "$@" | uniq
 
 Save this script to a file and make sure the permissions on the file
@@ -470,10 +470,10 @@ is what you want, configure the *condor_job_router* daemon to use it:
 
 ::
 
-    # command to build the routing table 
-    JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments> 
-     
-    # how often to rebuild the routing table: 
+    # command to build the routing table
+    JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
+
+    # how often to rebuild the routing table:
     JOB_ROUTER_ENTRIES_REFRESH = 3600
 
 Using the example configuration, use the above settings to replace
@@ -484,4 +484,4 @@ or reconfigure the *condor_job_router* daemon, you should see messages
 in the Job Router's log indicating that it is adding more routes to the
 table.
 
-      
+

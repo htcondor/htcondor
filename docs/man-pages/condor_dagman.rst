@@ -1,4 +1,4 @@
-      
+
 
 *condor_dagman*
 ===============
@@ -95,7 +95,7 @@ Options
     omitted, the number of idle procs is limited by the configuration
     variable ``DAGMAN_MAX_JOBS_IDLE``
     :index:`DAGMAN_MAX_JOBS_IDLE` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
     cause the *NumberOfProcs* limit to be exceeded. Setting
@@ -112,7 +112,7 @@ Options
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED``
     :index:`DAGMAN_MAX_JOBS_SUBMITTED` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 0 (unlimited).
  **-maxpre** *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
@@ -121,7 +121,7 @@ Options
     the configuration variable
     ``DAGMAN_MAX_PRE_SCRIPTS``\ :index:`DAGMAN_MAX_PRE_SCRIPTS`
     (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 20.
  **-maxpost** *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
@@ -129,7 +129,7 @@ Options
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
     :index:`DAGMAN_MAX_POST_SCRIPTS` (see  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__), which
+    Macros <../admin-manual/configuration-macros.html>`_), which
     defaults to 20.
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
@@ -287,7 +287,7 @@ Examples
 
 *condor_dagman* is normally not run directly, but submitted as an
 HTCondor job by running condor_submit_dag. See the condor_submit_dag
-manual page \ `condor_submitdag <../man-pages/condor_submitdag.html>`__
+manual page \ `condor_submitdag <../man-pages/condor_submitdag.html>`_
 for examples.
 
 Author
@@ -302,4 +302,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

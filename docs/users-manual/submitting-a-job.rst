@@ -31,7 +31,7 @@ every time will need to use a separate subdirectory for the output of
 each run.
 
 The *condor_submit* manual page is on :doc:`/man-pages/condor_submit`
-and contains a complete and full description of how to use *condor_submit*. 
+and contains a complete and full description of how to use *condor_submit*.
 It also includes descriptions of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
@@ -81,17 +81,17 @@ jobs.
 
 ::
 
-      #################### 
-      # 
-      # Example 1 
-      # Simple HTCondor submit description file 
-      # 
-      #################### 
-     
-      Executable   = myexe 
-      Log          = myexe.log 
-      Input        = inputfile 
-      Output       = outputfile 
+      ####################
+      #
+      # Example 1
+      # Simple HTCondor submit description file
+      #
+      ####################
+
+      Executable   = myexe
+      Log          = myexe.log
+      Input        = inputfile
+      Output       = outputfile
       Queue
 
 
@@ -108,16 +108,16 @@ explicitly opening a file and writing to it.
 
 ::
 
-      #################### 
-      # 
-      # Example 2 
-      # Standard universe submit description file 
-      # 
-      #################### 
-     
-      Executable   = foo 
-      Universe     = standard 
-      Log          = foo.log 
+      ####################
+      #
+      # Example 2
+      # Standard universe submit description file
+      #
+      ####################
+
+      Executable   = foo
+      Universe     = standard
+      Log          = foo.log
       Queue
 
 
@@ -142,25 +142,25 @@ then execute on pool machines that provide at least 1 GByte of memory.
 
 ::
 
-      #################### 
-      # 
-      # Example 3: demonstrate use of multiple 
-      # directories for data organization. 
-      # 
-      #################### 
-     
-      executable     = mathematica 
-      universe       = vanilla 
-      input          = test.data 
-      output         = loop.out 
-      error          = loop.error 
-      log            = loop.log 
-      request_memory = 1 GB 
-     
-      initialdir     = run_1 
-      queue 
-     
-      initialdir     = run_2 
+      ####################
+      #
+      # Example 3: demonstrate use of multiple
+      # directories for data organization.
+      #
+      ####################
+
+      executable     = mathematica
+      universe       = vanilla
+      input          = test.data
+      output         = loop.out
+      error          = loop.error
+      log            = loop.log
+      request_memory = 1 GB
+
+      initialdir     = run_1
+      queue
+
+      initialdir     = run_2
       queue
 
 
@@ -185,25 +185,25 @@ queued programs will be written into the single file ``foo.log``.
 
 ::
 
-      #################### 
-      # 
-      # Example 4: Show off some fancy features including 
-      # the use of pre-defined macros. 
-      # 
-      #################### 
-     
-      Executable     = foo 
-      Universe       = standard 
-      requirements   = OpSys == "LINUX" && Arch =="INTEL" 
-      rank           = Memory >= 64 
-      image_size     = 28000 
-      request_memory = 32 
-     
-      error   = err.$(Process) 
-      input   = in.$(Process) 
-      output  = out.$(Process) 
-      log     = foo.log 
-     
+      ####################
+      #
+      # Example 4: Show off some fancy features including
+      # the use of pre-defined macros.
+      #
+      ####################
+
+      Executable     = foo
+      Universe       = standard
+      requirements   = OpSys == "LINUX" && Arch =="INTEL"
+      rank           = Memory >= 64
+      image_size     = 28000
+      request_memory = 32
+
+      error   = err.$(Process)
+      input   = in.$(Process)
+      output  = out.$(Process)
+      log     = foo.log
+
       queue 150
 
 :index:`examples<single: examples; submit description file>`
@@ -260,9 +260,9 @@ Here are a set of examples.
 
 ::
 
-      transfer_input_files = $(filename) 
-      arguments            = -infile $(filename) 
-      queue filename matching files *.dat 
+      transfer_input_files = $(filename)
+      arguments            = -infile $(filename)
+      queue filename matching files *.dat
 
 The use of file globbing expands the list of items to be all files in
 the current directory that end in ``.dat``. Only files, and not
@@ -277,14 +277,14 @@ to
 
 ::
 
-      transfer_input_files = initial.dat 
-      arguments            = -infile initial.dat 
-      queue 
-      transfer_input_files = middle.dat 
-      arguments            = -infile middle.dat 
-      queue 
-      transfer_input_files = ending.dat 
-      arguments            = -infile ending.dat 
+      transfer_input_files = initial.dat
+      arguments            = -infile initial.dat
+      queue
+      transfer_input_files = middle.dat
+      arguments            = -infile middle.dat
+      queue
+      transfer_input_files = ending.dat
+      arguments            = -infile ending.dat
       queue
 
 
@@ -301,11 +301,11 @@ to
 
 ::
 
-      input = A 
-      queue 
-      input = B 
-      queue 
-      input = C 
+      input = A
+      queue
+      input = B
+      queue
+      input = C
       queue
 
 
@@ -313,9 +313,9 @@ to
 
 ::
 
-      queue input,arguments from ( 
-        file1, -a -b 26 
-        file2, -c -d 92 
+      queue input,arguments from (
+        file1, -a -b 26
+        file2, -c -d 92
       )
 
 Using the ``from`` form of the options, each of the two variables
@@ -324,11 +324,11 @@ specified is given a value from the list of items. For this example the
 
 ::
 
-      input = file1 
-      arguments = -a -b 26 
-      queue 
-      input = file2 
-      arguments = -c -d 92 
+      input = file1
+      arguments = -a -b 26
+      queue
+      input = file2
+      arguments = -c -d 92
       queue
 
 
@@ -467,14 +467,14 @@ syntax:
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         <statement> 
-         . . . 
-         <statement> 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      else
+         <statement>
+         . . .
+         <statement>
       endif
 
 An else key word and statements are not required, such that simple if
@@ -489,10 +489,10 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if defined MY_UNDEFINED_VARIABLE 
-            X = 12 
-         else 
-            X = -1 
+         if defined MY_UNDEFINED_VARIABLE
+            X = 12
+         else
+            X = -1
          endif
 
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
@@ -516,10 +516,10 @@ character (!) to represent the not operation, followed by
 
    ::
 
-         if version >= 8.1.6 
-            DO_X = True 
-         else 
-            DO_Y = True 
+         if version >= 8.1.6
+            DO_X = True
+         else
+            DO_Y = True
          endif
 
    results in defining ``DO_X`` as ``True`` if the current version of
@@ -537,30 +537,30 @@ The syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      elif <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      elif <simple condition>
+         <statement>
+         . . .
+         <statement>
       endif
 
 is the same as syntax
 
 ::
 
-      if <simple condition> 
-         <statement> 
-         . . . 
-         <statement> 
-      else 
-         if <simple condition> 
-            <statement> 
-            . . . 
-            <statement> 
-         endif 
+      if <simple condition>
+         <statement>
+         . . .
+         <statement>
+      else
+         if <simple condition>
+            <statement>
+            . . .
+            <statement>
+         endif
       endif
 
 Here is an example use of a conditional in the submit description file.
@@ -569,10 +569,10 @@ syntax to define command line arguments in one of two ways:
 
 ::
 
-      if defined X 
-        arguments = -n $(X) 
-      else 
-        arguments = -n 1 -debug 
+      if defined X
+        arguments = -n $(X)
+      else
+        arguments = -n 1 -debug
       endif
 
 Submit variable ``X`` is defined on the *condor_submit* command line
@@ -746,7 +746,7 @@ other than those given by $(Process) are desired.
 
 ::
 
-      MyIndex     = $(Process) + 1 
+      MyIndex     = $(Process) + 1
       initial_dir = run-$INT(MyIndex, %04d)
 
 Assuming that there are three jobs queued, such that $(Process) becomes
@@ -761,8 +761,8 @@ This variation on Example 1 generates a file name extension which is a
 
 ::
 
-      Values     = $(Process) * 10 
-      Extension  = $INT(Values, %03d) 
+      Values     = $(Process) * 10
+      Extension  = $INT(Values, %03d)
       input      = X.$(Extension)
 
 Assuming that there are four jobs queued, such that $(Process) becomes
@@ -781,10 +781,10 @@ execute host.
 
 ::
 
-      arguments            = $Fnx(FILE) 
-      transfer_input_files = $(FILE) 
-      queue  FILE  MATCHING ( 
-           samplerun/*.dat 
+      arguments            = $Fnx(FILE)
+      transfer_input_files = $(FILE)
+      queue  FILE  MATCHING (
+           samplerun/*.dat
            )
 
 Assume that two files that end in ``.dat``, ``A.dat`` and ``B.dat``, are
@@ -816,10 +816,10 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-section \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__ on
+Section `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`_ on
 page \ `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`__.
+Mechanism <../misc-concepts/classad-mechanism.html>`_.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -847,10 +847,10 @@ queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
 unnumbered Appendix on page \ `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`__. A
+Attributes <../classad-attributes/job-classad-attributes.html>`_. A
 list of defined ClassAd attributes for machine ClassAds is given in the
 unnumbered Appendix on page \ `Machine ClassAd
-Attributes <../classad-attributes/machine-classad-attributes.html>`__.
+Attributes <../classad-attributes/machine-classad-attributes.html>`_.
 
 Rank Expression Examples
 ''''''''''''''''''''''''
@@ -891,15 +891,15 @@ Sundays:
 
 ::
 
-       Rank = ( (clockday == 0) || (clockday == 6) ) 
+       Rank = ( (clockday == 0) || (clockday == 6) )
               && (machine == "friend.cs.wisc.edu")
 
 For a job that prefers to run on one of three specific machines:
 
 ::
 
-       Rank = (machine == "friend1.cs.wisc.edu") || 
-              (machine == "friend2.cs.wisc.edu") || 
+       Rank = (machine == "friend1.cs.wisc.edu") ||
+              (machine == "friend2.cs.wisc.edu") ||
               (machine == "friend3.cs.wisc.edu")
 
 For a job that wants the machine with the best floating point
@@ -940,8 +940,8 @@ For a job that prefers specific machines in a specific order:
 
 ::
 
-       Rank = ((machine == "friend1.cs.wisc.edu")*3) + 
-              ((machine == "friend2.cs.wisc.edu")*2) + 
+       Rank = ((machine == "friend1.cs.wisc.edu")*3) +
+              ((machine == "friend2.cs.wisc.edu")*2) +
                (machine == "friend3.cs.wisc.edu")
 
 If the machine being ranked is ``friend1.cs.wisc.edu``, then the
@@ -1035,7 +1035,7 @@ access to that shared data, so she specifies a different
 
 ::
 
-       Requirements = TARGET.UidDomain == "cs.wisc.edu" && \ 
+       Requirements = TARGET.UidDomain == "cs.wisc.edu" && \
                       TARGET.FileSystemDomain == "cs.wisc.edu"
 
 WARNING: If there is no shared file system, or the HTCondor pool
@@ -1077,7 +1077,7 @@ By default, they will be:
 
 ::
 
-      should_transfer_files = IF_NEEDED 
+      should_transfer_files = IF_NEEDED
       when_to_transfer_output = ON_EXIT
 
 Setting the
@@ -1163,7 +1163,7 @@ Note that the combination of
 
 ::
 
-      should_transfer_files = IF_NEEDED 
+      should_transfer_files = IF_NEEDED
       when_to_transfer_output = ON_EXIT_OR_EVICT
 
 would produce undefined file access semantics. Therefore, this
@@ -1193,8 +1193,8 @@ executable. For example:
 
 ::
 
-      should_transfer_files = YES 
-      when_to_transfer_output = ON_EXIT 
+      should_transfer_files = YES
+      when_to_transfer_output = ON_EXIT
       transfer_input_files = file1,file2
 
 This example explicitly enables the file transfer mechanism, and it
@@ -1262,10 +1262,10 @@ directory:
 
 ::
 
-          o1 
-          o2 
-          d1 (directory) 
-              o3 
+          o1
+          o2
+          d1 (directory)
+              o3
               o4
 
 If the submit description file sets
@@ -1278,10 +1278,10 @@ then transferred back to the submit machine will be
 
 ::
 
-          o1 
-          o2 
-          d1 (directory) 
-              o3 
+          o1
+          o2
+          d1 (directory)
+              o3
               o4
 
 Note that the directory ``d1`` and all its contents are specified, and
@@ -1299,8 +1299,8 @@ then transferred back to the submit machine will be
 
 ::
 
-          o1 
-          o2 
+          o1
+          o2
           o3
 
 Note that only the base name is used in the naming and placement of the
@@ -1372,13 +1372,13 @@ the examples:
 
 ::
 
-    /scratch/test (directory) 
-          my_program.condor (the submit description file) 
-          my_program (the executable) 
-          files (directory) 
-              logs2 (directory) 
-              in1 (file) 
-              in2 (file) 
+    /scratch/test (directory)
+          my_program.condor (the submit description file)
+          my_program (the executable)
+          files (directory)
+              logs2 (directory)
+              in1 (file)
+              in2 (file)
           logs (directory)
 
 **Example 1**
@@ -1392,19 +1392,19 @@ transferred back into the directory ``/scratch/test``.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs/err.$(cluster) 
-    Output          = logs/out.$(cluster) 
-    Log             = logs/log.$(cluster) 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = files/in1,files/in2 
-     
-    Arguments       = in1 in2 out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs/err.$(cluster)
+    Output          = logs/out.$(cluster)
+    Log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = files/in1,files/in2
+
+    Arguments       = in1 in2 out1
     Queue
 
     The log file is written on the submit machine, and is not involved
@@ -1418,19 +1418,19 @@ the input files.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs/err.$(cluster) 
-    Output          = logs/out.$(cluster) 
-    Log             = logs/log.$(cluster) 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2 
-     
-    Arguments       = in1 in2 out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs/err.$(cluster)
+    Output          = logs/out.$(cluster)
+    Log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2
+
+    Arguments       = in1 in2 out1
     Queue
 
 **Example 3**
@@ -1454,21 +1454,21 @@ example work correctly.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs2/err.$(cluster) 
-    Output          = logs2/out.$(cluster) 
-    Log             = logs2/log.$(cluster) 
-     
-    initialdir      = files 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = in1,in2 
-     
-    Arguments       = in1 in2 out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs2/err.$(cluster)
+    Output          = logs2/out.$(cluster)
+    Log             = logs2/log.$(cluster)
+
+    initialdir      = files
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = in1,in2
+
+    Arguments       = in1 in2 out1
     Queue
 
 **Example 4 – Illustrates an Error**
@@ -1486,19 +1486,19 @@ the execute machine.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs/err.$(cluster) 
-    Output          = logs/out.$(cluster) 
-    Log             = logs/log.$(cluster) 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = files/in1,files/in2 
-     
-    Arguments       = files/in1 files/in2 files/out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs/err.$(cluster)
+    Output          = logs/out.$(cluster)
+    Log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = files/in1,files/in2
+
+    Arguments       = files/in1 files/in2 files/out1
     Queue
 
 This example fails with the following error:
@@ -1514,19 +1514,19 @@ The executing program's use of absolute paths cannot work.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs/err.$(cluster) 
-    Output          = logs/out.$(cluster) 
-    Log             = logs/log.$(cluster) 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2 
-     
-    Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs/err.$(cluster)
+    Output          = logs/out.$(cluster)
+    Log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+
+    Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
     Queue
 
 The job fails with the following error:
@@ -1548,20 +1548,20 @@ initial working directory as ``/scratch/test/out1``.
 
 ::
 
-    # file name:  my_program.condor 
-    # HTCondor submit description file for my_program 
-    Executable      = my_program 
-    Universe        = vanilla 
-    Error           = logs/err.$(cluster) 
-    Output          = logs/out.$(cluster) 
-    Log             = logs/log.$(cluster) 
-     
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
-    transfer_input_files = files/in1,files/in2 
-    transfer_output_files = /tmp/out1 
-     
-    Arguments       = in1 in2 /tmp/out1 
+    # file name:  my_program.condor
+    # HTCondor submit description file for my_program
+    Executable      = my_program
+    Universe        = vanilla
+    Error           = logs/err.$(cluster)
+    Output          = logs/out.$(cluster)
+    Log             = logs/log.$(cluster)
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = files/in1,files/in2
+    transfer_output_files = /tmp/out1
+
+    Arguments       = in1 in2 /tmp/out1
     Queue
 
 
@@ -1587,9 +1587,9 @@ transfer using the HTTP mechanism. For example:
 
 ::
 
-      should_transfer_files = YES 
-      when_to_transfer_output = ON_EXIT 
-      transfer_input_files = file1,file2 
+      should_transfer_files = YES
+      when_to_transfer_output = ON_EXIT
+      transfer_input_files = file1,file2
       public_input_files = public_data1,public_data2
 
 Similar to the regular
@@ -1669,8 +1669,8 @@ that has a single file specified with a URL:
 
 ::
 
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
     transfer_input_files = http://www.full.url/path/to/filename
 
 The destination file is given by the file name within the URL.
@@ -1686,8 +1686,8 @@ transfer.
 
 ::
 
-    should_transfer_files = YES 
-    when_to_transfer_output = ON_EXIT 
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
     output_destination = urltype://path/to/destination/directory
 
 Note that with this feature, no files are transferred back to the submit
@@ -1821,14 +1821,14 @@ set and reference environment variables for a job or job cluster.
 Within a submit description file, the user may define environment
 variables for the job's environment by using the **environment**
 command. See within the *condor_submit* manual page at
-section \ `condor_submit <../man-pages/condor_submit.html>`__ for more
+Section `condor_submit <../man-pages/condor_submit.html>`_ for more
 details about this command.
 
 The submitter's entire environment can be copied into the job ClassAd
 for the job at job submission. The
 **getenv** :index:`getenv<single: getenv; submit commands>` command within the
 submit description file does this, as described at
-section \ `condor_submit <../man-pages/condor_submit.html>`__.
+Section `condor_submit <../man-pages/condor_submit.html>`_.
 
 If the environment is set with the
 **environment** :index:`environment<single: environment; submit commands>` command
@@ -1966,7 +1966,7 @@ executables named
 
 ::
 
-      povray.LINUX.INTEL 
+      povray.LINUX.INTEL
       povray.LINUX.X86_64
 
 will work correctly for the macro
@@ -1981,28 +1981,28 @@ submit description file that queues three jobs for this example:
 
 ::
 
-      #################### 
-      # 
-      # Example of heterogeneous submission 
-      # 
-      #################### 
-     
-      universe     = vanilla 
-      Executable   = povray.$$(OpSys).$$(Arch) 
-      Log          = povray.log 
-      Output       = povray.out.$(Process) 
-      Error        = povray.err.$(Process) 
-     
-      Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \ 
-                     (Arch == "X86_64" && OpSys =="LINUX") 
-     
-      Arguments    = +W1024 +H768 +Iimage1.pov 
-      Queue 
-     
-      Arguments    = +W1024 +H768 +Iimage2.pov 
-      Queue 
-     
-      Arguments    = +W1024 +H768 +Iimage3.pov 
+      ####################
+      #
+      # Example of heterogeneous submission
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = povray.$$(OpSys).$$(Arch)
+      Log          = povray.log
+      Output       = povray.out.$(Process)
+      Error        = povray.err.$(Process)
+
+      Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys =="LINUX")
+
+      Arguments    = +W1024 +H768 +Iimage1.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage2.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage3.pov
       Queue
 
 These jobs are submitted to the vanilla universe to assure that once a
@@ -2048,10 +2048,10 @@ will default to
 
 ::
 
-      # Added by HTCondor 
-      CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \ 
-                          ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED)) 
-     
+      # Added by HTCondor
+      CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
+                          ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
+
       Requirements = (<user specified policy>) && $(CkptRequirements)
 
 The behavior of the ``CkptRequirements`` expressions and its addition to
@@ -2073,30 +2073,30 @@ The complete submit description file for this example:
 
 ::
 
-      #################### 
-      # 
-      # Example of heterogeneous submission 
-      # 
-      #################### 
-     
-      universe     = standard 
-      Executable   = povray.$$(OpSys).$$(Arch) 
-      Log          = povray.log 
-      Output       = povray.out.$(Process) 
-      Error        = povray.err.$(Process) 
-     
-      # HTCondor automatically adds the correct expressions to insure that the 
-      # checkpointed jobs will restart on the correct platform types. 
-      Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \ 
-                     (Arch == "X86_64" && OpSys == "LINUX") ) 
-     
-      Arguments    = +W1024 +H768 +Iimage1.pov 
-      Queue 
-     
-      Arguments    = +W1024 +H768 +Iimage2.pov 
-      Queue 
-     
-      Arguments    = +W1024 +H768 +Iimage3.pov 
+      ####################
+      #
+      # Example of heterogeneous submission
+      #
+      ####################
+
+      universe     = standard
+      Executable   = povray.$$(OpSys).$$(Arch)
+      Log          = povray.log
+      Output       = povray.out.$(Process)
+      Error        = povray.err.$(Process)
+
+      # HTCondor automatically adds the correct expressions to insure that the
+      # checkpointed jobs will restart on the correct platform types.
+      Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys == "LINUX") )
+
+      Arguments    = +W1024 +H768 +Iimage1.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage2.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage3.pov
       Queue
 
 
@@ -2108,58 +2108,58 @@ specific operating systems and versions in heterogeneous pools.
 
 ::
 
-      #################### 
-      # 
-      # Example targeting only RedHat platforms 
-      # 
-      #################### 
-     
-      universe     = vanilla 
-      Executable   = /bin/date 
-      Log          = distro.log 
-      Output       = distro.out 
-      Error        = distro.err 
-     
-      Requirements = (OpSysName == "RedHat") 
-     
+      ####################
+      #
+      # Example targeting only RedHat platforms
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = (OpSysName == "RedHat")
+
       Queue
 
 ::
 
-      #################### 
-      # 
-      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool 
-      # 
-      #################### 
-     
-      universe     = vanilla 
-      Executable   = /bin/date 
-      Log          = distro.log 
-      Output       = distro.out 
-      Error        = distro.err 
-     
-      Requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6) 
-     
+      ####################
+      #
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6)
+
       Queue
 
 Here is a more compact way to specify a RedHat 6 platform.
 
 ::
 
-      #################### 
-      # 
-      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool 
-      # 
-      #################### 
-     
-      universe     = vanilla 
-      Executable   = /bin/date 
-      Log          = distro.log 
-      Output       = distro.out 
-      Error        = distro.err 
-     
-      Requirements = ( OpSysAndVer == "RedHat6") 
-     
+      ####################
+      #
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = ( OpSysAndVer == "RedHat6")
+
       Queue
 
 Jobs That Require GPUs
@@ -2191,7 +2191,7 @@ description file, place
 
 ::
 
-      request_GPUs = 1 
+      request_GPUs = 1
       requirements = (CUDACapability >= 1.2) && $(requirements:True)
 
 Access to GPU resources by an HTCondor job needs special configuration
@@ -2272,4 +2272,4 @@ benefit.
    when done on a pool machine. It may also be that the development
    platforms required reside within Condor's purview as execute hosts.
 
-      
+

@@ -1,4 +1,4 @@
-      
+
 
 Microsoft Windows
 =================
@@ -18,12 +18,12 @@ are no remote system calls.
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
 the overview chapter (section `High Throughput Computing (HTC) and its
-Requirements <../overview/high-throughput-computing-requirements.html>`__)
+Requirements <../overview/high-throughput-computing-requirements.html>`_)
 and the user's manual (section `Welcome to
-HTCondor <../users-manual/welcome-to-htcondor.html>`__). If
+HTCondor <../users-manual/welcome-to-htcondor.html>`_). If
 administrating or customizing the policy and set up of HTCondor, also
 read the administrator's manual chapter (section `Administrators' Manual
-Introduction <../admin-manual/introduction-admin-manual.html>`__). After
+Introduction <../admin-manual/introduction-admin-manual.html>`_). After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
 HTCondor on Windows. For information on installing HTCondor for Windows,
@@ -186,16 +186,16 @@ on all HTCondor nodes.
 
 ::
 
-    CREDD_HOST = credd.cs.wisc.edu 
-    CREDD_CACHE_LOCALLY = True 
-     
-    STARTER_ALLOW_RUNAS_OWNER = True 
-     
-    ALLOW_CONFIG = Administrator@* 
-    SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD 
-    SEC_CONFIG_NEGOTIATION = REQUIRED 
-    SEC_CONFIG_AUTHENTICATION = REQUIRED 
-    SEC_CONFIG_ENCRYPTION = REQUIRED 
+    CREDD_HOST = credd.cs.wisc.edu
+    CREDD_CACHE_LOCALLY = True
+
+    STARTER_ALLOW_RUNAS_OWNER = True
+
+    ALLOW_CONFIG = Administrator@*
+    SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
+    SEC_CONFIG_NEGOTIATION = REQUIRED
+    SEC_CONFIG_AUTHENTICATION = REQUIRED
+    SEC_CONFIG_ENCRYPTION = REQUIRED
     SEC_CONFIG_INTEGRITY = REQUIRED
 
 The example above can be modified to meet the needs of your pool,
@@ -349,11 +349,11 @@ up for several scripting languages:
 
 ::
 
-    OPEN_VERB_FOR_JS_FILES  = Open2 
-    OPEN_VERB_FOR_VBS_FILES = Open2 
-    OPEN_VERB_FOR_VBE_FILES = Open2 
-    OPEN_VERB_FOR_JSE_FILES = Open2 
-    OPEN_VERB_FOR_WSF_FILES = Open2 
+    OPEN_VERB_FOR_JS_FILES  = Open2
+    OPEN_VERB_FOR_VBS_FILES = Open2
+    OPEN_VERB_FOR_VBE_FILES = Open2
+    OPEN_VERB_FOR_JSE_FILES = Open2
+    OPEN_VERB_FOR_WSF_FILES = Open2
     OPEN_VERB_FOR_WSH_FILES = Open2
 
 In this example, HTCondor specifies the Open2 verb, instead of the
@@ -524,9 +524,9 @@ C:\\WINNT on the submit machine, and a user gives the following to
 
 ::
 
-             executable = mytrojan.exe 
-             initialdir = c:\winnt 
-             output = explorer.exe 
+             executable = mytrojan.exe
+             initialdir = c:\winnt
+             output = explorer.exe
              queue
 
 Unless that user is in group Administrators, HTCondor will not permit
@@ -571,7 +571,7 @@ access.
 Finally, HTCondor has all the security mechanisms present in the
 full-blown version of HTCondor. See
 the :doc:`/admin-manual/security` section starting on
-page \ `Security <../admin-manual/security.html>`__ for complete
+page \ `Security <../admin-manual/security.html>`_ for complete
 information on how to allow/deny access to HTCondor.
 
 Network files and HTCondor
@@ -609,9 +609,9 @@ Example: you want to copy a file off of a server before running it....
 
 ::
 
-       @echo off 
-       net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN 
-       copy \\myserver\someshare\my-program.exe 
+       @echo off
+       net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN
+       copy \\myserver\someshare\my-program.exe
        my-program.exe
 
 The idea here is to simply authenticate to the file server with a
@@ -626,9 +626,9 @@ GUEST
 
 ::
 
-       @echo off 
-       net use \\myserver\someshare 
-       copy \\myserver\someshare\my-program.exe 
+       @echo off
+       net use \\myserver\someshare
+       copy \\myserver\someshare\my-program.exe
        my-program.exe
 
 In this example, you'd contact the server MYSERVER as the HTCondor
@@ -650,7 +650,7 @@ them to your registry. You can then use the batch file wrapper like:
 
 ::
 
-    net use z: \\myserver\someshare /USER:"" 
+    net use z: \\myserver\someshare /USER:""
     z:\my-program.exe
 
 so long as 'someshare' is in the list of allowed NULL session shares. To
@@ -658,12 +658,12 @@ edit this list, run regedit.exe and navigate to the key:
 
 ::
 
-    HKEY_LOCAL_MACHINE\ 
-       SYSTEM\ 
-         CurrentControlSet\ 
-           Services\ 
-             LanmanServer\ 
-               Parameters\ 
+    HKEY_LOCAL_MACHINE\
+       SYSTEM\
+         CurrentControlSet\
+           Services\
+             LanmanServer\
+               Parameters\
                  NullSessionShares
 
 and edit it. unfortunately it is a binary value, so you'll then need to
@@ -734,4 +734,4 @@ Some differences between HTCondor for Unix -vs- HTCondor for Windows
 
 :index:`Windows<single: Windows; platform-specific information>`
 
-      
+

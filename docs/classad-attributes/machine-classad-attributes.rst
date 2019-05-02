@@ -90,7 +90,7 @@ Machine ClassAd Attributes
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
     with ``SLOTS_CONNECTED_TO_CONSOLE``
-    :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the 
+    :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros` section.
     :index:`Cpus<single: Cpus; ClassAd machine attribute>`
@@ -226,7 +226,7 @@ Machine ClassAd Attributes
     A string of comma-separated file transfer protocols that the machine
     can support. The value can be modified with ``FILETRANSFER_PLUGINS``
     :index:`FILETRANSFER_PLUGINS` as defined at  `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    Macros <../admin-manual/configuration-macros.html>`_.
     :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
  ``Has_sse4_1``:
     A boolean value set to ``True`` if the machine being advertised
@@ -880,7 +880,7 @@ Machine ClassAd Attributes
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
     two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
     on page \ `Configuration
-    Macros <../admin-manual/configuration-macros.html>`__.
+    Macros <../admin-manual/configuration-macros.html>`_.
     :index:`StartdIpAddr<single: StartdIpAddr; ClassAd machine attribute>`
  ``StartdIpAddr``:
     String with the IP and port address of the *condor_startd* daemon
@@ -1373,4 +1373,4 @@ ClassAd environment. :index:`CurrentTime<single: CurrentTime; ClassAd attribute>
     Evaluates to the the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
 
-      
+

@@ -1,4 +1,4 @@
-      
+
 
 *condor_drain*
 ===============
@@ -57,7 +57,7 @@ draining state (see below). The **-start** expression you supply
 replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
 available. See section `Policy Configuration for Execute Hosts and for
-Submit Hosts <../admin-manual/policy-configuration.html>`__ for more
+Submit Hosts <../admin-manual/policy-configuration.html>`_ for more
 information.
 
 Once draining is complete, the machine will enter the Drained/Idle
@@ -120,4 +120,4 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+

@@ -1,4 +1,4 @@
-      
+
 
 HTCondor Annex User's Guide
 ===========================
@@ -8,7 +8,7 @@ an HTCondor pool administrator. This guide will cover basic
 *condor_annex* usage first, followed by advanced usage that may be of
 less interest to the submitter. Users interested in customizing
 *condor_annex* should consult section `HTCondor Annex Customization
-Guide <../cloud-computing/annex-customization-guide.html>`__.
+Guide <../cloud-computing/annex-customization-guide.html>`_.
 
 Considerations and Limitations
 ------------------------------
@@ -22,7 +22,7 @@ however, *condor_annex* instances will only start jobs submitted by the
 user who started the annex, so pool administrators using *condor_annex*
 on their users' behalf will probably want to use the **-owners** option
 or **-no-owner** flag; see the man page (section
-`condor_annex <../man-pages/condor_annex.html>`__). Once the new
+`condor_annex <../man-pages/condor_annex.html>`_). Once the new
 machines join the pool, they will run jobs as normal.
 
 Submitters, however, will have to set up their own personal HTCondor
@@ -40,7 +40,7 @@ support other network topologies). When checking connectivity from AWS,
 the IP(s) used by the AWS Lambda function implementing this check may
 not be in the same range(s) as those used by AWS instance; please
 consult AWS's list of all their IP
-ranges\ `:sup:`2` <ref62.html#fn2x7>`__ when configuring your firewall.
+ranges\ `:sup:`2` <ref62.html#fn2x7>`_ when configuring your firewall.
 
 Starting in v8.7.2, *condor_annex* requires that the AWS secret
 (private) key file be owned by the submitting user and not readable by
@@ -82,14 +82,14 @@ what it said it was going to do, and then exit.
 
 ::
 
-    $ condor_annex -count 1 -annex-name MyFirstAnnex 
-    Will request 1 m4.large on-demand instance for 0.83 hours. Each instance will 
-    terminate after being idle for 0.25 hours. 
-    Is that OK? (Type 'yes' or 'no'): yes 
-    Starting annex... 
-    Annex started. Its identity with the cloud provider is 
-    'TestAnnex0_f2923fd1-3cad-47f3-8e19-fff9988ddacf'. It will take about three 
-    minutes for the new machines to join the pool. 
+    $ condor_annex -count 1 -annex-name MyFirstAnnex
+    Will request 1 m4.large on-demand instance for 0.83 hours. Each instance will
+    terminate after being idle for 0.25 hours.
+    Is that OK? (Type 'yes' or 'no'): yes
+    Starting annex...
+    Annex started. Its identity with the cloud provider is
+    'TestAnnex0_f2923fd1-3cad-47f3-8e19-fff9988ddacf'. It will take about three
+    minutes for the new machines to join the pool.
 
 You won't need to know the annex's identity with the cloud provider
 unless something goes wrong.
@@ -106,7 +106,7 @@ Instance Types
   cores, amount of RAM, local storage, and the like. We recommend starting
   with ‘m4.large', which has 2 CPU cores and 8 GiB of RAM, but you can see
   the complete list of instance types at the following URL:
-| `https://aws.amazon.com/ec2/instance-types/ <https://aws.amazon.com/ec2/instance-types/>`__
+| `https://aws.amazon.com/ec2/instance-types/ <https://aws.amazon.com/ec2/instance-types/>`_
 | You can specify an instance type with the -aws-on-demand-instance-type
   flag.
 
@@ -129,8 +129,8 @@ if you'd like "MyFirstAnnex" to expire eight hours from now:
 
 ::
 
-    $ condor_annex -annex-name MyFirstAnnex -duration 8 
-    Lease updated. 
+    $ condor_annex -annex-name MyFirstAnnex -duration 8
+    Lease updated.
 
 Idle Time
 '''''''''
@@ -170,16 +170,16 @@ following way:
 
 ::
 
-    $ condor_annex status 
-    Name                               OpSys      Arch   State     Activity     Load 
+    $ condor_annex status
+    Name                               OpSys      Arch   State     Activity     Load
 
-    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
-    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
+    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0
+    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+    X86_64/LINUX     2     0       0         2       0          0        0      0
+    Total     2     0       0         2       0          0        0      0
 
 This example shows that the annex instance you requested has joined your
 pool. (The default annex image configures one static slot for each CPU
@@ -189,25 +189,25 @@ You may instead use *condor_status*:
 
 ::
 
-    $ condor_status -annex MyFirstAnnex 
-    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    $ condor_status -annex MyFirstAnnex
+    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
+    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
 
-     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+     Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
+    X86_64/LINUX     2     0       0         2       0          0        0      0
+    Total     2     0       0         2       0          0        0      0
 
 You can also get a report about the instances which have not joined your
 pool:
 
 ::
 
-    $ condor_annex -annex MyFirstAnnex -status 
-    STATE          COUNT 
-    pending            1 
-    TOTAL              1 
-    Instances not in the pool, grouped by state: 
-    pending i-06928b26786dc7e6e 
+    $ condor_annex -annex MyFirstAnnex -status
+    STATE          COUNT
+    pending            1
+    TOTAL              1
+    Instances not in the pool, grouped by state:
+    pending i-06928b26786dc7e6e
 
 Monitoring Multiple Annexes
 '''''''''''''''''''''''''''
@@ -217,32 +217,32 @@ the pool, regardless of which annex they're from:
 
 ::
 
-    $ condor_status -annex 
-    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot1@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
-    slot2@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767 
+    $ condor_status -annex
+    slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
+    slot2@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
+    slot1@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
+    slot2@ip-111-48-85-13.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
-    X86_64/LINUX     4     0       0         4       0          0        0      0 
-    Total     4     0       0         4       0          0        0      0 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
+    X86_64/LINUX     4     0       0         4       0          0        0      0
+    Total     4     0       0         4       0          0        0      0
 
 The following command reports about instance which have not joined the
 pool, regardless of which annex they're from:
 
 ::
 
-    $ condor_annex -status 
-    NAME                        TOTAL running 
-    NamelessTestA                   2       2 
-    NamelessTestB                   3       3 
-    NamelessTestC                   1       1 
+    $ condor_annex -status
+    NAME                        TOTAL running
+    NamelessTestA                   2       2
+    NamelessTestB                   3       3
+    NamelessTestC                   1       1
 
-    NAME                        STATUS  INSTANCES... 
-    NamelessTestA               running i-075af9ccb40efb162 i-0bc5e90066ed62dd8 
-    NamelessTestB               running i-02e69e85197f249c2 i-0385f59f482ae6a2e 
-     i-06191feb755963edd 
-    NamelessTestC               running i-09da89d40cde1f212 
+    NAME                        STATUS  INSTANCES...
+    NamelessTestA               running i-075af9ccb40efb162 i-0bc5e90066ed62dd8
+    NamelessTestB               running i-02e69e85197f249c2 i-0385f59f482ae6a2e
+     i-06191feb755963edd
+    NamelessTestC               running i-09da89d40cde1f212
 
 The ellipsis in the last column (INSTANCES...) is to indicate that it's
 a very wide column and may wrap (as it has in the example), not that it
@@ -252,24 +252,24 @@ The following command combines these two reports:
 
 ::
 
-    $ condor_annex status 
-    Name                               OpSys      Arch   State     Activity     Load 
+    $ condor_annex status
+    Name                               OpSys      Arch   State     Activity     Load
 
-    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0 
-    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0 
+    slot1@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Benchmarking  0.0
+    slot2@ip-172-31-48-84.ec2.internal LINUX      X86_64 Unclaimed Idle          0.0
 
-    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain 
+    Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
 
-    X86_64/LINUX     2     0       0         2       0          0        0      0 
-    Total     2     0       0         2       0          0        0      0 
+    X86_64/LINUX     2     0       0         2       0          0        0      0
+    Total     2     0       0         2       0          0        0      0
 
-    Instance ID         not in Annex  Status  Reason (if known) 
-    i-075af9ccb40efb162 NamelessTestA running - 
-    i-0bc5e90066ed62dd8 NamelessTestA running - 
-    i-02e69e85197f249c2 NamelessTestB running - 
-    i-0385f59f482ae6a2e NamelessTestB running - 
-    i-06191feb755963edd NamelessTestB running - 
-    i-09da89d40cde1f212 NamelessTestC running - 
+    Instance ID         not in Annex  Status  Reason (if known)
+    i-075af9ccb40efb162 NamelessTestA running -
+    i-0bc5e90066ed62dd8 NamelessTestA running -
+    i-02e69e85197f249c2 NamelessTestB running -
+    i-0385f59f482ae6a2e NamelessTestB running -
+    i-06191feb755963edd NamelessTestB running -
+    i-09da89d40cde1f212 NamelessTestC running -
 
 Run a Job
 ---------
@@ -290,8 +290,8 @@ cluster 1234 to run on AWS:
 
 ::
 
-    $ condor_qedit 1234 "MayUseAWS = TRUE" 
-    Set attribute "MayUseAWS" for 21 matching jobs. 
+    $ condor_qedit 1234 "MayUseAWS = TRUE"
+    Set attribute "MayUseAWS" for 21 matching jobs.
 
 Stop an Annex
 -------------
@@ -303,8 +303,8 @@ terminating *condor_annex* instances.
 
 ::
 
-    $ condor_off -annex MyFirstAnnex 
-    Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal 
+    $ condor_off -annex MyFirstAnnex
+    Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal
 
 Stopping Multiple Annexes
 '''''''''''''''''''''''''
@@ -314,9 +314,9 @@ regardless of which annex they're from:
 
 ::
 
-    $ condor_off -annex 
-    Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal 
-    Sent "Kill-Daemon" command for "master" to master ip-111-48-85-13.ec2.internal 
+    $ condor_off -annex
+    Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal
+    Sent "Kill-Daemon" command for "master" to master ip-111-48-85-13.ec2.internal
 
 Using Different or Multiple AWS Regions
 ---------------------------------------
@@ -380,7 +380,7 @@ request which says something like "give me a thousand cores as cheaply
 as possible", and specify that an ‘m4.large' instance has two cores,
 while ‘m4.xlarge' has four, and so on. (The interface actually allows
 you to assign arbitrary values – like HTCondor slot weights – to each
-instance type\ `:sup:`3` <ref63.html#fn3x7>`__ , but the default value
+instance type\ `:sup:`3` <ref63.html#fn3x7>`_ , but the default value
 is core count.) AWS will then divide the current price for each instance
 type by its core count and request spot instances at the cheapest
 per-core rate until the number of cores (not the number of instances!)
@@ -469,7 +469,7 @@ with instance types, but this is not required.
 Expert Mode
 '''''''''''
 
-The man page (in section `12 <Condorannex.html#x99-68500012>`__) lists
+The man page (in section `12 <Condorannex.html#x99-68500012>`_) lists
 the "expert mode" options.
 
 Four of the "expert mode" options set the URLs used to access AWS
@@ -491,4 +491,4 @@ The options labeled "developers only" control implementation details and
 may change without warning; they are probably best left unused unless
 you're a developer.
 
-      
+
