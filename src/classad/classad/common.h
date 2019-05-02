@@ -144,7 +144,7 @@ extern const char * const ATTR_XACTION_NAME;
 struct CaseIgnLTStr {
    inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
        return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
-	}
+ }
 };
 
 struct CaseIgnEqStr {

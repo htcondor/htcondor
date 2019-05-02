@@ -58,39 +58,6 @@ void Value::ApplyFactor()
 	factor = NO_FACTOR;
 }
 
-void Value::
-_Clear()
-{
-	switch( valueType ) {
-	    case SCLASSAD_VALUE:
-	        delete sclassadValue;
-	        break;
-
-		case SLIST_VALUE:
-			delete slistValue;
-			break;
-
-		case STRING_VALUE:
-			delete strValue;
-			break;
-
-		case ABSOLUTE_TIME_VALUE:
-			delete absTimeValueSecs;
-			break;
-
-		default:
-		case LIST_VALUE:
-		case CLASSAD_VALUE:
-			// list and classad values live in the evaluation environment, so they must
-			// never be explicitly destroyed
-			break;
-	}
-
-	classadValue = NULL; // this clears the entire union
-	factor = NO_FACTOR;
-}
-
-
 bool Value::
 IsNumber (int &i) const
 {
