@@ -75,9 +75,9 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
-static References &getSpecialAttrNames()
+static inline ReferencesBySize &getSpecialAttrNames()
 {
-	static References specialAttrNames;
+	static ReferencesBySize specialAttrNames;
 	static bool specialAttrNames_inited = false;
 	if ( !specialAttrNames_inited ) {
 		specialAttrNames.insert( ATTR_TOPLEVEL );
