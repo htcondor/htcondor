@@ -777,6 +777,13 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         priv = set_root_priv();
     }
     
+	// NOTE: If a target_str other than "GSI-NO-TARGET" is used, then
+	//   this function may return failure while leaving the server
+	//   waiting for data. The most common why for this to happen is
+	//   if the server's subject name doesn't match the expected target.
+	//   The anticipated action for the client is to close the
+	//   connection, it seems. Otherwise, the two sides will be out
+	//   of synch.
     char target_str[] = "GSI-NO-TARGET";
     major_status = (*globus_gss_assist_init_sec_context_ptr)(&minor_status,
                                                       credential_handle,
@@ -819,21 +826,6 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		}
         print_log(major_status,minor_status,token_status,
                   "Condor GSI authentication failure");
-        // Following four lines of code is added to temporarily
-        // resolve a bug (I belive so) in Globus's GSI code.
-        // basically, if client calls init_sec_context with
-        // mutual authentication and it returns with a mismatched
-        // target principal, init_sec_context will return without
-        // sending the server any token. The sever, therefore,
-        // hangs on waiting for the token (or until the timeout
-        // occurs). This code will force the server to break out
-        // the loop.
-        status = 0;
-        mySock_->encode();
-        if (!mySock_->code(status)) {
-			dprintf(D_ALWAYS, "Authenticate: failed to inform client of failure to authenticate\n");
-		}
-        mySock_->end_of_message();
     }
     else {
         // Now, wait for final signal
