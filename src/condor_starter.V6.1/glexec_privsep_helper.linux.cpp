@@ -423,7 +423,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 			return 0;
 		}
 			// truncated exponential backoff
-		int delay_rand = 1 + (get_random_int() % glexec_errors) % 100;
+		int delay_rand = 1 + (get_random_int_insecure() % glexec_errors) % 100;
 		int delay = m_glexec_retry_delay * delay_rand;
 		dprintf(D_ALWAYS,"Glexec exited with status %d; retrying in %d seconds.\n",
 				glexec_rc, delay );

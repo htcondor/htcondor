@@ -57,7 +57,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 		// re-used the PID of a daemon that recently ran and
 		// somebody tries to connect to that daemon, they are
 		// unlikely to connect to us.
-		rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
+		rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
 	}
 
 	MyString buffer;
