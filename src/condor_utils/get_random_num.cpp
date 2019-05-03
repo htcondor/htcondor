@@ -19,90 +19,45 @@
 
 
 #include "condor_common.h" 
+#include "condor_debug.h"
 #include "condor_random_num.h"
-
-/* srand48, lrand48, and drand48 seem to be available on all Condor
-   platforms except WIN32.  -Jim B. */
-
-static char initialized = 0;
-
-/* (re)sets the seed for the random number generator -- may be useful
-   for generating less predictable random numbers */
-int set_seed(int seed)
-{
-	if (seed == 0) {
-		seed = time(0);
-	}
-
-#if defined(WIN32)
-	srand(seed);
-#else
-	srand48(seed);
+#ifdef HAVE_EXT_OPENSSL
+#include <openssl/rand.h>
 #endif
-	initialized = 1;
 
-	return seed;
-}
+//
+// Note the insecure variants are actually implemented using the CSRNG
+// cousins; this is because we couldn't identify any downside in doing
+// so (nothing here is time-critical; there's no need to make things
+// reproducible).
+//
+// That said, we leave the *interfaces* such that developers must declare
+// what quality of random numbers they need, buying flexibility in the future.
+//
+
 
 /* returns a random positive integer, trying to use best random number
    generator available on each platform */
-int get_random_int( void )
+int get_random_int_insecure( void )
 {
-	if (!initialized) {
-		set_seed(getpid());
-	}
-
-#if defined(WIN32)
-	return rand();
-#else
-	return (int) (lrand48() & INT_MAX);
-#endif
+	return get_csrng_int();
 }
+
 
 /* returns a random floating point number in this range: [0.0, 1.0), trying
    to use best random number generator available on each platform */
-float get_random_float( void )
+float get_random_float_insecure( void )
 {
-	if (!initialized) {
-		set_seed(getpid());
-	}
-
-#if defined(WIN32)
-	return (float)rand()/((float)RAND_MAX + 1);
-#else
-	return (float) drand48();
-#endif
-}
-
-double get_random_double( void )
-{
-    if (!initialized) {
-        set_seed(getpid());
-    }
-
-#if defined(WIN32)
-    return (((double)rand())*(((unsigned int)1)<<15) + (double)rand()) /
-	       (((double)RAND_MAX)*(((unsigned int)1)<<15) + (double)RAND_MAX + 1);
-#else
-    return drand48();
-#endif
+	return static_cast<float>(get_csrng_uint() % RAND_MAX) /
+              (static_cast<float>(RAND_MAX) + 1);
 }
 
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
 unsigned int
-get_random_uint( void )
+get_random_uint_insecure( void )
 {
-	if (!initialized) {
-		set_seed(getpid());
-	}
-
-	/*  get_random_float() doesn't have enough precision to use here.
-	    Since get_random_double returns [0.0, 1.0), add one to UINT_MAX
-		to ensure the probability fencepost error doesn't
-		happen and I actually can get ALL the numbers from 0 up to and
-		including UINT_MAX */
-	return (unsigned) (get_random_double() * (((double)UINT_MAX)+1) );
+	return get_csrng_uint();
 }
 
 /* returns a fuzz factor to be added to a timer period to decrease
@@ -117,7 +72,7 @@ timer_fuzz(int period)
 		}
 		fuzz = period - 1;
 	}
-	fuzz = (int)( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
+	fuzz = (int)( get_random_float_insecure() * ((float)fuzz+1) ) - fuzz/2;
 
 	if( period + fuzz <= 0 ) { // sanity check
 		fuzz = 0;

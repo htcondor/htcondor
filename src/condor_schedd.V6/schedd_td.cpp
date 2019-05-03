@@ -514,7 +514,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			// XXX Should I test this against the keys in the manager table
 			// to ensure there are unique ids for the transferds I have
 			// requested to invoke--a collision would be nasty here.
-			rand_id.randomlyGenerateHex(64); 
+			rand_id.randomlyGenerateInsecureHex(64); 
 
 			td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
 
