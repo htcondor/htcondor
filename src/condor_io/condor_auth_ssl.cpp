@@ -1573,6 +1573,10 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		return (*SSL_get_verify_result_ptr)( ssl );
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
+	if (param_boolean("SSL_SKIP_HOST_CHECK", false)) {
+		success = true;
+		goto success;
+	}
 
 	// Client must know what host it is trying to talk to in order for us to verify the SAN / CN.
 	{
@@ -1658,6 +1662,7 @@ skip_san:
 		}
 	}
 
+success:
 	if (success) {
 		ouch("Server checks out; returning SSL_get_verify_result.\n");
     
