@@ -47,7 +47,6 @@
 #include <fstream>
 #include <algorithm>
 #include <numeric>
-#include "condor_random_num.h"
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -213,6 +212,12 @@ const int GO_AHEAD_ONCE = 1;    // send one file and ask again
 				// token, we assume it lasts forever.
 
 const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
+
+// Utils from the util_lib that aren't prototyped
+extern "C" {
+	int		get_random_int();
+	int		set_seed( int );
+}
 
 
 struct upload_info {
@@ -862,6 +867,12 @@ FileTransfer::Init(
 		if (ReaperId == 1) {
 			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
+
+		// we also need to initialize the random number generator.  since
+		// this only has to happen once, and we will only be in this section
+		// of the code once (because the CommandsRegistered flag is static),
+		// initialize the C++ random number generator here as well.
+		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
@@ -869,7 +880,7 @@ FileTransfer::Init(
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
 		sprintf(tempbuf,"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
-			get_csrng_int(), get_csrng_int());
+			get_random_int(),get_random_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
 		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);

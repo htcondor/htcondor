@@ -617,7 +617,7 @@ bool SSHToJob::execute_ssh()
 
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
-		unsigned int r = get_random_uint_insecure();
+		unsigned int r = get_random_uint();
 		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
 							  temp_dir,DIR_DELIM_CHAR,local_username,r);
 		if( mkdir(m_session_dir.Value(),0700)==0 ) {

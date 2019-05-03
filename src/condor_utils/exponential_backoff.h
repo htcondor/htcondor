@@ -31,16 +31,20 @@ class ExponentialBackoff{
 
 		// Variables
  private:
+	static int NEXT_SEED;
+	
 	int min;
 	int max;
 	double base;
+	int seed;
 	unsigned int tries;
 	int prevBackoff;
 
 	
 		// Functions
  public:
-	ExponentialBackoff(int min, int max, double base);
+	ExponentialBackoff(int min, int max, double base);	
+	ExponentialBackoff(int min, int max, double base, int seed);
 	ExponentialBackoff(const ExponentialBackoff& orig);
 	ExponentialBackoff& operator =(const ExponentialBackoff& rhs);
 	virtual ~ExponentialBackoff();
@@ -69,7 +73,7 @@ class ExponentialBackoff{
 	int numberOfTries();
 
  protected:
-	void init(int min, int max, double base);
+	void init(int min, int max, double base, int seed);
 	void deepCopy(const ExponentialBackoff& orig);
 	void noLeak();
 
