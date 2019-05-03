@@ -2506,6 +2506,12 @@ default=false
 type=bool
 tags=io,condor_auth_claim
 
+[SSL_SKIP_HOST_CHECK]
+default=false
+description=Disable client host checks for SSL authentication.
+type=bool
+tags=condor_auth_sl
+
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string
