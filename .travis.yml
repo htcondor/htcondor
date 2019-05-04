@@ -2,8 +2,38 @@
 language: c
 
 sudo: true
+dist: xenial
+
+matrix:
+    include:
+        - os: osx
+          env: UW_BUILD=ON PROPER=OFF VOMS=ON GLOBUS=ON
+        - os: osx
+          env: UW_BUILD=OFF PROPER=ON VOMS=OFF GLOBUS=OFF
+        - os: linux
+          env: UW_BUILD=OFF PROPER=ON
+        - os: linux
+          env: UW_BUILD=ON PROPER=OFF CLIPPED=ON
+        - os: linux
+          env: UW_BUILD=ON PROPER=OFF CLIPPED=OFF
+
+cache:
+    directories:
+        - bld_external/blahp-1.16.5.1-p26
+        - externals/bundles/blahp/1.16.5.1/blahp-prefix
+        - bld_external/glibc-2.17-157-x86_64
+        - externals/bundles/glibc/glibc-prefix
+        - bld_external/globus-6.0-p2
+        - externals/bundles/globus/6.0/globus-prefix
 
 before_install:
-    - sudo apt-get install -y --no-install-recommends chrpath cmake default-jdk gfortran globus-core help2man latex2html libboost-filesystem-dev libboost-program-options-dev libboost-python-dev libboost-regex-dev libboost-system-dev libboost-test-dev libboost-thread-dev libcgroup-dev libcurl4-openssl-dev libglobus-ftp-client-dev libglobus-gass-server-ez-dev libglobus-gram-client-dev libglobus-gram-protocol-dev libglobus-gss-assist-dev libmunge-dev libpq-dev libvirt-dev libxml2-dev po-debconf texlive-font-utils transfig
+    - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y --no-install-recommends chrpath cmake default-jdk gfortran globus-core help2man latex2html libboost-filesystem-dev libboost-program-options-dev libboost-python-dev libboost-regex-dev libboost-system-dev libboost-test-dev libboost-thread-dev libcgroup-dev libcurl4-openssl-dev libglobus-common-dev libglobus-ftp-client-dev libglobus-gass-server-ez-dev libglobus-gram-client-dev libglobus-gram-protocol-dev libglobus-gss-assist-dev libmunge-dev libpq-dev libvirt-dev libxml2-dev po-debconf texlive-font-utils transfig libc-ares-dev voms-dev libtool-bin; fi
 
-script: cmake -DPROPER:BOOL=ON -DCLIPPED:BOOL=ON -DUW_BUILD:BOOL=OFF -D_DEBUG:BOOL=TRUE -DCMAKE_SKIP_RPATH:BOOL=ON -DHAVE_EXT_GSOAP:BOOL=OFF -DWITH_GSOAP:BOOL=OFF -DHAVE_EXT_CURL:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_BOOST:BOOL=ON -DHAVE_EXT_GLOBUS:BOOL=OFF -DWITH_GLOBUS:BOOL=OFF -DHAVE_EXT_KRB5:BOOL=ON -DHAVE_EXT_LIBVIRT:BOOL=ON -DHAVE_EXT_LIBXML2:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_PCRE:BOOL=ON -DHAVE_EXT_VOMS:BOOL=OFF -DWITH_VOMS:BOOL=OFF -DWITH_LIBCGROUP:BOOL=ON -DWANT_CONTRIB:BOOL=OFF -DWITH_BOSCO:BOOL=OFF -DWITH_PYTHON_BINDINGS:BOOL=OFF -DWITH_CAMPUSFACTORY:BOOL=OFF && make
+script:
+    - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cmake -DPROPER:BOOL=$PROPER -DCLIPPED:BOOL=$CLIPPED -DUW_BUILD:BOOL=$UW_BUILD -D_DEBUG:BOOL=TRUE -DCMAKE_SKIP_RPATH:BOOL=ON -DHAVE_EXT_GSOAP:BOOL=OFF -DWITH_GSOAP:BOOL=OFF -DHAVE_EXT_CURL:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_BOOST:BOOL=ON -DHAVE_EXT_GLOBUS:BOOL=ON -DWITH_GLOBUS:BOOL=ON -DHAVE_EXT_KRB5:BOOL=ON -DHAVE_EXT_LIBVIRT:BOOL=ON -DHAVE_EXT_LIBXML2:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_PCRE:BOOL=ON -DHAVE_EXT_VOMS:BOOL=ON -DWITH_VOMS:BOOL=ON -DWITH_LIBCGROUP:BOOL=ON -DWANT_CONTRIB:BOOL=OFF -DWITH_BOSCO:BOOL=OFF -DWITH_PYTHON_BINDINGS:BOOL=OFF -DWITH_CAMPUSFACTORY:BOOL=OFF; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cmake -DPROPER:BOOL=$PROPER -DCLIPPED:BOOL=ON -DUW_BUILD:BOOL=$UW_BUILD -D_DEBUG:BOOL=TRUE -DCMAKE_SKIP_RPATH:BOOL=ON -DHAVE_EXT_GSOAP:BOOL=OFF -DWITH_GSOAP:BOOL=OFF -DHAVE_EXT_CURL:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_BOOST:BOOL=ON -DHAVE_EXT_GLOBUS:BOOL=$GLOBUS -DWITH_GLOBUS:BOOL=$GLOBUS -DHAVE_EXT_KRB5:BOOL=ON -DHAVE_EXT_LIBXML2:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_PCRE:BOOL=ON -DHAVE_EXT_VOMS:BOOL=$VOMS -DWITH_VOMS:BOOL=$VOMS -DWANT_CONTRIB:BOOL=OFF -DWITH_BOSCO:BOOL=OFF -DWITH_PYTHON_BINDINGS:BOOL=OFF -DWITH_CAMPUSFACTORY:BOOL=OFF; fi
+# The Mac OS X Travis-CI build times out at 10 minutes without visible output; this breaks up the "noisy externals" in half in this case.
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]] && [[ "$PROPER" == "OFF" ]]; then make -j2 boost >> noisy_externals.log 2>> noisy_externals.log || cat noisy_externals.log; fi
+    - if [[ "$PROPER" == "OFF" ]]; then make -j2 boost globus >> noisy_externals.log 2>> noisy_externals.log || cat noisy_externals.log; fi
+    - make externals -j2
+    - make -j2
