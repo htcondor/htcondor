@@ -18,7 +18,7 @@
  ###############################################################
 
 if (UNIX)
-	option(WITH_SCITOKENS "Compiling with support for SciTokens" ON)
+	option(WITH_SCITOKENS "Compiling with support for SciTokens" OFF)
 endif(UNIX)
 
 if (WITH_SCITOKENS)
