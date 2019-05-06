@@ -308,7 +308,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
-		unsigned int idx = get_random_int() % vCollectors.size() ;
+		unsigned int idx = get_random_int_insecure() % vCollectors.size() ;
 		daemon = vCollectors[idx];
 
 		if ( ! daemon->addr() ) {
