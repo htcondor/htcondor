@@ -5,8 +5,8 @@ To be clear, our concern throughout this chapter is with commercial
 services which rent computational resources over the Internet at short
 notice and charge in small increments (by the minute or the hour). In
 2016, the four largest such services [1]_
-were (in alphabetical order) Amazon Web Services (‘AWS'), (Microsoft)
-Azure, Google Cloud Platform (‘GCP'), and (IBM) SoftLayer; as of version
+were (in alphabetical order) Amazon Web Services ('AWS'), (Microsoft)
+Azure, Google Cloud Platform ('GCP'), and (IBM) SoftLayer; as of version
 8.7.8, the *condor_annex* tool supports only AWS. AWS can start booting
 a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM

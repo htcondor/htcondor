@@ -215,9 +215,8 @@ the ``.dagman.out`` file
 
 the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. Section `DAGMan
-    Applications <../users-manual/dagman-applications.html>`_ details
-    this log.
+    DAG. The page :ref:`users-manual/dagman-applications:a machine-readable
+    event history, the jobstate.log file` details this log.
 
 :index:`logging`
 

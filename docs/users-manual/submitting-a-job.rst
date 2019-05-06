@@ -816,10 +816,7 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-Section `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`_ on
-page `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`_.
+the :doc:`/misc-concepts/classad-mechanism` section.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -846,11 +843,9 @@ command. This shows all the defined attributes for current jobs in the
 queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
-unnumbered Appendix on page `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`_. A
+Appendix on the :doc:`/classad-attributes/job-classad-attributes` page. A
 list of defined ClassAd attributes for machine ClassAds is given in the
-unnumbered Appendix on page `Machine ClassAd
-Attributes <../classad-attributes/machine-classad-attributes.html>`_.
+Appendix on the :doc:`/classad-attributes/machine-classad-attributes` page.
 
 Rank Expression Examples
 ''''''''''''''''''''''''
@@ -1820,15 +1815,14 @@ set and reference environment variables for a job or job cluster.
 
 Within a submit description file, the user may define environment
 variables for the job's environment by using the **environment**
-command. See within the *condor_submit* manual page at
-Section `condor_submit <../man-pages/condor_submit.html>`_ for more
+command. See within the :doc:`/man-pages/condor_submit` manual page for more
 details about this command.
 
 The submitter's entire environment can be copied into the job ClassAd
 for the job at job submission. The
 **getenv** :index:`getenv<single: getenv; submit commands>` command within the
-submit description file does this, as described at
-Section `condor_submit <../man-pages/condor_submit.html>`_.
+submit description file does this, as described on the 
+:doc:`/man-pages/condor_submit` manual page.
 
 If the environment is set with the
 **environment** :index:`environment<single: environment; submit commands>` command

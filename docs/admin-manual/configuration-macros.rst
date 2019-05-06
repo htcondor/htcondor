@@ -337,8 +337,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     A regular expression that specifies file names to be ignored when
     looking for configuration files within the directories specified via
     ``LOCAL_CONFIG_DIR``. The default expression ignores files with
-    names beginning with a ‘.' or a ‘#', as well as files with names
-    ending in ‘˜'. This avoids accidents that can be caused by treating
+    names beginning with a '.' or a '#', as well as files with names
+    ending in '˜'. This avoids accidents that can be caused by treating
     temporary files created by text editors as configuration files.
 
 ``CONDOR_IDS`` :index:`CONDOR_IDS`

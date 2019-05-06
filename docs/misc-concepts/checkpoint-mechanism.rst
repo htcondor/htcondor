@@ -25,9 +25,9 @@ program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
-HTCondor's resource management functionality. See Section `Running a
-Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_
-for a description of
+HTCondor's resource management functionality. See the 
+:ref:`users-manual/running-a-job-steps:choosing an htcondor universe`
+section for a description of
 the classes of jobs for which HTCondor does not provide checkpoint
 services. :index:`implementation<single: implementation; checkpoint>`
 
@@ -81,14 +81,15 @@ mechanism` section.
 :index:`compression<single: compression; checkpoint>`
 
 HTCondor can produce and use compressed checkpoints. Configuration
-variables (detailed in the :doc:`/admin-manual/configuration-macros` section control whether
-compression is used. The default is to not compress.
+variables (detailed in the :ref:`admin-manual/configuration-macros:condor_shadow
+configuration file entries` section control whether compression is used.
+The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted. An HTCondor pool can also be
 configured with a checkpoint server or servers that serve as a
-repository for checkpoints, as described in the :doc:`/admin-manual/checkpoint-server` section on page
-`The Checkpoint Server <../admin-manual/checkpoint-server.html>`_. When a
+repository for checkpoints, as described in the 
+:doc:`/admin-manual/checkpoint-server` section. When a
 host is configured to use a checkpoint server, jobs submitted on that
 machine write and read checkpoints to and from the server, rather than
 the local disk of the submitting machine, taking the burden of storing
@@ -119,9 +120,8 @@ The message is of the form:
 
 Platforms that use address space randomization will need a modified
 invocation of the program, as described in
-the :doc:`/platform-specific/linux` section on
-page `Linux <../platform-specific/linux.html>`_. The invocation
-disables the address space randomization.
+the :ref:`platform-specific/linux:linux address space randomization` section.
+The invocation disables the address space randomization.
 
 To force the program to write a checkpoint image and stop, send it the
 SIGTSTP signal or press control-Z. To force the program to write a

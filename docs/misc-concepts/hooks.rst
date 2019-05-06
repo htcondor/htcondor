@@ -759,8 +759,8 @@ Configuration
 '''''''''''''
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-section  `Configuration
-Macros <../admin-manual/configuration-macros.html>`_.
+:ref:`admin-manual/configuration-macros:configuration file entries relating to
+hooks`.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark

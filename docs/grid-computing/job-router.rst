@@ -203,12 +203,12 @@ An Example Configuration
 
 The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
-specific to the Job Router are in section  `Configuration
-Macros <../admin-manual/configuration-macros.html>`_. One route is an
-HTCondor site accessed via the Globus gt2 protocol. A second route is a
-PBS site, also accessed via Globus gt2. The third site is an HTCondor
-site accessed by HTCondor-C. The *condor_job_router* daemon does not
-know which site will be best for a given job. The policy implemented in
+specific to the Job Router are in the 
+:ref:`admin-manual/configuration-macros:condor_job_router configuration file
+entries` section. One route is an HTCondor site accessed via the Globus gt2
+protocol. A second route is a PBS site, also accessed via Globus gt2. The third
+site is an HTCondor site accessed by HTCondor-C. The *condor_job_router* daemon
+does not know which site will be best for a given job. The policy implemented in
 this sample configuration stops sending more jobs to a site, if ten jobs
 that have already been sent to that site are idle.
 
@@ -224,7 +224,8 @@ convenient way to set up and install a trusted CA, if needed.
 
 Note that, as of version 8.5.6, the configuration language supports
 multi-line values, as shown in the example below (see the
-:doc:`/admin-manual/introduction-to-configuration` section for more details).
+:ref:`admin-manual/introduction-to-configuration:multi-line values` section
+for more details).
 
 ::
 

@@ -35,8 +35,8 @@ Where reasonable, they behave like Python dictionaries::
    >>> print sub.expand("baz")
    1
 
-The available attributes - and their semantics - are relatively well documented in the ``condor_submit``
-`online help <http://research.cs.wisc.edu/htcondor/manual/v8.5/condor_submit.html>`_; we won't repeat them
+The available attributes - and their semantics - are relatively well documented in the
+:doc:`/man-pages/condor_submit` man page; we won't repeat them
 here.  A minimal, but realistic submit object may look like the following::
 
    >>> sub = htcondor.Submit({"executable": "/bin/sleep", "arguments": "5m"})

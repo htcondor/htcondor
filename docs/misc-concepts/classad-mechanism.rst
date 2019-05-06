@@ -807,7 +807,7 @@ characters other than these as options are ignored.
     ``pattern`` does not describe a valid regular expression, returns
     ``ERROR``. :index:`regexps()<single: regexps(); ClassAd functions>`
 ``String regexps``
-    ``(String pattern, String target, String substitute [ , String options ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. When ``target`` matches the regular
     expression given by ``pattern``, the string ``substitute`` is
@@ -815,7 +815,7 @@ characters other than these as options are ignored.
     a string, returns ``ERROR``.
     :index:`replace()<single: replace(); ClassAd functions>`
 ``String replace``
-    ``(String pattern, String target, String substitute [ , String options      ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where the first substring that matches ``pattern`` is
@@ -824,7 +824,7 @@ characters other than these as options are ignored.
     argument is not a string, returns ``ERROR``.
     :index:`replaceall()<single: replaceall(); ClassAd functions>`
 ``String replaceall``
-    ``(String pattern, String target, String substitute [ ,      String options ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where every substring that matches ``pattern`` is
@@ -833,7 +833,7 @@ characters other than these as options are ignored.
     any argument is not a string, returns ``ERROR``.
     :index:`stringList_regexpMember()<single: stringList_regexpMember(); ClassAd functions>`
 ``Boolean stringList_regexpMember``
-    ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
+    ``(String pattern, String list [ , String delimiter ] [ , String options ])``
     Uses the description of a regular expression given by string
     ``pattern`` to scan through the list of strings in ``list``. Returns
     ``TRUE`` when one of the strings in ``list`` is a regular expression

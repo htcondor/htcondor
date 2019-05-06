@@ -621,7 +621,7 @@ DAG Submission
 :index:`DAG submission<single: DAG submission; DAGMan>`
 
 A DAG is submitted using the tool *condor_submit_dag*. The manual
-page `2248 <Condorsubmitdag.html#x150-109200012>`_ details the
+page for :doc:`/man-pages/condor_submit_dag` details the
 command. The simplest of DAG submissions has the syntax
 
 *condor_submit_dag* *DAGInputFileName*
@@ -680,8 +680,8 @@ represents a single HTCondor proc that requires 4 MB of input files, and
 the proc will run in a directory with a volume of 100 MB of free space.
 Using the argument **-maxjobs 25** guarantees that a maximum of 25
 clusters, using a maximum of 100 MB of space, will be submitted to
-HTCondor at one time. (See the *condor_submit_dag* man page
-( `12 <Condorsubmitdag.html#x150-109200012>`_) for more information.
+HTCondor at one time. (See the :doc:`/man-pages/condor_submit_dag` manual
+page) for more information.
 Also see the equivalent ``DAGMAN_MAX_JOBS_SUBMITTED``
 :index:`DAGMAN_MAX_JOBS_SUBMITTED` configuration option
 (ref:`admin-manual/configuration-macros:configuration file entries for dagman`).
@@ -3866,8 +3866,8 @@ reporting the metrics if the *condor_dagman* job is removed, or if the
 DAG drains from the queue because of being halted by a halt file.
 
 The metrics are reported by the *condor_dagman_metrics_reporter*
-executable as described in the manual page at
-`1891 <Condordagmanmetricsreporter.html#x110-76900012>`_.
+executable as described in the :doc:`/man-pages/condor_dagman_metrics_reporter`
+manual page.
 
 DAGMan and Accounting Groups
 ----------------------------

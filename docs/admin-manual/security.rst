@@ -446,51 +446,51 @@ by ``SEC_*_NEGOTIATION``. ``SEC_DEFAULT_NEGOTIATION`` is a variable
 representing the entire set of configuration variables for
 ``NEGOTIATION``. For the client side setting, the only definitions that
 make sense are ``REQUIRED`` and ``NEVER``. For the daemon side setting,
-the ``PREFERRED`` value makes no sense. Table `3.2 <#x36-2720012>`_
+the ``PREFERRED`` value makes no sense. Table 3.2
 shows how security negotiation resolves various client-daemon
 combinations of security negotiation policy settings. Within the table,
 Yes means the security negotiation will take place. No means it will
 not. Fail means that the policy settings are incompatible and the
 communication cannot continue.
 
---------------
-
-+-----------+------------+--------+-------+--------+
-| Client    | NEVER      | No     | No    | Fail   |
-+-----------+------------+--------+-------+--------+
-| Setting   | REQUIRED   | Fail   | Yes   | Yes    |
-+-----------+------------+--------+-------+--------+
-
-|
++------------------------+------------------------------+
+|                        | Daemon Setting               |
++                        +--------+----------+----------+
+|                        | NEVER  | OPTIONAL | REQUIRED |
++-----------+------------+--------+----------+----------+
+| Client    | NEVER      | No     | No       | Fail     |
+| Setting   +------------+--------+----------+----------+
+|           | REQUIRED   | Fail   | Yes      | Yes      |
++-----------+------------+--------+----------+----------+
 
 Table 3.2: Resolution of security negotiation.
 
---------------
 
 Enabling authentication, encryption, and integrity checks is dependent
 on security negotiation taking place. The enabled security negotiation
 further sets the policy for these other features.
-Table `3.3 <#x36-2720023>`_ shows how security features are resolved
+Table 3.3 shows how security features are resolved
 for client-daemon combinations of security feature policy settings. Like
-Table `3.2 <#x36-2720012>`_, Yes means the feature will be utilized.
+Table 3.2, Yes means the feature will be utilized.
 No means it will not. Fail implies incompatibility and the feature
 cannot be resolved.
 
---------------
-
-+-----------+-------------+--------+-------+-------+-------+
-| Client    | OPTIONAL    | No     | No    | Yes   | Yes   |
-+-----------+-------------+--------+-------+-------+-------+
-| Setting   | PREFERRED   | No     | Yes   | Yes   | Yes   |
-+-----------+-------------+--------+-------+-------+-------+
-|           | REQUIRED    | Fail   | Yes   | Yes   | Yes   |
-+-----------+-------------+--------+-------+-------+-------+
-
-|
++------------------------+------------------------------------------+
+|                        | Daemon Setting                           |
+|                        +--------+----------+-----------+----------+
+|                        | NEVER  | OPTIONAL | PREFERRED | REQUIRED |
++-----------+------------+--------+----------+-----------+----------+
+| Client    | NEVER      | No     | No       | No        | Fail     |
+| Setting   +------------+--------+----------+-----------+----------+
+|           | OPTIONAL   | No     | No       | Yes       | Yes      |
++           +------------+--------+----------+-----------+----------+
+|           | PREFERRED  | No     | Yes      | Yes       | Yes      |
++           +------------+--------+----------+-----------+----------+
+|           | REQUIRED   | Fail   | Yes      | Yes       | Yes      |
++-----------+------------+--------+----------+-----------+----------+
 
 Table 3.3: Resolution of security features.
 
---------------
 
 The enabling of encryption and/or integrity checks is dependent on
 authentication taking place. The authentication provides a key exchange.

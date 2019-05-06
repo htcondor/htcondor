@@ -999,6 +999,13 @@ Job ClassAd Attributes
     executable such as *condor_q* will instead use this string. For
     interactive jobs that do not have a submit description file, this
     string will default to ``"Interactive job"``.
+    :index:`JobDisconnectedDate<single: JobDisconnectedDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobDisconnectedDate>`
+
+``JobDisconnectedDate``
+    Time at which the *condor_shadow* and *condor_starter* become disconnected.
+    Set to ``Undefined`` when a succcessful reconnect occurs. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
     :index:`JobLeaseDuration<single: JobLeaseDuration; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 

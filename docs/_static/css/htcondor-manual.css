@@ -3,7 +3,9 @@ table.indextable {
 }
 
 table.indextable li {
+	max-width: 350px;
 	margin-left: 10px;
+	word-wrap: break-word;
 }
 
 /* override table width restrictions */

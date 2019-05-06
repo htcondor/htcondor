@@ -100,7 +100,7 @@ Options
     desired attribute. Like ``printf(3)``-style formats, one may include
     other text that will be reproduced directly. A format without any
     conversion specifiers may be specified, but an attribute is still
-    required. Include a backslash followed by an ‘n' to specify a line
+    required. Include a backslash followed by an 'n' to specify a line
     break.
  **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
     (display option) Display attribute(s) or expression(s) formatted in

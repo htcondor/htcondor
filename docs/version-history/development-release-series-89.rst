@@ -10,7 +10,7 @@ Version 8.9.2
 
 Release Notes:
 
--  HTCondor version 8.9.2 released on ______, 2019.
+-  HTCondor version 8.9.2 is scheduled for release on June 4, 2019.
 
 New Features:
 

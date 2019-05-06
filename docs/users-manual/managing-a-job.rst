@@ -4,10 +4,8 @@ Managing a Job
 This section provides a brief summary of what can be done once jobs are
 submitted. The basic mechanisms for monitoring a job are introduced, but
 the commands are discussed briefly. You are encouraged to look at the
-man pages of the commands referred to (located in Chapter `Command
-Reference Manual (man pages) <../man-pages/index.html>`_ beginning on
-page `Command Reference Manual (man
-pages) <../man-pages/index.html>`_) for more information.
+man pages of the commands referred to (located in :doc:`/man-pages/index`) 
+for more information.
 
 When jobs are submitted, HTCondor will attempt to find resources to run
 the jobs. A list of all those with jobs submitted may be obtained
@@ -77,10 +75,8 @@ I
     waiting for a machine to become available.
 H
     The job is the hold state. In the hold state, the job will not be
-    scheduled to run until it is released. See the *condor_hold* manual
-    page located on page `condor_hold <../man-pages/condor_hold.html>`_ and the
-    *condor_release* manual page located on
-    page `condor_release <../man-pages/condor_release.html>`_.
+    scheduled to run until it is released. See the :doc:`/man-pages/condor_hold`
+    and the :doc:`/man-pages/condor_release` manual pages.
 
 The RUN_TIME time reported for a job is the time that has been
 committed to the job.
@@ -200,11 +196,8 @@ available.
 Jobs in universes other than the standard universe that are running when
 placed on hold will start over from the beginning when released.
 
-The manual page for *condor_hold* on
-page `condor_hold <../man-pages/condor_hold.html>`_ and the manual
-page for *condor_release* on
-page `condor_release <../man-pages/condor_release.html>`_ contain
-usage details.
+The :doc:`/man-pages/condor_hold` and the :doc:`/man-pages/condor_release`
+contain usage details.
 
 Changing the priority of jobs
 -----------------------------
