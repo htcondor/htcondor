@@ -37,7 +37,7 @@ if (WINDOWS)
 
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
-		condor_post_external( boost "boost" "lib" )
+		condor_post_external( boost "boost" "lib" "" )
 	endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
