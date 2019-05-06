@@ -44,7 +44,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	TransferDaemon *td = NULL;
-	MyString rand_id;
+	std::string rand_id;
 	MyString fquser;
 	ClassAd reqad, respad;
 	std::string jids, jids_allow, jids_deny;
@@ -514,7 +514,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			// XXX Should I test this against the keys in the manager table
 			// to ensure there are unique ids for the transferds I have
 			// requested to invoke--a collision would be nasty here.
-			rand_id.randomlyGenerateInsecureHex(64); 
+			randomlyGenerateInsecureHex(rand_id, 64);
 
 			td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
 

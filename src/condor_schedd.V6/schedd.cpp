@@ -8936,7 +8936,7 @@ bool
 Scheduler::startTransferd( int cluster, int proc )
 {
 	MyString fquser;
-	MyString rand_id;
+	std::string rand_id;
 	TransferDaemon *td = NULL;
 	ClassAd *jobad = NULL;
 	MyString desc;
@@ -8963,7 +8963,7 @@ Scheduler::startTransferd( int cluster, int proc )
 
 		// XXX fix this rand_id to be dealt with better, like maybe the tdman
 		// object assigns it or something.
-		rand_id.randomlyGenerateInsecureHex(64);
+		randomlyGenerateInsecureHex(rand_id, 64);
 		td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
 		ASSERT(td != NULL);
 
