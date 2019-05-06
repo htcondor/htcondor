@@ -63,8 +63,8 @@ static void add_seed_prng() {
 }
 
 
-/* returns a random integer that is effectively impossible for an attacker
-   to guess.
+/* returns a random non-negative integer that is effectively impossible
+   for an attacker to guess.
  */
 int get_csrng_int( void )
 {
@@ -76,13 +76,13 @@ int get_csrng_int( void )
 #else
 	#error OpenSSL is required to build this function
 #endif
-	return retval;
+	return retval & INT_MAX;
 }
 
 
 /* returns a random unsigned int from the PRNG.
  */
-int get_csrng_uint( void )
+unsigned int get_csrng_uint( void )
 {
 	add_seed_prng();
 

@@ -38,12 +38,13 @@ unsigned int get_random_uint_insecure(void);
 float get_random_float_insecure(void);
 int timer_fuzz(int period);
 
-// The cryptographically securit RNG variants.  These are higher quality,
+// The cryptographically secure RNG variants.  These are higher quality,
 // mostly-non-blocking random number generators suitable for things like
 // session keys.  An attacker would need to observe an enormous number of
 // outputs of these to guess the PRNG state.
+// get_csrng_int() returns a non-negative value.
 int get_csrng_int(void);
-int get_csrng_uint(void);
+unsigned int get_csrng_uint(void);
 
 // We do not currently have a true RNG (i.e., /dev/random on linux); those
 // are more suitable for long-term key material, which HTCondor does not

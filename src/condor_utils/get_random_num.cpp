@@ -36,7 +36,7 @@
 //
 
 
-/* returns a random positive integer, trying to use best random number
+/* returns a random non-negative integer, trying to use best random number
    generator available on each platform */
 int get_random_int_insecure( void )
 {
