@@ -1067,6 +1067,15 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 			method_bitmask &= ~CAUTH_GSI;
 		}
+#ifdef HAVE_EXT_SCITOKENS
+		if ( (method_bitmask & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+#else
+		if (method_bitmask & CAUTH_SCITOKENS)
+#endif
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
+			method_bitmask &= ~CAUTH_SCITOKENS;
+		}
 #if defined(HAVE_EXT_MUNGE)
 		if ( (method_bitmask & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
 #else
@@ -1136,6 +1145,15 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 		client_methods &= ~CAUTH_GSI;
 		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	}
+#ifdef HAVE_EXT_SCITOKENS
+	if ( (shouldUseMethod & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+#else
+	if (shouldUseMethod & CAUTH_SCITOKENS)
+#endif
+	{
+		dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
+		shouldUseMethod &= ~CAUTH_SCITOKENS;
 	}
 #if defined(HAVE_EXT_MUNGE)
 	if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )

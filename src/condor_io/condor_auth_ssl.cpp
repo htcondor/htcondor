@@ -38,10 +38,10 @@
 #if defined(HAVE_EXT_SCITOKENS)
 #include "condor_attributes.h"
 #include <scitokens/scitokens.h>
+#endif
 
 #include <algorithm>
 #include <sstream>
-#endif
 
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
@@ -81,6 +81,7 @@ static SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #else
 static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
+#ifdef HAVE_EXT_SCITOKENS
 static int (*scitoken_deserialize_ptr)(const char *value, SciToken *token, const char **allowed_issuers, char **err_msg) = nullptr;
 static int (*scitoken_get_claim_string_ptr)(const SciToken token, const char *key, char **value, char **err_msg) = nullptr;
 static void (*scitoken_destroy_ptr)(SciToken token) = nullptr;
@@ -88,6 +89,7 @@ static Enforcer (*enforcer_create_ptr)(const char *issuer, const char **audience
 static void (*enforcer_destroy_ptr)(Enforcer) = nullptr;
 static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scitokens, Acl **acls, char **err_msg) = nullptr;
 static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
+#endif
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -192,6 +194,7 @@ bool Condor_Auth_SSL::Initialize()
 		m_initSuccess = true;
 	}
 
+#ifdef HAVE_EXT_SCITOKENS
 	dlerror();
 	dl_hdl = nullptr;
 	if (
@@ -211,6 +214,7 @@ bool Condor_Auth_SSL::Initialize()
 		}
 		m_initSuccess = false;
 	}
+#endif
 
 #else
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
@@ -246,6 +250,8 @@ bool Condor_Auth_SSL::Initialize()
 #else
 	SSL_method_ptr = TLS_method;
 #endif
+
+#ifdef HAVE_EXT_SCITOKENS
 	scitoken_deserialize_ptr = scitoken_deserialize;
 	scitoken_get_claim_string_ptr = scitoken_get_claim_string;
 	scitoken_destroy_ptr = scitoken_destroy;
@@ -254,6 +260,7 @@ bool Condor_Auth_SSL::Initialize()
 	enforcer_generate_acls_ptr = enforcer_generate_acls;
 	enforcer_acl_free_ptr = enforcer_acl_free;
 	m_initSuccess = true;
+#endif
 #endif
 
 	m_initTried = true;
