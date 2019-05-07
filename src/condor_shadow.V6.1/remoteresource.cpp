@@ -2028,6 +2028,7 @@ RemoteResource::beginExecution( void )
 void
 RemoteResource::hadContact( void )
 {
+	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
 }
 
