@@ -261,7 +261,7 @@ Grid Universe
 
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
-management systems. The :doc:`/grid-computing/grid-universe` section has details
+management systems. :doc:`/grid-computing/grid-universe` section has details
 on using the Grid universe. The manual page for :doc:`/man-pages/condor_submit`
 has detailed descriptions of the grid-related attributes.
 

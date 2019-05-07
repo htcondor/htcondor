@@ -2824,8 +2824,8 @@ These macros control the *condor_master*.
     verify the program, and it will store the path and program name.
     When the *condor_master* shuts down (that is, just before it
     exits), the program is then executed as described above. The manual
-    page for *condor_set_shutdown* on :doc:`/man-pages/condor_set_shutdown`
-    contains details on the use of this program.
+    page for :doc:`/man-pages/condor_set_shutdown` contains details on the
+    use of this program.
 
     NOTE: This program will be run with root privileges under Unix or
     administrator privileges under Windows. The administrator must

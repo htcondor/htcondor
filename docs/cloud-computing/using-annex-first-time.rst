@@ -129,6 +129,7 @@ machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
 ::
+
     # ~/condor-8.7.8/local/condor_config.local
 
     NETWORK_INTERFACE = *

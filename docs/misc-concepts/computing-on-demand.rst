@@ -85,8 +85,8 @@ the machine (usually in a local configuration file).
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
 authentication methods described in
-the :doc:`/admin-manual/security` section on HTCondor's
-Security Model. If one of these methods cannot be used, then file system
+the :ref:`admin-manual/security:htcondor's security model` section. 
+If one of these methods cannot be used, then file system
 authentication may be used when directly logging in to that machine (to
 be claimed) and issuing the command locally.
 

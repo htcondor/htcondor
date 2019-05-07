@@ -94,12 +94,14 @@ Returning From a Low Power State
 
 The HTCondor command line tool *condor_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
-*condor_power* manual page (:doc:`/man-pages/condor_power`).
+:doc:`/man-pages/condor_power` manual page.
 :index:`condor_rooster daemon`
 
 To automatically call *condor_power* under specific conditions,
 *condor_rooster* may be used. The configuration options for
-*condor_rooster* are described in the :doc:`/admin-manual/configuration-macros` section.
+*condor_rooster* are described in the 
+:ref:`admin-manual/configuration-macros:condor_rooster configuration file
+macros` section.
 
 Keeping a ClassAd for a Hibernating Machine
 -------------------------------------------

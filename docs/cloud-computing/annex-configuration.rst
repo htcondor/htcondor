@@ -127,7 +127,7 @@ Expert Settings
 Developer Settings
 ------------------
 
- ``ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
+``ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
     The name (or ARN) of the Lambda function on AWS which
     *condor_annex* should use to check if the configured collector can
     be contacted from AWS.
@@ -143,5 +143,3 @@ Developer Settings
 ``ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`
     The Lambda function which implements the lease (duration) for Spot
     instances. No default.
-
-

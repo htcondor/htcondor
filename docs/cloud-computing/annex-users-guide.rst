@@ -281,7 +281,7 @@ general use, use the -no-owner flag to run jobs from anyone.
 
 Also starting in v8.7.1, the default behaviour for an annex instance is
 to run only jobs which have the MayUseAWS attribute set (to true). To
-submit a job with MayUseAWS set to true, add +MayUseAWS = TRUE to the
+submit a job with MayUseAWS set to true, add ``+MayUseAWS = TRUE`` to the
 submit file somewhere before the queue command. To allow an existing job
 to run in the annex, use condor_q_edit. For instance, if you'd like
 cluster 1234 to run on AWS:
@@ -467,8 +467,7 @@ with instance types, but this is not required.
 Expert Mode
 '''''''''''
 
-The man page (:doc:`/man-pages/condor_annex`) lists
-the "expert mode" options.
+The :doc:`/man-pages/condor_annex` manual page lists the "expert mode" options.
 
 Four of the "expert mode" options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**

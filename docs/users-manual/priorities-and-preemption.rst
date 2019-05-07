@@ -82,7 +82,7 @@ ships with HTCondor is configured to only preempt lower priority jobs
 that have run for at least one hour. So in the previous example, in the
 worse case it could take up to a maximum of one hour until the higher
 priority user receives a fair share of machines. For a general
-discussion of limiting preemption, please see 
+discussion of limiting preemption, please see the
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
 section of the Administrator's manual.
 

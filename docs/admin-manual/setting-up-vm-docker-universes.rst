@@ -17,7 +17,8 @@ What follows is not a comprehensive list of the options that help set up
 to use the **vm** universe; rather, it is intended to serve as a
 starting point for those users interested in getting **vm** universe
 jobs up and running quickly. Details of configuration variables are in
-the :doc:`/admin-manual/configuration-macros` section.
+the :ref:`admin-manual/configuration-macros:configuration file entries relating
+to virtual machines` section.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions. We have successfully used
@@ -296,7 +297,8 @@ variable ``DOCKER`` :index:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor_starter* daemon has been given a password-less sudo permission
 to start the container as root. Details of the ``DOCKER`` configuration
-variable are in the :doc:`/admin-manual/configuration-macros` section.
+variable are in the :ref:`admin-manual/configuration-macros:condor_startd
+configuration file macros` section.
 
 Docker must be installed as root by following these steps on an
 Enterprise Linux machine.

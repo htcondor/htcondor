@@ -335,6 +335,7 @@ point in the negotiations has been reached. The possible states are
 .. figure:: /_images/machine-states-transitions.png
   :width: 600
   :alt: Machine states and the possible transitions between the states
+  :align: center
   
   Machine states and the possible transitions between the states.
 
@@ -617,6 +618,7 @@ transition numbers referred to in this manual will be **bold**.
 .. figure:: /_images/machine-states-activities.png
   :width: 700
   :alt: Machine States and Activities
+  :align: center
 
   Machine States and Activities
 
@@ -2065,13 +2067,18 @@ variables.
 
 -  ``SLOTS_CONNECTED_TO_CONSOLE``
    :index:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
 -  ``SLOTS_CONNECTED_TO_KEYBOARD``
    :index:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
 -  ``DISCONNECTED_KEYBOARD_IDLE_BOOST``
    :index:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
 
 Each slot has its own machine ClassAd. Yet, the policy expressions for
 the multi-core machine are propagated and inherited from configuration
@@ -2279,26 +2286,26 @@ on a per-slot basis. Here is another example:
 
 For this example, the *condor_startd* ClassAds are
 
-    slot1:
+slot1:
 
-    ::
+::
 
-        favorite_color = "blue"
-        favorite_season = "spring"
+    favorite_color = "blue"
+    favorite_season = "spring"
 
-    slot2:
+slot2:
 
-    ::
+::
 
-        favorite_color = "green"
-        favorite_season = "spring"
+    favorite_color = "green"
+    favorite_season = "spring"
 
-    slot3:
+slot3:
 
-    ::
+::
 
-        favorite_color = "blue"
-        favorite_season = "summer"
+    favorite_color = "blue"
+    favorite_season = "summer"
 
 Dynamic Provisioning: Partitionable and Dynamic Slots
 '''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2319,12 +2326,16 @@ than one job is or can be matched to a single slot. In this example,
 Slot1 is identified as a partitionable slot and has the following
 resources:
 
+::
+
     cpu = 10
     memory = 10240
     disk = BIG
 
 Assume that JobA is allocated to this slot. JobA includes the following
 requirements:
+
+::
 
     cpu = 3
     memory = 1024
@@ -2337,6 +2348,8 @@ substring ``Slot1_1``.
 
 After allocation, the partitionable Slot1 advertises that it has the
 following resources still available:
+
+::
 
     cpu = 7
     memory = 9216
@@ -2365,6 +2378,8 @@ configuration variables:
 
 In a pool using dynamic provisioning, jobs can have extra, and desired,
 resources specified in the submit description file:
+
+::
 
     request_cpus
     request_memory
@@ -2637,7 +2652,9 @@ This example policy tells *condor_defrag* to initiate draining jobs
 from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
-*condor_defrag* daemon may be found in the :doc:`/admin-manual/configuration-macros` section.
+*condor_defrag* daemon may be found in the 
+:ref:`admin-manual/configuration-macros:condor_defrag configuration file
+macros` section.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining

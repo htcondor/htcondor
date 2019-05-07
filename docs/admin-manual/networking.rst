@@ -195,18 +195,19 @@ and dynamic (apparently random) ports for everything else. See
 assigned port is desired for the *condor_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
-single port. See the :doc:`/admin-manual/configuration-macros` section for more
-information.
+single port. See the :ref:`admin-manual/configuration-macros:condor_shared_port
+configuration file macros` section for more information.
 
 The configuration variables ``HIGHPORT`` :index:`HIGHPORT` and
 ``LOWPORT`` :index:`LOWPORT` facilitate setting a restricted range
 of ports that HTCondor will use. This may be useful when some machines
 are behind a firewall. The configuration macros ``HIGHPORT`` and
 ``LOWPORT`` will restrict dynamic ports to the range specified. The
-configuration variables are fully defined in the :doc:`/admin-manual/configuration-macros` section. All of these
-ports must be greater than 0 and less than 65,536. Note that both
-``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor version
-6.6.8. In general, use ports greater than 1024, in order to avoid port
+configuration variables are fully defined in the 
+:ref:`admin-manual/configuration-macros:network-related configuration file
+entries` section. All of these ports must be greater than 0 and less than 65,536.
+Note that both ``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor
+version 6.6.8. In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
 using ports greater than 1024 is that daemons and tools are often not
 run as root, and only root may listen to a port lower than 1024. Also,
@@ -217,12 +218,12 @@ The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
 variables ``IN_HIGHPORT`` :index:`IN_HIGHPORT`, ``IN_LOWPORT``
 :index:`IN_LOWPORT`, ``OUT_HIGHPORT`` :index:`OUT_HIGHPORT`,
-and ``OUT_LOWPORT`` :index:`OUT_LOWPORT`. See
-the :doc:`/admin-manual/configuration-macros` section for complete
-definitions of these configuration variables. A range of ports lower
-than 1024 for daemons running as root is appropriate for incoming ports,
-but not for outgoing ports. The use of ports below 1024 (versus above
-1024) has security implications; therefore, it is inappropriate to
+and ``OUT_LOWPORT``. :index:`OUT_LOWPORT` See
+the :ref:`admin-manual/configuration-macros:network-related configuration
+file entries` section for complete definitions of these configuration variables.
+A range of ports lower than 1024 for daemons running as root is appropriate for
+incoming ports, but not for outgoing ports. The use of ports below 1024
+(versus above 1024) has security implications; therefore, it is inappropriate to
 assign a range that crosses the 1024 boundary.
 
 NOTE: Setting ``HIGHPORT`` and ``LOWPORT`` will not automatically force
@@ -353,7 +354,7 @@ setting the configuration variable
 
 ::
 
-      USE_SHARED_PORT = True
+    USE_SHARED_PORT = True
 
 the *condor_shared_port* daemon is treated specially. ``SHARED_PORT``
 :index:`SHARED_PORT` is automatically added to ``DAEMON_LIST``
@@ -362,7 +363,7 @@ down all daemons except for the *condor_master*, will also leave the
 *condor_shared_port* running. This prevents the *condor_master* from
 getting into a state where it can no longer receive commands.
 
-Also when ``  USE_SHARED_PORT = True``, the *condor_collector* needs to
+Also when ``USE_SHARED_PORT = True``, the *condor_collector* needs to
 be configured to use a shared port, so that connections to the shared
 port that are destined for the *condor_collector* can be forwarded. As
 an example, the shared port socket name of the *condor_collector* with
@@ -394,7 +395,7 @@ SOAP commands cannot be sent through the *condor_shared_port* daemon.
 However, a daemon may be configured to open a fixed, non-shared port, in
 addition to using a shared port. This is done both by setting
 ``USE_SHARED_PORT = True`` and by specifying a fixed port for the daemon
-using <SUBSYS>_ARGS = -p <portnum>.
+using ``<SUBSYS>_ARGS = -p <portnum>``.
 
 The TCP connections required to manage standard universe jobs do not
 make use of shared ports. Therefore, if the firewall is configured to
@@ -795,7 +796,7 @@ forwarding updates to any *condor_collector* daemons specified in
 ``CONDOR_VIEW_HOST``, where UDP is used. These configuration variables
 control the protocol used:
 
- ``UPDATE_COLLECTOR_WITH_TCP`` :index:`UPDATE_COLLECTOR_WITH_TCP`
+``UPDATE_COLLECTOR_WITH_TCP`` :index:`UPDATE_COLLECTOR_WITH_TCP`
     When set to ``False``, the HTCondor daemons will use UDP to update
     the *condor_collector*, instead of the default TCP. Defaults to
     ``True``.
@@ -867,7 +868,7 @@ them; if both are, they will prefer the first address listed by that
 daemon.
 
 A daemon may be listening on one, some, or all of its machine's
-addresses. (See ``NETWORK_INTERFACE`` :index:`NETWORK_INTERFACE`.)
+addresses. :index:`NETWORK_INTERFACE` (See ``NETWORK_INTERFACE``)
 Daemons may presently list at most two addresses, one IPv6 and one IPv4.
 Each address is the "most public" address of its protocol; by default,
 the IPv6 address is listed first. HTCondor selects the "most public"

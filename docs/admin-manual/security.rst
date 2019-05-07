@@ -325,16 +325,16 @@ SCHEDD:
 
 MASTER: All commands are registered with ``ADMINISTRATOR`` access:
 
-restart
+``restart``
     Master restarts itself (and all its children)
 
-off
+``off``
     Master shuts down all its children
 
-off -master
+``off -master``
     Master shuts down all its children and exits
 
-on
+``on``
     Master spawns all the daemons it is configured to spawn
 
 Security Negotiation
@@ -533,8 +533,9 @@ authentication and/or encryption are
 
 These macros are defined by a comma or space delimited list of possible
 methods to use. The :ref:`admin-manual/security:authentication` section
-lists all implemented authentication methods. Section `3.8.5 <#x36-2860003.8.5>`_
-lists all implemented encryption methods.
+lists all implemented authentication methods. The 
+:ref:`admin-manual/security:encryption` section lists all implemented
+encryption methods.
 
 Authentication
 --------------
@@ -1818,7 +1819,7 @@ the local configuration file:
 
 ::
 
-    ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
+    ALLOW_OWNER = username@cs.wisc.edu/hostname.cs.wisc.edu
 
 In this example the owner has a login of username, and the machine's
 name is represented by hostname.
@@ -1990,9 +1991,11 @@ HTCondor can be registered with:
     command to get their jobs to periodically checkpoint, even if the
     users do not have an account on the machine where the jobs execute.
 
-    **IMPORTANT:** For a machine to join an HTCondor pool, the machine
-    must have both ``WRITE`` permission **AND** ``READ`` permission.
-    ``WRITE`` permission is not enough.
+    .. note::
+
+        For a machine to join an HTCondor pool, the machine
+        must have both ``WRITE`` permission **AND** ``READ`` permission.
+        ``WRITE`` permission is not enough.
 
 ``ADMINISTRATOR``
     Machines with ``ADMINISTRATOR`` access are granted additional
@@ -2004,11 +2007,14 @@ HTCondor can be registered with:
     that are used by HTCondor and system administrators as their primary
     workstations, or the machines running as the pool's central manager.
 
-    **IMPORTANT:** Giving ``ADMINISTRATOR`` privileges to a machine
-    grants administrator access for the pool to **ANY USER** on that
-    machine. This includes any users who can run HTCondor jobs on that
-    machine. It is recommended that ``ADMINISTRATOR`` access is granted
-    with due diligence.
+    .. note::
+
+
+        Giving ``ADMINISTRATOR`` privileges to a machine
+        grants administrator access for the pool to **ANY USER** on that
+        machine. This includes any users who can run HTCondor jobs on that
+        machine. It is recommended that ``ADMINISTRATOR`` access is granted
+        with due diligence.
 
 ``OWNER``
     This level of access is required for commands that the owner of a
@@ -2663,7 +2669,7 @@ Notes:
    account, so just using the default behavior is sufficient to avoid
    problems with lurker processes. See
    :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
-   user`, and the :doc:`/man-pages/condor_store_cred` for details.
+   user`, and the :doc:`/man-pages/condor_store_cred` manual page for details.
 
 #. The *condor_starter* logs a line similar to
 

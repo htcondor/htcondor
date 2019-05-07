@@ -286,7 +286,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :doc:`/misc-concepts/hooks` section.
+the :ref:`misc-concepts/hooks:hooks for a job router` section.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.

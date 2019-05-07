@@ -30,9 +30,8 @@ command line. A program that opens a static file, given by file name,
 every time will need to use a separate subdirectory for the output of
 each run.
 
-The *condor_submit* manual page is on :doc:`/man-pages/condor_submit`
-and contains a complete and full description of how to use *condor_submit*.
-It also includes descriptions of
+The :doc:`/man-pages/condor_submit` manual page contains a complete and full
+description of how to use *condor_submit*. It also includes descriptions of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
@@ -341,7 +340,7 @@ Variables in the Submit Description File
 There are automatic variables for use within the submit description
 file.
 
- ``$(Cluster)`` or ``$(ClusterId)``
+``$(Cluster)`` or ``$(ClusterId)``
     Each set of queued jobs from a specific user, submitted from a
     single submit host, sharing an executable have the same value of
     ``$(Cluster)`` or ``$(ClusterId)``. The first cluster of jobs are
@@ -675,10 +674,11 @@ as given in these definitions.
     -  ``a`` When combined with the q option, causes the return value to
        be enclosed within single quotes.
 
- ``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
- ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
- ``$INT(item-to-convert)`` or
-``$INT(item-to-convert, format-specifier)``
+``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
+
+``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
+
+``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
     a C language or Perl format specifier. If no ``format-specifier`` is
@@ -694,7 +694,7 @@ as given in these definitions.
 
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
- ``$RANDOM_INTEGER(min, max [, step])``
+``$RANDOM_INTEGER(min, max [, step])``
     :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
@@ -705,8 +705,7 @@ as given in these definitions.
 
           $RANDOM_INTEGER(0, 8, 2)
 
- ``$REAL(item-to-convert)`` or
-``$REAL(item-to-convert, format-specifier)``
+``$REAL(item-to-convert)`` or ``$REAL(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert`` for a floating point type. The
     ``format-specifier`` is a C language or Perl format specifier. If no
@@ -1922,7 +1921,7 @@ program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
 Cross submission works for all universes except ``scheduler`` and
-``local``. See the :doc:`/grid-computing/grid-universe` section for how matchmaking
+``local``. See :doc:`/grid-computing/grid-universe` section for how matchmaking
 works in the ``grid`` universe. The burden is on the user to both obtain
 and specify the correct executable for the target architecture. To list
 the architecture and operating systems of the machines in a pool, run

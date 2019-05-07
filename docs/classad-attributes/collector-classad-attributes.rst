@@ -62,7 +62,7 @@ Collector ClassAd Attributes
 
     ::
 
-          CurrentJobsRunningVanilla = 567
+        CurrentJobsRunningVanilla = 567
 
     identifies that the *condor_collector* counts 567 vanilla universe
     jobs currently running. ``<universe>`` is one of ``Unknown``,
@@ -72,7 +72,7 @@ Collector ClassAd Attributes
     Condor.
     :index:`DaemonStartTime<single: DaemonStartTime; ClassAd Collector attribute>`
 
- ``DaemonStartTime``:
+``DaemonStartTime``:
     The time that this daemon was started, represented as the number of
     second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
     :index:`DaemonLastReconfigTime<single: DaemonLastReconfigTime; ClassAd Collector attribute>`
@@ -238,7 +238,7 @@ Collector ClassAd Attributes
     used in Condor.
     :index:`MyAddress<single: MyAddress; ClassAd Collector attribute>`
 
- ``MyAddress``:
+``MyAddress``:
     String with the IP and port address of the *condor_collector*
     daemon which is publishing this ClassAd.
     :index:`MyCurrentTime<single: MyCurrentTime; ClassAd Collector attribute>`

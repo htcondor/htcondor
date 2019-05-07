@@ -2117,7 +2117,6 @@ Job ClassAd Attributes
     :index:`UserLog<single: UserLog; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; UserLog>`
 
-
 ``UserLog``
     The full path and file name on the submit machine of the log file of
     job events.

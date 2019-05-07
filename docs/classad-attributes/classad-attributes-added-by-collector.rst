@@ -52,5 +52,3 @@ ClassAd Attributes Added by the *condor_collector*
     received from the daemon plus the number of updates that the
     *condor_collector* determined were lost. This attribute is added if
     ``COLLECTOR_DAEMON_STATS`` is ``True``.
-
-      

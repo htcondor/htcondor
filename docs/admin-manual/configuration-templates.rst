@@ -19,7 +19,7 @@ macro later in the configuration.
 
 Detailed information about configuration templates (such as the macros
 they set) can be obtained using the *condor_config_val* ``use`` option
-(see :doc:`/man-pages/condor_config_val`). (This
+(see the :doc:`/man-pages/condor_config_val` manual page). (This
 document does not contain such information because the
 *condor_config_val* command is a better way to obtain it.)
 
@@ -58,7 +58,7 @@ There are four ``<category name>`` values. Within a category, a
 predefined, case insensitive name identifies the set of configuration it
 incorporates.
 
- ``ROLE category``
+``ROLE category``
     Describes configuration for the various roles that a machine might
     play within an HTCondor pool. The configuration will identify which
     daemons are running on a machine.
@@ -83,7 +83,7 @@ incorporates.
        manager for the pool. May be combined with ``Submit`` and
        ``Execute`` roles.
 
- ``FEATURE category``
+``FEATURE category``
     Describes configuration for implemented features.
 
     -  ``Remote_Runtime_Config``
@@ -214,7 +214,7 @@ incorporates.
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
 
- ``POLICY category``
+``POLICY category``
     Describes configuration for the circumstances under which machines
     choose to run jobs.
 
@@ -333,7 +333,7 @@ incorporates.
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.
 
- ``SECURITY category``
+``SECURITY category``
     Describes configuration for an implemented security model.
 
     -  ``Host_Based``
@@ -389,30 +389,30 @@ Configuration Template Examples
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+        use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
    ::
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+        use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
 
 -  Update dynamic GPU information every 15 minutes:
 
    ::
 
-       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
+        use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
    the DetectedGPUs line from textttcondor_gpu_discovery:
 
    ::
 
-       #!/usr/bin/env perl 
-       my @attrs = `@ARGV`; 
-       for (@attrs) { 
-       next if ($_ =~ /^Detected/i); 
-       print $_; 
-       } 
+        #!/usr/bin/env perl 
+        my @attrs = `@ARGV`; 
+        for (@attrs) { 
+            next if ($_ =~ /^Detected/i); 
+            print $_; 
+        } 

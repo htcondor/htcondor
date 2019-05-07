@@ -84,7 +84,7 @@ There are three steps necessary towards running a checkpoint server:
 #. Start the checkpoint server.
 #. Configure the pool to use the checkpoint server.
 
- Configure the Checkpoint Server
+Configure the Checkpoint Server
     :index:`configuration of<single: configuration of; checkpoint server>`
 
     Place settings in the local configuration file of the checkpoint
@@ -101,7 +101,7 @@ There are three steps necessary towards running a checkpoint server:
 
     The other optional variables are:
 
-     ``DAEMON_LIST`` :index:`DAEMON_LIST`
+    ``DAEMON_LIST`` :index:`DAEMON_LIST`
         Described in the :ref:`admin-manual/configuration-macros:condor_master
         configuration file macros` section. To have
         the checkpoint server managed by the *condor_master*, the
@@ -115,16 +115,18 @@ There are three steps necessary towards running a checkpoint server:
     the :ref:`admin-manual/configuration-macros:daemon logging configuration
     file entries` section.
 
-     ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG`
+    ``CKPT_SERVER_LOG`` :index:`CKPT_SERVER_LOG`
         The location of the checkpoint server log.
-     ``MAX_CKPT_SERVER_LOG`` :index:`MAX_CKPT_SERVER_LOG`
+
+    ``MAX_CKPT_SERVER_LOG`` :index:`MAX_CKPT_SERVER_LOG`
         Sets the maximum size of the checkpoint server log, before it is
         saved and the log file restarted.
-     ``CKPT_SERVER_DEBUG`` :index:`CKPT_SERVER_DEBUG`
+
+    ``CKPT_SERVER_DEBUG`` :index:`CKPT_SERVER_DEBUG`
         Regulates the amount of information printed in the log file.
         Currently, the only debug level supported is ``D_ALWAYS``.
 
- Start the Checkpoint Server
+Start the Checkpoint Server
     To start the newly configured checkpoint server, restart HTCondor on
     that host to enable the *condor_master* to notice the new
     configuration. Do this by sending a *condor_restart* command from
@@ -137,15 +139,16 @@ There are three steps necessary towards running a checkpoint server:
     by the ``CKPT_SERVER_DIR`` variable, and determine if any of them
     are stale. Stale checkpoint files will be removed.
 
- Configure the Pool to Use the Checkpoint Server
+Configure the Pool to Use the Checkpoint Server
     After the checkpoint server is running, modify a few configuration
     variables to let the other machines in the pool know about the new
     server:
 
-     ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER`
+    ``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER`
         A boolean value that should be set to ``True`` to enable the use
         of the checkpoint server.
-     ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST`
+
+    ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST`
         Provides the full host name of the machine that is now running
         the checkpoint server.
 

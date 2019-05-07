@@ -197,7 +197,7 @@ Jobs in universes other than the standard universe that are running when
 placed on hold will start over from the beginning when released.
 
 The :doc:`/man-pages/condor_hold` and the :doc:`/man-pages/condor_release`
-contain usage details.
+manual pages contain usage details.
 
 Changing the priority of jobs
 -----------------------------
