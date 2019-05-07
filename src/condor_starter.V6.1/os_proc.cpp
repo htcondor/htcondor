@@ -75,6 +75,7 @@ OsProc::OsProc( ClassAd* ad )
 	dumped_core = false;
 	job_not_started = false;
 	m_using_priv_sep = false;
+	singReaperId = -1;
 	UserProc::initialize();
 }
 
@@ -180,7 +181,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// since that will become argv[0] of what we exec(), either
 		// the wrapper or the actual job.
 
-	if( !getArgv0() ) {
+	std::string wrapper;
+	has_wrapper = param(wrapper, "USER_JOB_WRAPPER");
+
+	if( !getArgv0() || has_wrapper ) {
 		args.AppendArg(JobName.c_str());
 	} else {
 		args.AppendArg(getArgv0());
@@ -497,6 +501,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
 		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
 		job_not_started = true;
+		free(affinity_mask);
 		return 0;
 	} else if( Starter->glexecPrivSepHelper() ) {
 			// TODO: if there is some way to figure out the final username,
@@ -524,26 +529,23 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
 		// Support USER_JOB_WRAPPER parameter...
-	char *wrapper = NULL;
-	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
+	if( has_wrapper ) {
 
 			// make certain this wrapper program exists and is executable
-		if( access(wrapper,X_OK) < 0 ) {
+		if( access(wrapper.c_str(),X_OK) < 0 ) {
 			dprintf( D_ALWAYS, 
 					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
-					 wrapper );
-			free( wrapper );
+					 wrapper.c_str() );
 			job_not_started = true;
+			free(affinity_mask);
 			return 0;
 		}
-		has_wrapper = true;
 			// Now, we've got a valid wrapper.  We want that to become
-			// "JobName" so we exec it directly, and we want to put
-			// what was the JobName (with the full path) as the first
-			// argument to the wrapper
-		args.InsertArg(JobName.c_str(),0);
+			// "JobName" so we exec it directly. We also insert the
+			// wrapper filename at the front of args. As a result,
+			// the executable being wrapped is now argv[1] and so forth.
+		args.InsertArg(wrapper.c_str(),0);
 		JobName = wrapper;
-		free(wrapper);
 	}
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 

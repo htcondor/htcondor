@@ -608,9 +608,9 @@ StringList * getDaemonList(char const *param_name,char const *fqh)
         char *tmp = strstr( entry, STR_DAEMON_NAME_FORMAT );
         if (tmp != NULL) { // we found the macro, now expand it
             char * rest = tmp + strlen(STR_DAEMON_NAME_FORMAT);
-            int totalLen = strlen(entry) + strlen(fqh);
+            int totalLen = strlen(entry) + strlen(fqh) + 1;
 
-            // We have our macor, expand it into our host name
+            // We have our macro, expand it into our host name
             buf = (char *) malloc(totalLen);
             memset(buf, 0, totalLen);
 

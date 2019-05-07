@@ -1,5 +1,5 @@
-Users’ Manual
--------------
+Users' Manual
+=============
 
 .. toctree::
    :maxdepth: 2
@@ -19,4 +19,4 @@ Users’ Manual
    docker-universe-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   potential-problems      
+   potential-problems      

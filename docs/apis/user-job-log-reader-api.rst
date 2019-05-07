@@ -1,16 +1,14 @@
-      
-
 The HTCondor User and Job Log Reader API
 ========================================
 
-:index:`API<single: API; ReadUserLog class>`
-:index:`User Log Reader API<single: User Log Reader API>`
-:index:`Event Log Reader API<single: Event Log Reader API>` :index:`ReadUserLog<single: ReadUserLog>`
-:index:`Job Log Reader API<single: Job Log Reader API>`
+:index:`ReadUserLog class<single: ReadUserLog class; API>`
+:index:`User Log Reader API`
+:index:`Event Log Reader API` :index:`ReadUserLog`
+:index:`Job Log Reader API`
 
-HTCondor has the ability to log an HTCondor job’s significant events
-during its lifetime. This is enabled in the job’s submit description
-file with the **Log**\ :index:`submit commands<single: submit commands; Log>` command.
+HTCondor has the ability to log an HTCondor job's significant events
+during its lifetime. This is enabled in the job's submit description
+file with the **Log** :index:`Log<single: Log; submit commands>` command.
 
 This section describes the API defined by the C++ ``ReadUserLog`` class,
 which provides a programming interface for applications to read and
@@ -64,10 +62,9 @@ will be removed. The application will need to call the appropriate
       be checked to verify that the initialization was successful.
       NOTE: The ``isEventLog`` parameter will be removed in the future.
 
--  | ReadUserLog::ReadUserLog(FILE \*fp, bool is\_xml, bool
-   enable\_close)
-   | **Synopsis:** Constructor of a limited functionality reader: no
-   rotation handling, no locking
+-  | ReadUserLog::ReadUserLog(FILE \*fp, bool is_xml, bool enable_close
+   | **Synopsis:** Constructor of a limited functionality reader:
+     no rotation handling, no locking
    | **Returns:** None
    | **Constructor** parameters:
 
@@ -80,10 +77,10 @@ will be removed. The application will need to call the appropriate
       If ``true``, the reader will open the file read-only.
 
    | NOTE: The ReadUserLog::isInitialized method should be invoked to
-   verify that this constructor was initialized successfully.
+     verify that this constructor was initialized successfully.
    | NOTE: This constructor will be removed in the future.
 
--  | ReadUserLog::ReadUserLog(const char \*filename, bool read\_only)
+-  | ReadUserLog::ReadUserLog(const char \*filename, bool read_only)
    | **Synopsis:** Constructor to read a specific log file
    | **Returns:** None
    | **Constructor** parameters:
@@ -96,7 +93,7 @@ will be removed. The application will need to call the appropriate
 
    NOTE: This constructor will be removed in the future.
 
--  | ReadUserLog::ReadUserLog(const FileState &state, bool read\_only)
+-  | ReadUserLog::ReadUserLog(const FileState &state, bool read_only)
    | **Synopsis:** Constructor to continue from a persisted reader state
    | **Returns:** None
    | **Constructor** parameters:
@@ -108,7 +105,7 @@ will be removed. The application will need to call the appropriate
       locking.
 
    | NOTE: The ReadUserLog::isInitialized method should be invoked to
-   verify that this constructor was initialized successfully.
+     verify that this constructor was initialized successfully.
    | NOTE: This constructor will be removed in the future.
 
 -  ReadUserLog::˜ReadUserLog(void)
@@ -140,7 +137,7 @@ as being unable to open the log file, or ``true`` if successful.
    -  None.
 
 -  ``bool`` ReadUserLog::initialize(const char \*filename, bool
-   handle\_rotation, bool check\_for\_rotated, bool read\_only)
+   handle_rotation, bool check_for_rotated, bool read_only)
    **Synopsis:** Initialize to read a specific log file.
    **Returns:** ``bool``; ``true``: success, ``false``: failed
    **Method** parameters:
@@ -153,13 +150,13 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.
 
 -  ``bool`` ReadUserLog::initialize(const char \*filename, int
-   max\_rotation, bool check\_for\_rotated, bool read\_only)
+   max_rotation, bool check_for_rotated, bool read_only)
    **Synopsis:** Initialize to read a specific log file.
    **Returns:** ``bool``; ``true``: success, ``false``: failed
    **Method** parameters:
@@ -175,13 +172,13 @@ as being unable to open the log file, or ``true`` if successful.
    -  ``bool`` ``check_for_rotated`` (*Optional with default* =
       ``false``)
       If ``true``, try to open the rotated files (with file names
-      appended with ``.old`` or ``.1``, ``.2``, …) first.
+      appended with ``.old`` or ``.1``, ``.2``, ...) first.
    -  ``bool`` ``read_only`` (*Optional with default* = ``false``)
       If ``true``, the reader will open the file read-only and disable
       locking.
 
 -  ``bool`` ReadUserLog::initialize(const FileState &state, bool
-   read\_only)
+   read_only)
    **Synopsis:** Initialize to continue from a persisted reader state.
    **Returns:** ``bool``; ``true``: success, ``false``: failed
    **Method** parameters:
@@ -193,7 +190,7 @@ as being unable to open the log file, or ``true`` if successful.
       locking.
 
 -  ``bool`` ReadUserLog::initialize(const FileState &state, int
-   max\_rotation, bool read\_only)
+   max_rotation, bool read_only)
    **Synopsis:** Initialize to continue from a persisted reader state
    and set the rotation parameters.
    **Returns:** ``bool``; ``true``: success, ``false``: failed
@@ -251,7 +248,7 @@ Accessors
    -  None.
 
 -  ``ReadUserLog::FileStatus`` ReadUserLog::CheckFileStatus(bool
-   &is\_empty)
+   &is_empty)
    **Synopsis:** Check the status of the file, and whether it has grown,
    shrunk, etc.
    **Returns:** ``ReadUserLog::FileStatus``; the status of the log file,
@@ -280,19 +277,19 @@ To save the state, do something like this:
 
 ::
 
-      ReadUserLog                reader; 
-      ReadUserLog::FileState     statebuf; 
-     
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-      status = reader.GetFileState( statebuf ); 
-      write( fd, statebuf.buf, statebuf.size ); 
-      ... 
-     
-      status = UninitFileState( statebuf );
+      ReadUserLog                reader;
+      ReadUserLog::FileState     statebuf;
+
+      status = ReadUserLog::InitFileState( statebuf );
+
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+      status = reader.GetFileState( statebuf );
+      write( fd, statebuf.buf, statebuf.size );
+      ...
+
+      status = UninitFileState( statebuf );
 
 Restore state from persistent storage
 -------------------------------------
@@ -301,16 +298,16 @@ To restore the state, do something like this:
 
 ::
 
-      ReadUserLog::FileState     statebuf; 
-      status = ReadUserLog::InitFileState( statebuf ); 
-     
-      read( fd, statebuf.buf, statebuf.size ); 
-     
-      ReadUserLog                reader; 
-      status = reader.initialize( statebuf ); 
-     
-      status = UninitFileState( statebuf ); 
-      ....
+      ReadUserLog::FileState     statebuf;
+      status = ReadUserLog::InitFileState( statebuf );
+
+      read( fd, statebuf.buf, statebuf.size );
+
+      ReadUserLog                reader;
+      status = reader.initialize( statebuf );
+
+      status = UninitFileState( statebuf );
+      ....
 
 API Reference
 -------------
@@ -539,4 +536,4 @@ initialize.
 Additionally, the functionality of ``ReadUserLogStateAccess`` will be
 integrated into this class.
 
-      
+

@@ -1971,6 +1971,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::ABSOLUTE_TIME_VALUE:
@@ -2086,6 +2087,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
@@ -2424,6 +2426,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 
 	case Value::ERROR_VALUE:
 	case Value::CLASSAD_VALUE:
+	case Value::SCLASSAD_VALUE:
 	case Value::LIST_VALUE:
 	case Value::SLIST_VALUE:
 	case Value::STRING_VALUE:

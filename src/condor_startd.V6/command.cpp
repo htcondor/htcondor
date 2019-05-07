@@ -567,6 +567,8 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		return FALSE;
 	}
+
+	free( id );
 	
 	State s = rip->state();
 	switch( s ) {
@@ -615,9 +617,11 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 			break;
 		default:
 			rip->log_ignore( cmd, s, rip->activity() );
+			free(id);
 			return FALSE;
 	}		
 	
+	free(id);
 	return rval;
 }
 
@@ -2680,6 +2684,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 	if(! getClassAd( sock, commandAd )) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get command ad\n" );
+		delete requestAd;
 		return FALSE;
 	}
 

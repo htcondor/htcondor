@@ -32,6 +32,14 @@ condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_transform_ads "transform_ads.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# Temporarily move the token tools out of the way so they aren't distributed
+# while we're not telling anyone about the new TOKEN method.
+# condor_exe(condor_token_create "token_create.cpp;token_utils.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# condor_exe(condor_token_fetch "token_fetch.cpp;token_utils.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# condor_exe(condor_token_list "token_list.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe_test(condor_token_create "token_create.cpp;token_utils.cpp" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe_test(condor_token_fetch "token_fetch.cpp;token_utils.cpp" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe_test(condor_token_list "token_list.cpp" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
@@ -130,10 +138,4 @@ endif()
 ############################################################
 # GPU Support
 ############################################################
-if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-else ()
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-endif()
+condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )

@@ -92,7 +92,7 @@ def test_classad_constructor():
     ad = classad.ClassAd('[foo = "1"; bar = 2]')
     assertEqual(ad['foo'], "1", "test_classad_constructor-1")
     assertEqual(ad['bar'], 2, "test_classad_constructor-2")
-    assertRaises(KeyError, ad.__getitem__, "test_classad_constructor-3", 'baz')
+    assertRaises(KeyError, ad.__getitem__, "test_classad_constructor-3", "baz")
 
 def test_pickle():
     ad = classad.ClassAd({"one": 1})
@@ -288,8 +288,8 @@ def test_ad_iterator():
     ad["barl"] = 2
     assertEqual(len(ad), 2, "test_ad_iterator-1")
     assertEqual(len(list(ad)), 2, "test_ad_iterator-2")
-    assertEqual(list(ad)[1], "foo", "test_ad_iterator-3")
-    assertEqual(list(ad)[0], "bar", "test_ad_iterator-4")
+    assertEqual(list(ad)[1], "fool", "test_ad_iterator-3")
+    assertEqual(list(ad)[0], "barl", "test_ad_iterator-4")
     assertEqual(list(ad.items())[1][1], 1, "test_ad_iterator-5")
     assertEqual(list(ad.items())[0][1], 2, "test_ad_iterator-6")
     assertEqual(list(ad.values())[1], 1, "test_ad_iterator-7")
@@ -505,18 +505,17 @@ def test_pipes():
     wfd.close()
     ad = classad.parseNext(rfd ,parser=classad.Parser.New)
     assertEqual(tuple(dict(ad).items()), (('foo', 1),), "test_pipes-1")
-    # TODO: Fix the following subtest
-    # assertRaises(StopIteration, classad.parseNext, "test_pipes", rfd, classad.Parser.New)
+    # TODO: Fix the following test.
+    # The reason it's failing is because the classad.Parser.New keyword isn't getting passed to the function call.
+    #assertRaises(StopIteration, classad.parseNext, "test_pipes-2", [rfd, classad.Parser.New])
     rfd.close()
     r, w = os.pipe()
     rfd = os.fdopen(r, 'r')
     wfd = os.fdopen(w, 'w')
     wfd.write("[foo = 1]")
     wfd.close()
-    assertRaises(ValueError, classad.parseNext, "test_pipes-2", rfd)
+    assertRaises(ValueError, classad.parseNext, "test_pipes-3", rfd)
     rfd.close()
-
-
 
 def main():
 

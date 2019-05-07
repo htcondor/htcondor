@@ -4838,13 +4838,13 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 static void
 AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 {
-	if (!Q_SOCK || !Q_SOCK->getReliSock()) {return;}
 	if (new_ad_keys.empty()) {return;}
 
-	const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
 	ClassAd policy_ad;
-	if (!daemonCore || !daemonCore->getSecMan()) {return;}
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	if (Q_SOCK && Q_SOCK->getReliSock()) {
+		const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
+		daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	}
 
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
@@ -4854,42 +4854,89 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 	string last_proxy_file;
 	ClassAd proxy_file_attrs;
 
+	// Put X509 credential information in cluster ads (from either the
+	// job's proxy or the GSI authentication on the CEDAR socket).
+	// Proc ads should get X509 credential information only if they
+	// have a proxy file different than in their cluster ad.
 	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
 	{
-		MyString x509up;
+		string x509up;
+		string iwd;
 		JobQueueKey job( it->c_str() );
-			// Set attribute for process ads: prevents jobs from overriding these.
-		if (job.proc == -1) {continue;}
-
-		// check if x509up was defined for this job
-		if ( GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up) == -1 ) {
+		GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up);
+		GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd);
+		if (job.proc != -1 && x509up.empty()) {
+			if (iwd.empty()) {
+				// A proc ad that will inherit its iwd and proxy filename
+				// from its cluster ad.
+				// Let any x509 attributes from the cluster ad show through.
+				continue;
+			}
+			// This proc ad has a different iwd than its cluster ad.
+			// If cluster ad has a relative proxy filename, then the proc
+			// ad's altered iwd could result in a different proxy file
+			// than in the cluster ad.
 			GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, x509up);
+			if (x509up.empty() || x509up[0] == DIR_DELIM_CHAR) {
+				// A proc ad with no proxy filename whose cluster ad
+				// has no proxy filename or a proxy filename with full path.
+				// Let any x509 attributes from the cluster ad show through.
+				continue;
+			}
 		}
-		if (x509up.IsEmpty()) {
+		if (job.proc == -1 && x509up.empty()) {
+			// A cluster ad with no proxy file. If the client authenticated
+			// with GSI, use the attributes from that credential.
 			x509_attrs = &policy_ad;
 		} else {
+			// We have a cluster ad with a proxy file or a proc ad with a
+			// proxy file that may be different than in its cluster's ad.
 			string full_path;
 			if ( x509up[0] == DIR_DELIM_CHAR ) {
 				full_path = x509up;
 			} else {
-				MyString iwd;
-				if ( GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd ) == -1 ) {
+				if ( iwd.empty() ) {
 					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, iwd );
 				}
-				formatstr( full_path, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, x509up.Value() );
+				formatstr( full_path, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, x509up.c_str() );
+			}
+			if (job.proc != -1) {
+				string cluster_full_path;
+				string cluster_x509up;
+				GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, cluster_x509up);
+				if (cluster_x509up[0] == DIR_DELIM_CHAR) {
+					cluster_full_path = cluster_x509up;
+				} else {
+					string cluster_iwd;
+					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, cluster_iwd );
+					formatstr( cluster_full_path, "%s%c%s", cluster_iwd.c_str(), DIR_DELIM_CHAR, cluster_x509up.c_str() );
+				}
+				if (full_path == cluster_full_path) {
+					// A proc ad with identical full-path proxy
+					// filename as its cluster ad.
+					// Let any attributes from the cluster ad show through.
+					continue;
+				}
 			}
 			if ( full_path != last_proxy_file ) {
-				MyString owner;
+				string owner;
 				if ( GetAttributeString(job.cluster, job.proc, ATTR_OWNER, owner) == -1 ) {
 					GetAttributeString(job.cluster, -1, ATTR_OWNER, owner);
 				}
 				last_proxy_file = full_path;
 				proxy_file_attrs.Clear();
-				ReadProxyFileIntoAd( last_proxy_file.c_str(), owner.Value(), proxy_file_attrs );
+				ReadProxyFileIntoAd( last_proxy_file.c_str(), owner.c_str(), proxy_file_attrs );
 			}
 			if ( proxy_file_attrs.size() > 0 ) {
 				x509_attrs = &proxy_file_attrs;
+			} else if (job.proc != -1) {
+				// Failed to read proxy for a proc ad.
+				// Let any attributes from the cluster ad show through.
+				continue;
 			} else {
+				// Failed to read proxy for a cluster ad.
+				// If the client authenticated with GSI, use the attributes
+				// from that credential.
 				x509_attrs = &policy_ad;
 			}
 		}
@@ -5400,6 +5447,19 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
 					MyString &val )
+{
+	std::string strVal;
+	int rc = GetAttributeString(cluster_id, proc_id, attr_name, strVal);
+	val = strVal;
+	return rc;
+}
+
+// returns -1 if the lookup fails or if the value is not a string, 0 if
+// the lookup succeeds in the job queue, 1 if it succeeds in the current
+// transaction; val is set to the empty string on failure
+int
+GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
+                    std::string &val )
 {
 	ClassAd	*ad = NULL;
 	char	*attr_val;

@@ -1,5 +1,5 @@
-Daemons
-=======
+HTCondor
+========
 
 Let's start interacting with the HTCondor daemons!
 

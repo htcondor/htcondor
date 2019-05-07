@@ -1,9 +1,7 @@
-      
-
 Welcome to HTCondor
 ===================
 
-:index:`HTCondor<single: HTCondor; user manual>` :index:`user manual<single: user manual>`
+:index:`user manual<single: user manual; HTCondor>` :index:`user manual`
 
 HTCondor is developed by the Center for High Throughput Computing at the
 University of Wisconsin-Madison (UW-Madison), and was first installed as
@@ -18,4 +16,4 @@ now the Center for High Throughput Computing have established
 collaborations with scientists from around the world, and have provided
 them with access to many cycles. One scientist consumed 100 CPU years!
 
-      
+

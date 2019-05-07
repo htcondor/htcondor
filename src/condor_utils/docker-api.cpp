@@ -112,6 +112,9 @@ int DockerAPI::createContainer(
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
 
+		// Add a label to mark this container as htcondor-managed
+	runArgs.AppendArg("--label=org.htcondorproject=True");
+
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
 		return -8;
@@ -375,7 +378,11 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 		dprintf( D_ALWAYS, "Checking to see if Docker is offline\n");
 
 		ArgList infoArgs;
-		add_docker_arg(infoArgs);
+		if (!add_docker_arg(infoArgs)) {
+			dprintf( D_ALWAYS, "Cannot do Docker offline check, DOCKER is not properly set\n");
+			return DockerAPI::docker_hung;
+		}
+		
 		infoArgs.AppendArg( "info" );
 		MyString displayString;
 		infoArgs.GetArgsStringForLogging( & displayString );

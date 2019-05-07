@@ -243,11 +243,37 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				break;
 #endif
 
-#ifdef HAVE_EXT_OPENSSL  // 3DES is the prequisite for passwd auth
+#ifdef HAVE_EXT_OPENSSL  // 3DES is the prerequisite for passwd auth
 			case CAUTH_PASSWORD:
-				m_auth = new Condor_Auth_Passwd(mySock);
+				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
 				break;
+			case CAUTH_TOKEN: {
+					// Make a copy of the pointer as a Condor_Auth_Passwd to avoid
+					// repetitive static_cast<> below.
+				auto tmp_auth = new Condor_Auth_Passwd(mySock, 2);
+				m_auth = tmp_auth;
+				const classad::ClassAd *policy = mySock->getPolicyAd();
+				if (policy) {
+					std::string issuer;
+					if (policy->EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, issuer)) {
+						tmp_auth->set_remote_issuer(issuer);
+					}
+					std::string key_str;
+					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, key_str)) {
+						StringList key_list(key_str.c_str());
+						const char *key;
+						key_list.rewind();
+						std::vector<std::string> keys;
+						while ( (key = key_list.next()) ) {
+							keys.push_back(key);
+						}
+						tmp_auth->set_remote_keys(keys);
+					}
+				}
+                                m_method_name = "TOKEN";
+                                break;
+			}
 #endif
  
 #if defined(WIN32)

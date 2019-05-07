@@ -1270,14 +1270,14 @@ daemon::Exited( int status )
 				// immediately), and it doesn't check executable
 				// timestamps and restart based on that, either.
 			on_hold = true;
-		} else if (WEXITSTATUS(status) == 0 && MasterShuttingDown) {
+		} else if (WEXITSTATUS(status) == 0 && (on_hold || MasterShuttingDown)) {
 			had_failure = false;
 		}
 	}
 	int d_flag = D_ALWAYS;
 	if( had_failure ) {
 		d_flag |= D_FAILURE;
-    }
+	}
 	dprintf(d_flag, "%s\n", msg.Value());
 
 		// For HA, release the lock
@@ -1563,7 +1563,7 @@ daemon::InitParams()
 		tmp = watch_name;
 	}
 			
-	int length = strlen(name_in_config_file) + 32;
+	int length = (int)strlen(name_in_config_file) + 32;
 	buf = (char *)malloc(length);
 	ASSERT( buf != NULL );
 	snprintf( buf, length, "%s_WATCH_FILE", name_in_config_file );
@@ -3057,6 +3057,13 @@ Daemons::SetDefaultReaper()
 	reaper = DEFAULT_R;
 }
 
+/*static*/ void
+Daemons::ProcdStopped(void* me, int pid, int status)
+{
+	dprintf(D_FULLDEBUG, "ProcD (pid %d) is gone. status=%d\n", pid, status);
+	((Daemons*)me)->AllDaemonsGone();
+}
+
 bool
 Daemons::StopDaemonsBeforeMasterStops()
 {
@@ -3072,6 +3079,15 @@ Daemons::StopDaemonsBeforeMasterStops()
 			running++;
 		}
 	}
+
+	// If we didn't stop any daemons (I'm looking at you shared-port)
+	// then we can now stop the procd if it is running
+	if ( ! running) {
+		if (daemonCore && daemonCore->Proc_Family_QuitProcd(ProcdStopped, this)) {
+			++running;
+		}
+	}
+
 	return !running;
 }
 

@@ -208,7 +208,7 @@ pandoc -f html -t rst DaemonCoreStatisticsAttributes.html.out -o ../../../classa
 
 # Codes and Other Needed Values
 #pandoc -f html -t rst CodesandOtherNeededValues.html.out -o ../../../codes-other-values/index.rst
-pandoc -f html -t rst CondorshadowExitCodes.html.out -o ../../../man-pages/condor_shadow-exit-codes.rst
+pandoc -f html -t rst CondorshadowExitCodes.html.out -o ../../../codes-other-values/condor_shadow-exit-codes.rst
 pandoc -f html -t rst JobEventLogCodes.html.out -o ../../../codes-other-values/job-event-log-codes.rst
 pandoc -f html -t rst WellknownPortNumbers.html.out -o ../../../codes-other-values/well-known-port-numbers.rst
 pandoc -f html -t rst DaemonCoreCommandNumbers.html.out -o ../../../codes-other-values/daemoncore-command-numbers.rst

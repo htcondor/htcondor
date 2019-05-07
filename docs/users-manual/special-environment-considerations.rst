@@ -1,12 +1,10 @@
-      
-
 Special Environment Considerations
 ==================================
 
 AFS
 ---
 
-:index:`file system<single: file system; AFS>` :index:`AFS<single: AFS; interaction with>`
+:index:`AFS<single: AFS; file system>` :index:`interaction with<single: interaction with; AFS>`
 
 The HTCondor daemons do not run authenticated to AFS; they do not
 possess AFS tokens. Therefore, no child process of HTCondor will be AFS
@@ -32,24 +30,23 @@ you have the following choices:
 The Center for High Throughput Computing hopes to improve upon how
 HTCondor deals with AFS authentication in a subsequent release.
 
-Please see section \ `Setting Up for Special
-Environments <../admin-manual/setting-up-special-environments.html>`__
+Please see the :doc:`/admin-manual/setting-up-special-environments` section
 for further discussion of this problem.
 
 NFS
 ---
 
-:index:`file system<single: file system; NFS>` :index:`NFS<single: NFS; interaction with>`
+:index:`NFS<single: NFS; file system>` :index:`interaction with<single: interaction with; NFS>`
 
 If the current working directory when a job is submitted is accessed via
 an NFS automounter, HTCondor may have problems if the automounter later
 decides to unmount the volume before the job has completed. This is
-because *condor\_submit* likely has stored the dynamic mount point as
-the job’s initial current working directory, and this mount point could
+because *condor_submit* likely has stored the dynamic mount point as
+the job's initial current working directory, and this mount point could
 become automatically unmounted by the automounter.
 
 There is a simple work around. When submitting the job, use the submit
-command **initialdir**\ :index:`submit commands<single: submit commands; initialdir>` to
+command **initialdir** :index:`initialdir<single: initialdir; submit commands>` to
 point to the stable access point. For example, suppose the NFS
 automounter is configured to mount a volume at mount point
 ``/a/myserver.company.com/vol1/johndoe`` whenever the directory
@@ -58,13 +55,13 @@ description file solves the problem.
 
 ::
 
-      initialdir = /home/johndoe
+      initialdir = /home/johndoe
 
-:index:`NFS<single: NFS; cache flush on submit machine>`
-:index:`ClassAd job attribute<single: ClassAd job attribute; IwdFlushNFSCache>`
+:index:`cache flush on submit machine<single: cache flush on submit machine; NFS>`
+:index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
 
 HTCondor attempts to flush the NFS cache on a submit machine in order to
-refresh a job’s initial working directory. This allows files written by
+refresh a job's initial working directory. This allows files written by
 the job into an NFS mounted initial working directory to be immediately
 visible on the submit machine. Since the flush operation can require
 multiple round trips to the NFS server, it is expensive. Therefore, a
@@ -72,22 +69,22 @@ job may disable the flushing by setting
 
 ::
 
-      +IwdFlushNFSCache = False
+      +IwdFlushNFSCache = False
 
-in the job’s submit description file. See page \ `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`__ for a
+in the job's submit description file. See page `Job ClassAd
+Attributes <../classad-attributes/job-classad-attributes.html>`_ for a
 definition of the job ClassAd attribute.
 
 HTCondor Daemons That Do Not Run as root
 ----------------------------------------
 
-:index:`running as root<single: running as root>`
-:index:`daemon<single: daemon; running as root>`
+:index:`running as root`
+:index:`running as root<single: running as root; daemon>`
 
 HTCondor is normally installed such that the HTCondor daemons have root
-permission. This allows HTCondor to run the *condor\_shadow*
-:index:`HTCondor daemon<single: HTCondor daemon; condor_shadow>`\ :index:`remote system call<single: remote system call; condor_shadow>`
-daemon and the job with the submitting user’s UID and file access
+permission. This allows HTCondor to run the *condor_shadow*
+:index:`condor_shadow<single: condor_shadow; HTCondor daemon>`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
+daemon and the job with the submitting user's UID and file access
 rights. When HTCondor is started as root, HTCondor jobs can access
 whatever files the user that submits the jobs can.
 
@@ -98,10 +95,10 @@ HTCondor is running as root on a specific machine, use the command
 
 ::
 
-      condor_status -master -l <machine-name>
+      condor_status -master -l <machine-name>
 
 where <machine-name> is the name of the specified machine. This command
-displays the full condor\_master ClassAd; if the attribute ``RealUid``
+displays the full condor_master ClassAd; if the attribute ``RealUid``
 equals zero, then the HTCondor daemons are indeed running with root
 access. If the ``RealUid`` attribute is not zero, then the HTCondor
 daemons do not have root access.
@@ -110,23 +107,23 @@ NOTE: The Unix program *ps* is not an effective method of determining if
 HTCondor is running with root access. When using *ps*, it may often
 appear that the daemons are running as the condor user instead of root.
 However, note that the *ps* command shows the current effective owner of
-the process, not the real owner. (See the *getuid*\ (2) and
-*geteuid*\ (2) Unix man pages for details.) In Unix, a process running
+the process, not the real owner. (See the *getuid* (2) and
+*geteuid* (2) Unix man pages for details.) In Unix, a process running
 under the real UID of root may switch its effective UID. (See the
-*seteuid*\ (2) man page.) For security reasons, the daemons only set the
+*seteuid* (2) man page.) For security reasons, the daemons only set the
 effective UID to root when absolutely necessary, as it will be to
 perform a privileged operation.
 
 If daemons are not running with root access, make any and all files
 and/or directories that the job will touch readable and/or writable by
 the UID (user id) specified by the ``RealUid`` attribute. Often this may
-mean using the Unix command chmod 777 on the directory from which the
+mean using the Unix command chmod 777 on the directory from which the
 HTCondor job is submitted.
 
 Job Leases
 ----------
 
-:index:`job lease<single: job lease>`
+:index:`job lease`
 
 A job lease specifies how long a given job will attempt to run on a
 remote resource, even if that resource loses contact with the submitting
@@ -134,7 +131,7 @@ machine. Similarly, it is the length of time the submitting machine will
 spend trying to reconnect to the (now disconnected) execution host,
 before the submitting machine gives up and tries to claim another
 resource to run the job. The goal aims at run only once semantics, so
-that the *condor\_schedd* daemon does not allow the same job to run on
+that the *condor_schedd* daemon does not allow the same job to run on
 multiple sites simultaneously.
 
 If the submitting machine is alive, it periodically renews the job
@@ -144,20 +141,20 @@ the lease expires. While the lease has not expired, the execute host
 continues to try to run the job, in the hope that the submit machine
 will come back to life and reconnect. If the job completes and the lease
 has not expired, yet the submitting machine is still dead, the
-*condor\_starter* daemon will wait for a *condor\_shadow* daemon to
+*condor_starter* daemon will wait for a *condor_shadow* daemon to
 reconnect, before sending final information on the job, and its output
-files. Should the lease expire, the *condor\_startd* daemon kills off
-the *condor\_starter* daemon and user job.
-:index:`ClassAd job attribute<single: ClassAd job attribute; JobLeaseDuration>`
-:index:`JobLeaseDuration<single: JobLeaseDuration; job ClassAd attribute>`
+files. Should the lease expire, the *condor_startd* daemon kills off
+the *condor_starter* daemon and user job.
+:index:`JobLeaseDuration<single: JobLeaseDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 
-A default value equal to 40 minutes exists for a job’s ClassAd attribute
+A default value equal to 40 minutes exists for a job's ClassAd attribute
 ``JobLeaseDuration``, or this attribute may be set in the submit
 description file, using
-**job\_lease\_duration**\ :index:`submit commands<single: submit commands; job_lease_duration>`,
+**job_lease_duration** :index:`job_lease_duration<single: job_lease_duration; submit commands>`,
 to keep a job running in the case that the submit side no longer renews
 the lease. There is a trade off in setting the value of
-**job\_lease\_duration**\ :index:`submit commands<single: submit commands; job_lease_duration>`.
+**job_lease_duration** :index:`job_lease_duration<single: job_lease_duration; submit commands>`.
 Too small a value, and the job might get killed before the submitting
 machine has a chance to recover. Forward progress on the job will be
 lost. Too large a value, and an execute resource will be tied up waiting
@@ -171,13 +168,13 @@ As a special case, a submit description file setting of
 
 ::
 
-     job_lease_duration = 0
+     job_lease_duration = 0
 
-as well as utilizing submission other than *condor\_submit* that do not
+as well as utilizing submission other than *condor_submit* that do not
 set ``JobLeaseDuration`` (such as using the web services interface)
 results in the corresponding job ClassAd attribute to be explicitly
 undefined. This has the further effect of changing the duration of a
 claim lease, the amount of time that the execution machine waits before
 dropping a claim due to missing keep alive messages.
 
-      
+

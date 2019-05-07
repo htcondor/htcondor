@@ -53,7 +53,7 @@ int getCommand(object command)
     return 0;
 }
 
-SecManWrapper::SecManWrapper() 
+SecManWrapper::SecManWrapper()
 	: m_secman()
 	, m_config_overrides(true)
 	, m_tag_set(false), m_pool_pass_set(false), m_cred_set(false)
@@ -252,17 +252,84 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ping_overloads, SecManWrapper::ping, 1, 2
 void
 export_secman()
 {
-    class_<SecManWrapper>("SecMan", "Access to the internal security state information.")
-        .def("invalidateAllSessions", &SecManWrapper::invalidateAllCache, "Invalidate all security sessions.")
-        .def("ping", &SecManWrapper::ping, ping_overloads("Ping a remote daemon."
-            ":param ad: ClassAd describing daemon location or sinful string.\n"
-            ":param command: HTCondor command to query.\n"
-            ":return: ClassAd containing authorization information for the current security session."))
-        .def("getCommandString", &SecManWrapper::getCommandString, "Return the string for a given integer command.")
+    class_<SecManWrapper>("SecMan",
+            R"C0ND0R(
+            A class that represents the internal HTCondor security state.
+
+            If a security session becomes invalid, for example, because the remote daemon restarts,
+            reuses the same port, and the client continues to use the session, then all future
+            commands will fail with strange connection errors. This is the only mechanism to
+            invalidate in-memory sessions.
+
+            The :class:`SecMan` can also behave as a context manager; when created, the object can
+            be used to set temporary security configurations that only last during the lifetime
+            of the security object.
+            )C0ND0R")
+        .def(boost::python::init<>(boost::python::args("self")))
+        .def("invalidateAllSessions", &SecManWrapper::invalidateAllCache,
+            R"C0ND0R(
+            Invalidate all security sessions. Any future connections to a daemon will
+            cause a new security session to be created.
+            )C0ND0R",
+            boost::python::args("self"))
+        .def("ping", &SecManWrapper::ping, ping_overloads(
+            R"C0ND0R(
+            Perform a test authorization against a remote daemon for a given command.
+
+            :param ad: The ClassAd of the daemon as returned by :meth:`Collector.locate`;
+                alternately, the sinful string can be given directly as the first parameter.
+            :type ad: str or :class:`~classad.ClassAd`
+            :param command: The DaemonCore command to try; if not given, ``'DC_NOP'`` will be used.
+            :return: An ad describing the results of the test security negotiation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad"), boost::python::arg("command")="DC_NOP")))
+        .def("getCommandString", &SecManWrapper::getCommandString,
+            R"C0ND0R(
+            Return the string name corresponding to a given integer command.
+
+            :param int command_int: The integer command to get the string name of.
+            )C0ND0R",
+            boost::python::args("self", "command_int"))
         .def("__exit__", &SecManWrapper::exit, "Exit the context manager.")
         .def("__enter__", &SecManWrapper::enter, "Enter the context manager.")
-        .def("setTag", &SecManWrapper::setTag, "Set the auth context tag")
-        .def("setPoolPassword", &SecManWrapper::setPoolPassword, "Set the pool password")
-        .def("setGSICredential", &SecManWrapper::setGSICredential, "Set the GSI credential")
-        .def("setConfig", &SecManWrapper::setConfig, "Set a temporary configuration variable.");
+        .def("setTag", &SecManWrapper::setTag,
+            R"C0ND0R(
+            Set the authentication context tag for the current thread.
+
+            All security sessions negotiated with the same tag will only
+            be utilized when that tag is active.
+
+            For example, if thread A has a tag set to ``'Joe'`` and thread B
+            has a tag set to ``'Jane'``, then all security sessions negotiated
+            for thread A will not be used for thread B.
+
+            :param str tag: New tag to set.
+            )C0ND0R",
+            boost::python::args("self", "tag"))
+        .def("setPoolPassword", &SecManWrapper::setPoolPassword,
+            R"C0ND0R(
+            Set the pool password.
+
+            :param str new_pass: Updated pool password to use for new
+                security negotiations.
+            )C0ND0R",
+            boost::python::args("self", "new_pass"))
+        .def("setGSICredential", &SecManWrapper::setGSICredential,
+            R"C0ND0R(
+            Set the GSI credential to be used for security negotiation.
+
+            :param str filename: File name of the GSI credential.
+            )C0ND0R",
+            boost::python::args("self", "filename"))
+        .def("setConfig", &SecManWrapper::setConfig,
+            R"C0ND0R(
+            Set a temporary configuration variable; this will be kept for all security
+            sessions in this thread for as long as the :class:`SecMan` object is alive.
+
+            :param str key: Configuration key to set.
+            :param str value: Temporary value to set.
+            )C0ND0R",
+            boost::python::args("self", "key", "value"))
+        ;
 }

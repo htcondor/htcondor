@@ -39,9 +39,14 @@ public:
 	void initializeFromString (const char *, char delim_char);
 
 	/** Note: the contains* methods have side affects -- they
-		change "current" to point at the location of the match */
+		change "current" to point at the location of the match
+		(so do the prefix* methods) */
+	// prefix() works like contains_withwildcard() would if all of the
+	// items in the list ended with a '*'. That is, it returns true if
+	// any item in the list is a prefix of the given string.
+	bool prefix( const char * );
+	bool prefix_anycase( const char * );
 	bool contains( const char * );
-	bool substring( const char * );
 	bool contains_anycase( const char * );
 	bool contains_withwildcard( const char *str );
 	bool contains_anycase_withwildcard( const char * );

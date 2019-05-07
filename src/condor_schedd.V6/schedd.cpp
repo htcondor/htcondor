@@ -11839,6 +11839,7 @@ Scheduler::child_exit(int pid, int status)
 		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0) && !paired_match_wait) {
 			DelMrec( srec->match );
+			srec->match = NULL;
 		} else {
 			int exitstatus = WEXITSTATUS(status);
 			if ((srec->match->keep_while_idle > 0 || paired_match_wait) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
@@ -17229,37 +17230,36 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	}
 
 	PROC_ID vID;
-	unsigned vCount = 1;
-	PROC_ID * vids = & vID;
+	std::vector< PROC_ID> vids;
 
 	std::string vidString;
 	if( request.LookupString( "VictimJobIDs", vidString ) ) {
 		StringList vidList( vidString.c_str() );
-		if( vidList.number() > 0 ) {
-			vids = (PROC_ID *)malloc( sizeof(PROC_ID) * vidList.number() );
-		} else {
+		if( vidList.number() <= 0 ) {
 			handleReassignSlotError( sock, "invalid vacate-job ID list" );
 			return FALSE;
 		}
 
-		vCount = 0;
 		vidList.rewind();
 		char * vs = vidList.next();
 		for( ; vs != NULL; vs = vidList.next() ) {
+			PROC_ID vID;
 			if(! vID.set( vs )) {
 				handleReassignSlotError( sock, "invalid vacate-job ID in list" );
 				return FALSE;
 			}
-			vids[vCount++] = vID;
+			vids.push_back( vID );
 		}
 
 		dprintf( D_COMMAND, "REASSIGN SLOT: to %d.%d from %s\n", bid.cluster, bid.proc, vidString.c_str() );
 	} else {
+		PROC_ID vID;
 		if( ! request.LookupInteger( "Victim" ATTR_CLUSTER_ID, vID.cluster ) ||
 		  ! request.LookupInteger( "Victim" ATTR_PROC_ID, vID.proc ) ) {
 			handleReassignSlotError( sock, "missing vacate-job ID" );
 			return FALSE;
 		}
+		vids.push_back( vID );
 
 		dprintf( D_COMMAND, "REASSIGN_SLOT: from %d.%d to %d.%d\n", vids[0].cluster, vids[0].proc, bid.cluster, bid.proc );
 	}
@@ -17290,7 +17290,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		return FALSE;
 	}
 
-	for( unsigned v = 0; v < vCount; ++v ) {
+	for( unsigned v = 0; v < vids.size(); ++v ) {
 		ClassAd * vAd = GetJobAd( vids[v].cluster, vids[v].proc );
 		if(! vAd) {
 			handleReassignSlotError( sock, "no such job (vacate-job)" );
@@ -17322,7 +17322,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 	// If we're testing send_matchless_vacate(), don't do anything else.
 	if( flags & RS_TEST_SMV ) {
-		for( unsigned v = 0; v < vCount; ++v ) {
+		for( unsigned v = 0; v < vids.size(); ++v ) {
 			match_rec * match = FindMrecByJobID( vids[v] );
 			if(! match) {
 				handleReassignSlotError( sock, "no match for vacate-job ID" );
@@ -17344,7 +17344,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 			handleReassignSlotError( sock, "the now-job must not already be scheduled to run immediately" );
 			return FALSE;
 		}
-		for( unsigned v = 0; v < vCount; ++v ) {
+		for( unsigned v = 0; v < vids.size(); ++v ) {
 			match_rec * match = FindMrecByJobID( vids[v] );
 			if(! match) {
 				handleReassignSlotError( sock, "no match for vacate-job ID" );

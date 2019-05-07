@@ -1,23 +1,23 @@
-      
+      
 
-*condor\_gpu\_discovery*
+*condor_gpu_discovery*
 ========================
 
 Output GPU-related ClassAd attributes
-:index:`HTCondor commands<single: HTCondor commands; condor_gpu_discovery>`\ :index:`condor_gpu_discovery command<single: condor_gpu_discovery command>`
+:index:`condor_gpu_discovery<single: condor_gpu_discovery; HTCondor commands>`\ :index:`condor_gpu_discovery command`
 
 Synopsis
 --------
 
-**condor\_gpu\_discovery** **-help**
+**condor_gpu_discovery** **-help**
 
-**condor\_gpu\_discovery** [**<options>**\ ]
+**condor_gpu_discovery** [**<options>** ]
 
 Description
 -----------
 
-*condor\_gpu\_discovery* outputs ClassAd attributes corresponding to a
-host’s GPU capabilities. It can presently report CUDA and OpenCL
+*condor_gpu_discovery* outputs ClassAd attributes corresponding to a
+host's GPU capabilities. It can presently report CUDA and OpenCL
 devices; which type(s) of device(s) it reports is determined by which
 libraries, if any, it can find when it runs; this reflects what GPU jobs
 will find on that host when they run. (Note that some HTCondor
@@ -25,7 +25,7 @@ configuration settings may cause the environment to differ between jobs
 and the HTCondor daemons in ways that change library discovery.)
 
 If ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL`` is set in the
-environment when *condor\_gpu\_discovery* is run, it will report only
+environment when *condor_gpu_discovery* is run, it will report only
 devices present in the those lists.
 
 This tool is not available for MAC OS platforms.
@@ -43,7 +43,7 @@ output
 
 ::
 
-    DetectedGPUs="CUDA0, CUDA1"
+    DetectedGPUs="CUDA0, CUDA1"
 
 Further command line options use ``"CUDA"`` either with or without one
 of the integer values 0 or 1 as the *prefix string* in attribute names.
@@ -77,19 +77,19 @@ Options
     When displaying attribute values, assume that the machine has a
     heterogeneous set of GPUs, so always include the integer value in
     the *prefix string*.
- **-device **\ *<N>*
+ **-device** *<N>*
     Display properties only for GPU device *<N>*, where *<N>* is the
     integer value defined for the *prefix string*. This option may be
     specified more than once; additional *<N>* are listed along with the
     first. This option adds to the devices(s) specified by the
     environment variables ``CUDA_VISIBLE_DEVICES`` and
     ``GPU_DEVICE_ORDINAL``, if any.
- **-tag **\ *string*
+ **-tag** *string*
     Set the resource tag portion of the intended machine ClassAd
     attribute ``Detected<ResourceTag>`` to be *string*. If this option
     is not specified, the resource tag is ``"GPUs"``, resulting in
     attribute name ``DetectedGPUs``.
- **-prefix **\ *str*
+ **-prefix** *str*
     When naming attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
     ``OCL``.
@@ -112,16 +112,16 @@ Options
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
     which is set to the number of GPUs detected.
  **-cron**
-    | This option suppresses the ``DetectedGpus`` attribute so that the
-    output is suitable for use with *condor\_startd* cron. Combine this
+    This option suppresses the ``DetectedGpus`` attribute so that the
+    output is suitable for use with *condor_startd* cron. Combine this
     option with the **-dynamic** option to periodically refresh the
     dynamic Gpu information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
 
     ::
 
-          use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron) 
-          
+          use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron) 
+          
 
  **-verbose**
     For interactive use of the tool, output extra information to show
@@ -132,19 +132,19 @@ Options
 Exit Status
 -----------
 
-*condor\_gpu\_discovery* will exit with a status value of 0 (zero) upon
+*condor_gpu_discovery* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Author
 ------
 
-Center for High Throughput Computing, University of Wisconsin–Madison
+Center for High Throughput Computing, University of Wisconsin-Madison
 
 Copyright
 ---------
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
+      

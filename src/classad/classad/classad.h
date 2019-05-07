@@ -31,6 +31,7 @@
 namespace classad {
 
 typedef std::set<std::string, CaseIgnLTStr> References;
+typedef std::set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
 typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )

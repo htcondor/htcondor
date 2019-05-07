@@ -187,6 +187,7 @@ createConfigTarball(	const char * configDir,
 	if( collectorHost.empty() ) {
 		formatstr( tarballError, "COLLECTOR_HOST empty or undefined" );
 		free(cwd);
+		close(fd);
 		return false;
 	}
 

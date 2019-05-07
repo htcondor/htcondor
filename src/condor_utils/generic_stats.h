@@ -1030,8 +1030,6 @@ public:
 
 #endif // _timed_queue_h_
 
-#undef min
-#undef max
 #include <limits>
 
 // stats_entry_probe is derived from Miron Livny's Probe class,

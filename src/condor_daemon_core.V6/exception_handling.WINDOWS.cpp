@@ -275,7 +275,7 @@ LPCTSTR ExceptionHandler::GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR szBuf, 
 		#endif
 			*p = 0;
 			if (per->NumberParameters >= 3 && cchBuf >= 70) {
-				sprintf(p, _T(" NTStatus: %d"), access, (NTSTATUS)(per->ExceptionInformation[2]));
+				sprintf(p, _T(" NTStatus: %d"), (NTSTATUS)(per->ExceptionInformation[2]));
 			}
 			return szBuf;
 		}
@@ -309,7 +309,7 @@ BOOL ExceptionHandler::GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len, 
             i++, pSection++ )    {
         DWORD sectionStart = pSection->VirtualAddress;
         DWORD sectionEnd = sectionStart
-                    + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
+                    + MAX(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
         // Is the address in this section???
         if ( (rva >= sectionStart) && (rva <= sectionEnd) ) {
             // Yes, address is in the section.  Calculate section and offset,

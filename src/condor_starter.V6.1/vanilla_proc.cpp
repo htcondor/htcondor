@@ -555,8 +555,12 @@ VanillaProc::StartJob()
 
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
-	// job its own PID namespace
-	if (param_boolean("USE_PID_NAMESPACES", false) && !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd)) {
+	// job its own PID namespace.
+	static bool previously_setup_for_pid_namespace = false;
+
+	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
+			&& !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd) ) 
+	{
 		if (!can_switch_ids()) {
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");
@@ -572,10 +576,13 @@ VanillaProc::StartJob()
 		// When PID Namespaces are enabled, need to run the job
 		// under the condor_pid_ns_init program, so that signals
 		// propagate through to the child.  
+		// Be aware that StartJob() can be called repeatedly in the
+		// case of a self-checkpointing job, so be careful to only make
+		// modifications to the job classad once.
 
 		// First tell the program where to log output status
 		// via an environment variable
-		if (param_boolean("USE_PID_NAMESPACE_INIT", true)) {
+		if (!previously_setup_for_pid_namespace && param_boolean("USE_PID_NAMESPACE_INIT", true)) {
 			Env env;
 			MyString env_errors;
 			MyString arg_errors;
@@ -609,6 +616,7 @@ VanillaProc::StartJob()
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
 			JobAd->Assign(ATTR_JOB_CMD, c_p_n_i);
+			previously_setup_for_pid_namespace = true;
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");

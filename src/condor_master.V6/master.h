@@ -260,6 +260,8 @@ private:
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();
+
+	static void ProcdStopped(void*, int pid, int status);
 };
 
 #endif /* _CONDOR_MASTER_H */
