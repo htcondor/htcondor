@@ -223,8 +223,7 @@ TransferRequest::set_transfer_service(TreqMode  /*mode*/)
 TreqMode
 TransferRequest::get_transfer_service(void)
 {
-	MyString mode;
-	MyString tmp;
+	std::string mode;
 
 	ASSERT(m_ip != NULL);
 
@@ -315,7 +314,7 @@ TransferRequest::get_used_constraint(void)
 }
 
 void
-TransferRequest::set_peer_version(MyString &pv)
+TransferRequest::set_peer_version(const MyString &pv)
 {
 	ASSERT(m_ip != NULL);
 
@@ -337,7 +336,7 @@ TransferRequest::set_peer_version(char *pv)
 MyString
 TransferRequest::get_peer_version(void)
 {
-	MyString pv;
+	std::string pv;
 
 	ASSERT(m_ip != NULL);
 
@@ -356,7 +355,7 @@ TransferRequest::todo_tasks(void)
 }
 
 void
-TransferRequest::set_capability(MyString &capability)
+TransferRequest::set_capability(const MyString &capability)
 {
 	m_cap = capability;
 }
@@ -368,7 +367,7 @@ TransferRequest::get_capability()
 }
 
 void
-TransferRequest::set_rejected_reason(MyString &reason)
+TransferRequest::set_rejected_reason(const MyString &reason)
 {
 	m_rejected_reason = reason;
 }

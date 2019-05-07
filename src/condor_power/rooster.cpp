@@ -171,15 +171,15 @@ void Rooster::poll()
 	ClassAd *startd_ad;
 	HashTable<MyString,bool> machines_done(hashFunction);
 	while( (startd_ad=startdAds.Next()) ) {
-		MyString machine;
-		MyString name;
+		std::string machine;
+		std::string name;
 		startd_ad->LookupString(ATTR_MACHINE,machine);
 		startd_ad->LookupString(ATTR_NAME,name);
 
 		if( machines_done.exists(machine)==0 ) {
 			dprintf(D_FULLDEBUG,
 					"Skipping %s: already attempted to wake up %s in this cycle.\n",
-					name.Value(),machine.Value());
+					name.c_str(),machine.c_str());
 			continue;
 		}
 
@@ -188,7 +188,7 @@ void Rooster::poll()
 		if( !EvalExprBool(startd_ad,requirements) ) {
 			dprintf(D_ALWAYS,
 					"Skipping %s: ROOSTER_UNHIBERNATE is no longer true.\n",
-					name.Value());
+					name.c_str());
 			continue;
 		}
 
@@ -218,10 +218,10 @@ Rooster::wakeUp(ClassAd *startd_ad)
 {
 	ASSERT( startd_ad );
 
-	MyString name;
+	std::string name;
 	startd_ad->LookupString(ATTR_NAME,name);
 
-	dprintf(D_ALWAYS,"Sending wakeup call to %s.\n",name.Value());
+	dprintf(D_ALWAYS,"Sending wakeup call to %s.\n",name.c_str());
 
 	int stdin_pipe_fds[2];
 	stdin_pipe_fds[0] = -1; // child's side

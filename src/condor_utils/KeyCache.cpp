@@ -310,9 +310,10 @@ KeyCache::addToIndex(KeyCacheEntry *key)
 {
 		// update our index
 	ClassAd *policy = key->policy();
-	MyString parent_id, server_unique_id;
+	std::string parent_id;
+	MyString server_unique_id;
 	int server_pid=0;
-	MyString server_addr, peer_addr;
+	std::string server_addr, peer_addr;
 
 	policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, server_addr);
 	policy->LookupString(ATTR_SEC_PARENT_UNIQUE_ID, parent_id);
@@ -331,9 +332,10 @@ void
 KeyCache::removeFromIndex(KeyCacheEntry *key)
 {
 		//remove references to this key from the index
-	MyString parent_id, server_unique_id;
+	std::string parent_id;
+	MyString server_unique_id;
 	int server_pid=0;
-	MyString server_addr, peer_addr;
+	std::string server_addr, peer_addr;
 	ClassAd *policy = key->policy();
 	ASSERT( policy );
 
@@ -458,7 +460,7 @@ KeyCache::getKeysForPeerAddress(char const *addr)
 
 	keylist->Rewind();
 	while( keylist->Next(key) ) {
-		MyString server_addr,peer_addr;
+		std::string server_addr,peer_addr;
 		ClassAd *policy = key->policy();
 
 		policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, server_addr);
@@ -491,7 +493,8 @@ KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
 
 	keylist->Rewind();
 	while( keylist->Next(key) ) {
-		MyString this_parent_id,this_server_unique_id;
+		std::string this_parent_id;
+		MyString this_server_unique_id;
 		int this_server_pid=0;
 		ClassAd *policy = key->policy();
 

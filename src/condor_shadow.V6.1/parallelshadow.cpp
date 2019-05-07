@@ -93,7 +93,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 
 	shutdownPolicy = ParallelShadow::WAIT_FOR_NODE0;
 
-	MyString policy;
+	std::string policy;
 	job_ad->LookupString(ATTR_PARALLEL_SHUTDOWN_POLICY, policy);
 	if (policy == "WAIT_FOR_ALL") {
 		dprintf(D_ALWAYS, "Setting parallel shutdown policy to WAIT_FOR_ALL\n");
@@ -455,7 +455,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	size_t i;
 	FILE* mailer;
 	Email msg;
-	MyString str;
+	std::string str;
 	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
@@ -479,7 +479,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// This should be a more rare case in any event.
 
 		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
-		StringList slist(str.Value());
+		StringList slist(str.c_str());
 
 		slist.rewind();
 		while((s = slist.next()) != NULL)

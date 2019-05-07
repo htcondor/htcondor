@@ -172,7 +172,7 @@ private:
 	MyString        s_execute_dir;
 	MyString        s_encrypted_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
-	MyString        m_starter_addr;
+	std::string     m_starter_addr;
 };
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.
