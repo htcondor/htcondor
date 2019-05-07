@@ -123,7 +123,7 @@ set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
 set( CLASSADS_FOUND_STATIC ${CLASSADS_FOUND_STATIC} PARENT_SCOPE )
 
 
-condor_post_external( classads include OFF )
+condor_post_external( classads include OFF "" )
 
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")

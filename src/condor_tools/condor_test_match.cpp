@@ -217,11 +217,11 @@ MatchTest::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 		// optimize it accordingly.
 	std::string error_msg;
 	if( !classad::MatchClassAd::OptimizeRightAdForMatchmaking( ad, &error_msg ) ) {
-		MyString name;
+		std::string name;
 		ad->LookupString(ATTR_NAME,name);
 		dprintf(D_ALWAYS,
 				"Failed to optimize machine ad %s for matchmaking: %s\n",	
-			name.Value(),
+			name.c_str(),
 				error_msg.c_str());
 	}
 }
@@ -248,25 +248,25 @@ MatchTest::OptimizeJobAdForMatchmaking(ClassAd *ad)
 void
 MatchTest::showJobAd(ClassAd *ad,char const *label)
 {
-    MyString gid;
+    std::string gid;
     if( !ad->LookupString(ATTR_GLOBAL_JOB_ID,gid) ) {
         int cluster = -1;
         int proc = -1;
         ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
         ad->LookupInteger(ATTR_PROC_ID,proc);
-        gid.formatstr("%d.%d",cluster,proc);
+        formatstr(gid,"%d.%d",cluster,proc);
     }
 
-    printf("%s: %s\n",label,gid.Value());
+    printf("%s: %s\n",label,gid.c_str());
 }
 
 void
 MatchTest::showMachineAd(ClassAd *ad,char const *label)
 {
-    MyString name;
+    std::string name;
     ad->LookupString(ATTR_NAME,name);
 
-    printf("%s: %s\n",label,name.Value());
+    printf("%s: %s\n",label,name.c_str());
 }
 
 void

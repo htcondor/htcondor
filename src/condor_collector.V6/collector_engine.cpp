@@ -445,8 +445,8 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	}
 
 	if(ipattr) {
-		MyString my_address;
-		MyString subsys_ipaddr;
+		std::string my_address;
+		std::string subsys_ipaddr;
 
 			// Some ClassAds contain two copies of the IP address,
 			// one named "MyAddress" and one named "<SUBSYS>IpAddr".
@@ -463,8 +463,8 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 				        " IP addresses: %s=%s, %s=%s\n",
 				        COLLECTOR_REQUIREMENTS,
 				        (sock ? sock->get_sinful_peer() : "(NULL)"),
-				        ipattr, subsys_ipaddr.Value(),
-				        ATTR_MY_ADDRESS, my_address.Value());
+				        ipattr, subsys_ipaddr.c_str(),
+				        ATTR_MY_ADDRESS, my_address.c_str());
 				return false;
 			}
 		}

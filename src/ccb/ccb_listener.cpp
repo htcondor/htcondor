@@ -82,11 +82,11 @@ CCBListener::RegisterWithCCBServer(bool blocking)
 	}
 
 	msg.Assign( ATTR_COMMAND, CCB_REGISTER );
-	if( !m_ccbid.IsEmpty() ) {
+	if( !m_ccbid.empty() ) {
 		// we are reconnecting; trying to preserve ccbid so that prospective
 		// clients with stale information can still contact us
-		msg.Assign( ATTR_CCBID, m_ccbid.Value() );
-		msg.Assign( ATTR_CLAIM_ID, m_reconnect_cookie.Value() );
+		msg.Assign( ATTR_CCBID, m_ccbid );
+		msg.Assign( ATTR_CLAIM_ID, m_reconnect_cookie );
 	}
 
 		// for debugging purposes only, identify ourselves to the CCB server
@@ -403,7 +403,7 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 	dprintf(D_ALWAYS,
 			"CCBListener: registered with CCB server %s as ccbid %s\n",
 			m_ccb_address.Value(),
-			m_ccbid.Value() );
+			m_ccbid.c_str() );
 
 	m_waiting_for_registration = false;
 	m_registered = true;
@@ -416,10 +416,10 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 bool
 CCBListener::HandleCCBRequest( ClassAd &msg )
 {
-	MyString address;
-	MyString connect_id;
-	MyString request_id;
-	MyString name;
+	std::string address;
+	std::string connect_id;
+	std::string request_id;
+	std::string name;
 	if( !msg.LookupString( ATTR_MY_ADDRESS, address) ||
 		!msg.LookupString( ATTR_CLAIM_ID, connect_id) ||
 		!msg.LookupString( ATTR_REQUEST_ID, request_id) )
@@ -427,20 +427,20 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 		MyString msg_str;
 		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
-			   m_ccb_address.Value(),
+			   m_ccb_address.c_str(),
 			   msg_str.Value() );
 	}
 
 	msg.LookupString( ATTR_NAME, name );
 
-	if( name.find(address.Value())<0 ) {
-		name.formatstr_cat(" with reverse connect address %s",address.Value());
+	if( name.find(address) == std::string::npos ) {
+		formatstr_cat(name, " with reverse connect address %s",address.c_str());
 	}
 	dprintf(D_FULLDEBUG|D_NETWORK,
 			"CCBListener: received request to connect to %s, request id %s.\n",
-			name.Value(), request_id.Value());
+			name.c_str(), request_id.c_str());
 
-	return DoReversedCCBConnect( address.Value(), connect_id.Value(), request_id.Value(), name.Value() );
+	return DoReversedCCBConnect( address.c_str(), connect_id.c_str(), request_id.c_str(), name.c_str() );
 }
 
 bool
@@ -552,24 +552,24 @@ CCBListener::ReportReverseConnectResult(ClassAd *connect_msg,bool success,char c
 {
 	ClassAd msg = *connect_msg;
 
-	MyString request_id;
-	MyString address;
+	std::string request_id;
+	std::string address;
 	connect_msg->LookupString(ATTR_REQUEST_ID,request_id);
 	connect_msg->LookupString(ATTR_MY_ADDRESS,address);
 	if( !success ) {
 		dprintf(D_ALWAYS,
 				"CCBListener: failed to create reversed connection for "
 				"request id %s to %s: %s\n",
-				request_id.Value(),
-				address.Value(),
+				request_id.c_str(),
+				address.c_str(),
 				error_msg ? error_msg : "");
 	}
 	else {
 		dprintf(D_FULLDEBUG|D_NETWORK,
 				"CCBListener: created reversed connection for "
 				"request id %s to %s: %s\n",
-				request_id.Value(),
-				address.Value(),
+				request_id.c_str(),
+				address.c_str(),
 				error_msg ? error_msg : "");
 	}
 

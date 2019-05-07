@@ -90,7 +90,7 @@ if (WITH_KRB5)
 					DESTINATION ${C_LIB} )
 			endif ()
 
-		condor_post_external( krb5 include OFF )
+		condor_post_external( krb5 include OFF "" )
 
 	else()
 

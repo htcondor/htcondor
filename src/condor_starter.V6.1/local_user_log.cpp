@@ -77,7 +77,8 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 							 const char* xml_attr,
 							 bool write_event_log )
 {
-	MyString tmp, dagmanLogFilename, logfilename;
+	std::string tmp;
+	MyString dagmanLogFilename, logfilename;
 	bool use_xml = false;
 	const char* iwd = jic->jobIWD();
 	int cluster = jic->jobCluster();
@@ -101,21 +102,21 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 
 	} else {
 		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-			tmp.Value());
-		if( fullpath (tmp.Value() ) ) {
+			tmp.c_str());
+		if( fullpath (tmp.c_str() ) ) {
 				// we have a full pathname in the job ad.  however, if the
 				// job is using a different iwd (namely, filetransfer is
 				// being used), we want to just stick it in the local iwd
 				// for the job, instead.
 			if( jic->iwdIsChanged() ) {
-				const char* base = condor_basename(tmp.Value());
+				const char* base = condor_basename(tmp.c_str());
 				logfilename.formatstr( "%s/%s", iwd, base);
 			} else {
 				logfilename = tmp;
 			}
 		} else {
 				// no full path, so, use the job's iwd...
-			logfilename.formatstr( "%s/%s", iwd, tmp.Value());
+			logfilename.formatstr( "%s/%s", iwd, tmp.c_str());
 		}
 		logfiles.push_back( logfilename.Value());
 	}
@@ -131,29 +132,29 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: %s is defined\n",
 			ATTR_DAGMAN_WORKFLOW_LOG);
 		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-			tmp.Value());
-		if( fullpath (tmp.Value() ) ) {
+			tmp.c_str());
+		if( fullpath (tmp.c_str() ) ) {
 				// we have a full pathname in the job ad.  however, if the
 				// job is using a different iwd (namely, filetransfer is
 				// being used), we want to just stick it in the local iwd
 				// for the job, instead.
 			if( jic->iwdIsChanged() ) {
-				const char* base = condor_basename(tmp.Value());
+				const char* base = condor_basename(tmp.c_str());
 				dagmanLogFilename.formatstr( "%s/%s", iwd, base);
 			} else {
 				dagmanLogFilename = tmp;
 			}
 		} else {
 				// no full path, so, use the job's iwd...
-			dagmanLogFilename.formatstr( "%s/%s", iwd, tmp.Value());
+			dagmanLogFilename.formatstr( "%s/%s", iwd, tmp.c_str());
 		}
 		logfiles.push_back( dagmanLogFilename.Value());
-		MyString msk;
+		std::string msk;
 		if( ad->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk) ) {
 				// Check the mask of the DAGMan log
 			dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: msk = %s\n",
-				msk.Value());
-			Tokenize(msk.Value());
+				msk.c_str());
+			Tokenize(msk.c_str());
 			while(const char* mask = GetNextToken(",",true)) {
 				dprintf( D_FULLDEBUG, "Adding \"%s\" to the mask\n",mask);
 				mask_vec.push_back(ULogEventNumber(atoi(mask)));
@@ -490,9 +491,9 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
     	//
     	// Grab the exit reason out of the ad
     	//
-    MyString reason;
+	std::string reason;
 	if ( ad->LookupString( ATTR_REQUEUE_REASON, reason ) ) {
-		event.setReason( reason.Value() );
+		event.setReason( reason.c_str() );
 	}
     
 	event.run_local_rusage = run_local_rusage;

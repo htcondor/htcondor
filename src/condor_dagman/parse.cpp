@@ -1179,7 +1179,7 @@ parse_retry(
            	job->retry_abort_val = unless_exit;
 		}
            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
-		   			jobName, job->retry_abort_val );
+		   			job->GetJobName(), job->retry_abort_val );
 	}
 
 	if ( jobName ) {

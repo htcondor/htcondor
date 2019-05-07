@@ -112,7 +112,7 @@ class TransferRequest
 		// What is the version string of the peer I'm talking to?
 		// This could be the empty string if there is no version.
 		// this will make a copy when you assign it to something.
-		void set_peer_version(MyString &pv);
+		void set_peer_version(const MyString &pv);
 		void set_peer_version(char *pv);
 		MyString get_peer_version(void);
 
@@ -167,7 +167,7 @@ class TransferRequest
 		void set_client_sock(ReliSock *rsock);
 		ReliSock* get_client_sock(void);
 
-		void set_capability(MyString &capability);
+		void set_capability(const MyString &capability);
 		MyString get_capability(void);
 
 		/////////////////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ class TransferRequest
 		void set_rejected(bool val);
 		bool get_rejected(void);
 
-		void set_rejected_reason(MyString &reason);
+		void set_rejected_reason(const MyString &reason);
 		MyString get_rejected_reason(void);
 
 		/////////////////////////////////////////////////////////////////////

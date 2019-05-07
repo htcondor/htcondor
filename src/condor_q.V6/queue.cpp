@@ -698,9 +698,9 @@ int main (int argc, const char **argv)
 
 		first = false;
 
-		MyString scheddVersion;
+		std::string scheddVersion;
 		ad->LookupString(ATTR_VERSION, scheddVersion);
-		CondorVersionInfo v(scheddVersion.Value());
+		CondorVersionInfo v(scheddVersion.c_str());
 		if (v.built_since_version(8, 3, 3)) {
 			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
 			useFastScheddQuery = v3_query_with_auth ? 3 : 2;
@@ -4942,7 +4942,7 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	PrintMaskMakeSettings dummySettings;
 	std::vector<GroupByKeyInfo> dummyGrpBy;
 	MyString sumyformat(standard_summary2);
-	MyString myname;
+	std::string myname;
 	if (summary_ad->LookupString("MyName", myname)) { 
 		sumyformat = standard_summary3;
 		sumyformat.replaceString("$(ME)", myname.c_str());

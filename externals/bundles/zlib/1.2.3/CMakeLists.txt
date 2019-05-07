@@ -33,7 +33,7 @@ if ( NOT CLIPPED )
 			    INSTALL_DIR ${ZLIB_INSTALL_LOC}
 			    INSTALL_COMMAND make install )
 
-	condor_post_external( zlib include OFF )
+	condor_post_external( zlib include OFF "" )
 
 	install ( FILES "${ZLIB_INSTALL_LOC}/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a )
 

@@ -74,14 +74,20 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // Perform one-time initialization, primarily dlopen()ing libssl
     // on linux. Returns true on success, false on failure.
 
-    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+    virtual int authenticate(const char * remoteHost, CondorError* errstack,
+		bool non_blocking) override;
+
+	// Continue an ongoing authentication.
+	virtual int authenticate_continue(CondorError* /*errstack*/,
+		bool /*non_blocking*/) override;
+
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
     // RETURNS:
     //------------------------------------------
 
-    int isValid() const;
+    virtual int isValid() const override;
     //------------------------------------------
     // PURPOSE: whether the authenticator is in
     //          valid state.
@@ -89,10 +95,67 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
-    int wrap(const char* input, int input_len, char*& output, int& output_len);
-    int unwrap(const char* input, int input_len, char*& output, int& output_len);
+    virtual int wrap(const char* input, int input_len, char*& output,
+		int& output_len) override;
+    virtual int unwrap(const char* input, int input_len, char*& output,
+		int& output_len) override;
 
  private:
+
+	enum class Phase {
+		Startup,
+		PreConnect,
+		Connect,
+		KeyExchange
+	};
+
+	enum class CondorAuthSSLRetval {
+		Fail = 0,
+		Success,
+		WouldBlock
+	};
+
+	// Step 1 of the server protocol: exchange status with the client.
+	CondorAuthSSLRetval authenticate_server_pre(CondorError *errstack,
+		bool non_blocking);
+
+	// Step 2 of the server protocol: connect with TLS.
+	CondorAuthSSLRetval authenticate_server_connect(CondorError *errstack,
+		bool non_blocking);
+
+	// Step 3: exchange the session key.
+	CondorAuthSSLRetval authenticate_server_key(CondorError *errstack,
+		bool non_blocking);
+
+	// Common to both client and server: successfully finish, tear down state.
+	CondorAuthSSLRetval authenticate_finish(CondorError *errstack,
+		bool non_blocking);
+
+	// Common to both client and server: fail and release state.
+	CondorAuthSSLRetval authenticate_fail();
+
+	class AuthState {
+	public:
+		AuthState() {}
+		~AuthState();
+
+		long m_err{0};
+		char m_buffer[AUTH_SSL_BUF_SIZE];
+		char m_err_buf[500];
+		int m_ssl_status{AUTH_SSL_A_OK};
+		int m_server_status{AUTH_SSL_A_OK};
+		int m_client_status{AUTH_SSL_A_OK};
+		int m_done{0};
+		int m_round_ctr{0};
+		BIO *m_conn_in{nullptr};
+		BIO *m_conn_out{nullptr};
+		SSL *m_ssl{nullptr};
+		SSL_CTX *m_ctx{nullptr};
+		unsigned char m_session_key[AUTH_SSL_SESSION_KEY_LEN];
+		Phase m_phase{Phase::Startup};
+	};
+
+	std::unique_ptr<AuthState> m_auth_state;
 
 	static bool m_initTried;
 	static bool m_initSuccess;
@@ -100,21 +163,23 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     int init_OpenSSL(void);
     SSL_CTX *setup_ssl_ctx(bool is_server);
     int client_share_status(int client_status);
-    int receive_status(int &status);
+    CondorAuthSSLRetval receive_status(bool non_blocking, int &status);
     int send_status(int status);
-    int server_share_status(int server_status);
     int send_message(int status, char *buf, int len);
-    int receive_message(int &status, int &len, char *buf);
+    CondorAuthSSLRetval receive_message(bool non_blocking, int &status, int &len,
+		char *buf);
     int server_send_message( int server_status, char *buf,
                              BIO *conn_in, BIO *conn_out );
-    int server_receive_message( int server_status, char *buf,
-                                BIO *conn_in, BIO *conn_out );
+    CondorAuthSSLRetval server_receive_message( bool non_blocking, int server_status,
+				char *buf, BIO *conn_in, BIO *conn_out,
+				int &client_status );
     int client_send_message( int server_status, char *buf,
                              BIO *conn_in, BIO *conn_out );
     int client_receive_message( int server_status, char *buf,
                                 BIO *conn_in, BIO *conn_out );
-    int server_exchange_messages(int server_status, char *buf,
-                                 BIO *conn_in, BIO *conn_out);
+    CondorAuthSSLRetval server_exchange_messages(bool non_blocking, int server_status,
+				char *buf, BIO *conn_in, BIO *conn_out,
+				int &client_status);
     int client_exchange_messages(int client_status, char *buf,
                                  BIO *conn_in, BIO *conn_out);
 //    int verify_callback(int ok, X509_STORE_CTX *store);

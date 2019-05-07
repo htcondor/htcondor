@@ -307,9 +307,9 @@ class BaseShadow : public Service
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
         /// Returns the current working dir for the job
-    char const *getIwd() { return iwd.Value(); }
+    char const *getIwd() { return iwd.c_str(); }
         /// Returns the owner of the job - found in the job ad
-    char const *getOwner() { return owner.Value(); }
+    char const *getOwner() { return owner.c_str(); }
 		/// Returns true if job requests graceful removal
 	bool jobWantsGracefulRemoval();
 
@@ -477,9 +477,9 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	MyString owner;
-	MyString domain;
-	MyString iwd;
+	std::string owner;
+	std::string domain;
+	std::string iwd;
 	char *scheddAddr;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
