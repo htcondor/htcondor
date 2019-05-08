@@ -1334,6 +1334,9 @@ rm -rf %{buildroot}
 %_bindir/condor_continue
 %_bindir/condor_suspend
 %_bindir/condor_test_match
+%_bindir/condor_token_create
+%_bindir/condor_token_fetch
+%_bindir/condor_token_list
 %_bindir/condor_drain
 %_bindir/condor_ping
 %_bindir/condor_tail
