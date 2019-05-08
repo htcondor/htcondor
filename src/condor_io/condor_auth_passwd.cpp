@@ -149,7 +149,7 @@ bool findToken(const std::string &tokenfilename,
 			username = decoded_jwt.get_subject();
 			token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
 			signature = decoded_jwt.get_signature();
-		} catch (std::exception) {
+		} catch (...) {
 			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
 		}
 		return true;
