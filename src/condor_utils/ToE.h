@@ -11,19 +11,19 @@ namespace ToE {
 
     bool writeTag( classad::ClassAd * tag, const std::string & jobAdFileName );
 
-    // This asinine construction is required to be able to forward-reference
-    // ToE::Tag in condor_event.h, which doesn't need it for its API, but
-    // must declare protected/private data members which would rather have it
-    // as data member rather than a pointer.  *sigh*
-    struct tag_t {
+    class Tag {
+      public:
         std::string who;
         std::string how;
         std::string when;
         unsigned int howCode;
+
+        bool writeToString( std::string & out );
+        bool readFromString( const std::string & in );
     };
-    typedef struct tag_t Tag;
 
     bool decode( classad::ClassAd * tagIn, Tag & tagOut );
+    bool encode( const Tag & tagIn, classad::ClassAd * tagOut );
 };
 
 #endif /* _CONDOR_TOE_H */

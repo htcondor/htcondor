@@ -35,7 +35,8 @@ const char * itself = "itself";
 // means it won't work for the purpose we're using it for.  We
 // should probably wrap this knowledge up in a function somewhere
 // if we aren't going to fixe safefile.
-bool writeTag( classad::ClassAd * toe, const std::string & jobAdFileName ) {
+bool
+writeTag( classad::ClassAd * toe, const std::string & jobAdFileName ) {
 #ifndef WINDOWS
     FILE * jobAdFile = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "a" );
 #else
@@ -67,7 +68,8 @@ bool writeTag( classad::ClassAd * toe, const std::string & jobAdFileName ) {
     return true;
 }
 
-bool decode( classad::ClassAd * ca, Tag & tag ) {
+bool
+decode( classad::ClassAd * ca, Tag & tag ) {
     if(! ca) { return false; }
 
     ca->EvaluateAttrString( "Who", tag.who );
@@ -91,6 +93,70 @@ bool decode( classad::ClassAd * ca, Tag & tag ) {
     time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
         ISO8601_DateAndTime, true );
     tag.when.assign( whenStr );
+
+    return true;
+}
+
+bool
+Tag::writeToString( std::string & out ) {
+    return formatstr_cat( out,
+        "\n\tJob terminated by %s at %s (using method %d: %s).\n",
+        who.c_str(), when.c_str(), howCode, how.c_str() ) >= 0;
+}
+
+bool
+Tag::readFromString( const std::string & in ) {
+    std::string line = in;
+
+	const char * endWhoStr = " at ";
+	int endWho = line.find( endWhoStr );
+	if( endWho == -1 ) { return false; }
+	MyString whoStr = line.substr( 0, endWho );
+	this->who = whoStr.c_str();
+	line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
+
+	const char * endWhenStr = " (using method ";
+	int endWhen = line.find( endWhenStr );
+	if( endWhen == -1 ) { return false; }
+	MyString whenStr = line.substr( 0, endWhen );
+	line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
+	// This code gets more complicated if we don't assume UTC i/o.
+	struct tm eventTime;
+	iso8601_to_time( whenStr.Value(), & eventTime, NULL, NULL );
+	formatstr( when, "%ld", timegm(&eventTime) );
+
+	const char * endHowCodeStr = ": ";
+	int endHowCode = line.find( endHowCodeStr );
+	if( endHowCode == -1 ) { return false; }
+	MyString howCodeStr = line.substr( 0, endHowCode );
+	line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
+	char * end = NULL;
+	long lhc = strtol( howCodeStr.Value(), & end, 10 );
+	if( end && *end == '\0' ) {
+		this->howCode = lhc;
+	} else {
+		return false;
+	}
+
+	const char * endHowStr = ").";
+	int endHow = line.find( endHowStr );
+	if( endHow == -1 ) { return false; }
+	MyString how = line.substr( 0, endHow );
+	line = line.substr( endHow + strlen(endHowStr), INT_MAX );
+	if(! line.empty()) { return false; }
+	this->how = how.c_str();
+
+    return true;
+}
+
+bool
+encode( const Tag & tag, classad::ClassAd * ca ) {
+    if(! ca) { return false; }
+
+    ca->InsertAttr( "Who", tag.who );
+    ca->InsertAttr( "How", tag.how );
+    ca->InsertAttr( "When",tag.when );
+    ca->InsertAttr( "HowCode", (int)tag.howCode );
 
     return true;
 }

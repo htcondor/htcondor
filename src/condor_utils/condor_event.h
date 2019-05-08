@@ -36,8 +36,7 @@
 #include <string>
 
 namespace ToE {
-	struct tag_t;
-	typedef struct tag_t Tag;
+    class Tag;
 }
 
 /* 

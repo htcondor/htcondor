@@ -3076,6 +3076,7 @@ JobAbortedEvent::~JobAbortedEvent(void)
 void
 JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
 	if(! tt) { return; }
+	if( toeTag ) { delete toeTag; }
 	toeTag = new ToE::Tag();
 	if(! ToE::decode( tt, * toeTag )) {
 		delete toeTag;
@@ -3117,11 +3118,7 @@ JobAbortedEvent::formatBody( std::string &out )
 		}
 	}
 	if( toeTag ) {
-		if( formatstr_cat( out,
-		  "\n\tJob terminated by %s at %s (using method %d: %s).\n",
-		    toeTag->who.c_str(), toeTag->when.c_str(),
-		    toeTag->howCode, toeTag->how.c_str() )
-		  < 0 ) {
+		if(! toeTag->writeToString( out )) {
 			return false;
 		}
 	}
@@ -3143,6 +3140,25 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if (read_optional_line(line, file, got_sync_line, true)) {
 		line.trim();
 		reason = line.detach_buffer();
+	}
+
+	// Try to read the ToE tag.
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if( line.empty() ) {
+			if(! read_optional_line( line, file, got_sync_line )) {
+				return 0;
+			}
+		}
+
+		if( line.remove_prefix( "\tJob terminated by " ) ) {
+			if( toeTag != NULL ) { delete toeTag; }
+			toeTag = new ToE::Tag();
+			if(! toeTag->readFromString( line )) {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
 	}
 #else
 	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
@@ -3186,6 +3202,20 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
+	if( toeTag ) {
+		classad::ClassAd * tt = new classad::ClassAd();
+		if(! ToE::encode( * toeTag, tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+		if(! myad->Insert( "ToE", (classad::ExprTree* &)tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+	}
+
 	return myad;
 }
 
@@ -3203,10 +3233,12 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 		free(multi);
 		multi = NULL;
 	}
+
+	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" )) );
 }
 
 // ----- TerminatedEvent baseclass
-TerminatedEvent::TerminatedEvent(void)
+TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 {
 	normal = false;
 	core_file = NULL;
@@ -3228,9 +3260,8 @@ TerminatedEvent::~TerminatedEvent(void)
 
 void
 TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
-	// We should eventually fix this so that it copies what it wants
-	// from the ClassAd to member variables, instead.
 	if( tt ) {
+		if( toeTag ) { delete toeTag; }
 		toeTag = new classad::ClassAd( * tt );
 	}
 }
@@ -3593,10 +3624,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 					return false;
 				}
 			} else {
-				if( formatstr_cat( out, "\n\tJob terminated by %s at %s (using method %d: %s).\n",
-					tag.who.c_str(), tag.when.c_str(), tag.howCode, tag.how.c_str() ) < 0 ) {
-					return false;
-				}
+				rv = tag.writeToString( out );
 			}
 		}
 	}
@@ -3642,48 +3670,16 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
 			toeTag->InsertAttr( "When", timegm(&eventTime) );
 		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
-			if(toeTag != NULL) {
-				delete toeTag;
-			}
-			toeTag = new classad::ClassAd();
-
-			const char * endWhoStr = " at ";
-			int endWho = line.find( endWhoStr );
-			if( endWho == -1 ) { return 0; }
-			MyString whoStr = line.substr( 0, endWho );
-			toeTag->InsertAttr( "Who", whoStr );
-			line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
-
-			const char * endWhenStr = " (using method ";
-			int endWhen = line.find( endWhenStr );
-			if( endWhen == -1 ) { return 0; }
-			MyString whenStr = line.substr( 0, endWhen );
-			line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
-			// This code gets more complicated if we don't assume UTC i/o.
-			struct tm eventTime;
-			iso8601_to_time( whenStr.Value(), & eventTime, NULL, NULL );
-			toeTag->InsertAttr( "When", timegm(&eventTime) );
-
-			const char * endHowCodeStr = ": ";
-			int endHowCode = line.find( endHowCodeStr );
-			if( endHowCode == -1 ) { return 0; }
-			MyString howCodeStr = line.substr( 0, endHowCode );
-			line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
-			char * end = NULL;
-			long howCode = strtol( howCodeStr.Value(), & end, 10 );
-			if( end && *end == '\0' ) {
-				toeTag->InsertAttr( "HowCode", howCode );
-			} else {
+			ToE::Tag tag;
+			if(! tag.readFromString( line )) {
 				return 0;
 			}
 
-			const char * endHowStr = ").";
-			int endHow = line.find( endHowStr );
-			if( endHow == -1 ) { return 0; }
-			MyString how = line.substr( 0, endHow );
-			line = line.substr( endHow + strlen(endHowStr), INT_MAX );
-			if(! line.empty()) { return 0; }
-			toeTag->InsertAttr( "How", how.Value() );
+			if(toeTag != NULL) {
+				delete toeTag;
+			}
+			toeTag = new ClassAd();
+			ToE::encode( tag, toeTag );
 		} else {
 			return 0;
 		}
@@ -3774,9 +3770,8 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 	}
 
 	if( toeTag ) {
-	    // FIXME: does InserAttr() make a copy, or does it own the pointer
-	    // now, and we need to make a copy of toeTag?
-		if(! myad->InsertAttr("ToE", toeTag)) {
+	    classad::ExprTree * tt = toeTag->Copy();
+		if(! myad->Insert("ToE", tt)) {
 			delete myad;
 			return NULL;
 		}
@@ -3832,6 +3827,7 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
 
+	if( toeTag ) { delete toeTag; }
 	toeTag = dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" ));
 }
 
@@ -4769,7 +4765,6 @@ NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
 	eventNumber = ULOG_NODE_TERMINATED;
 	node = -1;
 	pusageAd = NULL;
-	toeTag = NULL;
 }
 
 
