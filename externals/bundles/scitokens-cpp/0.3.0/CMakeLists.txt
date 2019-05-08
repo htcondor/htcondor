@@ -25,7 +25,6 @@ if (WITH_SCITOKENS)
 
 	if ( NOT PROPER )
 
-		### TODO: adopt for SciTokens
 		condor_pre_external( SCITOKENS scitokens-0.3.0 "lib;include" "done" )
 
 		ExternalProject_Add(scitokens
@@ -54,19 +53,26 @@ if (WITH_SCITOKENS)
 
 	else(NOT PROPER)
 
-		find_path( SCITOKENS_INCLUDE_DIRS NAMES "scitokens/scitokens.h" PATHS $ENV{SCITOKENS_DIR}/include )
-		find_library( SCITOKENS_FOUND "libSciTokens" PATHS $ENV{SCITOKENS_DIR}/lib )
-		if (LINUX)
-			find_so_name( SCITOKNES_SO ${SCITOKENS_FOUND} )
-		endif(LINUX)
+		find_path( SCITOKENS_INCLUDE_DIRS NAMES "scitokens/scitokens.h"
+			PATHS $ENV{SCITOKENS_DIR}/include ${SCITOKENS_DIR}/include )
+		find_library( SCITOKENS_FOUND "SciTokens"
+			HINTS $ENV{SCITOKENS_DIR} ${SCITOKENS_DIR}
+			PATH_SUFFIXES lib )
+		if (LINUX AND SCITOKENS_FOUND )
+			find_so_name( SCITOKENS_SO ${SCITOKENS_FOUND} )
+		endif()
 
 	endif(NOT PROPER)
 
+	if ( SCITOKENS_FOUND )
+		message( STATUS "external configured (SCITOKENS_FOUND=${SCITOKENS_FOUND})" )
+	else()
+		message( FATAL_ERROR "SciTokens enabled but supporting library (libSciTokens) not found." )
+	endif()
 	if( DLOPEN_SECURITY_LIBS )
 		set( SCITOKENS_FOUND "" )
 	endif()
 
-	message( STATUS "external configured (SCITOKENS_FOUND=${SCITOKENS_FOUND})" )
 	set( HAVE_EXT_SCITOKENS ON PARENT_SCOPE )
 	set( SCITOKENS_FOUND ${SCITOKENS_FOUND} PARENT_SCOPE )
 	set( SCITOKENS_INCLUDE_DIRS ${SCITOKENS_INCLUDE_DIRS} PARENT_SCOPE )
