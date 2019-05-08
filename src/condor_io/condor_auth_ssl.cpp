@@ -29,11 +29,87 @@
 #include "CondorError.h"
 #include "openssl/rand.h"
 #include "condor_netdb.h"
+#include "condor_sinful.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
 #include "condor_auth_kerberos.h"
 #endif
+
+#include <algorithm>
+#include <sstream>
+#include <string.h>
+
+namespace {
+
+bool hostname_match(const char *match_pattern, const char *hostname)
+{
+    char match_copy[256], host_copy[256];
+    char *tok1, *tok2;
+    char *run1, *run2;
+    int idx;
+
+    // Basic input sanity checks.
+    if ((match_pattern == NULL || hostname == NULL) ||
+       ((strlen(match_pattern) > 255) || strlen(hostname) > 255))
+        return false;
+
+    // All matching on hostnames must be case insensitive.
+    for (idx = 0; match_pattern[idx]; idx++) {
+        match_copy[idx] = tolower(match_pattern[idx]);
+    }
+    match_copy[idx] = '\0';
+    for (idx = 0; hostname[idx]; idx++) {
+        host_copy[idx] = tolower(hostname[idx]);
+    }
+
+    host_copy[idx] = '\0';
+
+	// This is the same trick as done in condor_startd.V6/ResAttributes.cpp; as
+	// noted there, it's not the exact same function but "close enough"
+#ifdef WIN32
+#define strtok_r strtok_s
+#endif
+
+    // Split the strings by '.' character, iterate through each sub-component.
+    run1 = nullptr;
+    run2 = nullptr;
+    for (tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2);
+         tok1 && tok2;
+         tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2))
+    {
+        // Match non-wildcard bits
+        while (*tok1 && *tok2 && *tok1 == *tok2) {
+            if (*tok2 == '*')
+               return false;
+            if (*tok1 == '*')
+                break;
+            tok1++;
+            tok2++;
+        }
+
+        /**
+         * At this point, one of the following must be true:
+         * - We hit a wildcard.  In this case, we accept the match as
+         *   long as there is no non-wildcard after it.
+         * - We hit a character that doesn't match.
+         * - We hit the of at least one string.
+         */
+        if (*tok1 == '*') {
+            tok1++;
+            // Non-wildcard after wildcard -- not acceptable.
+            if (*tok1 != '\0')
+                return false;
+        }
+        // Only accept the match if both components are at their end.
+        else if (*tok1 || *tok2) {
+            return false;
+        }
+    }
+    return !tok1 && !tok2;
+}
+
+}
 
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
@@ -1090,17 +1166,13 @@ int Condor_Auth_SSL :: client_exchange_messages( int client_status, char *buf, B
 }
 
 
-long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
+long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
-		/* These are removed, see below.
-    X509_NAME *subj;
-    char      data[256];
-    int       extcount;
-    int       ok = 0;
-		*/
-//    char      err_buf[500];
-    ouch("post_connection_check.\n");
+	bool success = false;
+	std::string fqdn;
+	ouch("post_connection_check.\n");
+
  
     /* Checking the return from SSL_get_peer_certificate here is not
      * strictly necessary.  With our example programs, it is not
@@ -1110,99 +1182,125 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
      * require a client certificate.
      * (Comment from book.  -Ian)
      */
-    cert = (*SSL_get_peer_certificate_ptr)(ssl);
-    if( cert == NULL ) {
-        dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
-        goto err_occured;
-    }
-    dprintf(D_SECURITY,"SSL_get_peer_certificate returned data.\n" );
+	cert = (*SSL_get_peer_certificate_ptr)(ssl);
+	if( cert == NULL ) {
+		if (mySock_->isClient()) {
+			dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
+			goto err_occured;
+		} else {
+			dprintf(D_SECURITY, "Peer is anonymous; not checking.\n");
+			return X509_V_OK;
+		}
+	}
+	dprintf(D_SECURITY,"SSL_get_peer_certificate returned data.\n" );
 
     /* What follows is working code based on examples from the book
        "Network Programming with OpenSSL."  The point of this code
        is to determine that the certificate is a valid host certificate
-       for the server side.  Zach says that this will be done by
-       the caller of the authenticate method, so we just ignore it.
-       However, since it's more complicated than simply extracting
-       the CN and comparing it to the host name, I'm leaving it in
-       here so we can refer to it if needed.
+       for the server side.  It's more complicated than simply extracting
+       the CN and comparing it to the host name.
 
-       TODO: Does globus do this?  Do we need to do it?
-
-       TODO: The caller is probably going to want the DN, we should
-       extract it here.
-       
        -Ian
+     */
        
-    if(role == AUTH_SSL_ROLE_SERVER) {
-        X509_free( cert );
-        ouch("Server role: returning from post connection check.\n");
-        return (*SSL_get_verify_result_ptr)( ssl );
-    } // else ROLE_CLIENT: check dns (arg 2) against cn
-    if ((extcount = X509_get_ext_count(cert)) > 0) {
-        int i;
-        for (i = 0;  i < extcount;  i++) {
-            const char              *extstr;
-            X509_EXTENSION    *ext;
-            ASN1_OBJECT *foo;
+	if(role == AUTH_SSL_ROLE_SERVER) {
+		X509_free( cert );
+		ouch("Server role: returning from post connection check.\n");
+		return (*SSL_get_verify_result_ptr)( ssl );
+	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
-            ext = X509_get_ext(cert, i);
-            foo = X509_EXTENSION_get_object(ext);
-            int bar = OBJ_obj2nid(foo);
-            extstr = OBJ_nid2sn(bar);
-            
-            if (!strcmp(extstr, "subjectAltName")) {
-                int                  j;
-                unsigned char        *data;
-                STACK_OF(CONF_VALUE) *val;
-                CONF_VALUE           *nval;
-                X509V3_EXT_METHOD    *meth;
-                void                 *ext_str = NULL;
- 
-                if (!(meth = X509V3_EXT_get(ext)))
-                    break;
-                data = ext->value->data;
-#if (OPENSSL_VERSION_NUMBER > 0x00907000L)
 
-                if (meth->it)
-                    ext_str = ASN1_item_d2i(NULL, &data, ext->value->length,
-                                            ASN1_ITEM_ptr(meth->it));
-                else
-                    ext_str = meth->d2i(NULL, &data, ext->value->length);
+	// Client must know what host it is trying to talk to in order for us to verify the SAN / CN.
+	{
+		char const *connect_addr = mySock_->get_connect_addr();
+		if (connect_addr) {
+			Sinful s(connect_addr);
+			char const *alias = s.getAlias();
+			if (alias) {
+				dprintf(D_SECURITY|D_FULLDEBUG,"SSL host check: using host alias %s for peer %s\n", alias,
+					mySock_->peer_ip_str());
+				fqdn = alias;
+			}
+		}
+	}
+	if (fqdn.empty()) {
+		dprintf(D_SECURITY, "No SSL host name specified.\n");
+		goto err_occured;
+	}
+	{
+			// First, look at the SAN; RFC 1035 limits each FQDN to 255 characters.
+		char san_fqdn[256];
+
+		auto gens = static_cast<GENERAL_NAMES *>(X509_get_ext_d2i(cert,
+		NID_subject_alt_name, NULL, NULL));
+		if (!gens) goto skip_san;
+
+		for (int idx = 0; idx < sk_GENERAL_NAME_num(gens); idx++) {
+			auto gen = sk_GENERAL_NAME_value(gens, idx);
+			// We only consider alt names of type DNS
+			if (gen->type != GEN_DNS) continue;
+			auto cstr = gen->d.dNSName;
+				// DNS names must be an IA5 string.
+			if (ASN1_STRING_type(cstr) != V_ASN1_IA5STRING) continue;
+			int san_fqdn_len = ASN1_STRING_length(cstr);
+				// Suspiciously long FQDN; skip.
+			if (san_fqdn_len > 255) continue;
+				// ASN1_STRING_data is deprecated in newer SSLs due to an incorrect signature.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+			memcpy(san_fqdn, ASN1_STRING_data(cstr), san_fqdn_len);
 #else
-                ext_str = meth->d2i(NULL, &data, ext->value->length);
+			memcpy(san_fqdn, ASN1_STRING_get0_data(cstr), san_fqdn_len);
 #endif
-                val = meth->i2v(meth, ext_str, NULL);
-                for (j = 0;  j < sk_CONF_VALUE_num(val);  j++) {
-                    nval = sk_CONF_VALUE_value(val, j);
-                    if (!strcmp(nval->name, "DNS")
-                        && !strcmp(nval->value, host)) {
-                        ok = 1;
-                        break;
-                    }
-                }
-            }
-            if (ok)
-                break;
-        }
-    }
+			san_fqdn[san_fqdn_len] = '\0';
+			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) // Avoid embedded null's.
+				continue;
+			if (hostname_match(san_fqdn, fqdn.c_str())) {
+				dprintf(D_SECURITY, "SSL host check: host alias %s matches certificate SAN %s.\n",
+					fqdn.c_str(), san_fqdn);
+				success = true;
+				break;
+			} else {
+				dprintf(D_SECURITY|D_FULLDEBUG,
+					"SSL host check: host alias %s DOES NOT match certificate SAN %s.\n",
+					fqdn.c_str(), san_fqdn);
+			}
+		}
+		sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+		if (!success) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Certificate subjectAltName does not match hostname %s.\n",
+				fqdn.c_str());
+		}
+	}
+
+skip_san:
+	{
+		char cn_fqdn[256];
+		X509_NAME *subj = nullptr;
+		if (!success && (subj = X509_get_subject_name(cert)) &&
+			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
+		{
+		        cn_fqdn[255] = '\0';
+			dprintf(D_SECURITY|D_FULLDEBUG, "Common Name: '%s'; host: '%s'\n", cn_fqdn, fqdn.c_str());
+			if (strcasecmp(cn_fqdn, fqdn.c_str()) != 0) {
+				dprintf(D_SECURITY, "Certificate common name (CN), %s, does not match host %s.\n",
+					cn_fqdn, fqdn.c_str());
+				goto err_occured;
+			} else {
+				success = true;
+			}
+		} else if (!success) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Unable to extract CN from certificate.\n");
+			goto err_occured;
+		}
+	}
+
+	if (success) {
+		ouch("Server checks out; returning SSL_get_verify_result.\n");
     
-    if (!ok && (subj = X509_get_subject_name(cert)) &&
-        X509_NAME_get_text_by_NID(subj, NID_commonName, data, 256) > 0)
-    {
-        data[255] = 0;
-        dprintf(D_SECURITY, "Common Name: '%s'; host: '%s'\n", data, host);
-        if (strcasecmp(data, host) != 0)
-            goto err_occured;
-    }
-    if( cert != NULL ) {
-        dprintf(D_SECURITY,"Client: Got non null cert.\n" );
-    }
-    */
-    ouch("Returning SSL_get_verify_result.\n");
-    
-    X509_free(cert);
-    return (*SSL_get_verify_result_ptr)(ssl);
- 
+		X509_free(cert);
+		return (*SSL_get_verify_result_ptr)(ssl);
+	}
+
 err_occured:
     if (cert)
         X509_free(cert);
