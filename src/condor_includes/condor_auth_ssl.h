@@ -190,6 +190,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
                                  BIO *conn_in, BIO *conn_out);
 //    int verify_callback(int ok, X509_STORE_CTX *store);
     long post_connection_check(SSL *ssl, int role);
+	bool server_verify_scitoken();
 
 		/** This stores the shared session key produced as output of
 			the protocol. 
@@ -224,6 +225,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 
 	bool m_scitokens_mode{false};
 	std::string m_scitokens_file;
+	std::string m_scitokens_auth_name;
 	std::string m_client_scitoken;
 };
 

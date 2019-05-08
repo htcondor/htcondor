@@ -210,7 +210,9 @@ bool Condor_Auth_SSL::Initialize()
 	) {
 		const char *err_msg = dlerror();
 		if ( err_msg ) {
-			dprintf( D_ALWAYS, "Failed to open OpenSSL library: %s\n", err_msg );
+			dprintf( D_ALWAYS, "Failed to open SciTokens library: %s\n", err_msg );
+		} else {
+			dprintf( D_ALWAYS, "Failed to initialize SciTokens (no error message available\n" );
 		}
 		m_initSuccess = false;
 	}
@@ -259,8 +261,8 @@ bool Condor_Auth_SSL::Initialize()
 	enforcer_destroy_ptr = enforcer_destroy;
 	enforcer_generate_acls_ptr = enforcer_generate_acls;
 	enforcer_acl_free_ptr = enforcer_acl_free;
-	m_initSuccess = true;
 #endif
+	m_initSuccess = true;
 #endif
 
 	m_initTried = true;
@@ -600,8 +602,12 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 					m_auth_state->m_done = 1;
 				}
 			}
-			if( m_auth_state->m_server_status == AUTH_SSL_QUITTING
-				|| m_auth_state->m_client_status == AUTH_SSL_QUITTING )
+			if( m_auth_state->m_server_status == AUTH_SSL_QUITTING )
+			{
+				ouch ("Server has rejected our token!\n");
+				return static_cast<int>(CondorAuthSSLRetval::Fail);
+			}
+			if (m_auth_state->m_client_status == AUTH_SSL_QUITTING)
 			{
 				ouch( "SciToken Authentication while client was sending the token.\n" );
 				return static_cast<int>(CondorAuthSSLRetval::Fail);
@@ -924,7 +930,11 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			if(m_auth_state->m_client_status == AUTH_SSL_HOLDING) {
 				m_auth_state->m_done = 1;
 			}
-			m_auth_state->m_server_status = AUTH_SSL_HOLDING;
+			if (server_verify_scitoken()) {
+				m_auth_state->m_server_status = AUTH_SSL_HOLDING;
+			} else {
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+			}
 		}
 		if(m_auth_state->m_round_ctr % 2 == 1) {
 			if(AUTH_SSL_ERROR == server_send_message(
@@ -964,123 +974,117 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 }
 
 
+bool
+Condor_Auth_SSL::server_verify_scitoken()
+{
+#if defined(HAVE_EXT_SCITOKENS)
+	SciToken token = nullptr;
+	char *err_msg = nullptr;
+	char *issuer = nullptr;
+	char *sub = nullptr;
+	Enforcer enf = nullptr;
+	Acl *acls = nullptr;
+	std::vector<std::string> audiences;
+	std::vector<const char *> audience_ptr;
+	std::string audience_string;
+	if (param(audience_string, "SCITOKENS_SERVER_AUDIENCE")) {
+		StringList audience_list(audience_string.c_str());
+		audience_list.rewind();
+		char *aud;
+		while ( (aud = audience_list.next()) ) {
+			audiences.emplace_back(aud);
+			audience_ptr.push_back(audiences.back().c_str());
+		}
+	}
+	if ((*scitoken_deserialize_ptr)(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
+		dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
+			err_msg ? err_msg : "(unknown failure)");
+		free(err_msg);
+		return false;
+	} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &issuer, &err_msg)) {
+		dprintf(D_SECURITY, "Unable to retrieve token issuer: %s\n",
+			err_msg ? err_msg : "(unknown failure)");
+		free(err_msg);
+		(*scitoken_destroy_ptr)(token);
+		token = nullptr;
+		return false;
+	} else if ((*scitoken_get_claim_string_ptr)(token, "sub", &sub, &err_msg) || !sub) {
+		dprintf(D_SECURITY, "Unable to retrieve token subject: %s\n",
+			err_msg ? err_msg : "(unknown failure)");
+		free(err_msg);
+		(*scitoken_destroy_ptr)(token);
+		token = nullptr;
+		free(issuer);
+		return false;
+	} else if (!(enf = (*enforcer_create_ptr)(issuer, &audience_ptr[0], &err_msg))) {
+		dprintf(D_SECURITY, "Failed to create SciTokens enforcer: %s\n",
+			err_msg ? err_msg : "(unknown failure)");
+		free(err_msg);
+		(*scitoken_destroy_ptr)(token);
+		free(issuer);
+		free(sub);
+		return false;
+	} else if ((*enforcer_generate_acls_ptr)(enf, token, &acls, &err_msg)) {
+		dprintf(D_SECURITY, "Failed to verify token and generate ACLs: %s\n",
+			err_msg ? err_msg : "(unknown failure)");
+		free(err_msg);
+		(*scitoken_destroy_ptr)(token);
+		free(issuer);
+		free(sub);
+		(*enforcer_destroy_ptr)(enf);
+		return false;
+	} else {
+		if (acls) {
+			int idx = 0;
+			Acl acl = acls[idx++];
+			std::vector<std::string> authz;
+			while ( (acl.authz && acl.resource) ) {
+				if (!strcmp(acl.authz, "condor")) {
+					const char * condor_authz = acl.resource;
+					while (*condor_authz != '\0' && *condor_authz == '/') {condor_authz++;}
+					if (strlen(condor_authz)) {authz.emplace_back(condor_authz);}
+				}
+				acl = acls[idx++];
+			}
+			if (!authz.empty()) {
+				classad::ClassAd ad;
+				std::stringstream ss;
+				for (const auto &auth : authz) {
+					dprintf(D_SECURITY|D_FULLDEBUG,
+						"Found SciToken condor authorization: %s\n",
+						auth.c_str());
+					ss << auth << ",";
+				}
+				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+				mySock_->setPolicyAd(ad);
+			}
+
+			(*enforcer_acl_free_ptr)(acls);
+		}
+		m_scitokens_auth_name = std::string(issuer) + "," + sub;
+		dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer);
+		(*scitoken_destroy_ptr)(token);
+		free(issuer);
+		free(sub);
+		(*enforcer_destroy_ptr)(enf);
+		return true;
+	}
+	return false;
+#else
+	dprintf(D_ALWAYS, "SciTokens auth used but support is not available.\n");
+	return false;
+#endif
+}
+
 Condor_Auth_SSL::CondorAuthSSLRetval
 Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_blocking*/)
 {
-    char subjectname[1024];
+	char subjectname[1024];
 	Condor_Auth_SSL::CondorAuthSSLRetval retval = CondorAuthSSLRetval::Success;
+	setRemoteDomain( UNMAPPED_DOMAIN );
 	if (m_scitokens_mode) {
-		if (mySock_->isClient()) {
-			X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
-			if (peer) {
-				X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-				setRemoteUser( "ssl" );
-			} else {
-				ouch("Server subject name is unavailable.");
-				retval = CondorAuthSSLRetval::Fail;
-			}
-		} else {
-			setRemoteUser("unauthenticated");
-			setAuthenticatedName( "unauthenticated" );
-			setRemoteDomain( UNMAPPED_DOMAIN );
-#if defined(HAVE_EXT_SCITOKENS)
-			SciToken token = nullptr;
-			char *err_msg = nullptr;
-			char *issuer = nullptr;
-			char *sub = nullptr;
-			Enforcer enf = nullptr;
-			Acl *acls = nullptr;
-			std::vector<std::string> audiences;
-			std::vector<const char *> audience_ptr;
-			std::string audience_string;
-			if (param(audience_string, "SCITOKENS_SERVER_AUDIENCE")) {
-				StringList audience_list(audience_string.c_str());
-				audience_list.rewind();
-				char *aud;
-				while ( (aud = audience_list.next()) ) {
-					audiences.emplace_back(aud);
-					audience_ptr.push_back(audiences.back().c_str());
-				}
-		}
-			if ((*scitoken_deserialize_ptr)(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
-				dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
-					err_msg ? err_msg : "(unknown failure)");
-				free(err_msg);
-				retval = CondorAuthSSLRetval::Fail;
-			} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &issuer, &err_msg)) {
-				dprintf(D_SECURITY, "Unable to retrieve token issuer: %s\n",
-					err_msg ? err_msg : "(unknown failure)");
-				free(err_msg);
-				(*scitoken_destroy_ptr)(token);
-				token = nullptr;
-				retval = CondorAuthSSLRetval::Fail;
-			} else if ((*scitoken_get_claim_string_ptr)(token, "sub", &sub, &err_msg) || !sub) {
-				dprintf(D_SECURITY, "Unable to retrieve token subject: %s\n",
-					err_msg ? err_msg : "(unknown failure)");
-				free(err_msg);
-				(*scitoken_destroy_ptr)(token);
-				token = nullptr;
-				free(issuer);
-				retval = CondorAuthSSLRetval::Fail;
-			} else if (!(enf = (*enforcer_create_ptr)(issuer, &audience_ptr[0], &err_msg))) {
-				dprintf(D_SECURITY, "Failed to create SciTokens enforcer: %s\n",
-					err_msg ? err_msg : "(unknown failure)");
-				free(err_msg);
-				(*scitoken_destroy_ptr)(token);
-				free(issuer);
-				free(sub);
-				retval = CondorAuthSSLRetval::Fail;
-			} else if ((*enforcer_generate_acls_ptr)(enf, token, &acls, &err_msg)) {
-				dprintf(D_SECURITY, "Failed to verify token and generate ACLs: %s\n",
-					err_msg ? err_msg : "(unknown failure)");
-				free(err_msg);
-				(*scitoken_destroy_ptr)(token);
-				free(issuer);
-				free(sub);
-				(*enforcer_destroy_ptr)(enf);
-				retval = CondorAuthSSLRetval::Fail;
-			} else {
-				if (acls) {
-					int idx = 0;
-					Acl acl = acls[idx++];
-					std::vector<std::string> authz;
-					while ( (acl.authz && acl.resource) ) {
-						if (!strcmp(acl.authz, "condor")) {
-							const char * condor_authz = acl.resource;
-							while (*condor_authz != '\0' && *condor_authz == '/') {condor_authz++;}
-							if (strlen(condor_authz)) {authz.emplace_back(condor_authz);}
-						}
-						acl = acls[idx++];
-					}
-					if (!authz.empty()) {
-						classad::ClassAd ad;
-						std::stringstream ss;
-						for (const auto &auth : authz) {
-							dprintf(D_SECURITY|D_FULLDEBUG,
-								"Found SciToken condor authorization: %s\n",
-								auth.c_str());
-							ss << auth << ",";
-						}
-						ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
-						mySock_->setPolicyAd(ad);
-					}
-
-					(*enforcer_acl_free_ptr)(acls);
-				}
-				setRemoteUser("scitokens");
-				std::string auth_name = std::string(issuer) + "," + sub;
-				setAuthenticatedName( auth_name.c_str() );
-				dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer);
-				(*scitoken_destroy_ptr)(token);
-				free(issuer);
-				free(sub);
-				(*enforcer_destroy_ptr)(enf);
-			}
-#else
-			dprintf(D_ALWAYS, "SciTokens auth used but support is not available.\n");
-			retval = CondorAuthSSLRetval::Fail;
-#endif
-		}
+		setRemoteUser("scitokens");
+		setAuthenticatedName( m_scitokens_auth_name.c_str() );
 	} else {
     	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
 		if (peer) {
@@ -1091,7 +1095,6 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 			setRemoteUser( "unauthenticated" );
 		}
 		setAuthenticatedName( subjectname );
-		setRemoteDomain( UNMAPPED_DOMAIN );
 	}
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
