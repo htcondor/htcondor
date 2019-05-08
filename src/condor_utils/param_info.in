@@ -155,6 +155,13 @@ tags=config
 description=Fully qualified hostname of the machine
 customization=expert
 
+[HOST_ALIAS]
+default=$(FULL_HOSTNAME)
+type=string
+tags=config
+description=Preferred DNS alias for this host
+customization=expert
+
 [HOSTNAME]
 default=
 type=string
@@ -2498,6 +2505,12 @@ tags=io,condor_auth_claim
 default=false
 type=bool
 tags=io,condor_auth_claim
+
+[SSL_SKIP_HOST_CHECK]
+default=false
+description=Disable client host checks for SSL authentication.
+type=bool
+tags=condor_auth_sl
 
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
