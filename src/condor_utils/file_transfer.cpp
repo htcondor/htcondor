@@ -628,12 +628,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 		// add the spooled user log to the list of files to xfer
 		// (i.e. when sending output to condor_transfer_data)
-	MyString ulog;
+	std::string ulog;
 	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
-		if( outputFileIsSpooled(ulog.Value()) ) {
+		if( outputFileIsSpooled(ulog.c_str()) ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(ulog.Value()) ) {
-					OutputFiles->append(ulog.Value());
+				if( !OutputFiles->file_contains(ulog.c_str()) ) {
+					OutputFiles->append(ulog.c_str());
 				}
 			} else {
 				OutputFiles = new StringList(buf,",");
@@ -1130,9 +1130,9 @@ FileTransfer::ComputeFilesToSend()
 		Directory dir( Iwd, desired_priv_state );
 
 		const char *proxy_file = NULL;
-		MyString proxy_file_buf;		
+		std::string proxy_file_buf;
 		if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {			
-			proxy_file = condor_basename(proxy_file_buf.Value());
+			proxy_file = condor_basename(proxy_file_buf.c_str());
 		}
 
 		const char *f;
@@ -2293,9 +2293,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			if(subcommand == TransferSubCommand::UploadUrl) {
 				// 7 == send local file using plugin
 				
-				MyString rt_src;
-				MyString rt_dst;
-				MyString rt_err;
+				std::string rt_src;
+				std::string rt_dst;
+				std::string rt_err;
 				int      rt_result = 0;
 				if(!file_info.LookupInteger("Result",rt_result)) {
 					rt_result = -1;
@@ -2315,7 +2315,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 				// TODO: write to job log success/failure for each file (as a custom event?)
 				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
-						rt_src.Value(), rt_dst.Value(), rt_result );
+						rt_src.c_str(), rt_dst.c_str(), rt_result );
 
 				if(rt_result == 0) {
 					rc = 0;
@@ -5058,7 +5058,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
 	stats.Assign( "JobProcId", proc_id );
 
-	MyString owner;
+	std::string owner;
 	jobAd.LookupString( ATTR_OWNER, owner );
 	stats.Assign( "JobOwner", owner );
 
@@ -5491,13 +5491,13 @@ FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
 		// So unless we rewire that, we need to pre-process the input
 		// file list during the job submission, before spooling files.
 
-	MyString input_files;
+	std::string input_files;
 	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,input_files) != 1 )
 	{
 		return true; // nothing to do
 	}
 
-	MyString iwd;
+	std::string iwd;
 	if( job->LookupString(ATTR_JOB_IWD,iwd) != 1 )
 	{
 		error_msg.formatstr("Failed to expand transfer input list because no IWD found in job ad.");
@@ -5505,7 +5505,7 @@ FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
 	}
 
 	MyString expanded_list;
-	if( !FileTransfer::ExpandInputFileList(input_files.Value(),iwd.Value(),expanded_list,error_msg) )
+	if( !FileTransfer::ExpandInputFileList(input_files.c_str(),iwd.c_str(),expanded_list,error_msg) )
 	{
 		return false;
 	}

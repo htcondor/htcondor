@@ -64,7 +64,7 @@ Bugs Fixed:
    the second argument of an ternary operator is omitted in a ``START``
    expression. ``(expression ?: value)`` :ticket:`6798`
 -  Fixed a bug which would cause certain valid URLs not be recognized.
-   This allows, for example, ‘s3' to be used as a custom file transfer
+   This allows, for example, 's3' to be used as a custom file transfer
    plug-in. :ticket:`6722`
 -  Fixed a bug in file transfer where jobs would go on hold if they
    created a domain socket, which the FileTransfer module would

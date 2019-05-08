@@ -45,7 +45,7 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool RegisterWithCCBServer(bool blocking=false);
 
 		// unique ID of this CCBListener in namespace of the CCB server
-	char const *getCCBID() const { return m_ccbid.Value(); }
+	char const *getCCBID() const { return m_ccbid.c_str(); }
 
 	char const *getAddress() const { return m_ccb_address.Value(); }
 
@@ -53,8 +53,8 @@ class CCBListener: public Service, public ClassyCountedPtr {
 
  private:
 	MyString m_ccb_address;
-	MyString m_ccbid;
-	MyString m_reconnect_cookie;
+	std::string m_ccbid;
+	std::string m_reconnect_cookie;
 	Sock *m_sock;
 	bool m_waiting_for_connect;
 	bool m_waiting_for_registration;

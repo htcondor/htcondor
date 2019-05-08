@@ -15,11 +15,11 @@ A platform is an architecture/operating system combination.
 :index:`definition of<single: definition of; clipped platform>`
 :index:`availability<single: availability; clipped platform>`
 
-In the table, clipped means that HTCondor does not support checkpointing
-or remote system calls on the given platform. This means that standard
-universe jobs are not supported. Some clipped platforms will have
-further limitations with respect to supported universes. See
-section `Running a Job: the Steps To Take <../users-manual/running-a-job-steps.html>`_
+In the following table, *clipped* means that HTCondor does not support
+checkpointing or remote system calls on the given platform. This means that
+standard universe jobs are not supported. Some clipped platforms will have
+further limitations with respect to supported universes. See the
+:ref:`users-manual/running-a-job-steps:choosing an htcondor universe` section
 for more details on job universes within HTCondor and their abilities and
 limitations.
 
@@ -49,19 +49,16 @@ binary distributions.
 |                                      |   (clipped)                          |
 +--------------------------------------+--------------------------------------+
 
-Table 1.1: Supported platforms in HTCondor Version 8.9.1
-
 
 NOTE: Other Linux distributions likely work, but are not tested or
 supported.
 
 For more platform-specific information about HTCondor's support for
-various operating systems, see
-Chapter `8 <PlatformSpecificInformation.html#x74-5700008>`_.
+various operating systems, see the :doc:`/platform-specific/index` chapter.
 
 Jobs submitted to the standard universe utilize *condor_compile* to
 relink programs with libraries provided by HTCondor.
-Table `1.2 <#x8-80112>`_ lists supported compilers by platform for
+The following table lists supported compilers by platform for
 this Version 8.9.1 release. Other compilers may work, but are not
 supported.
 :index:`list of supported compilers<single: list of supported compilers; condor_compile>`
@@ -74,12 +71,10 @@ supported.
 | Red Hat Enterprise Linux 6 on x86_64 | gcc, g++, and g77  | as shipped |
 +--------------------------------------+--------------------+------------+
 | Red Hat Enterprise Linux 7 on x86_64 | gcc, g++, and g77  | as shipped |
-+--------------------------------------+----------------------+----------+
++--------------------------------------+--------------------+------------+
 | Debian Linux 8.0 (jessie) on x86_64  | gcc, g++, gfortran | as shipped |
 +--------------------------------------+--------------------+------------+
 | Ubuntu 14.04 on x86_64               | gcc, g++, gfortran | as shipped |
 +--------------------------------------+--------------------+------------+
-
-Table 1.2: Supported compilers in HTCondor Version 8.9.1
 
 

@@ -44,10 +44,8 @@ meaningful batch names for their jobs, to make it easier to keep track
 of related jobs.
 
 (For information about specifying batch names for your jobs, see the
-*condor_submit* ( `condor_submit <../man-pages/condor_submit.html>`_)
-and *condor_submit_dag*
-( `condor_submitdag <../man-pages/condor_submitdag.html>`_) man
-pages.)
+:doc:`/man-pages/condor_submit` and :doc:`/man-pages/condor_submit_dag`
+manual pages.)
 
 A batch of jobs is defined as follows:
 
@@ -527,7 +525,7 @@ Options
     formats, one may include other text that will be reproduced
     directly. A format without any conversion specifiers may be
     specified, but an attribute is still required. Include a backslash
-    followed by an ‘n' to specify a line break.
+    followed by an 'n' to specify a line break.
  **-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]* or **-af[:jlhVr,tng]** *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an

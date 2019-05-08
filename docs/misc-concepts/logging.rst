@@ -18,9 +18,9 @@ job event log
     event log with the submit command
     **log** :index:`log<single: log; submit commands>`. The log is created
     and remains on the submit machine. Contents of the log are detailed
-    in the :doc:`/users-manual/managing-a-job` section. Examples of events are
-    that the job is running, that the job is placed on hold, or that the
-    job completed.
+    in the :ref:`users-manual/managing-a-job:in the job event log file` section.
+    Examples of events are that the job is running, that the job is placed on
+    hold, or that the job completed.
 
 daemon logs
     Each daemon configured to have a log writes events relevant to that
@@ -190,8 +190,8 @@ default node log
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    the :doc:`/admin-manual/configuration-macros` section for the
-    complete definition.
+    the :ref:`admin-manual/configuration-macros:configuration file entries for
+    dagman` section for the complete definition.
 
     Configuration variables that affect this log are
 
@@ -215,9 +215,8 @@ the ``.dagman.out`` file
 
 the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. Section `DAGMan
-    Applications <../users-manual/dagman-applications.html>`_ details
-    this log.
+    DAG. The page :ref:`users-manual/dagman-applications:a machine-readable
+    event history, the jobstate.log file` details this log.
 
 :index:`logging`
 

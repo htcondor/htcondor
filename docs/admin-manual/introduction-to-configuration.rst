@@ -566,7 +566,7 @@ forms a full path and file name. This file is read and parsed. The
 resulting configuration is incorporated into the current configuration.
 This resulting configuration may contain further nested ``include``
 specifications, which are also parsed, evaluated, and incorporated.
-Levels of nested ``include``\ s are limited, such that infinite nesting
+Levels of nested ``include`` s are limited, such that infinite nesting
 is discovered and thwarted, while still permitting nesting.
 
 Consider the further example
@@ -768,7 +768,7 @@ and configuration files.
 Case is significant in the function's name, so use the same letter case
 as given in these definitions.
 
- ``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, ...)``
+``$CHOICE(index, listname)`` or ``$CHOICE(index, item1, item2, ...)``
     An item within the list is returned. The list is represented by a
     parameter name, or the list items are the parameters. The ``index``
     parameter determines which item. The first item in the list is at
@@ -784,11 +784,11 @@ as given in these definitions.
 
     ::
 
-          A = $ENV(HOME)
+        A = $ENV(HOME)
 
     binds ``A`` to the value of the ``HOME`` environment variable.
 
- ``$F[fpduwnxbqa](filename)``
+``$F[fpduwnxbqa](filename)``
     One or more of the lower case letters may be combined to form the
     function name and thus, its functionality. Each letter operates on
     the ``filename`` in its own way.
@@ -796,12 +796,14 @@ as given in these definitions.
     -  ``f`` convert relative path to full path by prefixing the current
        working directory to it. This option works only in
        *condor_submit* files.
+ 
     -  ``p`` refers to the entire directory portion of ``filename``,
        with a trailing slash or backslash character. Whether a slash or
        backslash is used depends on the platform of the machine. The
        slash will be recognized on Linux platforms; either a slash or
        backslash will be recognized on Windows platforms, and the parser
        will use the same character specified.
+
     -  ``d`` refers to the last portion of the directory within the
        path, if specified. It will have a trailing slash or backslash,
        as appropriate to the platform of the machine. The slash will be
@@ -809,28 +811,36 @@ as given in these definitions.
        be recognized on Windows platforms, and the parser will use the
        same character specified unless u or w is used. if b is used the
        trailing slash or backslash will be omitted.
+
     -  ``u`` convert path separators to Unix style slash characters
+
     -  ``w`` convert path separators to Windows style backslash
        characters
+
     -  ``n`` refers to the file name at the end of any path, but without
        any file name extension. As an example, the return value from
        ``$Fn(/tmp/simulate.exe)`` will be ``simulate`` (without the
        ``.exe`` extension).
+
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
        ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
        causes the leading period (``.``) to be omitted.
+
     -  ``q`` causes the return value to be enclosed within quotes.
        Double quote marks are used unless a is also specified.
+
     -  ``a`` When combined with the q option, causes the return value to
        be enclosed within single quotes.
 
- ``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
- ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
- ``$INT(item-to-convert)`` or
-``$INT(item-to-convert, format-specifier)``
+``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
+
+``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
+
+``$INT(item-to-convert)`` or``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
     a C language or Perl format specifier. If no ``format-specifier`` is
@@ -844,9 +854,9 @@ as given in these definitions.
 
     ::
 
-          $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+        $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
- ``$RANDOM_INTEGER(min, max [, step])``
+``$RANDOM_INTEGER(min, max [, step])``
     :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
@@ -855,10 +865,9 @@ as given in these definitions.
 
     ::
 
-          $RANDOM_INTEGER(0, 8, 2)
+        $RANDOM_INTEGER(0, 8, 2)
 
- ``$REAL(item-to-convert)`` or
-``$REAL(item-to-convert, format-specifier)``
+``$REAL(item-to-convert)`` or ``$REAL(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert`` for a floating point type. The
     ``format-specifier`` is a C language or Perl format specifier. If no
@@ -876,7 +885,7 @@ as given in these definitions.
 
     ::
 
-          Name = abcdef
+        Name = abcdef
 
     -  ``$SUBSTR(Name, 2)`` is ``cdef``.
     -  ``$SUBSTR(Name, 0, -2)`` is ``abcd``.
@@ -928,14 +937,14 @@ routine which parses the configuration files. This implies that a change
 to the underlying value of any of these variables will require a full
 restart of HTCondor in order to use the changed value.
 
- ``$(FULL_HOSTNAME)``\ :index:`FULL_HOSTNAME`
+``$(FULL_HOSTNAME)`` :index:`FULL_HOSTNAME`
     The fully qualified host name of the local machine, which is host
     name plus domain name.
 
-``$(HOSTNAME)``\ :index:`HOSTNAME`
+``$(HOSTNAME)`` :index:`HOSTNAME`
     The host name of the local machine, without a domain name.
 
-``$(IP_ADDRESS)``\ :index:`IP_ADDRESS`
+``$(IP_ADDRESS)`` :index:`IP_ADDRESS`
     The ASCII string version of the local machine's "most public" IP
     address. This address may be IPv4 or IPv6, but the macro will always
     be set.
@@ -947,28 +956,28 @@ restart of HTCondor in order to use the changed value.
 
     labelparam:IPv4Address
 
- ``$(IPV4_ADDRESS)``\ :index:`IPV4_ADDRESS`
+``$(IPV4_ADDRESS)`` :index:`IPV4_ADDRESS`
     The ASCII string version of the local machine's "most public" IPv4
     address; unset if the local machine has no IPv4 address.
 
     See ``IP_ADDRESS`` about "most public".
 
- ``$(IPV6_ADDRESS)``\ :index:`IPV6_ADDRESS`
+``$(IPV6_ADDRESS)`` :index:`IPV6_ADDRESS`
     The ASCII string version of the local machine's "most public" IPv6
     address; unset if the local machine has no IPv6 address.
 
     See ``IP_ADDRESS`` about "most public".
 
- ``$(IP_ADDRESS_IS_V6)``\ :index:`IP_ADDRESS_IS_V6`
+``$(IP_ADDRESS_IS_V6)`` :index:`IP_ADDRESS_IS_V6`
     A boolean which is true if and only if ``IP_ADDRESS``
     :index:`IP_ADDRESS` is an IPv6 address. Useful for conditonal
     configuration.
 
-``$(TILDE)``\ :index:`TILDE`
+``$(TILDE)`` :index:`TILDE`
     The full path to the home directory of the Unix user condor, if such
     a user exists on the local machine.
 
-``$(SUBSYSTEM)``\ :index:`SUBSYSTEM` :index:`subsystem names<single: subsystem names; configuration file>`
+``$(SUBSYSTEM)`` :index:`SUBSYSTEM` :index:`subsystem names<single: subsystem names; configuration file>`
     The subsystem name of the daemon or tool that is evaluating the
     macro. This is a unique string which identifies a given daemon
     within the HTCondor system. The possible subsystem names are:
@@ -1002,7 +1011,7 @@ restart of HTCondor in order to use the changed value.
     -  TOOL
     -  TRANSFERER
 
- ``$(DETECTED_CPUS)``\ :index:`DETECTED_CPUS`
+``$(DETECTED_CPUS)`` :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by
     ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
@@ -1010,7 +1019,7 @@ restart of HTCondor in order to use the changed value.
     :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. When
     ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
 
-``$(DETECTED_PHYSICAL_CPUS)``\ :index:`DETECTED_PHYSICAL_CPUS`
+``$(DETECTED_PHYSICAL_CPUS)`` :index:`DETECTED_PHYSICAL_CPUS`
     The integer number of physical (non hyper-threaded) CPUs. This will
     be equal the number of unique CPU IDs.
 
@@ -1018,7 +1027,7 @@ This second set of macros are entries whose default values are
 determined automatically at run time but which can be overwritten.
 :index:`macros<single: macros; configuration file>`
 
- ``$(ARCH)``\ :index:`ARCH`
+``$(ARCH)`` :index:`ARCH`
     Defines the string used to identify the architecture of the local
     machine to HTCondor. The *condor_startd* will advertise itself with
     this attribute so that users can submit binaries compiled for a
@@ -1029,54 +1038,54 @@ determined automatically at run time but which can be overwritten.
     ``OPSYS`` explicitly in their submit file. See the *condor_submit*
     manual page (doc:`/man-pages/condor_submit`) for details.
 
-``$(OPSYS)``\ :index:`OPSYS`
+``$(OPSYS)`` :index:`OPSYS`
     Defines the string used to identify the operating system of the
     local machine to HTCondor. If it is not defined in the configuration
     file, HTCondor will automatically insert the operating system of
     this machine as determined by *uname*.
 
-``$(OPSYS_VER)``\ :index:`OPSYS_VER`
+``$(OPSYS_VER)`` :index:`OPSYS_VER`
     Defines the integer used to identify the operating system version
     number.
 
-``$(OPSYS_AND_VER)``\ :index:`OPSYS_AND_VER`
+``$(OPSYS_AND_VER)`` :index:`OPSYS_AND_VER`
     Defines the string used prior to HTCondor version 7.7.2 as
     ``$(OPSYS)``.
 
-``$(UNAME_ARCH)``\ :index:`UNAME_ARCH`
+``$(UNAME_ARCH)`` :index:`UNAME_ARCH`
     The architecture as reported by *uname* (2)'s ``machine`` field.
     Always the same as ``ARCH`` on Windows.
 
-``$(UNAME_OPSYS)``\ :index:`UNAME_OPSYS`
+``$(UNAME_OPSYS)`` :index:`UNAME_OPSYS`
     The operating system as reported by *uname* (2)'s ``sysname``
     field. Always the same as ``OPSYS`` on Windows.
 
-``$(DETECTED_MEMORY)``\ :index:`DETECTED_MEMORY`
+``$(DETECTED_MEMORY)`` :index:`DETECTED_MEMORY`
     The amount of detected physical memory (RAM) in MiB.
 
-``$(DETECTED_CORES)``\ :index:`DETECTED_CORES`
+``$(DETECTED_CORES)`` :index:`DETECTED_CORES`
     The number of CPU cores that the operating system schedules. On
     machines that support hyper-threading, this will be the number of
     hyper-threads.
 
-``$(PID)``\ :index:`PID`
+``$(PID)`` :index:`PID`
     The process ID for the daemon or tool.
 
-``$(PPID)``\ :index:`PPID`
+``$(PPID)`` :index:`PPID`
     The process ID of the parent process for the daemon or tool.
 
-``$(USERNAME)``\ :index:`USERNAME`
+``$(USERNAME)`` :index:`USERNAME`
     The user name of the UID of the daemon or tool. For daemons started
     as root, but running under another UID (typically the user condor),
     this will be the other UID.
 
-``$(FILESYSTEM_DOMAIN)``\ :index:`FILESYSTEM_DOMAIN`
+``$(FILESYSTEM_DOMAIN)`` :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See the :doc:`/admin-manual/configuration-macros` section, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
 
-``$(UID_DOMAIN)``\ :index:`UID_DOMAIN`
+``$(UID_DOMAIN)`` :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
     evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
     description of this configuration variable.

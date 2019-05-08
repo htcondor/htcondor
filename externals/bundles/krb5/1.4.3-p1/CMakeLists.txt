@@ -111,7 +111,7 @@ if (WITH_KRB5)
 			endif()
 		endif()
 
-		condor_post_external( krb5 include OFF )
+		condor_post_external( krb5 include OFF "" )
 
 	endif( )
 

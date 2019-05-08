@@ -201,7 +201,7 @@ started under HTCondor and what they do:
     *condor_negotiator* can preempt that resource and match it with the
     user with better priority.
 
-    ..note::
+    .. note::
 
         A higher numerical value of the user priority in HTCondor
         translate into worse priority for that user. The best priority is

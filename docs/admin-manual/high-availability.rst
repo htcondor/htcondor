@@ -96,9 +96,9 @@ machine (correctly) interprets this situation as the *condor_schedd*
 daemon is no longer running. This machine's *condor_master* daemon then
 acquires the lock and runs the *condor_schedd* daemon.
 
-See the :doc:`/admin-manual/configuration-macros` section, in the section on
-*condor_master* Configuration File Macros for details relating to the
-configuration variables used to set timing and polling intervals.
+See the :ref:`admin-manual/configuration-macros:condor_master configuration
+file macros` section for details relating to the configuration variables used
+to set timing and polling intervals.
 
 Working with Remote Job Submission
 ''''''''''''''''''''''''''''''''''
@@ -257,7 +257,8 @@ Configuration
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
 configured appropriately in order to make the high availability
-mechanism work. See the :doc:`/admin-manual/configuration-macros` section, for definitions
+mechanism work. See the :ref:`admin-manual/configuration-macros:configuration
+file entries relating to high availability` section, for definitions
 of these configuration variables.
 
 The *condor_had* and *condor_replication* daemons use the
@@ -477,7 +478,7 @@ manager machines.
 
     ## Enables/disables the replication feature of HAD daemon
     ## Default: false
-    HAD_USE_REPLICATION    = true
+    HAD_USE_REPLICATION = true
 
     ## Name of the file from the SPOOL directory that will be replicated
     ## Default: $(SPOOL)/Accountantnew.log
@@ -485,12 +486,12 @@ manager machines.
 
     ## Period of time between two successive awakenings of the replication daemon
     ## Default: 300
-    REPLICATION_INTERVAL                 = 300
+    REPLICATION_INTERVAL = 300
 
     ## Period of time, in which transferer daemons have to accomplish the
     ## downloading/uploading process
     ## Default: 300
-    MAX_TRANSFER_LIFETIME                = 300
+    MAX_TRANSFER_LIFETIME = 300
 
 
     ## Period of time between two successive sends of classads to the collector by HAD

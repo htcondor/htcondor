@@ -51,7 +51,7 @@ if (WITH_LIBCGROUP)
 
 		#set ( LIBCGROUP_SHARE "${EXTERNAL_BUILD_PREFIX}/${LIBCGROUP_VER}/src/libcgroup/${LIBCGROUP_VER}/libcgroup" )
 
-		condor_post_external( libcgroup include OFF )
+		condor_post_external( libcgroup include OFF "${LIBCGROUP_FOUND}" )
 
 	else( NOT PROPER )
 

@@ -210,9 +210,10 @@ If the remote *condor_collector* is not listening on the standard port
 
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
-HTCondor's file transfer mechanism (see the :doc:`/users-manual/submitting-a-job` section on page `Submitting a
-Job <../users-manual/submitting-a-job.html>`_), the mechanism is
-applied based on the resulting job universe on the remote machine.
+HTCondor's file transfer mechanism (see the 
+:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+system: htcondor's file transfer mechanism` section), the mechanism is applied
+based on the resulting job universe on the remote machine.
 
 HTCondor-C Jobs Between Differing Platforms
 '''''''''''''''''''''''''''''''''''''''''''
@@ -1011,8 +1012,7 @@ description file:
 
 The *condor_qsub* command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
-the *condor_qsub* manual page at `12 <Condorqsub.html#x132-94400012>`_
-for details.
+the :doc:`/man-pages/condor_qsub` manual page for details.
 
 The EC2 Grid Type
 -----------------
@@ -1991,14 +1991,13 @@ that you have already run at.
 In addition, *condor_submit* has two options to help control grid
 universe job resubmissions and rematching. See the definitions of the
 submit description file commands **globus_resubmit** and
-**globus_rematch** at page `2203 <Condorsubmit.html#x149-108400012>`_
-and page `2203 <Condorsubmit.html#x149-108400012>`_. These options are
-independent of **match_list_length**.
+**globus_rematch** on the :doc:`/man-pages/condor_submit` manual page. These
+options are independent of **match_list_length**.
 
 There are some new attributes that will be added to the Job ClassAd, and
 may be useful to you when you write your rank, requirements,
-globus_resubmit or globus_rematch option. Please refer to the Appendix
-on page `2364 <JobClassAdAttributes.html#x170-1234000A.2>`_ to see a
+globus_resubmit or globus_rematch option. Please refer to the 
+:doc:`/classad-attributes/job-classad-attributes` section to see a
 list containing the following attributes:
 
 -  NumJobMatches

@@ -30,9 +30,8 @@ command line. A program that opens a static file, given by file name,
 every time will need to use a separate subdirectory for the output of
 each run.
 
-The *condor_submit* manual page is on :doc:`/man-pages/condor_submit`
-and contains a complete and full description of how to use *condor_submit*.
-It also includes descriptions of
+The :doc:`/man-pages/condor_submit` manual page contains a complete and full
+description of how to use *condor_submit*. It also includes descriptions of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
@@ -341,7 +340,7 @@ Variables in the Submit Description File
 There are automatic variables for use within the submit description
 file.
 
- ``$(Cluster)`` or ``$(ClusterId)``
+``$(Cluster)`` or ``$(ClusterId)``
     Each set of queued jobs from a specific user, submitted from a
     single submit host, sharing an executable have the same value of
     ``$(Cluster)`` or ``$(ClusterId)``. The first cluster of jobs are
@@ -675,10 +674,11 @@ as given in these definitions.
     -  ``a`` When combined with the q option, causes the return value to
        be enclosed within single quotes.
 
- ``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
- ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
- ``$INT(item-to-convert)`` or
-``$INT(item-to-convert, format-specifier)``
+``$DIRNAME(filename)`` is the same as ``$Fp(filename)``
+
+``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
+
+``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
     a C language or Perl format specifier. If no ``format-specifier`` is
@@ -694,7 +694,7 @@ as given in these definitions.
 
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
- ``$RANDOM_INTEGER(min, max [, step])``
+``$RANDOM_INTEGER(min, max [, step])``
     :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
     within the range min and max, inclusive, is selected. The optional
     step parameter controls the stride within the range, and it defaults
@@ -705,8 +705,7 @@ as given in these definitions.
 
           $RANDOM_INTEGER(0, 8, 2)
 
- ``$REAL(item-to-convert)`` or
-``$REAL(item-to-convert, format-specifier)``
+``$REAL(item-to-convert)`` or ``$REAL(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert`` for a floating point type. The
     ``format-specifier`` is a C language or Perl format specifier. If no
@@ -816,10 +815,7 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-Section `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`_ on
-page `HTCondor's ClassAd
-Mechanism <../misc-concepts/classad-mechanism.html>`_.
+the :doc:`/misc-concepts/classad-mechanism` section.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -846,11 +842,9 @@ command. This shows all the defined attributes for current jobs in the
 queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
-unnumbered Appendix on page `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`_. A
+Appendix on the :doc:`/classad-attributes/job-classad-attributes` page. A
 list of defined ClassAd attributes for machine ClassAds is given in the
-unnumbered Appendix on page `Machine ClassAd
-Attributes <../classad-attributes/machine-classad-attributes.html>`_.
+Appendix on the :doc:`/classad-attributes/machine-classad-attributes` page.
 
 Rank Expression Examples
 ''''''''''''''''''''''''
@@ -1820,15 +1814,14 @@ set and reference environment variables for a job or job cluster.
 
 Within a submit description file, the user may define environment
 variables for the job's environment by using the **environment**
-command. See within the *condor_submit* manual page at
-Section `condor_submit <../man-pages/condor_submit.html>`_ for more
+command. See within the :doc:`/man-pages/condor_submit` manual page for more
 details about this command.
 
 The submitter's entire environment can be copied into the job ClassAd
 for the job at job submission. The
 **getenv** :index:`getenv<single: getenv; submit commands>` command within the
-submit description file does this, as described at
-Section `condor_submit <../man-pages/condor_submit.html>`_.
+submit description file does this, as described on the 
+:doc:`/man-pages/condor_submit` manual page.
 
 If the environment is set with the
 **environment** :index:`environment<single: environment; submit commands>` command
@@ -1928,7 +1921,7 @@ program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
 Cross submission works for all universes except ``scheduler`` and
-``local``. See the :doc:`/grid-computing/grid-universe` section for how matchmaking
+``local``. See :doc:`/grid-computing/grid-universe` section for how matchmaking
 works in the ``grid`` universe. The burden is on the user to both obtain
 and specify the correct executable for the target architecture. To list
 the architecture and operating systems of the machines in a pool, run

@@ -14,9 +14,10 @@ daemon (which runs on each machine that may submit jobs) to implement
 flocking.
 
 NOTE: Flocking to pools which use HTCondor's high availability
-mechanisms is not advised. See section  `The High Availability of
-Daemons <../admin-manual/high-availability.html>`_ for a discussion of
-the issues.
+mechanisms is not advised. See 
+:ref:`admin-manual/high-availability:high availability of the central manager`
+for a discussion of the issues.
+
 
 Flocking Configuration
 ----------------------
@@ -68,8 +69,7 @@ configuration, set the following configuration variables:
 
     This example configuration presumes that the *condor_collector* and
     *condor_negotiator* daemons are running on the same machine. See
-    the :doc:`/admin-manual/security` section on
-    page `Security <../admin-manual/security.html>`_ for a discussion
+    the :ref:`admin-manual/security:authorization` section for a discussion
     of security macros and their use.
 
 The configuration macros that must be set in pool B are ones that
@@ -113,4 +113,5 @@ the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
-the :doc:`/users-manual/submitting-a-job` section.
+the :ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+system: htcondor's file transfer mechanism` section.

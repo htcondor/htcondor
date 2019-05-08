@@ -22,9 +22,9 @@ a higher job priority than 5.
 
 For the simple case, each job can be given a distinct priority. For an
 already queued job, its priority may be set with the *condor_prio*
-command; see the example in the :doc:`/users-manual/managing-a-job` section, or the *condor_prio*
-manual page `condor_prio <../man-pages/condor_prio.html>`_ for
-details. This sets the value of job ClassAd attribute ``JobPrio``.
+command; see the example in the :doc:`/users-manual/managing-a-job` section, or
+the :doc:`/man-pages/condor_prio` manual page for details. This sets the value
+of job ClassAd attribute ``JobPrio``.
 
 A fine-grained categorization of jobs and their ordering is available
 for experts by using the job ClassAd attributes: ``PreJobPrio1``,
@@ -33,16 +33,16 @@ for experts by using the job ClassAd attributes: ``PreJobPrio1``,
 User priority
 -------------
 
-:index:`priority<single: priority; preemption>` :index:`priority<single: priority; user>`
+:index:`priority<single: priority; preemption>`
+:index:`priority<single: priority; user>`
 :index:`of a user<single: of a user; priority>`
 
 Machines are allocated to users based upon a user's priority. A lower
 numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor_userprio*
-command (see
-page `condor_userprio <../man-pages/condor_userprio.html>`_).
-:index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ HTCondor
+command (see the :doc:`/man-pages/condor_userprio` manual page).
+:index:`condor_userprio<single: condor_userprio; HTCondor commands>` HTCondor
 administrators can set and change individual user priorities with the
 same utility.
 
@@ -82,10 +82,9 @@ ships with HTCondor is configured to only preempt lower priority jobs
 that have run for at least one hour. So in the previous example, in the
 worse case it could take up to a maximum of one hour until the higher
 priority user receives a fair share of machines. For a general
-discussion of limiting preemption, please see section `Policy
-Configuration for Execute Hosts and for Submit
-Hosts <../admin-manual/policy-configuration.html>`_ of the
-Administrator's manual.
+discussion of limiting preemption, please see the
+:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+section of the Administrator's manual.
 
 User priorities are keyed on ``<username>@<domain>``, for example
 ``johndoe@cs.wisc.edu``. The domain name to use, if any, is configured
@@ -95,7 +94,7 @@ from or even if the user submits jobs from multiple machines.
 :index:`nice job` :index:`nice job<single: nice job; priority>`
 
 An extra feature is the ability to submit a job as a nice job (see
-page `condor_submit <../man-pages/condor_submit.html>`_). Nice jobs
+the :doc:`/man-pages/condor_submit` manual page). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar

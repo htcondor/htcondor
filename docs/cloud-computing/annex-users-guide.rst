@@ -5,8 +5,8 @@ A user of *condor_annex* may be a regular job submitter, or she may be
 an HTCondor pool administrator. This guide will cover basic
 *condor_annex* usage first, followed by advanced usage that may be of
 less interest to the submitter. Users interested in customizing
-*condor_annex* should consult section `HTCondor Annex Customization
-Guide <../cloud-computing/annex-customization-guide.html>`_.
+*condor_annex* should consult the 
+:doc:`/cloud-computing/annex-customization-guide`.
 
 Considerations and Limitations
 ------------------------------
@@ -19,9 +19,8 @@ can of course add machines to your pool as you see fit. By default,
 however, *condor_annex* instances will only start jobs submitted by the
 user who started the annex, so pool administrators using *condor_annex*
 on their users' behalf will probably want to use the **-owners** option
-or **-no-owner** flag; see the man page (section
-`condor_annex <../man-pages/condor_annex.html>`_). Once the new
-machines join the pool, they will run jobs as normal.
+or **-no-owner** flag; see the :doc:`/man-pages/condor_annex` man page.
+Once the new machines join the pool, they will run jobs as normal.
 
 Submitters, however, will have to set up their own personal HTCondor
 pool, so that *condor_annex* has a pool to join, and then work with
@@ -30,7 +29,8 @@ their new pool. Otherwise, jobs will have to be manually divided
 (removed from one and resubmitted to the other) between the pools. For
 instructions on creating a personal HTCondor pool, preparing an AWS
 account for use by *condor_annex*, and then configuring *condor_annex*
-to use that account, see the :doc:`/cloud-computing/using-annex-first-time` section.
+to use that account, see the :doc:`/cloud-computing/using-annex-first-time`
+section.
 
 Starting in v8.7.1, *condor_annex* will check for inbound access to the
 collector (usually port 9618) before starting an annex (it does not
@@ -47,15 +47,16 @@ Basic Usage
 -----------
 
 This section assumes you're logged into a Linux machine an that you've
-already configured *condor_annex*. If you haven't, see the :doc:`/cloud-computing/using-annex-first-time` section.
+already configured *condor_annex*. If you haven't, see the 
+:doc:`/cloud-computing/using-annex-first-time` section.
 
 All the terminal commands (shown in a box without a title) and file
 edits (shown in a box with an emphasized filename for a title) in this
 section take place on the Linux machine. In this section, we follow the
-common convention that the commands you type are preceded by by ‘$' to
+common convention that the commands you type are preceded by by '$' to
 distinguish them from any expected output; don't copy that part of each
-of the following lines. (Lines which end in a ‘\\' continue on the
-following line; be sure to copy both lines. Don't copy the ‘\\' itself.)
+of the following lines. (Lines which end in a '\\' continue on the
+following line; be sure to copy both lines. Don't copy the '\\' itself.)
 
 What You'll Need to Know
 ''''''''''''''''''''''''
@@ -72,7 +73,7 @@ Start an Annex
 
 Entering the following command will start an annex named "MyFirstAnnex"
 with one instance. *condor_annex* will print out what it's going to do,
-and then ask you if that's OK. You must type ‘yes' (and hit enter) at
+and then ask you if that's OK. You must type 'yes' (and hit enter) at
 the prompt to start an annex; if you do not, *condor_annex* will print
 out instructions about how to change whatever you may not like about
 what it said it was going to do, and then exit.
@@ -101,7 +102,7 @@ Instance Types
 
 | Each instance type provides a different number (and/or type) of CPU
   cores, amount of RAM, local storage, and the like. We recommend starting
-  with ‘m4.large', which has 2 CPU cores and 8 GiB of RAM, but you can see
+  with 'm4.large', which has 2 CPU cores and 8 GiB of RAM, but you can see
   the complete list of instance types at the following URL:
 | `https://aws.amazon.com/ec2/instance-types/ <https://aws.amazon.com/ec2/instance-types/>`_
 | You can specify an instance type with the -aws-on-demand-instance-type
@@ -280,7 +281,7 @@ general use, use the -no-owner flag to run jobs from anyone.
 
 Also starting in v8.7.1, the default behaviour for an annex instance is
 to run only jobs which have the MayUseAWS attribute set (to true). To
-submit a job with MayUseAWS set to true, add +MayUseAWS = TRUE to the
+submit a job with MayUseAWS set to true, add ``+MayUseAWS = TRUE`` to the
 submit file somewhere before the queue command. To allow an existing job
 to run in the annex, use condor_q_edit. For instance, if you'd like
 cluster 1234 to run on AWS:
@@ -368,14 +369,14 @@ Using AWS Spot Fleet
 *condor_annex* supports Spot instances via an AWS technology called
 "Spot Fleet". Normally, when you request instances, you request a
 specific type of instance (the default on-demand instance is, for
-instance, ‘m4.large'.) However, in many cases, you don't care too much
+instance, 'm4.large'.) However, in many cases, you don't care too much
 about how many cores an intance has - HTCondor will automatically
 advertise the right number and schedule jobs appropriately, so why would
 you? In such cases - or in other cases where your jobs will run
 acceptably on more than one type of instance - you can make a Spot Fleet
 request which says something like "give me a thousand cores as cheaply
-as possible", and specify that an ‘m4.large' instance has two cores,
-while ‘m4.xlarge' has four, and so on. (The interface actually allows
+as possible", and specify that an 'm4.large' instance has two cores,
+while 'm4.xlarge' has four, and so on. (The interface actually allows
 you to assign arbitrary values - like HTCondor slot weights - to each
 instance type [1]_, but the default value
 is core count.) AWS will then divide the current price for each instance
@@ -396,7 +397,7 @@ containing a JSON blob which describes the Spot Fleet request you'd like
 to make. (It's too complicated for a reasonable command-line interface.)
 The AWS web console can be used to create such a file; the button to
 download that file is (currently) in the upper-right corner of the last
-page before you submit the Spot Fleet request; it is labeled ‘JSON
+page before you submit the Spot Fleet request; it is labeled 'JSON
 config'. You may need to create an IAM role the first time you make a
 Spot Fleet request; please do so before running *condor_annex*.
 
@@ -413,7 +414,7 @@ ANNEX_DEFAULT_SFR_CONFIG_FILE
 file you just downloaded, if you'd like it to become your default
 configuration for Spot annexes. Be aware that *condor_annex* does not
 alter the validity period if one is set in the Spot Fleet configuration
-file. You should remove the references to ‘ValidFrom' and ‘ValidTo' in
+file. You should remove the references to 'ValidFrom' and 'ValidTo' in
 the JSON file to avoid confusing surprises later.
 
 Additionally, be aware that *condor_annex* uses the Spot Fleet API in
@@ -466,8 +467,7 @@ with instance types, but this is not required.
 Expert Mode
 '''''''''''
 
-The man page (:doc:`/man-pages/condor_annex`) lists
-the "expert mode" options.
+The :doc:`/man-pages/condor_annex` manual page lists the "expert mode" options.
 
 Four of the "expert mode" options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**

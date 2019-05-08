@@ -10,7 +10,9 @@ Using HTCondor with AFS
 :index:`AFS<single: AFS; file system>`
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at the :doc:`/admin-manual/configuration-macros` section.
+shared file system are given at the 
+:ref:`admin-manual/configuration-macros:shared file system configuration file
+macros` section.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
@@ -115,7 +117,8 @@ to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
-see the :doc:`/users-manual/submitting-a-job` section for details.
+see the :ref:`users-manual/submitting-a-job:submitting jobs without a shared
+file system: htcondor's file transfer mechanism` section for details.
 
 For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
@@ -125,7 +128,8 @@ command
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
 **output_destination** :index:`output_destination<single: output_destination; submit commands>`;
-see the :doc:`/users-manual/submitting-a-job` section for details. The plug-in
+see the :ref:`users-manual/submitting-a-job:submitting jobs without a shared
+file system: htcondor's file transfer mechanism` section for details. The plug-in
 is invoked once for each output file to be transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
@@ -489,8 +493,8 @@ universe. However, these jobs cannot take checkpoints and migrate.
 To relink programs with HTCondor, we provide the *condor_compile* tool.
 As installed by default, *condor_compile* works with the following
 commands: *gcc*, *g++*, *g77*, *cc*, *acc*, *c89*, *CC*, *f77*,
-*fort77*, *ld*. See the *condor_compile* (1) man page for details on
-using *condor_compile*.
+*fort77*, *ld*. See the :doc:`/man-pages/condor_compile` manual page for
+details on using *condor_compile*.
 
 *condor_compile* can work transparently with all commands on the
 system, including *make*. The basic idea here is to replace the system
@@ -968,7 +972,7 @@ full.host.name.
 Different resources in the pool may have different dedicated policies by
 varying the local configuration.
 
- Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
+Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
     One possible scenario for the use of a dedicated resource is to only
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
@@ -994,7 +998,7 @@ varying the local configuration.
     daemon's pool-wide policies, such as those for evicting jobs when
     keyboard and CPU activity is discovered on the machine.
 
- Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
+Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
     While the first example works nicely for jobs requiring dedicated
     resources, it can lead to poor utilization of the dedicated
     machines. A more sophisticated strategy allows the machines to run
@@ -1009,7 +1013,7 @@ varying the local configuration.
 
         START = True
 
- Policy Scenario: Adding Desktop Resources To The Mix
+Policy Scenario: Adding Desktop Resources To The Mix
     A third policy example allows all jobs. These desktop machines use a
     preexisting ``START`` expression that takes the machine owner's
     usage into account for some jobs. The machine does not preempt jobs

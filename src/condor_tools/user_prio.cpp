@@ -1115,7 +1115,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
   float wtResUsed, requested;
-  MyString AcctGroup;
+  std::string AcctGroup;
   bool IsAcctGroup;
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;
   bool fNeedGroupIdFixup = false;

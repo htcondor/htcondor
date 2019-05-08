@@ -84,8 +84,7 @@ variety of ways. For example,
  *condor_status -long*
     lists the machine ClassAds for all machines in the pool.
 
-Refer to the *condor_status* command reference page located on
-page `condor_status <../man-pages/condor_status.html>`_ for a
+Refer to the :doc:`/man-pages/condor_status` command reference page for a
 complete description of the *condor_status* command.
 
 The following shows a portion of a machine ClassAd

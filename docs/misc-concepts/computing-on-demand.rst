@@ -85,8 +85,8 @@ the machine (usually in a local configuration file).
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
 authentication methods described in
-the :doc:`/admin-manual/security` section on HTCondor's
-Security Model. If one of these methods cannot be used, then file system
+the :ref:`admin-manual/security:htcondor's security model` section. 
+If one of these methods cannot be used, then file system
 authentication may be used when directly logging in to that machine (to
 be claimed) and issuing the command locally.
 
@@ -312,12 +312,11 @@ When using COD, the job ID is only used to identify the job in various
 log messages and in the COD-specific output of *condor_status*. The COD
 job ID is part of the information included in all events written to the
 ``StarterUserLog`` regarding a given job. The COD job ID is also used in
-the HTCondor debugging logs described in the :doc:`/admin-manual/configuration-macros` section on
-page `Configuration
-Macros <../admin-manual/configuration-macros.html>`_. For example, in
-the *condor_starter* daemon's log file for COD jobs (called
-``StarterLog.cod`` by default) or in the *condor_startd* daemon's log
-file (called ``StartLog`` by default).
+the HTCondor debugging logs described in the 
+:ref:`admin-manual/configuration-macros:daemon logging configuration file
+entries` section. For example, in the *condor_starter* daemon's log file for
+COD jobs (called ``StarterLog.cod`` by default) or in the *condor_startd* 
+daemon's log file (called ``StartLog`` by default).
 
 These COD job IDs are optional. The job ID is useful to define where it
 helps a user with the accounting or debugging of their own application.

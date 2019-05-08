@@ -135,7 +135,7 @@ if (WITH_GLOBUS)
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
 		endif()
 
-		condor_post_external( globus include OFF )
+		condor_post_external( globus include OFF "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND}" )
 
 		if ( LINUX )
 			# Install the Globus libraries manually.

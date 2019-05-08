@@ -33,6 +33,7 @@ elements of a node.
 .. figure:: /_images/dagman-node.png
   :width: 400
   :alt: One Node within a DAG
+  :align: center
 
   One Node within a DAG
 
@@ -79,6 +80,7 @@ nodes.
 .. figure:: /_images/dagman-diamond-dag.png
   :width: 300
   :alt: Diamond DAG
+  :align: center
 
   Diamond DAG
 
@@ -107,8 +109,8 @@ JOB
 The *JOB* command specifies an HTCondor job. The syntax used for each
 *JOB* command is
 
-**JOB** *JobName* *SubmitDescriptionFileName* [**DIR  ** *directory*]
-[**NOOP** ] [**DONE** ]
+**JOB** *JobName* *SubmitDescriptionFileName* [**DIR** *directory*]
+[**NOOP**] [**DONE**]
 
 A *JOB* entry maps a *JobName* to an HTCondor submit description file.
 The *JobName* uniquely identifies nodes within the DAG input file and in
@@ -189,7 +191,7 @@ The syntax used for each dependency (PARENT/CHILD) command is
 
 **PARENT** *ParentJobName...* **CHILD** *ChildJobName...*
 
-The *PARENT* keyword is followed by one or more *ParentJobName* s. The
+The *PARENT* keyword is followed by one or more *ParentJobName*s. The
 *CHILD* keyword is followed by one or more *ChildJobName* s. Each child
 job depends on every parent job within the line. A single line in the
 input file can specify the dependencies from one or more parents to one
@@ -294,14 +296,14 @@ nodes within the DAG. The success of a node is based upon the success of
 the job(s), PRE script, and POST script. A job, PRE script, or POST
 script with an exit value not equal to 0 is considered failed. **The
 exit value of whatever component of the node was run last determines the
-success or failure of the node.** Table `2.1 <#x22-810051>`_ lists
+success or failure of the node.** Table 2.1 lists
 the definition of node success and failure for all variations of script
 and job success and failure, when ``DAGMAN_ALWAYS_RUN_POST`` is set to
 ``False``. In this table, a dash (``-``) represents the case where a
 script does not exist for the DAG, **S** represents success, and **F**
 represents failure.
 
-Table `2.2 <#x22-810062>`_ lists the definition of node success and
+Table 2.2 lists the definition of node success and
 failure only for the cases where the PRE script fails, when
 ``DAGMAN_ALWAYS_RUN_POST`` is set to ``True``.
 
@@ -621,7 +623,7 @@ DAG Submission
 :index:`DAG submission<single: DAG submission; DAGMan>`
 
 A DAG is submitted using the tool *condor_submit_dag*. The manual
-page `2248 <Condorsubmitdag.html#x150-109200012>`_ details the
+page for :doc:`/man-pages/condor_submit_dag` details the
 command. The simplest of DAG submissions has the syntax
 
 *condor_submit_dag* *DAGInputFileName*
@@ -680,8 +682,8 @@ represents a single HTCondor proc that requires 4 MB of input files, and
 the proc will run in a directory with a volume of 100 MB of free space.
 Using the argument **-maxjobs 25** guarantees that a maximum of 25
 clusters, using a maximum of 100 MB of space, will be submitted to
-HTCondor at one time. (See the *condor_submit_dag* man page
-( `12 <Condorsubmitdag.html#x150-109200012>`_) for more information.
+HTCondor at one time. (See the :doc:`/man-pages/condor_submit_dag` manual
+page) for more information.
 Also see the equivalent ``DAGMAN_MAX_JOBS_SUBMITTED``
 :index:`DAGMAN_MAX_JOBS_SUBMITTED` configuration option
 (ref:`admin-manual/configuration-macros:configuration file entries for dagman`).
@@ -694,7 +696,7 @@ ready nodes in the DAG. This allows *condor_dagman* to submit jobs in a
 way that adapts to the load on the HTCondor pool at any given time. If
 the pool is lightly loaded, *condor_dagman* will end up submitting more
 jobs; if the pool is heavily loaded, *condor_dagman* will submit fewer
-jobs. (See the :doc:`/man-pages/condor_submit_dag` man page for more
+jobs. (See the :doc:`/man-pages/condor_submit_dag` manual page for more
 information.)
 Also see the equivalent ``DAGMAN_MAX_JOBS_IDLE``
 :index:`DAGMAN_MAX_JOBS_IDLE` configuration option
@@ -718,7 +720,7 @@ running at one time. The optional **-maxpre** command line argument
 limits the number of PRE scripts that may be running at one time, and
 the optional **-maxpost** command line argument limits the number of
 POST scripts that may be running at one time. (See the
-:doc:`/man-pages/condor_submit_dag` man page for more information.)
+:doc:`/man-pages/condor_submit_dag` manual page for more information.)
 Also see the equivalent
 ``DAGMAN_MAX_PRE_SCRIPTS`` :index:`DAGMAN_MAX_PRE_SCRIPTS` and
 ``DAGMAN_MAX_POST_SCRIPTS`` :index:`DAGMAN_MAX_POST_SCRIPTS`
@@ -1610,7 +1612,7 @@ The *SET_JOB_ATTR* keyword within the DAG input file specifies an
 attribute/value pair to be set in the DAGMan job's ClassAd. The syntax
 for *SET_JOB_ATTR* is
 
-**SET_JOB_ATTR** *AttributeName* =\ *AttributeValue*
+**SET_JOB_ATTR** *AttributeName* = *AttributeValue*
 
 As an example, if the DAG input file contains:
 
@@ -1866,8 +1868,8 @@ file to be run by a separate instance of *condor_dagman*, with the
 
 The syntax for the SUBDAG command is
 
-**SUBDAG** **EXTERNAL** *JobName* *DagFileName* [**DIR  ** *directory*]
-[**NOOP** ] [**DONE** ]
+**SUBDAG** **EXTERNAL** *JobName* *DagFileName* [**DIR** *directory*]
+[**NOOP**] [**DONE**]
 
 The optional specifications of **DIR**, **NOOP**, and **DONE**, if used,
 must appear in this order within the entry. **NOOP** and **DONE** for
@@ -2205,6 +2207,7 @@ associated with all nodes.
 .. figure:: /_images/dagman-diamond-spliced.png
   :width: 350
   :alt: The diamond-shaped DAG spliced between two nodes.
+  :align: center
 
   The diamond-shaped DAG spliced between two nodes.
 
@@ -2249,6 +2252,7 @@ file is specified.
 .. figure:: /_images/dagman-x-shaped-dag.png
   :width: 350
   :alt: The X-shaped DAG.
+  :align: center
 
   The X-shaped DAG.
 
@@ -2285,6 +2289,7 @@ The next description illustrates the resulting DAG.
 .. figure:: /_images/dagman-s1-dag.png
   :width: 350
   :alt: The DAG described by s1.dag.
+  :align: center
 
   The DAG described by ``s1.dag``.
 
@@ -2328,6 +2333,7 @@ having any dependencies associated with it in this top level DAG.
 .. figure:: /_images/dagman-complex-splice.png
   :width: 750
   :alt: The complex splice example DAG.
+  :align: center
 
   The complex splice example DAG.
 
@@ -2339,8 +2345,7 @@ Because the nodes of a splice are directly incorporated into the DAG
 containing the SPLICE command, splices do not generate their own rescue
 DAGs, unlike SUBDAG EXTERNALs.
 
-The DIR option with splices
-"""""""""""""""""""""""""""
+**The DIR option with splices**
 
 The *DIR* option specifies a working directory for a splice, from which
 the splice will be parsed and the jobs within the splice submitted. The
@@ -2359,7 +2364,7 @@ argument will contain DIR specifications, so such a rescue DAG must be
 run without the *-usedagdir* argument. (Note that "full" rescue DAGs are
 no longer the default.)
 
- Limitation: splice DAGs must exist at submit time
+**Limitation: splice DAGs must exist at submit time**
 
 Unlike the DAG files referenced in a SUBDAG EXTERNAL command, DAG files
 referenced in a SPLICE command must exist when the DAG containing the
@@ -2369,8 +2374,7 @@ submitted, not when the top-most DAG is submitted, so the splice DAG can
 be created by a part of the workflow that runs before the relevant
 sub-DAG.)
 
-Limitation: Splices and PRE or POST Scripts
-"""""""""""""""""""""""""""""""""""""""""""
+**Limitation: Splices and PRE or POST Scripts**
 
 A PRE or POST script may not be specified for a splice (however, nodes
 within a spliced DAG can have PRE and POST scripts). (The reason for
@@ -2426,8 +2430,7 @@ child of the splice, and attach the POST script to the NOOP node.
 
     # END DAG FILE example2.dag
 
-Limitation: Splices and the RETRY of a Node, use of VARS, or use of
-PRIORITY
+**Limitation: Splices and the RETRY of a Node, use of VARS, or use of PRIORITY**
 
 A RETRY, VARS or PRIORITY command cannot be specified for a SPLICE;
 however, individual nodes within a spliced DAG can have a RETRY, VARS or
@@ -2478,7 +2481,7 @@ RETRY on that SUBDAG.
 
       RETRY B 3
 
- Limitation: The Interaction of Categories and MAXJOBS with Splices
+**Limitation: The Interaction of Categories and MAXJOBS with Splices**
 
 Categories normally refer only to nodes within a given splice. All of
 the assignments of nodes to a category, and the setting of the category
@@ -2661,6 +2664,7 @@ A diagram of the above example:
 .. figure:: /_images/dagman-splice-connect.png
   :width: 600
   :alt: Diagram of the splice connect example
+  :align: center
 
   Diagram of the splice connect example
 
@@ -2679,8 +2683,7 @@ input file specifies a node job to be run at the end of the DAG.
 
 The syntax used for the *FINAL* command is
 
-**FINAL** *JobName* *SubmitDescriptionFileName* [**DIR  ** *directory*]
-[**NOOP** ]
+**FINAL** *JobName* *SubmitDescriptionFileName* [**DIR** *directory*] [**NOOP**]
 
 The FINAL node within the DAG is identified by *JobName*, and the
 HTCondor job is described by the contents of the HTCondor submit
@@ -3025,7 +3028,7 @@ original DAG file. For example:
 Attempting to re-submit the original DAG file, if the Rescue DAG file is
 a complete DAG, will result in a parse failure.
 
- Rescue DAG Generated When There Are Parse Errors
+**Rescue DAG Generated When There Are Parse Errors**
 
 Starting in HTCondor version 7.5.5, passing the **-DumpRescue** option
 to either *condor_dagman* or *condor_submit_dag* causes
@@ -3169,7 +3172,7 @@ parameters:
    option to visualize the history of the DAG after it has finished
    executing.
 
--  **INCLUDE ** *path-to-filename* Includes the contents of a file
+-  **INCLUDE** *path-to-filename* Includes the contents of a file
    given by ``path-to-filename`` in the file produced by the **DOT**
    command. The include file contents are always placed after the line
    of the form label=. This may be useful if further editing of the
@@ -3194,8 +3197,8 @@ enable this feature, the DAG input file must contain a line with the
 
 The syntax for a *NODE_STATUS_FILE* command is
 
-**NODE_STATUS_FILE** *statusFileName* [*minimumUpdateTime* ]
-[**ALWAYS-UPDATE** ]
+**NODE_STATUS_FILE** *statusFileName* [*minimumUpdateTime*]
+[**ALWAYS-UPDATE**]
 
 The status file is written on the machine on which the DAG is submitted;
 its location is given by *statusFileName*, and it may be a full path and
@@ -3725,19 +3728,17 @@ for the pool. The transfer of files (or not) when using
 **initialdir** :index:`initialdir<single: initialdir; submit commands>` differs
 based upon the job
 **universe** :index:`universe<single: universe; submit commands>` and whether or
-not there is a shared file system. See
-:doc:`/man-pages/condor_submit` for the details on
-the submit command
-**initialdir** :index:`initialdir<single: initialdir; submit commands>`.
+not there is a shared file system. See the :doc:`/man-pages/condor_submit` 
+manual page for the details on the submit command.
 
 Submission of this set of jobs is no different than the previous
 examples. With the current working directory the same as the one
 containing the submit description file, the DAG input file, and the
-subdirectories,
+subdirectories:
 
 ::
 
-      condor_submit_dag biggersweep.dag
+    condor_submit_dag biggersweep.dag
 
 Workflow Metrics
 ----------------
@@ -3866,8 +3867,8 @@ reporting the metrics if the *condor_dagman* job is removed, or if the
 DAG drains from the queue because of being halted by a halt file.
 
 The metrics are reported by the *condor_dagman_metrics_reporter*
-executable as described in the manual page at
-`1891 <Condordagmanmetricsreporter.html#x110-76900012>`_.
+executable as described in the :doc:`/man-pages/condor_dagman_metrics_reporter`
+manual page.
 
 DAGMan and Accounting Groups
 ----------------------------
@@ -3890,7 +3891,8 @@ values can be specified using the **-append** flag to
 
 ::
 
-    condor_submit_dag -append accounting_group=group_physics -append accounting_group_user=albert relativity.dag
+    condor_submit_dag -append accounting_group=group_physics -append \
+      accounting_group_user=albert relativity.dag
 
 See :ref:`admin-manual/user-priorities-negotiation:group accounting`
 for a discussion of group accounting and

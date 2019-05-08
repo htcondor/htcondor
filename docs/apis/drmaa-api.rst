@@ -68,10 +68,8 @@ attributes:
 
 The attribute ``DRMAA_NATIVE_SPECIFICATION`` can be used to direct all
 commands supported within submit description files. See the
-*condor_submit* manual page at
-Section `condor_submit <../man-pages/condor_submit.html>`_ for a
-complete list. Multiple commands can be specified if separated by
-newlines.
+:doc:`/man-pages/condor_submit` manual page for a complete list. Multiple 
+ommands can be specified if separated by newlines.
 
 As in the normal submit file, arbitrary attributes can be added to the
 job's ClassAd by prefixing the attribute with ``+``. In this case, you will

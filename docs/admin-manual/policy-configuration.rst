@@ -56,7 +56,7 @@ command:
 
 ::
 
-      condor_status -l hostname
+    condor_status -l hostname
 
 The ``START`` Expression
 ''''''''''''''''''''''''
@@ -122,10 +122,10 @@ reference only machine ClassAd attributes.
 
     ::
 
-          START = True
-          SUSPEND = False
-          PREEMPT = False
-          KILL = False
+        START = True
+        SUSPEND = False
+        PREEMPT = False
+        KILL = False
 
 In this way, HTCondor jobs always run and can never be kicked off from
 activity on the machine. However, because they would run with the low
@@ -335,6 +335,7 @@ point in the negotiations has been reached. The possible states are
 .. figure:: /_images/machine-states-transitions.png
   :width: 600
   :alt: Machine states and the possible transitions between the states
+  :align: center
   
   Machine states and the possible transitions between the states.
 
@@ -342,7 +343,7 @@ point in the negotiations has been reached. The possible states are
 Each transition is labeled with a letter. The cause of each transition
 is described below.
 
--  Transitions out of the Owner state
+- Transitions out of the Owner state
 
     A
        The machine switches from Owner to Unclaimed whenever the
@@ -354,7 +355,7 @@ is described below.
        draining of the machine is initiated, for example by
        *condor_drain* or by the *condor_defrag* daemon.
 
--  Transitions out of the Unclaimed state
+- Transitions out of the Unclaimed state
 
     B
        The machine switches from Unclaimed back to Owner whenever the
@@ -381,7 +382,7 @@ is described below.
        the machine is initiated, for example by *condor_drain* or by
        the *condor_defrag* daemon.
 
--  Transitions out of the Matched state
+- Transitions out of the Matched state
 
     F
        The machine moves from Matched to Owner if either the ``START``
@@ -404,7 +405,7 @@ is described below.
        *condor_schedd* successfully completes the claiming protocol
        with the *condor_startd*.
 
--  Transitions out of the Claimed state
+- Transitions out of the Claimed state
 
     H
        From the Claimed state, the only possible destination is the
@@ -422,7 +423,7 @@ is described below.
           (either a better user priority, or one where the machine rank
           is higher)
 
--  Transitions out of the Preempting state
+- Transitions out of the Preempting state
 
     I
        The resource will move from Preempting back to Claimed if the
@@ -434,7 +435,7 @@ is described below.
        FALSE when the *condor_startd* has finished evicting whatever
        job it was running when it entered the Preempting state.
 
--  Transitions out of the Backfill state
+- Transitions out of the Backfill state
 
     K
        The resource will move from Backfill to Owner for the following
@@ -455,7 +456,7 @@ is described below.
        the *condor_startd* receives the match notification from the
        *condor_negotiator*.
 
--  Transitions out of the Drained state
+- Transitions out of the Drained state
 
     O
        The transition from Drained to Owner state happens when draining
@@ -522,6 +523,7 @@ The following list describes all the possible state/activity pairs.
        HTCondor.
 
    :index:`Unclaimed<single: Unclaimed; machine activity>`
+
 -  Unclaimed
 
     Idle
@@ -616,6 +618,7 @@ transition numbers referred to in this manual will be **bold**.
 .. figure:: /_images/machine-states-activities.png
   :width: 700
   :alt: Machine States and Activities
+  :align: center
 
   Machine States and Activities
 
@@ -1188,7 +1191,7 @@ State/Activity Transition Expression Summary
 This section is a summary of the information from the previous sections.
 It serves as a quick reference.
 
- ``START`` :index:`START`
+``START`` :index:`START`
     When TRUE, the machine is willing to spawn a remote HTCondor job.
 
 ``RUNBENCHMARKS`` :index:`RUNBENCHMARKS`
@@ -1273,7 +1276,7 @@ It serves as a quick reference.
     ``NEGOTIATOR_CONSIDER_EARLY_PREEMPTION``
     :index:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
 
- ``WANT_VACATE`` :index:`WANT_VACATE`
+``WANT_VACATE`` :index:`WANT_VACATE`
     This is checked only when the ``PREEMPT`` expression is ``True`` and
     the machine enters the Preempting state. If ``WANT_VACATE`` is
     ``True``, the machine enters the Vacating activity. If it is
@@ -1331,7 +1334,7 @@ defined, the standard expressions are used for vanilla jobs as well).
 
 The following are macros to help write the expressions clearly.
 
- ``StateTimer``
+``StateTimer``
     Amount of time in seconds in the current state.
 
 ``ActivityTimer``
@@ -1451,7 +1454,7 @@ considerably to
 
 :index:`test job<single: test job; policy>`
 
- Test-job Policy Example
+**Test-job Policy Example**
 
 This example shows how the default macros can be used to set up a
 machine for running test jobs from a specific user. Suppose we want the
@@ -1476,7 +1479,7 @@ Notice that there is nothing special in either the ``CONTINUE`` or
 at ``CONTINUE``. Similarly, if they never preempt, they never look at
 ``KILL``. :index:`time of day<single: time of day; policy>`
 
- Time of Day Policy
+**Time of Day Policy**
 
 HTCondor can be configured to only run jobs at certain times of the day.
 In general, we discourage configuring a system like this, since there
@@ -1612,7 +1615,7 @@ keyboard activity. :index:`disabling preemption<single: disabling preemption; po
 :index:`enabling preemption<single: enabling preemption; policy>`
 :index:`disabling and enabling<single: disabling and enabling; preemption>`
 
- Disabling and Enabling Preemption
+**Disabling and Enabling Preemption**
 
 Preemption causes a running job to be suspended or killed, such that
 another job can run. As of HTCondor version 8.1.5, preemption is
@@ -1623,7 +1626,7 @@ New configuration file examples disable preemption, but contain
 directions for enabling preemption.
 :index:`suspending jobs instead of evicting them<single: suspending jobs instead of evicting them; policy>`
 
- Job Suspension
+**Job Suspension**
 
 As new jobs are submitted that receive a higher priority than currently
 executing jobs, the executing jobs may be preempted. If the preempted
@@ -1739,7 +1742,7 @@ Each interactive job has the job ClassAd attribute
 
 ::
 
-      InteractiveJob = True
+    InteractiveJob = True
 
 and this may be used to identify interactive jobs, distinguishing them
 from all other jobs.
@@ -1806,7 +1809,7 @@ Within a machine the shared system resources of cores, RAM, swap space
 and disk space will be divided for use by the slots. There are two main
 ways to go about dividing the resources of a multi-core machine:
 
- Evenly divide all resources.
+Evenly divide all resources.
     By default, the *condor_startd* will automatically divide the
     machine into slots, placing one core in each slot, and evenly
     dividing all shared resources among the slots. The only
@@ -1821,7 +1824,7 @@ ways to go about dividing the resources of a multi-core machine:
     more slots than there are cores on the machine. The number of cores
     is defined by ``NUM_CPUS`` :index:`NUM_CPUS`.
 
- Define slot types.
+Define slot types.
     Instead of an even division of resources per slot, the machine may
     have definitions of slot types, where each type is provided with a
     fraction of shared system resources. Given the slot type definition,
@@ -2064,13 +2067,18 @@ variables.
 
 -  ``SLOTS_CONNECTED_TO_CONSOLE``
    :index:`SLOTS_CONNECTED_TO_CONSOLE`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
 -  ``SLOTS_CONNECTED_TO_KEYBOARD``
    :index:`SLOTS_CONNECTED_TO_KEYBOARD`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
+
 -  ``DISCONNECTED_KEYBOARD_IDLE_BOOST``
    :index:`DISCONNECTED_KEYBOARD_IDLE_BOOST`, with definition at
-   the :doc:`/admin-manual/configuration-macros` section
+   the :ref:`admin-manual/configuration-macros:condor_startd configuration file
+   macros` section
 
 Each slot has its own machine ClassAd. Yet, the policy expressions for
 the multi-core machine are propagated and inherited from configuration
@@ -2278,26 +2286,26 @@ on a per-slot basis. Here is another example:
 
 For this example, the *condor_startd* ClassAds are
 
-    slot1:
+slot1:
 
-    ::
+::
 
-        favorite_color = "blue"
-        favorite_season = "spring"
+    favorite_color = "blue"
+    favorite_season = "spring"
 
-    slot2:
+slot2:
 
-    ::
+::
 
-        favorite_color = "green"
-        favorite_season = "spring"
+    favorite_color = "green"
+    favorite_season = "spring"
 
-    slot3:
+slot3:
 
-    ::
+::
 
-        favorite_color = "blue"
-        favorite_season = "summer"
+    favorite_color = "blue"
+    favorite_season = "summer"
 
 Dynamic Provisioning: Partitionable and Dynamic Slots
 '''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2318,12 +2326,16 @@ than one job is or can be matched to a single slot. In this example,
 Slot1 is identified as a partitionable slot and has the following
 resources:
 
+::
+
     cpu = 10
     memory = 10240
     disk = BIG
 
 Assume that JobA is allocated to this slot. JobA includes the following
 requirements:
+
+::
 
     cpu = 3
     memory = 1024
@@ -2336,6 +2348,8 @@ substring ``Slot1_1``.
 
 After allocation, the partitionable Slot1 advertises that it has the
 following resources still available:
+
+::
 
     cpu = 7
     memory = 9216
@@ -2364,6 +2378,8 @@ configuration variables:
 
 In a pool using dynamic provisioning, jobs can have extra, and desired,
 resources specified in the submit description file:
+
+::
 
     request_cpus
     request_memory
@@ -2508,7 +2524,7 @@ their defaults are
     ``MODIFY_REQUEST_EXPR_REQUESTDISK`` = ``quantize(RequestDisk, {1024})`` :index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 
 condor_negotiator-Side Resource Consumption Policies
-'''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 :index:`consumption policy`
 :index:`negotiator-side resource consumption policy<single: negotiator-side resource consumption policy; partitionable slots>`
@@ -2636,7 +2652,9 @@ This example policy tells *condor_defrag* to initiate draining jobs
 from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
-*condor_defrag* daemon may be found in the :doc:`/admin-manual/configuration-macros` section.
+*condor_defrag* daemon may be found in the 
+:ref:`admin-manual/configuration-macros:condor_defrag configuration file
+macros` section.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining

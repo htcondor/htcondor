@@ -8,6 +8,32 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.3
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.3 is scheduled for release on June 4, 2019.
+
+New Features:
+
+-  The performance of HTCondor's File Transfer mechanism has improved when
+   sending multiple files, especially in wide-area network settings.
+   :ticket:`7000`
+
+Bugs Fixed:
+
+-  Fixed a bug with singularity jobs where TMPDIR was set to the wrong
+   value.  It is now set the the scratch directory inside the container.
+   :ticket:`6991`
+
+-  Fixed a bug when pid namespaces where enabled and vanilla checkpointing
+   was also enabled that caused one copy of the pid namespace wrapper to wrap
+   the job per each checkpoint restart.
+   :ticket:`6986`
+
+
+
 Version 8.8.2
 -------------
 
@@ -99,7 +125,7 @@ Known Issues:
    received reports indicating excessive CPU usage. We believe we've
    fixed the problem, but would like to get updated reports from users
    who were previously affected. To enable (the patched) GPU resource
-   monitoring, add ‘use feature: GPUsMonitor' to the HTCondor
+   monitoring, add 'use feature: GPUsMonitor' to the HTCondor
    configuration. Thank you.
 
    :ticket:`6857`

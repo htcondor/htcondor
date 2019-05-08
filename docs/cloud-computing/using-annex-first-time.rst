@@ -24,7 +24,7 @@ Install a Personal HTCondor
 We recommend that you install a personal HTCondor to make use of
 *condor_annex*; it's simpler to configure that way. These instructions
 assume version 8.7.8 of HTCondor, but should work the 8.8.x series as
-well; change ‘8.7.8' in the instructions wherever it appears.
+well; change '8.7.8' in the instructions wherever it appears.
 
 These instructions assume that it's OK to create a directory named
 ``condor-8.7.8`` in your home directory; adjust them accordingly if you
@@ -39,10 +39,10 @@ is located in your home directory on the Linux machine, so copy it there
 if necessary.
 
 Then do the following; note that in this box, like other terminal boxes,
-the commands you type are preceded by by ‘$' to distinguish them from
+the commands you type are preceded by by '$' to distinguish them from
 any expected output, so don't copy that part of each of the following
-lines. (Lines which end in a ‘\\' continue on the following line; be
-sure to copy both lines. Don't copy the ‘\\' itself.)
+lines. (Lines which end in a '\\' continue on the following line; be
+sure to copy both lines. Don't copy the '\\' itself.)
 
 ::
 
@@ -129,6 +129,7 @@ machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
 ::
+
     # ~/condor-8.7.8/local/condor_config.local
 
     NETWORK_INTERFACE = *
@@ -185,7 +186,7 @@ Tell HTCondor about the Open Port
 By default, HTCondor will use port 9618. If the Linux machine doesn't
 already have HTCondor installed, and the admin is willing to open that
 port, then you don't have to do anything. Otherwise, you'll need to add
-a line like the following, replacing ‘9618' with whatever port the
+a line like the following, replacing '9618' with whatever port the
 administrator opened for you.
 
 ::
@@ -255,7 +256,7 @@ go to the IAM console at the following URL; log in if you need to:
 `https://console.aws.amazon.com/iam/home?region=us-east-1#/users <https://console.aws.amazon.com/iam/home?region=us-east-1#/users>`_
 
 The following instructions assume you are logged in as a user with the
-privilege to create new users. (The ‘root' user for any account has this
+privilege to create new users. (The 'root' user for any account has this
 privilege; other accounts may as well.)
 
 #. Click the "Add User" button.
@@ -275,7 +276,7 @@ privilege; other accounts may as well.)
    file privateKeyFile.
 #. Hit the "Close" button.
 
-The ‘annex-user' now has full privileges to your account.
+The 'annex-user' now has full privileges to your account.
 
 Configure *condor_annex*
 ------------------------
@@ -320,7 +321,7 @@ it won't cost you anything extra to leave your account setup for
 *condor_annex* indefinitely. If, however, you want to be tidy, you may
 delete the components setup created by going to the CloudFormation
 console at the following URL and deleting the entries whose names begin
-with ‘HTCondorAnnex-':
+with 'HTCondorAnnex-':
 
 `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active <https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active>`_
 
@@ -328,7 +329,7 @@ The setup procedure also creates an SSH key pair which may be useful
 for debugging; the private key was stored in
 ~/.condor/HTCondorAnnex-KeyPair.pem. To remove the corresponding public
 key from your AWS account, go to the key pair console at the following
-URL and delete the ‘HTCondorAnnex-KeyPair' key:
+URL and delete the 'HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`_
 

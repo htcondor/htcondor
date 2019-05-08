@@ -4,6 +4,35 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+
+Version 8.9.2
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.2 is scheduled for release on June 4, 2019.
+
+New Features:
+
+-  Add job ad attribute ``JobDisconnectedDate``.
+   When the *condor_shadow* and *condor_starter* are disconnected from each other,
+   this attribute is set to the time at which the disconnection happened.
+   :ticket:`6978`
+-  Python bindings docstrings have been improved. The Python built-in ``help``
+   function should now give better results on objects and function in the bindings.
+   :ticket:`6953`
+
+Bugs Fixed:
+
+-  Argument names for all functions in the Python bindings
+   (including class constructors and methods) have been normalized.
+   We don't expect any compatibility problems with existing code.
+   :ticket:`6963`
+-  In the Python bindings, the default argument for ``use_tcp`` in
+   :class:`Collector.advertise` is now ``True`` (it was previously ``False``,
+   which was very outdated).
+   :ticket:`6983`
+
 Version 8.9.1
 -------------
 

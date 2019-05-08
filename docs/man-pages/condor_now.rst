@@ -58,9 +58,9 @@ To begin running job 17.3 as soon as possible using job 4.2's slot:
 
       condor_now 17.3 4.2
 
-To try to figure out why that doesn't work for the ‘magic' scheduler in
+To try to figure out why that doesn't work for the 'magic' scheduler in
 the 'gandalf' pool, set the environment variable _CONDOR_TOOL_DEBUG
-to ‘D_FULLDEBUG' and then:
+to 'D_FULLDEBUG' and then:
 
 ::
 

@@ -292,7 +292,7 @@ class match_rec: public ClaimIdParser
 	~match_rec();
 
     char*   		peer; //sinful address of startd
-	MyString        m_description;
+	std::string        m_description;
 
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
@@ -337,7 +337,7 @@ class match_rec: public ClaimIdParser
 
 	void makeDescription();
 	char const *description() {
-		return m_description.Value();
+		return m_description.c_str();
 	}
 
 	PROC_ID m_now_job;

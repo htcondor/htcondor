@@ -209,7 +209,7 @@ A job's execution schedule is defined by a set of specifications within
 the submit description file. HTCondor uses these to calculate a
 ``DeferralTime`` for the job.
 
-Table `2.3 <#x25-1350063>`_ lists the submit commands and acceptable
+Table 2.3 lists the submit commands and acceptable
 values for these commands. At least one of these must be defined in
 order for HTCondor to calculate a ``DeferralTime`` for the job. Once one
 CronTab value is defined, the default for all the others uses all the
@@ -219,8 +219,6 @@ values in the allowed values ranges.
 :index:`cron_day_of_month<single: cron_day_of_month; submit commands>`
 :index:`cron_month<single: cron_month; submit commands>`
 :index:`cron_day_of_week<single: cron_day_of_week; submit commands>`
-
---------------
 
 +----------------------------+----------------------------+
 | **cron_minute**            | 0 - 59                     |
@@ -236,7 +234,6 @@ values in the allowed values ranges.
 
 Table 2.3: The list of submit commands and their value ranges.
 
---------------
 
 The day of a job's execution can be specified by both the
 **cron_day_of_month** and the **cron_day_of_week** attributes. The

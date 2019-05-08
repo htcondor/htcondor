@@ -247,24 +247,24 @@ what output is expected, and, when relevant, the exit status expected.
 
        The additional attributes included inside the job ClassAd are:
 
-        ``JobState``
+       ``JobState``
            The current state of the job. Can be either ``"Running"`` or
            ``"Suspended"``.
-        ``JobPid``
+       ``JobPid``
            The process identifier for the initial job directly spawned
            by the *condor_starter*.
-        ``NumPids``
+       ``NumPids``
            The number of processes that the job has currently spawned.
-        ``JobStartDate``
+       ``JobStartDate``
            The epoch time when the job was first spawned by the
            *condor_starter*.
-        ``RemoteSysCpu``
+       ``RemoteSysCpu``
            The total number of seconds of system CPU time (the time
            spent at system calls) the job has used.
-        ``RemoteUserCpu``
+       ``RemoteUserCpu``
            The total number of seconds of user CPU time the job has
            used.
-        ``ImageSize``
+       ``ImageSize``
            The memory image size of the job in Kbytes.
 
     Expected standard output from the hook
@@ -314,18 +314,18 @@ what output is expected, and, when relevant, the exit status expected.
        :index:`<Keyword>_HOOK_UPDATE_JOB_INFO`, and the following
        additional attributes that are only present once a job exits:
 
-        ``ExitReason``
+       ``ExitReason``
            A human-readable string describing why the job exited.
-        ``ExitBySignal``
+       ``ExitBySignal``
            A boolean indicating if the job exited due to being killed by
            a signal, or if it exited with an exit status.
-        ``ExitSignal``
+       ``ExitSignal``
            If ``ExitBySignal`` is true, the signal number that killed
            the job.
-        ``ExitCode``
+       ``ExitCode``
            If ``ExitBySignal`` is false, the integer exit code of the
            job.
-        ``JobDuration``
+       ``JobDuration``
            The number of seconds that the job ran during this
            invocation.
 
@@ -759,8 +759,8 @@ Configuration
 '''''''''''''
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-section  `Configuration
-Macros <../admin-manual/configuration-macros.html>`_.
+:ref:`admin-manual/configuration-macros:configuration file entries relating to
+hooks`.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark

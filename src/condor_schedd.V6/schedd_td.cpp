@@ -52,9 +52,9 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	std::vector<PROC_ID> *modify_allow_jobs = NULL;
 	std::vector<PROC_ID> *modify_deny_jobs = NULL;
 	ClassAd *tmp_ad = NULL;
-	MyString constraint_string;
+	std::string constraint_string;
 	int protocol;
-	MyString peer_version;
+	std::string peer_version;
 	bool has_constraint;
 	int direction;
 	MyString desc;
@@ -276,14 +276,14 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// Walk the job queue looking for jobs which match the constraint
 		// filter. Then filter that set with OwnerCheck to ensure 
 		// the client has the correct authority to modify these jobids.
-		tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 1);
+		tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 1);
 		while (tmp_ad) {
 			PROC_ID job_id;
 			if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
 			{
 				modify_allow_jobs->push_back(job_id);
 			}
-			tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 0);
+			tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 0);
 		}
 
 		// Let the client know what jobids it may actually transfer for.

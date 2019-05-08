@@ -1251,8 +1251,7 @@ void main_init (int argc, char ** const argv) {
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
-        	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 	dagFile );
+        	debug_error( 1, DEBUG_QUIET, "Failed to parse dag file\n");
     	}
 	}
 

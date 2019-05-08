@@ -30,8 +30,8 @@ you have the following choices:
 The Center for High Throughput Computing hopes to improve upon how
 HTCondor deals with AFS authentication in a subsequent release.
 
-Please see the :doc:`/admin-manual/setting-up-special-environments` section
-for further discussion of this problem.
+Please see the :ref:`admin-manual/setting-up-special-environments:using
+htcondor with afs` section for further discussion of this problem.
 
 NFS
 ---
@@ -71,9 +71,9 @@ job may disable the flushing by setting
 
       +IwdFlushNFSCache = False
 
-in the job's submit description file. See page `Job ClassAd
-Attributes <../classad-attributes/job-classad-attributes.html>`_ for a
-definition of the job ClassAd attribute.
+in the job's submit description file. See the 
+:doc:`/classad-attributes/job-classad-attributes` page for a definition of the
+job ClassAd attribute.
 
 HTCondor Daemons That Do Not Run as root
 ----------------------------------------

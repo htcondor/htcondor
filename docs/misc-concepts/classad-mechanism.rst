@@ -714,7 +714,8 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     This function returns ``ERROR`` if other than 1 or 2 arguments are
     given. :index:`stringListSum()<single: stringListSum(); ClassAd functions>`
 
-``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``    Sums and returns the sum of all items in the string ``list``, as
+``Integer stringListSum(String list [ , String delimiter ])`` OR ``Real stringListSum(String list [ , String delimiter ])``
+    Sums and returns the sum of all items in the string ``list``, as
     delimited by the optional ``delimiter`` string. If all items in the
     list are integers, the return value is also an integer. If any item
     in the list is a real value (noninteger), the return value is a
@@ -729,7 +730,8 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     is ``ERROR``. A list with 0 items (the empty list) returns the value
     0.0. :index:`stringListMin()<single: stringListMin(); ClassAd functions>`
 
-``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``    Finds and returns the minimum value from all items in the string
+``Integer stringListMin(String list [ , String delimiter ])`` OR ``Real stringListMin(String list [ , String delimiter ])``
+    Finds and returns the minimum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -738,7 +740,8 @@ string. :index:`stringListSize()<single: stringListSize(); ClassAd functions>`
     list) returns the value ``UNDEFINED``.
     :index:`stringListMax()<single: stringListMax(); ClassAd functions>`
 
-``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``    Finds and returns the maximum value from all items in the string
+``Integer stringListMax(String list [ , String delimiter ])`` OR ``Real stringListMax(String list [ , String delimiter ])``
+    Finds and returns the maximum value from all items in the string
     ``list``, as delimited by the optional ``delimiter`` string. If all
     items in the list are integers, the return value is also an integer.
     If any item in the list is a real value (noninteger), the return
@@ -807,7 +810,7 @@ characters other than these as options are ignored.
     ``pattern`` does not describe a valid regular expression, returns
     ``ERROR``. :index:`regexps()<single: regexps(); ClassAd functions>`
 ``String regexps``
-    ``(String pattern, String target, String substitute [ , String options ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. When ``target`` matches the regular
     expression given by ``pattern``, the string ``substitute`` is
@@ -815,7 +818,7 @@ characters other than these as options are ignored.
     a string, returns ``ERROR``.
     :index:`replace()<single: replace(); ClassAd functions>`
 ``String replace``
-    ``(String pattern, String target, String substitute [ , String options      ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where the first substring that matches ``pattern`` is
@@ -824,7 +827,7 @@ characters other than these as options are ignored.
     argument is not a string, returns ``ERROR``.
     :index:`replaceall()<single: replaceall(); ClassAd functions>`
 ``String replaceall``
-    ``(String pattern, String target, String substitute [ ,      String options ]) ``
+    ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
     through the string ``target``. Returns a modified version of
     ``target``, where every substring that matches ``pattern`` is
@@ -833,7 +836,7 @@ characters other than these as options are ignored.
     any argument is not a string, returns ``ERROR``.
     :index:`stringList_regexpMember()<single: stringList_regexpMember(); ClassAd functions>`
 ``Boolean stringList_regexpMember``
-    ``(String pattern, String list [ ,      String delimiter ] [ , String options ]) ``
+    ``(String pattern, String list [ , String delimiter ] [ , String options ])``
     Uses the description of a regular expression given by string
     ``pattern`` to scan through the list of strings in ``list``. Returns
     ``TRUE`` when one of the strings in ``list`` is a regular expression
@@ -869,7 +872,7 @@ characters other than these as options are ignored.
 
     The maps for the ``userMap()`` function are defined by the following
     configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES``,
-    ``CLASSAD_USER_MAPFILE_<name> and ``CLASSAD_USER_MAPDATA_<name> (see  3.5.1)``
+    ``CLASSAD_USER_MAPFILE_<name> and ``CLASSAD_USER_MAPDATA_<name> ``
     (see the :ref:`admin-manual/configuration-macros:htcondor-wide
     configuration file entries` section).
 
@@ -1027,10 +1030,8 @@ right hand side operand, returning ``TRUE`` when they are identical.
     ``FALSE``, where the ``==`` operator may produce evaluation results ``TRUE``,
     ``FALSE``, ``UNDEFINED``, or ``ERROR``.
 
-Table `4.1 <#x48-4100021>`_ presents
-examples that define the outcome of the ``==`` operator.
-Table `4.2 <#x48-4100032>`_ presents examples that define the outcome
-of the ``=?=`` operator.
+Table 4.1 presents examples that define the outcome of the ``==`` operator.
+Table 4.2 presents examples that define the outcome of the ``=?=`` operator.
 
 +-------------------------------+---------------------------+
 | **expression**                | **evaluated result**      |
@@ -1049,6 +1050,7 @@ of the ``=?=`` operator.
 +-------------------------------+---------------------------+
 
 Table 4.1: Evaluation examples for the ``==`` operator
+
 
 +-------------------------------+----------------------+
 | **expression**                | **evaluated result** |
@@ -1082,9 +1084,8 @@ identical.
     of ``TRUE`` and ``FALSE``, where the ``!=`` operator may produce evaluation
     results ``TRUE``, ``FALSE``, ``UNDEFINED``, or ``ERROR``.
 
-Table `4.3 <#x48-4100043>`_ presents examples that define the outcome of
-the ``!=`` operator. Table `4.4 <#x48-4100054>`_ presents examples that
-define the outcome of the ``=!=`` operator.
+Table 4.3 presents examples that define the outcome of the ``!=`` operator.
+Table 4.4 presents examples that define the outcome of the ``=!=`` operator.
 
 +-------------------------------+----------------------------+
 | **expression**                | **evaluated result**       |
@@ -1122,6 +1123,7 @@ Table 4.3: Evaluation examples for the ``!=`` operator
 +-------------------------------+-----------------------+
 
 Table 4.4: Evaluation examples for the ``=!=`` operator
+
 
 Old ClassAds in the HTCondor System
 -----------------------------------

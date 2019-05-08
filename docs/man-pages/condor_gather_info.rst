@@ -62,8 +62,8 @@ The information gathered by this tool:
    -  Output of ``ps -auxww -forest``
    -  Output of ``df -h``
    -  Output of ``iptables -L``
-   -  Output of ``ls ‘condor_config_val LOG‘``
-   -  Output of ``ldd ‘condor_config_val SBIN‘/condor_schedd``
+   -  Output of ``ls 'condor_config_val LOG'``
+   -  Output of ``ldd 'condor_config_val SBIN'/condor_schedd``
    -  Contents of ``/etc/hosts``
    -  Contents of ``/etc/nsswitch.conf``
    -  Output of ``ulimit -a``

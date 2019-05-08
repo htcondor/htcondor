@@ -225,12 +225,12 @@ Submit Description File Commands
 :index:`submit commands`
 
 Note: more information on submitting HTCondor jobs can be found here:
- `Submitting a Job <../users-manual/submitting-a-job.html>`_.
+:doc:`/users-manual/submitting-a-job`.
 
 As of version 8.5.6, the *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
-(see more details here:  `Introduction to
-Configuration <../admin-manual/introduction-to-configuration.html>`_).
+(see more details here: 
+:ref:`admin-manual/introduction-to-configuration:multi-line values`).
 
 Each submit description file describes one or more clusters of jobs to
 be placed in the HTCondor execution pool. All jobs in a cluster must
@@ -610,9 +610,8 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  `DAGMan
-    Applications <../users-manual/dagman-applications.html>`_ for more
-    details). :index:`queue<single: queue; submit commands>`
+    (see  :ref:`users-manual/dagman-applications:advanced features of dagman`
+    for more details). :index:`queue<single: queue; submit commands>`
 
  queue [**<int expr>** ]
     Places zero or more copies of the job into the HTCondor queue.
@@ -663,7 +662,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
        the list continues until the first line that begins with a close
        paren, and lines beginning with pound sign ('#') will be skipped.
        When using the **<file name>** form, if the **<file name>** ends
-       with |, then it will be executed as a script whatever the script
+       with \|, then it will be executed as a script whatever the script
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
@@ -871,10 +870,9 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
-    *condor_q -l*; see the command reference for *condor_q* on
-    page `condor_q <../man-pages/condor_q.html>`_. Also, see the
-    HTCondor Users Manual for complete information on the syntax and
-    available attributes that can be used in the ClassAd expression.
+    *condor_q -l*; see the command reference for :doc:`/man-pages/condor_q`.
+    Also, see the HTCondor Users Manual for complete information on the syntax
+    and available attributes that can be used in the ClassAd expression.
 
 FILE TRANSFER COMMANDS
 :index:`dont_encrypt_input_files<single: dont_encrypt_input_files; submit commands>`
@@ -2500,9 +2498,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
     same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see page `Configuration
-    Macros <../admin-manual/configuration-macros.html>`_), but it
-    applies to the job event log, instead of the system event log.
+    ``EVENT_LOG_INFORMATION_ATTRS`` (see the 
+    :ref:`admin-manual/configuration-macros:daemon logging configuration file
+    entries` page), but it applies to the job event log, instead of the system
+    event log.
     :index:`JobBatchName<single: JobBatchName; submit commands>`
  JobBatchName = <batch_name>
     Set the batch name for this submit. The batch name is displayed by

@@ -93,108 +93,106 @@ The second visible feature that DaemonCore provides to administrators is
 a common set of command-line arguments that all daemons understand.
 These arguments and what they do are described below:
 
-::
+\-a string
+    Append a period character ('.') concatenated with **string** to the
+    file name of the log for this daemon, as specified in the
+    configuration file.
 
-    -a string
-        Append a period character ('.') concatenated with **string** to the
-        file name of the log for this daemon, as specified in the
-        configuration file.
+\-b
+    Causes the daemon to start up in the background. When a DaemonCore
+    process starts up with this option, it disassociates itself from the
+    terminal and forks itself, so that it runs in the background. This
+    is the default behavior for HTCondor daemons.
 
-    -b
-        Causes the daemon to start up in the background. When a DaemonCore
-        process starts up with this option, it disassociates itself from the
-        terminal and forks itself, so that it runs in the background. This
-        is the default behavior for HTCondor daemons.
+\-c filename
+    Causes the daemon to use the specified **filename** as a full path
+    and file name as its global configuration file. This overrides the
+    ``CONDOR_CONFIG`` environment variable and the regular locations
+    that HTCondor checks for its configuration file.
 
-    -c filename
-        Causes the daemon to use the specified **filename** as a full path
-        and file name as its global configuration file. This overrides the
-        ``CONDOR_CONFIG`` environment variable and the regular locations
-        that HTCondor checks for its configuration file.
+\-d
+    Use dynamic directories. The ``$(LOG)``, ``$(SPOOL)``, and
+    ``$(EXECUTE)`` directories are all created by the daemon at run
+    time, and they are named by appending the parent's IP address and
+    PID to the value in the configuration file. These values are then
+    inherited by all children of the daemon invoked with this **-d**
+    argument. For the *condor_master*, all HTCondor processes will use
+    the new directories. If a *condor_schedd* is invoked with the *-d*
+    argument, then only the *condor_schedd* daemon and any
+    *condor_shadow* daemons it spawns will use the dynamic directories
+    (named with the *condor_schedd* daemon's PID).
 
-    -d
-        Use dynamic directories. The ``$(LOG)``, ``$(SPOOL)``, and
-        ``$(EXECUTE)`` directories are all created by the daemon at run
-        time, and they are named by appending the parent's IP address and
-        PID to the value in the configuration file. These values are then
-        inherited by all children of the daemon invoked with this **-d**
-        argument. For the *condor_master*, all HTCondor processes will use
-        the new directories. If a *condor_schedd* is invoked with the *-d*
-        argument, then only the *condor_schedd* daemon and any
-        *condor_shadow* daemons it spawns will use the dynamic directories
-        (named with the *condor_schedd* daemon's PID).
+    Note that by using a dynamically-created spool directory named by
+    the IP address and PID, upon restarting daemons, jobs submitted to
+    the original *condor_schedd* daemon that were stored in the old
+    spool directory will not be noticed by the new *condor_schedd*
+    daemon, unless you manually specify the old, dynamically-generated
+    ``SPOOL`` directory path in the configuration of the new
+    *condor_schedd* daemon.
 
-        Note that by using a dynamically-created spool directory named by
-        the IP address and PID, upon restarting daemons, jobs submitted to
-        the original *condor_schedd* daemon that were stored in the old
-        spool directory will not be noticed by the new *condor_schedd*
-        daemon, unless you manually specify the old, dynamically-generated
-        ``SPOOL`` directory path in the configuration of the new
-        *condor_schedd* daemon.
+\-f
+    Causes the daemon to start up in the foreground. Instead of forking,
+    the daemon runs in the foreground.
 
-    -f
-        Causes the daemon to start up in the foreground. Instead of forking,
-        the daemon runs in the foreground.
+    NOTE: When the *condor_master* starts up daemons, it does so with
+    the **-f** option, as it has already forked a process for the new
+    daemon. There will be a **-f** in the argument list for all HTCondor
+    daemons that the *condor_master* spawns.
 
-        NOTE: When the *condor_master* starts up daemons, it does so with
-        the **-f** option, as it has already forked a process for the new
-        daemon. There will be a **-f** in the argument list for all HTCondor
-        daemons that the *condor_master* spawns.
+\-k filename
+    For non-Windows operating systems, causes the daemon to read out a
+    PID from the specified **filename**, and send a SIGTERM to that
+    process. The daemon started with this optional argument waits until
+    the daemon it is attempting to kill has exited.
 
-    -k filename
-        For non-Windows operating systems, causes the daemon to read out a
-        PID from the specified **filename**, and send a SIGTERM to that
-        process. The daemon started with this optional argument waits until
-        the daemon it is attempting to kill has exited.
+\-l directory
+    Overrides the value of ``LOG`` :index:`LOG` as specified in
+    the configuration files. Primarily, this option is used with the
+    *condor_kbdd* when it needs to run as the individual user logged
+    into the machine, instead of running as root. Regular users would
+    not normally have permission to write files into HTCondor's log
+    directory. Using this option, they can override the value of ``LOG``
+    and have the *condor_kbdd* write its log file into a directory that
+    the user has permission to write to.
 
-    -l directory
-        Overrides the value of ``LOG`` :index:`LOG` as specified in
-        the configuration files. Primarily, this option is used with the
-        *condor_kbdd* when it needs to run as the individual user logged
-        into the machine, instead of running as root. Regular users would
-        not normally have permission to write files into HTCondor's log
-        directory. Using this option, they can override the value of ``LOG``
-        and have the *condor_kbdd* write its log file into a directory that
-        the user has permission to write to.
+\-local-name name
+    Specify a local name for this instance of the daemon. This local
+    name will be used to look up configuration parameters.
+    The :ref:`admin-manual/introduction-to-configuration:configuration file
+    macros` section contains details on how this local name will be used in the
+    configuration.
 
-    -local-name name
-        Specify a local name for this instance of the daemon. This local
-        name will be used to look up configuration parameters.
-        The :ref:`admin-manual/introduction-to-configuration:configuration file
-        macros` section contains details on how this local name will be used in the
-        configuration.
+\-p port
+    Causes the daemon to bind to the specified port as its command
+    socket. The *condor_master* daemon uses this option to ensure that
+    the *condor_collector* and *condor_negotiator* start up using
+    well-known ports that the rest of HTCondor depends upon them using.
 
-    -p port
-        Causes the daemon to bind to the specified port as its command
-        socket. The *condor_master* daemon uses this option to ensure that
-        the *condor_collector* and *condor_negotiator* start up using
-        well-known ports that the rest of HTCondor depends upon them using.
+\-pidfile filename
+    Causes the daemon to write out its PID (process id number) to the
+    specified **filename**. This file can be used to help shutdown the
+    daemon without first searching through the output of the Unix *ps*
+    command.
 
-    -pidfile filename
-        Causes the daemon to write out its PID (process id number) to the
-        specified **filename**. This file can be used to help shutdown the
-        daemon without first searching through the output of the Unix *ps*
-        command.
+    Since daemons run with their current working directory set to the
+    value of ``LOG``, if a full path (one that begins with a slash
+    character, ``/``) is not specified, the file will be placed in the
+    ``LOG`` directory.
 
-        Since daemons run with their current working directory set to the
-        value of ``LOG``, if a full path (one that begins with a slash
-        character, ``/``) is not specified, the file will be placed in the
-        ``LOG`` directory.
+\-q
+    Quiet output; write less verbose error messages to ``stderr`` when
+    something goes wrong, and before regular logging can be initialized.
 
-    -q
-        Quiet output; write less verbose error messages to ``stderr`` when
-        something goes wrong, and before regular logging can be initialized.
+\-r minutes
+    Causes the daemon to set a timer, upon expiration of which, it sends
+    itself a SIGTERM for graceful shutdown.
 
-    -r minutes
-        Causes the daemon to set a timer, upon expiration of which, it sends
-        itself a SIGTERM for graceful shutdown.
+\-t
+    Causes the daemon to print out its error message to ``stderr``
+    instead of its specified log file. This option forces the **-f**
+    option.
 
-    -t
-        Causes the daemon to print out its error message to ``stderr``
-        instead of its specified log file. This option forces the **-f**
-        option.
-
-    -v
-        Causes the daemon to print out version information and exit.
+\-v
+    Causes the daemon to print out version information and exit.
 
 :index:`daemoncore`

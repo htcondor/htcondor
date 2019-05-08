@@ -24,7 +24,9 @@ two priority values assigned to HTCondor users:
 
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
-priorities may be found in the :doc:`/admin-manual/configuration-macros` section.
+priorities may be found in the 
+:ref:`admin-manual/configuration-macros:condor_negotiator configuration
+file entries` section.
 
 Real User Priority (RUP)
 ------------------------
@@ -95,7 +97,7 @@ Remote Users
 
 The priority boost factors for individual users can be set with the
 **setfactor** option of *condor_userprio*. Details may be found in the
-*condor_userprio* manual page (:doc:`/man-pages/condor_userprio`).
+:doc:`/man-pages/condor_userprio` manual page.
 
 Priorities in Negotiation and Preemption
 ----------------------------------------
@@ -499,9 +501,9 @@ quotas in the configuration of the central manager:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry
-      GROUP_QUOTA_group_physics =   20
-      GROUP_QUOTA_group_chemistry = 10
+    GROUP_NAMES = group_physics, group_chemistry
+    GROUP_QUOTA_group_physics =   20
+    GROUP_QUOTA_group_chemistry = 10
 
 The implementation of quotas is hierarchical, such that quotas may be
 described for the tree of groups, subgroups, sub subgroups, etc. Group
@@ -544,8 +546,9 @@ many groups. Jobs identify which group they are in by setting the
 **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
 and
 **accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
-commands within the submit description file, as specified in
-Section `3.6.7 <#x34-2390003.6.7>`_. For example:
+commands within the submit description file, as specified in the
+:ref:`admin-manual/user-priorities-negotiation:group accounting` section.
+For example:
 
 ::
 
@@ -565,9 +568,9 @@ same. Configuration on the central manager becomes:
 
 ::
 
-      GROUP_NAMES = group_physics, group_chemistry
-      GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33
-      GROUP_QUOTA_DYNAMIC_group_physics =   0.66
+    GROUP_NAMES = group_physics, group_chemistry
+    GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33
+    GROUP_QUOTA_DYNAMIC_group_physics =   0.66
 
 The values of the quotas must be less than 1.0, indicating fractions of
 the pool's machines. As with static quota specification, if the sum of
@@ -674,13 +677,9 @@ negotiates with the smallest positive value going first. Available
 attributes for sorting with ``GROUP_SORT_EXPR``
 :index:`GROUP_SORT_EXPR` include:
 
---------------
-
-Table 3.1: Attributes visible to GROUP_SORT_EXPR
-
 +-----------------------+--------------------------------------------+
 | Attribute Name        | Description                                |
-+-----------------------+--------------------------------------------+
++=======================+============================================+
 | AccountingGroup       | A string containing the group name         |
 +-----------------------+--------------------------------------------+
 | GroupQuota            | The computed limit for this group          |
@@ -690,7 +689,8 @@ Table 3.1: Attributes visible to GROUP_SORT_EXPR
 | GroupQuotaAllocated   | Quota allocated this cycle                 |
 +-----------------------+--------------------------------------------+
 
---------------
+Table 3.1: Attributes visible to GROUP_SORT_EXPR
+
 
 One possible group quota policy is strict priority. For example, a site
 prefers physics users to match as many slots as they can, and only when

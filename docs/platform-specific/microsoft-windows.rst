@@ -15,17 +15,15 @@ are no remote system calls.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
-the overview chapter (section `High Throughput Computing (HTC) and its
-Requirements <../overview/high-throughput-computing-requirements.html>`_)
-and the user's manual (section `Welcome to
-HTCondor <../users-manual/welcome-to-htcondor.html>`_). If
+the :doc:`/overview/index` chapter and the :doc:`/users-manual/index`. If
 administrating or customizing the policy and set up of HTCondor, also
-read the administrator's manual chapter (section `Administrators' Manual
-Introduction <../admin-manual/introduction-admin-manual.html>`_). After
+read the :doc:`/admin-manual/index` chapter. After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
 HTCondor on Windows. For information on installing HTCondor for Windows,
-see :doc:`/admin-manual/installation-startup-shutdown-reconfiguration`.
+see
+:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
+on windows`.
 
 Limitations under Windows
 -------------------------
@@ -568,8 +566,7 @@ access.
 
 Finally, HTCondor has all the security mechanisms present in the
 full-blown version of HTCondor. See
-the :doc:`/admin-manual/security` section starting on
-page `Security <../admin-manual/security.html>`_ for complete
+the :ref:`admin-manual/security:authorization` section for complete
 information on how to allow/deny access to HTCondor.
 
 Network files and HTCondor

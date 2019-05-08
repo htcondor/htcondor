@@ -745,7 +745,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	MyString public_addr;
+	std::string public_addr;
 	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
@@ -753,7 +753,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	Sinful sinful(public_addr.Value());
+	Sinful sinful(public_addr.c_str());
 	sinful.setSharedPortID( m_local_id.Value() );
 
 		// if there is a private address, set the shared port id on that too

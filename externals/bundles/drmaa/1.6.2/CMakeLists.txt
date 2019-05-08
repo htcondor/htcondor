@@ -73,7 +73,7 @@ if ( WITH_DRMAA )
 						INSTALL_COMMAND ${DRMAA_INSTALL})
 
 	# set standard globals include and link loc
-	condor_post_external( drmaa include OFF )
+	condor_post_external( drmaa include OFF "" )
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
 	
 	# i've tar bundled drmaa, does anyone actually use this?  if so I can explode.

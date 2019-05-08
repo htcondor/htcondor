@@ -1097,7 +1097,7 @@ JICShadow::initUserPriv( void )
 
 	bool run_as_owner = allowRunAsOwner( true, true );
 
-	MyString owner;
+	std::string owner;
 	if( run_as_owner ) {
 		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
 			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
@@ -1122,7 +1122,7 @@ JICShadow::initUserPriv( void )
 		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
 	}
 
-	MyString vm_univ_type;
+	std::string vm_univ_type;
 	if( job_universe == CONDOR_UNIVERSE_VM ) {
 		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_univ_type);
 	}
@@ -1132,7 +1132,7 @@ JICShadow::initUserPriv( void )
 		if( use_vm_nobody_user ) {
 			run_as_owner = false;
 			dprintf( D_ALWAYS, "Using VM_UNIV_NOBODY_USER instead of %s\n", 
-					owner.Value());
+					owner.c_str());
 		}
 	}
 
@@ -1145,17 +1145,17 @@ JICShadow::initUserPriv( void )
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( init_user_ids_quiet(owner.Value()) ) {
+		if( init_user_ids_quiet(owner.c_str()) ) {
 			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user(owner.Value());
+				privsep_helper->initialize_user(owner.c_str());
 			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
-			         owner.Value() );
-			if( checkDedicatedExecuteAccounts( owner.Value() ) ) {
-				setExecuteAccountIsDedicated( owner.Value() );
+			         owner.c_str() );
+			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
+				setExecuteAccountIsDedicated( owner.c_str() );
 			}
 		}
-		else if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		else if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
 			run_as_owner = false;
 		}
@@ -1168,7 +1168,7 @@ JICShadow::initUserPriv( void )
 					// need to do the RSC, we can just fail.
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file and SOFT_UID_DOMAIN is False\n",
-						 owner.Value() ); 
+						 owner.c_str() );
 				return false;
             }
 
@@ -1185,7 +1185,7 @@ JICShadow::initUserPriv( void )
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file, SOFT_UID_DOMAIN is True, but the "
 						 "condor_shadow failed to send the required Uid.\n",
-						 owner.Value() );
+						 owner.c_str() );
 				return false;
 			}
 
@@ -1266,7 +1266,7 @@ JICShadow::initUserPriv( void )
         }
 
 
-		if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
+		if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
 			// VMware doesn't support that "nobody" creates a VM.
 			// So for VMware vm universe, we will "condor" instead of "nobody".
 			if( strcmp(nobody_user, "nobody") == MATCH ) {
@@ -1308,7 +1308,7 @@ JICShadow::initJobInfo( void )
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
-	MyString x509userproxy;
+	std::string x509userproxy;
 
 	if( ! job_ad ) {
 		EXCEPT( "JICShadow::initJobInfo() called with NULL job ad!" );
@@ -1856,12 +1856,12 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		refuse(s);
 		return false;
 	}
-	MyString path;
+	std::string path;
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		dprintf(D_ALWAYS, "Refusing shadow's request to update proxy as this job has no proxy\n");
 		return false;
 	}
-	const char * proxyfilename = condor_basename(path.Value());
+	const char * proxyfilename = condor_basename(path.c_str());
 
 	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
 
@@ -1878,11 +1878,11 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 void
 JICShadow::setX509ProxyExpirationTimer()
 {
-	MyString path;
+	std::string path;
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		return;
 	}
-	const char * proxyfilename = condor_basename(path.Value());
+	const char * proxyfilename = condor_basename(path.c_str());
 
 #if defined(LINUX)
 	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
@@ -2087,7 +2087,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		}
 	}
 
-	MyString spooled_files;
+	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
@@ -2135,8 +2135,8 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		ad->Assign( ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) );
 
 	}
-	MyString spooled_files;
-	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	std::string spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}
@@ -2432,14 +2432,14 @@ JICShadow::beginFileTransfer( void )
 		const char* scratch_dir = Starter->GetWorkingDir();
 
 			// Get source path to proxy file on the submit machine
-		MyString proxy_source_path;
+		std::string proxy_source_path;
 		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
 
 			// Get proxy expiration timestamp
 		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
 
 			// Parse proxy filename
-		MyString proxy_filename = condor_basename( proxy_source_path.Value() );
+		MyString proxy_filename = condor_basename( proxy_source_path.c_str() );
 
 			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
 		MyString proxy_dest_path = scratch_dir;
@@ -2449,7 +2449,7 @@ JICShadow::beginFileTransfer( void )
 			// Do RPC call to get delegated proxy.
 			// This needs to happen with user privs so we can write to scratch dir!
 		priv_state original_priv = set_user_priv();
-		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.c_str(), proxy_dest_path.Value(), proxy_expiration );
 		set_priv( original_priv );
 
 			// Update job ad with location of proxy
@@ -2493,7 +2493,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
-		MyString cmd;
+		std::string cmd;
 		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
 		    (cmd == CONDOR_EXEC))
 		{

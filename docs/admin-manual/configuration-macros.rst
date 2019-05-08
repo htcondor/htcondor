@@ -337,8 +337,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     A regular expression that specifies file names to be ignored when
     looking for configuration files within the directories specified via
     ``LOCAL_CONFIG_DIR``. The default expression ignores files with
-    names beginning with a ‘.' or a ‘#', as well as files with names
-    ending in ‘˜'. This avoids accidents that can be caused by treating
+    names beginning with a '.' or a '#', as well as files with names
+    ending in '˜'. This avoids accidents that can be caused by treating
     temporary files created by text editors as configuration files.
 
 ``CONDOR_IDS`` :index:`CONDOR_IDS`
@@ -2824,8 +2824,8 @@ These macros control the *condor_master*.
     verify the program, and it will store the path and program name.
     When the *condor_master* shuts down (that is, just before it
     exits), the program is then executed as described above. The manual
-    page for *condor_set_shutdown* on :doc:`/man-pages/condor_set_shutdown`
-    contains details on the use of this program.
+    page for :doc:`/man-pages/condor_set_shutdown` contains details on the
+    use of this program.
 
     NOTE: This program will be run with root privileges under Unix or
     administrator privileges under Windows. The administrator must

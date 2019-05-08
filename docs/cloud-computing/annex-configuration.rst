@@ -19,7 +19,7 @@ User Settings
 -------------
 
 ``ANNEX_DEFAULT_AWS_REGION`` :index:`ANNEX_DEFAULT_AWS_REGION`
-    The default region when using AWS. Defaults to ‘us-east-1'.
+    The default region when using AWS. Defaults to 'us-east-1'.
 
 ``ANNEX_DEFAULT_LEASE_DURATION`` :index:`ANNEX_DEFAULT_LEASE_DURATION`
     The duration of an annex if not specified on the command-line;
@@ -36,12 +36,12 @@ User Settings
 ``ANNEX_DEFAULT_ODI_INSTANCE_TYPE`` :index:`ANNEX_DEFAULT_ODI_INSTANCE_TYPE`
     The AWS instance type to use for on-demand instances if not
     specified. No default, but the *condor_annex* setup procedure sets
-    this to ‘m4.large'.
+    this to 'm4.large'.
 
 ``ANNEX_DEFAULT_ODI_IMAGE_ID`` :index:`ANNEX_DEFAULT_ODI_IMAGE_ID`
     The AWS AMI to use for on-demand instance if not specified. No
     default, but the *condor_annex* setup procedure sets this to
-    ‘ami-35b13223'.
+    'ami-35b13223'.
 
 ``ANNEX_DEFAULT_SFR_CONFIG_FILE`` :index:`ANNEX_DEFAULT_SFR_CONFIG_FILE`
     The JSON configuration file use by *condor_annex* when creating a
@@ -84,25 +84,25 @@ includes ``D_AUDIT:2``.
 Expert Settings
 ---------------
 
- ``ANNEX_DEFAULT_EC2_URL`` :index:`ANNEX_DEFAULT_EC2_URL`
+``ANNEX_DEFAULT_EC2_URL`` :index:`ANNEX_DEFAULT_EC2_URL`
     The AWS EC2 endpoint that *condor_annex* should use. Defaults to
-    ‘https://ec2.us-east-1.amazonaws.com'.
+    'https://ec2.us-east-1.amazonaws.com'.
 
 ``ANNEX_DEFAULT_CWE_URL`` :index:`ANNEX_DEFAULT_CWE_URL`
     The AWS CloudWatch Events endpoint that *condor_annex* should use.
-    Defaults to ‘https://events.us-east-1.amazonaws.com'.
+    Defaults to 'https://events.us-east-1.amazonaws.com'.
 
 ``ANNEX_DEFAULT_LAMBDA_URL`` :index:`ANNEX_DEFAULT_LAMBDA_URL`
     The AWS Lambda endpoint that *condor_annex* should use. Defaults to
-    ‘https://lambda.us-east-1.amazonaws.com'.
+    'https://lambda.us-east-1.amazonaws.com'.
 
 ``ANNEX_DEFAULT_S3_URL`` :index:`ANNEX_DEFAULT_S3_URL`
     The AWS S3 endpoint that *condor_annex* should use. Defaults to
-    ‘https://s3.amazonaws.com'.
+    'https://s3.amazonaws.com'.
 
 ``ANNEX_DEFAULT_CF_URL`` :index:`ANNEX_DEFAULT_CF_URL`
     The AWS CloudFormation endpoint that *condor_annex* should use.
-    Defaults to ‘https://cloudformation.us-east-1.amazonaws.com'.
+    Defaults to 'https://cloudformation.us-east-1.amazonaws.com'.
 
 ``ANNEX_DEFAULT_ACCESS_KEY_FILE`` :index:`ANNEX_DEFAULT_ACCESS_KEY_FILE`
     The full path to the AWS access key file *condor_annex* should use.
@@ -127,7 +127,7 @@ Expert Settings
 Developer Settings
 ------------------
 
- ``ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
+``ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN`
     The name (or ARN) of the Lambda function on AWS which
     *condor_annex* should use to check if the configured collector can
     be contacted from AWS.
@@ -143,5 +143,3 @@ Developer Settings
 ``ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`` :index:`ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN`
     The Lambda function which implements the lease (duration) for Spot
     instances. No default.
-
-
