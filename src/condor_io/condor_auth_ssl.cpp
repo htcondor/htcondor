@@ -76,7 +76,7 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     run2 = nullptr;
     for (tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2);
          tok1 && tok2;
-         tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2))
+         tok1 = strtok_r(NULL, ".", &run1), tok2 = strtok_r(NULL, ".", &run2))
     {
         // Match non-wildcard bits
         while (*tok1 && *tok2 && *tok1 == *tok2) {
