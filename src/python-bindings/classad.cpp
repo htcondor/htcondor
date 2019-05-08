@@ -175,6 +175,7 @@ convert_value_to_python(const classad::Value &value)
     classad_shared_ptr<classad::ExprList> exprlist;
     switch (value.GetType())
     {
+    case classad::Value::SCLASSAD_VALUE:
     case classad::Value::CLASSAD_VALUE:
         value.IsClassAdValue(advalue);
         wrap.reset(new ClassAdWrapper());
