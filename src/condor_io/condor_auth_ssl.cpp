@@ -389,13 +389,16 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 				ouch( "No SciToken file provided\n" );
 				m_auth_state->m_client_status = AUTH_SSL_ERROR;
 			} else {
-				FILE * f = safe_fopen_no_create( m_scitokens_file.c_str(), "r" );
-				if (f == nullptr) {
+				std::unique_ptr<FILE,decltype(&::fclose)> f(
+					safe_fopen_no_create( m_scitokens_file.c_str(), "r" ), 
+					&::fclose);
+
+				if (f.get() == nullptr) {
 					dprintf(D_ALWAYS, "Failed to open scitoken file '%s': %d (%s)\n",
 						m_scitokens_file.c_str(), errno, strerror(errno));
 					m_auth_state->m_client_status = AUTH_SSL_ERROR;
 				} else {
-					for (std::string line; readLine(line, f, false); ) {
+					for (std::string line; readLine(line, f.get(), false); ) {
 						// Strip out whitespace and ignore comments.
 						line.erase( line.length() - 1, 1 );
 						line.erase(line.begin(),
