@@ -496,6 +496,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		if (family_info && family_info->want_pid_namespace) {
 			dprintf(D_FULLDEBUG, "PID namespaces cannot be enabled for singularity jobs.\n");
 			job_not_started = true;
+			free(affinity_mask);
 			return 0;
 		}
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
