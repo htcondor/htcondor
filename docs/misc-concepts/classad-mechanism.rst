@@ -872,7 +872,7 @@ characters other than these as options are ignored.
 
     The maps for the ``userMap()`` function are defined by the following
     configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES``,
-    ``CLASSAD_USER_MAPFILE_<name> and ``CLASSAD_USER_MAPDATA_<name> ``
+    ``CLASSAD_USER_MAPFILE_<name>`` and ``CLASSAD_USER_MAPDATA_<name>``
     (see the :ref:`admin-manual/configuration-macros:htcondor-wide
     configuration file entries` section).
 
