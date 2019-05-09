@@ -21,6 +21,10 @@ New Features:
    sending multiple files, especially in wide-area network settings.
    :ticket:`7000`
 
+-  If ``MAXJOBRETIREMENTTIME`` evaluates to ``-1``, it will truncate a job's
+   retirement even during a peaceful shutdown.
+   :ticket:`7034`
+
 Bugs Fixed:
 
 -  Fixed a bug with singularity jobs where TMPDIR was set to the wrong
@@ -32,6 +36,9 @@ Bugs Fixed:
    the job per each checkpoint restart.
    :ticket:`6986`
 
+-  ``condor_off -peaceful`` will now work by default (and whenever
+   ``MAXJOBRETIREMENTTIME`` is zero).
+   :ticket:`7034`
 
 Version 8.8.2
 -------------

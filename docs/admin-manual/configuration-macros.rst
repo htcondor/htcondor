@@ -3352,7 +3352,8 @@ section.
     hard-killing of the job will not happen until the end of the
     retirement time if the job does not finish shutting down before
     then. Note that in peaceful shutdown mode of the *condor_startd*,
-    retirement time is treated as though infinite. In graceful shutdown
+    retirement time is treated as though infinite, unless set to ``-1``, which
+    means soft-kill immediately.  In graceful shutdown
     mode, the job will not be preempted until the configured retirement
     time expires or ``SHUTDOWN_GRACEFUL_TIMEOUT``
     :index:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown

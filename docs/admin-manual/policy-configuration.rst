@@ -1000,7 +1000,9 @@ Preempting
     any suspension time. When retiring due to *condor_startd* daemon
     shutdown or restart, it is possible for the administrator to issue a
     peaceful shutdown command, which causes ``MaxJobRetirementTime`` to
-    effectively be infinite, avoiding any killing of jobs. It is also
+    effectively be infinite, avoiding any killing of jobs. (Note that
+    the administrator may still configure the *condor_startd* daemon
+    to kill jobs for misbehavior during a peaceful shutdown.)  It is also
     possible for the administrator to issue a fast shutdown command,
     which causes ``MaxJobRetirementTime`` to be effectively 0.
 
@@ -1269,7 +1271,11 @@ It serves as a quick reference.
 
     This expression is evaluated in the context of the job ClassAd, so
     it may refer to attributes of the current job as well as machine
-    attributes.
+    attributes.  This allows the administrator to configure HTCondor to
+    preempt jobs even during retirement.  Because the peaceful shutdown mode
+    of the *condor_startd* daemon normally ignores max job retirement time
+    (treating it as infinite), this expression only preempts jobs during
+    a peaceful shutdown if it evaluates to ``-1``.
 
     By default the *condor_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
