@@ -8051,7 +8051,7 @@ int SubmitHash::query_universe(MyString & sub_type, bool &is_docker)
 	is_docker = IsDockerJob;
 	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
 		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
-		else if (JobUniverse == CONDOR_UNIVERSE_VM) { sub_type == VMType; }
+		else if (JobUniverse == CONDOR_UNIVERSE_VM) { sub_type = VMType; }
 		return JobUniverse;
 	}
 
