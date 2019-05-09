@@ -3622,11 +3622,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// Ensure user is not changing a secure attribute.  Only schedd is
 	// allowed to do that, via the internal API.
-	if (Q_SOCK && secure_attrs.find(attr_name) != secure_attrs.end())
+	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
 		// should we fail or silently succeed?  (old submits set secure attrs)
 		const CondorVersionInfo *vers = NULL;
-		if ( ! Ignore_Secure_SetAttr_Attempts) {
+		if ( Q_SOCK && ! Ignore_Secure_SetAttr_Attempts) {
 			vers = Q_SOCK->get_peer_version();
 		}
 		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
