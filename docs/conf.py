@@ -17,6 +17,19 @@ import os
 
 import re
 
+from pathlib import Path
+
+ON_RTD = os.environ.get('READTHEDOCS') == 'True'
+if ON_RTD:
+    print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
+    text = (Path(__file__).parent.parent / 'CMakeLists.txt').read_text()
+    version = re.search(r"set\(VERSION \"(\d*\.\d*\.\d*)\"\)", text).group(1)
+    print("DETECTED VERSION {}".format(version))
+    cmd = '{} -m pip install htcondor=={}'.format(sys.executable, version)
+    print("EXECUTING COMMAND: {}".format(cmd))
+    os.system(cmd)
+    print("INSTALLED HTCONDOR PACKAGE")
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
