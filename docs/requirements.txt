@@ -1,7 +1,0 @@
-# points to the version of the bindings to use for building docs
-# if no =x.x.x, uses latest stable release on pypi
-
-htcondor == 8.9.1
-
-sphinx
-sphinx_rtd_theme
