@@ -5635,7 +5635,7 @@ default : @end
   else
     PREEMPT = $($(1))
   endif
-  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),0,$(MAXJOBRETIREMENTTIME:0))
+  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),-1,$(MAXJOBRETIREMENTTIME:0))
   if defined WANT_SUSPEND
     WANT_SUSPEND = $($(1)) =!= true && $(WANT_SUSPEND)
   else
