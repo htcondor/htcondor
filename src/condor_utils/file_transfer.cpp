@@ -3215,6 +3215,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
+	bool should_invoke_output_plugins, tmp;
+	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
+		should_invoke_output_plugins = m_final_transfer_flag;
+	} else {
+		InitDownloadFilenameRemaps(&jobAd);
+		should_invoke_output_plugins = !tmp;
+	}
+
 	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
@@ -3275,7 +3283,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
-		if ( m_final_transfer_flag ) {
+		if ( should_invoke_output_plugins ) {
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
