@@ -89,8 +89,8 @@ public:
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(MacroStream & ms, int cluster_id, std::string & errmsg);
-	int LoadDigest(FILE* fp, int cluster_id, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, int cluster_id, StringList & items, std::string & errmsg);
+	int LoadDigest(FILE* fp, int cluster_id, StringList & items, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names = NULL);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
@@ -337,13 +337,13 @@ bool JobFactory::RowDataIsLoading(int row)
 }
 
 
-int JobFactory::LoadDigest(FILE* fp, int cluster_id, std::string & errmsg)
+int JobFactory::LoadDigest(FILE* fp, int cluster_id, StringList & items, std::string & errmsg)
 {
 	MacroStreamYourFile ms(fp, source);
-	return LoadDigest(ms, cluster_id, errmsg);
+	return LoadDigest(ms, cluster_id, items, errmsg);
 }
 
-int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg)
+int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, StringList & items, std::string & errmsg)
 {
 	char * qline = NULL;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
@@ -386,6 +386,10 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg
 				} else if (fea.items.number() > 0) {
 					// we populated the itemdata already
 					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%d\n", cluster_id, fea.items.number());
+				} else if (items.number() > 0) {
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d passed in. number=%d\n", cluster_id, items.number());
+					fea.items.take_list(items);
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Moved %d items, input list now has %d items\n", fea.items.number(), items.number());
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					if (rval == 0) {
@@ -420,6 +424,28 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, std::string & errmsg
 // append a buffer of row data into job factories row data, the last item in the buffer may be incomplete
 // in which case it should be returned in the remainder string - which will be prefixed to the first
 // item the next time this function is called.
+#if 1
+int AppendRowsToJobFactory(StringList & items, char * buf, size_t cbbuf, std::string & remainder)
+{
+	int num_rows = 0;
+	size_t off = 0;
+	for (size_t ix = off; ix < cbbuf; ++ix) {
+		if (buf[ix] == '\n') {
+			remainder.append(buf + off, ix - off);
+			items.append(remainder.data(), (int)remainder.size());
+			remainder.clear();
+			off = ix + 1;
+			++num_rows;
+		}
+	}
+	if (off < cbbuf) {
+		remainder.append(buf + off, cbbuf - off);
+	}
+	dprintf(D_MATERIALIZE | D_VERBOSE, "Appended %d rows to factory from %d bytes. remain=%d, items=%d\n",
+		num_rows, (int)cbbuf, (int)remainder.size(), items.number());
+	return 0;
+}
+#else
 int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder)
 {
 	int num_rows = 0;
@@ -440,6 +466,7 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 		num_rows, (int)cbbuf, (int)remainder.size(), factory->fea.items.number());
 	return 0;
 }
+#endif
 
 // this function should behave (more or less) the same as the one in src/condor_schedd.V6/qmgmt_factory.cpp
 //
@@ -925,6 +952,7 @@ main( int argc, const char *argv[] )
 
 	JobFactory * factory = new JobFactory(digest_file, cluster_id);
 
+	StringList items;
 	if (items_file) {
 		file = safe_fopen_wrapper_follow(items_file, "rb");
 		if (! file) {
@@ -939,7 +967,7 @@ main( int argc, const char *argv[] )
 		size_t cbread;
 		size_t off = 0;
 		while ((cbread = fread(buf, 1, sizeof(buf), file)) > 0) {
-			if (AppendRowsToJobFactory(factory, buf, cbread, remainder) < 0) {
+			if (AppendRowsToJobFactory(items, buf, cbread, remainder) < 0) {
 				fprintf(stderr, "ERROR: could not append %d bytes of itemdata to factory at offset %d\n", (int)cbread, (int)off);
 				exit(1);
 			}
@@ -961,7 +989,7 @@ main( int argc, const char *argv[] )
 	close_file = true;
 
 	// the SetJobFactory RPC does this
-	if (factory->LoadDigest(file, cluster_id, errmsg) != 0) {
+	if (factory->LoadDigest(file, cluster_id, items, errmsg) != 0) {
 		fprintf(stderr, "\nERROR: failed to parse submit digest for factory %d : %s\n", factory->getClusterId(), errmsg.c_str());
 		exit(1);
 	}

@@ -1,7 +1,9 @@
-HTCondor Manual
-===============
+HTCondor Version Version |release| Manual
+=========================================
 
 Center for High Throughput Computing, University of Wisconsin–Madison.
+
+|release_date|
 
 .. toctree::
    :maxdepth: 2

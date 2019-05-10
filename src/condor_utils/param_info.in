@@ -4951,8 +4951,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -5723,7 +5723,7 @@ default : @end
   else
     PREEMPT = $($(1))
   endif
-  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),0,$(MAXJOBRETIREMENTTIME:0))
+  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),-1,$(MAXJOBRETIREMENTTIME:0))
   if defined WANT_SUSPEND
     WANT_SUSPEND = $($(1)) =!= true && $(WANT_SUSPEND)
   else
