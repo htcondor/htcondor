@@ -36,6 +36,10 @@ Bugs Fixed:
    the job per each checkpoint restart.
    :ticket:`6986`
 
+-  Fixed a bug where the memory usage reported for Docker Universe jobs
+   in the job classad and job event log could be underestimated.
+   :ticket:`7049`
+
 -  ``condor_off -peaceful`` will now work by default (and whenever
    ``MAXJOBRETIREMENTTIME`` is zero).
    :ticket:`7034`
