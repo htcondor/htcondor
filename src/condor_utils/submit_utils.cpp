@@ -63,7 +63,8 @@
 #include <set>
 
 #ifdef WIN32
-#define CLIPPED 1
+//#define CLIPPED 1
+#undef CLIPPED
 #endif
 
 /* Disable gcc warnings about floating point comparisons */
@@ -3659,6 +3660,25 @@ int SubmitHash::SetAutoAttributes()
 	}
 #endif
 
+	// Standard universe needs BufferSize and BufferBlockSize
+	if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
+		if ( ! job->Lookup(ATTR_BUFFER_SIZE)) {
+			auto_free_ptr tmp(param("DEFAULT_IO_BUFFER_SIZE"));
+			if ( ! tmp) {
+				tmp = strdup("524288");
+			}
+			AssignJobExpr(ATTR_BUFFER_SIZE, tmp);
+		}
+
+		if ( ! job->Lookup(ATTR_BUFFER_BLOCK_SIZE)) {
+			auto_free_ptr tmp(param("DEFAULT_IO_BUFFER_BLOCK_SIZE"));
+			if ( ! tmp) {
+				tmp = strdup("32768");
+			}
+			AssignJobExpr(ATTR_BUFFER_BLOCK_SIZE, tmp);
+		}
+	}
+
 	return abort_code;
 }
 
@@ -5184,7 +5204,7 @@ int SubmitHash::SetSimpleJobExprs()
 				}
 			}
 			AssignJobString(i->attr, str);
-		} else if (i->opts & SimpleSubmitKeyword::f_as_expr) {
+		} else if (i->opts & (SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_as_int)) {
 			AssignJobExpr(i->attr, expr);
 		} else {
 			bool val = false;
