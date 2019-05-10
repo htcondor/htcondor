@@ -813,12 +813,30 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	// special don't care cases for logical operators with exactly one value
 	if( (!tree1 || !tree2) && (tree1 || tree2) && 
 		( op==LOGICAL_OR_OP || op==LOGICAL_AND_OP ) ) {
-		_doOperation( op, !tree1?val1:dummy , !tree2?val2:dummy , dummy , 
+		_doOperation( op, !tree1 ? val1 : dummy , !tree2?val2:dummy , dummy , 
 						true, true, false, val );
 		if( val.IsBooleanValue() ) {
 			tree = NULL;
 			delete tree1;
 			delete tree2;
+			op = __NO_OP__;
+			return true;
+		}
+
+		// rewrite true && expr -> expr
+		// this pattern happens after flatening often
+		// rewriting creates faster evaluation than short-circuit at eval time
+
+		bool literalValue = false;
+		if ((op == LOGICAL_AND_OP) && !tree1 && val1.IsBooleanValue(literalValue) && literalValue) {
+			tree = tree2;
+			op = __NO_OP__;
+			return true;
+		}
+
+		// rewrite expr && true -> expr
+		if ((op == LOGICAL_AND_OP) && !tree2 && val2.IsBooleanValue(literalValue) && literalValue) {
+			tree = tree1;
 			op = __NO_OP__;
 			return true;
 		}
