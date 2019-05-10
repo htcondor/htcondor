@@ -63,8 +63,8 @@
 #include <set>
 
 #ifdef WIN32
-//#define CLIPPED 1
-#undef CLIPPED
+#define CLIPPED 1
+//#undef CLIPPED
 #endif
 
 /* Disable gcc warnings about floating point comparisons */
@@ -534,12 +534,13 @@ struct SimpleSubmitKeyword {
 	char const *attr; // job attribute
 	int opts;         // zero or more of the below option flags
 	enum {
-		f_as_bool = 0,
-		f_as_int      = 0x01,
-		f_as_expr     = 0x02,
-		f_as_string   = 0x04,
-		f_as_list     = 0x08,  // canonicalize the item as a list, removing extra spaces and using , as separator
-		f_strip_quotes = 0x10, // if value has quotes already, remove them before inserting into the ad
+		f_as_expr     = 0,
+		f_as_bool     = 0x01,
+		f_as_int      = 0x02,
+		f_as_uint     = 0x04,
+		f_as_string   = 0x08,
+		f_as_list     = 0x10,  // canonicalize the item as a list, removing extra spaces and using , as separator
+		f_strip_quotes = 0x20, // if value has quotes already, remove them before inserting into the ad
 
 		f_alt_name    = 0x080, // this is an alternate name, don't set if the previous keyword existed
 		f_alt_err     = 0x0c0, // this is an alternate name, and it is an error to use both
@@ -5204,15 +5205,25 @@ int SubmitHash::SetSimpleJobExprs()
 				}
 			}
 			AssignJobString(i->attr, str);
-		} else if (i->opts & (SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_as_int)) {
-			AssignJobExpr(i->attr, expr);
-		} else {
+		} else if (i->opts & SimpleSubmitKeyword::f_as_bool) {
 			bool val = false;
 			if (! string_is_boolean_param(expr, val)) {
 				push_error(stderr, "%s=%s is invalid, must eval to a boolean.\n", i->key, expr.ptr());
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobVal(i->attr, val);
+		} else if (i->opts & (SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_as_uint)) {
+			long long val = 0;
+			if ( ! string_is_long_param(expr, val)) {
+				push_error(stderr, "%s=%s is invalid, must eval to an integer.\n", i->key, expr.ptr());
+				ABORT_AND_RETURN(1);
+			} else if ((val < 0) && (i->opts & SimpleSubmitKeyword::f_as_uint)) {
+				push_error(stderr, "%s=%s is invalid, must eval to a non-negative integer.\n", i->key, expr.ptr());
+				ABORT_AND_RETURN(1);
+			}
+			AssignJobVal(i->attr, val);
+		} else {
+			AssignJobExpr(i->attr, expr);
 		}
 
 		RETURN_IF_ABORT();
