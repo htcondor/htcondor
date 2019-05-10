@@ -5282,6 +5282,10 @@ description=Debug logging options for the credd
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
+[CREDD_OAUTH_MODE]
+default=true
+type=bool
+
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
