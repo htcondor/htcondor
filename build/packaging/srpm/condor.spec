@@ -675,6 +675,7 @@ Summary: External packages built into HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: %name-external-libs%{?_isa} = %version-%release
+Provides: blahp
 
 %description externals
 Includes the external packages built when UW_BUILD is enabled
