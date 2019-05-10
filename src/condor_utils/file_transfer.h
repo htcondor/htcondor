@@ -135,6 +135,15 @@ class FileTransfer: public Service {
 	 */
 	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
 
+	/** Set the location of various ads describing the runtime environment.
+	 *  Used by the file transfer plugins.
+	 *
+	 *  @param job_ad The location of the job ad.
+	 *  @param machine_ad The location of the machine ad.
+	 */
+	void setRuntimeAds(const std::string &job_ad, const std::string &machine_ad)
+	{m_job_ad = job_ad; m_machine_ad = machine_ad;}
+
 		/** Set limits on how much data will be sent/received per job
 			(i.e. per call to DoUpload() or DoDownload()).  The job is
 			put on hold if the limit is exceeded.  The files are sent
@@ -437,6 +446,8 @@ class FileTransfer: public Service {
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
 	std::string m_cred_dir;
+	std::string m_job_ad;
+	std::string m_machine_ad;
 	filesize_t MaxUploadBytes;
 	filesize_t MaxDownloadBytes;
 

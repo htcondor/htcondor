@@ -39,11 +39,13 @@ class MultiFileCurlPlugin {
     int DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes );
     int BuildTransferRequests (const std::string & input_filename, std::vector<std::pair<std::string, transfer_request>> &requested_files) const;
     FILE *OpenLocalFile (const std::string &local_file, const char *mode) const;
+    void ParseAds();
 
     CURL* _handle{nullptr};
     std::unique_ptr<FileTransferStats> _this_file_stats{nullptr};
     bool _diagnostic{false};
     std::string _all_files_stats;
     char _error_buffer[CURL_ERROR_SIZE];
-
+    int m_speed_limit{1024};
+    int m_speed_time{30};
 };
