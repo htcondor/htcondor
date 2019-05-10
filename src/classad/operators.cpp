@@ -469,6 +469,16 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	return SIG_NONE;
 }
 
+bool OperationParens::
+_Evaluate (EvalState &state, Value &result) const
+{
+		if( !child1->Evaluate (state, result) ) {
+			result.SetErrorValue( );
+			return( false );
+		}
+		return true;
+}
+
 bool Operation::
 _Evaluate (EvalState &state, Value &result) const
 {
