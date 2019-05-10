@@ -28,6 +28,7 @@ ShouldRetryTransfer(int rval) {
         case CURLE_OPERATION_TIMEDOUT:
         case CURLE_SEND_ERROR:
         case CURLE_RECV_ERROR:
+        case CURLE_GOT_NOTHING:
             return true;
         default:
             return false;
