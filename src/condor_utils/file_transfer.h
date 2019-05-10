@@ -75,7 +75,7 @@ enum FileTransferStatus {
 };
 
 
-class FileTransfer: public Service {
+class FileTransfer final: public Service {
 
   public:
 
@@ -364,92 +364,92 @@ class FileTransfer: public Service {
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
-	double uploadStartTime, uploadEndTime;
-	double downloadStartTime, downloadEndTime;
+	double uploadStartTime{-1}, uploadEndTime{-1};
+	double downloadStartTime{-1}, downloadEndTime{-1};
 
 	void CommitFiles();
 	void ComputeFilesToSend();
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
-	float bytesSent, bytesRcvd;
+	uint64_t bytesSent{0}, bytesRcvd{0};
 	StringList* InputFiles;
 
   private:
 
-	bool TransferFilePermissions;
-	bool DelegateX509Credentials;
-	bool PeerDoesTransferAck;
-	bool PeerDoesGoAhead;
-	bool PeerUnderstandsMkdir;
-	bool PeerDoesXferInfo;
-	bool TransferUserLog;
-	char* Iwd;
-	StringList* ExceptionFiles;
-	StringList* OutputFiles;
-	StringList* EncryptInputFiles;
-	StringList* EncryptOutputFiles;
-	StringList* DontEncryptInputFiles;
-	StringList* DontEncryptOutputFiles;
-	StringList* IntermediateFiles;
-	StringList* FilesToSend;
-	StringList* EncryptFiles;
-	StringList* DontEncryptFiles;
-	char* OutputDestination;
-	char* SpooledIntermediateFiles;
-	char* ExecFile;
-	char* UserLogFile;
-	char* X509UserProxy;
+	bool TransferFilePermissions{false};
+	bool DelegateX509Credentials{false};
+	bool PeerDoesTransferAck{false};
+	bool PeerDoesGoAhead{false};
+	bool PeerUnderstandsMkdir{false};
+	bool PeerDoesXferInfo{false};
+	bool TransferUserLog{false};
+	char* Iwd{nullptr};
+	StringList* ExceptionFiles{nullptr};
+	StringList* OutputFiles{nullptr};
+	StringList* EncryptInputFiles{nullptr};
+	StringList* EncryptOutputFiles{nullptr};
+	StringList* DontEncryptInputFiles{nullptr};
+	StringList* DontEncryptOutputFiles{nullptr};
+	StringList* IntermediateFiles{nullptr};
+	StringList* FilesToSend{nullptr};
+	StringList* EncryptFiles{nullptr};
+	StringList* DontEncryptFiles{nullptr};
+	char* OutputDestination{nullptr};
+	char* SpooledIntermediateFiles{nullptr};
+	char* ExecFile{nullptr};
+	char* UserLogFile{nullptr};
+	char* X509UserProxy{nullptr};
 	MyString JobStdoutFile;
 	MyString JobStderrFile;
-	char* TransSock;
-	char* TransKey;
-	char* SpoolSpace;
-	char* TmpSpoolSpace;
-	int user_supplied_key;
-	bool upload_changed_files;
-	int m_final_transfer_flag;
-	time_t last_download_time;
-	FileCatalogHashTable* last_download_catalog;
-	int ActiveTransferTid;
-	time_t TransferStart;
-	int TransferPipe[2];
-	bool registered_xfer_pipe;
-	FileTransferHandler ClientCallback;
-	FileTransferHandlerCpp ClientCallbackCpp;
-	Service* ClientCallbackClass;
-	bool ClientCallbackWantsStatusUpdates;
+	char* TransSock{nullptr};
+	char* TransKey{nullptr};
+	char* SpoolSpace{nullptr};
+	char* TmpSpoolSpace{nullptr};
+	int user_supplied_key{false};
+	bool upload_changed_files{false};
+	int m_final_transfer_flag{false};
+	time_t last_download_time{0};
+	FileCatalogHashTable* last_download_catalog{nullptr};
+	int ActiveTransferTid{-1};
+	time_t TransferStart{0};
+	int TransferPipe[2] {-1, -1};
+	bool registered_xfer_pipe{false};
+	FileTransferHandler ClientCallback{nullptr};
+	FileTransferHandlerCpp ClientCallbackCpp{nullptr};
+	Service* ClientCallbackClass{nullptr};
+	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
-	PluginHashTable* plugin_table;
+	PluginHashTable* plugin_table{nullptr};
 	std::map<MyString, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
-	bool I_support_filetransfer_plugins;
-	bool multifile_plugins_enabled;
+	bool I_support_filetransfer_plugins{false};
+	bool multifile_plugins_enabled{false};
 #ifdef WIN32
-	perm* perm_obj;
+	perm* perm_obj{nullptr};
 #endif		
-    priv_state desired_priv_state;
-	bool want_priv_change;
+	priv_state desired_priv_state{PRIV_UNKNOWN};
+	bool want_priv_change{false};
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
 	static bool ServerShouldBlock;
-	int clientSockTimeout;
-	bool did_init;
-	bool simple_init;
-	ReliSock *simple_sock;
+	int clientSockTimeout{30};
+	bool did_init{false};
+	bool simple_init{true};
+	ReliSock *simple_sock{nullptr};
 	MyString download_filename_remaps;
-	bool m_use_file_catalog;
+	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
-	char *m_sec_session_id;
+	char *m_sec_session_id{nullptr};
 	std::string m_cred_dir;
 	std::string m_job_ad;
 	std::string m_machine_ad;
-	filesize_t MaxUploadBytes;
-	filesize_t MaxDownloadBytes;
+	filesize_t MaxUploadBytes{-1};  // no limit by default
+	filesize_t MaxDownloadBytes{-1};
 
 	// stores the path to the proxy after one is received
 	MyString LocalProxyName;

@@ -225,66 +225,6 @@ struct download_info {
 
 FileTransfer::FileTransfer()
 {
-	TransferFilePermissions = false;
-	DelegateX509Credentials = false;
-	PeerDoesTransferAck = false;
-	PeerDoesGoAhead = false;
-	PeerUnderstandsMkdir = false;
-	PeerDoesXferInfo = false;
-	TransferUserLog = false;
-	Iwd = NULL;
-	ExceptionFiles = NULL;
-	InputFiles = NULL;
-	OutputFiles = NULL;
-	EncryptInputFiles = NULL;
-	EncryptOutputFiles = NULL;
-	DontEncryptInputFiles = NULL;
-	DontEncryptOutputFiles = NULL;
-	IntermediateFiles = NULL;
-	SpooledIntermediateFiles = NULL;
-	FilesToSend = NULL;
-	EncryptFiles = NULL;
-	DontEncryptFiles = NULL;
-	OutputDestination = NULL;
-	ExecFile = NULL;
-	UserLogFile = NULL;
-	X509UserProxy = NULL;
-	TransSock = NULL;
-	TransKey = NULL;
-	SpoolSpace = NULL;
-	TmpSpoolSpace = NULL;
-	user_supplied_key = FALSE;
-	upload_changed_files = false;
-	last_download_catalog = NULL;
-	last_download_time = 0;
-	ActiveTransferTid = -1;
-	TransferStart = 0;
-	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = -1.0;
-	ClientCallback = 0;
-	ClientCallbackCpp = 0;
-	ClientCallbackClass = NULL;
-	ClientCallbackWantsStatusUpdates = false;
-	TransferPipe[0] = TransferPipe[1] = -1;
-	registered_xfer_pipe = false;
-	bytesSent = 0.0;
-	bytesRcvd = 0.0;
-	m_final_transfer_flag = FALSE;
-#ifdef WIN32
-	perm_obj = NULL;
-#endif
-	desired_priv_state = PRIV_UNKNOWN;
-	want_priv_change = false;
-	did_init = false;
-	clientSockTimeout = 30;
-	simple_init = true;
-	simple_sock = NULL;
-	m_use_file_catalog = true;
-	m_sec_session_id = NULL;
-	I_support_filetransfer_plugins = false;
-	plugin_table = NULL;
-	multifile_plugins_enabled = false;
-	MaxUploadBytes = -1;  // no limit by default
-	MaxDownloadBytes = -1;
 }
 
 FileTransfer::~FileTransfer()
@@ -2651,12 +2591,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// go back to the state we were in before file transfer
 	s->set_crypto_mode(socket_default_crypto);
 
-#ifdef WIN32
-		// unsigned __int64 to float is not implemented on Win32
-	bytesRcvd += (float)(signed __int64)(*total_bytes);
-#else
 	bytesRcvd += (*total_bytes);
-#endif
 
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
@@ -3280,6 +3215,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
+	bool should_invoke_output_plugins, tmp;
+	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
+		should_invoke_output_plugins = m_final_transfer_flag;
+	} else {
+		InitDownloadFilenameRemaps(&jobAd);
+		should_invoke_output_plugins = !tmp;
+	}
+
 	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
@@ -3340,7 +3283,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
-		if ( m_final_transfer_flag ) {
+		if ( should_invoke_output_plugins ) {
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
