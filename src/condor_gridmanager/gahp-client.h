@@ -79,6 +79,7 @@ class GahpServer : public Service {
 
 	bool Startup();
 	bool Initialize(Proxy * proxy);
+	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
 
 	void DeleteMe();
@@ -182,6 +183,7 @@ class GahpServer : public Service {
 	bool command_version();
 	bool command_initialize_from_file(const char *proxy_path,
 									  const char *command=NULL);
+	bool command_update_token_from_file(const std::string &token);
 	bool command_commands();
 	bool command_async_mode_on();
 	bool command_response_prefix(const char *prefix);
@@ -255,6 +257,7 @@ class GenericGahpClient : public Service {
 
 		bool Startup();
 		bool Initialize( Proxy * proxy );
+		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
 
 		void purgePendingRequests() { clear_pending(); }
