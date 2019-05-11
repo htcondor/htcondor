@@ -373,7 +373,7 @@ class FileTransfer final: public Service {
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
 	uint64_t bytesSent{0}, bytesRcvd{0};
-	StringList* InputFiles;
+	StringList* InputFiles{nullptr};
 
   private:
 
