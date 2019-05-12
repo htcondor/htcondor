@@ -1402,10 +1402,27 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+	// Update memory_usage_mb, which should be the maximum value seen
+	// in the update ad for ATTR_MEMORY_USAGE
+	if( update_ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value) ) {
+		if( int64_value > memory_usage_mb ) {
+			memory_usage_mb = int64_value;
+		}
+	}
+	// Now update MemoryUsage in the job ad.  If the update ad sent us 
+	// a literal value for MemoryUsage, then insert in the job ad the MAX 
+	// value we have seen.  But if the update ad sent us MemoryUsage as an
+	// expression, then just copy the expression into the job ad.
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
-	if( tree ) {
-		tree = tree->Copy();
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+	if (tree) {
+		if (tree->GetKind() != ExprTree::LITERAL_NODE) {
+				// Copy the exression over
+			tree = tree->Copy();
+			jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+		} else {
+				// It is a literal, so insert the MAX of the literals seen
+			jobAd->Assign(ATTR_MEMORY_USAGE, memory_usage_mb);
+		}
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, real_value) ) {
@@ -1592,10 +1609,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// record the new state
 			setResourceState( new_state );
 		}
-	}
-
-	if (jobAd->LookupInteger(ATTR_MEMORY_USAGE, int64_value)) {
-		memory_usage_mb = int64_value;
 	}
 
 	std::string starter_addr;
