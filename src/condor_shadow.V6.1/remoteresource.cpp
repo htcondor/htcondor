@@ -1404,7 +1404,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	// Update memory_usage_mb, which should be the maximum value seen
 	// in the update ad for ATTR_MEMORY_USAGE
-	if( update_ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value) ) {
+	if( EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value) ) {
 		if( int64_value > memory_usage_mb ) {
 			memory_usage_mb = int64_value;
 		}
