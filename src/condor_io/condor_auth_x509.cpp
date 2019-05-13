@@ -826,6 +826,25 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		}
         print_log(major_status,minor_status,token_status,
                   "Condor GSI authentication failure");
+		// The following code is a workaround for a long-standing GSI
+		// bug. In gss_init_sec_context() (called by
+		// globus_gss_assist_init_sec_context()), in some situations
+		// where the SSL handshake fails, it drops the last packet of
+		// data to be sent to the server before returning failure.
+		// This leaves the server waiting for data that won't be sent.
+		// So here, we send an empty packet of data to the server.
+		// Our heuristic for when to do this is if the last packet
+		// exchanged was a "large" one received by the client.
+		// Once GSI is fixed, this code won't cause any problems, but
+		// can then be removed.
+		if (mySock_->is_decode() && relisock_gsi_get_last_size > 100) {
+			status = 0;
+			mySock_->encode();
+			if (!mySock_->code(status)) {
+				dprintf(D_ALWAYS, "Authenticate: failed to inform client of failure to authenticate\n");
+			}
+			mySock_->end_of_message();
+		}
     }
     else {
         // Now, wait for final signal
