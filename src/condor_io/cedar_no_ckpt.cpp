@@ -801,6 +801,10 @@ ReliSock::put_x509_delegation( filesize_t *size, const char *source, time_t expi
 	return 0;
 }
 
+// These variables hold the size of the last data block handled by each
+// respective function. They are part of a hacky workaround for a GSI bug.
+size_t relisock_gsi_get_last_size = 0;
+size_t relisock_gsi_put_last_size = 0;
 
 int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
 {
@@ -843,8 +847,10 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
         *sizep = 0;
         free( *bufp );
         *bufp = NULL;
+        relisock_gsi_get_last_size = 0;
         return -1;
     }
+    relisock_gsi_get_last_size = *sizep;
     return 0;
 }
 
@@ -876,8 +882,10 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     //ensure data send was successful
     if ( stat == FALSE) {
         dprintf( D_ALWAYS, "relisock_gsi_put (write to socket) failure\n" );
+        relisock_gsi_put_last_size = 0;
         return -1;
     }
+    relisock_gsi_put_last_size = size;
     return 0;
 }
 
