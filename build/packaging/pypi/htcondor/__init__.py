@@ -25,3 +25,4 @@ Neither the environment variable CONDOR_CONFIG, /etc/condor/,
         warnings.warn(message)
 
 from ._htcondor import *
+from ._htcondor import _Param
