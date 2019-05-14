@@ -69,7 +69,11 @@ def main():
         shutil.copy(src_fname, dst_fname)
 
     os.environ['PERL5LIB'] = '..'
-    os.environ['LD_LIBRARY_PATH'] = os.path.join(args.prefix_path, "lib")
+    new_library_path = os.path.join(args.prefix_path, "lib")
+    if 'LD_LIBRARY_PATH' in os.environ:
+        os.environ['LD_LIBRARY_PATH'] = new_library_path + ':' + os.environ['LD_LIBRARY_PATH']
+    else:
+        os.environ['LD_LIBRARY_PATH'] = new_library_path
     os.environ['PATH'] = ":".join([os.path.join(args.prefix_path, "bin"), "/bin", "/sbin", "/usr/sbin", "/usr/bin"])
 
     write_base_config(args.prefix_path)
