@@ -1086,6 +1086,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 {
 	OM_uint32 major_status = GSS_S_COMPLETE;
 	OM_uint32 minor_status = 0;
+	OM_uint32 minor_status2 = 0;
 
 	OM_uint32				time_req;
 	gss_buffer_desc			output_token_desc = GSS_C_EMPTY_BUFFER;
@@ -1156,13 +1157,13 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 				major_status =
 				GSS_S_DEFECTIVE_TOKEN | GSS_S_CALL_INACCESSIBLE_WRITE;
 			}
-			(*gss_release_buffer_ptr)(&minor_status, output_token);
+			(*gss_release_buffer_ptr)(&minor_status2, output_token);
 		}
 		if (GSS_ERROR(major_status))
 		{
 			if (context_handle != GSS_C_NO_CONTEXT)
 			{
-				(*gss_delete_sec_context_ptr)(&minor_status, &context_handle, GSS_C_NO_BUFFER);
+				(*gss_delete_sec_context_ptr)(&minor_status2, &context_handle, GSS_C_NO_BUFFER);
 			}
 			break;
 		}
@@ -1199,7 +1200,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		gss_buffer_desc                     tmp_buffer_desc = GSS_C_EMPTY_BUFFER;
 		gss_buffer_t                        tmp_buffer = &tmp_buffer_desc;
 		char * gss_name = NULL;
-		major_status = (*gss_display_name_ptr)(&minor_status,
+		major_status = (*gss_display_name_ptr)(&minor_status2,
 			m_client_name,
 			tmp_buffer,
 			NULL);
@@ -1222,7 +1223,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED, "Unable to determine remote client name.  Globus is reporting error (%u:%u)",
 				(unsigned)major_status, (unsigned)minor_status);
 		}
-		(*gss_release_buffer_ptr)(&minor_status, tmp_buffer);
+		(*gss_release_buffer_ptr)(&minor_status2, tmp_buffer);
 
 		classad::ClassAd ad;
 
