@@ -54,6 +54,12 @@ Bugs Fixed:
 -  Fixed a bug that could cause reading ClassAds from a pipe to fail.
    :ticket:`7001`
 
+-  Fixed a bug that caused the *condor_shadow* to not attempt to
+   reconnect to the *condor_starter* after a network disconnection.
+   Reconnecting after a restart of the *condor_schedd* was not
+   affected.
+   :ticket:`7033`
+
 Version 8.8.2
 -------------
 
