@@ -30,6 +30,11 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that prevented HTCondor from being started inside a docker
+   container with the condor_master as PID 1.  HTCondor could start 
+   if the master was launched from a script.
+   :ticket: `7017` 
+
 -  Fixed a bug with singularity jobs where TMPDIR was set to the wrong
    value.  It is now set the the scratch directory inside the container.
    :ticket:`6991`
