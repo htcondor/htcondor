@@ -3530,7 +3530,13 @@ void export_schedd()
             )C0ND0R",
         init<boost::python::dict>(
             R"C0ND0R(
-            :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description.
+            :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description,
+                or a string containing the text of a submit file.
+                If a string is used, the text should consist of valid *condor_submit*
+                statments optionally followed by a a single *condor_submit* ``QUEUE``
+                statement. The arguments to the QUEUE statement will be stored
+                in the ``QArgs`` member of this class and used when the :method:`Submit.queue()`
+                method is called.
                 If omitted, the submit object is initially empty.
             :type input: dict or str
             )C0ND0R",
@@ -3552,7 +3558,10 @@ void export_schedd()
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
-            :param int count: The number of jobs to create (defaults to ``1``).
+            :param int count: The number of jobs to create (defaults to ``0``).
+                If not specified, or a value of ``0`` is given the ``QArgs`` member
+                of this class is used to determine the number of procs to submit.
+                If no ``QArgs`` were specified, one job is submitted.
             :param ad_results: A list to receive the ClassAd resulting from this submit.
                 As with :meth:`Schedd.submit`, this is often used to later spool the input
                 files.
@@ -3688,7 +3697,7 @@ void export_schedd()
         .def("clusterad", &SubmitResult::clusterad,
             R"C0ND0R(
             :return: the cluster Ad of the submitted jobs.
-            :rtype: int
+            :rtype: :class:`classad.ClassAd`
             )C0ND0R",
             boost::python::args("self"))
         .def("first_proc", &SubmitResult::first_procid,
