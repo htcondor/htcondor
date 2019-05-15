@@ -44,6 +44,10 @@ Bugs Fixed:
    ``MAXJOBRETIREMENTTIME`` is zero).
    :ticket:`7034`
 
+-  The job attributes ``NumJobStarts`` and ``JobRunCount`` are now
+   updated properly for the grid universe and the job router.
+   :ticket:`7016`
+
 Version 8.8.2
 -------------
 
