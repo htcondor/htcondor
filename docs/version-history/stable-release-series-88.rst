@@ -47,6 +47,14 @@ Bugs Fixed:
    ``MAXJOBRETIREMENTTIME`` is zero).
    :ticket:`7034`
 
+-  Restored the old Python bindings for reading the job event log
+   (``EventIterator`` and ``read_events()``) for Python 2.
+   In HTCondor 8.8.2, they were mistakenly restored for Python 3 only.
+   These bindings are marked as deprecated and will likely be
+   removed permanently in the 8.9 series. Users should transition to the
+   replacement bindings (``JobEventLog``)
+   :ticket:`7039`
+
 -  The job attributes ``NumJobStarts`` and ``JobRunCount`` are now
    updated properly for the grid universe and the job router.
    :ticket:`7016`
