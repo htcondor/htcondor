@@ -38,6 +38,11 @@ Bugs Fixed:
    which was very outdated).
    :ticket:`6983`
 
+-  Reduced the number of DNS resolutions that may be performed while
+   establishing a network connection. Slow DNS queries could cause a
+   connection to fail due to the peer timing out.
+   :ticket:`6968`
+
 Version 8.9.1
 -------------
 
