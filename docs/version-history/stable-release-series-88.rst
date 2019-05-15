@@ -25,6 +25,9 @@ New Features:
    retirement even during a peaceful shutdown.
    :ticket:`7034`
 
+-  Unusually slow DNS queries now generate a warning in the daemon logs.
+   :ticket:`6967`
+
 Bugs Fixed:
 
 -  Fixed a bug with singularity jobs where TMPDIR was set to the wrong
