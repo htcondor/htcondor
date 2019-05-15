@@ -48,6 +48,9 @@ Bugs Fixed:
    updated properly for the grid universe and the job router.
    :ticket:`7016`
 
+-  Fixed a bug that could cause reading ClassAds from a pipe to fail.
+   :ticket:`7001`
+
 Version 8.8.2
 -------------
 
