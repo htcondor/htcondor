@@ -28,6 +28,11 @@ New Features:
 -  Unusually slow DNS queries now generate a warning in the daemon logs.
    :ticket:`6967`
 
+-  Docker Universe now creates containers with a label named
+   org.htcondorproject for 3rd party monitoring tools to classify
+   and identify containers as managed by HTCondor.
+   :ticket: `6965`
+
 Bugs Fixed:
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
