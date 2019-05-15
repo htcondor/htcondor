@@ -22,6 +22,11 @@ New Features:
    function should now give better results on objects and function in the bindings.
    :ticket:`6953`
 
+-  X.509 proxies now work properly with job materialization.
+   In particular, the job attributes describing the X.509 credential
+   are now set properly.
+   :ticket:`6972`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
