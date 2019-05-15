@@ -25,6 +25,10 @@ New Features:
    retirement even during a peaceful shutdown.
    :ticket:`7034`
 
+-  Docker Universe now creates containers with a label named
+   org.htcondorproject for 3rd party monitoring tools to classify
+   and identify containers as managed by HTCondor.
+   :ticket: `6965`
 Bugs Fixed:
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
