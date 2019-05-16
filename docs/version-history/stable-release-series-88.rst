@@ -78,6 +78,11 @@ Bugs Fixed:
    restart of the *condor_schedd*.
    :ticket:`7033`
 
+-  Fixed a bug in *condor_q* that would result in the error "Two results with the same ID"
+   when the ``-long`` and ``-attributes`` options were used, and the attributes list did
+   not contain the ``ProcId`` attribute.
+   :ticket:`6997`
+
 Version 8.8.2
 -------------
 
