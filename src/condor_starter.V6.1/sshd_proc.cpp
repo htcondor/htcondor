@@ -69,7 +69,7 @@ SSHDProc::JobReaper(int pid, int status)
 
 	if (pid == JobPid) {
 		Directory d(session_dir.c_str());
-		dprintf(D_ALWAYS, "GGT GGT GGT removing %s\n",session_dir.c_str());
+		dprintf(D_ALWAYS, "Removing %s\n",session_dir.c_str());
 		TemporaryPrivSentry s(PRIV_USER);
 		d.Remove_Full_Path(session_dir.c_str());
 	}
