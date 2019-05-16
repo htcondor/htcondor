@@ -66,7 +66,10 @@ def main():
         fname = os.path.split(src_fname)[1]
         dst_fname = os.path.join(rundir, fname)
         src_fname = os.path.join(args.source_dir, src_fname)
-        shutil.copy(src_fname, dst_fname)
+        if os.path.isdir(src_fname):
+            shutil.copytree(src_fname, dst_fname)
+        else:
+            shutil.copy(src_fname, dst_fname)
 
     os.environ['PERL5LIB'] = '..'
     new_library_path = os.path.join(args.prefix_path, "lib")
