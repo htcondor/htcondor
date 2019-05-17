@@ -446,6 +446,7 @@ DedicatedScheduler::DedicatedScheduler()
 	unclaimed_resources = NULL;
 	busy_resources = NULL;
 
+	total_cores = 0;
 	hdjt_tid = -1;
 	sanity_tid = -1;
 	rid = -1;
@@ -1612,6 +1613,16 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		startdQueryTime = time(0) - b4;
 		dprintf( D_ALWAYS, "Found %d potential dedicated resources in %ld seconds\n",
 				 resources->Length(),startdQueryTime);
+
+		resources->Rewind();
+		while (ClassAd *m = resources->Next()) {
+			int cpus = 0;
+			m->LookupInteger(ATTR_CPUS, cpus);
+			if (cpus == 0) cpus = 1;
+			total_cores += cpus;
+		}
+		resources->Rewind();
+
 		return true;
 	}
 
@@ -1882,6 +1893,7 @@ DedicatedScheduler::clearResources( void )
 		delete resources;
 		resources = NULL;
 	}
+	total_cores = 0;
 }
 
 
@@ -2265,7 +2277,7 @@ DedicatedScheduler::computeSchedule( void )
 			while (jobsToReconnect.Next(reconId)) {
 				if ((reconId.cluster == cluster) &&
 				    (reconId.proc    == proc_id)) {
-					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waitingn to reconnect\n", cluster, proc_id);
+					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waiting to reconnect\n", cluster, proc_id);
 					give_up = true;
 					break;
 				}
@@ -2274,6 +2286,12 @@ DedicatedScheduler::computeSchedule( void )
 					 "Trying to find %d resource(s) for dedicated job %d.%d\n",
 					 hosts, cluster, proc_id );
 
+			if (hosts > total_cores) {
+				dprintf(D_ALWAYS, "Skipping job %d.%d because it requests more nodes (%d) than exist in the pool (%d)\n", cluster, proc_id, hosts, total_cores);
+				nprocs++;
+				give_up = true;
+				continue;
+			}
 			for( int job_num = 0 ; job_num < hosts; job_num++) {
 				jobs->Append(job);
 			}
@@ -3863,7 +3881,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 		candidate_resources.Append(machine);
 	}
 	candidate_resources.Rewind();
-
 
 	ClassAd *job;
 	jobs->Rewind();
