@@ -35,6 +35,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that prevented condor_submit -i from working with
+   a Singularity container environemnt for more than three minutes.
+   :ticket: `7018`
+
 -  Fixed a bug that prevented HTCondor from being started inside a docker
    container with the condor_master as PID 1.  HTCondor could start 
    if the master was launched from a script.
