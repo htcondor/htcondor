@@ -83,6 +83,10 @@ Bugs Fixed:
    not contain the ``ProcId`` attribute.
    :ticket:`6997`
 
+-  Fixed a bug when GSI authentication fails, which could cause all other
+   authentication methods to be skipped.
+   :ticket:`7024`
+
 Version 8.8.2
 -------------
 
