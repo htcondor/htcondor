@@ -77,7 +77,6 @@ Remote_Remote_GridResource="condor remoter stuff"
 Remote_Remote_NordugridRSL="or over there"
 Requirements=/TARGET\.HasEncryptExecuteDirectory.+TARGET\.HasJobDeferral.+DeferralTime.+DeferralPrepTime/
 RunAsOwner=false
-ScheddInterval=300
 StackSize=1024 * 1024
 SubmitEventNotes="ipso lorem"
 SubmitEventUserNotes="user ipso lorem"
