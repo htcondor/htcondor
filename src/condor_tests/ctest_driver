@@ -24,6 +24,9 @@ SCHEDD_DEBUG=D_FULLDEBUG
 RUNBENCHMARKS=false
 FILETRANSFER_PLUGINS=
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
+# ctest allows tests to run for up to 1500 seconds; after that, we are
+# potentially a runaway personal condor instance.
+DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500
 LOCAL_DIR={pwd}/local_dir
 {extra_args}
 """
@@ -39,7 +42,8 @@ def parse_args():
     parser.add_argument("--prefix-path", help="Location of the install prefix to test",
         default=".", dest="prefix_path")
     parser.add_argument("--dependencies", help="Source file dependencies")
-    parser.add_argument("--java", help="Enable Java universe", dest="java")
+    parser.add_argument("--java", help="Enable Java universe", dest="java", action="store_true",
+        default=False)
 
     return parser.parse_args()
 
