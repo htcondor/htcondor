@@ -98,6 +98,10 @@ Bugs Fixed:
    authentication methods to be skipped.
    :ticket:`7024`
 
+-  Ensured that the HTCondor Annex boot-time configuration is done after the
+   network is available.
+   :ticket:`7045`
+
 Version 8.8.2
 -------------
 
