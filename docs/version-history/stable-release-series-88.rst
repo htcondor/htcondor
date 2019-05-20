@@ -35,6 +35,9 @@ New Features:
 
 Bugs Fixed:
 
+-  Included the python bindings in the Debian and Ubuntu deb packages.
+   :ticket: `7048`
+
 -  Fixed a bug that prevented condor_submit -i from working with
    a Singularity container environemnt for more than three minutes.
    :ticket: `7018`
