@@ -64,7 +64,7 @@ sub InitGlobals{
 sub WaitForIt {
     my $count = 0;
     my $looplimit = 7;
-    my $variance = 20;
+    my $variance = 10;
     my $sleeptime = 0;
     my $res = 0;
     my $final = 0;
@@ -236,23 +236,33 @@ sub ExamineSlots
     my $waitforit = shift;
 
     my $available = 0;
-    my $looplimit = 10;
-    my $count = 10; # go just once
+    my $looplimit = 20;
+    my $count = 5; # go just once
     my @goods = ();
     if(defined $waitforit) {
         $count = 0; #enable looping with 10 second sleep
     }
+    my $waitready = $waitforit;
+    my $slottype = `condor_config_val SLOT_TYPE_1_PARTITIONABLE`;
+    chomp($slottype);
+    if($slottype =~ /Not defined/){
+        print "Looking for static slots";
+    } else {
+        print "Looking for partitionable slots";
+        $waitready = 1;
+    }
+
     while($count <= $looplimit) {
         $count += 1;
         CondorTest::runCondorTool("condor_status -tot",\@goods,2,{emit_output => 0});
         foreach my $line (@goods) {
             if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
-                #print "<$4> unclaimed <$1> Total slots\n";
+                print "<$4> unclaimed <$1> Total slots\n";
                 $available = $4;
             }
         }
         if(defined $waitforit) {
-            if($available >= $waitforit) {
+            if($available >= $waitready) {
                 last;
             } else {
                 sleep 10;
@@ -265,10 +275,8 @@ sub ExamineSlots
 	}
 	if($available == 1) {
 		#could be a partionable slot
-		my $slottype = `condor_config_val SLOT_TYPE_1_PARTITIONABLE`;
-		chomp($slottype);
 		if($slottype =~ /Not defined/){
-    		return($available);
+    			return($available);
 		}
 		my $numcpus = `condor_config_val NUM_CPUS`;
 		chomp($numcpus);
