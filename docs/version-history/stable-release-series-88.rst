@@ -21,6 +21,11 @@ New Features:
    sending multiple files, especially in wide-area network settings.
    :ticket:`7000`
 
+-  The HTCondor startd now deletes any orphaned Docker containers
+   that have been left behind in the case of a starter crash, machine
+   crash or docker restart
+   :ticket: `7019`
+
 -  If ``MAXJOBRETIREMENTTIME`` evaluates to ``-1``, it will truncate a job's
    retirement even during a peaceful shutdown.
    :ticket:`7034`
