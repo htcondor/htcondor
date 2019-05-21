@@ -2328,9 +2328,9 @@ sub wait_for_reconfig {
 	my @log;
 	while ($count > 0) {
 		if (is_mac()) {
-			@log = `tail -n 40 $file`;
+			@log = `tail -n 80 $file`;
 		} else {
-			@log = `tail $file --lines=40`;
+			@log = `tail $file --lines=80`;
 		}
 		for my $i (0..(scalar @log)-1) {
 			if ($log[$i] =~ /SIGHUP/) {
