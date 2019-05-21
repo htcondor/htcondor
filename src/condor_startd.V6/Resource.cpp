@@ -1772,10 +1772,14 @@ Resource::evalRetirementRemaining()
 		// GT#6701: Allow job policy to be effective even during peaceful
 		// retirement (e.g., just because I'm turning the machine off
 		// doesn't mean you get to use too much RAM).
-		if(MaxJobRetirementTime != 0 && r_cur->getRetirePeacefully()) {
-			// Override startd's MaxJobRetirementTime setting.
-			// Make it infinite.
-			MaxJobRetirementTime = INT_MAX;
+		//
+		// GT#7034: A computed MJRT of -1 means preempt immediately, even
+		// if you're retiring peacefully.  Otherwise, the job gets all
+		// all the time in the world.
+		if( r_cur->getRetirePeacefully() ) {
+			if( MaxJobRetirementTime != -1 ) {
+				MaxJobRetirementTime = INT_MAX;
+			}
 		}
 		//look up the maximum retirement time specified by the job
 		if(r_cur->ad()->LookupExpr(ATTR_MAX_JOB_RETIREMENT_TIME) &&
@@ -1795,7 +1799,7 @@ Resource::evalRetirementRemaining()
 		JobAge = r_cur->getJobTotalRunTime();
 	}
 	else {
-		//There is no job running, so there is no point in waiting any longer
+		// There is no job running, so there is no point in waiting any longer
 		MaxJobRetirementTime = 0;
 	}
 
