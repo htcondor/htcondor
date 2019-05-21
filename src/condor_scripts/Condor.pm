@@ -830,6 +830,7 @@ sub Monitor
 		if( $saw_submit && $num_active_jobs == 0 )
 		{
 			monitor_debug( "leaving eventlog monitor because num_active_jobs=$num_active_jobs\n" , 1);
+			close SUBMIT_LOG;
 			return 1;
 		}
 
@@ -1683,6 +1684,7 @@ sub Monitor
 			if defined $ULogCallback;
 		}
 	    }
+    close SUBMIT_LOG;
     return 1;
 }
 
