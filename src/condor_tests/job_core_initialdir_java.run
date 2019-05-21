@@ -62,7 +62,9 @@ $ExitSuccess = sub
 	# clean up
 	print "Great it is in the intialdir set for job\n";
 
-	runcmd("rm -rf initd",{emit_output=>0});
+	# the test suite has open file handles to the event log, causing
+	# the following command to fail on NFS-based workign directories.
+	runcmd("rm -rf initd || :",{emit_output=>0});
 };
 
 
