@@ -24,7 +24,7 @@ New Features:
 -  The HTCondor startd now deletes any orphaned Docker containers
    that have been left behind in the case of a starter crash, machine
    crash or docker restart
-   :ticket: `7019`
+   :ticket:`7019`
 
 -  If ``MAXJOBRETIREMENTTIME`` evaluates to ``-1``, it will truncate a job's
    retirement even during a peaceful shutdown.
@@ -36,7 +36,7 @@ New Features:
 -  Docker Universe now creates containers with a label named
    org.htcondorproject for 3rd party monitoring tools to classify
    and identify containers as managed by HTCondor.
-   :ticket: `6965`
+   :ticket:`6965`
 
 Bugs Fixed:
 
