@@ -33,6 +33,7 @@ Bugs Fixed:
    (including class constructors and methods) have been normalized.
    We don't expect any compatibility problems with existing code.
    :ticket:`6963`
+
 -  In the Python bindings, the default argument for ``use_tcp`` in
    :class:`Collector.advertise` is now ``True`` (it was previously ``False``,
    which was very outdated).
@@ -54,26 +55,34 @@ New Features:
 
 -  The deprecated ``HOSTALLOW...`` and ``HOSTDENY...`` configuration knobs
    have been removed. Please use ``ALLOW...`` and ``DENY...``. :ticket:`6921`
+
 -  Implemented a new version of the curl_plugin with multi-file
    support, allowing it to transfer many files in a single invocation of
    the plugin. :ticket:`6499`
    :ticket:`6859`
+
 -  The performance of HTCondor's File Transfer mechanism has improved
    when sending multiple files, especially in wide-area network
    settings. :ticket:`6884`
+
 -  Added support for passing HTTPS authentication credentials to file
    transfer plugins, using specially customized protocols. :ticket:`6858`
+
 -  If a job requests GPUs and is a Docker Universe job, HTCondor
    automatically mounts the nVidia GPU devices. :ticket:`6910`
+
 -  If a job requests GPUs, and Singularity is enabled, HTCondor
    automatically passes the **-nv** flag to Singularity to tell it to
    mount the nVidia GPUs. :ticket:`6898`
+
 -  Added a new submit file option, ``docker_network_type = host``, which
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
+
 -  Added a new config knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
+
 -  We've added six new events to the job event log, recording details
    about file transfer. For both file transfer -in (before/to the job)
    and -out (after/from the job), we log if the transfer was queued,
@@ -102,11 +111,13 @@ New Features:
    preserving the older implementation (OutputDestination), which puts
    all output files in the same place, for backwards compatibility.
    :ticket:`6876`
+
 -  Added options ``f`` (return full target string) and ``g`` (perform
    multiple substitutions) to ClassAd function ``regexps()``. Added new
    ClassAd functions ``replace()`` (equivalent to ``regexps()`` with
    ``f`` option) and ``replaceall()`` (equivalent to ``regexps()`` with
    ``fg`` options). :ticket:`6848`
+
 -  When jobs are run without file transfer on, usually because there is
    a shared file system, HTCondor used to unconditionally set the jobs
    argv[0] to the string *condor_exe.exe*. This breaks jobs that look
@@ -117,10 +128,12 @@ Bugs Fixed:
 
 -  Avoid killing jobs using between 90% and 99% of memory limit.
    :ticket:`6925`
+
 -  Improved how ``"Chirp"`` handles a network disconnection between the
    *condor_starter* and *condor_shadow*. ``"Chirp"`` commands now
    return a error and no longer cause the *condor_starter* to exit
    (killing the job). :ticket:`6873`
+
 -  Fixed a bug that could cause *condor_submit* to send invalid job
    ClassAds to the *condor_schedd* when the executable attribute was
    not the same for all jobs in that submission. :ticket:`6719`
@@ -141,6 +154,7 @@ changes.
 
 -  Absent any configuration, the default behavior is to deny
    authorization to all users.
+
 -  In the configuration files, if ``ALLOW_DAEMON`` or ``DENY_DAEMON``
    are omitted, ``ALLOW_WRITE`` or ``DENY_WRITE`` are no longer used in
    their place.
@@ -169,11 +183,13 @@ New Features:
    default. Also, neither ``ALLOW_DAEMON`` nor ``DENY_DAEMON`` fall back
    to using the corresponding ``ALLOW_WRITE`` or ``DENY_WRITE`` when
    reading configuration files. :ticket:`6824`
+
 -  A family of HTCondor daemons can now share a security session that
    allows them to trust each other without doing a security negotiation
    when a network connection is made amongst them. This "family"
    security session can be disabled by setting the new configuration
    parameter ``SEC_USE_FAMILY_SESSION`` to ``False``. :ticket:`6788`
+
 -  Scheduler Universe jobs now start in order of priority, instead of
    random order. This is most typically used for DAGMan. When running
    *condor_submit_dag* against a .dag file, you can use the -priority
@@ -182,6 +198,7 @@ New Features:
    the highest priority queued job will start first. If all queued
    Scheduler Universe jobs have equal priority, they get started in
    order of submission. :ticket:`6703`
+
 -  Normally, HTCondor requires the user to specify their credentials
    when using EC2 (via the grid universe or via *condor_annex*). This
    allows users to use different accounts from the same machine.
@@ -203,10 +220,12 @@ New Features:
 -  The *condor_now* tool now supports vacating more than one job; the
    additional jobs' resources will be coalesced into a single slot, on
    which the now-job will be run. :ticket:`6694`
+
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements
    ``_enter__`` and ``_exit__``). The ``JobEvent`` class now
    implements ``_str__`` and ``_repr__``. :ticket:`6814`
+
 -  the *condor_hdfs* daemon which allowed the hdfs daemons to run under
    the *condor_master* has been removed from the contributed source.
    :ticket:`6809`
