@@ -55,6 +55,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Usage & Memory';
 #
 # Verify the configuration before running the test.
 #
+sleep(5);
 CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
 
 #

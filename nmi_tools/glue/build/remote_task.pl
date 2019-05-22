@@ -184,7 +184,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 } elsif ($taskname eq $RUN_UNIT_TESTS) {
     if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     } else {
-        $execstr = "ctest -v --output-on-failure";
+        $execstr = "ctest -v --output-on-failure -L batlab";
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";

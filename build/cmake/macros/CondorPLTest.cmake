@@ -16,9 +16,35 @@
  # 
  ############################################################### 
 
+include(CMakeParseArguments)
+
 MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 
 	if (BUILD_TESTING)
+
+		cmake_parse_arguments(${_TARGET} "CTEST;JAVA" "" "DEPENDS" ${ARGN})
+
+		if ( ${_TARGET}_CTEST )
+			if ( ${_TARGET}_JAVA )
+				ADD_TEST(${_TARGET} ${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver
+					"--test" ${_TARGET}
+					"--working-dir" ${CMAKE_BINARY_DIR}
+					"--source-dir" ${CMAKE_SOURCE_DIR}
+					"--prefix-path" ${CMAKE_INSTALL_PREFIX}
+					"--dependencies" "${${_TARGET}_DEPENDS}"
+					"--java")
+			else()
+				ADD_TEST(${_TARGET} ${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver
+					"--test" ${_TARGET}
+					"--working-dir" ${CMAKE_BINARY_DIR}
+					"--source-dir" ${CMAKE_SOURCE_DIR}
+					"--prefix-path" ${CMAKE_INSTALL_PREFIX}
+					"--dependencies" "${${_TARGET}_DEPENDS}")
+
+			endif()
+			set_tests_properties(${_TARGET} PROPERTIES LABELS "${_TEST_RUNS}")
+			add_custom_target(${_TARGET} ALL)
+		endif()
 
 		foreach(test ${_TEST_RUNS})
 			file (APPEND ${TEST_TARGET_DIR}/list_${test} "${_TARGET}\n")
