@@ -412,6 +412,7 @@ class DedicatedScheduler : public Service {
 	ExtArray<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
+	int					total_cores;    // sum of all cores above
 
 
 		// All resources, sorted by the time they'll next be available 

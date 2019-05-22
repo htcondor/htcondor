@@ -1789,6 +1789,14 @@ fi
 %endif
 
 %changelog
+* Wed May 22 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.3-1
+- Fixed a bug where jobs were killed instead of peacefully shutting down
+- Fixed a bug where a restarted schedd wouldn't connect to its running jobs
+- Improved file transfer performance when sending multiple files
+- Fix a bug that prevented interactive submit from working with Singularity
+- Orphaned Docker containers are now cleaned up on execute nodes
+- Restored a deprecated Python interface that is used to read the event log
+
 * Wed Apr 17 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.1-1
 - An efficient curl plugin that supports uploads and authentication tokens
 - HTCondor automatically supports GPU jobs in Docker and Singularity
