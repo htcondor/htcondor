@@ -23,6 +23,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/version.hpp>
+#include <boost/python/raw_function.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -2247,6 +2248,16 @@ public:
         update(input);
     }
 
+    static
+    boost::python::object
+    rawInit(boost::python::tuple args, boost::python::dict kwargs) {
+        boost::python::object self = args[0];
+        if (py_len(args) > 1) {
+            THROW_EX(TypeError, "Keyword constructor cannot take positional arguments");
+        }
+        return self.attr("__init__")(kwargs);
+    }
+
 
 	Submit(const std::string lines)
        : m_ms_inline("", 0, EmptyMacroSrc)
@@ -3527,8 +3538,12 @@ void export_schedd()
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.
-            )C0ND0R",
-        init<boost::python::dict>(
+            )C0ND0R", boost::python::no_init)
+        .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
+            R"C0ND0R(
+            Construct the Submit object from a number of ``key = value`` keyword arguments.
+            )C0ND0R")
+        .def(init<boost::python::dict>(
             R"C0ND0R(
             :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description,
                 or a string containing the text of a submit file.
