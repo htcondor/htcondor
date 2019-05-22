@@ -125,7 +125,8 @@ FinishedParse ()
 }
 
 
-// Mark:  This function is called when the beginning of a token is detected
+// fetch:  Fetch the next character to be examined, if we don't have
+//   it already.
 void Lexer::
 fetch (void)
 {
