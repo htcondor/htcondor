@@ -258,7 +258,6 @@ check_recovery_file( const char *execute_dir )
 		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
 	}
 }
-
 void
 cleanup_execute_dirs( StringList &list )
 {
@@ -314,6 +313,8 @@ cleanup_execute_dirs( StringList &list )
 		}
 #endif
 	}
+
+	DockerAPI::pruneContainers();
 }
 
 bool retry_cleanup_user_account(const MyString & name, int /*options*/, int & err)
