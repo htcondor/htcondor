@@ -2314,8 +2314,9 @@ public:
 
 
     std::string
-    setDefault(const std::string attr, const std::string default_value)
+    setDefault(const std::string attr, boost::python::object value_obj)
     {
+        std::string default_value = convertToSubmitValue(value_obj);
         const char *val = m_hash.lookup(attr.c_str());
         if (val == NULL)
         {
@@ -2327,8 +2328,9 @@ public:
 
 
     void
-    setItem(const std::string attr, const std::string value)
+    setItem(const std::string attr, boost::python::object obj)
     {
+        std::string value = convertToSubmitValue(obj);
         m_hash.set_submit_param(attr.c_str(), value.c_str());
     }
 
@@ -2458,8 +2460,11 @@ public:
 
             boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
             std::string attr = boost::python::extract<std::string>(tup[0]);
-            std::string value = boost::python::extract<std::string>(tup[1]);
-            m_hash.set_submit_param(attr.c_str(), value.c_str());
+
+            boost::python::object value(tup[0]);
+            std::string value_str = convertToSubmitValue(tup[1]);
+
+            m_hash.set_submit_param(attr.c_str(), value_str.c_str());
         }
     }
 
@@ -3060,6 +3065,32 @@ public:
 	}
 
 private:
+
+    std::string
+    convertToSubmitValue(boost::python::object value) {
+        boost::python::extract<std::string> extract_str(value);
+        std::string attr;
+        if (extract_str.check()) {
+            attr = extract_str();
+        } else {
+            boost::python::extract<ExprTreeHolder*> extract_expr(value);
+            if (extract_expr.check()) {
+                ExprTreeHolder *holder = extract_expr();
+                attr = holder->toString();
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(value);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    attr = wrapper->toRepr();
+                } else {
+                    boost::python::str value_str(value);
+                    attr = boost::python::extract<std::string>(value_str);
+                }
+            }
+        }
+        return attr;
+    }
+
     SubmitHash m_hash;
     std::string m_qargs;
     std::string m_remainder; // holds remainder of input after queue statement.
