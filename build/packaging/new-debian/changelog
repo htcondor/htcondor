@@ -1,3 +1,14 @@
+condor (8.8.3-1) stable; urgency=medium
+
+  * Fixed a bug where jobs were killed instead of peacefully shutting down
+  * Fixed a bug where a restarted schedd wouldn't connect to its running jobs
+  * Improved file transfer performance when sending multiple files
+  * Fix a bug that prevented interactive submit from working with Singularity
+  * Orphaned Docker containers are now cleaned up on execute nodes
+  * Restored a deprecated Python interface that is used to read the event log
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 22 May 2019 07:16:49 -0500
+
 condor (8.9.1-1) unstable; urgency=medium
 
   * An efficient curl plugin that supports uploads and authentication tokens
