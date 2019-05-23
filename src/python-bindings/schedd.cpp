@@ -23,6 +23,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/version.hpp>
+#include <boost/python/raw_function.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -2259,6 +2260,37 @@ public:
         update(input);
     }
 
+    static
+    boost::python::object
+    rawInit(boost::python::tuple args, boost::python::dict kwargs) {
+        boost::python::object self = args[0];
+        if (py_len(args) > 2) {
+            THROW_EX(TypeError, "Keyword constructor cannot take more than one positional argument");
+        } else if (py_len(args) == 1) {
+            return self.attr("__init__")(kwargs);
+        } else {
+            // Can it be converted to a dictionary?  If so, we use that dictionary.
+            // Otherwise, we convert it to a string.
+            try {
+                boost::python::dict input(args[1]);
+                self.attr("__init__")(input);
+                self.attr("update")(kwargs);
+                return boost::python::object();
+            } catch (boost::python::error_already_set &) {
+                if (PyErr_ExceptionMatches(PyExc_ValueError)) {
+                    PyErr_Clear();
+                    boost::python::str input_str(args[1]);
+                    self.attr("__init__")(input_str);
+                    self.attr("update")(kwargs);
+                    return boost::python::object();
+                } else {
+                    throw;
+                }
+            }
+            return boost::python::object();
+        }
+    }
+
 
 	Submit(const std::string lines)
        : m_ms_inline("", 0, EmptyMacroSrc)
@@ -3581,8 +3613,12 @@ void export_schedd()
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.
-            )C0ND0R",
-        init<boost::python::dict>(
+            )C0ND0R", boost::python::no_init)
+        .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
+            R"C0ND0R(
+            Construct the Submit object from a number of ``key = value`` keyword arguments.
+            )C0ND0R")
+        .def(init<boost::python::dict>(
             R"C0ND0R(
             :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description,
                 or a string containing the text of a submit file.
