@@ -42,6 +42,8 @@
 #include "condor_base64.h"
 #include "Regex.h"
 #include "directory.h"
+#include "subsystem_info.h"
+#include "secure_file.h"
 
 #include "condor_auth_passwd.h"
 
@@ -2628,6 +2630,8 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
+	check_pool_password();
+
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::string issuer;
 	if (param(issuer, "TRUST_DOMAIN")) {
@@ -2649,6 +2653,47 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 		ad.InsertAttr(ATTR_SEC_ISSUER_KEYS, creds_str.c_str(), creds_str.size()-1);
 	}
 	return true;
+}
+
+void
+Condor_Auth_Passwd::check_pool_password()
+{
+	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
+		return;
+	}
+
+	std::string pool_password;
+	if (!param(pool_password, "SEC_PASSWORD_FILE")) {
+		return;
+	}
+
+		// Try to create the pool password file if it doesn't exist.
+	int fd = -1;
+	{
+#ifdef WIN32
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL | O_BINARY;
+#else
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL;
+#endif
+		mode_t access_mode = 0600;
+
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fd = safe_open_wrapper_follow(pool_password.c_str(), open_flags, access_mode);
+	}
+	if (fd < 0) {
+		return;
+	}
+
+		// Generate a password.
+	char password_buffer[65];
+	password_buffer[64] = '\0';
+	if (!RAND_bytes(reinterpret_cast<unsigned char *>(password_buffer), 64)) {
+		// Insufficient entropy available; bail out!
+		return;
+	}
+
+		// Write out the password.
+	write_password_file(pool_password.c_str(), password_buffer);
 }
 
 

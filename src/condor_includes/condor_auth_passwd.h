@@ -154,6 +154,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
  private:
 
+	/** If we are the collector, we may check & generate a pool password */
+	static void check_pool_password();
+
 	enum CondorAuthPasswordState {
 		ServerRec1 = 100,
 		ServerRec2
