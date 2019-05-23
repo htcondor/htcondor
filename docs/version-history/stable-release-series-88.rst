@@ -8,12 +8,28 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.4
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.4 not yet released.
+.. HTCondor version 8.8.4 released on Month Date, 2019.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.8.3
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.3 is scheduled for release on June 4, 2019.
+-  HTCondor version 8.8.3 released on May 22, 2019.
 
 New Features:
 
@@ -21,20 +37,58 @@ New Features:
    sending multiple files, especially in wide-area network settings.
    :ticket:`7000`
 
+-  The HTCondor startd now deletes any orphaned Docker containers
+   that have been left behind in the case of a starter crash, machine
+   crash or docker restart
+   :ticket:`7019`
+
 -  If ``MAXJOBRETIREMENTTIME`` evaluates to ``-1``, it will truncate a job's
    retirement even during a peaceful shutdown.
    :ticket:`7034`
 
+-  Unusually slow DNS queries now generate a warning in the daemon logs.
+   :ticket:`6967`
+
 -  Docker Universe now creates containers with a label named
    org.htcondorproject for 3rd party monitoring tools to classify
    and identify containers as managed by HTCondor.
-   :ticket: `6965`
+   :ticket:`6965`
+
 Bugs Fixed:
+
+-  ``condor_off -peaceful`` will now work by default (and whenever
+   ``MAXJOBRETIREMENTTIME`` is zero).
+   :ticket:`7034`
+
+-  Fixed a bug that caused the *condor_shadow* to not attempt to
+   reconnect to the *condor_starter* after a network disconnection.
+   This bug will also prevent reconnecting to some jobs after a
+   restart of the *condor_schedd*.
+   :ticket:`7033`
+
+-  Fixed a bug that prevented *condor_submit* ``-i`` from working with
+   a Singularity container environment for more than three minutes.
+   :ticket:`7018`
+
+-  Restored the old Python bindings for reading the job event log
+   (``EventIterator`` and ``read_events()``) for Python 2.
+   In HTCondor 8.8.2, they were mistakenly restored for Python 3 only.
+   These bindings are marked as deprecated and will likely be
+   removed permanently in the 8.9 series. Users should transition to the
+   replacement bindings (``JobEventLog``)
+   :ticket:`7039`
+
+-  Included the python binding libraries in the Debian and Ubuntu deb packages.
+   :ticket:`7048`
+
+-  Fixed a bug with *condor_ssh_to_job* did not remove subdirectories
+   from the scratch directory on ssh exit.
+   :ticket:`7010`
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
    container with the condor_master as PID 1.  HTCondor could start 
    if the master was launched from a script.
-   :ticket: `7017` 
+   :ticket:`7017`
 
 -  Fixed a bug with singularity jobs where TMPDIR was set to the wrong
    value.  It is now set the the scratch directory inside the container.
@@ -46,12 +100,28 @@ Bugs Fixed:
    :ticket:`6986`
 
 -  Fixed a bug where the memory usage reported for Docker Universe jobs
-   in the job classad and job event log could be underestimated.
+   in the job ClassAd and job event log could be underestimated.
    :ticket:`7049`
 
--  ``condor_off -peaceful`` will now work by default (and whenever
-   ``MAXJOBRETIREMENTTIME`` is zero).
-   :ticket:`7034`
+-  The job attributes ``NumJobStarts`` and ``JobRunCount`` are now
+   updated properly for the grid universe and the job router.
+   :ticket:`7016`
+
+-  Fixed a bug that could cause reading ClassAds from a pipe to fail.
+   :ticket:`7001`
+
+-  Fixed a bug in *condor_q* that would result in the error "Two results with the same ID"
+   when the ``-long`` and ``-attributes`` options were used, and the attributes list did
+   not contain the ``ProcId`` attribute.
+   :ticket:`6997`
+
+-  Fixed a bug when GSI authentication fails, which could cause all other
+   authentication methods to be skipped.
+   :ticket:`7024`
+
+-  Ensured that the HTCondor Annex boot-time configuration is done after the
+   network is available.
+   :ticket:`7045`
 
 Version 8.8.2
 -------------
