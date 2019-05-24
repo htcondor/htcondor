@@ -81,6 +81,8 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
 
+bool Condor_Auth_Passwd::m_attempt_pool_password = true;
+
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #include "jwt-cpp/jwt.h"
@@ -2658,6 +2660,10 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 void
 Condor_Auth_Passwd::check_pool_password()
 {
+		// Only attempt to drop the pool password once.
+	if (!m_attempt_pool_password) {return;}
+	m_attempt_pool_password = false;
+
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}

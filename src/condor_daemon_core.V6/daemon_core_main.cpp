@@ -1871,6 +1871,9 @@ dc_reconfig()
 	// Flush the cached list of keys.
 	refreshNamedCredentials();
 
+	// Allow us to retry setting the pool password.
+	Condor_Auth_Passwd::retry_pool_password();
+
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
 

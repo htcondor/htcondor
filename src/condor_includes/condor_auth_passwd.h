@@ -152,10 +152,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
 	void set_remote_keys(const std::vector<std::string> &keys);
 
+	static void retry_pool_password() {m_attempt_pool_password = true;}
+
  private:
 
 	/** If we are the collector, we may check & generate a pool password */
 	static void check_pool_password();
+	static bool m_attempt_pool_password;
 
 	enum CondorAuthPasswordState {
 		ServerRec1 = 100,
