@@ -2942,6 +2942,8 @@ int process_job_credentials()
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
 				exit( 1 );
 			}
+			free(ut64);
+			free(zkmbuf);
 		}
 	}  // end of block to run a credential producer
 
