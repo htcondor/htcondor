@@ -222,9 +222,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Debian5'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [],
 			'xtests'	=> [],
 		},
@@ -243,9 +241,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Debian6'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
 		},
@@ -263,9 +259,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Debian7'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
 		},
@@ -301,9 +295,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_RedHat7'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
 		},
@@ -338,9 +330,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_RedHat6'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DCLIPPED:BOOL' => 'OFF',
-			 },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> ['x86_64_SL6'],
 		},
@@ -373,9 +363,7 @@ our %submit_info = (
 	# RedHat5
 	'x86_64_RedHat5'		=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ ],
 		},
@@ -394,7 +382,7 @@ our %submit_info = (
 	# 32 bit RedHat 6
 	'x86_RedHat6'		=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args	},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ ],
 		},
@@ -417,9 +405,7 @@ our %submit_info = (
 	# 32 bit RedHat 5
 	'x86_RedHat5'		=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ ],
 		},
@@ -437,9 +423,7 @@ our %submit_info = (
 	# 32 bit SL 5
 	'x86_SL5' => {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=> undef,
 		},
@@ -631,12 +615,9 @@ our %submit_info = (
 		},
 	},
 
-	# Only Ubuntu 14.04 has standard universe port.
 	'x86_64_Ubuntu14'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DCLIPPED:BOOL' => 'OFF',
-			 },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 		},
 

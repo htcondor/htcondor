@@ -14,11 +14,9 @@ Command Reference Manual (man pages)
    bosco_uninstall
    condor_advertise
    condor_annex
-   condor_checkpoint
    condor_check_userlogs
    condor_chirp
    condor_cod
-   condor_compile
    condor_configure
    condor_config_val
    condor_continue

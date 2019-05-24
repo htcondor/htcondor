@@ -703,7 +703,7 @@ if (UW_BUILD OR WINDOWS)
 
   # so the clipped detection will try to match glibc vers and if it fails will disable
   if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" OFF)
+	option(CLIPPED "enable/disable the standard universe" ON)
   else()
 	option(CLIPPED "enable/disable the standard universe" ON)
   endif()
