@@ -137,28 +137,6 @@ int EvalAttr (const char *name, classad::ClassAd *my, classad::ClassAd *target, 
  *  @param name The name of the attribute
  *  @param my The ClassAd containing the named attribute
  *  @param target A ClassAd to resolve TARGET or other references
- *  @param value Where we copy the string. We allocate space ala strdup().
- *    The caller is responsible for freeing.
- *    This parameter is only modified on success.
- *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
- *  but is not a string.
- */
-int EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value);
-/** MyString version of EvalString()
- *  @param name The name of the attribute
- *  @param my The ClassAd containing the named attribute
- *  @param target A ClassAd to resolve TARGET or other references
- *  @param value A MyString where we the copy the string. We ensure there is enough space.
- *    This parameter is only modified on success.
- *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist
- *  but is not a string.
- */
-int EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value);
-
-/** std::string version of EvalString()
- *  @param name The name of the attribute
- *  @param my The ClassAd containing the named attribute
- *  @param target A ClassAd to resolve TARGET or other references
  *  @param value A std::string where we the copy the string.
  *    This parameter is only modified on success.
  *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist

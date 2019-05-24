@@ -1998,34 +1998,6 @@ EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, clas
 	return rc;
 }
 
-/*
- * Ensure that we allocate the value, so we have sufficient space
- */
-int
-EvalString (const char *name, classad::ClassAd *my, classad::ClassAd *target, char **value)
-{
-	std::string str_val;
-	int rc = EvalString(name, my, target, str_val);
-	if( rc != 0 ) {
-		*value = strdup(str_val.c_str());
-		if(*value == NULL) {
-			rc = 0;
-		}
-	}
-	return rc;
-}
-
-int
-EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, MyString & value)
-{
-	std::string str_val;
-	int rc = EvalString(name, my, target, str_val);
-	if( rc != 0 ) {
-		value = str_val;
-	}
-	return rc;
-}
-
 int
 EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, std::string & value)
 {
