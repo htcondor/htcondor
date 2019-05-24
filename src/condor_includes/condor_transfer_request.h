@@ -166,8 +166,8 @@ class TransferRequest
 		void set_client_sock(ReliSock *rsock);
 		ReliSock* get_client_sock(void);
 
-		void set_capability(const MyString &capability);
-		MyString get_capability(void);
+		void set_capability(const std::string &capability);
+		const std::string& get_capability(void);
 
 		/////////////////////////////////////////////////////////////////////
 		// Various kinds of status this request can be in 
@@ -177,7 +177,7 @@ class TransferRequest
 		bool get_rejected(void);
 
 		void set_rejected_reason(const std::string &reason);
-		std::string get_rejected_reason(void);
+		const std::string& get_rejected_reason(void);
 
 		/////////////////////////////////////////////////////////////////////
 		// Callback at various processing points of this request so the 
@@ -231,7 +231,7 @@ class TransferRequest
 		ReliSock *m_client_sock;
 
 		// Allow the stashing of a capability a td gave for this request here.
-		MyString m_cap;
+		std::string m_cap;
 
 		// If the transferd rejects this request, this is for the schedd
 		// to record that fact.

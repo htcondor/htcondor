@@ -344,12 +344,12 @@ TransferRequest::todo_tasks(void)
 }
 
 void
-TransferRequest::set_capability(const MyString &capability)
+TransferRequest::set_capability(const std::string &capability)
 {
 	m_cap = capability;
 }
 
-MyString
+const std::string&
 TransferRequest::get_capability()
 {
 	return m_cap;
@@ -361,7 +361,7 @@ TransferRequest::set_rejected_reason(const std::string &reason)
 	m_rejected_reason = reason;
 }
 
-std::string
+const std::string&
 TransferRequest::get_rejected_reason()
 {
 	return m_rejected_reason;

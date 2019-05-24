@@ -657,8 +657,8 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 	TransferDaemon *td)
 {
 	ReliSock *rsock = NULL;
-	MyString sinful;
-	MyString capability;
+	std::string sinful;
+	std::string capability;
 	ClassAd respad;
 	std::string jids;
 	std::string reason;
@@ -990,8 +990,8 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 	TransferDaemon *td)
 {
 	ReliSock *rsock = NULL;
-	MyString sinful;
-	MyString capability;
+	std::string sinful;
+	std::string capability;
 	ClassAd respad;
 	std::string jids;
 	std::string reason;

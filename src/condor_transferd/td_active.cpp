@@ -38,7 +38,7 @@ TransferD::process_active_requests_timer()
 	TransferRequest *treq = NULL;
 	TransferRequest *tmp = NULL;
 	int found_actives = FALSE;
-	MyString key;
+	std::string key;
 
 	dprintf(D_FULLDEBUG, "Processing active requests\n");
 
