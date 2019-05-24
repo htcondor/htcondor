@@ -485,8 +485,6 @@ int fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
  * @param An optional white-list of attributes to be printed.
  * @return TRUE
  */
-int sPrintAdAsXML(MyString &output, const classad::ClassAd &ad,
-				  StringList *attr_white_list = NULL);
 int sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
 
@@ -506,8 +504,6 @@ int fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
  * @param An optional white-list of attributes to be printed.
  * @return TRUE
  */
-int sPrintAdAsJson(MyString &output, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL);
 int sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
 				   StringList *attr_white_list = NULL);
 
