@@ -547,7 +547,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 // requests to the transferd. Also, if the transferd dies, the schedd is 
 // informed quickly and reliably due to the closed connection.
 bool
-DCSchedd::register_transferd(MyString sinful, MyString id, int timeout, 
+DCSchedd::register_transferd(const std::string &sinful, const std::string &id, int timeout,
 		ReliSock **regsock_ptr, CondorError *errstack) 
 {
 	ReliSock *rsock;

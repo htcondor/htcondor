@@ -589,7 +589,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	getJobOwnerFQUOrDummy(fqu);
 	ASSERT( !fqu.empty() );
 
-	MyString error_msg;
+	std::string error_msg;
 	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
@@ -660,13 +660,13 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	ClassAd response;
 	response.Assign(ATTR_VERSION,CondorVersion());
 	if( !rc ) {
-		if( error_msg.IsEmpty() ) {
+		if( error_msg.empty() ) {
 			error_msg = "Failed to create security session.";
 		}
 		response.Assign(ATTR_RESULT,false);
 		response.Assign(ATTR_ERROR_STRING,error_msg);
 		dprintf(D_ALWAYS,
-				"createJobOwnerSecSession failed: %s\n", error_msg.Value());
+				"createJobOwnerSecSession failed: %s\n", error_msg.c_str());
 	}
 	else {
 		// We use a "claim id" string to hold the security session info,
@@ -695,14 +695,14 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 int
 CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char const *fmt,va_list args)
 {
-	MyString error_msg;
-	error_msg.vformatstr( fmt, args );
+	std::string error_msg;
+	vformatstr( error_msg, fmt, args );
 
 		// old classads cannot handle a string ending in a double quote
 		// followed by a newline, so strip off any trailing newline
-	error_msg.trim();
+	trim(error_msg);
 
-	dprintf(D_ALWAYS,"%s failed: %s\n", prefix.c_str(), error_msg.Value());
+	dprintf(D_ALWAYS,"%s failed: %s\n", prefix.c_str(), error_msg.c_str());
 
 	ClassAd response;
 	response.Assign(ATTR_RESULT,false);

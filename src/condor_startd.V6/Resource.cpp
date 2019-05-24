@@ -1513,18 +1513,18 @@ Resource::update_with_ack( void )
 void
 Resource::hold_job( bool soft )
 {
-	MyString hold_reason;
+	std::string hold_reason;
 	int hold_subcode = 0;
 
 	EvalString("WANT_HOLD_REASON", r_classad, r_cur->ad(), hold_reason);
-	if( hold_reason.IsEmpty() ) {
+	if( hold_reason.empty() ) {
 		ExprTree *want_hold_expr;
-		MyString want_hold_str;
+		std::string want_hold_str;
 
 		want_hold_expr = r_classad->LookupExpr("WANT_HOLD");
 		if( want_hold_expr ) {
-			want_hold_str.formatstr( "%s = %s", "WANT_HOLD",
-								   ExprTreeToString( want_hold_expr ) );
+			formatstr( want_hold_str, "%s = %s", "WANT_HOLD",
+					ExprTreeToString( want_hold_expr ) );
 		}
 
 		hold_reason = "The startd put this job on hold.  (At preemption time, WANT_HOLD evaluated to true: ";
@@ -1534,7 +1534,7 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.Value(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
+	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
 }
 
 int
@@ -1995,7 +1995,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 #if HAVE_HIBERNATION
 
 bool
-Resource::evaluateHibernate( MyString &state_str ) const
+Resource::evaluateHibernate( std::string &state_str ) const
 {
 	ClassAd *ad = NULL;
 	if ( NULL != r_cur ) {

@@ -445,7 +445,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 }
 
 void
-BaseShadow::mockTerminateJob( MyString exit_reason, 
+BaseShadow::mockTerminateJob( std::string exit_reason,
 		bool exited_by_signal, int exit_code, int exit_signal, 
 		bool core_dumped )
 {
@@ -462,7 +462,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 			 exit_code,
 			 exit_signal,
 			 core_dumped ? "TRUE" : "FALSE",
-			 exit_reason.Value());
+			 exit_reason.c_str());
 
 	if( ! jobAd ) {
 		dprintf(D_ALWAYS, "BaseShadow::mockTerminateJob(): NULL JobAd! "

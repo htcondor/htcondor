@@ -50,12 +50,14 @@ CODMgr::publish( ClassAd* ad, amask_t mask )
 	if( ! num_claims ) {
 		return;
 	}
-	MyString claim_names;
+	std::string claim_names;
 	Claim* tmp_claim;
 	claims.Rewind();
 	while( claims.Next(tmp_claim) ) {
 		tmp_claim->publishCOD( ad );
-		claim_names += tmp_claim->codId();
+		if ( tmp_claim->codId() ) {
+			claim_names += tmp_claim->codId();
+		}
 		if( ! claims.AtEnd() ) {
 			claim_names += ", ";
 		}

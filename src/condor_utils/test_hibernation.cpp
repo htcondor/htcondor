@@ -25,7 +25,7 @@
 #include "condor_uid.h"
 #include "condor_distribution.h"
 #include "hibernation_manager.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 #include "simple_arg.h"
 
 #if defined ( WIN32 )
@@ -81,10 +81,10 @@ main(int argc, const char **argv)
 		net = NetworkAdapterBase::createNetworkAdapter( opts.m_if_name );
 	}
 	else {
-		MyString	sinful;
-		sinful.formatstr( "<%s:1234>", opts.m_address );
-		printf( "Creating network adapter object for %s\n", sinful.Value() );
-		net = NetworkAdapterBase::createNetworkAdapter( sinful.Value() );
+		std::string sinful;
+		formatstr( sinful, "<%s:1234>", opts.m_address );
+		printf( "Creating network adapter object for %s\n", sinful.c_str() );
+		net = NetworkAdapterBase::createNetworkAdapter( sinful.c_str() );
 	}
 	if ( !net ) {
 		printf( "Error creating adapter\n" );
@@ -118,12 +118,12 @@ main(int argc, const char **argv)
 
 	printf( "wakable: %s\n", net->isWakeable() ? "YES" : "NO" );
 
-	MyString	tmpstr;
+	std::string tmpstr;
 	net->wakeSupportedString( tmpstr );
-	printf( "wake support flags: %s\n", tmpstr.Value() );
+	printf( "wake support flags: %s\n", tmpstr.c_str() );
 
 	net->wakeEnabledString( tmpstr );
-	printf( "wake enable flags: %s\n", tmpstr.Value() );
+	printf( "wake enable flags: %s\n", tmpstr.c_str() );
 
 	HibernatorBase	*hibernator = new RealHibernator( );
 	if ( opts.m_method ) {

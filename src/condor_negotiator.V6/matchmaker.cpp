@@ -5759,9 +5759,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// NOTE: Because the Concurrency Limits should be available to
 		// the Schedd, they must be stashed before PERMISSION_AND_AD
 		// is sent.
-	MyString limits;
+	std::string limits;
 	if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, offer, limits)) {
-		limits.lower_case();
+		lower_case(limits);
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);

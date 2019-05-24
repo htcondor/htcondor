@@ -752,11 +752,10 @@ Claim::loadRequestInfo()
 {
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
-	char* limits = NULL;
-	EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, &limits);
-	if (limits) {
-		c_client->setConcurrencyLimits(limits);
-		free(limits); limits = NULL;
+	std::string limits;
+	EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
+	if (!limits.empty()) {
+		c_client->setConcurrencyLimits(limits.c_str());
 	}
 
     // stash information about what accounting group match was negotiated under

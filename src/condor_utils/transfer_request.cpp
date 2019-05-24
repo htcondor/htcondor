@@ -314,26 +314,15 @@ TransferRequest::get_used_constraint(void)
 }
 
 void
-TransferRequest::set_peer_version(const MyString &pv)
+TransferRequest::set_peer_version(const std::string &pv)
 {
 	ASSERT(m_ip != NULL);
 
 	m_ip->Assign( ATTR_IP_PEER_VERSION, pv );
 }
 
-void
-TransferRequest::set_peer_version(char *pv)
-{
-	MyString str;
-	ASSERT(m_ip != NULL);
-
-	str = pv;
-
-	set_peer_version(str);
-}
-
 // This will make a copy when you assign the return value to something.
-MyString
+std::string
 TransferRequest::get_peer_version(void)
 {
 	std::string pv;
@@ -367,12 +356,12 @@ TransferRequest::get_capability()
 }
 
 void
-TransferRequest::set_rejected_reason(const MyString &reason)
+TransferRequest::set_rejected_reason(const std::string &reason)
 {
 	m_rejected_reason = reason;
 }
 
-MyString
+std::string
 TransferRequest::get_rejected_reason()
 {
 	return m_rejected_reason;

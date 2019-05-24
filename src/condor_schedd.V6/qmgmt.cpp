@@ -1492,7 +1492,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	MyString	correct_user;
 	MyString	buf;
 	std::string	attr_scheduler;
-	MyString	correct_scheduler;
+	std::string correct_scheduler;
 	std::string buffer;
 
 	if (!JobQueue->Lookup(HeaderKey, ad)) {
@@ -1519,7 +1519,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.formatstr( "DedicatedScheduler@%s", Name );
+	formatstr( correct_scheduler, "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
@@ -1674,7 +1674,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", job_id.c_str(),
 							 ATTR_SCHEDULER );
-					ad->Assign( ATTR_SCHEDULER, correct_scheduler.Value() );
+					ad->Assign( ATTR_SCHEDULER, correct_scheduler );
 					JobQueueDirty = true;
 				} else {
 
@@ -5826,7 +5826,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						break;
 					}
 
-					MyString result;
+					std::string result;
 					isok = EvalString(INTERNAL_DD_EXPR, &tmpJobAd, startd_ad, result);
 					if( ! isok ) {
 						attribute_not_found = true;

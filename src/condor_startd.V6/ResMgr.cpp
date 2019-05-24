@@ -1875,7 +1875,7 @@ void ResMgr::updateHibernateConfiguration() {
 
 
 int
-ResMgr::allHibernating( MyString &target ) const
+ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
@@ -1890,7 +1890,7 @@ ResMgr::allHibernating( MyString &target ) const
 		// We take largest value as the representative
 		// hibernation level for this machine
 	target = "";
-	MyString str;
+	std::string str;
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
@@ -1901,11 +1901,11 @@ ResMgr::allHibernating( MyString &target ) const
 		}
 
 		int tmp = m_hibernation_manager->stringToSleepState (
-			str.Value () );
+			str.c_str () );
 
 		dprintf ( D_FULLDEBUG,
 			"allHibernating: resource #%d: '%s' (0x%x)\n",
-			i + 1, str.Value (), tmp );
+			i + 1, str.c_str (), tmp );
 
 		if ( 0 == tmp ) {
 			activity = true;
@@ -1932,7 +1932,7 @@ ResMgr::checkHibernate( void )
 
 		// If all resources have gone unused for some time
 		// then put the machine to sleep
-	MyString	target;
+	std::string target;
 	int level = allHibernating( target );
 	if( level > 0 ) {
 
@@ -2044,7 +2044,7 @@ ResMgr::cancelHibernateTimer( void )
 
 
 int
-ResMgr::disableResources( const MyString &state_str )
+ResMgr::disableResources( const std::string &state_str )
 {
 
 	dprintf (
@@ -2055,7 +2055,7 @@ ResMgr::disableResources( const MyString &state_str )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetState ( state_str.Value() );
+	m_hibernation_manager->setTargetState ( state_str.c_str() );
 
 	/* update the CM */
 	bool ok = true;

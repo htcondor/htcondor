@@ -283,7 +283,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 			return EXIT_FAILURE;
 		}
 
-		ftrans.setPeerVersion(treq->get_peer_version().Value());
+		ftrans.setPeerVersion(treq->get_peer_version().c_str());
 
 		// We're "downloading" from the client to here.
 		result = ftrans.DownloadFiles();
