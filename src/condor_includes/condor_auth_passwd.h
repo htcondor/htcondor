@@ -154,6 +154,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 	static void retry_pool_password() {m_attempt_pool_password = true;}
 
+	/** Determines if any credentials (tokens, master passwords) are available;
+	 *  if not, then there's no point in trying auth'n. */
+	static bool should_try_auth();
+
+	/** Retry search for tokens */
+	static void retry_token_search() {m_should_search_for_tokens = true;}
+
  private:
 
 	/** If we are the collector, we may check & generate a pool password */
@@ -349,6 +356,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	std::set<std::string> m_server_keys;
 
 	CondorAuthPasswordState m_state;
+
+		// Status of token auth.
+	static bool m_should_search_for_tokens; // Should we search for tokens?
+	static bool m_tokens_avail; // Are any tokens known to be available?
 };
 
 #endif /* SKIP_AUTHENTICATION */

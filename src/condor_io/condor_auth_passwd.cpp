@@ -47,6 +47,10 @@
 
 #include "condor_auth_passwd.h"
 
+bool Condor_Auth_Passwd::m_should_search_for_tokens = true;
+bool Condor_Auth_Passwd::m_tokens_avail = false;
+
+
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.
 //
@@ -138,12 +142,12 @@ bool findToken(const std::string &tokenfilename,
 				continue;
 			}
 			const std::string &tmp_key_id = decoded_jwt.get_key_id();
-			if (server_key_ids.find(tmp_key_id) == server_key_ids.end()) {
+			if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
 				continue;
 			}
 			dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 			const std::string &tmp_issuer = decoded_jwt.get_issuer();
-			if (issuer != tmp_issuer) {
+			if (!issuer.empty() && issuer != tmp_issuer) {
 				continue;
 			}
 			if (!decoded_jwt.has_subject()) {
@@ -2700,6 +2704,41 @@ Condor_Auth_Passwd::check_pool_password()
 
 		// Write out the password.
 	write_password_file(pool_password.c_str(), password_buffer);
+}
+
+
+bool
+Condor_Auth_Passwd::should_try_auth()
+{
+	bool has_named_creds = false;
+	std::vector<std::string> creds;
+	CondorError err;
+	if (listNamedCredentials(creds, &err)) {
+		has_named_creds = !creds.empty();
+	}
+	if (has_named_creds) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+		// Did we perform the search recently?  If so,
+		// we should just return the prior result.
+	if (!m_should_search_for_tokens) {
+		return m_tokens_avail;
+	}
+	m_should_search_for_tokens = false;
+
+	std::string issuer;
+	std::set<std::string> server_key_ids;
+	std::string username, token, signature;
+
+	m_tokens_avail = findTokens(issuer, server_key_ids, username, token, signature);
+	if (m_tokens_avail) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one token.\n");
+	}
+	return m_tokens_avail;
 }
 
 

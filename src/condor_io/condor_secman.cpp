@@ -2891,6 +2891,8 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods = "FS";
 #endif
 
+	methods += ",TOKEN";
+
 #if defined(HAVE_EXT_KRB5) 
 	methods += ",KERBEROS";
 #endif
@@ -2899,7 +2901,31 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods += ",GSI";
 #endif
 
-	return methods;
+	StringList meth_iter( methods.c_str() );
+	meth_iter.rewind();
+	char *tmp = NULL;
+	bool first = true;
+	MyString result;
+	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods.\n");
+	while( (tmp = meth_iter.next()) ) {
+		int method = sec_char_to_auth_method(tmp);
+		switch (method) {
+			case CAUTH_TOKEN: {
+				if (!Condor_Auth_Passwd::should_try_auth()) {
+					continue;
+				}
+				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
+				break;
+			}
+			// As additional filters are made, we can add them here.
+			default:
+				break;
+		};
+		if (first) {first = false;}
+		else {result += ",";}
+		result += tmp;
+	}
+	return result;
 }
 
 

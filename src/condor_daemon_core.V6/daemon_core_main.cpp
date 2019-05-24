@@ -1874,6 +1874,9 @@ dc_reconfig()
 	// Allow us to retry setting the pool password.
 	Condor_Auth_Passwd::retry_pool_password();
 
+	// Allow us to search for new tokens
+	Condor_Auth_Passwd::retry_token_search();
+
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
 
