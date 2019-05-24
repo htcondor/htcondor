@@ -2446,7 +2446,7 @@ type=string
 tags=misc_utils
 
 [SEC_PASSWORD_FILE]
-default=
+default=$(SEC_PASSWORD_DIRECTORY)/POOL
 type=string
 tags=store_cred
 
