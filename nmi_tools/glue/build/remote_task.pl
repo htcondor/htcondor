@@ -190,8 +190,8 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "/bin:$ENV{PATH}:/home/condorauto/cov-analysis-linux64-8.6.0/bin";
 	$execstr = get_cmake_args();
-	$execstr += "-DBUILD_TESTING:bool=false ";
-	$execstr += " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$execstr .= "-DBUILD_TESTING:bool=false ";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 
