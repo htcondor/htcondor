@@ -877,6 +877,12 @@ protected:
 		   Internal function used by public versions of startCommand().
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
+
+		   This function previously was also named `startCommand`; it
+		   was fairly confusing because there is also the non-static
+		   `startCommand`; the `_internal` suffix was added to help
+		   differentiate between the 6 different variants (besides the
+		   13 argument signature!).
 		 */
 	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request );
 
