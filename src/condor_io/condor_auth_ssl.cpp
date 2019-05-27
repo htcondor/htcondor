@@ -163,6 +163,9 @@ static void (*enforcer_destroy_ptr)(Enforcer) = nullptr;
 static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scitokens, Acl **acls, char **err_msg) = nullptr;
 static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 #endif
+static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
+static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
+
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -247,6 +250,8 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
+		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
+		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
@@ -320,6 +325,8 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_read_ptr = SSL_read;
 	SSL_set_bio_ptr = SSL_set_bio;
 	SSL_write_ptr = SSL_write;
+	ERR_get_error_ptr = ERR_get_error;
+	ERR_error_string_ptr = ERR_error_string;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_method_ptr = SSLv23_method;
 #else
@@ -472,7 +479,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    ouch("SSL: library failure.  see error queue?\n");
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", (*ERR_error_string_ptr)((*ERR_get_error_ptr)(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
@@ -784,7 +791,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    ouch("SSL: library failure.  see error queue?\n");
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", (*ERR_error_string_ptr)((*ERR_get_error_ptr)(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
