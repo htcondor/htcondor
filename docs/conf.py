@@ -65,10 +65,10 @@ copyright = u'Center for High Throughput Computing, University of Wisconsin–Ma
 # The short X.Y version.
 version = '8.8'
 # The full version, including alpha/beta/rc tags.
-release = '8.8.2'
+release = '8.8.3'
 
 rst_epilog = """
-.. |release_date| replace:: April 11, 2019
+.. |release_date| replace:: May 28, 2019
 """
 
 
