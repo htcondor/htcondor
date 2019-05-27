@@ -38,6 +38,7 @@ condor_exe(condor_token_list "token_list.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF
 condor_exe(condor_token_request "token_request.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_token_request_approve "token_request_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_token_request_list "token_request_list.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
