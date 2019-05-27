@@ -29,7 +29,7 @@ Version 8.8.3
 
 Release Notes:
 
--  HTCondor version 8.8.3 released on May 22, 2019.
+-  HTCondor version 8.8.3 released on May 28, 2019.
 
 New Features:
 
