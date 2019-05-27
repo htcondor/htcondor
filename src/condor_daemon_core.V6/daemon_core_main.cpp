@@ -46,9 +46,8 @@
 #include <sys/prctl.h>
 #endif
 
-#if defined(HAVE_EXT_OPENSSL)
 #include "condor_auth_passwd.h"
-#endif
+#include "condor_auth_ssl.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -1876,6 +1875,9 @@ dc_reconfig()
 
 	// Allow us to search for new tokens
 	Condor_Auth_Passwd::retry_token_search();
+
+	// Allow us to search for SSL certificate and key
+	Condor_Auth_SSL::retry_cert_search();
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();

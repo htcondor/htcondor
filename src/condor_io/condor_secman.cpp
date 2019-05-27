@@ -41,6 +41,7 @@
 #include "setenv.h"
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
+#include "condor_auth_ssl.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -311,7 +312,7 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 		*result = p;
 		free (p);
 	} else {
-		*result = SecMan::getDefaultAuthenticationMethods();
+		*result = SecMan::getDefaultAuthenticationMethods(perm);
 	}
 }
 
@@ -486,7 +487,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// auth methods
 	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		MyString methods = SecMan::getDefaultAuthenticationMethods();
+		MyString methods = SecMan::getDefaultAuthenticationMethods(auth_level);
 		if(auth_level == READ) {
 			methods += ",CLAIMTOBE";
 			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
@@ -2881,7 +2882,7 @@ SecMan::invalidateExpiredCache()
 	}
 }
 
-MyString SecMan::getDefaultAuthenticationMethods() {
+MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	MyString methods;
 #if defined(WIN32)
 	// default windows method
@@ -2901,6 +2902,9 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods += ",GSI";
 #endif
 
+	// SSL is last as this may cause the client to be anonymous.
+	methods += ",SSL";
+
 	StringList meth_iter( methods.c_str() );
 	meth_iter.rewind();
 	char *tmp = NULL;
@@ -2916,6 +2920,15 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 				}
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
 				break;
+			}
+			case CAUTH_SCITOKENS: // fallthrough
+			case CAUTH_SSL: {
+					// Client auth doesn't require a SSL cert, so
+					// we always will try this
+				if (CLIENT_PERM == perm) {break;}
+				if (!Condor_Auth_SSL::should_try_auth()) {
+					continue;
+				}
 			}
 			// As additional filters are made, we can add them here.
 			default:

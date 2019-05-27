@@ -168,6 +168,8 @@ static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
+bool Condor_Auth_SSL::m_should_search_for_cert = true;
+bool Condor_Auth_SSL::m_cert_avail = false;
 
 Condor_Auth_SSL::AuthState::~AuthState() {
 	if (m_ctx) {(*SSL_CTX_free_ptr)(m_ctx); m_ctx = nullptr;}
@@ -1702,7 +1704,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
-    priv_state priv;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1751,22 +1752,24 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1, NULL );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1_1, NULL );
 
-    if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
+	// Only load the verify locations if they are explicitly specified;
+	// otherwise, we will use the system default.
+    if( (cafile || cadir) && (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
         dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
 		 cafile, cadir);
 	goto setup_server_ctx_err;
     }
-    if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
-        ouch( "Error loading certificate from file" );
-        goto setup_server_ctx_err;
+    {
+        TemporaryPrivSentry sentry(PRIV_ROOT);
+        if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
+            ouch( "Error loading certificate from file" );
+            goto setup_server_ctx_err;
+        }
+        if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
+            ouch( "Error loading private key from file" );
+            goto setup_server_ctx_err;
+        }
     }
-    priv = set_root_priv();
-    if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
-        set_priv(priv);
-        ouch( "Error loading private key from file" );
-        goto setup_server_ctx_err;
-    }
-    set_priv(priv);
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
@@ -1791,5 +1794,37 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 }
 
 
- 
+bool
+Condor_Auth_SSL::should_try_auth()
+{
+	if (!m_should_search_for_cert) {
+		return m_cert_avail;
+	}
+	m_should_search_for_cert = false;
+	m_cert_avail = false;
+
+	std::string certfile, keyfile;
+	if (!param(certfile, AUTH_SSL_SERVER_CERTFILE_STR)) {
+		return false;
+	}
+	if (!param(keyfile, AUTH_SSL_SERVER_KEYFILE_STR)) {
+		return false;
+	}
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		int fd = open(certfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			return false;
+		}
+		close(fd);
+		fd = open(keyfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			return false;
+		}
+		close(fd);
+	}
+	m_cert_avail = true;
+	return true;
+}
 #endif

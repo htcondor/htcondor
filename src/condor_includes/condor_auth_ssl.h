@@ -106,6 +106,13 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
     virtual int unwrap(const char* input, int input_len, char*& output,
 		int& output_len) override;
 
+	// Determines if appropriate auth'n credentials are available
+	static bool should_try_auth();
+
+	// `should_try_auth` caches its results to avoid hammering the
+	// filesystem; this resets the cache results.
+	static void retry_cert_search() {m_should_search_for_cert = true;}
+
  private:
 
 	enum class Phase {
@@ -233,6 +240,10 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	std::string m_scitokens_file;
 	std::string m_scitokens_auth_name;
 	std::string m_client_scitoken;
+
+		// Status of potential SSL auth
+	static bool m_should_search_for_cert; // Should we search for TLS certificates?
+	static bool m_cert_avail; // Is there a known available TLS certificate?
 };
 
 #endif
