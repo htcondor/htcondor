@@ -245,9 +245,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
-		 !(SSL_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
@@ -1748,11 +1746,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		goto setup_server_ctx_err;
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	// disable SSLv2.  it has vulnerabilities.
-	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
-#endif
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv3, NULL );
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1, NULL );
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1_1, NULL );
 
     if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
         dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
@@ -1773,10 +1770,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-    //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
-    (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
-#endif
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
