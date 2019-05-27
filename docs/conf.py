@@ -25,7 +25,7 @@ if ON_RTD:
     text = (Path(__file__).parent.parent / 'CMakeLists.txt').read_text()
     match = re.search(r"set\(VERSION \"(\d+\.\d+\.\d+)\"\)", text)
     if match is not None:
-        version = match.group(1)
+        version = "8.9.2b1" #match.group(1)
         print("DETECTED VERSION {}".format(version))
         cmd = '{} -m pip install htcondor=={}'.format(sys.executable, version)
         print("EXECUTING COMMAND: {}".format(cmd))
