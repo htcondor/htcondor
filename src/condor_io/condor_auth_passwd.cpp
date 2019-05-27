@@ -2692,6 +2692,8 @@ Condor_Auth_Passwd::check_pool_password()
 	}
 	if (fd < 0) {
 		return;
+	} else {
+		close(fd);
 	}
 
 		// Generate a password.
