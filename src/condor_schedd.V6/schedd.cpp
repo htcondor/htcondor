@@ -17544,11 +17544,20 @@ Scheduler::try_token_request()
 			m_token_client_id = "";
 			return;
 		}
-		m_token_request_id = request_id;
-		m_token_daemon = daemon;
-		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
-		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
+		if (token.empty()) {
+			m_token_request_id = request_id;
+			m_token_daemon = daemon;
+			dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
+			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
+				"Scheduler::try_token_request", this);
+			return;
+		} else {
+			dprintf(D_ALWAYS, "Token request auto-approved.\n");
+			Condor_Auth_Passwd::retry_token_search();
+			daemonCore->getSecMan()->reconfig();
+			daemonCore->Reset_Timer(timeoutid,0,1);
+			m_token_client_id = "";
+		}
 	} else {
 		CondorError err;
 		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {

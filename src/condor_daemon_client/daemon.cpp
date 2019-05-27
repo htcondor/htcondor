@@ -2897,7 +2897,7 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 	CondorError *err ) noexcept
 {
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "Daemon::listTokenRequest() making connection to "
+		dprintf( D_COMMAND, "Daemon::approveTokenRequest() making connection to "
 			"'%s'\n", _addr ? _addr : "NULL" );
 	}
 
@@ -2937,11 +2937,10 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 
 	if (!startCommand( DC_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
 		if (err) { err->pushf("DAEMON", 1,
-			"command for listing token requests with remote daemon at '%s'.",
+			"command for approving token requests with remote daemon at '%s'.",
 			_addr ? _addr : "(unknown)"); }
-		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to start "
-			"command for listing token requests with remote daemon at '%s'.\n",
-			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to start command for "
+			"approving token requests with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
 		return false;
 	}
 
@@ -2992,6 +2991,96 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 		if (err_msg.empty()) {err_msg = "Unknown error.";}
 
 		if (err) { err->push("DAEMON", error_code, err_msg.c_str()); }
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::autoApproveTokenRequest() making connection to "
+		"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (netblock.empty()) {
+		if (err) err->pushf("DAEMON", 1, "No netblock provided.");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): No netblock provided.");
+		return false;
+	} else if (!ad.InsertAttr(ATTR_SUBNET, netblock)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set netblock.");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
+		return false;
+	}
+	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
+		if (err) err->pushf("DAEMON", 1, "Unable to set lifetime.");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set lifetime.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_AUTO_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to start command for "
+			"auto-approving token requests with remote daemon at '%s'.\n",
+			_addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to recieve response "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	int error_code = 0;
+	if (!result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		if (err) err->pushf("DAEMON", 1, "Remote daemon at '%s' did not return a result.",
+			_addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() - Remote daemon at '%s' did "
+			"not return a result", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (error_code) {
+		std::string err_msg;
+		result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg);
+		if (err_msg.empty()) {err_msg = "Unknown error.";}
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
 		return false;
 	}
 	return true;

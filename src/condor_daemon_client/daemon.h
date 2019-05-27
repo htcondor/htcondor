@@ -626,6 +626,15 @@ public:
 		CondorError *err=nullptr ) noexcept;
 
 		/**
+		 * Create a rule to auto-approve future requests.
+		 *
+		 * The `netblock` (example: 192.168.0.1/24) and `lifetime` (seconds)
+		 * define the tool we are to install.
+		 */
+	bool autoApproveTokens( const std::string &netblock, time_t lifetime,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
 		 * When authentication fails - but TOKEN is a valid method - this is set to true.
 		 */
 	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
