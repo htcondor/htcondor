@@ -8849,22 +8849,71 @@ These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
 ``SEC_*_AUTHENTICATION`` :index:`SEC_*_AUTHENTICATION`
-    This section has not yet been written
+    Whether authentication is required for a specified permission level.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_READ_AUTHENTICATION = REQUIRED``
+    indicates that any command requiring ``READ`` authorization will fail
+    unless authentication is performed.  The special value,
+    ``SEC_DEFAULT_AUTHENTICATION``, controls the default setting if no
+    others are specified.
 
 ``SEC_*_ENCRYPTION`` :index:`SEC_*_ENCRYPTION`
-    This section has not yet been written
+    Whether encryption is required for a specified permission level.
+    Encryption prevents another entity on the same network from understanding
+    the contents of the transfer between client and server.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_WRITE_ENCRYPTION = REQUIRED``
+    indicates that any command requiring ``WRITE`` authorization will fail
+    unless the channel is encrypted.  The special value,
+    ``SEC_DEFAULT_ENCRYPTION``, controls the default setting if no
+    others are specified.
 
 ``SEC_*_INTEGRITY`` :index:`SEC_*_INTEGRITY`
-    This section has not yet been written
+    Whether integrity-checking is required for a specified permission level.
+    Integrity checking allows the client and server to detect changes
+    (malicious or otherwise)  to the contents of the transfer.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_WRITE_INTEGRITY = REQUIRED``
+    indicates that any command requiring ``WRITE`` authorization will fail
+    unless the channel is integrity-checked.  The special value,
+    ``SEC_DEFAULT_INTEGRITY``, controls the default setting if no
+    others are specified.
+
+    As a special exception, file transfers are not integrity checked unless
+    they are also encrypted.
 
 ``SEC_*_NEGOTIATION`` :index:`SEC_*_NEGOTIATION`
-    This section has not yet been written
+    Whether the client and server should negotiate security parameters (such
+    as encryption, integrity, and authentication) for a given authorization
+    level.  For example, setting ``SEC_DEFAULT_NEGOTIATION = REQUIRED`` will
+    require a security negotiation for all permission levels by default.
+    There is very little penalty for security negotiation and it is strongly
+    suggested to leave this as the default (``REQUIRED``) at all times.
 
 ``SEC_*_AUTHENTICATION_METHODS`` :index:`SEC_*_AUTHENTICATION_METHODS`
-    This section has not yet been written
+    An ordered list of allowed authentication methods for a given authorization
+    level.  This set of configuration variables controls both the ordering and
+    the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
+    ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
+    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``TOKEN``,
+    ``SCITOKEN``,  and ``ANONYMOUS``.
+    See the :doc:`/admin-manual/security` section for a discussion of the
+    relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
+    no security at all.  The default authentication methods are
+    ``NTSSPI,FS,TOKEN,KERBEROS,GSI,SSL``.
+
+    These methods are tried in order until one succeeds or they all fail; for
+    this reason, we do not recommend changing the default method list.
+
+    The special value, ``SEC_DEFAULT_AUTHENTICATION_METHODS``, controls the
+    default setting if no others are specified.
 
 ``SEC_*_CRYPTO_METHODS`` :index:`SEC_*_CRYPTO_METHODS`
-    This section has not yet been written
+    When encryption is enabled for a session at a specified authorization,
+    the cryptographic algorithm used to encrypt the conversation.  Possible
+    values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
+    the setting per authorization level; it is recommended to leave these
+    settings untouched.
 
 ``GSI_DAEMON_NAME`` :index:`GSI_DAEMON_NAME`
     This configuration variable is retired. Instead use ``ALLOW_CLIENT``
