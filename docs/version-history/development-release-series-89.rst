@@ -32,6 +32,10 @@ New Features:
    appropriate for end-user use) and provides the ability for multiple pool passwords
    to exist within a single setup. :ticket:`6947`
 
+-  SSL authentication no longer requires a client X509 certificate present in
+   order to establish a security session.  If no client certificate is available,
+   then the client is mapped to the user ``unauthenticated``. :ticket:`7032`
+
 -  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
    client saves the token to the file specified in ``SCITOKENS_FILE``, that token
    will be used to authenticate with the remote server.  Further, for HTCondor-C
