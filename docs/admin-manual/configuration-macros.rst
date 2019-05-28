@@ -9207,6 +9207,19 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path and file name of the file containing the
     pool password for password authentication.
 
+``SEC_PASSWORD_DIRECTORY`` :index:`SEC_PASSWORD_DIRECTORY`
+    For Unix machines, the path to the directory containing password files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+
+``SEC_TOKEN_SYSTEM_DIRECTORY`` :index:`SEC_TOKEN_SYSTEM_DIRECTORY`
+    For Unix machines, the path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.  Defaults to
+    ``/etc/condor/tokens.d``.
+
+``SEC_TOKEN_DIRECTORY`` :index:`SEC_TOKEN_DIRECTORY`
+    For Unix machines, the path to the directory containing tokens for
+    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+
 ``AUTH_SSL_SERVER_CAFILE`` :index:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating

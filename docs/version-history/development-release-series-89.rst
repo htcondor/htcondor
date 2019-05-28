@@ -27,6 +27,11 @@ New Features:
    are now set properly.
    :ticket:`6972`
 
+-  A new authentication method, ``TOKEN``, has been added.  This method provides
+   the pool administrator with more fine-grained authorization control (making it
+   appropriate for end-user use) and provides the ability for multiple pool passwords
+   to exist within a single setup. :ticket:`6947`
+
 -  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
    client saves the token to the file specified in ``SCITOKENS_FILE``, that token
    will be used to authenticate with the remote server.  Further, for HTCondor-C
