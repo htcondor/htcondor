@@ -9260,6 +9260,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
 
+``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK`
+    A boolean variable that controls whether a host check is performed
+    by the client during an SSL authentication of a Condor daemon. This
+    check requires the daemon's host name to match either the "distinguished
+    name" or a subject alternate name embedded in the server's host certificate
+    When the  default value of ``False`` is set, the check is not skipped.
+    When ``True``, this check is skipped, and hosts will not be rejected due
+    to a mismatch of certificate and host name.
+
 ``CERTIFICATE_MAPFILE`` :index:`CERTIFICATE_MAPFILE`
     A path and file name of the unified map file.
 

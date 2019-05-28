@@ -42,6 +42,12 @@ New Features:
    jobs, the token file can be specified by the job attribute ``ScitokensFile``.
    :ticket:`7011`
 
+-  During SSL authentication, clients now verify that the server hostname matches
+   the host's X509 certificate, using the rules from RFC 2818.  This matches the
+   behavior most users expected in the first place.  To restore the prior behavior,
+   where any valid certificate (regardless of hostname) is accepted by default, set
+   ``SSL_SKIP_HOST_CHECK`` to ``true``. :ticket:`7030`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
