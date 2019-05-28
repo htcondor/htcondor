@@ -32,6 +32,9 @@ New Features:
    appropriate for end-user use) and provides the ability for multiple pool passwords
    to exist within a single setup. :ticket:`6947`
 
+-  The implementation of SSL authentication has been made non-blocking, improving
+   scalability and responsiveness when this method is used. :ticket:`6981`
+
 -  SSL authentication no longer requires a client X509 certificate present in
    order to establish a security session.  If no client certificate is available,
    then the client is mapped to the user ``unauthenticated``. :ticket:`7032`
