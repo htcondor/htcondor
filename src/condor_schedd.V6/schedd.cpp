@@ -3423,8 +3423,11 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 		}
 	}
 
+	int wantPS = 0;
+	job_ad->LookupBool("WantParallelScheduling", wantPS);
+
 	if( (job_universe == CONDOR_UNIVERSE_MPI) || 
-		(job_universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		(job_universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		job_id.proc = 0;		// Parallel and MPI shadow is always associated with proc 0
 	} 
 
@@ -3999,6 +4002,11 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		}
 		break;
 	default:
+		int wantPS = 0;
+		GetAttributeBool( cluster, proc, "WantParallelScheduling", &wantPS );
+		if (wantPS && (proc > 0)) {
+			return true;
+		}
 		break;
 	}
 	ASSERT( srec != NULL );
@@ -4270,7 +4278,10 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
-	if ( universe == CONDOR_UNIVERSE_PARALLEL ) {
+        int wantPS = 0;
+        job->LookupBool("WantParallelScheduling", wantPS);
+
+	if ( (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		if ( job->jid.proc > 0) {
 			return true;;
 		}
@@ -8836,8 +8847,11 @@ Scheduler::StartJobHandler()
 		int universe = srec->universe;
 		callAboutToSpawnJobHandler( cluster, proc, srec );
 
+		int wantPS = 0;
+		job_ad->LookupBool("WantParallelScheduling", wantPS);
+
 		if( (universe == CONDOR_UNIVERSE_MPI) || 
-			(universe == CONDOR_UNIVERSE_PARALLEL)) {
+			(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 			
 			if (proc != 0) {
 				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
@@ -11390,8 +11404,11 @@ mark_job_stopped(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
+	int wantPS = 0;
+	GetAttributeInt(job_id->cluster, job_id->proc, "WantParallelScheduling",
+					&wantPS);
 	if( (universe == CONDOR_UNIVERSE_MPI) || 
-		(universe == CONDOR_UNIVERSE_PARALLEL)){
+		(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ){
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -11706,7 +11723,9 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 
 		int universe = -1;
 		GetAttributeInt(p.cluster, p.proc, ATTR_JOB_UNIVERSE, &universe);
-		if ((universe != CONDOR_UNIVERSE_MPI) && (universe != CONDOR_UNIVERSE_PARALLEL))
+		int wantPS = 0;
+		GetAttributeInt(p.cluster, p.proc, "WantParallelScheduling", &wantPS);
+		if ((universe != CONDOR_UNIVERSE_MPI) && (universe != CONDOR_UNIVERSE_PARALLEL) && (!wantPS))
 			continue;
 		
 		
@@ -11776,10 +11795,13 @@ set_job_status(int cluster, int proc, int status)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 
+	int wantPS = 0;
+	GetAttributeInt(cluster, proc, "WantParallelScheduling", &wantPS);
+
 	BeginTransaction();
 
 	if( ( universe == CONDOR_UNIVERSE_MPI) || 
-		( universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		( universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -14526,10 +14548,13 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 
 int Scheduler::AlreadyMatched(JobQueueJob * job, int universe)
 {
+	int wantPS = 0;
+	job->LookupBool("WantParallelScheduling", wantPS);
+
 	if ( ! job || ! job->IsJob() ||
 		 (universe == CONDOR_UNIVERSE_MPI) ||
 		 (universe == CONDOR_UNIVERSE_GRID) ||
-		 (universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		 (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		return FALSE;
 	}
 
