@@ -9330,6 +9330,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of the keytab file for the client in Kerberos
     authentication. This variable has no default value.
 
+``SCITOKENS_FILE`` :index:`SCITOKENS_FILE`
+    The path and file name of a file containing a SciToken for use by
+    the client during the SCITOKENS authentication methods.  This variable
+    has no default value.
+
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------
 

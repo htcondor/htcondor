@@ -27,6 +27,12 @@ New Features:
    are now set properly.
    :ticket:`6972`
 
+-  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
+   client saves the token to the file specified in ``SCITOKENS_FILE``, that token
+   will be used to authenticate with the remote server.  Further, for HTCondor-C
+   jobs, the token file can be specified by the job attribute ``ScitokensFile``.
+   :ticket:`7011`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
