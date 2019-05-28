@@ -1331,7 +1331,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 
 			std::string reason = "[unknown reason]";
 			cap->LookupString( reasonName.c_str(), reason );
-			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+			extras_classad->Assign( reasonName.c_str(), reason );
 		} else {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.

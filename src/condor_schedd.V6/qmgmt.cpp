@@ -1229,7 +1229,7 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 				np += v.c_str() + strlen(o);
 				dprintf(D_ALWAYS,"Changing job %d.%d %s from %s to %s\n",
 						cluster, proc, attr, o, np.c_str());
-				job_ad->Assign(attr,np.c_str());
+				job_ad->Assign(attr,np);
 			}
 			continue;
 		}
@@ -1489,7 +1489,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	JobQueueKey cluster_key;
 	std::string	owner;
 	std::string	user;
-	MyString	correct_user;
+	std::string correct_user;
 	MyString	buf;
 	std::string	attr_scheduler;
 	std::string correct_scheduler;
@@ -1641,7 +1641,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
-			correct_user.formatstr( "%s%s@%s",
+			formatstr( correct_user, "%s%s@%s",
 					 (nice_user) ? "nice-user." : "", owner.c_str(),
 					 scheduler.uidDomain() );
 
@@ -1649,7 +1649,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf( D_FULLDEBUG,
 						"Job %s has no %s attribute.  Inserting one now...\n",
 						job_id.c_str(), ATTR_USER);
-				ad->Assign( ATTR_USER, correct_user.Value() );
+				ad->Assign( ATTR_USER, correct_user );
 				JobQueueDirty = true;
 			} else {
 					// ATTR_USER exists, make sure it's correct, and
@@ -1660,7 +1660,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 							 "Job %s has stale %s attribute.  "
 							 "Inserting correct value now...\n",
 							 job_id.c_str(), ATTR_USER );
-					ad->Assign( ATTR_USER, correct_user.Value() );
+					ad->Assign( ATTR_USER, correct_user );
 					JobQueueDirty = true;
 				}
 			}

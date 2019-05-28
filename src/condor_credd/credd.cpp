@@ -341,9 +341,9 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			sPrintAd(contents, ad);
 
 			if (IsDebugVerbose(D_FULLDEBUG)) {
-				MyString tmp;
-				tmp.formatstr("<contents of %s> %d bytes", secret_filename.c_str(), (int)secret_len);
-				ad.Assign("ClientSecret", tmp.Value());
+				std::string tmp;
+				formatstr(tmp, "<contents of %s> %d bytes", secret_filename.c_str(), (int)secret_len);
+				ad.Assign("ClientSecret", tmp);
 				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.c_str());
 				dPrintAd(D_FULLDEBUG, ad);
 			}

@@ -958,7 +958,7 @@ void Sinful::parseV1String() {
 			m_valid = false;
 			return;
 		}
-		MyString ccbContactString;
+		std::string ccbContactString;
 		CCBServer::CCBIDToContactString( ccbAddress.c_str(), ccbID, ccbContactString );
 		ccbList.append( ccbContactString.c_str() );
 	}

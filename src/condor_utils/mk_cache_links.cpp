@@ -248,7 +248,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 
 	char *initialWorkingDir = NULL;
 	const char *path;
-	MyString remap;
+	std::string remap;
 	struct stat fileStat;
 	time_t fileModifiedTime = time(NULL);
 
@@ -314,17 +314,13 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 			}
 		}
 		free( initialWorkingDir );
-		if ( remap.Length() > 0 ) {
-			MyString remapnew;
-			char *buf = NULL;
-			if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
-				remapnew = buf;
-				free(buf);
-				buf = NULL;
+		if ( remap.length() > 0 ) {
+			std::string remapnew;
+			if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, remapnew) == 1) {
 				remapnew += ";";
 			} 
 			remapnew += remap;
-			if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap.Value()) == false) {
+			if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap) == false) {
 				dprintf(D_ALWAYS, "mk_cache_links.cpp: Could not add to jobAd: "
 													"%s\n", remap.c_str());
 			}

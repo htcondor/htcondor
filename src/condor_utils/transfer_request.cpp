@@ -198,26 +198,18 @@ TransferRequest::get_num_transfers(void)
 }
 
 void
-TransferRequest::set_transfer_service(MyString &mode)
+TransferRequest::set_transfer_service(const std::string &mode)
 {
-	ASSERT(m_ip != NULL);
-
-	set_transfer_service(mode.Value());
-}
-
-void
-TransferRequest::set_transfer_service(const char *mode)
-{
-	ASSERT(m_ip != NULL);
-
 	m_ip->Assign( ATTR_IP_TRANSFER_SERVICE, mode );
 }
 
+#if 0
 void
 TransferRequest::set_transfer_service(TreqMode  /*mode*/)
 {
 	// XXX TODO
 }
+#endif
 
 
 TreqMode

@@ -234,14 +234,14 @@ VirshType::Shutdown()
 
 	if( getVMStatus() == VM_RUNNING ) {
 		priv_state priv = set_root_priv();
-                virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+                virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str());
 		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 		    if (err && err->code != VIR_ERR_NO_DOMAIN)
 		      {
-			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.c_str(), err->message);
 			return false;
 		      }
 		  }
@@ -418,12 +418,12 @@ VirshType::ResumeFromSoftSuspend(void)
 	if( m_is_soft_suspended ) {
 
 		priv_state priv = set_root_priv();
-		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str());
 		set_priv(priv);
 		if(dom == NULL)
 		  {
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.c_str(), (err ? err->message : "No reason found"));
 		    return false;
 		  }
 
@@ -462,12 +462,12 @@ VirshType::SoftSuspend()
 	}
 
 	priv_state priv = set_root_priv();
-	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str());
 	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.c_str(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 
@@ -519,12 +519,12 @@ VirshType::Suspend()
 	unlink(tmpfilename.Value());
 
 	priv_state priv = set_root_priv();
-	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str());
 	set_priv(priv);
 	if(dom == NULL)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.c_str(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 
@@ -647,7 +647,7 @@ VirshType::Status()
  	m_result_msg += "=";
 
 	priv_state priv = set_root_priv();
-	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str());
 	set_priv(priv);
 	if(dom == NULL)
 	{
@@ -659,7 +659,7 @@ VirshType::Status()
 			{
 				case (VIR_ERR_NO_DOMAIN):
 					// The VM isn't there anymore, so signal shutdown
-					vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
+					vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.c_str());
 					if(getVMStatus() == VM_RUNNING) {
 						m_self_shutdown = true;
 					}
@@ -673,7 +673,7 @@ VirshType::Status()
 				case (VIR_ERR_SYSTEM_ERROR): //
 					vmprintf(D_ALWAYS, "libvirt communication error detected, attempting to reconnect...\n");
 					this->Connect();
-					if ( NULL == ( dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value() ) ) )
+					if ( NULL == ( dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.c_str() ) ) )
 					{
 						vmprintf(D_ALWAYS, "could not reconnect to libvirt... marking vm as stopped (should exit)\n");
 						if(getVMStatus() == VM_RUNNING) {
@@ -692,7 +692,7 @@ VirshType::Status()
 					}
 				break;
 			default:
-				vmprintf(D_ALWAYS, "Error finding domain %s(%d): %s\n", m_vm_name.Value(), err->code, err->message );
+				vmprintf(D_ALWAYS, "Error finding domain %s(%d): %s\n", m_vm_name.c_str(), err->code, err->message );
 				return false;
 			}
 		}
@@ -710,7 +710,7 @@ VirshType::Status()
 	if(virDomainGetInfo(dom, info) < 0)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
-	    vmprintf(D_ALWAYS, "Error finding domain info %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+	    vmprintf(D_ALWAYS, "Error finding domain info %s: %s\n", m_vm_name.c_str(), (err ? err->message : "No reason found"));
 	    return false;
 	  }
 	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
@@ -1427,14 +1427,14 @@ VirshType::killVM()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::killVM\n");
 
-	if( ( m_vm_name.Length() == 0 ) ) {
+	if( ( m_vm_name.length() == 0 ) ) {
 		return false;
 	}
 
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	return killVMFast(m_vm_name.Value(), m_libvirt_connection);
+	return killVMFast(m_vm_name.c_str(), m_libvirt_connection);
 }
 
 bool

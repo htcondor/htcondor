@@ -786,7 +786,7 @@ static bool extract_delimited_data_as_base64(
 	int input_len,
 	char const *begin_marker,
 	char const *end_marker,
-	MyString &output_buffer,
+	std::string &output_buffer,
 	MyString *error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
@@ -818,7 +818,7 @@ static bool extract_delimited_data(
 	int input_len,
 	char const *begin_marker,
 	char const *end_marker,
-	MyString &output_buffer,
+	std::string &output_buffer,
 	MyString *error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
@@ -838,7 +838,7 @@ static bool extract_delimited_data(
 		}
 		return false;
 	}
-	output_buffer.formatstr("%.*s",end-start,input_buffer+start);
+	formatstr(output_buffer,"%.*s",end-start,input_buffer+start);
 	return true;
 }
 
@@ -1474,7 +1474,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// from the pipe to sshd_setup.
 
 	bool rc = true;
-	MyString session_dir;
+	std::string session_dir;
 	if( rc ) {
 		rc = extract_delimited_data(
 			setup_output,
@@ -1485,7 +1485,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString sshd_user;
+	std::string sshd_user;
 	if( rc ) {
 		rc = extract_delimited_data(
 			setup_output,
@@ -1496,7 +1496,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString public_host_key;
+	std::string public_host_key;
 	if( rc ) {
 		rc = extract_delimited_data_as_base64(
 			setup_output,
@@ -1507,7 +1507,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString private_client_key;
+	std::string private_client_key;
 	if( rc ) {
 		rc = extract_delimited_data_as_base64(
 			setup_output,
@@ -1527,17 +1527,17 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			error_msg.Value());
 	}
 
-	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.Value());
+	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.c_str());
 
 	MyString sshd_config_file;
-	sshd_config_file.formatstr("%s%csshd_config",session_dir.Value(),DIR_DELIM_CHAR);
+	sshd_config_file.formatstr("%s%csshd_config",session_dir.c_str(),DIR_DELIM_CHAR);
 
 
 
-	MyString sshd;
+	std::string sshd;
 	param(sshd,"SSH_TO_JOB_SSHD","/usr/sbin/sshd");
-	if( access(sshd.Value(),X_OK)!=0 ) {
-		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.Value(),strerror(errno));
+	if( access(sshd.c_str(),X_OK)!=0 ) {
+		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.c_str(),strerror(errno));
 	}
 
 	ArgList sshd_arglist;
@@ -1581,7 +1581,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 
 	ClassAd *sshd_ad = new ClassAd(*jobad);
-	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
+	sshd_ad->Assign(ATTR_JOB_CMD,sshd);
 	CondorVersionInfo ver_info;
 	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
@@ -1606,8 +1606,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	ClassAd response;
 	response.Assign(ATTR_RESULT,true);
 	response.Assign(ATTR_REMOTE_USER,sshd_user);
-	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key.Value());
-	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
+	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key);
+	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key);
 
 	s->encode();
 	if( !putClassAd(s, response) || !s->end_of_message() ) {
@@ -1619,7 +1619,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	MyString sshd_log_fname;
 	sshd_log_fname.formatstr(
-		"%s%c%s",session_dir.Value(),DIR_DELIM_CHAR,"sshd.log");
+		"%s%c%s",session_dir.c_str(),DIR_DELIM_CHAR,"sshd.log");
 
 
 	int std[3];

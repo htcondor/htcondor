@@ -2449,21 +2449,21 @@ JICShadow::beginFileTransfer( void )
 		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
 
 			// Parse proxy filename
-		MyString proxy_filename = condor_basename( proxy_source_path.c_str() );
+		const char *proxy_filename = condor_basename( proxy_source_path.c_str() );
 
 			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
-		MyString proxy_dest_path = scratch_dir;
+		std::string proxy_dest_path = scratch_dir;
 		proxy_dest_path += DIR_DELIM_CHAR;
 		proxy_dest_path += proxy_filename;
 
 			// Do RPC call to get delegated proxy.
 			// This needs to happen with user privs so we can write to scratch dir!
 		priv_state original_priv = set_user_priv();
-		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.c_str(), proxy_dest_path.Value(), proxy_expiration );
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.c_str(), proxy_dest_path.c_str(), proxy_expiration );
 		set_priv( original_priv );
 
 			// Update job ad with location of proxy
-		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );
+		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path );
 	}
 		// no transfer wanted or started, so return false
 	return false;

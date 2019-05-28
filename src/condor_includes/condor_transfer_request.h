@@ -130,9 +130,8 @@ class TransferRequest
 		bool get_used_constraint(void);
 
 		// Should this request be handled Passively, Actively, or Active Shadow
-		void set_transfer_service(TreqMode mode);
-		void set_transfer_service(MyString &str);
-		void set_transfer_service(const char *str);
+		//void set_transfer_service(TreqMode mode);
+		void set_transfer_service(const std::string &str);
 		TreqMode get_transfer_service(void);
 
 		// How many transfers am I going to process? Each transfer is on

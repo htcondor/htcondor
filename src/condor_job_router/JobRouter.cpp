@@ -564,7 +564,7 @@ JobRouter::InitPublicAd()
 	SetMyTypeName(m_public_ad, "Job_Router");
 	SetTargetTypeName(m_public_ad, "");
 
-	m_public_ad.Assign(ATTR_NAME,daemonName.c_str());
+	m_public_ad.Assign(ATTR_NAME,daemonName);
 
 	daemonCore->publish(&m_public_ad);
 }

@@ -220,7 +220,7 @@ parse_param_string(const char *line, MyString &name, MyString &value, bool del_q
 }
 
 bool 
-create_name_for_VM(ClassAd *ad, MyString& vmname)
+create_name_for_VM(ClassAd *ad, std::string& vmname)
 {
 	if( !ad ) {
 		return false;

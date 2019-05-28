@@ -308,7 +308,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -1522,8 +1522,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	if ( !output_remaps.empty() ) {
-		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS,
-						   output_remaps.c_str() );
+		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 	}
 
 	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,

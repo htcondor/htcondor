@@ -458,7 +458,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 		jobAd->Assign( ATTR_HOLD_REASON_CODE, holdReasonCode );
 		jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, holdReasonSubCode );
 	}
@@ -1194,7 +1194,7 @@ void EC2Job::doEvaluateState()
 					// dprintf( D_ALWAYS, "DEBUG: m_state_reason_code = %s (assuming 'NULL')\n", m_state_reason_code.c_str() );
 					if( ! m_state_reason_code.empty() ) {
 						// Send the user a copy of the reason code.
-						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 						requestScheddUpdate( this, false );
 
 							//
@@ -2347,14 +2347,14 @@ void EC2Job::StatusUpdate( const char * instanceID,
 		if( m_state_reason_code != stateReasonCode ) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 			m_state_reason_code = stateReasonCode;
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	} else {
 		if(! m_state_reason_code.empty()) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Clearing old state reason code of '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), m_remoteJobId.c_str() );
 			m_state_reason_code.clear();
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	}

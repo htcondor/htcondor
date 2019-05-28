@@ -311,7 +311,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -385,7 +385,7 @@ void INFNBatchJob::doEvaluateState()
 				std::string error_string = "Failed to start GAHP: ";
 				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+				jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -400,7 +400,7 @@ void INFNBatchJob::doEvaluateState()
 					std::string error_string = "Failed to start transfer GAHP: ";
 					error_string += gahp->getGahpStderr();
 
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -477,7 +477,7 @@ void INFNBatchJob::doEvaluateState()
 				if ( errorString == "" ) {
 					std::string error_string = "Attempts to submit failed: ";
 					error_string += gahp->getGahpStderr();
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				}
 				gmState = GM_HOLD;
 				break;

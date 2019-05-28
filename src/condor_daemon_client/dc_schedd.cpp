@@ -1976,8 +1976,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 	std::string vidList;
 	formatstr( vidList, "%d.%d", vids[0].cluster, vids[0].proc );
 	for( unsigned i = 1; i < vCount; ++i ) {
-		formatstr( vidList, "%s, %d.%d", vidList.c_str(),
-			vids[i].cluster, vids[i].proc );
+		formatstr_cat( vidList, ", %d.%d", vids[i].cluster, vids[i].proc );
 	}
 
 	if( IsDebugLevel( D_COMMAND ) ) {
@@ -2015,7 +2014,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 	ProcIdToStr( bid, bidStr );
 
 	ClassAd request;
-	request.Assign( "VictimJobIDs", vidList.c_str() );
+	request.Assign( "VictimJobIDs", vidList );
 	request.Assign( "BeneficiaryJobID", bidStr );
 	if( flags != 0 ) {
 		request.Assign( "Flags", flags );

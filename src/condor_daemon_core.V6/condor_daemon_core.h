@@ -1731,7 +1731,7 @@ class DaemonCore : public Service
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
-	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
+	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,

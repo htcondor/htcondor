@@ -185,7 +185,7 @@ class CondorQuery
 	void setDesiredAttrs(const std::vector<std::string> &attrs);
 	void setDesiredAttrs(const classad::References & attrs);
 		// set list of desired attributes as a space-separated string
-	void setDesiredAttrs(const char * attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
+	void setDesiredAttrs(const std::string &attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
 	void setDesiredAttrsExpr(const char *expr);
 
 	void setResultLimit(int limit) { resultLimit = limit; }

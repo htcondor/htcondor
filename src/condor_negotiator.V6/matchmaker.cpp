@@ -2578,7 +2578,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
 
 
-				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign(ATTR_NAME, name); // the hash key
 				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(name));
 
@@ -6722,22 +6722,22 @@ SetAttrN( ClassAd *ad, char const *attr, int n, double value )
 static void
 SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
 {
-	MyString attrn;
-	attrn.formatstr("%s%d",attr,n);
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
 
-	MyString value;
+	std::string value;
 	std::set<std::string>::iterator it;
 	for(it = string_list.begin();
 		it != string_list.end();
 		it++)
 	{
-		if( !value.IsEmpty() ) {
+		if( !value.empty() ) {
 			value += ", ";
 		}
-		value += it->c_str();
+		value += *it;
 	}
 
-	ad->Assign(attrn.Value(),value.Value());
+	ad->Assign(attrn.c_str(),value);
 }
 
 

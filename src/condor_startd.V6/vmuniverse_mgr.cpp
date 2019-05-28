@@ -926,11 +926,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
 	}
 
-	MyString matchstring;
-	std::string workingdir;
-
-	formatstr(workingdir, "%s%cdir_%ld", info->m_execute_dir.c_str(),
-	                   DIR_DELIM_CHAR, (long)info->m_pid);
+	std::string matchstring;
 
 	if( (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
@@ -941,7 +937,8 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	}else {
 		// Except Xen, we need the path of working directory of Starter
 		// in order to destroy VM.
-		matchstring = workingdir;
+		formatstr(matchstring, "%s%cdir_%ld", info->m_execute_dir.c_str(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
 	}
 
 	killVM( matchstring.c_str() );
