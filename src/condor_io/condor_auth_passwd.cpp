@@ -1507,9 +1507,12 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
 
-	auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
-
-	token = jwt_token;
+	try {
+		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
+		token = jwt_token;
+	} catch (...) {
+		return false;
+	}
 	return true;
 }
 
