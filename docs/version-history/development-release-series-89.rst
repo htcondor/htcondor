@@ -51,6 +51,12 @@ New Features:
    where any valid certificate (regardless of hostname) is accepted by default, set
    ``SSL_SKIP_HOST_CHECK`` to ``true``. :ticket:`7030`
 
+-  HTCondor will now utilize OpenSSL for random number generation when
+   cryptographically secure (e.g., effectively impossible to guess beforehand) random
+   numbers are needed.  Previous random number generation always utilized a method
+   that was not appropriate for cryptographic contexts.  As a side-effect of this
+   change, HTCondor can no longer be built without OpenSSL support. :ticket:`6990`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
