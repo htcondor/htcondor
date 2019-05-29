@@ -44,6 +44,11 @@ New Features:
 
 Bugs Fixed:
 
+-  *condor_status -af:r* now properly prints nested ClassAds.  The handling
+   of undefined attribute references has also been corrected, so that that
+   they print ``undefined`` instead of the name of the undefined attribute.
+   :ticket:`6979`
+
 -  Argument names for all functions in the Python bindings
    (including class constructors and methods) have been normalized.
    We don't expect any compatibility problems with existing code.
