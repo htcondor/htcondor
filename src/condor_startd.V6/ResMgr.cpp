@@ -1336,8 +1336,8 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.
 			offlineUniverses.erase( universeName );
-			extras_classad->Assign( reasonTime.c_str(), "undefined" );
-			extras_classad->Assign( reasonName.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonTime.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonName.c_str(), "undefined" );
 		}
 	}
 

@@ -1185,10 +1185,10 @@ void CreamJob::doEvaluateState()
 			
 			int stage_time;
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_START, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_START, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_START, "Undefined" );
 			}
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_FINISH, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_FINISH, "Undefined" );
 			}
 
 			if ( wantRematch ) {

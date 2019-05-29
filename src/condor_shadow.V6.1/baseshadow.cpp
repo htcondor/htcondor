@@ -174,7 +174,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			}
 			else
 			{
-				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, "FALSE" );
+				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, false );
 				m_RunAsNobody=true;
 				dprintf(D_ALWAYS, "init_user_ids() now running as user nobody\n");
 			}
