@@ -68,6 +68,8 @@ New Features:
    to job attributes. This should make adding new submit keywords in the furture quicker and more reliable.
    :ticket:`7044`
 
+-  File transfer plugins can now be supplied by the job. :ticket:`6855`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
