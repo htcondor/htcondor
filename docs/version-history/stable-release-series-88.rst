@@ -22,7 +22,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug that could result in job attributes ``CommittedTime`` and
+   ``CommittedSlotTime`` reporting overly-large values.
+   :ticket:`7083`
 
 Version 8.8.3
 -------------
