@@ -2245,7 +2245,8 @@ struct Submit
 	static MACRO_SOURCE EmptyMacroSrc;
 public:
     Submit()
-       : m_ms_inline("", 0, EmptyMacroSrc)
+       : m_src_pystring(EmptyMacroSrc),
+		 m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
@@ -2253,7 +2254,8 @@ public:
 
 
     Submit(boost::python::dict input)
-       : m_ms_inline("", 0, EmptyMacroSrc)
+       : m_src_pystring(EmptyMacroSrc),
+         m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
