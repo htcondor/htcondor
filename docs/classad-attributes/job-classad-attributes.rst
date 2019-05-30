@@ -1868,6 +1868,12 @@ Job ClassAd Attributes
     running. :index:`StackSize<single: StackSize; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; StackSize>`
 
+``ScitokensFile``
+    The path and filename containing a SciToken to use for a Condor-C job.
+    :index:`ScitokensFile`
+    :index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
+
 ``StackSize``
     Utilized for Linux jobs only, the number of bytes allocated for
     stack space for this job. This number of bytes replaces the default

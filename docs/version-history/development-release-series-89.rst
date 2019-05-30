@@ -42,6 +42,36 @@ New Features:
    are now set properly.
    :ticket:`6972`
 
+-  A new authentication method, ``TOKEN``, has been added.  This method provides
+   the pool administrator with more fine-grained authorization control (making it
+   appropriate for end-user use) and provides the ability for multiple pool passwords
+   to exist within a single setup. :ticket:`6947`
+
+-  The implementation of SSL authentication has been made non-blocking, improving
+   scalability and responsiveness when this method is used. :ticket:`6981`
+
+-  SSL authentication no longer requires a client X509 certificate present in
+   order to establish a security session.  If no client certificate is available,
+   then the client is mapped to the user ``unauthenticated``. :ticket:`7032`
+
+-  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
+   client saves the token to the file specified in ``SCITOKENS_FILE``, that token
+   will be used to authenticate with the remote server.  Further, for HTCondor-C
+   jobs, the token file can be specified by the job attribute ``ScitokensFile``.
+   :ticket:`7011`
+
+-  During SSL authentication, clients now verify that the server hostname matches
+   the host's X509 certificate, using the rules from RFC 2818.  This matches the
+   behavior most users expected in the first place.  To restore the prior behavior,
+   where any valid certificate (regardless of hostname) is accepted by default, set
+   ``SSL_SKIP_HOST_CHECK`` to ``true``. :ticket:`7030`
+
+-  HTCondor will now utilize OpenSSL for random number generation when
+   cryptographically secure (e.g., effectively impossible to guess beforehand) random
+   numbers are needed.  Previous random number generation always utilized a method
+   that was not appropriate for cryptographic contexts.  As a side-effect of this
+   change, HTCondor can no longer be built without OpenSSL support. :ticket:`6990`
+
 Bugs Fixed:
 
 -  *condor_status -af:r* now properly prints nested ClassAds.  The handling
