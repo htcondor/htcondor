@@ -2129,7 +2129,9 @@ Job ClassAd Attributes
     to be supplied by the job. Each entry in this list will be of the form
     ``TAG1[,TAG2[,...]]=/path/to/plugin`` were `TAG` values are URL prefixes like `HTTP`,
     and ``/path/to/plugin`` is the path that the transfer plugin is to be transferred from.
-    The files mentioned in this list will be transferred to the job sandbox for any of
+    The files mentioned in this list will be transferred to the job sandbox before any file
+    transfer plugins are invoked. A transfer plugin supplied in this will way will be used
+    even if the execute node has a file transfer plugin installed that handles that URL prefix.
 
 ``TransferQueued``
     A boolean value that indicates whether the job is currently waiting
