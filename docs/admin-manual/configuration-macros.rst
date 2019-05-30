@@ -1495,6 +1495,36 @@ a file that receives job events, but across all users and user's jobs.
     specified by ``EVENT_LOG``) will be locked before being written to.
     When ``False``, HTCondor does not lock the file before writing.
 
+``EVENT_LOG_FORMAT_OPTIONS`` :index:`EVENT_LOG_FORMAT_OPTIONS`
+    A list of case-insensitive keywords that control formatting of the log events
+    and of timestamps for the log specified by ``EVENT_LOG``.  Use zero or one of the
+    following formatting options:
+
+    ``XML``
+        Log events in XML format. This has the same effect ``EVENT_LOG_USE_XML`` below
+
+    ``JSON``
+        Log events in JSON format. This conflicts with ``EVENT_LOG_USE_XML`` below
+
+    And zero or more of the following option flags:
+
+    ``UTC``
+        Log event timestamps as Universal Coordinated Time. The time value will be printed
+        with a timezone value of Z to indicate that times are UTC.
+
+    ``ISO_DATE``
+        Log event timestamps in ISO 8601 format. This format includes a 4 digit year and is
+        printed in a way that makes sorting by date easier.
+
+    ``SUB_SECOND``
+        Include fractional seconds in event timestamps.
+
+    ``LEGACY``
+        Set all time formatting flags to be compatible with older versions of HTCondor.
+
+    All of the above options are case-insensitive, and can be preceeded by a ! to invert their meaning,
+    so configuring ``!UTC, !ISO_DATE, !SUB_SECOND`` gives the same result as configuring ``LEGACY``.
+
 ``EVENT_LOG_USE_XML`` :index:`EVENT_LOG_USE_XML`
     A boolean value that defaults to ``False``. When ``True``, events
     are logged in XML format. If ``EVENT_LOG`` is not defined, this
@@ -1509,6 +1539,11 @@ a file that receives job events, but across all users and user's jobs.
     the same as the job ClassAd attribute ``JobAdInformationAttrs`` (see
     :doc:`/classad-attributes/job-classad-attributes`), but it
     applies to the system Event Log rather than the user job log.
+
+``DEFAULT_USERLOG_FORMAT_OPTIONS`` :index:`DEFAULT_USERLOG_FORMAT_OPTIONS`
+    A list of case-insensitive keywords that control formatting of the events
+    and of timestamps for the log specified by a job's ``UserLog`` or ``DAGManNodesLog``
+    attributes. see ``EVENT_LOG_FORMAT_OPTIONS`` above for the permitted options.
 
 DaemonCore Configuration File Entries
 -------------------------------------

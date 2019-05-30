@@ -57,6 +57,17 @@ New Features:
    that was not appropriate for cryptographic contexts.  As a side-effect of this
    change, HTCondor can no longer be built without OpenSSL support. :ticket:`6990`
 
+-  The system administrator can now configure better timestamps for the global event log
+   and for all jobs that specify a userlog or dagman nodes log. There are two new configuration
+   variables that control this; ``EVENT_LOG_FORMAT_OPTIONS`` controls the format of the global event log
+   and ``DEFAULT_USERLOG_FORMAT_OPTIONS`` controls formatting of userlog and dagman nodes logs.  These
+   configuration variables can individually enable UTC time, ISO 8601 timestamps, and fractional seconds.
+   :ticket:`6941`
+
+-  *condor_submit* and the python bindings submit now use a table to convert most submit keywords
+   to job attributes. This should make adding new submit keywords in the furture quicker and more reliable.
+   :ticket:`7044`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
