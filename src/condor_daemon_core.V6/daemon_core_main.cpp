@@ -195,6 +195,22 @@ public:
 	const std::string &getPeerLocation() const {return m_peer_location;}
 
 	bool static ShouldAutoApprove(const TokenRequest &token_request, time_t now) {
+
+			// Only auto-approve requests for the condor identity.
+		if (strncmp(token_request.getRequestedIdentity().c_str(), "condor@", 7)) {
+			return false;
+		}
+			// All auto-approve requests must have a bounding set to limit auth.
+		if (!token_request.getBoundingSet().size()) {
+			return false;
+		}
+			// Only auto-approve requests that ask for schedds or startds.
+		for (const auto &authz : token_request.getBoundingSet()) {
+			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD")) {
+				return false;
+			}
+		}
+
 		auto peer_location = token_request.getPeerLocation();
 		for (auto &rule : m_approval_rules) {
 			if (!rule.m_approval_netblock->find_matches_withnetwork(
