@@ -12,6 +12,11 @@ Release Notes:
 
 -  HTCondor version 8.9.2 is scheduled for release on June 4, 2019.
 
+-  The default setting for ``CREDD_OAUTH_MODE`` is now ``true``.  This only
+   affects people who were using the *condor_credd* to manage Kerberos credentials
+   in the ``SEC_CREDENTIAL_DIRECTORY``.
+   :ticket:`7046`
+
 New Features:
 
 -  Add job ad attribute ``JobDisconnectedDate``.
