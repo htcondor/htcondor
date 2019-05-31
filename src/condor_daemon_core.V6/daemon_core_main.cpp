@@ -1728,6 +1728,15 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 				dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
 					token_request.getPublicString().c_str(), rule_text.c_str());
 			}
+			// Auto-approval rules are effectively host-based security; if we trust the network
+			// blindly, the lack of encryption does not bother us.
+			//
+			// In all other cases, encryption is a hard requirement.
+		} else if (!stream->get_encryption()) {
+			g_request_map.erase(iter);
+			result_ad.Clear();
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
 		}
 	}
 

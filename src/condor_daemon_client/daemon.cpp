@@ -2644,6 +2644,9 @@ Daemon::startTokenRequest( const std::string identity,
 			_addr ? _addr : "(unknown)");
 		return false;
 	}
+		// Try forcing encryption.  If it's not available, then this request will be
+		// queued ONLY IF auto-approval is allowed.
+	rSock.set_crypto_mode(true);
 
 	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) { err->pushf("DAEMON", 1, "Failed to send "
