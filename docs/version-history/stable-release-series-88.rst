@@ -14,6 +14,7 @@ Version 8.8.4
 Release Notes:
 
 -  HTCondor version 8.8.4 not yet released.
+
 .. HTCondor version 8.8.4 released on Month Date, 2019.
 
 New Features:
