@@ -83,6 +83,9 @@ New Features:
 -  The default file transfer plugin for HTTP/HTTPS will timeout transfers
    that make no progress as opposed to waiting indefinitely.  :ticket:`6971`
 
+-  HTCondor EC2 components are now packaged for Debian and Ubuntu.
+   :ticket:`7043`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
