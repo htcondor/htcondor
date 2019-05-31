@@ -326,7 +326,7 @@ the default, set the configuration macro ANNEX_DEFAULT_AWS_REGION
 the *condor_annex* automatic setup, you can edit the ``user_config`` file
 in ``.condor directory`` in your home directory; this file uses the normal
 HTCondor configuration file syntax.  See
-`Ordered Evaluation to Set the Configuration`_.) Once you do this, you'll
+:ref:`ordered_evaluation_to_set_the_configuration`.) Once you do this, you'll
 have to re-do the setup, as setup is region-specific.
 
 If you'd like to use multiple AWS regions, you can specify which reason
