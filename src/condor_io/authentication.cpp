@@ -367,12 +367,6 @@ authenticate:
 				return 2;
 			}
 		}
-		if (m_method_name == "TOKEN") {
-			// Even if token auth did not work, it might work if the caller requests a
-			// token from the remote host.  Note we enable the request retry even if the
-			// authentication fails as the authorization might be denied.
-			m_should_try_token_request = mySock->isClient();
-		}
 
 			// check to see if the auth IP is the same as the socket IP
 		if( auth_rc ) {
@@ -389,6 +383,11 @@ authenticate:
 		}
 
 		if( !auth_rc ) {
+			if (m_method_name == "TOKEN") {
+				// Our token auth did not work, but might work if the caller requests a
+				// token from the remote host.
+				m_should_try_token_request = mySock->isClient();
+			}
 			delete m_auth;
 			m_auth = NULL;
 

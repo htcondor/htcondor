@@ -1387,7 +1387,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						break;
 					}
 				}
-				if (!found_limit && strcmp(perm_cstr, "ALLOW")) {
+				if (!found_limit) {
 					can_attempt = false;
 				}
 			}
