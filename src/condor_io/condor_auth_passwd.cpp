@@ -106,7 +106,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "TOKEN: Will use examine tokens found in %s.\n", tokenfilename.c_str());
 /*
 	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
 	if (!tokenfile) {
@@ -209,7 +209,7 @@ findTokens(const std::string &issuer,
 
 	Directory dir(dirpath.c_str());
 	if (!dir.Rewind()) {
-		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)\n",
+		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)",
 			dirpath.c_str(), strerror(errno), errno);
 			return false;
 	}

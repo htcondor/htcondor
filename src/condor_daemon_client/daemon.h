@@ -576,60 +576,6 @@ public:
 	bool getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
 		std::string &token, CondorError *err=NULL );
 
-		/*
-		 * Start a token request workflow from the remote daemon, potentially as an
-		 * unauthenticated user.
-		 *
-		 * As with `getSessionToken`, the user can request limits on the token's
-		 * capabilities (maximum lifetime, bounding set) and additionally request a
-		 * specific identity.
-		 *
-		 * The caller should provide a human-friendly ID (not necessarily unique; may
-		 * be the hostname) that will help the request approver to identify the request.
-		 *
-		 * If we are able to authenticate, then the token may be issued immediately;
-		 * in that case, the function will set the `token` parameter to a non-empty string
-		 * and return true.  If we are unable to authenticate (or have insufficient
-		 * permissions at the server-side), then the `request_id` parameter will be
-		 * set; use `finishTokenRequest` to poll for completion.
-		 *
-		 * Returns true on success or false on failure.
-		 */
-	bool startTokenRequest( const std::string identity,
-		const std::vector<std::string> &authz_bounding_set, int lifetime,
-		const std::string &client_id, std::string &token, std::string &request_id,
-		CondorError *err=NULL ) noexcept;
-
-		/**
-		 * Poll for and finish a token request.
-		 *
-		 * The `request_id` is the ID returned by a prior call to `startTokenRequest`.
-		 */
-	bool finishTokenRequest( const std::string &client_id, const std::string &request_id,
-		std::string &token, CondorError *err=nullptr ) noexcept;
-
-		/**
-		 * List all the token requests in the system.
-		 *
-		 * The `request_id`, if non-empty, causes only a given request to be returned;
-		 * otherwise, all requests are returned.
-		 */
-	bool listTokenRequest( const std::string &request_id, std::vector<classad::ClassAd> &results,
-		CondorError *err=nullptr ) noexcept;
-
-		/**
-		 * Approve a specific token request.
-		 *
-		 * The `request_id` and `client_id` must match a given request.
-		 */
-	bool approveTokenRequest( const std::string &client_id, const std::string &request_id,
-		CondorError *err=nullptr ) noexcept;
-
-		/**
-		 * When authentication fails - but TOKEN is a valid method - this is set to true.
-		 */
-	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
-
 protected:
 	// Data members
 	char* _name;
@@ -651,8 +597,7 @@ protected:
 	bool _tried_locate;
 	bool _tried_init_hostname;
 	bool _tried_init_version;
-	bool _is_configured;
-	bool m_should_try_token_request{false};
+	bool _is_configured; 
 	SecMan _sec_man;
 	StringList daemon_list;
 
@@ -877,14 +822,8 @@ protected:
 		   Internal function used by public versions of startCommand().
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
-
-		   This function previously was also named `startCommand`; it
-		   was fairly confusing because there is also the non-static
-		   `startCommand`; the `_internal` suffix was added to help
-		   differentiate between the 6 different variants (besides the
-		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
 
 		/**
 		   Internal function used by public versions of startCommand().
