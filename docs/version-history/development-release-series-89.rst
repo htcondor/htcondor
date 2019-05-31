@@ -75,6 +75,9 @@ New Features:
 
 -  File transfer plugins can now be supplied by the job. :ticket:`6855`
 
+-  The default file transfer plugin for HTTP/HTTPS will timeout transfers
+   that make no progress as opposed to waiting indefinitely.  :ticket:`6971`
+
 Bugs Fixed:
 
 -  Argument names for all functions in the Python bindings
