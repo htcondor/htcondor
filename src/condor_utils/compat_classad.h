@@ -260,9 +260,6 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,unsigned long value)
 	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
 
-	int Assign(char const *name,unsigned long long value)
-	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
-
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
 
