@@ -68,6 +68,11 @@ New Features:
    to job attributes. This should make adding new submit keywords in the furture quicker and more reliable.
    :ticket:`7044`
 
+-  Added a new multifile transfer plugin for downloading files from Box.com user accounts. This
+   supports URLs like "box://path/to/file" and using the plugin requires the admin configure the
+   condor_credd to allow users to obtain Box.com tokens and requires the user request Box.com
+   tokens in their submit file. :ticket:`7007`
+
 -  File transfer plugins can now be supplied by the job. :ticket:`6855`
 
 Bugs Fixed:
