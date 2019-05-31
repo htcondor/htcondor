@@ -406,7 +406,6 @@ public:
 		// True if the socket failed to authenticate with the remote
 		// server but may succeed with a token request workflow.
 	bool shouldTryTokenRequest() const { return _should_try_token_request; }
-	void setShouldTryTokenRequest(bool val) { _should_try_token_request = val; }
 
 		/// Returns true if the fully qualified user name is
 		/// a non-anonymous user name (i.e. something not from
