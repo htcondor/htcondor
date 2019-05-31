@@ -298,6 +298,8 @@ public:
 		}
 	}
 
+	static void clearApprovalRules() {m_approval_rules.clear();}
+
 	static void cleanupApprovalRules() {
 		auto now = time(NULL);
 		m_approval_rules.erase(
@@ -2724,6 +2726,12 @@ dc_reconfig()
 			
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	
+	}
+
+		// On reconfig, reset token requests to a pristine state.
+	TokenRequest::clearApprovalRules();
+	for (auto &entry : g_request_map) {
+		entry.second->setFailed();
 	}
 
 	// call this daemon's specific main_config()
