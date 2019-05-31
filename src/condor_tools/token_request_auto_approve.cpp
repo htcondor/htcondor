@@ -29,6 +29,8 @@
 
 #include <iostream>
 
+void printRemainingRequests(std::unique_ptr<Daemon> daemon);
+
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-lifetime LIFETIME] [-netblock NETBLOCK]\n\n"
 		"Generates a new rule at specified daemon to automatically approve requests.\n"
@@ -79,7 +81,38 @@ auto_approve(const std::string &pool, const std::string &name, daemon_t dtype,
 		exit(1);
 	}
 
+	printf("Successfully installed auto-approval rule for netblock %s with lifetime of %.2f hours\n",
+		netblock.c_str(), static_cast<float>(lifetime/3600));
+
+	printRemainingRequests(std::move(daemon));
 	return 0;
+}
+
+void printRemainingRequests(std::unique_ptr<Daemon> daemon) {
+
+	CondorError err;
+	std::vector<classad::ClassAd> results;
+	if (!daemon->listTokenRequest("", results, &err)) {
+		fprintf(stderr, "Failed to list remaining token requests: %s\n", err.getFullText().c_str());
+		return;
+	}
+	if (results.empty()) {
+		fprintf(stderr, "Remote daemon reports no un-approved requests pending.\n");
+		return;
+	}
+
+	printf("The following requests remain after auto-approval rule was installed:\n");
+	printf("==================================================\n");
+	for (const auto &request_ad : results) {
+		classad::ClassAdUnParser unp;
+		std::string req_contents_str;
+		unp.SetOldClassAd(true);
+		unp.Unparse(req_contents_str, &request_ad);
+
+		printf("%s\n", req_contents_str.c_str());
+	}
+	printf("==================================================\n");
+	printf("To approve these requests, please run condor_token_request_approve manually.\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -87,8 +120,8 @@ int main(int argc, char *argv[]) {
 	daemon_t dtype = DT_COLLECTOR;
 	std::string pool;
 	std::string name;
-	std::string netblock = "255.255.255.255/0";
-	time_t lifetime = -1;
+	std::string netblock;
+	time_t lifetime = 3600;
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix(argv[i], "lifetime", 1)) {
 			i++;
@@ -149,6 +182,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	config();
+
+	if (netblock.empty()) {
+		fprintf(stderr, "%s: -netblock argument is required.\n"
+			"Example: %s -netblock 192.168.0.0/24\n",
+			argv[0], argv[0]);
+		exit(1);
+	}
 
 	return auto_approve(pool, name, dtype, netblock, lifetime);
 }

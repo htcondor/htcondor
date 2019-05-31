@@ -161,6 +161,27 @@ public:
 		m_request_time = time(NULL);
 	}
 
+	std::string getPublicString() const {
+		std::stringstream ss;
+		std::string bounding_set_info = "<none>";
+		if (!m_authz_bounding_set.empty()) {
+			std::stringstream ss2;
+			bool first = true;
+			for (const auto &authz : m_authz_bounding_set) {
+				if (first) {first = false;}
+				else {ss2 << ",";}
+				ss2 << authz;
+			}
+			bounding_set_info = ss2.str();
+		}
+		ss << "[requested_id = " << m_requested_identity
+			<< "; requester_id = " << m_requester_identity
+			<< "; peer_location = " << m_peer_location
+			<< "; m_authz_bounding_set = " << bounding_set_info
+			<< "]";
+		return ss.str();
+	}
+
 	void setToken(const std::string &token) {
 		m_token = token;
 			// Ensure the token expires 60s after it is made.
@@ -194,7 +215,9 @@ public:
 
 	const std::string &getPeerLocation() const {return m_peer_location;}
 
-	bool static ShouldAutoApprove(const TokenRequest &token_request, time_t now) {
+	bool static ShouldAutoApprove(const TokenRequest &token_request, time_t now,
+		std::string &rule_text)
+	{
 
 			// Only auto-approve requests for the condor identity.
 		if (strncmp(token_request.getRequestedIdentity().c_str(), "condor@", 7)) {
@@ -212,11 +235,12 @@ public:
 		}
 
 		auto peer_location = token_request.getPeerLocation();
+		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %d rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!rule.m_approval_netblock->find_matches_withnetwork(
 					peer_location.c_str(), nullptr)) {
 				char * netblock = rule.m_approval_netblock->print_to_string();
-				dprintf(D_FULLDEBUG|D_SECURITY, "Cannot auto-approve existing request;"
+				dprintf(D_FULLDEBUG|D_SECURITY, "Cannot auto-approve request;"
 					" peer %s does not match netblock %s.\n",
 					peer_location.c_str(),
 					netblock);
@@ -230,7 +254,8 @@ public:
 			}
 			if (token_request.m_request_time > rule.m_expiry_time) {
 				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
-					" because request is after rule expiration.\n");
+					" because request time (%ld) is after rule expiration (%ld).\n",
+					token_request.m_request_time, rule.m_expiry_time);
 				continue;
 			}
 			if (now > (token_request.m_request_time + \
@@ -250,6 +275,11 @@ public:
 					" because it is too old");
 				continue;
 			}
+			std::unique_ptr<char> netblock(rule.m_approval_netblock->print_to_string());
+			std::stringstream ss;
+			ss << "[netblock = " << netblock.get() << "; lifetime_left = "
+				<< (rule.m_expiry_time - now) << "]";
+			rule_text = ss.str();
 			return true;
 		}
 		return false;
@@ -1670,7 +1700,8 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			iter = g_request_map.end();
 		}
 
-		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now)) {
+		std::string rule_text;
+		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
 			auto &token_request = *(iter->second);
 			CondorError err;
 			std::string token;
@@ -1692,6 +1723,8 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 					error_string = "Internal state error.";
 				}
 				result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+				dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
+					token_request.getPublicString().c_str(), rule_text.c_str());
 			}
 		}
 	}
@@ -2052,7 +2085,8 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 	for (auto &iter : g_request_map) {
 		if (error_code) {break;}
 
-		if (!TokenRequest::ShouldAutoApprove(*(iter.second), now)) {
+		std::string rule_text;
+		if (!TokenRequest::ShouldAutoApprove(*(iter.second), now, rule_text)) {
 			continue;
 		}
 		auto &token_request = *(iter.second);
@@ -2074,6 +2108,8 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 			dprintf(D_SECURITY|D_FULLDEBUG,
 				"Auto-approved existing request %d.\n",
 				iter.first);
+			dprintf(D_ALWAYS, "Token request %s passed via auto-approval rule %s.\n",
+				token_request.getPublicString().c_str(), rule_text.c_str());
 		}
 	}
 
