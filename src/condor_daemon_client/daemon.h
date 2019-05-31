@@ -625,11 +625,6 @@ public:
 	bool approveTokenRequest( const std::string &client_id, const std::string &request_id,
 		CondorError *err=nullptr ) noexcept;
 
-		/**
-		 * When authentication fails - but TOKEN is a valid method - this is set to true.
-		 */
-	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
-
 protected:
 	// Data members
 	char* _name;
@@ -651,8 +646,7 @@ protected:
 	bool _tried_locate;
 	bool _tried_init_hostname;
 	bool _tried_init_version;
-	bool _is_configured;
-	bool m_should_try_token_request{false};
+	bool _is_configured; 
 	SecMan _sec_man;
 	StringList daemon_list;
 
@@ -878,7 +872,7 @@ protected:
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
 
 		/**
 		   Internal function used by public versions of startCommand().
