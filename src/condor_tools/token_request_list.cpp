@@ -43,7 +43,7 @@ void print_usage(const char *argv0) {
 }
 
 int
-list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, std::string request_id)
+approve_token(const std::string &pool, const std::string &name, daemon_t dtype, std::string request_id)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -146,5 +146,5 @@ int main(int argc, char *argv[]) {
 
 	config();
 
-	return list_tokens(pool, name, dtype, reqid);
+	return approve_token(pool, name, dtype, reqid);
 }

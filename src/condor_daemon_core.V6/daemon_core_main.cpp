@@ -162,8 +162,6 @@ public:
 
 	void setToken(const std::string &token) {
 		m_token = token;
-			// Ensure the token expires 60s after it is made.
-		m_lifetime = time(NULL) - m_request_time + 60;
 		m_state = State::Successful;
 	}
 
@@ -248,14 +246,7 @@ private:
 	stats_entry_sum_ema_rate<uint64_t> m_request_rate;
 };
 
-	// We allow 60 seconds for the remote side to pick up the result.
-	// During that time, an attacker can try to brute-force the request ID.
-	// This is a variant of the birthday paradox: what's the likelihood of
-	// N random selections out of D options being the same as your selection?
-	// Turns out, the answer is 1 - ((D-1)/D) ^ N.  Setting D = 9999999 and
-	// N = 60*10, there is a 0.006% chance of a determined attacker guessing
-	// a 7-digit number
-RequestRateLimiter g_request_limit(10);
+RequestRateLimiter g_request_limit(50);
 
 void cleanup_request_map() {
 	std::vector<int> requests_to_delete;
@@ -1514,13 +1505,13 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		error_code = 3;
 		error_string = "Too many requests in the system.";
 	} else {
-		unsigned request_id = get_csrng_uint() % 10000000;
+		unsigned request_id = get_random_uint() % 1000000;
 		auto iter = g_request_map.find(request_id);
 		int idx = 0;
 			// Try a few randomly generated request IDs; to avoid strange issues,
 			// bail out after a fixed limit.
 		while ((iter != g_request_map.end() && (idx++ < 5))) {
-			request_id = get_csrng_uint() % 10000000;
+			request_id = get_random_uint() % 1000000;
 			iter = g_request_map.find(request_id);
 		}
 		if (iter != g_request_map.end()) {
@@ -1532,8 +1523,6 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		}
 		std::string request_id_str;
 		formatstr(request_id_str, "%d", request_id);
-			// Note we currently store this as a string; this way we can come back later
-			// and introduce alphanumeric characters if we so wish.
 		result_ad.InsertAttr(ATTR_REQUEST_ID, request_id_str);
 	}
 
@@ -1562,35 +1551,31 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	if (!g_request_limit.AllowIncomingRequest()) {
-		error_code = 5;
-		error_string = "Request rate limit hit.";
+	std::string client_id;
+	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+		error_code = 2;
+		error_string = "No client ID provided.";
 	}
 
-	std::string client_id;
 	std::string request_id_str;
+	if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
+		error_code = 2;
+		error_string = "No request ID provided.";
+	}
 	int request_id = -1;
-	if (!error_code) {
-		if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
-			error_code = 2;
-			error_string = "No client ID provided.";
-		}
-
-		if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
-			error_code = 2;
-			error_string = "No request ID provided.";
-		}
-		try {
-			request_id = std::stol(request_id_str);
-		} catch (...) {
-			error_code = 2;
-			error_string = "Unable to convert request ID to integer.";
-		}
+	try {
+		request_id = std::stol(request_id_str);
+	} catch (...) {
+		error_code = 2;
+		error_string = "Unable to convert request ID to integer.";
 	}
 
 	std::string token;
 	auto iter = (request_id >= 0) ? g_request_map.find(request_id) : g_request_map.end();
-	if ((request_id >= 0) && (iter == g_request_map.end())) {
+	if (!g_request_limit.AllowIncomingRequest()) {
+		error_code = 5;
+		error_string = "Request rate limit hit.";
+	} else if ((request_id >= 0) && (iter == g_request_map.end())) {
 		error_code = 3;
 		error_string = "Request ID is not known.";
 	} else if (iter->second->getClientId() != client_id) {
@@ -1605,10 +1590,6 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 			token = req.getToken();
 			// Remove the token from the request list; no one else should be able to retrieve it.
 			g_request_map.erase(iter);
-			if (token.empty()) {
-				error_code = 6;
-				error_string = "Internal state error.";
-			}
 			break;
 		case TokenRequest::State::Failed:
 			error_code = 4;
@@ -1627,9 +1608,6 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 	} else {
-			// NOTE: client always expects this attribute to
-			// be set; if it is set to an empty string, then
-			// it knows to poll again.
 		result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
 	}
 
@@ -1657,9 +1635,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-		// NOTE: this filter string may be empty
 	std::string request_filter_str;
-	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty()) {
+	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str)) {
 		try {
 			std::stol(request_filter_str);
 		} catch (...) {
@@ -1671,7 +1648,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	stream->encode();
 
 	classad::ClassAd result_ad;
-	for (const auto & iter : g_request_map) {
+	if (!error_code) for (const auto & iter : g_request_map) {
 		if (error_code) break;
 
 		const auto &request_id = iter.first;

@@ -94,8 +94,6 @@
 #include <algorithm>
 #include "pccc.h"
 #include "shared_port_endpoint.h"
-#include "condor_auth_passwd.h"
-#include "condor_secman.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -1483,7 +1481,7 @@ Scheduler::count_jobs()
 		// Check to see if we need to perform a token request.
 	auto collector_list = daemonCore->getCollectorList();
 	if (collector_list && collector_list->shouldTryTokenRequest()) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd should perform a token request\n");
 		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
 			"Scheduler::try_token_request", this);
 	} else if (num_updates == 0) {
@@ -17430,7 +17428,7 @@ Scheduler::try_token_request()
 			return;
 		}
 		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 1000);
+			std::to_string(get_random_uint() % 1000);
 
 		auto collector_list = daemonCore->getCollectorList();
 		if (!collector_list || collector_list->IsEmpty()) {
@@ -17480,12 +17478,7 @@ Scheduler::try_token_request()
 				"Scheduler::try_token_request", this);
 			return;
 		} else {
-				// Flush the cached result of the token search.
-			Condor_Auth_Passwd::retry_token_search();
-				// Flush out the security sessions; will need to force a re-auth.
-			daemonCore->getSecMan()->reconfig();
-				// Reset the timeout timer, causing the schedd to advertise itself.
-			daemonCore->Reset_Timer(timeoutid,0,1);
+			reconfig();
 		}
 		m_token_client_id = "";
 	}

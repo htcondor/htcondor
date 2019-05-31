@@ -2578,8 +2578,6 @@ Daemon::startTokenRequest( const std::string identity,
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
 		return false;
 	}
-		// If no token lifetime is provided (or lifetime is set to 0), then
-		// we rely on the server to decide on a lifetime for us.
 	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
 		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
@@ -2678,7 +2676,7 @@ Daemon::startTokenRequest( const std::string identity,
 
 	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token) || token.empty()) {
 		if (result_ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id)
-			&& !request_id.empty())
+			|| request_id.empty())
 		{
 			return true;
 		}
