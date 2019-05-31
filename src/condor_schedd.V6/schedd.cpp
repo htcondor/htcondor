@@ -629,6 +629,7 @@ Scheduler::Scheduler() :
 	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
+	m_token_daemon = nullptr;
 
 	stats.InitMain();
 
