@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_RunAsNobody = false;
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
+	m_committed_time_finalized = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -638,7 +639,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     int int_value = (last_ckpt_time > current_start_time) ?
                         last_ckpt_time : current_start_time;
 
-    if( int_value > 0 ) {
+    if( int_value > 0 && !m_committed_time_finalized ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		int delta = (int)time(NULL) - int_value;
@@ -651,6 +652,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
 		slot_time += slot_weight * delta;
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
+
+		m_committed_time_finalized = true;
     }
 
 	CommitSuspensionTime(jobAd);
