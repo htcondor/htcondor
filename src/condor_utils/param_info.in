@@ -2510,7 +2510,35 @@ tags=io,condor_auth_claim
 default=false
 description=Disable client host checks for SSL authentication.
 type=bool
-tags=condor_auth_sl
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CERTFILE]
+default=/etc/pki/tls/certs/localhost.crt
+win32_default=
+description=Location of the host X509 certificate
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_KEYFILE]
+default=/etc/pki/tls/private/localhost.key
+win32_default=
+description=Location of the host private key
+type=path
+tags=condor_auth_ssl
 
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)

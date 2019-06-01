@@ -56,7 +56,13 @@ extern "C" {
 #define AUTH_SSL_SERVER_CERTFILE_STR "AUTH_SSL_SERVER_CERTFILE"
 #define AUTH_SSL_SERVER_KEYFILE_STR "AUTH_SSL_SERVER_KEYFILE"
 
-#define AUTH_SSL_DEFAULT_CIPHERLIST "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
+// Updated cipher list taken from:
+//  https://mozilla.github.io/server-side-tls/ssl-config-generator/?server=apache-2.4.34&openssl=1.0.0&hsts=yes&profile=intermediate
+// Not that we have the same compatibility concerns as the browser environment; the prior HTCondor default ciphers were:
+//  ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH
+// That was compatible with the below list; the below list eliminates crappy options like `ECDH-RSA-RC4-SHA` that
+// were in the previous default.
+#define AUTH_SSL_DEFAULT_CIPHERLIST "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"
 
 class Condor_Auth_SSL final : public Condor_Auth_Base {
  public:
@@ -99,6 +105,13 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 		int& output_len) override;
     virtual int unwrap(const char* input, int input_len, char*& output,
 		int& output_len) override;
+
+	// Determines if appropriate auth'n credentials are available
+	static bool should_try_auth();
+
+	// `should_try_auth` caches its results to avoid hammering the
+	// filesystem; this resets the cache results.
+	static void retry_cert_search() {m_should_search_for_cert = true;}
 
  private:
 
@@ -227,6 +240,10 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	std::string m_scitokens_file;
 	std::string m_scitokens_auth_name;
 	std::string m_client_scitoken;
+
+		// Status of potential SSL auth
+	static bool m_should_search_for_cert; // Should we search for TLS certificates?
+	static bool m_cert_avail; // Is there a known available TLS certificate?
 };
 
 #endif
