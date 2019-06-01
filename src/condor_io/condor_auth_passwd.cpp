@@ -2642,11 +2642,6 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 	check_pool_password();
 
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
-	std::string issuer;
-	if (param(issuer, "TRUST_DOMAIN")) {
-		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
-		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
-	}
 	std::vector<std::string> creds;
 	CondorError err;
 	if (!listNamedCredentials(creds, &err)) {

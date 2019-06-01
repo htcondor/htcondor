@@ -387,6 +387,12 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 void
 SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 {
+	std::string issuer;
+	if (param(issuer, "TRUST_DOMAIN")) {
+		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
+	}
+
 	std::string method_list_str;
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
@@ -1824,6 +1830,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf ( D_SECURITY, "SECMAN: server responded with:\n");
 				dPrintAd( D_SECURITY, auth_response );
+			}
+
+				// Record the remote trust domain, if present
+			std::string trust_domain;
+			if (m_auth_info.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+				m_sock->setTrustDomain(trust_domain);
 			}
 
 				// Get rid of our sinful address in what will become
