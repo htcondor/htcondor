@@ -630,7 +630,6 @@ Scheduler::Scheduler() :
 	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
-	m_token_daemon = nullptr;
 
 	stats.InitMain();
 
@@ -1261,6 +1260,44 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 }
 
 
+	// Check to see if we need to perform a token request.
+void Scheduler::calc_token_requests(DaemonList *collector_list, const std::string &identity) {
+	if (!collector_list) {return;}
+
+	if (!collector_list->shouldTryTokenRequest()) {return;}
+
+	dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
+	Daemon *coll;
+	collector_list->rewind();
+	std::set<std::pair<std::string, Daemon*>> failed_trust_domains;
+	while (collector_list->Next(coll)) {
+		if (coll->shouldTryTokenRequest() && !coll->getTrustDomain().empty()) {
+			failed_trust_domains.insert({coll->getTrustDomain(), coll});
+		}
+	}
+		// Avoiding requesting tokens for already-pending requests.
+	for (const auto &pending_request : m_token_requests) {
+		if (pending_request.m_identity != identity) {
+			continue;
+		}
+		for (auto it = failed_trust_domains.begin(); it != failed_trust_domains.end();) {
+			if (it->first == pending_request.m_trust_domain) {
+				it = failed_trust_domains.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+	for (const auto &trust_domain : failed_trust_domains) {
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.first.c_str());
+		m_token_requests.emplace_back();
+		auto &back = m_token_requests.back();
+		back.m_trust_domain = trust_domain.first;
+		back.m_daemon = trust_domain.second;
+	}
+}
+
+
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1533,11 +1570,8 @@ Scheduler::count_jobs()
 
 		// Check to see if we need to perform a token request.
 	auto collector_list = daemonCore->getCollectorList();
-	if (collector_list && collector_list->shouldTryTokenRequest()) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
-		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
-	} else if (num_updates == 0) {
+	calc_token_requests(collector_list, "");
+	if (!(collector_list && collector_list->shouldTryTokenRequest()) && (num_updates == 0)) {
 		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
 	}
 
@@ -1554,6 +1588,15 @@ Scheduler::count_jobs()
 			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
 			FlockCollectors->next( d );
 		}
+			// Note that flocking updates are always non-blocking; hence, we may
+			// not notice that a token request is necessary until the next interval.
+		calc_token_requests(FlockCollectors, "");
+	}
+
+	if (!m_token_requests.empty() && m_token_requests_tid == -1) {
+		m_token_requests_tid = daemonCore->Register_Timer( 0,
+			(TimerHandlercpp)&Scheduler::try_token_requests,
+			"Scheduler::try_token_requests", this );
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -13694,6 +13737,10 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
+	// Clear out any pending token requests.
+	m_token_requests.clear();
+	m_initial_update = true;
+
 	first_time_in_init = false;
 }
 
@@ -13883,12 +13930,6 @@ Scheduler::Register()
 
 	m_xfer_queue_mgr.RegisterHandlers();
 
-	// Clear out any pending token requests.
-	m_token_client_id = "";
-	m_token_request_id = "";
-		// We don't own this memory - just clear the reference.
-	m_token_daemon = nullptr; 
-	m_initial_update = true;
 }
 
 void
@@ -17490,69 +17531,87 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	return TRUE;
 }
 
+
 void
-Scheduler::try_token_request()
+Scheduler::try_token_requests()
+{
+	bool should_reschedule = false;
+	dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		m_token_requests.size());
+	for (auto & request : m_token_requests)
+	{
+		should_reschedule |= try_token_request(request);
+	}
+	if (should_reschedule) {
+		daemonCore->Reset_Timer(m_token_requests_tid, 5, 1);
+		dprintf(D_SECURITY|D_FULLDEBUG, "Will reschedule another poll of requests.\n");
+	} else {
+		daemonCore->Cancel_Timer(m_token_requests_tid);
+		m_token_requests_tid = -1;
+	}
+	m_token_requests.erase(
+		std::remove_if(m_token_requests.begin(),
+			m_token_requests.end(),
+			[](const PendingRequest &req) {return req.m_client_id.empty();}),
+		m_token_requests.end()
+	);
+}
+
+
+bool
+Scheduler::try_token_request(PendingRequest &req)
 {
 	dprintf(D_SECURITY, "Trying token request to remote host.\n");
+	if (!req.m_daemon) {
+		dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+		return false;
+	}
 	std::string token;
-	if (m_token_client_id.empty()) {
-		m_token_daemon = nullptr;
-		m_token_request_id = "";
+	if (req.m_client_id.empty()) {
+		req.m_request_id = "";
 		std::vector<char> hostname;
 		hostname.reserve(MAXHOSTNAMELEN);
 		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
 			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-			return;
+			return false;
 		}
-		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
+		req.m_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
 			std::to_string(get_csrng_uint() % 1000);
-
-		auto collector_list = daemonCore->getCollectorList();
-		if (!collector_list || collector_list->IsEmpty()) {
-			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
-			m_token_client_id = "";
-			return;
-		}
-		Daemon *daemon = nullptr;
-		collector_list->Rewind();
-		collector_list->Current(daemon);
-
-		if (!daemon) {
-			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
-			m_token_client_id = "";
-			return;
-		}
 
 		std::string request_id;
 		std::vector<std::string> authz_list;
 		authz_list.push_back("ADVERTISE_SCHEDD");
 		int lifetime = -1;
 		CondorError err;
-		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
-			token, request_id, &err))
+		if (!req.m_daemon->startTokenRequest(req.m_identity, authz_list, lifetime,
+			req.m_client_id, token, request_id, &err))
 		{
 			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
+			req.m_client_id = "";
+			return false;
 		}
-		m_token_request_id = request_id;
-		m_token_daemon = daemon;
-		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
-		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
+		if (token.empty()) {
+			req.m_request_id = request_id;
+			dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
+			return true;
+		} else {
+			dprintf(D_ALWAYS, "Token request auto-approved.\n");
+			Condor_Auth_Passwd::retry_token_search();
+			daemonCore->getSecMan()->reconfig();
+			daemonCore->Reset_Timer(timeoutid,0,1);
+			req.m_client_id = "";
+		}
 	} else {
 		CondorError err;
-		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
+		if (!req.m_daemon->finishTokenRequest(req.m_client_id, req.m_request_id, token, &err)) {
 			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
+			req.m_client_id = "";
+			return false;
 		}
 		if (token.empty()) {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
-			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-				"Scheduler::try_token_request", this);
-			return;
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", req.m_request_id.c_str());
+			return true;
 		} else {
 			dprintf(D_ALWAYS, "Token request approved.\n");
 				// Flush the cached result of the token search.
@@ -17562,9 +17621,10 @@ Scheduler::try_token_request()
 				// Reset the timeout timer, causing the schedd to advertise itself.
 			daemonCore->Reset_Timer(timeoutid,0,1);
 		}
-		m_token_client_id = "";
+		req.m_client_id = "";
 	}
 	if (!token.empty()) {
 		write_out_token("schedd_auto_generated_token", token);
 	}
+	return false;
 }

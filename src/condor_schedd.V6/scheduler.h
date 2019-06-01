@@ -1084,13 +1084,27 @@ private:
 	bool m_matchPasswordEnabled;
 
 	// State for token request.
-	void try_token_request();
+	void try_token_requests();
 	// Right now, we will at most have one token request in flight;
 	// when we are ready to do this for multiple pools at a time, we
 	// will make these data structs into vectors.
-	std::string m_token_request_id;
-	std::string m_token_client_id;
-	Daemon *m_token_daemon;
+
+	struct PendingRequest {
+		std::string m_request_id;
+		std::string m_client_id;
+		std::string m_identity;
+		std::string m_trust_domain;
+		Daemon *m_daemon{nullptr};
+	};
+
+		// Try a specific token request; returns True if the timer
+		// should reschedule.
+	bool try_token_request(PendingRequest &);
+	void calc_token_requests(DaemonList *collector_list, const std::string &identity);
+
+	std::vector<PendingRequest> m_token_requests;
+	int m_token_requests_tid{-1};
+
 	bool m_initial_update{true}; // First update to the collector after reconfig blocks so we can trigger
 					// token auth if needed
 
