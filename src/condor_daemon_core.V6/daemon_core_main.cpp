@@ -1527,7 +1527,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Unable to generate new request ID");
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
 		} else {
-			g_request_map[request_id] = std::unique_ptr<TokenRequest>( 
+			g_request_map[request_id] = std::unique_ptr<TokenRequest>(
 				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
 		}
 		std::string request_id_str;
@@ -1576,6 +1576,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 			error_string = "No client ID provided.";
 		}
 
+		// See comment in handle_dc_list_token_request().
 		if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
 			error_code = 2;
 			error_string = "No request ID provided.";
@@ -1623,7 +1624,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 	}
 
 	classad::ClassAd result_ad;
-	if (error_code) {	
+	if (error_code) {
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 	} else {
@@ -1657,7 +1658,12 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-		// NOTE: this filter string may be empty
+	// While it looks like we could use EvaluateAttrInt() here, we're storing
+	// request IDs as strings in case in turns out people don't like random
+	// 7-digit integers.  The std::stol() call is an optimization which we'll
+	// have to remove or replace if we cahnge the request ID format.
+	//
+	// The filter is optional; if it's absent, we'll list all pending requests.
 	std::string request_filter_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty()) {
 		try {
@@ -1672,7 +1678,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 
 	classad::ClassAd result_ad;
 	for (const auto & iter : g_request_map) {
-		if (error_code) break;
+		if (error_code) { break; }
 
 		const auto &request_id = iter.first;
 		const auto &token_request = iter.second;
@@ -1757,6 +1763,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
+	// See comment in handle_dc_list_token_request().
 	std::string request_id_str;
 	if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty())
 	{
