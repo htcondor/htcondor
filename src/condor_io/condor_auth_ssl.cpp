@@ -223,7 +223,7 @@ bool Condor_Auth_SSL::Initialize()
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
 #else
-		 !(SSL_CTX_set_options_ptr = (unsigned long (*)(SSL_CX *, unsigned long))dlsym(dl_hdl, "SSL_CTX_set_options")) ||
+		 !(SSL_CTX_set_options_ptr = (unsigned long (*)(SSL_CTX *, unsigned long))dlsym(dl_hdl, "SSL_CTX_set_options")) ||
 #endif
 		 !(SSL_peek_ptr = (int (*)(SSL *ssl, void *buf, int num))dlsym(dl_hdl, "SSL_peek")) ||
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
