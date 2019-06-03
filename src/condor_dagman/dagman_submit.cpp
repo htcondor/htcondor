@@ -23,6 +23,8 @@
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "condor_string.h"
+#include "submit_protocol.h"
+#include "submit_utils.h"
 
 #include <sstream>
 
@@ -67,6 +69,7 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
   return true;
 }
 
+#if 0
 static bool
 submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
@@ -179,24 +182,95 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   
   return true;
 }
+#endif
 
 //-------------------------------------------------------------------------
 // NOTE: this and submit_try should probably be merged into a single
 // method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
+// MRC: Merging these functions as part of transition to submit_utils
 static bool
-do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
-{
-	MyString cmd; // for debug output
-	args.GetArgsStringForDisplay( &cmd );
-	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.Value() );
-  
+do_submit( SubmitHash *submitHash, CondorID &condorID, bool prohibitMultiJobs ) {
+
+	ActualScheddQ *scheddQ = NULL;
 	bool success = false;
+	CondorError errorStack;
+	DCSchedd* mySchedd = NULL;
+	int clusterId = -1;
+	std::string scheddAddress;
+	std::string scheddName;
+	std::string scheddVersion;
 
-	success = submit_try( args, condorID, prohibitMultiJobs );
+	// DEBUG: Dump the contents of the hash to a file on disk.
+	// Is there a better way to output the contents of the hash?
+	/*
+	FILE* dumpFile;
+	dumpFile = safe_fopen_wrapper_follow( "/scratch/condor/dagman-submit-utils/submitHash.out", "w" );
+	submitHash->dump( dumpFile, 0 );
+	fclose( dumpFile );
+	*/
 
-	if( !success ) {
-	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
-		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.Value() );
+	// Establish a connection to the schedd
+	mySchedd = new DCSchedd( NULL );
+	if ( !mySchedd->locate() ) {
+		debug_printf( DEBUG_NORMAL, "ERROR: Can't find address of local schedd. Job submission failed.\n" );
+		return false;
+	}
+
+	// MRC: The following is a combination of code that doesn't work and
+	// various notes. This is where we want to connect to the schedd and queue
+	// the submit hash.
+
+	/*
+	*scheddQ = new ActualScheddQ();
+	if ( scheddQ->Connect( *mySchedd, errorStack ) == 0 ) {
+		delete ScheddQ;
+		debug_printf( DEBUG_NORMAL, "ERROR: Unable to connect to local queue manager: %s\n", errorStack.getFullText(true).c_str() );
+		return false;
+	}
+
+	// Now submit the jobs
+	// Look in submit.cpp line 1076 where it calls submit_jobs(), I think that's what we're looking for
+	// The magic really starts around line 1895
+	// The actual submission seems to happen around lines 2008-2028, but even here it branches out to other functions...
+	// And then there's queue_item() starting at line 2312
+	//init_vars( submitHash, clusterId, o.vars );
+
+	static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
+	void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
+	{
+		sprintf(ClusterString, "%d", cluster_id);
+		strcpy(ProcessString, "0");
+
+		// establish live buffers for $(Cluster) and $(Process), and other loop variables
+		// Because the user might already be using these variables, we can only set the explicit ones
+		// unconditionally, the others we must set only when not already set by the user.
+		hash.set_live_submit_variable(SUBMIT_KEY_Cluster, ClusterString);
+		hash.set_live_submit_variable(SUBMIT_KEY_Process, ProcessString);
+
+		vars.rewind();
+		char * var;
+		while ((var = vars.next())) { hash.set_live_submit_variable(var, EmptyItemString, false); }
+
+		// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
+		hash.optimize();
+		init_vars only has to happen once
+	set_vars has to happen for every item
+	then make job ad
+	then MySendJobAttributes
+
+	MySendJobAttributes can become a non-virtual member of the AbstractQ class
+		-> references to MyQ become this.
+
+	init_vars and set_vars could become static members of the AbstractQ class
+		-> but really this belongs in the ItemData structure
+
+	int rval = queue_item(o.queue_num, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+
+	ScheddQ->disconnect( true, errstack );
+	*/
+
+	if ( !success ) {
+	    debug_printf( DEBUG_QUIET, "ERROR: Submit attempt failed\n" );
 	}
 
 	return success;
@@ -210,17 +284,64 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* directory, const char *workflowLogFile,
 			   bool hold_claim, const MyString &batchName )
 {
-	TmpDir		tmpDir;
-	MyString	errMsg;
-	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to node directory %s: %s\n",
-				directory, errMsg.Value() );
-		return false;
+	bool success = false;
+	MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
+	SubmitHash submitHash;
+
+	// Start by populating the hash with some parameters
+	submitHash.init();
+
+	// Parse the submit file and add its contents to the hash
+	// TODO: Make sure the file exists and is readable! If not throw an error and exit.
+	char* qline = NULL;
+	int rval;
+	std::string errmsg;
+
+	FILE* fp = safe_fopen_wrapper_follow( cmdFile, "r" );
+	MacroStreamYourFile ms( fp, FileMacroSource );
+	for ( ;; ) {
+		if ( feof(fp) ) { 
+			break; 
+		}
+		rval = submitHash.parse_up_to_q_line( ms, errmsg, &qline );
+		if ( rval ) {
+			break;
+		}
+	}
+	fclose(fp);
+
+	// Add the submit filename to the hash (do we actually need this?)
+	submitHash.insert_submit_filename( cmdFile, FileMacroSource );
+
+	// NOTE: we specify the job ID of DAGMan using only its cluster ID
+	// so that it may be referenced by jobs in their priority
+	// attribute (which needs an int, not a string).  Doing so allows
+	// users to effectively "batch" jobs by DAG so that when they
+	// submit many DAGs to the same schedd, all the ready jobs from
+	// one DAG complete before any jobs from another begin.
+	submitHash.set_arg_variable( ATTR_DAG_NODE_NAME_ALT, DAGNodeName );
+	submitHash.set_arg_variable( ATTR_DAGMAN_JOB_ID, IntToStr( dm.DAGManJobId._cluster ).c_str() );
+
+	if ( batchName != "" ) {
+		submitHash.set_arg_variable( SUBMIT_KEY_BatchName, batchName.Value() );
 	}
 
-	ArgList args;
+	std::string submitEventNotes = std::string( "DAG Node: " ) + std::string( DAGNodeName );
+	submitHash.set_arg_variable( "submit_event_notes", submitEventNotes.c_str() );
 
+	// We need to append the DAGman default log file to the log file list
+	submitHash.set_arg_variable( "dagman_log", workflowLogFile );
+
+	// Now add the event mask
+	std::string workflowMask = "\"" + std::string( getEventMask() ) + "\"";
+	submitHash.set_arg_variable( ATTR_DAGMAN_WORKFLOW_MASK, workflowMask.c_str() );
+	
+
+	// MRC: Original guts of the condor_submit function. Left here for reference.
+	// I've already added the first few arguments into the submit hash. Still
+	// need to add the rest.
+
+	/*
 	// construct arguments to condor_submit to add attributes to the
 	// job classad which identify the job's node name in the DAG, the
 	// node names of its parents in the DAG, and the job ID of DAGMan
@@ -384,7 +505,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	args.GetArgsStringForDisplay( &display );
 	int cmdLineSize = display.Length();
 
-	parentNameArgs.GetArgsStringForDisplay( &display );
 	int DAGParentNodeNamesLen = display.Length();
 		// how many additional chars must we still add to command line
 	        // NOTE: according to the POSIX spec, the args +
@@ -405,15 +525,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
 	args.AppendArg( cmdFile );
+	*/
 
-	bool success = do_submit( args, condorID, dm.prohibitMultiJobs );
-
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to original directory: %s\n",
-				errMsg.Value() );
-		success = false;
-	}
+	// Finally, do the actual submit.
+	// Depending on how complicated this is, we should think about just merging
+	// it into this condor_submit() function.
+	success = do_submit( &submitHash, condorID, dm.prohibitMultiJobs );
 
 	return success;
 }
