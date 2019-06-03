@@ -119,6 +119,8 @@ bool hostname_match(const char *match_pattern, const char *hostname)
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
+#else
+static unsigned long (*SSL_CTX_set_options_ptr)(SSL_CTX *, unsigned long) = NULL;
 #endif
 static int (*SSL_peek_ptr)(SSL *ssl, void *buf, int num) = NULL;
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
@@ -220,6 +222,8 @@ bool Condor_Auth_SSL::Initialize()
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
+#else
+		 !(SSL_CTX_set_options_ptr = (unsigned long (*)(SSL_CX *, unsigned long))dlsym(dl_hdl, "SSL_CTX_set_options")) ||
 #endif
 		 !(SSL_peek_ptr = (int (*)(SSL *ssl, void *buf, int num))dlsym(dl_hdl, "SSL_peek")) ||
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
@@ -299,6 +303,8 @@ bool Condor_Auth_SSL::Initialize()
 #else
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
+#else
+	SSL_CTX_set_options_ptr = SSL_CTX_set_options;
 #endif
 	SSL_peek_ptr = SSL_peek;
 	SSL_CTX_free_ptr = SSL_CTX_free;
@@ -1754,10 +1760,16 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		goto setup_server_ctx_err;
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv3, NULL );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1, NULL );
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1_1, NULL );
+#endif
+#else
+	(*SSL_CTX_set_options)( ctx, SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+#endif
 
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
