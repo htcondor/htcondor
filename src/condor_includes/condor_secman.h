@@ -175,7 +175,7 @@ public:
 	static	int 			getAuthBitmask ( const char * methods );
 	static void             getAuthenticationMethods( DCpermission perm, MyString *result );
 
-	static	MyString 		getDefaultAuthenticationMethods();
+	static	MyString 		getDefaultAuthenticationMethods( DCpermission perm );
 	static	MyString 		getDefaultCryptoMethods();
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);

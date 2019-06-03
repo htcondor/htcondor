@@ -42,7 +42,7 @@ $append_config = "
 my $pid = $$;
 my $submit_file = "$testname$pid.sub";
 my $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
 queue";
 my $submitfile = "$testname$pid.sub";

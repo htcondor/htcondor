@@ -249,7 +249,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 	  message ( STATUS "external configured (EXT_GLIBC_FOUND=${EXT_GLIBC_FOUND})" )
 	  set( EXT_GLIBC_FOUND ${EXT_GLIBC_FOUND} PARENT_SCOPE )
 
-	  condor_post_external( glibc OFF OFF )
+	  condor_post_external( glibc OFF OFF "" )
 
 	  install ( FILES ${GLIBC_INSTALL_LOC}/lib/libc.a DESTINATION ${C_LIB} RENAME libcondor_c.a)
 	  install ( FILES ${GLIBC_INSTALL_LOC}/lib/libnss_files.a DESTINATION ${C_LIB} RENAME libcondor_nss_files.a)

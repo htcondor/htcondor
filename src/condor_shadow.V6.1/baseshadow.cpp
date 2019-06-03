@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_RunAsNobody = false;
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
+	m_committed_time_finalized = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -156,8 +157,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	// Calling init_user_ids() while in user priv causes badness.
 	// Make sure we're in another priv state.
 	set_condor_priv();
-	if ( !init_user_ids(owner.Value(), domain.Value())) {
-		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.Value() );
+	if ( !init_user_ids(owner.c_str(), domain.c_str())) {
+		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.c_str() );
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
 		
@@ -167,8 +168,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			dprintf(D_ALWAYS, "trying init_user_ids() as user nobody\n" );
 			
 			owner="nobody";
-			domain=NULL;
-			if (!init_user_ids(owner.Value(), domain.Value()))
+			domain="";
+			if (!init_user_ids(owner.c_str(), domain.c_str()))
 			{
 				dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			}
@@ -231,16 +232,16 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 	if (wantClaiming) {
-		MyString startdSinful;
-		MyString claimid;
+		std::string startdSinful;
+		std::string claimid;
 
 			// Pull startd addr and claimid out of the jobad
 		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
 		jobAd->LookupString(ATTR_CLAIM_ID, claimid);
 
-		dprintf(D_ALWAYS, "%s is true, trying to claim startd %s\n", ATTR_CLAIM_STARTD, startdSinful.Value());
+		dprintf(D_ALWAYS, "%s is true, trying to claim startd %s\n", ATTR_CLAIM_STARTD, startdSinful.c_str());
 
-		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.Value(), claimid.Value());
+		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.c_str(), claimid.c_str());
 	
 		classy_counted_ptr<DCMsgCallback> cb = 
 			new DCMsgCallback((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
@@ -299,14 +300,14 @@ int BaseShadow::cdToIwd() {
 		p = set_root_priv();
 #endif
 	
-	if (chdir(iwd.Value()) < 0) {
+	if (chdir(iwd.c_str()) < 0) {
 		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
 		hold_reason.formatstr("Cannot access initial working directory %s: %s",
-		                    iwd.Value(), strerror(chdir_errno));
+		                    iwd.c_str(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		iRet = -1;
@@ -638,7 +639,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     int int_value = (last_ckpt_time > current_start_time) ?
                         last_ckpt_time : current_start_time;
 
-    if( int_value > 0 ) {
+    if( int_value > 0 && !m_committed_time_finalized ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		int delta = (int)time(NULL) - int_value;
@@ -651,6 +652,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
 		slot_time += slot_weight * delta;
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
+
+		m_committed_time_finalized = true;
     }
 
 	CommitSuspensionTime(jobAd);
@@ -838,10 +841,10 @@ void BaseShadow::initUserLog()
 		if ( ! jobAd->LookupInteger(ATTR_ULOG_USE_XML, use_classad)) { use_classad = 0; }
 		uLog.setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
 		if(logfiles.size() > 1) {
-			MyString msk;
+			std::string msk;
 			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk.Value());
-			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.Value());
+			Tokenize(msk);
+			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.c_str());
 			while(const char* mask = GetNextToken(",",true)) {
 				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
 				uLog.AddToMask(ULogEventNumber(atoi(mask)));
@@ -937,7 +940,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
 	struct rusage run_remote_rusage;
 	JobTerminatedEvent event;
-	MyString corefile;
+	std::string corefile;
 
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
 
@@ -994,7 +997,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
-			event.setCoreFile( corefile.Value() );
+			event.setCoreFile( corefile.c_str() );
 		}
 
 		if (!uLog.writeEvent (&event,jobAd)) {

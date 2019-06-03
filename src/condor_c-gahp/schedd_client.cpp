@@ -1524,6 +1524,13 @@ handle_gahp_command(char ** argv, int argc) {
 			init_done = true;
 		}
 		return TRUE;
+	} else if (!strcasecmp(argv[0], GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE)) {
+		if (argc != 2) {
+			dprintf(D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return false;
+		}
+		param_insert("SCITOKENS_FILE", argv[1]);
+		return true;
 	}
 
 	dprintf (D_ALWAYS, "Invalid command %s\n", argv[0]);

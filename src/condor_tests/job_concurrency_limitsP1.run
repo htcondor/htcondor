@@ -50,7 +50,7 @@ my $partitionable_condor_config = '
 	CONCURRENCY_LIMIT_DEFAULT = 1
 	CONCURRENCY_LIMIT_DEFAULT_SMALL = 1
 	CONCURRENCY_LIMIT_DEFAULT_LARGE = 1
-	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_INTERVAL = 2
 ';
 
 CondorTest::StartCondorWithParams(
@@ -135,6 +135,7 @@ $taskname = "";
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = UNDEFINED:2
@@ -166,6 +167,7 @@ if($waitforitres == 1) {
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = large.license
@@ -196,6 +198,7 @@ if($waitforitres == 1) {
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = small.license

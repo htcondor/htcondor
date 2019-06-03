@@ -20,6 +20,7 @@
 #include "condor_common.h" 
 #include "condor_snutils.h"
 #include "condor_debug.h"
+#include "condor_random_num.h"
 #include <limits>
 
 #include "stl_string_utils.h"
@@ -482,6 +483,72 @@ size_t filename_offset_from_path(std::string & pathname)
 #endif
 	}
 	return ix;
+}
+
+// if len is 10, this means 10 random ascii characters from the set.
+void
+randomlyGenerateInsecure(std::string &str, const char *set, int len)
+{
+	int i;
+	int idx;
+	int set_len;
+
+    if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	set_len = (int)strlen(set);
+
+	// now pick randomly from the set and fill stuff in
+	for (i = 0; i < len ; i++) {
+		idx = get_random_int_insecure() % set_len;
+		str[i] = set[idx];
+	}
+}
+
+#if 0
+void
+randomlyGeneratePRNG(std::string &str, const char *set, int len)
+{
+	if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	auto set_len = strlen(set);
+	for (int idx = 0; idx < len; idx++) {
+		auto rand_val = get_random_int_insecure() % set_len;
+		str[idx] = set[rand_val];
+	}
+}
+#endif
+
+void
+randomlyGenerateInsecureHex(std::string &str, int len)
+{
+	randomlyGenerateInsecure(str, "0123456789abcdef", len);
+}
+
+void
+randomlyGenerateShortLivedPassword(std::string &str, int len)
+{
+	// Create a randome password of alphanumerics
+	// and safe-to-print punctuation.
+	//
+	//randomlyGeneratePRNG(
+	randomlyGenerateInsecure(
+				str,
+				"abcdefghijklmnopqrstuvwxyz"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"0123456789"
+				"!@#$%^&*()-_=+,<.>/?",
+				len
+				);
 }
 
 // return the bounds of the next token or -1 if no tokens remain

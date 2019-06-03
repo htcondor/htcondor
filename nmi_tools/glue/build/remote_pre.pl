@@ -49,7 +49,8 @@ my %defines = (
     listvars => "-LA",
     #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
-    mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
+    mirror => "-DEXTERNALS_SOURCE_URL:URL=http://parrot.cs.wisc.edu/externals",
+    #mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
     );
 
 # autoflush our STDOUT

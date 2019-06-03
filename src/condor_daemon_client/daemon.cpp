@@ -1536,7 +1536,8 @@ Daemon::findCmDaemon( const char* cm_name )
 			return false;
 		}
 		sinful.setHost(saddr.to_ip_string().Value());
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
+		sinful.setAlias(fqdn.Value());
+		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
 		New_full_hostname(strdup(fqdn.Value()));
 		if( host ) {

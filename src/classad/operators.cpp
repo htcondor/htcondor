@@ -318,7 +318,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		return SIG_CHLD1;
 	} else if (op == UNARY_PLUS_OP) {
 		if (vt1 == Value::BOOLEAN_VALUE || vt1 == Value::STRING_VALUE || 
-			val1.IsListValue() || vt1 == Value::CLASSAD_VALUE || 
+			val1.IsListValue() || val1.IsClassAdValue() ||
 			vt1 == Value::ABSOLUTE_TIME_VALUE) {
 			result.SetErrorValue();
 		} else {
@@ -418,7 +418,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	} else if( op == SUBSCRIPT_OP ) {
 		// subscripting from a list (strict)
 
-		if (vt1 == Value::CLASSAD_VALUE && vt2 == Value::STRING_VALUE) {
+		if ((vt1 == Value::CLASSAD_VALUE || vt1 == Value::SCLASSAD_VALUE) && vt2 == Value::STRING_VALUE) {
 			ClassAd  *classad = NULL;
 			string   index;
 			
@@ -467,6 +467,16 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	// should not reach here
 	CLASSAD_EXCEPT ("Should not get here");
 	return SIG_NONE;
+}
+
+bool OperationParens::
+_Evaluate (EvalState &state, Value &result) const
+{
+		if( !child1->Evaluate (state, result) ) {
+			result.SetErrorValue( );
+			return( false );
+		}
+		return true;
 }
 
 bool Operation::
@@ -813,12 +823,30 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	// special don't care cases for logical operators with exactly one value
 	if( (!tree1 || !tree2) && (tree1 || tree2) && 
 		( op==LOGICAL_OR_OP || op==LOGICAL_AND_OP ) ) {
-		_doOperation( op, !tree1?val1:dummy , !tree2?val2:dummy , dummy , 
+		_doOperation( op, !tree1 ? val1 : dummy , !tree2?val2:dummy , dummy , 
 						true, true, false, val );
 		if( val.IsBooleanValue() ) {
 			tree = NULL;
 			delete tree1;
 			delete tree2;
+			op = __NO_OP__;
+			return true;
+		}
+
+		// rewrite true && expr -> expr
+		// this pattern happens after flatening often
+		// rewriting creates faster evaluation than short-circuit at eval time
+
+		bool literalValue = false;
+		if ((op == LOGICAL_AND_OP) && !tree1 && val1.IsBooleanValue(literalValue) && literalValue) {
+			tree = tree2;
+			op = __NO_OP__;
+			return true;
+		}
+
+		// rewrite expr && true -> expr
+		if ((op == LOGICAL_AND_OP) && !tree2 && val2.IsBooleanValue(literalValue) && literalValue) {
+			tree = tree1;
 			op = __NO_OP__;
 			return true;
 		}
@@ -1027,6 +1055,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );
 

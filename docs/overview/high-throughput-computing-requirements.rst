@@ -1,9 +1,9 @@
-      
+      
 
 High-Throughput Computing (HTC) and its Requirements
 ====================================================
 
-:index:`overview;HTCondor<single: overview;HTCondor>` :index:`overview<single: overview>`
+:index:`overview<single: overview; HTCondor>` :index:`overview`
 
 For many research and engineering projects, the quality of the research
 or the product is heavily dependent upon the quantity of computing
@@ -12,9 +12,9 @@ or months of computation to solve. Scientists and engineers engaged in
 this sort of work need a computing environment that delivers large
 amounts of computational power over a long period of time. Such an
 environment is called a High-Throughput Computing (HTC) environment.
-` <index://High-Throughput Computing (HTC)>`__\ ` <index://HTC (High-Throughput Computing)>`__
+:index:`High-Throughput Computing (HTC)`\ :index:`HTC (High-Throughput Computing)`
 In contrast, High Performance Computing (HPC)
-` <index://High-Performance Computing (HPC)>`__\ ` <index://HPC (High-Performance Computing)>`__
+:index:`High-Performance Computing (HPC)`\ :index:`HPC (High-Performance Computing)`
 environments deliver a tremendous amount of compute power over a short
 period of time. HPC environments are often measured in terms of FLoating
 point Operations Per Second (FLOPS). A growing community is not
@@ -40,7 +40,7 @@ than the large centralized machine, but it provides exclusive access.
 Now, instead of one giant computer for a large institution, there may be
 hundreds or thousands of personal computers. This is an environment of
 distributed ownership,
-:index:`of machines;distributed ownership<single: of machines;distributed ownership>`\ where individuals
+:index:`of machines<single: of machines; distributed ownership>`\ where individuals
 throughout an organization own their own resources. The total
 computational power of the institution as a whole may rise dramatically
 as the result of such a change, but because of distributed ownership,
@@ -51,4 +51,4 @@ personal desktop machines sit idle for very long periods of time while
 their owners are busy doing other things (such as being away at lunch,
 in meetings, or at home sleeping).
 
-      
+      

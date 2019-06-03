@@ -143,7 +143,7 @@ private:
 	ClassAd* job_ad;
 	char* schedd_addr;
 	char* schedd_ver;
-	MyString m_owner;
+	std::string m_owner;
 
 	int cluster;
 	int proc;

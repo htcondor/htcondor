@@ -124,18 +124,6 @@ class MyString
 	/** Sets the character '\0' at the given position and truncate the string to end at that position. */
 	void truncate(int pos);
 
-	/** Clears the current string in the MyString, and fills it with a
-	 *	randomly generated set derived from 'set' of len characters. */
-	void randomlyGenerate(const char *set, int len);
-
-	/** Clears the current string in the MyString, and fills it with 
-	 *	randomly generated [0-9a-f] values up to len size */
-	void randomlyGenerateHex(int len);
-
-	/** Clears the current string in the MyString, and fills it with
-	 *	randomly generated alphanumerics and punctuation up to len size */
-	void randomlyGeneratePassword(int len);
-
 	//@}
 
 	// ----------------------------------------

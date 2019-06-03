@@ -1,15 +1,13 @@
-      
-
 Introduction
 ============
 
 To be clear, our concern throughout this chapter is with commercial
 services which rent computational resources over the Internet at short
 notice and charge in small increments (by the minute or the hour). In
-2016, the four largest such services\ `:sup:`1` <ref60.html#fn1x7>`__
-were (in alphabetical order) Amazon Web Services (‘AWS’), (Microsoft)
-Azure, Google Cloud Platform (‘GCP’), and (IBM) SoftLayer; as of version
-8.7.8, the *condor\_annex* tool supports only AWS. AWS can start booting
+2016, the four largest such services [1]_
+were (in alphabetical order) Amazon Web Services ('AWS'), (Microsoft)
+Azure, Google Cloud Platform ('GCP'), and (IBM) SoftLayer; as of version
+8.7.8, the *condor_annex* tool supports only AWS. AWS can start booting
 a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM
 until you stop paying the hourly charge. The other cloud services are
@@ -21,22 +19,22 @@ advantages over the Grid: first, cloud resources are typically available
 more quickly and in greater quantity than from the Grid; and second,
 because cloud resources are virtual machines, they are considerably more
 customizable than Grid resources. The major disadvantages are, of
-course, cost and complexity (although we hope that *condor\_annex*
+course, cost and complexity (although we hope that *condor_annex*
 reduces the latter).
 
 We illustrate these advantages with what we anticipate will be the most
-common uses for *condor\_annex*.
+common uses for *condor_annex*.
 
 Use Case: Deadlines
 -------------------
 
 With the ability to acquire computational resources in seconds or
 minutes and retain them for days or weeks, it becomes possible to
-rapidly adjust the size – and cost – of an HTCondor pool. Giving this
+rapidly adjust the size - and cost - of an HTCondor pool. Giving this
 ability to the end-user avoids the problems of deciding who will pay for
 expanding the pool and when to do so. We anticipate that the usual cause
 for doing so will be deadlines; the end-user has the best knowledge of
-their own deadlines and how much, in monetary terms, it’s worth to
+their own deadlines and how much, in monetary terms, it's worth to
 complete their work by that deadline.
 
 Use Case: Capabilities
@@ -67,4 +65,8 @@ It may be possible for an HTCondor administrator to lower the cost of
 their pool by increasing utilization and meeting peak demand with cloud
 computing.
 
-      
+.. rubric: Footnotes
+
+.. [1] That is, "infrastructure-as-a-service" providers.
+
+

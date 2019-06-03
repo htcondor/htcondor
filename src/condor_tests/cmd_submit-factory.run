@@ -38,7 +38,7 @@ $append_config = "
 ###########  create submit file ##################
 my $pid = $$;
 my $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
 queue";
 my $submitfile = "$testname$pid.sub";
@@ -90,7 +90,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
 max_materialize = 10
 queue 12";

@@ -1,5 +1,5 @@
 ClassAd Attributes
-------------------
+==================
 
 .. toctree::
    :maxdepth: 2
@@ -17,4 +17,4 @@ ClassAd Attributes
    classad-attributes-added-by-collector
    daemon-core-statistics-attributes
 
-      
+      

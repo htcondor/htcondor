@@ -314,9 +314,6 @@ private:
 		/// Remove the execute/dir_<pid> directory
 	virtual bool removeTempExecuteDir( void );
 
-		/// Remove the <cred_dir>/<pid> directory
-	virtual bool removeCredentials( void );
-
 #if !defined(WIN32)
 		/// Special cleanup for exiting after being invoked via glexec
 	void exitAfterGlexec( int code );
@@ -341,13 +338,13 @@ private:
 		  @param result Buffer in which to store fully-qualified user name of the job owner
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
-	void getJobOwnerFQUOrDummy(MyString &result);
+	void getJobOwnerFQUOrDummy(std::string &result);
 
 		/*
 		  @param result Buffer in which to store claim id string from job.
 		  Returns false if no claim id could be found.
 		 */
-	bool getJobClaimId(MyString &result);
+	bool getJobClaimId(std::string &result);
 
 
 	bool WriteAdFiles();

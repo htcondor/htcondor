@@ -1,4 +1,4 @@
-      
+      
 
 Exceptional Features
 ====================
@@ -8,15 +8,15 @@ Exceptional Features
     HTCondor may be assured that their jobs will eventually complete,
     even in the ever changing environment that HTCondor utilizes. As a
     machine running a job submitted to HTCondor becomes unavailable, the
-    job can be check pointed. :index:`checkpoint<single: checkpoint>`\ The job may
-    continue after migrating :index:`migration<single: migration>`\ to another
-    machine. HTCondor’s checkpoint feature
-    :index:`periodic;checkpoint<single: periodic;checkpoint>`\ periodically checkpoints a job
+    job can be check pointed. :index:`checkpoint`\ The job may
+    continue after migrating :index:`migration`\ to another
+    machine. HTCondor's checkpoint feature
+    :index:`periodic<single: periodic; checkpoint>`\ periodically checkpoints a job
     even in lieu of migration in order to safeguard the accumulated
     computation time on a job from being lost in the event of a system
     failure, such as the machine being shutdown or a crash.
  Remote System Calls.
-    :index:`remote system call<single: remote system call>` Despite running jobs on remote
+    :index:`remote system call` Despite running jobs on remote
     machines, the HTCondor standard universe execution mode preserves
     the local execution environment via remote system calls. Users do
     not have to worry about making data files available to remote
@@ -26,7 +26,7 @@ Exceptional Features
     that submitted the job on the workstation where it was originally
     submitted, no matter on which machine it really ends up executing
     on.
- No Changes Necessary to User’s Source Code.
+ No Changes Necessary to User's Source Code.
     No special programming is required to use HTCondor. HTCondor is able
     to run non-interactive programs. The checkpoint and migration of
     programs by HTCondor is transparent and automatic, as is the use of
@@ -49,7 +49,7 @@ Exceptional Features
     As grid computing becomes a reality, HTCondor is already there. The
     technique of glidein allows jobs submitted to HTCondor to be
     executed on grid machines in various locations worldwide. As the
-    details of grid computing evolve, so does HTCondor’s ability,
+    details of grid computing evolve, so does HTCondor's ability,
     starting with Globus-controlled resources.
  Sensitive to the Desires of Machine Owners.
     The owner of a machine has complete priority over the use of the
@@ -58,7 +58,7 @@ Exceptional Features
     The owner does not want to take special action to regain control.
     HTCondor handles this automatically.
  ClassAds.
-    The ClassAd mechanism :index:`ClassAd<single: ClassAd>`\ in HTCondor provides
+    The ClassAd mechanism :index:`ClassAd`\ in HTCondor provides
     an extremely flexible, expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
     requirements and job desires. For example, a user can require that a
@@ -69,9 +69,9 @@ Exceptional Features
     workstation activity detectable at certain hours before HTCondor
     could start a job. Job requirements/preferences and resource
     availability constraints can be described in terms of powerful
-    expressions, resulting in HTCondor’s adaptation to nearly any
+    expressions, resulting in HTCondor's adaptation to nearly any
     desired policy.
 
-:index:`overview;HTCondor<single: overview;HTCondor>` :index:`overview<single: overview>`
+:index:`overview<single: overview; HTCondor>` :index:`overview`
 
-      
+      

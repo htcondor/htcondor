@@ -773,11 +773,11 @@ bool doJobRunAnalysis (
 	}
 	if (jobState == HELD) {
 		job_status = "Job is held.";
-		MyString hold_reason;
+		std::string hold_reason;
 		request->LookupString( ATTR_HOLD_REASON, hold_reason );
-		if( hold_reason.Length() ) {
+		if( hold_reason.length() ) {
 			job_status += "\n\nHold reason: ";
-			job_status += hold_reason.Value();
+			job_status += hold_reason;
 		}
 	}
 	if (jobState == REMOVED) {
@@ -1331,7 +1331,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 	int universe = CONDOR_UNIVERSE_MIN;
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
-	MyString resource;
+	std::string resource;
 	switch(universe) {
 			// Known valid
 		case CONDOR_UNIVERSE_STANDARD:
@@ -1349,7 +1349,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
 			request->LookupString(ATTR_GRID_RESOURCE, resource);
-			if ( strstr(resource.Value(),"$$") ) {
+			if ( strstr(resource.c_str(),"$$") ) {
 				uses_matchmaking = true;
 				break;
 			}  

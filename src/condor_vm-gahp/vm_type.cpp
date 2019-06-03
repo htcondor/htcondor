@@ -147,11 +147,11 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			// vm_networking_type is defined
 
 			// change string to lowercase
-			m_vm_networking_type.trim();
-			m_vm_networking_type.lower_case();
-			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
+			trim(m_vm_networking_type);
+			lower_case(m_vm_networking_type);
+			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.c_str()) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
-						"this gahp server\n", m_vm_networking_type.Value());
+						"this gahp server\n", m_vm_networking_type.c_str());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
 				return false;
 			}
@@ -263,9 +263,9 @@ VMType::setLastStatus(const char *result_msg)
 void
 VMType::createInitialFileList()
 {
-	MyString intermediate_files;
+	std::string intermediate_files;
 	StringList intermediate_file_list(NULL, ",");
-	MyString input_files;
+	std::string input_files;
 	StringList input_file_list(NULL, ",");
 
 	m_initial_working_files.clearAll();
@@ -277,14 +277,14 @@ VMType::createInitialFileList()
 
 	// Read Intermediate files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INTERMEDIATE_FILES, intermediate_files);
-	if( intermediate_files.IsEmpty() == false ) {
-		intermediate_file_list.initializeFromString(intermediate_files.Value());
+	if( intermediate_files.empty() == false ) {
+		intermediate_file_list.initializeFromString(intermediate_files.c_str());
 	}
 
 	// Read Input files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INPUT_FILES, input_files);
-	if( input_files.IsEmpty() == false ) {
-		input_file_list.initializeFromString(input_files.Value());
+	if( input_files.empty() == false ) {
+		input_file_list.initializeFromString(input_files.c_str());
 	}
 
 	// Create m_transfer_intermediate_files and m_transfer_input_files with fullpath.

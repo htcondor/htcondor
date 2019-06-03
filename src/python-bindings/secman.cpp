@@ -265,11 +265,13 @@ export_secman()
             be used to set temporary security configurations that only last during the lifetime
             of the security object.
             )C0ND0R")
+        .def(boost::python::init<>(boost::python::args("self")))
         .def("invalidateAllSessions", &SecManWrapper::invalidateAllCache,
             R"C0ND0R(
             Invalidate all security sessions. Any future connections to a daemon will
             cause a new security session to be created.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
         .def("ping", &SecManWrapper::ping, ping_overloads(
             R"C0ND0R(
             Perform a test authorization against a remote daemon for a given command.
@@ -280,11 +282,15 @@ export_secman()
             :param command: The DaemonCore command to try; if not given, ``'DC_NOP'`` will be used.
             :return: An ad describing the results of the test security negotiation.
             :rtype: :class:`~classad.ClassAd`
-            )C0ND0R"))
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad"), boost::python::arg("command")="DC_NOP")))
         .def("getCommandString", &SecManWrapper::getCommandString,
             R"C0ND0R(
             Return the string name corresponding to a given integer command.
-            )C0ND0R")
+
+            :param int command_int: The integer command to get the string name of.
+            )C0ND0R",
+            boost::python::args("self", "command_int"))
         .def("__exit__", &SecManWrapper::exit, "Exit the context manager.")
         .def("__enter__", &SecManWrapper::enter, "Enter the context manager.")
         .def("setTag", &SecManWrapper::setTag,
@@ -299,20 +305,23 @@ export_secman()
             for thread A will not be used for thread B.
 
             :param str tag: New tag to set.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "tag"))
         .def("setPoolPassword", &SecManWrapper::setPoolPassword,
             R"C0ND0R(
             Set the pool password.
 
             :param str new_pass: Updated pool password to use for new
                 security negotiations.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "new_pass"))
         .def("setGSICredential", &SecManWrapper::setGSICredential,
             R"C0ND0R(
             Set the GSI credential to be used for security negotiation.
 
             :param str filename: File name of the GSI credential.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "filename"))
         .def("setConfig", &SecManWrapper::setConfig,
             R"C0ND0R(
             Set a temporary configuration variable; this will be kept for all security
@@ -320,6 +329,7 @@ export_secman()
 
             :param str key: Configuration key to set.
             :param str value: Temporary value to set.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self", "key", "value"))
         ;
 }

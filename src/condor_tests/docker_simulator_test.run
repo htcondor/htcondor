@@ -53,7 +53,7 @@ my $pid = $$;
 my $submit_file = "$testname$pid.sub";
 my $submit_content = 
 "universe = docker
-executable = sleep.exe
+executable = x_sleep.pl
 arguments = 600
 docker_image = foo
 queue";

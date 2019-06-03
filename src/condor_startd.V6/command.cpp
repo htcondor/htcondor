@@ -522,8 +522,8 @@ countres:
 	int ResCount = 0;
 	cal.Open();
 	while( (ad=cal.Next()) ) {
-                MyString remoteuser;
-                MyString name;
+		std::string remoteuser;
+		std::string name;
                 ad->LookupString("RemoteUser",remoteuser);
                 ad->LookupString("Name",name);
 		if(strcmp(curuser.c_str(), remoteuser.c_str()) == 0) {
@@ -567,6 +567,8 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		return FALSE;
 	}
+
+	free( id );
 	
 	State s = rip->state();
 	switch( s ) {
@@ -615,9 +617,11 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 			break;
 		default:
 			rip->log_ignore( cmd, s, rip->activity() );
+			free(id);
 			return FALSE;
 	}		
 	
+	free(id);
 	return rval;
 }
 
@@ -800,10 +804,10 @@ command_query_ads( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-   MyString stats_config;
+	std::string stats_config;
    int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
    queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
-   if ( ! stats_config.IsEmpty()) {
+   if ( ! stats_config.empty()) {
 #if 0 // HACK to test swapping claims without a schedd
        dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
        if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
@@ -812,7 +816,7 @@ command_query_ads( Service*, int, Stream* stream)
        } else
 #endif
       daemonCore->dc_stats.PublishFlags = 
-         generic_stats_ParseConfigString(stats_config.Value(), 
+         generic_stats_ParseConfigString(stats_config.c_str(), 
                                          "DC", "DAEMONCORE", 
                                          dc_publish_flags);
    }
@@ -820,7 +824,7 @@ command_query_ads( Service*, int, Stream* stream)
 		// Construct a list of all our ClassAds:
 	resmgr->makeAdList( &ads, &queryAd );
 	
-    if ( ! stats_config.IsEmpty()) {
+    if ( ! stats_config.empty()) {
        daemonCore->dc_stats.PublishFlags = dc_publish_flags;
     }
 
@@ -2680,6 +2684,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 	if(! getClassAd( sock, commandAd )) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get command ad\n" );
+		delete requestAd;
 		return FALSE;
 	}
 

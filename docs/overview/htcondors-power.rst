@@ -1,6 +1,6 @@
-      
+      
 
-HTCondor’s Power
+HTCondor's Power
 ================
 
 HTCondor is a software system that creates a High-Throughput Computing
@@ -9,15 +9,15 @@ workstations that communicate over a network. HTCondor can manage a
 dedicated cluster of workstations. Its power comes from the ability to
 effectively harness non-dedicated, preexisting resources under
 distributed ownership.
-:index:`of machines;distributed ownership<single: of machines;distributed ownership>`
+:index:`of machines<single: of machines; distributed ownership>`
 
 A user submits the job to HTCondor. HTCondor finds an available machine
 on the network and begins running the job on that machine. HTCondor has
 the capability to detect that a machine running a HTCondor job is no
 longer available (perhaps because the owner of the machine came back
 from lunch and started typing on the keyboard). It can checkpoint
-:index:`checkpoint<single: checkpoint>`\ the job and move (migrate)
-:index:`migration<single: migration>`\ the jobs to a different machine which would
+:index:`checkpoint`\ the job and move (migrate)
+:index:`migration`\ the jobs to a different machine which would
 otherwise be idle. HTCondor continues the job on the new machine from
 precisely where it left off.
 
@@ -29,7 +29,7 @@ enterprise can run a job, including machines in different administrative
 domains.
 
 HTCondor can be a real time saver when a job must be run many (hundreds
-of) different times, :index:`multiple data sets;job<single: multiple data sets;job>`\ perhaps
+of) different times, :index:`multiple data sets<single: multiple data sets; job>`\ perhaps
 with hundreds of different data sets. With one command, all of the
 hundreds of jobs are submitted to HTCondor. Depending upon the number of
 machines in the HTCondor pool, dozens or even hundreds of otherwise idle
@@ -37,21 +37,21 @@ machines can be running the job at any given moment.
 
 HTCondor does not require an account (login) on machines where it runs a
 job. HTCondor can do this because of its remote system call
-:index:`remote system call<single: remote system call>`\ technology, which traps library
+:index:`remote system call`\ technology, which traps library
 calls for such operations as reading or writing from disk files. The
 calls are transmitted over the network to be performed on the machine
 where the job was submitted.
-:index:`resource management;HTCondor<single: resource management;HTCondor>`
-:index:`management;resource<single: management;resource>`
+:index:`resource management<single: resource management; HTCondor>`
+:index:`management<single: management; resource>`
 
 HTCondor provides powerful resource management by match-making resource
-:index:`matchmaking<single: matchmaking>`\ owners with resource consumers. This is the
+:index:`matchmaking`\ owners with resource consumers. This is the
 cornerstone of a successful HTC environment. Other compute cluster
 resource management systems attach properties to the job queues
 themselves, resulting in user confusion over which queue to use as well
 as administrative hassle in constantly adding and editing queue
 properties to satisfy user demands. HTCondor implements ClassAds,
-:index:`ClassAd<single: ClassAd>`\ a clean design that simplifies the user’s
+:index:`ClassAd`\ a clean design that simplifies the user's
 submission of jobs.
 
 ClassAds work in a fashion similar to the newspaper classified
@@ -59,8 +59,8 @@ advertising want-ads. All machines in the HTCondor pool advertise their
 resource properties, both static and dynamic, such as available RAM
 memory, CPU type, CPU speed, virtual memory size, physical location, and
 current load average, in a resource offer ad.
-:index:`offer;resource<single: offer;resource>`\ A user specifies a resource request ad
-:index:`request;resource<single: request;resource>`\ when submitting a job. The request
+:index:`offer<single: offer; resource>`\ A user specifies a resource request ad
+:index:`request<single: request; resource>`\ when submitting a job. The request
 defines both the required and a desired set of properties of the
 resource to run the job. HTCondor acts as a broker by matching and
 ranking resource offer ads with resource request ads, making certain
@@ -70,4 +70,4 @@ values: the priority the user assigned to the resource request ad, the
 priority of the user which submitted the ad, and desire of machines in
 the pool to accept certain types of ads over others.
 
-      
+      

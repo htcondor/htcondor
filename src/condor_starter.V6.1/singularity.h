@@ -35,7 +35,7 @@ public:
 
   static result setup(compat_classad::ClassAd &machineAd,
 			compat_classad::ClassAd &jobAd,
-			MyString &exec,
+			std::string &exec,
 			ArgList &args,
 			const std::string &job_iwd,
 			const std::string &execute_dir,

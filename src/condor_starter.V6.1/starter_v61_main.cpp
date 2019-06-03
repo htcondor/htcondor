@@ -86,6 +86,7 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
@@ -677,6 +678,7 @@ parseArgs( int argc, char* argv [] )
 		free( job_stdin );
 		free( job_stdout );
 		free( job_stderr );
+		if (job_keyword) { free(job_keyword); }
 		return jic;
 	}
 

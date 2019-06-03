@@ -304,9 +304,7 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 
 		// If no password given, create a random one
 	if (password.length() == 0) {
-		MyString rand;
-		rand.randomlyGeneratePassword(28);  // 28 chars long
-		password = rand.Value();
+		randomlyGenerateShortLivedPassword(password, 28);  // 28 chars long
 	}
 
 	// Put password into user root keyring stored in the kernel via

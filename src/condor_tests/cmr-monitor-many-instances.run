@@ -49,9 +49,9 @@ NUM_SLOTS = 2
 NUM_SLOTS_TYPE_1 = 2
 SLOT_TYPE_1 = SQUIDs=2 TAKOs=2 CPUs=2
 
-UPDATE_INTERVAL = 20
-STARTER_UPDATE_INTERVAL = 20
-SHADOW_QUEUE_UPDATE_INTERVAL = 20
+UPDATE_INTERVAL = 2
+STARTER_UPDATE_INTERVAL = 2
+SHADOW_QUEUE_UPDATE_INTERVAL = 2
 
 CONDOR_TESTREQ_CONFIG
 #endtestreq
@@ -62,6 +62,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Many, Multiple In
 #
 # Verify the configuration before running the test.
 #
+sleep(5);
 CustomMachineResource::TestSlotAndResourceCount( 2, $testName . "-1A", "SQUID" );
 CustomMachineResource::TestSlotAndResourceCount( 2, $testName . "-1B", "TAKO" );
 

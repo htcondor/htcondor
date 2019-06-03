@@ -1068,6 +1068,25 @@ GahpServer::Initialize( Proxy *proxy )
 	return true;
 }
 
+
+bool
+GenericGahpClient::UpdateToken( const std::string &token )
+{
+	return server->UpdateToken(token);
+}
+
+
+bool
+GahpServer::UpdateToken( const std::string &token )
+{
+	if ( !command_update_token_from_file( token ) ) {
+		dprintf( D_ALWAYS, "GAHP: Failed to update GAHP with token from file %s\n", token.c_str() );
+		return false;
+	}
+	return true;
+}
+
+
 bool
 GenericGahpClient::CreateSecuritySession()
 {
@@ -1789,6 +1808,38 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 			reason = "Unspecified error";
 		}
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+GahpServer::command_update_token_from_file(const std::string &token_path)
+{
+	static const std::string command = "UPDATE_TOKEN";
+
+	if (token_path.empty()) {
+		dprintf(D_ALWAYS, "GAHP command recieved with empty token file %s.\n",
+			token_path.c_str());
+	}
+
+	std::string buf;
+	auto x = formatstr(buf, "%s %s", command.c_str(), escapeGahpString(token_path.c_str()));
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS, "GAHP command '%s' failed: %s\n", command.c_str(), reason);
 		return false;
 	}
 

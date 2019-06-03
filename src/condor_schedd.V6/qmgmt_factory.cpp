@@ -151,6 +151,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	, paused(mmInvalid)
 	, cached_total_procs(-42)
 {
+	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());

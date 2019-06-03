@@ -200,6 +200,8 @@ CondorJob::CondorJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	jobAd->EvaluateAttrString( ATTR_SCITOKENS_FILE, scitokenFile );
+
 	int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
 		delegatedProxyExpireTime = (time_t)int_value;
@@ -411,7 +413,15 @@ void CondorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			if ( !scitokenFile.empty() && !gahp->UpdateToken( scitokenFile ) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+						procID.cluster, procID.proc );
 
+				jobAd->InsertAttr( ATTR_HOLD_REASON,
+							"Failed to provide GAHP with token" );
+				gmState = GM_HOLD;
+				break;
+			}
 			gmState = GM_START;
 			} break;
 		case GM_START: {

@@ -37,7 +37,7 @@ static void RandomAscii(char *buf)
 		"0123456789_-";
 	
 	while (*buf) {
-		int r = get_random_int();
+		int r = get_random_int_insecure();
 		int i;
 		
 		/* get 5 * 6 bits from each call to random() */

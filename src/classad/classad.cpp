@@ -75,9 +75,9 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
-static References &getSpecialAttrNames()
+static inline ReferencesBySize &getSpecialAttrNames()
 {
-	static References specialAttrNames;
+	static ReferencesBySize specialAttrNames;
 	static bool specialAttrNames_inited = false;
 	if ( !specialAttrNames_inited ) {
 		specialAttrNames.insert( ATTR_TOPLEVEL );
@@ -699,9 +699,7 @@ LookupInScope( const string &name, const ClassAd *&finalScope ) const
 int ClassAd::
 LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 {
-	extern int exprHash( const ExprTree* const&, int );
 	const ClassAd *current = this, *superScope;
-	Value			val;
 
 	expr = NULL;
 

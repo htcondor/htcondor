@@ -807,7 +807,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	{
 		return;
 	}
-	MyString iwd;
+	std::string iwd;
 	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
 		dprintf(D_ALWAYS,
 		        "writeExecutionVisa error: no IWD in job ad!\n");
@@ -818,7 +818,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	bool ok = classad_visa_write(&visa_ad,
 	                             get_mySubSystem()->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
-	                             iwd.Value(),
+	                             iwd.c_str(),
 	                             &filename);
 	set_priv(priv);
 	if (ok) {

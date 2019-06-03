@@ -23,6 +23,9 @@ BOOST_PYTHON_MODULE(_htcondor)
     export_dc_tool();
     export_secman();
     export_event_log();
+	// TODO This is the old API for reading the event log.
+	//   We should remove it once users have had enough time to
+	//   migrate to the new API.
 	export_event_reader();
 #if !defined(WIN32)
 	// omit for windows

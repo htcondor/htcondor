@@ -415,7 +415,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
-	param_and_insert_attrs("CHIRP_DELAYED_UPDATE_PREFIX", m_delayed_update_prefixes);
+	std::string prefix;
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
+	m_delayed_update_prefix.initializeFromString(prefix.c_str());
 
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_unsettable_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_unsettable_attrs);
@@ -1346,7 +1348,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	int64_t int64_value;
-	MyString string_value;
+	std::string string_value;
 	bool bool_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
@@ -1400,10 +1402,27 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+	// Update memory_usage_mb, which should be the maximum value seen
+	// in the update ad for ATTR_MEMORY_USAGE
+	if( EvalInteger(ATTR_MEMORY_USAGE, update_ad, NULL, int64_value) ) {
+		if( int64_value > memory_usage_mb ) {
+			memory_usage_mb = int64_value;
+		}
+	}
+	// Now update MemoryUsage in the job ad.  If the update ad sent us 
+	// a literal value for MemoryUsage, then insert in the job ad the MAX 
+	// value we have seen.  But if the update ad sent us MemoryUsage as an
+	// expression, then just copy the expression into the job ad.
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
-	if( tree ) {
-		tree = tree->Copy();
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+	if (tree) {
+		if (tree->GetKind() != ExprTree::LITERAL_NODE) {
+				// Copy the exression over
+			tree = tree->Copy();
+			jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+		} else {
+				// It is a literal, so insert the MAX of the literals seen
+			jobAd->Assign(ATTR_MEMORY_USAGE, memory_usage_mb);
+		}
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, real_value) ) {
@@ -1473,15 +1492,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
-		jobAd->Assign(ATTR_EXCEPTION_HIERARCHY, string_value.Value());
+		jobAd->Assign(ATTR_EXCEPTION_HIERARCHY, string_value);
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_NAME,string_value) ) {
-		jobAd->Assign(ATTR_EXCEPTION_NAME, string_value.Value());
+		jobAd->Assign(ATTR_EXCEPTION_NAME, string_value);
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_TYPE,string_value) ) {
-		jobAd->Assign(ATTR_EXCEPTION_TYPE, string_value.Value());
+		jobAd->Assign(ATTR_EXCEPTION_TYPE, string_value);
 	}
 
 	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
@@ -1499,7 +1518,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupString(ATTR_EXIT_REASON,string_value) ) {
-		jobAd->Assign(ATTR_EXIT_REASON, string_value.Value());
+		jobAd->Assign(ATTR_EXIT_REASON, string_value);
 	}
 
 	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, bool_value) ) {
@@ -1512,7 +1531,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		// are spooling output.  However, it doesn't hurt to have it there
 		// otherwise.
 	if( update_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
-		jobAd->Assign(ATTR_SPOOLED_OUTPUT_FILES,string_value.Value());
+		jobAd->Assign(ATTR_SPOOLED_OUTPUT_FILES,string_value);
 	}
 	else if( jobAd->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
@@ -1592,17 +1611,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	if (jobAd->LookupInteger(ATTR_MEMORY_USAGE, int64_value)) {
-		memory_usage_mb = int64_value;
-	}
-
-	MyString starter_addr;
+	std::string starter_addr;
 	update_ad->LookupString( ATTR_STARTER_IP_ADDR, starter_addr );
-	if( !starter_addr.IsEmpty() ) {
+	if( !starter_addr.empty() ) {
 		// The starter sends updated contact info along with the job
 		// update (useful if CCB info changes).  It's a bit of a hack
 		// to do it through this channel, but better than nothing.
-		setStarterAddress( starter_addr.Value() );
+		setStarterAddress( starter_addr.c_str() );
 	}
 
 	if( IsDebugLevel(D_MACHINE) ) {
@@ -1718,7 +1733,7 @@ bool
 RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
-	MyString string_value;
+	std::string string_value;
 	int int_value = 0;
 	static float last_recv_bytes = 0.0;
 
@@ -1788,10 +1803,10 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 
 	// Update Ckpt MAC and IP address of VM
 	if( update_ad->LookupString(ATTR_VM_CKPT_MAC,string_value) ) {
-		jobAd->Assign(ATTR_VM_CKPT_MAC, string_value.Value());
+		jobAd->Assign(ATTR_VM_CKPT_MAC, string_value);
 	}
 	if( update_ad->LookupString(ATTR_VM_CKPT_IP,string_value) ) {
-		jobAd->Assign(ATTR_VM_CKPT_IP, string_value.Value());
+		jobAd->Assign(ATTR_VM_CKPT_IP, string_value);
 	}
 
 	shadow->CommitSuspensionTime(jobAd);
@@ -1845,7 +1860,7 @@ void
 RemoteResource::printCheckpointStats( int debug_level )
 {
 	int int_value = 0;
-	MyString string_attr;
+	std::string string_attr;
 
 	dprintf( debug_level, "Statistics about job checkpointing:\n" );
 
@@ -1874,20 +1889,20 @@ RemoteResource::printCheckpointStats( int debug_level )
 	// CkptArch and CkptOpSys
 	string_attr = "";
 	jobAd->LookupString(ATTR_CKPT_ARCH, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_ARCH, string_attr.Value());
+	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_ARCH, string_attr.c_str());
 
 	string_attr = "";
 	jobAd->LookupString(ATTR_CKPT_OPSYS, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_OPSYS, string_attr.Value());
+	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_OPSYS, string_attr.c_str());
 
 	// MAC and IP address of VM
 	string_attr = "";
 	jobAd->LookupString(ATTR_VM_CKPT_MAC, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_MAC, string_attr.Value());
+	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_MAC, string_attr.c_str());
 
 	string_attr = "";
 	jobAd->LookupString(ATTR_VM_CKPT_IP, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_IP, string_attr.Value());
+	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_IP, string_attr.c_str());
 }
 
 
@@ -1991,7 +2006,7 @@ RemoteResource::startCheckingProxy()
 	if( proxy_check_tid != -1 ) {
 		return; // already running
 	}
-	if( !proxy_path.IsEmpty() ) {
+	if( !proxy_path.empty() ) {
 		// This job has a proxy.  We need to check it regularlly to
 		// potentially upload a renewed one.
 		int PROXY_CHECK_INTERVAL = param_integer("SHADOW_CHECKPROXY_INTERVAL",60*10,1);
@@ -2026,6 +2041,7 @@ RemoteResource::beginExecution( void )
 void
 RemoteResource::hadContact( void )
 {
+	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
 }
 
@@ -2505,24 +2521,24 @@ RemoteResource::setRemoteProxyRenewTime()
 		// actually is, we would need to have a better interface for
 		// obtaining that information from the file transfer object.
 
-	if( proxy_path.IsEmpty() ) {
+	if( proxy_path.empty() ) {
 		return;
 	}
 
 	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 #if defined(DLOPEN_GSI_LIBS)
 	time_t proxy_expiration_time = -1;
-	QueryJobProxy( proxy_path.Value(), &proxy_expiration_time, NULL, NULL,
+	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, NULL, NULL,
 				   NULL, NULL );
 #else
-	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
 #endif
 	time_t expiration_time = desired_expiration_time;
 
 	if( proxy_expiration_time == (time_t)-1 ) {
 		char const *errmsg = x509_error_string();
 		dprintf(D_ALWAYS,"setRemoteProxyRenewTime: failed to get proxy expiration time for %s: %s\n",
-				proxy_path.Value(),
+				proxy_path.c_str(),
 				errmsg ? errmsg : "");
 	}
 	else {
@@ -2585,12 +2601,12 @@ RemoteResource::checkX509Proxy( void )
 		dprintf(D_FULLDEBUG,"checkX509Proxy() doing nothing, because resource is not in EXECUTING state.\n");
 		return;
 	}
-	if(proxy_path.IsEmpty()) {
+	if(proxy_path.empty()) {
 		/* Harmless, but suspicious. */
 		return;
 	}
 	
-	StatInfo si(proxy_path.Value());
+	StatInfo si(proxy_path.c_str());
 	time_t lastmod = si.GetModifyTime();
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
@@ -2621,7 +2637,7 @@ RemoteResource::checkX509Proxy( void )
 	char *voname = NULL;
 	char *firstfqan = NULL;
 	char *quoted_DN_and_FQAN = NULL;
-	QueryJobProxy( proxy_path.Value(), &proxy_expiration_time, &proxy_subject,
+	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, &proxy_subject,
 				   &voname, &firstfqan, &quoted_DN_and_FQAN );
 
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
@@ -2646,8 +2662,8 @@ RemoteResource::checkX509Proxy( void )
 	free( quoted_DN_and_FQAN );
 #else
 	// first, do the DN and expiration time, which all proxies have
-	char* proxy_subject = x509_proxy_identity_name(proxy_path.Value());
-	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	char* proxy_subject = x509_proxy_identity_name(proxy_path.c_str());
+	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
 	/* This is a secure attribute, only settable by the schedd.
 	 * Assume it won't change during job execution.
 	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
@@ -2663,7 +2679,7 @@ RemoteResource::checkX509Proxy( void )
 	char * firstfqan = NULL;
 	char * quoted_DN_and_FQAN = NULL;
 	int vomserr = extract_VOMS_info_from_file(
-			proxy_path.Value(),
+			proxy_path.c_str(),
 			0 /*do not verify*/,
 			&voname,
 			&firstfqan,
@@ -2693,7 +2709,7 @@ RemoteResource::checkX509Proxy( void )
 
 	// Proxy file updated.  Time to upload
 	last_proxy_timestamp = lastmod;
-	updateX509Proxy(proxy_path.Value());
+	updateX509Proxy(proxy_path.c_str());
 }
 
 bool
@@ -2759,13 +2775,7 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	bool response = m_want_chirp || m_want_remote_updates;
 	if (!response && m_want_delayed)
 	{
-		auto i = m_delayed_update_prefixes.begin();
-		for( ; i !=  m_delayed_update_prefixes.end(); ++i ) {
-			if( starts_with_ignore_case( name, * i ) ) {
-				response = true;
-				break;
-			}
-		}
+		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
 	}
 
 	// Since this function is called to see if a user job is allowed to update

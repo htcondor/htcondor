@@ -47,7 +47,6 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
     ad.InsertAttr("TransferStartTime", TransferStartTime);
     ad.InsertAttr("TransferSuccess", TransferSuccess);
     ad.InsertAttr("TransferTotalBytes", TransferTotalBytes);
-    ad.InsertAttr("LibcurlReturnCode", LibcurlReturnCode);
 
     // The following statistics only appear if they have a value set
     if (!HttpCacheHitOrMiss.empty())
@@ -66,6 +65,8 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         ad.InsertAttr("TransferProtocol", TransferProtocol);
     if (TransferHTTPStatusCode > 0) 
         ad.InsertAttr("TransferHTTPStatusCode", TransferHTTPStatusCode);
+    if (LibcurlReturnCode >= 0)
+        ad.InsertAttr("LibcurlReturnCode", LibcurlReturnCode);
     if (TransferTries > 0) 
         ad.InsertAttr("TransferTries", TransferTries);
     if (!TransferType.empty())

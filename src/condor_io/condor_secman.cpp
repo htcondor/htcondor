@@ -41,6 +41,7 @@
 #include "setenv.h"
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
+#include "condor_auth_ssl.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -311,7 +312,7 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 		*result = p;
 		free (p);
 	} else {
-		*result = SecMan::getDefaultAuthenticationMethods();
+		*result = SecMan::getDefaultAuthenticationMethods(perm);
 	}
 }
 
@@ -486,7 +487,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// auth methods
 	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		MyString methods = SecMan::getDefaultAuthenticationMethods();
+		MyString methods = SecMan::getDefaultAuthenticationMethods(auth_level);
 		if(auth_level == READ) {
 			methods += ",CLAIMTOBE";
 			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
@@ -1069,7 +1070,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	bool m_sock_had_no_deadline;
 	ClassAd m_auth_info;
 	SecMan::sec_req m_negotiation;
-	MyString m_remote_version;
+	std::string m_remote_version;
 	KeyCacheEntry *m_enc_key;
 	KeyInfo* m_private_key;
 	MyString m_sec_session_id_hint;
@@ -1582,7 +1583,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	// extract the version attribute current in the classad - it is
 	// the version of the remote side.
 	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
-		CondorVersionInfo ver_info(m_remote_version.Value());
+		CondorVersionInfo ver_info(m_remote_version.c_str());
 		m_sock->set_peer_version(&ver_info);
 	}
 
@@ -1842,8 +1843,8 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
 			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION,m_remote_version);
-			if( !m_remote_version.IsEmpty() ) {
-				CondorVersionInfo ver_info(m_remote_version.Value());
+			if( !m_remote_version.empty() ) {
+				CondorVersionInfo ver_info(m_remote_version.c_str());
 				m_sock->set_peer_version(&ver_info);
 			}
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENACT );
@@ -1913,8 +1914,8 @@ SecManStartCommand::authenticate_inner()
 
 		if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 			if ((!m_new_session)) {
-				if( !m_remote_version.IsEmpty() ) {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.Value() );
+				if( !m_remote_version.empty() ) {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.c_str() );
 					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 				} else {
 					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n");
@@ -2135,11 +2136,11 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// Inspect the return code in the reponse ad to see what we should do.
 			// If it is blank, we must assume success, since that was what 8.3.5 and
 			// earlier would send.
-			MyString response_rc;
+			std::string response_rc;
 			post_auth_info.LookupString(ATTR_SEC_RETURN_CODE,response_rc);
 			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
 				// gather some additional data for useful error reporting
-				MyString response_user;
+				std::string response_user;
 				MyString response_method = m_sock->getAuthenticationMethodUsed();
 				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
 
@@ -2148,13 +2149,13 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				if (response_method == "") {
 					response_method = "(no authentication)";
 					errmsg.formatstr( "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
-						response_rc.Value(), response_user.Value(),
+						response_rc.c_str(), response_user.c_str(),
 						m_sock->my_addr().to_ip_string().Value(),
 						m_sock->peer_addr().to_ip_string().Value()
 						);
 				} else {
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
-						response_rc.Value(), response_user.Value(), response_method.Value());
+						response_rc.c_str(), response_user.c_str(), response_method.Value());
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
@@ -2218,7 +2219,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Failure: Unable to lookup valid commands.");
-				delete sesid;
+				free(sesid);
 				return StartCommandFailed;
 			}
 
@@ -2678,6 +2679,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_PASSWORD;
 	} else if ( !strcasecmp( method, "TOKEN" ) ) {
 		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "SCITOKENS" ) ) {
+		return CAUTH_SCITOKENS;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
 	} else if ( !strcasecmp( method, "FS_REMOTE" ) ) {
@@ -2879,7 +2882,7 @@ SecMan::invalidateExpiredCache()
 	}
 }
 
-MyString SecMan::getDefaultAuthenticationMethods() {
+MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	MyString methods;
 #if defined(WIN32)
 	// default windows method
@@ -2889,6 +2892,8 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods = "FS";
 #endif
 
+	methods += ",TOKEN";
+
 #if defined(HAVE_EXT_KRB5) 
 	methods += ",KERBEROS";
 #endif
@@ -2897,7 +2902,43 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods += ",GSI";
 #endif
 
-	return methods;
+	// SSL is last as this may cause the client to be anonymous.
+	methods += ",SSL";
+
+	StringList meth_iter( methods.c_str() );
+	meth_iter.rewind();
+	char *tmp = NULL;
+	bool first = true;
+	MyString result;
+	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods.\n");
+	while( (tmp = meth_iter.next()) ) {
+		int method = sec_char_to_auth_method(tmp);
+		switch (method) {
+			case CAUTH_TOKEN: {
+				if (!Condor_Auth_Passwd::should_try_auth()) {
+					continue;
+				}
+				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
+				break;
+			}
+			case CAUTH_SCITOKENS: // fallthrough
+			case CAUTH_SSL: {
+					// Client auth doesn't require a SSL cert, so
+					// we always will try this
+				if (CLIENT_PERM == perm) {break;}
+				if (!Condor_Auth_SSL::should_try_auth()) {
+					continue;
+				}
+			}
+			// As additional filters are made, we can add them here.
+			default:
+				break;
+		};
+		if (first) {first = false;}
+		else {result += ",";}
+		result += tmp;
+	}
+	return result;
 }
 
 
@@ -3045,12 +3086,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	sec_copy_attribute(policy,*auth_info,ATTR_SEC_CRYPTO_METHODS);
 
 		// remove all but the first crypto method
-	MyString crypto_methods;
+	std::string crypto_methods;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
-	if( crypto_methods.Length() ) {
-		int pos = crypto_methods.FindChar(',');
-		if( pos >= 0 ) {
-			crypto_methods.truncate(pos);
+	if( crypto_methods.length() ) {
+		size_t pos = crypto_methods.find(',');
+		if( pos != std::string::npos ) {
+			crypto_methods.erase(pos);
 			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
 		}
 	}
@@ -3073,10 +3114,10 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 
-	MyString crypto_method;
+	std::string crypto_method;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
 
-	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.Value());
+	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.c_str());
 	const int keylen = MAC_SIZE;
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
@@ -3153,9 +3194,9 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	// to the same key id (which is in the variable sesid)
 	dprintf(D_SECURITY, "SECMAN: now creating non-negotiated command mappings\n");
 
-	MyString valid_coms;
+	std::string valid_coms;
 	policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
-	StringList coms(valid_coms.Value());
+	StringList coms(valid_coms.c_str());
 	char *p;
 
 	coms.rewind();
