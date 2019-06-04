@@ -194,9 +194,13 @@ public:
 	const std::string &getPeerLocation() const {return m_peer_location;}
 
 private:
+	// The initial state of a request should always be pending.
 	State m_state{State::Pending};
+
+	// Initialize these to known-bogus values out of an abundance of caution.
 	time_t m_request_time{-1};
 	time_t m_lifetime{-1};
+
 	std::string m_requested_identity;
 	std::string m_requester_identity;
 	std::string m_peer_location;
@@ -1534,7 +1538,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		formatstr(request_id_str, "%d", request_id);
 			// Note we currently store this as a string; this way we can come back later
 			// and introduce alphanumeric characters if we so wish.
-		result_ad.InsertAttr(ATTR_REQUEST_ID, request_id_str);
+		result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str);
 	}
 
 	stream->encode();

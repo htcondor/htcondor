@@ -2740,10 +2740,10 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 
 	if (!startCommand( DC_FINISH_TOKEN_REQUEST, &rSock, 20, err)) {
 		if (err) { err->pushf("DAEMON", 1, "failed to start "
-			"command for "token request with remote daemon at '%s'.",
+			"command for token request with remote daemon at '%s'.",
 			_addr ? _addr : "NULL"); }
 		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to start "
-			"command for "token request with remote daemon at '%s'.\n",
+			"command for token request with remote daemon at '%s'.\n",
 			_addr ? _addr : "NULL");
 		return false;
 	}
@@ -2789,7 +2789,9 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 		return false;
 	}
 
-	// We are successful regardless of whether the token has any content.
+	// We are successful regardless of whether the token has any content --
+	// an empty token string (without an error) means that the request is
+	// still pending on the server.
 	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
 		if (err) { err->pushf("DAEMON", 1, "BUG!  Daemon::finishTokenRequest() "
 			"received a malformed ad containing no resulting token "
@@ -2956,8 +2958,8 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 	classad::ClassAd result_ad;
 	if (!getClassAd(&rSock, result_ad)) {
 		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
-			"response from remote daemon at at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" ); }
 		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to recieve "
 			"response from remote daemon at '%s'\n",
 			_addr ? _addr : "(unknown)" );
@@ -2980,7 +2982,7 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 			"at '%s' did not return a result.",
 			_addr ? _addr : "(unknown)" ); }
 		dprintf( D_FULLDEBUG, "Daemon::approveTokenRequest() - Remote daemon "
-			"at '%s' did "not return a result.\n",
+			"at '%s' did not return a result.\n",
 			_addr ? _addr : "(unknown)" );
 		return false;
 	}
