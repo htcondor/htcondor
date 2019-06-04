@@ -68,6 +68,8 @@ two things:
 #. How many instances you want. For your first annex, when you're
    checking to make sure things work, you may only want one instance.
 
+.. _start_an_annex:
+
 Start an Annex
 --------------
 
@@ -325,7 +327,7 @@ the default, set the configuration macro ANNEX_DEFAULT_AWS_REGION
 :index:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
 the *condor_annex* automatic setup, you can edit the ``user_config`` file
 in ``.condor directory`` in your home directory; this file uses the normal
-HTCondor configuration file syntax.  See
+HTCondor configuration file syntax.  (See
 :ref:`ordered_evaluation_to_set_the_configuration`.) Once you do this, you'll
 have to re-do the setup, as setup is region-specific.
 

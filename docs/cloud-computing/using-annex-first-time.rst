@@ -210,6 +210,8 @@ Prepare your AWS account
 Since v8.7.1, the *condor_annex* tool has included a -setup command
 which will prepare your AWS account.
 
+.. _obtain_an_access_key:
+
 Obtaining an Access Key
 '''''''''''''''''''''''
 
@@ -262,6 +264,8 @@ privilege; other accounts may as well.)
 
 The 'annex-user' now has full privileges to your account.
 
+.. _configure_condor_annex:
+
 Configure *condor_annex*
 ------------------------
 
@@ -271,6 +275,9 @@ keep around. These components can take quite some time to create;
 *condor_annex* checks each for completion every ten seconds and prints
 an additional dot (past the first three) when it does so, to let you
 know that everything's still working.
+
+If you're `using instance credentials`_, add ` FROM INSTANCE` to the end
+of the first line.
 
 ::
 
