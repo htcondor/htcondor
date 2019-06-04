@@ -1076,6 +1076,17 @@ private:
 
 	bool m_matchPasswordEnabled;
 
+	// State for token request.
+	void try_token_request();
+	// Right now, we will at most have one token request in flight;
+	// when we are ready to do this for multiple pools at a time, we
+	// will make these data structs into vectors.
+	std::string m_token_request_id;
+	std::string m_token_client_id;
+	Daemon *m_token_daemon;
+	bool m_initial_update{true}; // First update to the collector after reconfig blocks so we can trigger
+					// token auth if needed
+
 	friend class DedicatedScheduler;
 };
 

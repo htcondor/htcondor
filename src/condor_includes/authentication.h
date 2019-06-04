@@ -166,6 +166,10 @@ class Authentication {
 
 	static void reconfigMapFile();
 
+		// True if the socket failed to authenticate with the remote
+		// server but may succeed with a token request workflow.
+	bool shouldTryTokenRequest() const { return m_should_try_token_request; }
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -202,6 +206,7 @@ class Authentication {
 	time_t		m_auth_timeout_time;
 	bool		m_continue_handshake;
 	bool		m_continue_auth;
+	bool		m_should_try_token_request{false};
 
 	static MapFile* global_map_file;
 	static bool global_map_file_load_attempted;

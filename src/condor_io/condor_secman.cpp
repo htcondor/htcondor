@@ -2154,12 +2154,18 @@ SecManStartCommand::receivePostAuthInfo_inner()
 						m_sock->peer_addr().to_ip_string().Value()
 						);
 				} else {
+					if (response_method != "TOKEN") {
+						m_sock->setShouldTryTokenRequest(true);
+					}
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
 						response_rc.c_str(), response_user.c_str(), response_method.Value());
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
 				return StartCommandFailed;
+			} else {
+				// Hey, it worked!  Make sure we don't request a new token.
+				m_sock->setShouldTryTokenRequest(false);
 			}
 
 			// if we made it here, we're going to proceed as if the server authorized

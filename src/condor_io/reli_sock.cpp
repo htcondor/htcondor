@@ -1181,6 +1181,8 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 		} else {
 			result = m_authob->authenticate( hostAddr, methods, errstack, auth_timeout, non_blocking );
 		}
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
+
 		if ( result == 2 ) {
 			m_auth_in_progress = true;
 		}
@@ -1210,6 +1212,7 @@ int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, ch
 	if( m_auth_in_progress )
 	{
 		result = m_authob->authenticate_continue(errstack, non_blocking);
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
 		if (result == 2) {
 			return result;
 		}

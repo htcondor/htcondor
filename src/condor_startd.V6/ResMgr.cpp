@@ -28,10 +28,14 @@
 #include "overflow.h"
 #include <math.h>
 #include "credmon_interface.h"
+#include "condor_auth_passwd.h"
+#include "condor_netdb.h"
 
 #include "slot_builder.h"
 
 #include "strcasestr.h"
+
+extern int write_out_token(const std::string &token_name, const std::string &token);
 
 ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
 {
@@ -1052,12 +1056,23 @@ int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 					 bool nonblock )
 {
+	static bool first_time = true;
+
 		// Increment the resmgr's count of updates.
 	num_updates++;
 		// Actually do the updates, and return the # of updates sent.
-	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
+	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, first_time ? false : nonblock);
 
-	static bool first_time = true;
+	// Check to see if we need to perform a token request.
+	auto collector_list = daemonCore->getCollectorList();
+	if (collector_list && collector_list->shouldTryTokenRequest()) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; startd will perform a token request\n");
+		daemonCore->Register_Timer(0, (TimerHandlercpp)&ResMgr::try_token_request,
+			"ResMgr::try_token_request", this);
+	} else if (res == 0) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
+	}
+
 	if (first_time) {
 		first_time = false;
 		dprintf( D_ALWAYS, "Initial update sent to collector(s)\n");
@@ -1596,6 +1611,12 @@ ResMgr::reset_timers( void )
 	resetHibernateTimer();
 #endif /* HAVE_HIBERNATE */
 
+		// Clear out any pending token requests.
+	m_token_client_id = "";
+	m_token_request_id = "";
+
+		// This is a borrowed reference; do not delete.
+	m_token_daemon = nullptr;
 }
 
 
@@ -2621,4 +2642,84 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_classad, A_PUBLIC );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+
+void
+ResMgr::try_token_request()
+{
+	dprintf(D_SECURITY, "Trying token request to remote host.\n");
+	std::string token;
+	if (m_token_client_id.empty()) {
+		m_token_daemon = nullptr;
+		m_token_request_id = "";
+		std::vector<char> hostname;
+		hostname.reserve(MAXHOSTNAMELEN);
+		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
+			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
+			return;
+		}
+		m_token_client_id = "startd-" + std::string(&hostname[0]) + "-" +
+			std::to_string(get_csrng_uint() % 1000);
+
+		auto collector_list = daemonCore->getCollectorList();
+		if (!collector_list || collector_list->IsEmpty()) {
+			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
+			m_token_client_id = "";
+			return;
+		}
+		Daemon *daemon = nullptr;
+		collector_list->Rewind();
+		collector_list->Current(daemon);
+
+		if (!daemon) {
+			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
+			m_token_client_id = "";
+			return;
+		}
+
+		std::string request_id;
+		std::vector<std::string> authz_list;
+		authz_list.push_back("ADVERTISE_STARTD");
+		int lifetime = -1;
+		CondorError err;
+		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
+			token, request_id, &err))
+		{
+			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		m_token_request_id = request_id;
+		m_token_daemon = daemon;
+		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
+		daemonCore->Register_Timer(5, (TimerHandlercpp)&ResMgr::try_token_request,
+			"ResMgr::try_token_request", this);
+	} else {
+		CondorError err;
+		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
+			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		if (token.empty()) {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
+			daemonCore->Register_Timer(5, (TimerHandlercpp)&ResMgr::try_token_request,
+				"ResMgr::try_token_request", this);
+			return;
+		} else {
+			dprintf(D_ALWAYS, "Token request approved.\n");
+			Condor_Auth_Passwd::retry_token_search();
+			daemonCore->getSecMan()->reconfig();
+			if( up_tid != -1 ) {
+				daemonCore->Reset_Timer( up_tid, update_offset,
+					update_interval );
+			}
+		}
+		m_token_client_id = "";
+	}
+	if (!token.empty()) {
+		write_out_token("startd_auto_generated_token", token);
+	}
 }
