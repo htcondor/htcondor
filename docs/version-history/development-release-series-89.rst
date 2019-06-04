@@ -61,16 +61,16 @@ New Features:
    that was not appropriate for cryptographic contexts.  As a side-effect of this
    change, HTCondor can no longer be built without OpenSSL support. :ticket:`6990`
 
+-  A new authentication method, ``TOKEN``, has been added.  This method provides
+   the pool administrator with more fine-grained authorization control (making it
+   appropriate for end-user use) and provides the ability for multiple pool passwords
+   to exist within a single setup. :ticket:`6947`
+
 -  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
    client saves the token to the file specified in ``SCITOKENS_FILE``, that token
    will be used to authenticate with the remote server.  Further, for HTCondor-C
    jobs, the token file can be specified by the job attribute ``ScitokensFile``.
    :ticket:`7011`
-
--  A new authentication method, ``TOKEN``, has been added.  This method provides
-   the pool administrator with more fine-grained authorization control (making it
-   appropriate for end-user use) and provides the ability for multiple pool passwords
-   to exist within a single setup. :ticket:`6947`
 
 -  *condor_submit* and the python bindings submit now use a table to convert most submit keywords
    to job attributes. This should make adding new submit keywords in the future quicker and more reliable.
