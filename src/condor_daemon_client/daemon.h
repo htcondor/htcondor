@@ -608,6 +608,23 @@ public:
 	bool finishTokenRequest( const std::string &client_id, const std::string &request_id,
 		std::string &token, CondorError *err=nullptr ) noexcept;
 
+		/**
+		 * List all the token requests in the system.
+		 *
+		 * The `request_id`, if non-empty, causes only a given request to be returned;
+		 * otherwise, all requests are returned.
+		 */
+	bool listTokenRequest( const std::string &request_id, std::vector<classad::ClassAd> &results,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * Approve a specific token request.
+		 *
+		 * The `request_id` and `client_id` must match a given request.
+		 */
+	bool approveTokenRequest( const std::string &client_id, const std::string &request_id,
+		CondorError *err=nullptr ) noexcept;
+
 protected:
 	// Data members
 	char* _name;
