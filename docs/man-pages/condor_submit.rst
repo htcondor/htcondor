@@ -1182,6 +1182,13 @@ FILE TRANSFER COMMANDS
     backslash. You cannot specify directories to be remapped.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
+ transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
+    Specifies the file transfer plugins that should be transferred along with
+    the input files prior to invoking file transfer plugins for files specified in
+    *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
+    and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
+    Plugins transfered in this way must support the multi-file transfer plugin syntax.
+
  when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT >
     Setting
     **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`

@@ -2035,6 +2035,11 @@ Job ClassAd Attributes
     ``In``. :index:`TransferInFinished<single: TransferInFinished; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferInFinished>`
 
+``TransferInput``
+    A string attribute containing a comma separated list of directories, files and/or URLs
+    that should be transferred from the submit machine to the remote machine when
+    input file transfer is enabled.
+
 ``TransferInFinished``
     : When the job finished the most recent recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
@@ -2075,6 +2080,10 @@ Job ClassAd Attributes
     :index:`TransferOutFinished<single: TransferOutFinished; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferOutFinished>`
 
+``TransferOutput``
+    A string attribute containing a comma separated list of files and/or URLs that should be transferred
+    from the remote machine to the submit machine when output file transfer is enabled.
+
 ``TransferOutFinished``
     : When the job finished the most recent recent transfer of its
     output sandbox, measured in seconds from the epoch. (00:00:00 UTC
@@ -2114,6 +2123,15 @@ Job ClassAd Attributes
     active or queued, check ``TransferQueued``.
     :index:`TransferQueued<single: TransferQueued; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferQueued>`
+
+``TransferPlugins``
+    A string value containing a semicolon separated list of file transfer plugins
+    to be supplied by the job. Each entry in this list will be of the form
+    ``TAG1[,TAG2[,...]]=/path/to/plugin`` were `TAG` values are URL prefixes like `HTTP`,
+    and ``/path/to/plugin`` is the path that the transfer plugin is to be transferred from.
+    The files mentioned in this list will be transferred to the job sandbox before any file
+    transfer plugins are invoked. A transfer plugin supplied in this will way will be used
+    even if the execute node has a file transfer plugin installed that handles that URL prefix.
 
 ``TransferQueued``
     A boolean value that indicates whether the job is currently waiting

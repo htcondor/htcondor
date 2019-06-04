@@ -4867,6 +4867,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetUserLog
 	{SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
 	{SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
+	{SUBMIT_KEY_UserLogUseXML, ATTR_ULOG_USE_XML, SimpleSubmitKeyword::f_as_bool},
+
 	// formerly SetNoopJob
 	{SUBMIT_KEY_Noop, ATTR_JOB_NOOP, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_NoopExitSignal, ATTR_JOB_NOOP_EXIT_SIGNAL, SimpleSubmitKeyword::f_as_expr},
