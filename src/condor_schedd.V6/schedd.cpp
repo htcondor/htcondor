@@ -17479,6 +17479,7 @@ Scheduler::try_token_request()
 				"Scheduler::try_token_request", this);
 			return;
 		} else {
+			dprintf(D_ALWAYS, "Token request approved.\n");
 				// Flush the cached result of the token search.
 			Condor_Auth_Passwd::retry_token_search();
 				// Flush out the security sessions; will need to force a re-auth.
@@ -17488,5 +17489,7 @@ Scheduler::try_token_request()
 		}
 		m_token_client_id = "";
 	}
-	write_out_token("schedd_auto_generated_token", token);
+	if (!token.empty()) {
+		write_out_token("schedd_auto_generated_token", token);
+	}
 }
