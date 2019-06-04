@@ -1263,6 +1263,9 @@ rm -rf %{buildroot}
 %_bindir/condor_test_match
 %_bindir/condor_token_create
 %_bindir/condor_token_fetch
+%_bindir/condor_token_request
+%_bindir/condor_token_request_approve
+%_bindir/condor_token_request_list
 %_bindir/condor_token_list
 %_bindir/condor_drain
 %_bindir/condor_ping
