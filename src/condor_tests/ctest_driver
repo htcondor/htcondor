@@ -92,7 +92,7 @@ def main():
         os.environ['LD_LIBRARY_PATH'] = new_library_path + ':' + os.environ['LD_LIBRARY_PATH']
     else:
         os.environ['LD_LIBRARY_PATH'] = new_library_path
-    os.environ['PATH'] = ":".join([os.path.join(args.prefix_path, "bin"), "/bin", "/sbin", "/usr/sbin", "/usr/bin"])
+    os.environ['PATH'] = ":".join([os.path.join(args.prefix_path, "bin"), os.path.join(args.prefix_path, "sbin"), "/bin", "/sbin", "/usr/sbin", "/usr/bin"])
 
     write_base_config(args.prefix_path, java=args.java)
     # This is not re-generated each time.    
