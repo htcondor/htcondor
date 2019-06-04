@@ -629,6 +629,7 @@ Scheduler::Scheduler() :
 	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
+	m_token_daemon = nullptr;
 
 	stats.InitMain();
 
@@ -17438,10 +17439,9 @@ Scheduler::try_token_request()
 			return;
 		}
 		Daemon *daemon = nullptr;
+		collector_list->Rewind();
 		collector_list->Current(daemon);
-		//while (daemon && !daemon->shouldTryTokenRequest() && collector_list->Next(daemon)) {}
 
-		//if (!daemon || !daemon->shouldTryTokenRequest()) {
 		if (!daemon) {
 			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
 			m_token_client_id = "";

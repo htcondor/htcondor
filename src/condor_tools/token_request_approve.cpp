@@ -109,7 +109,7 @@ approve_token(const std::string &pool, const std::string &name, daemon_t dtype,
 		}
 
 		auto current_request_id = request_id;
-		if (current_request_id.empty() && 
+		if (current_request_id.empty() &&
 				!req_contents.EvaluateAttrString(ATTR_SEC_REQUEST_ID, current_request_id)) {
 			fprintf(stderr, "Remote host did not provide a request ID.\n");
 			exit(1);
