@@ -77,35 +77,53 @@ approve_token(const std::string &pool, const std::string &name, daemon_t dtype,
 			err.getFullText().c_str());
 		exit(1);
 	}
-	if (results.size() != 1) {
-		fprintf(stderr, "Remote daemon did not provide information for request ID %s.\n", request_id.c_str());
-		exit(1);
-	}
-	const auto &req_contents = results.back();
-
-	std::string client_id;
-	if (!req_contents.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
-		fprintf(stderr, "Remote host did not provide a client ID.\n");
+	if (results.size() == 0) {
+		if (request_id.empty()) {
+			fprintf(stderr, "Remote daemon has no request to approve.\n");
+		} else {
+			fprintf(stderr, "Remote daemon did not provide information for request ID %s.\n", request_id.c_str());
+		}
 		exit(1);
 	}
 
-	classad::ClassAdUnParser unp;
-	std::string req_contents_str;
-	unp.SetOldClassAd(true);
-	unp.Unparse(req_contents_str, &req_contents);
+	for (const auto &req_contents : results) {
 
-	printf("Request contents:\n%s\n", req_contents_str.c_str());
-	printf("To approve, please type 'yes'\n");
-	std::string response;
-	std::getline(std::cin, response);
-	if (response != "yes") {
-		fprintf(stderr, "Request was NOT approved.\n");
-		exit(1);
-	}
+		std::string client_id;
+		if (!req_contents.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+			fprintf(stderr, "Remote host did not provide a client ID.\n");
+			exit(1);
+		}
 
-	if (!daemon->approveTokenRequest(client_id, request_id, &err)) {
-		fprintf(stderr, "Failed to approve token request: %s\n", err.getFullText().c_str());
-		exit(1);
+		classad::ClassAdUnParser unp;
+		std::string req_contents_str;
+		unp.SetOldClassAd(true);
+		unp.Unparse(req_contents_str, &req_contents);
+
+		printf("Request contents:\n%s\n", req_contents_str.c_str());
+		printf("To approve, please type 'yes'\n");
+		std::string response;
+		std::getline(std::cin, response);
+		if (response != "yes") {
+			fprintf(stderr, "Request was NOT approved.\n");
+			exit(1);
+		}
+
+		auto current_request_id = request_id;
+		if (current_request_id.empty() && 
+				!req_contents.EvaluateAttrString(ATTR_SEC_REQUEST_ID, current_request_id)) {
+			fprintf(stderr, "Remote host did not provide a request ID.\n");
+			exit(1);
+		}
+
+		if (!daemon->approveTokenRequest(client_id, current_request_id, &err)) {
+			fprintf(stderr, "Failed to approve token request: %s\n", err.getFullText().c_str());
+			exit(1);
+		} else {
+			printf("Request %s approved successfully.\n", current_request_id.c_str());
+		}
+		if (!request_id.empty()) {
+			break;
+		}
 	}
 
 	return 0;
