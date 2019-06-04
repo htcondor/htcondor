@@ -174,7 +174,7 @@ void KeyCacheEntry::delete_storage() {
 KeyCache::KeyCache() {
 	key_table = new HashTable<MyString, KeyCacheEntry*>(hashFunction);
 	m_index = new KeyCacheIndex(hashFunction);
-	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
+	dprintf ( D_SECURITY|D_FULLDEBUG, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
@@ -199,7 +199,7 @@ const KeyCache& KeyCache::operator=(const KeyCache& k) {
 
 
 void KeyCache::copy_storage(const KeyCache &copy) {
-	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
+	dprintf ( D_SECURITY|D_FULLDEBUG, "KEYCACHE: created: %p\n", key_table );
 
 	// manually iterate all entries from the hash.  they are
 	// pointers, and we need to copy that object.
@@ -219,17 +219,11 @@ void KeyCache::delete_storage()
 		key_table->startIterations();
 		while( key_table->iterate(key_entry) ) {
 			if( key_entry ) {
-				if( IsDebugVerbose(D_SECURITY) ) {
-					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %p\n", 
-							 key_entry );
-				}
 				delete key_entry;
 			}
 		}
 		key_table->clear();
-		if( IsDebugVerbose(D_SECURITY) ) {
-			dprintf( D_SECURITY, "KEYCACHE: deleted: %p\n", key_table );
-		}
+		dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
 	}
 	if( m_index ) {
 		MyString index;
@@ -414,11 +408,11 @@ void KeyCache::expire(KeyCacheEntry *e) {
 	time_t key_exp = e->expiration();
 	char const *expiration_type = e->expirationType();
 
-	dprintf (D_SECURITY, "KEYCACHE: Session %s %s expired at %s", e->id(), expiration_type, ctime(&key_exp) );
+	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s", e->id(), expiration_type, ctime(&key_exp) );
 
 	// remove its reference from the hash table
 	remove(key_id);       // This should do it
-	dprintf (D_SECURITY, "KEYCACHE: Removed %s from key cache.\n", key_id);
+	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Removed %s from key cache.\n", key_id);
 
 	free( key_id );
 }
