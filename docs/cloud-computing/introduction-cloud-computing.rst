@@ -65,6 +65,18 @@ It may be possible for an HTCondor administrator to lower the cost of
 their pool by increasing utilization and meeting peak demand with cloud
 computing.
 
+Use Case: Experimental Convenience
+----------------------------------
+
+Although you can experiment with many different HTCondor configurations using
+*condor_annex* and HTCondor running as a normal user, some configurations may
+require elevated privileges.  In other situations, you may not be to create
+an unprivileged HTCondor pool on a machine because that would violate the
+acceptable-use policies, or because you can't change the firewall, or
+because you'd use too much bandwidth.  In those cases, you can instead
+"seed" the cloud with a single-node HTCondor installation and expand it using
+*condor_annex*.  See :ref:`condor_in_the_cloud` for instructions.
+
 .. rubric: Footnotes
 
 .. [1] That is, "infrastructure-as-a-service" providers.
