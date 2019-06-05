@@ -236,6 +236,10 @@ Singularity::setup(ClassAd &machineAd,
 		}
 	}
 
+	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
+		sing_args.AppendArg("--no-home");
+	}
+
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
 	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
