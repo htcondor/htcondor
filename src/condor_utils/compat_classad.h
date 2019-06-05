@@ -45,7 +45,6 @@ namespace compat_classad {
 
 class ClassAdFileParseHelper;
 
-extern classad::References ClassAdPrivateAttrs;
 bool ClassAdAttributeIsPrivate( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;

@@ -663,11 +663,27 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
+		// If our peer is at least 8.9.2 and has NEGOTIATOR authz, then we'll
+		// trust it to handle our capabilities.
+	bool filter_private_ads = true;
+	auto *verinfo = sock->get_peer_version();
+	if (verinfo && verinfo->built_since_version(8, 9, 2)) {
+		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
+		if (USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser())) {
+			filter_private_ads = false;
+		}
+	}
+
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
 	ClassAd *cad = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
 	AdTypes whichAds = query_entry->whichAds;
+
+		// Always send private attributes in private ads.
+	if (whichAds == STARTD_PVT_AD) {
+		filter_private_ads = false;
+	}
 
 	// Perform the query
 
@@ -735,7 +751,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj));
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_ads ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
         
 		if (stats_ad) {
 			stats_ad->Unchain();

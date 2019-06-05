@@ -584,6 +584,7 @@ ContactStartdArgs::~ContactStartdArgs()
 
 Scheduler::Scheduler() :
 	OtherPoolStats(stats),
+	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
 	GridJobOwners(UserIdentity::HashFcn),
@@ -856,6 +857,56 @@ Scheduler::~Scheduler()
 
 	delete slotWeightOfJob;
 	delete slotWeightGuessAd;
+}
+
+
+bool
+Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
+{
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+		return false;
+	}
+
+	// Internally, the negotiator session is serialized as a ClaimID.
+	// Obviously, there is no Claim here -- but it's simpler to keep
+	// this aligned with the rest of the infrastructure.
+
+	// ClaimId string is of the form:
+	// (keep this in sync with condor_claimid_parser)
+	// "<ip:port>#schedd_bday#sequence_num#cookie"
+
+	m_negotiator_seq++;
+
+	std::string id;
+
+	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+		m_scheduler_startup, m_negotiator_seq);
+
+	// A keylength of 32 bytes = 256 bits.
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+		Condor_Crypt_Base::randomHexKey(keylen),
+		free
+	};
+	if (!keybuf.get()) {
+		return false;
+	}
+
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		NEGOTIATOR,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration
+	);
+	if (retval) {
+		capability = id + "#" + session_info + keybuf.get();
+	}
+	return retval;
 }
 
 
@@ -1517,6 +1568,15 @@ Scheduler::count_jobs()
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
 
+		// This is called at most every 5 seconds, meaning this can cause
+		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
+		// collector.
+	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+	std::string capability;
+	if (SetupNegotiatorSession(duration, capability)) {
+		m_adBase->InsertAttr(ATTR_CAPABILITY, capability);
+	}
+
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
 
@@ -1591,6 +1651,12 @@ Scheduler::count_jobs()
 				}
 			}
 
+				// Same comment about potentially creating hundreds of sessions applies
+				// here as above for the primary collector...
+			unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+			std::string capability;
+			SetupNegotiatorSession(duration, capability);
+
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
@@ -1604,6 +1670,10 @@ Scheduler::count_jobs()
 					// we will use this "tag" later to identify which
 					// CM we are negotiating with when we negotiate
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
+				if (!capability.empty()) {
+					pAd.InsertAttr(ATTR_CAPABILITY, capability);
+				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}

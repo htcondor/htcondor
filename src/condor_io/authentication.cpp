@@ -59,6 +59,7 @@ char const *UNAUTHENTICATED_FQU = "unauthenticated@unmapped";
 char const *UNAUTHENTICATED_USER = "unauthenticated";
 char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
 char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
+char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU = "negotiator-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
