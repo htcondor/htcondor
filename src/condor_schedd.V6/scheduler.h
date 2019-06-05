@@ -317,7 +317,6 @@ class match_rec: public ClaimIdParser
 	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
-	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
@@ -346,7 +345,12 @@ class match_rec: public ClaimIdParser
 		return m_description.c_str();
 	}
 
+	const std::string & getPool() const {return m_pool;}
+
 	PROC_ID m_now_job;
+
+private:
+	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
 class UserIdentity {

@@ -393,9 +393,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	}
 	user = strdup( the_user );
 	if( my_pool ) {
-		pool = strdup( my_pool );
-	} else {
-		pool = NULL;
+		m_pool = std::string(my_pool);
 	}
 	this->is_dedicated = is_dedicated_arg;
 	allocated = false;
@@ -511,9 +509,6 @@ match_rec::~match_rec()
 	}
 	if( user ) {
 		free(user);
-	}
-	if( pool ) {
-		free(pool);
 	}
 	delete auth_hole_id;
 
@@ -1086,8 +1081,8 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	const SubmitterCounters & Counters = Owner.num;
 	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
+	int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
 	if ((Owner.FlockLevel >= flock_level) || (flock_level == INT_MAX)) {
-		int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
 		int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
 		const auto iter = Owner.flock.find(pool_name);
 		if (iter != Owner.flock.end()) {
@@ -1125,6 +1120,12 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 			WeightedJobsRunningHere = 0;
 		}
 		JobsRunningElsewhere = (Counters.JobsRunning + Counters.JobsFlocked) - JobsRunningHere;
+
+			// For flock targets, if we have neither idle nor running jobs for that pool,
+			// simply do not advertise.
+		if ((JobsRunningHere == 0) && (jobs_idle == 0)) {
+			return false;
+		}
 	}
 
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
@@ -1355,7 +1356,7 @@ Scheduler::count_jobs()
 		SubDat->num.Hits += 1;
 		SubDat->LastHitTime = current_time;
 		if (at_sign) *at_sign = '@';
-		if (rec->shadowRec && !rec->pool) {
+		if (rec->shadowRec && !rec->getPool().empty()) {
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
@@ -1364,7 +1365,7 @@ Scheduler::count_jobs()
 			SubDat->num.WeightedJobsRunning += job_weight;
 			SubDat->num.JobsRunning++;
 		} else {				// in remote pool, so add to Flocked count
-			auto iter = SubDat->flock.insert({rec->pool, SubmitterFlockCounters()});
+			auto iter = SubDat->flock.insert({rec->getPool(), SubmitterFlockCounters()});
 			iter.first->second.JobsRunning++;
 			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
 			JobsFlocked++;
@@ -7842,10 +7843,12 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
 
-			sn = new DedicatedScheddNegotiate(0, NULL, match->user, match->pool);
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user,
+				match->getPool().empty() ? nullptr : match->getPool().c_str());
 		} else {
 			// Use the DedSched
-			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
+			sn = new MainScheddNegotiate(0, NULL, match->user,
+				match->getPool().empty() ? nullptr : match->getPool().c_str());
 		}		
 
 			// Setting cluster.proc to -1.-1 should result in the schedd
@@ -7916,8 +7919,9 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		paired_job_id.cluster = match->cluster;
 		paired_job_id.proc = -1;
 		match_rec *paired_mrec = AddMrec( msg->paired_claim_id(), match->peer,
-										  &paired_job_id, msg->paired_startd_ad(),
-										  match->user, match->pool );
+						  &paired_job_id, msg->paired_startd_ad(),
+						  match->user,
+						  match->getPool().empty() ? nullptr : match->getPool().c_str() );
 
 		if ( paired_mrec == NULL ) {
 			dprintf( D_ALWAYS, "AsyncXfer: Failed to make match_rec for paired slot!\n" );
@@ -10779,9 +10783,11 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	
 	if (pid) {
 		add_shadow_rec(new_rec);
-	} else if ( new_rec->match && new_rec->match->pool ) {
+	} else if ( new_rec->match && !new_rec->match->getPool().empty() ) {
 		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-						   ATTR_REMOTE_POOL, new_rec->match->pool, NONDURABLE);
+						ATTR_REMOTE_POOL,
+						new_rec->match->getPool().empty() ? nullptr : new_rec->match->getPool().c_str(),
+						NONDURABLE);
 	}
 	return new_rec;
 }
@@ -11098,8 +11104,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				}
 			}
 		}
-		if( mrec->pool ) {
-			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
+		if( !mrec->getPool().empty() ) {
+			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->getPool().c_str());
 		}
 		if ( mrec->auth_hole_id ) {
 			SetAttributeString(cluster,
