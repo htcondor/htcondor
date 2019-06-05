@@ -1821,6 +1821,14 @@ friendly_name=Expression to determine Singularity image
 review=?
 tags=startd
 
+[SINGULARITY_MOUNT_HOME]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Allow singluarity to bind moont home
+tags=startd
+
 [UPDATE_INTERVAL]
 default=300
 type=int
