@@ -275,11 +275,11 @@ bool
 DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 )
 {
 		// Only send secrets in the case where there's a private ad (ad2)
-		// or the collector has been build since 8.9.2 and understands not
+		// or the collector has been build since 8.9.3 and understands not
 		// to share submitter secrets.
 	auto *verinfo = sock->get_peer_version();
 	bool send_submitter_secrets = false;
-	if (!ad2 && verinfo && verinfo->built_since_version(8, 9, 2)) {
+	if (!ad2 && verinfo && verinfo->built_since_version(8, 9, 3)) {
 		send_submitter_secrets = true;
 	}
 
@@ -297,7 +297,8 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 		}
 		return false;
 	}
-	if( ad2 && ! putClassAd(sock, *ad2, options) ) {
+		// This is always a private ad.
+	if( ad2 && ! putClassAd(sock, *ad2, 0) ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send ClassAd #2 to collector" );

@@ -663,11 +663,11 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
-		// If our peer is at least 8.9.2 and has NEGOTIATOR authz, then we'll
+		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
 	bool filter_private_ads = true;
 	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 2)) {
+	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
 		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
 		if (USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser())) {
 			filter_private_ads = false;
@@ -791,7 +791,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_ads=%d\n",
 			 __numAds__,
 			 __failed__,
 			 end_query - begin,
@@ -802,7 +802,8 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
 			 query_entry->subsys,
 			 sock->peer_description(),
-			 projection.c_str());
+			 projection.c_str(),
+			 filter_private_ads);
 END:
 	
 	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
