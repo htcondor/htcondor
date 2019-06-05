@@ -10,6 +10,7 @@ base_config_template = """
 RELEASE_DIR={prefix_path}
 # This is overwritten by CondorPersonal.pm
 LOCAL_CONFIG_FILE=/
+CONDOR_HOST=$(FULL_HOSTNAME)
 COLLECTOR_HOST=$(FULL_HOSTNAME):0
 ALLOW_READ=*
 ALLOW_WRITE=*
@@ -93,6 +94,8 @@ def main():
     else:
         os.environ['LD_LIBRARY_PATH'] = new_library_path
     os.environ['PATH'] = ":".join([os.path.join(args.prefix_path, "bin"), os.path.join(args.prefix_path, "sbin"), "/bin", "/sbin", "/usr/sbin", "/usr/bin"])
+    pythonpath = os.environ.setdefault('PYTHONPATH')
+    os.environ['PYTHONPATH'] = ':'.join([".", os.path.join(args.prefix_path, "lib", "python"), pythonpath])
 
     write_base_config(args.prefix_path, java=args.java)
     # This is not re-generated each time.    
