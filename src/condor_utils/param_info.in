@@ -3292,6 +3292,11 @@ default=$(FLOCK_TO)
 type=string
 tags=schedd
 
+[FLOCK_BY_DEFAULT]
+default=true
+type=bool
+tags=schedd
+
 [SHADOW_SIZE_ESTIMATE]
 default=125
 type=int

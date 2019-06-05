@@ -31,6 +31,7 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -175,6 +176,13 @@ struct LiveJobCounters {
   {}
 };
 
+struct SubmitterFlockCounters {
+  int JobsRunning{0};
+  int WeightedJobsRunning{0};
+  int JobsIdle{0};
+  int WeightedJobsIdle{0};
+};
+
 // counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
@@ -183,8 +191,6 @@ struct SubmitterCounters {
   int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
-  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
-  int WeightedJobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int SchedulerJobsRunning; // Scheduler Universe (i.e dags)
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
@@ -200,8 +206,6 @@ struct SubmitterCounters {
 	, WeightedJobsIdle(0)
 	, JobsHeld(0)
 	, JobsFlocked(0)
-	, JobsFlockedHere(0)
-	, WeightedJobsFlockedHere(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
@@ -218,6 +222,8 @@ struct SubmitterData {
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   SubmitterCounters num;
+  std::unordered_map<std::string, SubmitterFlockCounters> flock; // Per-pool flock information
+  std::unordered_set<std::string> owners; // Number of unique owners observed using this submitter.
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
@@ -923,7 +929,7 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int debug_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level, int debug_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
@@ -1022,6 +1028,8 @@ private:
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
+	std::unordered_set<std::string> FlockPools; // Names of all "default" flocked collectors.
+	std::unordered_map<std::string, std::unique_ptr<DCCollector>> FlockExtra; // User-provided flock targets.
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive

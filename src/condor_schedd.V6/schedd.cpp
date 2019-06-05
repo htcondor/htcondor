@@ -1080,19 +1080,30 @@ Scheduler::check_claim_request_timeouts()
   no longer flock and/or be advertised).
 */
 bool
-Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int dprint_level)
+Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level, int dprint_level)
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
 	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
-	if (Owner.FlockLevel >= flock_level) {
-		pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
+	if ((Owner.FlockLevel >= flock_level) || (flock_level == INT_MAX)) {
+		int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
+		int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
+		const auto iter = Owner.flock.find(pool_name);
+		if (iter != Owner.flock.end()) {
+			jobs_idle = iter->second.JobsIdle;
+			weighted_jobs_idle = iter->second.WeightedJobsIdle;
+		}
+		pAd.Assign(ATTR_IDLE_JOBS, jobs_idle);
+		pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, weighted_jobs_idle);
+		if (want_dprintf) {
+			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, jobs_idle);
+			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, weighted_jobs_idle);
+		}
 	} else if (Owner.OldFlockLevel >= flock_level ||
 				Counters.JobsRunning > 0) {
 		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
+		pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, (int)0);
 	} else {
 		// if we're no longer flocking with this pool and
 		// we're not running jobs in the pool, then don't send
@@ -1105,26 +1116,24 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 	int JobsRunningElsewhere = Counters.JobsFlocked;
 
 	if (flock_level > 0) {
-		JobsRunningHere = Counters.JobsFlockedHere;
-		WeightedJobsRunningHere = Counters.WeightedJobsFlockedHere;
-		JobsRunningElsewhere = (Counters.JobsRunning + Counters.JobsFlocked) - Counters.JobsFlockedHere;
+		const auto &iter = Owner.flock.find(pool_name);
+		if (iter != Owner.flock.end()) {
+			JobsRunningHere = iter->second.JobsRunning;
+			WeightedJobsRunningHere = iter->second.WeightedJobsRunning;
+		} else {
+			JobsRunningHere = 0;
+			WeightedJobsRunningHere = 0;
+		}
+		JobsRunningElsewhere = (Counters.JobsRunning + Counters.JobsFlocked) - JobsRunningHere;
 	}
 
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, JobsRunningHere);
 
-	pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
-
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
-
-	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
 	if (want_dprintf)
@@ -1299,10 +1308,24 @@ Scheduler::count_jobs()
 		Owner.num.clear_counters();	// clear the jobs counters 
 	}
 
+	FlockPools.clear();
+	if (FlockCollectors) {
+		FlockCollectors->rewind();
+		Daemon *daemon;
+		while (FlockCollectors->next(daemon)) {
+			auto col = static_cast<DCCollector*>(daemon);
+			FlockPools.insert(col->name());
+		}
+	}
+
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		SubmitterData & SubDat = it->second;
 		SubDat.num.clear_job_counters();	// clear the jobs counters 
 		SubDat.PrioSet.clear();
+		SubDat.flock.clear();
+		for (const auto &entry : FlockPools) {
+			SubDat.flock[entry] = SubmitterFlockCounters();
+		}
 	}
 
 	GridJobOwners.clear();
@@ -1341,7 +1364,9 @@ Scheduler::count_jobs()
 			SubDat->num.WeightedJobsRunning += job_weight;
 			SubDat->num.JobsRunning++;
 		} else {				// in remote pool, so add to Flocked count
-			SubDat->num.JobsFlocked++;
+			auto iter = SubDat->flock.insert({rec->pool, SubmitterFlockCounters()});
+			iter.first->second.JobsRunning++;
+			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
 			JobsFlocked++;
 		}
 	}
@@ -1594,7 +1619,7 @@ Scheduler::count_jobs()
 				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
-		if ( !fill_submitter_ad(pAd, SubDat, -1, D_FULLDEBUG) ) continue;
+		if ( !fill_submitter_ad(pAd, SubDat, "", -1, D_FULLDEBUG) ) continue;
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -1617,6 +1642,7 @@ Scheduler::count_jobs()
 	if( FlockCollectors && FlockNegotiators ) {
 		FlockCollectors->rewind();
 		FlockNegotiators->rewind();
+
 		for( int flock_level = 1;
 			 flock_level <= MaxFlockLevel; flock_level++) {
 			FlockNegotiators->next( flock_neg );
@@ -1624,31 +1650,6 @@ Scheduler::count_jobs()
 			flock_col = (DCCollector*)d;
 			if( ! (flock_col && flock_neg) ) { 
 				continue;
-			}
-			// Re-calculate JobsFlockedHere for each flock location
-			// Then when we call fill_submitter_ad with a flock_level != 0
-			// it will publish JobsFlockedHere for that site as JobsRunning
-			// and (JobsRunning + JobsFlocked) - JobsFlockedHere as JobsFlocked
-			// i.e. the JobsFlocked count for flocked pools is a count of
-			// 'jobs running elsewhere' including jobs running in the schedd's local pool.
-			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
-				SubmitterData & SubDat = it->second;
-				SubDat.num.JobsFlockedHere = 0;
-				SubDat.num.WeightedJobsFlockedHere = 0;
-			}
-			matches->startIterations();
-			match_rec *mRec;
-			while(matches->iterate(mRec) == 1) {
-				char *at_sign = strchr(mRec->user, '@');
-				if (at_sign) *at_sign = '\0';
-				SubmitterData * SubDat = insert_submitter(mRec->user);
-				if (at_sign) *at_sign = '@';
-				if (mRec->shadowRec && mRec->pool &&
-					!strcmp(mRec->pool, flock_neg->pool())) {
-					SubDat->num.JobsFlockedHere++;
-
-					SubDat->num.WeightedJobsFlockedHere += calcSlotWeight(mRec);
-				}
 			}
 
 				// Same comment about potentially creating hundreds of sessions applies
@@ -1660,7 +1661,7 @@ Scheduler::count_jobs()
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
-				if ( !fill_submitter_ad(pAd,SubDat,flock_level,D_NEVER) ) {
+				if ( !fill_submitter_ad(pAd,SubDat,flock_col->name(),flock_level,D_NEVER) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
@@ -1676,6 +1677,30 @@ Scheduler::count_jobs()
 				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+			}
+		}
+	}
+	for (const auto &map_entry : Submitters) {
+		const SubmitterData &SubDat = map_entry.second;
+			// If two owners are reusing the same submitter, then we can't safely
+			// add "extra" flock targets currently.  Otherwise, a malicious Unix user A
+			// could submit jobs that cause Unix user B to flock to a pool controlled
+			// by Unix user A.
+		if (SubDat.owners.size() > 1) {continue;}
+		for (const auto &flock_map_entries : SubDat.flock) {
+			const auto &pool = flock_map_entries.first;
+			if (FlockPools.find(pool) == FlockPools.end()) {
+				if (!fill_submitter_ad(pAd, SubDat, pool, INT_MAX, D_NEVER)) {continue;}
+
+				pAd.Assign(ATTR_SUBMITTER_TAG, pool);
+
+				auto iter = FlockExtra.find(pool);
+				if (iter == FlockExtra.end()) {
+					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					auto iter2 = FlockExtra.insert(std::move(value));
+					iter = iter2.first;
+				}
+				iter->second->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
 		}
 	}
@@ -1892,7 +1917,7 @@ int Scheduler::make_ad_list(
       if (Owner.empty()) continue;
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
-      if ( ! fill_submitter_ad(*cad, Owner, -1, D_NEVER)) {
+      if ( ! fill_submitter_ad(*cad, Owner, "", -1, D_NEVER)) {
          delete cad;
          continue;
       }
@@ -2895,6 +2920,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 				ATTR_JOB_STATUS);
 		return 0;
 	}
+	dprintf(D_FULLDEBUG, "Counting a job!\n");
 
 	bool noop = false;
 	job->LookupBool(ATTR_JOB_NOOP, noop);
@@ -2951,6 +2977,8 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n", ATTR_OWNER);
 		return 0;
 	}
+		// Keep track of unique owners per submitter.
+	SubData->owners.insert(OwnInfo->name);
 
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
@@ -3145,11 +3173,12 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			}
 		}
 			// Update Owners array JobsIdle
-		OwnerCounts->JobsIdle += (max_hosts - cur_hosts);
-		Counters->JobsIdle += (max_hosts - cur_hosts);
-
+		int job_idle = (max_hosts - cur_hosts);
+		OwnerCounts->JobsIdle += job_idle;
+		Counters->JobsIdle += job_idle;
 
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
+		int job_idle_weight;
 		if (scheduler.m_use_slot_weights && (max_hosts > cur_hosts)) {
 				// if we're biasing idle jobs by SCHEDD_SLOT_WEIGHT, eval that here
 			int job_weight = request_cpus;
@@ -3162,10 +3191,45 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			} else {
 				job_weight = scheduler.guessJobSlotWeight(job);
 			}
-			Counters->WeightedJobsIdle += job_weight * (max_hosts - cur_hosts);
+			job_idle_weight = job_weight * job_idle;
 		} else {
 			// here: either max_hosts == cur_hosts || !scheduler.m_use_slot_weights
-			Counters->WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+			job_idle_weight = request_cpus * job_idle;
+		}
+		Counters->WeightedJobsIdle += job_idle_weight;
+
+			// Update per-flock jobs idle
+		std::string flock_targets;
+		bool include_default_flock = param_boolean("FLOCK_BY_DEFAULT", true);
+		if (job->EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
+			StringList flock_list(flock_targets.c_str());
+			flock_list.rewind();
+			char *flock_entry = nullptr;
+			while ( (flock_entry = flock_list.next()) ) {
+				if (!strcasecmp(flock_entry, "default")) {
+					include_default_flock = true;
+				} else {
+					auto iter = SubData->flock.insert({flock_entry, SubmitterFlockCounters()});
+					iter.first->second.JobsIdle += job_idle;
+					iter.first->second.WeightedJobsIdle += job_idle_weight;
+				}
+			}
+				// Subtract out overlap with default list of flocked pools.
+			flock_list.rewind();
+			while ( (flock_entry = flock_list.next()) ) {
+				auto iter = scheduler.FlockPools.find(flock_entry);
+				if (iter != scheduler.FlockPools.end()) {
+					SubData->flock[flock_entry].JobsIdle -= job_idle;
+					SubData->flock[flock_entry].WeightedJobsIdle -= job_idle_weight;
+				}
+			}
+		}
+		if (include_default_flock) {
+			dprintf(D_FULLDEBUG, "Job will flock by default.\n");
+			for (const auto &flock_entry : scheduler.FlockPools) {
+				SubData->flock[flock_entry].JobsIdle += job_idle;
+				SubData->flock[flock_entry].WeightedJobsIdle -= job_idle_weight;
+			}
 		}
 
 			// Don't update scheduler.Owners[name].JobsRunning here.
@@ -13259,6 +13323,8 @@ Scheduler::Init()
 	}
 	if (flock_collector_hosts) free(flock_collector_hosts);
 	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
+
+	FlockExtra.clear();
 
 	// fetch all params that start with SCHEDD_COLLECT_STATS_FOR_ and
 	// use them to define other scheduler stats pools.  the value of this
