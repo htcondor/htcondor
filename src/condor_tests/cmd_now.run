@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#testreq: personal
+#endtestreq
 
 import sys
 import time
