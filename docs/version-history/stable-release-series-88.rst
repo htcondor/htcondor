@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that could cause the *condor_schedd* to crash when a
+   scheduler universe job is removed.
+   :ticket:`7095`
+
 -  Fixed a bug that could result in job attributes ``CommittedTime`` and
    ``CommittedSlotTime`` reporting overly-large values.
    :ticket:`7083`
