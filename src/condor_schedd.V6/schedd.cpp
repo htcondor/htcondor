@@ -3738,9 +3738,10 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 			break;
 	}
 
-	if ( status == COMPLETED || status == REMOVED ) {
+	if ( (status == COMPLETED || status == REMOVED) &&
+	     ! scheduler.FindSrecByProcID(jobad->jid) )
+	{
 		DestroyProc(cluster,proc);
-		return 1;
 	}
 
 	return 1;
@@ -12524,7 +12525,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	int reason_code;
 	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-	ASSERT( job_ad ); // No job ad?
+	if ( ! job_ad ) {
+		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
+			job_id.cluster, job_id.proc );
+		return;
+	}
 	{
 		UserPolicy policy;
 #ifdef USE_NON_MUTATING_USERPOLICY
