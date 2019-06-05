@@ -3071,6 +3071,10 @@ int DestroyProc(int cluster_id, int proc_id)
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
 			                (int)time(NULL), true /*nondurable*/);
 		}
+	} else if ( job_status != REMOVED ) {
+		// Jobs must be in COMPLETED or REMOVED status to leave the queue
+		errno = EINVAL;
+		return DESTROYPROC_ERROR;
 	}
 
 	int job_finished_hook_done = -1;
