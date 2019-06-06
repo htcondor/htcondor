@@ -5,6 +5,7 @@
 #include "compat_classad.h"
 #include "ToE.h"
 #include "iso_dates.h"
+#include "utc_time.h"
 
 namespace ToE {
 

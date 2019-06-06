@@ -219,9 +219,9 @@ class ClassAd : public classad::ClassAd
 		 * our own Insert() below, our parent's Insert() won't be found
 		 * by users of this class.
 		 */
-	bool Insert( const std::string &attrName, classad::ExprTree *& expr );
+	bool Insert( const std::string &attrName, classad::ExprTree * expr );
 
-	int Insert(const char *name, classad::ExprTree *& expr );
+	int Insert(const char *name, classad::ExprTree * expr );
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"

@@ -40,15 +40,6 @@
 #include "condor_debug.h"
 //--------------------------------------------------------
 
-#ifdef WIN32
- #if ! defined timegm
-  // timegm is the Linux name for the gm version of mktime, on Windows it is called _mkgmtime
-  #define timegm _mkgmtime
-  auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
-  auto __inline gmtime_r(const time_t*time, struct tm*result) { return gmtime_s(result, time); }
- #endif
-#endif
-
 // define this to turn off seeking in the event reader methods
 #define DONT_EVER_SEEK 1
 
@@ -3209,7 +3200,7 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 			delete myad;
 			return NULL;
 		}
-		if(! myad->Insert( "ToE", (classad::ExprTree* &)tt )) {
+		if(! myad->Insert( "ToE", tt )) {
 			delete tt;
 			delete myad;
 			return NULL;

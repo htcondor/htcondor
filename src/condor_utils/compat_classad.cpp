@@ -1831,12 +1831,12 @@ ClassAdAttributeIsPrivate( const std::string &name )
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
 
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr)
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree * expr)
 {
 	return classad::ClassAd::Insert( attrName, expr );
 }
 
-int ClassAd::Insert( const char *name, classad::ExprTree *& expr )
+int ClassAd::Insert( const char *name, classad::ExprTree * expr )
 {
 	string str(name);
 	return Insert( str, expr ) ? TRUE : FALSE;
