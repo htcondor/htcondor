@@ -1,5 +1,5 @@
-Administrators’ Manual
-----------------------
+Administrators' Manual
+======================
 
 .. toctree::
    :maxdepth: 2
@@ -22,4 +22,4 @@ Administrators’ Manual
    java-support-installation
    setting-up-vm-docker-universes
    singularity-support
-   power-management      
+   power-management      

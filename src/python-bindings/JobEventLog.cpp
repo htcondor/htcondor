@@ -402,7 +402,8 @@ void export_event_log() {
 	        Create an instance of the JobEventLog class.
 
 	        :param str filename: A file containing a job event (user) log.
-            )C0ND0R"))
+            )C0ND0R",
+            boost::python::args("self", "filename")))
 		.def(NEXT_FN, &JobEventLog::next,
             R"C0ND0R(
             Return the next JobEvent in the log, blocking until the deadline (if any).
@@ -412,15 +413,16 @@ void export_event_log() {
             Return an iterator over :class:`JobEvent` from the filename given in the constructor.
 
             :param int stop_after: After how many seconds should the iterator
-                stop waiting for new events?  If None, wait forever.
-                If 0, never wait.
+                stop waiting for new events?  If ``None``, wait forever.
+                If ``0``, never wait.
             )C0ND0R",
-            boost::python::args("stop_after"))
+            boost::python::args("self", "stop_after"))
 		.def("__iter__", &JobEventLog::iter, "Return self (which is its own iterator).")
 		.def("close", &JobEventLog::close,
             R"C0ND0R(
-            Closes any open underlying file; self will no longer iterate.
-            )C0ND0R")
+            Closes any open underlying file. This object will no longer iterate.
+            )C0ND0R",
+            boost::python::args("self"))
 		.def("__enter__", &JobEventLog::enter, "(Iterable context management.)")
 		.def("__exit__", &JobEventLog::exit, "(Iterable context management.)")
 	;
@@ -450,36 +452,48 @@ void export_event_log() {
             boost::python::no_init)
 		.add_property("type", & JobEvent::type,
 		    R"C0ND0R(
-		    The event type (an instance of :class:`JobEventType`).
+		    The event type.
+
+		    :rtype: :class:`JobEventType`
             )C0ND0R")
 		.add_property("cluster", & JobEvent::cluster,
 		    R"C0ND0R(
 		    The ``clusterid`` of the job the event is for.
+
+		    :rtype: int
             )C0ND0R")
 		.add_property("proc", & JobEvent::proc,
 		    R"C0ND0R(
 		    The ``procid`` of the job the event is for.
+
+		    :rtype: int
             )C0ND0R")
 		.add_property("timestamp", & JobEvent::timestamp,
 		    R"C0ND0R(
 		    The timestamp of the event.
+
+		    :rtype: str
             )C0ND0R")
 		.def("get", &JobEvent::Py_Get, JobEventPyGetOverloads(
 		    R"C0ND0R(
 		    As :meth:`dict.get`.
-            )C0ND0R"))
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("key"), boost::python::arg("default")=boost::python::object())))
 		.def("keys", &JobEvent::Py_Keys,
 		    R"C0ND0R(
 		    As :meth:`dict.keys`.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
 		.def("items", &JobEvent::Py_Items,
 		    R"C0ND0R(
 		    As :meth:`dict.items`.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
 		.def("values", &JobEvent::Py_Values,
 		    R"C0ND0R(
 		    As :meth:`dict.values`.
-            )C0ND0R")
+            )C0ND0R",
+            boost::python::args("self"))
 		.def("iterkeys", &JobEvent::Py_IterKeys, "...")
 		.def("iteritems", &JobEvent::Py_IterItems, "...")
 		.def("itervalues", &JobEvent::Py_IterValues, "...")

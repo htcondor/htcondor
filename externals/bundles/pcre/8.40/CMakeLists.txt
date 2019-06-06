@@ -65,7 +65,7 @@ if ( NOT PROPER AND NOT LINUX )
 	#
 	#################################################################
 
-	condor_post_external( pcre include OFF )
+	condor_post_external( pcre include OFF "${PCRE_FOUND}" )
 
 	if ( DARWIN )
 		# Install the PCRE libraries manually.
@@ -116,9 +116,9 @@ if( SYSTEM_NAME STREQUAL "sl6.3" )
 		INSTALL_COMMAND ${PCRE_INSTALL}
 	)
 
-	condor_post_external( pcre include OFF )
-
 	set( PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.so" )
+	condor_post_external( pcre include OFF "${PCRE_FOUND}" )
+
 	set( HAVE_PCRE_H ON PARENT_SCOPE )
 endif()
 

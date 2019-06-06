@@ -62,6 +62,10 @@ set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLA
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
+if (SCITOKENS_FOUND)
+include_directories(${SCITOKENS_INCLUDE_DIRS})
+endif(SCITOKENS_FOUND)
+
 # Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
 if (DARWIN)
 	set_source_files_properties(condor_base64.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
@@ -120,7 +124,7 @@ endif()
 if (DLOPEN_GSI_LIBS)
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 else()
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} ${SCITOKENS_FOUND} )
 endif()
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )

@@ -47,6 +47,7 @@
 #include <fstream>
 #include <algorithm>
 #include <numeric>
+#include "condor_random_num.h"
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -213,12 +214,6 @@ const int GO_AHEAD_ONCE = 1;    // send one file and ask again
 
 const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
 
-// Utils from the util_lib that aren't prototyped
-extern "C" {
-	int		get_random_int();
-	int		set_seed( int );
-}
-
 
 struct upload_info {
 	FileTransfer *myobj;
@@ -230,66 +225,6 @@ struct download_info {
 
 FileTransfer::FileTransfer()
 {
-	TransferFilePermissions = false;
-	DelegateX509Credentials = false;
-	PeerDoesTransferAck = false;
-	PeerDoesGoAhead = false;
-	PeerUnderstandsMkdir = false;
-	PeerDoesXferInfo = false;
-	TransferUserLog = false;
-	Iwd = NULL;
-	ExceptionFiles = NULL;
-	InputFiles = NULL;
-	OutputFiles = NULL;
-	EncryptInputFiles = NULL;
-	EncryptOutputFiles = NULL;
-	DontEncryptInputFiles = NULL;
-	DontEncryptOutputFiles = NULL;
-	IntermediateFiles = NULL;
-	SpooledIntermediateFiles = NULL;
-	FilesToSend = NULL;
-	EncryptFiles = NULL;
-	DontEncryptFiles = NULL;
-	OutputDestination = NULL;
-	ExecFile = NULL;
-	UserLogFile = NULL;
-	X509UserProxy = NULL;
-	TransSock = NULL;
-	TransKey = NULL;
-	SpoolSpace = NULL;
-	TmpSpoolSpace = NULL;
-	user_supplied_key = FALSE;
-	upload_changed_files = false;
-	last_download_catalog = NULL;
-	last_download_time = 0;
-	ActiveTransferTid = -1;
-	TransferStart = 0;
-	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = -1.0;
-	ClientCallback = 0;
-	ClientCallbackCpp = 0;
-	ClientCallbackClass = NULL;
-	ClientCallbackWantsStatusUpdates = false;
-	TransferPipe[0] = TransferPipe[1] = -1;
-	registered_xfer_pipe = false;
-	bytesSent = 0.0;
-	bytesRcvd = 0.0;
-	m_final_transfer_flag = FALSE;
-#ifdef WIN32
-	perm_obj = NULL;
-#endif
-	desired_priv_state = PRIV_UNKNOWN;
-	want_priv_change = false;
-	did_init = false;
-	clientSockTimeout = 30;
-	simple_init = true;
-	simple_sock = NULL;
-	m_use_file_catalog = true;
-	m_sec_session_id = NULL;
-	I_support_filetransfer_plugins = false;
-	plugin_table = NULL;
-	multifile_plugins_enabled = false;
-	MaxUploadBytes = -1;  // no limit by default
-	MaxDownloadBytes = -1;
 }
 
 FileTransfer::~FileTransfer()
@@ -349,12 +284,13 @@ FileTransfer::~FileTransfer()
 }
 
 int
-FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
+FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
 						 bool use_file_catalog, bool is_spool) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	const bool allow_inline_plugins = true; // enable job TransferPlugins attribute
 
 	jobAd = *Ad;	// save job ad
 
@@ -367,7 +303,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");
 
-	/* in the case of SimpleINit being called inside of Init, this will
+	/* in the case of SimpleInit being called inside of Init, this will
 		simply assign the same value to itself. */
 	m_use_file_catalog = use_file_catalog;
 
@@ -632,12 +568,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 		// add the spooled user log to the list of files to xfer
 		// (i.e. when sending output to condor_transfer_data)
-	MyString ulog;
+	std::string ulog;
 	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
-		if( outputFileIsSpooled(ulog.Value()) ) {
+		if( outputFileIsSpooled(ulog.c_str()) ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(ulog.Value()) ) {
-					OutputFiles->append(ulog.Value());
+				if( !OutputFiles->file_contains(ulog.c_str()) ) {
+					OutputFiles->append(ulog.c_str());
 				}
 			} else {
 				OutputFiles = new StringList(buf,",");
@@ -716,6 +652,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
 	InitializePlugins(e);
+	if (allow_inline_plugins) {
+		InitializeJobPlugins(*Ad, e, *InputFiles);
+	}
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -800,8 +739,11 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 
 
 int
-FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
-	bool use_file_catalog) 
+FileTransfer::Init(
+	ClassAd *Ad,
+	bool want_check_perms /* false */,
+	priv_state priv /* PRIV_UNKNOWN */,
+	bool use_file_catalog /* = true */)
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -860,12 +802,6 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		if (ReaperId == 1) {
 			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
-
-		// we also need to initialize the random number generator.  since
-		// this only has to happen once, and we will only be in this section
-		// of the code once (because the CommandsRegistered flag is static),
-		// initialize the C++ random number generator here as well.
-		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
@@ -873,7 +809,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
 		sprintf(tempbuf,"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
-			get_random_int(),get_random_int());
+			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
 		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
@@ -892,7 +828,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 
 		// Init all the file lists, etc.
 	if ( !SimpleInit(Ad, want_check_perms, IsServer(),
-			NULL, priv, m_use_file_catalog ) ) 
+			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
 	}
@@ -1134,9 +1070,9 @@ FileTransfer::ComputeFilesToSend()
 		Directory dir( Iwd, desired_priv_state );
 
 		const char *proxy_file = NULL;
-		MyString proxy_file_buf;		
+		std::string proxy_file_buf;
 		if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {			
-			proxy_file = condor_basename(proxy_file_buf.Value());
+			proxy_file = condor_basename(proxy_file_buf.c_str());
 		}
 
 		const char *f;
@@ -2297,9 +2233,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			if(subcommand == TransferSubCommand::UploadUrl) {
 				// 7 == send local file using plugin
 				
-				MyString rt_src;
-				MyString rt_dst;
-				MyString rt_err;
+				std::string rt_src;
+				std::string rt_dst;
+				std::string rt_err;
 				int      rt_result = 0;
 				if(!file_info.LookupInteger("Result",rt_result)) {
 					rt_result = -1;
@@ -2319,7 +2255,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 				// TODO: write to job log success/failure for each file (as a custom event?)
 				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
-						rt_src.Value(), rt_dst.Value(), rt_result );
+						rt_src.c_str(), rt_dst.c_str(), rt_result );
 
 				if(rt_result == 0) {
 					rc = 0;
@@ -2655,12 +2591,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// go back to the state we were in before file transfer
 	s->set_crypto_mode(socket_default_crypto);
 
-#ifdef WIN32
-		// unsigned __int64 to float is not implemented on Win32
-	bytesRcvd += (float)(signed __int64)(*total_bytes);
-#else
 	bytesRcvd += (*total_bytes);
-#endif
 
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
@@ -3284,6 +3215,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
+	bool should_invoke_output_plugins, tmp;
+	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
+		should_invoke_output_plugins = m_final_transfer_flag;
+	} else {
+		InitDownloadFilenameRemaps(&jobAd);
+		should_invoke_output_plugins = !tmp;
+	}
+
 	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
@@ -3344,7 +3283,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
-		if ( m_final_transfer_flag ) {
+		if ( should_invoke_output_plugins ) {
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
@@ -4807,6 +4746,14 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 		dprintf(D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n", proxy_filename);
 	}
 
+	if (!m_job_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+	}
+	if (!m_machine_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+	}
+	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
+
 	// prepare args for the plugin
 	ArgList plugin_args;
 	plugin_args.AppendArg(plugin.Value());
@@ -4906,10 +4853,19 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n",
 				proxy_filename );
 	}
+	if (!m_job_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+	}
+	if (!m_machine_ad.empty()) {
+		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+	}
+	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
+
 
 	// Determine if we want to run the plugin with root priv (if available).
 	// If so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
+	if (plugins_from_job.find(plugin_path) != plugins_from_job.end()) { drop_privs = true; }
 
 	// Lookup the initial working directory
 	std::string iwd;
@@ -5061,7 +5017,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
 	stats.Assign( "JobProcId", proc_id );
 
-	MyString owner;
+	std::string owner;
 	jobAd.LookupString( ATTR_OWNER, owner );
 	stats.Assign( "JobOwner", owner );
 
@@ -5109,6 +5065,47 @@ MyString FileTransfer::GetSupportedMethods() {
 		}
 	}
 	return method_list;
+}
+
+int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles)
+{
+	if ( ! I_support_filetransfer_plugins || ! plugin_table) {
+		return 0;
+	}
+
+	std::string job_plugins;
+	if ( ! job.LookupString(ATTR_TRANSFER_PLUGINS, job_plugins)) {
+		return 0;
+	}
+
+	StringTokenIterator plugins(job_plugins, 100, ";");
+	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
+		const char * colon = strchr(plug, '=');
+		if (colon) {
+			MyString methods; methods.set(plug, colon - plug);
+
+			// add the plugin to the front of the input files list
+			MyString plugin_path(colon + 1);
+			plugin_path.trim();
+			if (! infiles.file_contains(plugin_path.c_str())) {
+				infiles.insert(plugin_path.c_str());
+			}
+			// use the file basename as the plugin name, so that when we invoke it
+			// we will invoke the copy in the input sandbox
+			MyString plugin(condor_basename(plugin_path.c_str()));
+
+			InsertPluginMappings(methods, plugin);
+			plugins_multifile_support[plugin] = true;
+			plugins_from_job[plugin.c_str()] = true;
+			multifile_plugins_enabled = true;
+			// add the plugin to the transfer list
+		} else {
+			dprintf(D_ALWAYS, "FILETRANSFER: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+		}
+	}
+
+	return 0;
 }
 
 
@@ -5453,13 +5450,13 @@ FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
 		// So unless we rewire that, we need to pre-process the input
 		// file list during the job submission, before spooling files.
 
-	MyString input_files;
+	std::string input_files;
 	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,input_files) != 1 )
 	{
 		return true; // nothing to do
 	}
 
-	MyString iwd;
+	std::string iwd;
 	if( job->LookupString(ATTR_JOB_IWD,iwd) != 1 )
 	{
 		error_msg.formatstr("Failed to expand transfer input list because no IWD found in job ad.");
@@ -5467,7 +5464,7 @@ FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
 	}
 
 	MyString expanded_list;
-	if( !FileTransfer::ExpandInputFileList(input_files.Value(),iwd.Value(),expanded_list,error_msg) )
+	if( !FileTransfer::ExpandInputFileList(input_files.c_str(),iwd.c_str(),expanded_list,error_msg) )
 	{
 		return false;
 	}

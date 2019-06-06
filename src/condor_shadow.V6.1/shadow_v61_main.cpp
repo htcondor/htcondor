@@ -268,7 +268,7 @@ void startShadow( ClassAd *ad )
 		// see if the SchedD punched a DAEMON-level authorization
 		// hole for this job. if it did, we'll do the same here
 		//
-	MyString auth_hole_id;
+	std::string auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
 		IpVerify* ipv = daemonCore->getIpVerify();
 		if (!ipv->PunchHole(DAEMON, auth_hole_id) ||
@@ -276,7 +276,7 @@ void startShadow( ClassAd *ad )
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job may fail to execute\n",
-			        auth_hole_id.Value());
+			        auth_hole_id.c_str());
 		}
 	}
 

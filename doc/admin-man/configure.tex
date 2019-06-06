@@ -1882,12 +1882,12 @@ server, standard universe shadow, and standard universe starter, none of
 which use DaemonCore).
 \begin{description}
 
-\label{param:HostAllow}
-\item[\Macro{HOSTALLOW\Dots}]
-  All macros that begin with either \Macro{HOSTALLOW} or
-  \Macro{HOSTDENY} are settings for HTCondor's host-based security.
-  See section~\ref{sec:Host-Security} on Setting up
-  IP/host-based security in HTCondor for details on these
+\label{param:Allow}
+\item[\Macro{ALLOW\Dots}]
+  All macros that begin with either \Macro{ALLOW} or
+  \Macro{DENY} are settings for HTCondor's security.
+  See section~\ref{sec:Security-Authorization} on Setting up
+  security in HTCondor for details on these
   macros and how to configure them.
 
 \label{param:EnableRuntimeConfig}
@@ -1944,11 +1944,11 @@ which use DaemonCore).
   \MacroNI{<SUBSYS>.SETTABLE\_ATTRS} are settings used to restrict the 
   configuration values that can be changed using the \Condor{config\_val} 
   command.
-  Section~\ref{sec:Host-Security} on Setting up
-  IP/Host-Based Security in HTCondor for details on these
+  Section~\ref{sec:Security-Authorization} on Setting up
+  Security in HTCondor for details on these
   macros and how to configure them.  
-  In particular, section~\ref{sec:Host-Security}
-  on page~\pageref{sec:Host-Security} contains details specific to
+  In particular, section~\ref{sec:Security-Authorization}
+  on page~\pageref{sec:Security-Authorization} contains details specific to
   these macros.
 
 \label{param:ShutdownGracefulTimeout}
@@ -6028,8 +6028,8 @@ MAX_JOBS_RUNNING	= \
   should be in order of preference.  The \Condor{schedd} will only
   send a request to a central manager in the list if the local pool
   and pools earlier in the list are not satisfying all the job
-  requests.  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
-  section~\ref{param:HostAllow}) must also be configured to allow
+  requests.  \MacroUNI{ALLOW\_NEGOTIATOR\_SCHEDD} (see
+  section~\ref{param:Allow}) must also be configured to allow
   negotiators from all of the pools to contact the \Condor{schedd} at
   the \DCPerm{NEGOTIATOR} authorization level.  Similarly, the central
   managers of the remote pools must be configured to allow this
@@ -7152,10 +7152,17 @@ REM Run the actual job now
 
 \label{param:ChirpDelayedUpdatePrefix}
 \item[\Macro{CHIRP\_DELAYED\_UPDATE\_PREFIX}]
-  This string-valued parameter, which defaults to \AdStr{Chirp},
-  defines the allowed prefixes for attribute names which can be used with the
-  \Condor{chirp} commands \Opt{set\_job\_attr\_delayed} and 
-  \Opt{get\_job\_attr\_delayed}.  Because it must be set to the
+  This is a string-valued and case-insensitive parameter with the default
+  value of \AdStr{Chirp*}.  The
+  string is a list separated by spaces and/or commas.  Each attribute passed
+  to the either of the \Condor{chirp} commands \Opt{set\_job\_attr\_delayed} or
+  \Opt{get\_job\_attr\_delayed} must match against at least one element in
+  the list.  An attribute which does not match any list element fails.  A
+  list element may contain a wildcard character (\AdStr{Chirp*}), which marks
+  where any number of characters matches.  Thus, the default is to allow
+  reads from and writes to only attributes which start with \AdStr{Chirp}.
+
+  Because this parameter must be set to the
   same value on both the submit and execute nodes, it is advised that this
   parameter not be changed from its built-in default.
 

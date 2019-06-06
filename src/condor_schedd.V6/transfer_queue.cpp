@@ -343,9 +343,9 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	}
 
 	bool downloading = false;
-	MyString fname;
-	MyString jobid;
-	MyString queue_user;
+	std::string fname;
+	std::string jobid;
+	std::string queue_user;
 	filesize_t sandbox_size;
 	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
 		!msg.LookupString(ATTR_FILE_NAME,fname) ||
@@ -368,9 +368,9 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		new TransferQueueRequest(
 			sock,
 			sandbox_size,
-			fname.Value(),
-			jobid.Value(),
-			queue_user.Value(),
+			fname.c_str(),
+			jobid.c_str(),
+			queue_user.c_str(),
 			downloading,
 			m_default_max_queue_age);
 

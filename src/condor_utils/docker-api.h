@@ -10,6 +10,8 @@ class DockerAPI {
 		static int default_timeout;
 		static const int docker_hung = -9; // this error code is returned when we timed out a command to docker.
 
+		static int pruneContainers();
+
 		/**
 		 * Create a new container, identified by imageID but don't
 		 * start it.  The container

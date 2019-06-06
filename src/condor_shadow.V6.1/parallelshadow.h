@@ -128,7 +128,7 @@ class ParallelShadow : public BaseShadow
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
 
-	virtual void resourceDisconnected( RemoteResource* rr ) { }
+	virtual void resourceDisconnected( RemoteResource* ) { }
 
 	virtual void resourceReconnected( RemoteResource* rr );
 

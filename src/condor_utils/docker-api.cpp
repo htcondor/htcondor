@@ -25,7 +25,41 @@ static int gc_image(const std::string &image);
 static std::string makeHostname(ClassAd *machineAd, ClassAd *jobAd);
 static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, int original_error_code);
 
+static std::string HTCondorLabel = "--label=org.htcondorproject=True";
 int DockerAPI::default_timeout = 120;
+
+int DockerAPI::pruneContainers() {
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return -1;
+	args.AppendArg( "container" );
+	args.AppendArg( "prune");
+	args.AppendArg( "-f");
+	args.AppendArg( "--filter=label=org.htcondorproject=True"); // must match label in create
+
+	MyString displayString;
+	args.GetArgsStringForLogging( & displayString );
+	dprintf( D_ALWAYS, "Running: %s\n", displayString.c_str() );
+
+	MyPopenTimer pgm;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	if (pgm.start_program( args, true, NULL, false ) < 0) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	if ( ! pgm.wait_and_close(120) || pgm.output_size() <= 0) {
+		int error = pgm.error_code();
+		if( error ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
+			if (pgm.was_timeout()) {
+				dprintf( D_ALWAYS | D_FAILURE, "Declaring a hung docker\n");
+				return DockerAPI::docker_hung;
+			}
+		} 
+	}
+	return 0;
+}
 
 //
 // Because we fork before calling docker, we don't actually
@@ -113,7 +147,7 @@ int DockerAPI::createContainer(
 	runArgs.AppendArg( containerName );
 
 		// Add a label to mark this container as htcondor-managed
-	runArgs.AppendArg("--label=org.htcondorproject=True");
+	runArgs.AppendArg(HTCondorLabel);
 
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
@@ -378,7 +412,11 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 		dprintf( D_ALWAYS, "Checking to see if Docker is offline\n");
 
 		ArgList infoArgs;
-		add_docker_arg(infoArgs);
+		if (!add_docker_arg(infoArgs)) {
+			dprintf( D_ALWAYS, "Cannot do Docker offline check, DOCKER is not properly set\n");
+			return DockerAPI::docker_hung;
+		}
+		
 		infoArgs.AppendArg( "info" );
 		MyString displayString;
 		infoArgs.GetArgsStringForLogging( & displayString );
@@ -424,6 +462,7 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 
 	// Read from Docker's combined output and error streams.
 #if 1
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	MyPopenTimer pgm;
 	if (pgm.start_program( rmArgs, true, NULL, false ) < 0) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );

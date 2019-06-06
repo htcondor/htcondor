@@ -19,12 +19,12 @@ def SuccessCallback():
     # This assumes that this instance of the test is the only one which has
     # used this personal condor, which is inconvenient for development work.
     for line in starter_log_content:
-        if "invoking" in line and "multifile_curl_plugin" in line:
+        if "invoking" in line and "curl_plugin" in line:
             multifile_curl_plugin_invokes += 1
     if multifile_curl_plugin_invokes != 1:
-        Utils.TLog("Wrong number of multifile_curl_plugin invocations, test failed.")
+        Utils.TLog("Wrong number of curl_plugin invocations, test failed.")
         sys.exit(TEST_FAILURE)
-    Utils.TLog("Correct number of multifile_curl_plugin invocations, test succeeded.")
+    Utils.TLog("Correct number of curl_plugin invocations, test succeeded.")
     sys.exit(TEST_SUCCESS)
 
 def FailureCallback():

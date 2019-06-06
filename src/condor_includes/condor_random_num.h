@@ -24,12 +24,31 @@
 extern "C" {
 #endif
 
-int set_seed(int seed);
-int get_random_int(void);
-unsigned int get_random_uint(void);
-float get_random_float(void);
-double get_random_double( void );
+// First, the "insecure" variants: these generate numbers that are
+// well-distributed across the presecribed intervals but may be easy
+// to guess the next in the sequence given a small number of values.
+//
+// As the name suggests, these should only be used in cases where
+// security is entirely irrelevant (example: condor_mkstemp, where
+// there will be an additional layer of checking if the attacker can
+// guess the random number.
+int set_seed_insecure(int seed);
+int get_random_int_insecure(void);
+unsigned int get_random_uint_insecure(void);
+float get_random_float_insecure(void);
 int timer_fuzz(int period);
+
+// The cryptographically secure RNG variants.  These are higher quality,
+// mostly-non-blocking random number generators suitable for things like
+// session keys.  An attacker would need to observe an enormous number of
+// outputs of these to guess the PRNG state.
+// get_csrng_int() returns a non-negative value.
+int get_csrng_int(void);
+unsigned int get_csrng_uint(void);
+
+// We do not currently have a true RNG (i.e., /dev/random on linux); those
+// are more suitable for long-term key material, which HTCondor does not
+// currently use.
 
 #if defined(__cplusplus)
 }

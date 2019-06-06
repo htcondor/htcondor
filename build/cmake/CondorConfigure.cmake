@@ -703,7 +703,7 @@ if (UW_BUILD OR WINDOWS)
 
   # so the clipped detection will try to match glibc vers and if it fails will disable
   if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" OFF)
+	option(CLIPPED "enable/disable the standard universe" ON)
   else()
 	option(CLIPPED "enable/disable the standard universe" ON)
   endif()
@@ -916,6 +916,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.3.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -1087,7 +1088,7 @@ if (DLOPEN_GSI_LIBS)
 	set (SECURITY_LIBS "")
 	set (SECURITY_LIBS_STATIC "")
 else()
-	set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND}")
+	set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};${SCITOKENS_FOUND};${EXPAT_FOUND}")
 	set (SECURITY_LIBS_STATIC "${VOMS_FOUND_STATIC};${GLOBUS_FOUND_STATIC};${EXPAT_FOUND}")
 endif()
 

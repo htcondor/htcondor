@@ -634,7 +634,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 		} else {
 			classad::Value value;
 			MyString attr(ATTR_OFFLINE_PREFIX); attr += tag;
-			MyString res_value;
+			std::string res_value;
 			StringList offline_ids;
 			if (ad.LookupString(attr.c_str(),res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);

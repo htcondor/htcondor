@@ -292,7 +292,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		/* check to see if there is an entry in the passwd file for this uid */
 		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
-			if ( param_boolean_crufty("SOFT_UID_DOMAIN", false) ) {
+			if (!param_boolean_crufty("SOFT_UID_DOMAIN", false) ) {
 			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
 			}
 		}

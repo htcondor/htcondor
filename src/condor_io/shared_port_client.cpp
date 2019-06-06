@@ -737,8 +737,11 @@ SharedPortState::HandleFD(Stream *&s)
 			std::string procCmdLinePath = procPath + "/cmdline";
 			// No _follow, since the kernel doesn't create symlinks for this.
 			int pclFD = safe_open_no_create( procCmdLinePath.c_str(), O_RDONLY );
-			ssize_t procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
-			close( pclFD );
+			ssize_t procCmdLineLength = -1;
+			if( pclFD >= 0 ) {
+				procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
+				close( pclFD );
+			}
 			if( procCmdLineLength == -1 ) {
 				strcpy( procCmdLine, "(unable to read cmdline)" );
 			} else if( 0 <= procCmdLineLength && procCmdLineLength <= 1024 ) {

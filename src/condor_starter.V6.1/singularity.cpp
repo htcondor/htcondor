@@ -131,7 +131,7 @@ Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::Cla
 Singularity::result
 Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
-		MyString &exec,
+		std::string &exec,
 		ArgList &job_args,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
@@ -163,7 +163,7 @@ Singularity::setup(ClassAd &machineAd,
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
 		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
-		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.Value());
+		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
 	sing_args.AppendArg("exec");
@@ -207,6 +207,7 @@ Singularity::setup(ClassAd &machineAd,
 		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
 		job_env.SetEnv("TEMP", target_dir.c_str());
 		job_env.SetEnv("TMP", target_dir.c_str());
+		job_env.SetEnv("TMPDIR", target_dir.c_str());
 		std::string chirp = target_dir + "/.chirp.config";
 		std::string machine_ad = target_dir + "/.machine.ad";
 		std::string job_ad = target_dir + "/.job.ad";
@@ -235,6 +236,10 @@ Singularity::setup(ClassAd &machineAd,
 		}
 	}
 
+	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
+		sing_args.AppendArg("--no-home");
+	}
+
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
 	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
@@ -256,14 +261,14 @@ Singularity::setup(ClassAd &machineAd,
 	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
-	sing_args.AppendArg(exec.Value());
+	sing_args.AppendArg(exec.c_str());
 	sing_args.AppendArgsFromArgList(job_args);
 
 	MyString args_string;
 	job_args = sing_args;
 	job_args.GetArgsStringForDisplay(&args_string, 1);
 	exec = sing_exec_str;
-	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.Value(), args_string.Value());
+	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.Value());
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;

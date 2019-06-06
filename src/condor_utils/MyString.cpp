@@ -22,7 +22,6 @@
 #include "MyString.h"
 #include "condor_snutils.h"
 #include "condor_debug.h"
-#include "condor_random_num.h"
 #include "strupr.h"
 #include <limits>
 #include <vector>
@@ -852,65 +851,6 @@ MyString::RemoveAllWhitespace( void )
 	}
 	Data[j] = '\0';
 	Len = j;
-}
-
-// if len is 10, this means 10 random ascii characters from the set.
-void
-MyString::randomlyGenerate(const char *set, int len)
-{
-	int i;
-	int idx;
-	int set_len;
-
-    if (!set || len <= 0) {
-		// passed in NULL set, so automatically MyString is empty
-		// or told the string size is negative or nothing, again empty string.
-		if (Data) {
-			Data[0] = '\0';
-		}
-		Len = 0;
-		// leave capacity alone.
-		return;
-	}
-
-	// start over from scratch with this string.
-    if (Data) {
-		delete[] Data;
-	}
-
-	Data = new char[len+1]; 
-	Data[len] = '\0';
-	Len = len;
-	capacity = len;
-
-	set_len = (int)strlen(set);
-
-	// now pick randomly from the set and fill stuff in
-	for (i = 0; i < len ; i++) {
-		idx = get_random_int() % set_len;
-		Data[i] = set[idx];
-	}
-}
-
-void
-MyString::randomlyGenerateHex(int len)
-{
-	randomlyGenerate("0123456789abcdef", len);
-}
-
-void
-MyString::randomlyGeneratePassword(int len)
-{
-	// Create a randome password of alphanumerics
-	// and safe-to-print punctuation.
-	//
-	randomlyGenerate(
-				"abcdefghijklmnopqrstuvwxyz"
-				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-				"0123456789"
-				"!@#$%^&*()-_=+,<.>/?",
-				len
-				);
 }
 
 void

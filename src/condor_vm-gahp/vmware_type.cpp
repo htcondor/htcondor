@@ -448,16 +448,16 @@ VMwareType::adjustConfigDiskPath()
 		return;
 	}
 
-	if( m_vmware_dir.IsEmpty() ) {
+	if( m_vmware_dir.empty() ) {
 		return;
 	}
 
-	MyString iwd;
+	std::string iwd;
 	if( m_classAd.LookupString(ATTR_ORIG_JOB_IWD, iwd) == 1 ) {
-		if( strcmp(iwd.Value(), m_vmware_dir.Value()) == 0 ) {
+		if( strcmp(iwd.c_str(), m_vmware_dir.c_str()) == 0 ) {
 			vmprintf(D_FULLDEBUG, "job_iwd(%s) is the same to vmware dir "
 					"so we will still use basename for parent disk of snapshot disk\n", 
-					iwd.Value());
+					iwd.c_str());
 			return;
 		}
 	}
@@ -511,13 +511,13 @@ VMwareType::adjustConfigDiskPath()
 	char *one_file = NULL;
 	snapshot_disks.rewind();
 	while( (one_file = snapshot_disks.next()) != NULL ) {
-		change_snapshot_vmdk_file(one_file, true, m_vmware_dir.Value(), parent_filenames);
+		change_snapshot_vmdk_file(one_file, true, m_vmware_dir.c_str(), parent_filenames);
 	}
 
 	// Change vmsd file
 	MyString vmsd_file(m_configfile);
 	vmsd_file.replaceString(VMWARE_TMP_CONFIG_SUFFIX, "_condor.vmsd");
-	change_snapshot_vmsd_file(vmsd_file.Value(), &parent_filenames, true, m_vmware_dir.Value());
+	change_snapshot_vmsd_file(vmsd_file.Value(), &parent_filenames, true, m_vmware_dir.c_str());
 }
 
 void
@@ -1763,7 +1763,7 @@ VMwareType::CreateConfigFile()
 	// Read the directory where vmware files are on a submit machine
 	m_vmware_dir = "";
 	m_classAd.LookupString(VMPARAM_VMWARE_DIR, m_vmware_dir);
-	m_vmware_dir.trim();
+	trim(m_vmware_dir);
 
 	// Read the parameter of vmware vmx file
 	if( m_classAd.LookupString(VMPARAM_VMWARE_VMX_FILE, m_vmware_vmx) != 1 ) {
@@ -1772,11 +1772,11 @@ VMwareType::CreateConfigFile()
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM;
 		return false;
 	}
-	m_vmware_vmx.trim();
+	trim(m_vmware_vmx);
 
 	// Read the parameter of vmware vmdks
 	if( m_classAd.LookupString(VMPARAM_VMWARE_VMDK_FILES, m_vmware_vmdk) == 1 ) {
-		m_vmware_vmdk.trim();
+		trim(m_vmware_vmdk);
 	}
 
 	if( !m_vmware_transfer ) {
@@ -1839,9 +1839,9 @@ VMwareType::CreateConfigFile()
 	// Read transferred vmx file
 	MyString ori_vmx_file;
 	ori_vmx_file.formatstr("%s%c%s",m_workingpath.Value(), 
-			DIR_DELIM_CHAR, m_vmware_vmx.Value());
+			DIR_DELIM_CHAR, m_vmware_vmx.c_str());
 
-	if( readVMXfile(ori_vmx_file.Value(), m_vmware_dir.Value()) 
+	if( readVMXfile(ori_vmx_file.Value(), m_vmware_dir.c_str()) 
 			== false ) {
 		IGNORE_RETURN unlink(tmp_config_name.Value());
 		return false;
@@ -1886,11 +1886,11 @@ VMwareType::CreateConfigFile()
 		tmp_line.formatstr("ethernet0.connectionType = \"%s\"", 
 				networking_type.Value());
 		m_configVars.append(tmp_line.Value());
-        if (!m_vm_job_mac.IsEmpty())
+        if (!m_vm_job_mac.empty())
         {
-            vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
+            vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.c_str());
             m_configVars.append("ethernet0.addressType = \"static\"");
-            tmp_line.formatstr("ethernet0.address = \"%s\"", m_vm_job_mac.Value());
+            tmp_line.formatstr("ethernet0.address = \"%s\"", m_vm_job_mac.c_str());
             m_configVars.append(tmp_line.Value());
             //**********************************************************************
             // LIMITATION: the mac address has to be in the range
@@ -2003,7 +2003,7 @@ VMwareType::createCkptFiles()
 					!has_suffix(tmp_file, ".log") &&
 					!has_suffix(tmp_file, VMWARE_WRITELOCK_SUFFIX ) &&
 					!has_suffix(tmp_file, VMWARE_READLOCK_SUFFIX ) &&
-					strcmp(condor_basename(tmp_file), m_vmware_vmx.Value())) {
+					strcmp(condor_basename(tmp_file), m_vmware_vmx.c_str())) {
 				// We update mtime and atime of all files 
 				// except vmdk, iso, log, lock files, cdrom file, and 
 				// the original vmx file.

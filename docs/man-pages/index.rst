@@ -1,8 +1,8 @@
 Command Reference Manual (man pages)
-------------------------------------
+====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :glob:
    
    bosco_cluster
@@ -14,11 +14,9 @@ Command Reference Manual (man pages)
    bosco_uninstall
    condor_advertise
    condor_annex
-   condor_checkpoint
    condor_check_userlogs
    condor_chirp
    condor_cod
-   condor_compile
    condor_configure
    condor_config_val
    condor_continue
@@ -59,11 +57,11 @@ Command Reference Manual (man pages)
    condor_run
    condor_set_shutdown
    condor_sos
-   condor_sshtojob
+   condor_ssh_to_job
    condor_stats
    condor_status
-   condor_storecred
-   condor_submitdag
+   condor_store_cred
+   condor_submit_dag
    condor_submit
    condor_suspend
    condor_tail
@@ -81,4 +79,4 @@ Command Reference Manual (man pages)
    condor_wait
    condor_who
    giddalloc
-   procdctl      
+   procdctl      

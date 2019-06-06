@@ -1,5 +1,3 @@
-      
-
 Introduction to HTCondor Versions
 =================================
 
@@ -16,14 +14,14 @@ HTCondor Version Number Scheme
 Starting with version 6.0.1, HTCondor adopted a new, hopefully easy to
 understand version numbering scheme. It reflects the fact that HTCondor
 is both a production system and a research project. The numbering scheme
-was primarily taken from the Linux kernel’s version numbering, so if you
+was primarily taken from the Linux kernel's version numbering, so if you
 are familiar with that, it should seem quite natural.
 
 There will usually be two HTCondor versions available at any given time,
 the stable version, and the development version. Gone are the days of
-“patch level 3”, “beta2”, or any other random words in the version
+"patch level 3", "beta2", or any other random words in the version
 string. All versions of HTCondor now have exactly three numbers,
-separated by “.”
+separated by "."
 
 -  The first number represents the major version number, and will change
    very infrequently.
@@ -53,7 +51,7 @@ The Development Release Series
 ------------------------------
 
 Only people who are interested in the latest research, new features that
-haven’t been fully tested, etc, should download the development version,
+haven't been fully tested, etc, should download the development version,
 denoted with an odd number in the second digit of the version string. We
 will make a best effort to ensure that the development series will work,
 but we make no guarantees.
@@ -75,4 +73,4 @@ have fully tested this version, we will release a new stable series,
 resetting the minor version number, and start work on a new development
 release from there.
 
-      
+

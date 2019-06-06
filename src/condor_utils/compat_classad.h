@@ -45,7 +45,6 @@ namespace compat_classad {
 
 class ClassAdFileParseHelper;
 
-extern classad::References ClassAdPrivateAttrs;
 bool ClassAdAttributeIsPrivate( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
@@ -258,6 +257,9 @@ class ClassAd : public classad::ClassAd
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
+	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,unsigned long long value)
 	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,float value)

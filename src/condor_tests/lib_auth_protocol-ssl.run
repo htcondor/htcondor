@@ -99,7 +99,8 @@ my $finalappend_condor_config = "
 	AUTH_SSL_CLIENT_CAFILE =  $keydir/cert.pem
 	AUTH_SSL_CLIENT_CERTFILE = $keydir/cert.pem
 	AUTH_SSL_CLIENT_KEYFILE = $keydir/key.pem
-	
+	SSL_SKIP_HOST_CHECK = true
+
 	CERTIFICATE_MAPFILE = $keydir/condor_mapfile
 ";
 

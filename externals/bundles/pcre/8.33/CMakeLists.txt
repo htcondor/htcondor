@@ -68,7 +68,7 @@ if ( NOT PROPER AND NOT LINUX )
 	#
 	#################################################################
 
-	condor_post_external( pcre include OFF )
+	condor_post_external( pcre include OFF "${PCRE_FOUND}" )
 
 	if ( DARWIN )
 		# Install the PCRE libraries manually.

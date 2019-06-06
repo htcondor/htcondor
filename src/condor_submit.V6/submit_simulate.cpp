@@ -86,7 +86,7 @@ SimScheddQ::~SimScheddQ()
 }
 
 bool SimScheddQ::Connect(FILE* _fp, bool close_on_disconnect, bool log_all) {
-	ASSERT( ! fp);
+	ASSERT(! fp);
 	fp = _fp;
 	close_file_on_disconnect = close_on_disconnect;
 	log_all_communication = log_all;
@@ -110,9 +110,9 @@ int SimScheddQ::get_NewCluster() {
 
 int SimScheddQ::get_NewProc(int cluster_id) {
 	ASSERT(cluster == cluster_id);
-	if (fp) { 
+	if (fp) {
 		if (log_all_communication) fprintf(fp, "::get_newProc\n");
-		fprintf (fp, "\n");
+		fprintf(fp, "\n");
 	}
 	return ++proc;
 }
@@ -123,7 +123,7 @@ int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
 }
 
 int SimScheddQ::get_Capabilities(ClassAd & caps) {
-	caps.Assign( "LateMaterialize", true );
+	caps.Assign("LateMaterialize", true);
 	return GetScheddCapabilites(0, caps);
 }
 
@@ -134,7 +134,7 @@ int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, con
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
-		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth-1);
+		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth - 1);
 		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%s\n", attr, value);
 	}
@@ -155,15 +155,18 @@ int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, con
 	ASSERT(cluster_id == cluster);
 	if (fp) {
 		if (log_all_communication) {
-			fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
-			if (text) { fprintf(fp, "factory_text=%s\n", text); }
-			else if (filename) { fprintf(fp, "factory_file=%s\n", filename); }
-			else { fprintf(fp, "\n"); }
+			fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename ? filename : "NULL", text ? "<text>" : "NULL");
+			if (text) { fprintf(fp, "factory_text=%s\n", text); } else if (filename) { fprintf(fp, "factory_file=%s\n", filename); } else { fprintf(fp, "\n"); }
 		}
 	}
 	return 0;
 }
 
+bool SimScheddQ::echo_Itemdata(const char * filename)
+{
+	echo_itemdata_filepath = filename;
+	return true;
+}
 
 int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 {
@@ -177,6 +180,47 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 	if (o.items.number() > 0) {
 		if (log_all_communication) {
 			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
+		}
+		if (!echo_itemdata_filepath.empty()) {
+
+			int fd = safe_open_wrapper_follow(echo_itemdata_filepath.c_str(), O_WRONLY | _O_BINARY | O_CREAT | O_TRUNC | O_APPEND, 0644);
+			if (fd == -1) {
+				fprintf(stderr, "failed to open itemdata echo file %s : error %d - %s\n",
+					echo_itemdata_filepath.c_str(), errno, strerror(errno));
+			} else {
+
+				o.foreach_mode = foreach_from;
+				o.items_filename = echo_itemdata_filepath;
+
+				// read and canonicalize the items and write them in 64k (ish) chunks
+				// because that's what SendMaterializeData does
+				const size_t cbAlloc = 0x10000;
+				unsigned char buf[cbAlloc];
+				int ix = 0;
+				std::string item;
+				int rval = 0;
+				o.items.rewind();
+				while (AbstractScheddQ::next_rowdata(&o, item) == 1) {
+					if (item.size() + ix > cbAlloc) {
+						if (ix == 0) { // single item > 64k !!!
+							rval = -1;
+							break;
+						}
+						int wrote = write(fd, buf, ix);
+						if (wrote != ix) { fprintf(stderr, "write failure %d: %s\n", errno, strerror(errno)); }
+						ix = 0;
+					}
+					memcpy(buf + ix, item.data(), item.size());
+					ix += (int)item.size();
+				}
+
+				// write the remainder, if any
+				if ((rval == 0) && ix) {
+					int wrote = write(fd, buf, ix);
+					if (wrote != ix) { fprintf(stderr, "write failure %d: %s\n", errno, strerror(errno)); }
+				}
+				close(fd);
+			}
 		}
 	}
 	return 0;

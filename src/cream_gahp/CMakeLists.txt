@@ -46,6 +46,9 @@ if ( HAVE_EXT_CREAM )
 		${C_SBIN}
 		"${CREAM_FOUND};${VOMS_FOUND};${GLOBUS_THR_FOUND};${CLASSADS_FOUND};${LIBSSL_FOUND};${LIBCRYPTO_FOUND};${PCRE_FOUND};${CARES_LIB};${ZLIB_FOUND}"
 		OFF )
+	if ( NOT PROPER )
+		add_dependencies(cream_gahp creamsoap globus)
+	endif()
 
 	# Check cream_gahp's shared library dependencies and copy a
 	# specific subset of those libraries into <release>/lib/condor

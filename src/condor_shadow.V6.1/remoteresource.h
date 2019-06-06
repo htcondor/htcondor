@@ -415,7 +415,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
-	classad::References m_delayed_update_prefixes;
+	StringList m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 
 		// If we specially create a security session for file transfer,
@@ -477,7 +477,7 @@ private:
 	int next_reconnect_tid;
 	int proxy_check_tid;
 
-	MyString proxy_path;
+	std::string proxy_path;
 	time_t last_proxy_timestamp;
 
 	time_t m_remote_proxy_expiration;

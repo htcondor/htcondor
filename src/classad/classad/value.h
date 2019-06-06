@@ -373,7 +373,35 @@ class Value
 		friend std::ostream& operator<<(std::ostream &stream, Value &value);
 
 	private:
-		void _Clear();
+		void _Clear() {
+			switch( valueType ) {
+			case SCLASSAD_VALUE:
+				delete sclassadValue;
+				break;
+
+			case SLIST_VALUE:
+				delete slistValue;
+				break;
+
+			case STRING_VALUE:
+				delete strValue;
+				break;
+
+			case ABSOLUTE_TIME_VALUE:
+				delete absTimeValueSecs;
+				break;
+
+			default:
+			case LIST_VALUE:
+			case CLASSAD_VALUE:
+					// list and classad values live in the evaluation environment, so they must
+					// never be explicitly destroyed
+				break;
+			}
+
+			classadValue = NULL; // this clears the entire union
+			factor = NO_FACTOR;
+		}
 
 		friend class Literal;
 		friend class ClassAd;

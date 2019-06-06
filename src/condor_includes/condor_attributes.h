@@ -249,6 +249,7 @@
 #define ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY "HasEncryptExecuteDirectory"
 #define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
 #define ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS  "HasFileTransferPluginMethods"
+#define ATTR_HAS_JOB_TRANSFER_PLUGINS  "HasJobTransferPlugins"
 #define ATTR_HAS_PER_FILE_ENCRYPTION  "HasPerFileEncryption"
 #define ATTR_HAS_IO_PROXY  "HasIOProxy"
 #define ATTR_HAS_JAVA  "HasJava"
@@ -603,6 +604,7 @@
 #define ATTR_SCHEDULER  "Scheduler"
 #define ATTR_SHADOW_WAIT_FOR_DEBUG  "ShadowWaitForDebug"
 #define ATTR_SHOULD_FORWARD	"ShouldForward"
+#define ATTR_SCITOKENS_FILE "ScitokensFile"
 #define ATTR_SINGULARITY_VERSION "SingularityVersion"
 #define ATTR_SLOT_ID  "SlotID"
 #define ATTR_SLOT_PAIR_NAME  "SlotPairName"
@@ -782,6 +784,7 @@
 #define ATTR_TRANSFER_ERROR  "TransferErr"
 #define ATTR_TRANSFER_INPUT_FILES  "TransferInput"
 #define ATTR_TRANSFER_INPUT_REMAPS  "TransferInputRemaps"
+#define ATTR_TRANSFER_PLUGINS  "TransferPlugins"
 #define ATTR_TRANSFER_INPUT_SIZE_MB  "TransferInputSizeMB"
 #define ATTR_PUBLIC_INPUT_FILES  "PublicInputFiles"
 #define ATTR_MAX_TRANSFER_INPUT_MB "MaxTransferInputMB"
@@ -877,6 +880,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TOKEN "Token"
 #define ATTR_SEC_TOKEN_LIFETIME "TokenLifetime"
 #define ATTR_SEC_TRUST_DOMAIN "TrustDomain"
+#define ATTR_SEC_CLIENT_ID "ClientId"
+#define ATTR_SEC_REQUEST_ID "RequestId"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

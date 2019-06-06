@@ -284,6 +284,9 @@
 /* Do we have the openssl external (USED)*/
 #cmakedefine HAVE_EXT_OPENSSL 1
 
+/* Do we have the scitokens external (USED)*/
+#cmakedefine HAVE_EXT_SCITOKENS 1
+
 /* Do we have the srb external (USED) Imake stork*/
 #cmakedefine HAVE_EXT_SRB 1
 

@@ -100,6 +100,18 @@ const char * filename_from_path(const char * pathname);
 inline char * filename_from_path(char * pathname) { return const_cast<char*>(filename_from_path(const_cast<const char *>(pathname))); }
 size_t filename_offset_from_path(std::string & pathname);
 
+/** Clears the string and fills it with a
+ *	randomly generated set derived from 'set' of len characters. */
+void randomlyGenerateInsecure(std::string &str, const char *set, int len);
+//void randomlyGeneratePRNG(std::string &str, const char *set, int len);
+
+/** Clears the string and fills it with
+ *	randomly generated [0-9a-f] values up to len size */
+void randomlyGenerateInsecureHex(std::string &str, int len);
+
+/** Clears the string and fills it with
+ *	randomly generated alphanumerics and punctuation up to len size */
+void randomlyGenerateShortLivedPassword(std::string &str, int len);
 
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.

@@ -19,7 +19,15 @@
 
 
 #include "condor_common.h" 
+#include "condor_debug.h"
 #include "condor_random_num.h"
+
+/*
+   Note that we originally wanted to replace all of this as a thin shim
+   over the CSRNG (less code the better...) variants.  However, libcondorapi.so
+   utilizes some of these function calls and we don't want to have an OpenSSL
+   dependency in libcondorapi.so.
+ */
 
 /* srand48, lrand48, and drand48 seem to be available on all Condor
    platforms except WIN32.  -Jim B. */
@@ -46,7 +54,7 @@ int set_seed(int seed)
 
 /* returns a random positive integer, trying to use best random number
    generator available on each platform */
-int get_random_int( void )
+int get_random_int_insecure( void )
 {
 	if (!initialized) {
 		set_seed(getpid());
@@ -59,9 +67,10 @@ int get_random_int( void )
 #endif
 }
 
+
 /* returns a random floating point number in this range: [0.0, 1.0), trying
    to use best random number generator available on each platform */
-float get_random_float( void )
+float get_random_float_insecure( void )
 {
 	if (!initialized) {
 		set_seed(getpid());
@@ -74,6 +83,7 @@ float get_random_float( void )
 #endif
 }
 
+static
 double get_random_double( void )
 {
     if (!initialized) {
@@ -91,7 +101,7 @@ double get_random_double( void )
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
 unsigned int
-get_random_uint( void )
+get_random_uint_insecure( void )
 {
 	if (!initialized) {
 		set_seed(getpid());
@@ -117,7 +127,7 @@ timer_fuzz(int period)
 		}
 		fuzz = period - 1;
 	}
-	fuzz = (int)( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
+	fuzz = (int)( get_random_float_insecure() * ((float)fuzz+1) ) - fuzz/2;
 
 	if( period + fuzz <= 0 ) { // sanity check
 		fuzz = 0;

@@ -1309,8 +1309,8 @@ main( int argc, const char* argv[] )
 					param_id = pmet->param_id;
 					type_and_flags = param_default_help_by_id(pmet->param_id, descrip, tags, used_for);
 				}
+				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					raw_supported = true;
 					if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {

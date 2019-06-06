@@ -67,7 +67,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 		// See if creds are present for all modules requested
 	daemonCore->Register_Command( ZKM_QUERY_CREDS, "ZKM_QUERY_CREDS",
 								(CommandHandlercpp)&CredDaemon::zkm_query_creds,
-								"zkm_query_creds", this, DAEMON,
+								"zkm_query_creds", this, WRITE,
 								D_FULLDEBUG );
 
 		// set timer to periodically advertise ourself to the collector

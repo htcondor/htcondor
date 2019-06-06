@@ -158,19 +158,19 @@ bool satisfies(ClassAd* job, ClassAd* candidate) {
     // Concurrency limit checking
     // This is relevant for reused claim candidates
     bool satisfied_lim = true;
-    MyString resource_state;
+    std::string resource_state;
     candidate->LookupString(ATTR_STATE, resource_state);
-    resource_state.lower_case();
+    lower_case(resource_state);
     if ((resource_state == "claimed") && param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
         dprintf(D_FULLDEBUG, "Entering ded-schedd concurrency limit check...\n");
-        MyString jobLimits, resourceLimits;
+		std::string jobLimits, resourceLimits;
 		job->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
 		candidate->LookupString(ATTR_CONCURRENCY_LIMITS, resourceLimits);
-		jobLimits.lower_case();
-		resourceLimits.lower_case();
+		lower_case(jobLimits);
+		lower_case(resourceLimits);
 
-        dprintf(D_FULLDEBUG, "job limit: \"%s\"\n", jobLimits.Value());
-        dprintf(D_FULLDEBUG, "candidate limit: \"%s\"\n", resourceLimits.Value());
+        dprintf(D_FULLDEBUG, "job limit: \"%s\"\n", jobLimits.c_str());
+        dprintf(D_FULLDEBUG, "candidate limit: \"%s\"\n", resourceLimits.c_str());
 
         // a claimed resource with limits that are equal is considered a match
 		if (jobLimits == resourceLimits) {
@@ -201,16 +201,16 @@ bool is_dynamic(ClassAd* slot) {
 }
 
 bool is_claimed(ClassAd* slot) {
-    MyString state;
+    std::string state;
     if (!slot->LookupString(ATTR_STATE, state)) return false;
-    state.lower_case();
+    lower_case(state);
     return state == "claimed";
 }
 
 bool is_idle(ClassAd* slot) {
-    MyString activ;
+    std::string activ;
     if (!slot->LookupString(ATTR_ACTIVITY, activ)) return false;
-    activ.lower_case();
+    lower_case(activ);
     return activ == "idle";
 }
 
@@ -279,9 +279,9 @@ ResList::satisfyJobs( CAList *jobs,
 		while (ClassAd* candidate = this->Next()) {
 			if (satisfies(job, candidate)) {
                 // There's a match
-                MyString slotname;
+                std::string slotname;
                 candidate->LookupString(ATTR_NAME, slotname);
-                dprintf(D_FULLDEBUG, "satisfyJobs:     %d.%d satisfied with slot %s\n", cluster, proc, slotname.Value());
+                dprintf(D_FULLDEBUG, "satisfyJobs:     %d.%d satisfied with slot %s\n", cluster, proc, slotname.c_str());
 
 				candidates->Insert( candidate );
 				candidates_jobs->Insert( job );
@@ -442,6 +442,7 @@ DedicatedScheduler::DedicatedScheduler()
 	unclaimed_resources = NULL;
 	busy_resources = NULL;
 
+	total_cores = 0;
 	hdjt_tid = -1;
 	sanity_tid = -1;
 	rid = -1;
@@ -1608,6 +1609,16 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		startdQueryTime = time(0) - b4;
 		dprintf( D_ALWAYS, "Found %d potential dedicated resources in %ld seconds\n",
 				 resources->Length(),startdQueryTime);
+
+		resources->Rewind();
+		while (ClassAd *m = resources->Next()) {
+			int cpus = 0;
+			m->LookupInteger(ATTR_CPUS, cpus);
+			if (cpus == 0) cpus = 1;
+			total_cores += cpus;
+		}
+		resources->Rewind();
+
 		return true;
 	}
 
@@ -1628,7 +1639,7 @@ void duplicate_partitionable_res(ResList*& resources, std::map<std::string, matc
             dup_res->Append(res);
             continue;
         }
-        MyString resname;
+        std::string resname;
         res->LookupString(ATTR_NAME, resname);
         int ncpus=0;
         res->LookupInteger(ATTR_CPUS, ncpus);
@@ -1642,7 +1653,7 @@ void duplicate_partitionable_res(ResList*& resources, std::map<std::string, matc
         // partitionable slots to be requested from the dynamic slot
         // leftovers.
         int npend=0;
-        MyString pname;
+        std::string pname;
         std::map<std::string, match_rec*>::const_iterator mr;
         std::map<std::string, match_rec*>::const_iterator mre = pending_matches.end();
         for (mr = pending_matches.begin(); mr != mre; ++mr) {
@@ -1652,7 +1663,7 @@ void duplicate_partitionable_res(ResList*& resources, std::map<std::string, matc
         int ndupl = ncpus + npend;
         if (ndupl > ntotalcpus) ndupl = ntotalcpus;
 
-        dprintf(D_FULLDEBUG, "Duplicate x%d (%d/%d) partitionable res %s\n", ndupl, ncpus, npend, resname.Value());
+        dprintf(D_FULLDEBUG, "Duplicate x%d (%d/%d) partitionable res %s\n", ndupl, ncpus, npend, resname.c_str());
         for (int j = 0;  j < ndupl;  ++j) dup_res->Append(res);
     }
 
@@ -1689,9 +1700,9 @@ DedicatedScheduler::sortResources( void )
                     //dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
                     continue;
                 }
-                MyString pub_claim_id;
+                std::string pub_claim_id;
                 res->LookupString(ATTR_PUBLIC_CLAIM_ID, pub_claim_id);
-                std::map<std::string, std::string>::iterator f(pending_claims.find(pub_claim_id.Value()));
+                std::map<std::string, std::string>::iterator f(pending_claims.find(pub_claim_id));
                 if (f != pending_claims.end()) {
                     char const* claim_id = f->second.c_str();
                     std::map<std::string, match_rec*>::iterator c(pending_matches.find(claim_id));
@@ -1876,6 +1887,7 @@ DedicatedScheduler::clearResources( void )
 		delete resources;
 		resources = NULL;
 	}
+	total_cores = 0;
 }
 
 
@@ -2259,7 +2271,7 @@ DedicatedScheduler::computeSchedule( void )
 			while (jobsToReconnect.Next(reconId)) {
 				if ((reconId.cluster == cluster) &&
 				    (reconId.proc    == proc_id)) {
-					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waitingn to reconnect\n", cluster, proc_id);
+					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waiting to reconnect\n", cluster, proc_id);
 					give_up = true;
 					break;
 				}
@@ -2268,6 +2280,12 @@ DedicatedScheduler::computeSchedule( void )
 					 "Trying to find %d resource(s) for dedicated job %d.%d\n",
 					 hosts, cluster, proc_id );
 
+			if (hosts > total_cores) {
+				dprintf(D_ALWAYS, "Skipping job %d.%d because it requests more nodes (%d) than exist in the pool (%d)\n", cluster, proc_id, hosts, total_cores);
+				nprocs++;
+				give_up = true;
+				continue;
+			}
 			for( int job_num = 0 ; job_num < hosts; job_num++) {
 				jobs->Append(job);
 			}
@@ -3010,14 +3028,14 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 
 		// For each of our scheduling groups...
 	while ((machineAd = exampleSchedulingGroup.Next())) {
-		MyString groupStr;
+		std::string groupStr;
 		machineAd->LookupString(ATTR_PARALLEL_SCHEDULING_GROUP, groupStr);
 
-		dprintf(D_ALWAYS, "Attempting to find enough idle machines in group %s to run job.\n", groupStr.Value());
+		dprintf(D_ALWAYS, "Attempting to find enough idle machines in group %s to run job.\n", groupStr.c_str());
 
 			// From all the idle machines, select just those machines that are in this group
 		ResList group; 
-		idle_resources->selectGroup(&group, groupStr.Value());
+		idle_resources->selectGroup(&group, groupStr.c_str());
 
 			// And try to match the jobs in the cluster to the machine just in this group
 		CandidateList candidate_machines;
@@ -3855,7 +3873,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 		candidate_resources.Append(machine);
 	}
 	candidate_resources.Rewind();
-
 
 	ClassAd *job;
 	jobs->Rewind();
