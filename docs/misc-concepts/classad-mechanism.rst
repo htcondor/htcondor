@@ -10,7 +10,7 @@ resources, submitters and other HTCondor daemons. An understanding of
 this mechanism is required to harness the full flexibility of the
 HTCondor system.
 
-A ClassAd is is a set of uniquely named expressions. Each named
+A ClassAd is a set of uniquely named expressions. Each named
 expression is called an attribute. The following shows
 ten attributes, a portion of an example ClassAd.
 
