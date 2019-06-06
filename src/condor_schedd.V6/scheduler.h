@@ -566,7 +566,7 @@ class Scheduler : public Service
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
 	// support for START_VANILLA_UNIVERSE
 	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
-	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
@@ -1108,6 +1108,7 @@ private:
 	Daemon *m_token_daemon;
 	bool m_initial_update{true}; // First update to the collector after reconfig blocks so we can trigger
 					// token auth if needed
+	bool m_include_default_flock_param{true};
 
 	friend class DedicatedScheduler;
 };
