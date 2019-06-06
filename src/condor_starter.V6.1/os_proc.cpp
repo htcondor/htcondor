@@ -50,6 +50,7 @@
 #include "classad_oldnew.h"
 #include "singularity.h"
 #include "find_child_proc.h"
+#include "ToE.h"
 
 #include <sstream>
 
@@ -695,6 +696,60 @@ OsProc::JobReaper( int pid, int status )
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
 	if (JobPid == pid) {
+		// Write the appropriate ToE tag if the process exited of its own accord.
+		if(! requested_exit) {
+			// This ClassAd gets delete()d by toe when toe goes out of scope,
+			// because Insert() transfers ownership.
+			classad::ClassAd * tag = new classad::ClassAd();
+			tag->InsertAttr( "Who", ToE::itself );
+			tag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+			tag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
+			struct timeval exitTime;
+			condor_gettimestamp( exitTime );
+			tag->InsertAttr( "When", (long long)exitTime.tv_sec );
+
+			classad::ClassAd toe;
+			toe.Insert( "ToE", tag );
+
+			std::string jobAdFileName;
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
+			ToE::writeTag( & toe, jobAdFileName );
+
+			// Update the schedd's copy of the job ad.
+			ClassAd updateAd( toe );
+			Starter->publishUpdateAd( & updateAd );
+			Starter->jic->periodicJobUpdate( & updateAd, true );
+		} else {
+			// If we didn't write a ToE, check to see if the startd did.
+			std::string jobAdFileName;
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
+			FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
+			if(! f) {
+				dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
+			} else {
+				int error;
+				bool isEof;
+				classad::ClassAd jobAd;
+				if( InsertFromFile( f, jobAd, isEof, error ) ) {
+					classad::ClassAd * tag =
+						dynamic_cast<classad::ClassAd *>(jobAd.Lookup( "ToE" ));
+					if( tag ) {
+						// Don't let jobAd delete tag; toe will delete when it
+						// goes out of scope.
+						jobAd.Remove( "ToE" );
+
+						classad::ClassAd toe;
+						toe.Insert( "ToE", tag );
+
+						// Update the schedd's copy of the job ad.
+						ClassAd updateAd( toe );
+						Starter->publishUpdateAd( & updateAd );
+						Starter->jic->periodicJobUpdate( & updateAd, true );
+					}
+				}
+			}
+		}
+
 			// clear out num_pids... everything under this process
 			// should now be gone
 		num_pids = 0;

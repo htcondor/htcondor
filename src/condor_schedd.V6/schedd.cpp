@@ -4423,6 +4423,15 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		free( reason );
 	}
 
+	// Jobs usually have a shadow, and this event is usually written after
+	// that shadow dies, but that's by no means certain.  If we happen to
+	// have gotten a ToE tag, tell the abort event about it.
+	ClassAd * ja = GetJobAd( job_id.cluster, job_id.proc );
+	if( ja ) {
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd*>(ja->Lookup("ToE"));
+		event.setToeTag( toeTag );
+	}
+
 	bool status =
 		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;

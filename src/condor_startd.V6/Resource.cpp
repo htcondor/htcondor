@@ -2518,8 +2518,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			std::string adstring;
 			sPrintAdAttrs( adstring, * cap, r );
 
+			// It's important for ToE tag updating that this does NOT
+			// produce an extra trailing newline.
 			fprintf( updateAdFile, "%s", adstring.c_str() );
-			// fwrite( updateAdFile, sizeof( char ), strlen( adstring.c_str() ), adstring.c_str() );
 
 			fclose( updateAdFile );
 
