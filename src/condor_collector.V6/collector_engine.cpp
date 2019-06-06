@@ -414,12 +414,16 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 
 	char const *ipattr = NULL;
+	char const *check_owner = nullptr;
 	switch( command ) {
 	  case MERGE_STARTD_AD:
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
 		  break;
+	  case UPDATE_OWN_SUBMITTOR_AD:
+		check_owner = ATTR_NAME;
+		// fallthrough
 	  case UPDATE_SCHEDD_AD:
 	  case UPDATE_SUBMITTOR_AD:
 		  ipattr = ATTR_SCHEDD_IP_ADDR;
@@ -467,6 +471,20 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 				        ATTR_MY_ADDRESS, my_address.c_str());
 				return false;
 			}
+		}
+	}
+		// Verify the owner matches the value in the specified attribute.
+	if (check_owner) {
+		const char *sock_owner = sock->getOwner();
+		if (!sock_owner || !*sock_owner || !strcmp(sock_owner, "unmapped")) {
+			return false;
+		}
+		std::string ad_owner;
+		if (!clientAd->EvaluateAttrString(check_owner, ad_owner)) {
+			return false;
+		}
+		if (!strcmp(sock_owner, ad_owner.c_str())) {
+			return false;
 		}
 	}
 
@@ -645,6 +663,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 							  clientAd, hk, hashString, insert, from );
 		break;
 
+	  case UPDATE_OWN_SUBMITTOR_AD: // fallthrough
 	  case UPDATE_SUBMITTOR_AD:
 		// use the same hashkey function as a schedd ad
 		if (!makeScheddAdHashKey (hk, clientAd))

@@ -256,6 +256,11 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_ACCOUNTING_AD,"UPDATE_ACCOUNTING_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		// Users may advertise their own submitter ads.  If they do, there are additional
+		// restrictions to their contents (such as the user must be authenticated, not
+		// unmapped, and must match the Owner attribute).
+	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 
     // install command handlers for updates with acknowledgement
 
