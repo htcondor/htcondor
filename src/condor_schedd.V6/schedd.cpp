@@ -1361,6 +1361,7 @@ Scheduler::count_jobs()
 			SubDat.flock[entry] = SubmitterFlockCounters();
 		}
 	}
+	SubmitterMap.Cleanup(time(NULL));
 
 	GridJobOwners.clear();
 
@@ -1645,6 +1646,8 @@ Scheduler::count_jobs()
 		pAd.InsertAttr(ATTR_CAPABILITY, capability);
 	}
 
+	time_t time_now = time(NULL);
+
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		SubmitterData & SubDat = it->second;
 		const char * owner_name = SubDat.Name();
@@ -1659,6 +1662,7 @@ Scheduler::count_jobs()
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
+		SubmitterMap.AddSubmitter("", SubDat.name, time_now);
 		// Update non-flock collectors
 		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 		SubDat.lastUpdateTime = update_time;
@@ -1709,6 +1713,8 @@ Scheduler::count_jobs()
 				if (!capability.empty()) {
 					pAd.InsertAttr(ATTR_CAPABILITY, capability);
 				}
+
+				SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name, time_now);
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
@@ -7424,6 +7430,13 @@ Scheduler::negotiate(int command, Stream* s)
 	std::string policy_remote_pool;
 	if (policy_ad.EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
 		submitter_tag = policy_remote_pool;
+	}
+
+	if (!SubmitterMap.IsSubmitterValid(submitter_tag, owner, time(NULL))) {
+		dprintf(D_ALWAYS, "Remote negotiator (host=%s, pool=%s) is trying to negotiate with submitter %s;"
+			" that submitter was not sent to the negotiator, so aborting the negotiation attempt.\n",
+			sock->peer_ip_str(), submitter_tag.c_str(), owner);
+		return (!(KEEP_STREAM));
 	}
 
 	if( FlockCollectors && command == NEGOTIATE ) {

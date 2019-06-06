@@ -32,6 +32,7 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -416,6 +417,51 @@ typedef enum {
 	NO_SHADOW_MPI,
 	NO_SHADOW_VM,
 } NoShadowFailure_t;
+
+
+namespace std
+{
+	template<> struct hash<std::pair<std::string, std::string>>
+	{
+		typedef std::pair<std::string, std::string> argument_type;
+		typedef std::size_t result_type;
+		result_type operator()(argument_type const& input) const noexcept
+		{
+			result_type const h1 ( std::hash<std::string>{}(input.first) );
+			result_type const h2 ( std::hash<std::string>{}(input.second) );
+			return h1 ^ (h2 << 1);
+		}
+	};
+}
+
+class PoolSubmitterMap
+{
+public:
+	void AddSubmitter(const std::string &pool, const std::string &submitter, time_t now) {
+		m_map[std::make_pair(pool, submitter)] = now + 1200;
+	}
+
+	bool IsSubmitterValid(const std::string &pool, const std::string &submitter, time_t now) const {
+		auto iter = m_map.find({pool, submitter});
+		if (iter == m_map.end()) {
+			return false;
+		}
+		return iter->second > now;
+	}
+
+	void Cleanup(time_t now) {
+		for (auto it = m_map.begin(); it != m_map.end();) {
+			if (it->second <= now) {
+				it = m_map.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+private:
+	std::unordered_map<std::pair<std::string, std::string>, time_t> m_map;
+};
 
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
@@ -1037,6 +1083,9 @@ private:
 	DaemonList		*FlockCollectors, *FlockNegotiators;
 	std::unordered_set<std::string> FlockPools; // Names of all "default" flocked collectors.
 	std::unordered_map<std::string, std::unique_ptr<DCCollector>> FlockExtra; // User-provided flock targets.
+
+	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
+
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
