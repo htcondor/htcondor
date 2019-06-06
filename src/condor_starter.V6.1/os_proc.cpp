@@ -66,7 +66,7 @@ ReliSock *sns = 0;
 
 /* OsProc class implementation */
 
-OsProc::OsProc( ClassAd* ad )
+OsProc::OsProc( ClassAd* ad ) : howCode(-1)
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
@@ -698,6 +698,9 @@ OsProc::JobReaper( int pid, int status )
 	if (JobPid == pid) {
 		// Write the appropriate ToE tag if the process exited of its own accord.
 		if(! requested_exit) {
+			// Store for the post-script's environment.
+			this->howCode = ToE::OfItsOwnAccord;
+
 			// This ClassAd gets delete()d by toe when toe goes out of scope,
 			// because Insert() transfers ownership.
 			classad::ClassAd * tag = new classad::ClassAd();
@@ -734,6 +737,9 @@ OsProc::JobReaper( int pid, int status )
 					classad::ClassAd * tag =
 						dynamic_cast<classad::ClassAd *>(jobAd.Lookup( "ToE" ));
 					if( tag ) {
+						// Store for the post-script's environment.
+						tag->EvaluateAttrInt( "HowCode", this->howCode );
+
 						// Don't let jobAd delete tag; toe will delete when it
 						// goes out of scope.
 						jobAd.Remove( "ToE" );
@@ -937,7 +943,6 @@ OsProc::Continue()
 {
 	if (is_suspended)
 	{
-	  
 	  daemonCore->Send_Signal(JobPid, SIGCONT);
 	  is_suspended = false;
 	}
@@ -1023,6 +1028,18 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	return UserProc::PublishUpdateAd( ad );
+}
+
+void
+OsProc::PublishToEnv( Env * proc_env ) {
+	UserProc::PublishToEnv( proc_env );
+
+	if( howCode != -1 ) {
+		MyString name;
+		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
+		name.upper_case();
+		proc_env->SetEnv( name, IntToStr( howCode ) );
+	}
 }
 
 int *
