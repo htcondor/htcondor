@@ -777,9 +777,12 @@ class Scheduler : public Service
 
 private:
 
+	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
+
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
-	bool SetupNegotiatorSession(unsigned duration, std::string &capability);
+	bool SetupNegotiatorSession(unsigned duration, const std::string &remote_pool,
+		std::string &capability);
 	// Negotiator sessions have claim IDs, which includes a sequence number
 	uint64_t m_negotiator_seq{0};
 	time_t m_scheduler_startup{0};

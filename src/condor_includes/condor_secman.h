@@ -224,7 +224,12 @@ public:
 		// Setting duration=0 means the session never expires.  (In this case
 		// it should be explicitly deleted with invalidateKey() when it
 		// is no longer needed.)
-	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu,char const *peer_sinful, int duration);
+		//
+		// If additional attributes should be copied into the session policy,
+		// these can be copied into the policy parameter:
+	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
+		char const *exported_session_info, char const *peer_fqu, char const *peer_sinful, int duration,
+		classad::ClassAd *policy);
 
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.

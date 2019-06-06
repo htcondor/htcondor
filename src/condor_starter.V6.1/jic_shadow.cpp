@@ -3093,7 +3093,8 @@ JICShadow::initMatchSecuritySession()
 			reconnect_session_info.Value(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
-			0 /*don't expire*/ );
+			0 /*don't expire*/,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
@@ -3127,7 +3128,8 @@ JICShadow::initMatchSecuritySession()
 			filetrans_session_info.Value(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			shadow->addr(),
-			0 /*don't expire*/ );
+			0 /*don't expire*/,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create file "

@@ -419,7 +419,8 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 				secSessionInfo(),
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				peer,
-				0 );
+				0,
+				nullptr );
 
 			if( rc ) {
 					// we're good to go; use the claimid security session
@@ -856,7 +857,7 @@ Scheduler::~Scheduler()
 
 
 bool
-Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
+Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
 {
 	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
 		return false;
@@ -888,6 +889,8 @@ Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
 	}
 
 	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+	classad::ClassAd policy_ad;
+	policy_ad.InsertAttr(ATTR_REMOTE_POOL, pool);
 
 	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		NEGOTIATOR,
@@ -896,7 +899,8 @@ Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
 		session_info,
 		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
 		nullptr,
-		duration
+		duration,
+		&policy_ad
 	);
 	if (retval) {
 		capability = id + "#" + session_info + keybuf.get();
@@ -1594,15 +1598,6 @@ Scheduler::count_jobs()
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
 
-		// This is called at most every 5 seconds, meaning this can cause
-		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
-		// collector.
-	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
-	std::string capability;
-	if (SetupNegotiatorSession(duration, capability)) {
-		m_adBase->InsertAttr(ATTR_CAPABILITY, capability);
-	}
-
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
 
@@ -1611,6 +1606,15 @@ Scheduler::count_jobs()
 	ClassAd pAd;
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
+		// This is called at most every 5 seconds, meaning this can cause
+		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
+		// collector.
+	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+	std::string capability;
+	if (SetupNegotiatorSession(duration, HOME_POOL_SUBMITTER_TAG, capability)) {
+		pAd.InsertAttr(ATTR_CAPABILITY, capability);
+	}
 
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		SubmitterData & SubDat = it->second;
@@ -1657,7 +1661,7 @@ Scheduler::count_jobs()
 				// here as above for the primary collector...
 			unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
 			std::string capability;
-			SetupNegotiatorSession(duration, capability);
+			SetupNegotiatorSession(duration, flock_col->name(), capability);
 
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {

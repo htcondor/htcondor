@@ -6983,7 +6983,8 @@ int DaemonCore::Create_Process(
 			valid_coms.c_str(),
 			CONDOR_CHILD_FQU,
 			NULL,
-			0);
+			0,
+			nullptr);
 
 		if(!rc)
 		{
@@ -8911,7 +8912,8 @@ DaemonCore::Inherit( void )
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
 				saved_sinful_string.c_str(),
-				0);
+				0,
+				nullptr);
 			if(!rc)
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
@@ -8964,7 +8966,8 @@ DaemonCore::Inherit( void )
 				family_session_info.c_str(),
 				CONDOR_FAMILY_FQU,
 				NULL,
-				0);
+				0,
+				nullptr);
 
 		if(!rc) {
 			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");
