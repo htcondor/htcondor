@@ -3134,6 +3134,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 
 	// Try to read the ToE tag.
+	if( got_sync_line ) { return 1; }
 	if( read_optional_line( line, file, got_sync_line ) ) {
 		if( line.empty() ) {
 			if(! read_optional_line( line, file, got_sync_line )) {
@@ -3640,6 +3641,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if(! rv) { return rv; }
 
 	MyString line;
+	if( got_sync_line ) { return 1; }
 	if( read_optional_line( line, file, got_sync_line ) ) {
 		if(line.empty()) {
 			if( read_optional_line( line, file, got_sync_line ) ) {
