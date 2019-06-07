@@ -363,7 +363,12 @@ Dagman::Config()
 	if( !condorSubmitExe ) {
 		condorSubmitExe = strdup( "condor_submit" );
 		ASSERT( condorSubmitExe );
+	} else {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", condorSubmitExe);
 	}
+	bool _use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_USE_CONDOR_SUBMIT setting: %s\n",
+		_use_condor_submit ? "True" : "False");
 
 	free( condorRmExe );
 	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
@@ -622,6 +627,7 @@ void main_init (int argc, char ** const argv) {
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
+	int dash_dry_run = 0; // -DryRun command line argument
 
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
@@ -779,7 +785,10 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
-        } else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
+		} else if (!strcasecmp("-DryRun", argv[i])) {
+			dash_dry_run = 1;
+
+		} else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
 			dagman.useDagDir = true;
 
         } else if( !strcasecmp( "-AutoRescue", argv[i] ) ) {
@@ -1146,6 +1155,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
+	dagman.dag->SetDryRun(dash_dry_run);
 	if( dagman._priority != 0 ) {
 		dagman.dag->SetDagPriority(dagman._priority);
 	}
