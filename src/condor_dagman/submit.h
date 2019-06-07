@@ -57,6 +57,14 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* directory, const char *worflowLogFile,
 					bool hold_claim, const MyString &batchName );
 
+bool direct_condor_submit(const Dagman &dm, Job* node,
+	const char *worflowLogFile,
+	const MyString &parents,
+	const char *batchName,
+	CondorID& condorID);
+
+bool send_reschedule(const Dagman &dm);
+
 void set_fake_condorID( int subprocID );
 
 bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
