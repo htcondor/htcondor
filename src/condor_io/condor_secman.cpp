@@ -43,6 +43,8 @@
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
 
+#include <sstream>
+
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 // special security session "hint" used to specify that a new
@@ -90,6 +92,8 @@ const char SecMan::sec_req_rev[][10] = {
 KeyCache SecMan::m_default_session_cache;
 std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
 std::string SecMan::m_tag;
+std::map<DCpermission, std::string> SecMan::m_tag_methods;
+std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
 HashTable<MyString,MyString> SecMan::command_map(hashFunction);
@@ -103,6 +107,12 @@ IpVerify *SecMan::m_ipverify = NULL;
 
 void
 SecMan::setTag(const std::string &tag) {
+
+	if (tag != m_tag) {
+		m_tag_token_owner = "";
+		m_tag_methods.clear();
+	}
+
         m_tag = tag;
 	if (tag.size() == 0) {
 		session_cache = &m_default_session_cache;
@@ -121,6 +131,32 @@ SecMan::setTag(const std::string &tag) {
 	}
 	session_cache = tmp;
 }
+
+
+void
+SecMan::setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods)
+{
+	std::stringstream ss;
+	bool first = true;
+	for (const auto &method : methods) {
+		if (first) first = false;
+		else ss << ",";
+		ss << method;
+	}
+	m_tag_methods[perm] = ss.str();
+}
+
+
+const std::string
+SecMan::getTagAuthenticationMethods(DCpermission perm)
+{
+	const auto iter = m_tag_methods.find(perm);
+	if (iter == m_tag_methods.end()) {
+		return "";
+	}
+	return iter->second;
+}
+
 
 SecMan::sec_req
 SecMan::sec_alpha_to_sec_req(char *b) {
@@ -306,6 +342,12 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 	ASSERT( result );
 
+	const auto methods = getTagAuthenticationMethods(perm);
+	if (!methods.empty()) {
+		*result = methods;
+		return;
+	}
+
 	char * p = getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm);
 
 	if (p) {
@@ -482,10 +524,15 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 	// for those of you reading this code, a 'paramer'
 	// is a thing that param()s.
-	char *paramer;
+	char *paramer = nullptr;
 
 	// auth methods
-	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
+	const auto methods = getTagAuthenticationMethods(auth_level);
+	if (!methods.empty()) {
+		paramer = strdup(methods.c_str());
+	}
+
+	paramer = paramer ? paramer : SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
 		MyString methods = SecMan::getDefaultAuthenticationMethods(auth_level);
 		if(auth_level == READ) {

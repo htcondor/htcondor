@@ -44,6 +44,7 @@
 #include "directory.h"
 #include "subsystem_info.h"
 #include "secure_file.h"
+#include "condor_secman.h"
 
 #include "condor_auth_passwd.h"
 
@@ -168,16 +169,29 @@ bool findToken(const std::string &tokenfilename,
 bool
 findTokens(const std::string &issuer,
         const std::set<std::string> &server_key_ids,
+	const std::string &owner,
         std::string &username,
         std::string &token,
         std::string &signature)
 {
-	// Note we reuse the exclude regexp from the configuration subsys.
+	TemporaryPrivSentry tps( !owner.empty() );
+	if (!owner.empty()) {
+		if (!init_user_ids(owner.c_str(), NULL)) {
+			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
+			return false;
+		}
+		set_user_priv();
+	}
 
+	// Note we reuse the exclude regexp from the configuration subsys.
 	std::string dirpath;
-	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
 		MyString file_location;
 		if (!find_user_file(file_location, "tokens.d", false)) {
+			if (!owner.empty()) {
+				dprintf(D_FULLDEBUG, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
+				return false;
+			}
 			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
 		} else {
 			dirpath = file_location;
@@ -471,6 +485,7 @@ Condor_Auth_Passwd::fetchLogin()
 		std::string signature;
 		auto found_token = findTokens(m_server_issuer,
 					m_server_keys,
+					SecMan::getTagTokenOwner(),
 					username,
 					token,
 					signature);
@@ -2738,7 +2753,7 @@ Condor_Auth_Passwd::should_try_auth()
 	std::set<std::string> server_key_ids;
 	std::string username, token, signature;
 
-	m_tokens_avail = findTokens(issuer, server_key_ids, username, token, signature);
+	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagTokenOwner(), username, token, signature);
 	if (m_tokens_avail) {
 		dprintf(D_SECURITY|D_FULLDEBUG,
 			"Can try token auth because we have at least one token.\n");

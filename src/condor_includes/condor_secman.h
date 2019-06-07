@@ -90,6 +90,9 @@ public:
 	// Alternate session caches.
 	static std::map<std::string,KeyCache*> *m_tagged_session_cache;
         static std::string m_tag;
+	// Alternate tag methods
+	static std::map<DCpermission, std::string> m_tag_methods;
+	static std::string m_tag_token_owner;
 	static HashTable<MyString, MyString> command_map;
 	static int sec_man_ref_count;
 	static std::set<std::string> m_not_my_family;
@@ -151,6 +154,16 @@ public:
 	static void setPoolPassword(const std::string &pool) {m_pool_password = pool;}
 	// An empty pool indicates this is not used.
 	static const std::string &getPoolPassword() {return m_pool_password;}
+
+	// Setup the current authentication methods for a tag; these are considered overrides
+	// and are cleared when the tag is changed.
+	static void setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods);
+	static const std::string getTagAuthenticationMethods(DCpermission perm);
+
+	// Setup the tag TOKEN owner name; this is considered an override and cleared when the
+	// tag is changed.
+	static void setTagTokenOwner(const std::string &owner) {m_tag_token_owner = owner;}
+	static const std::string &getTagTokenOwner() {return m_tag_token_owner;}
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
 									ClassAd* ad,
