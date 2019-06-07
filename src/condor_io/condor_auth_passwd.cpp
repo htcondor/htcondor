@@ -187,7 +187,7 @@ findTokens(const std::string &issuer,
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
 		MyString file_location;
-		if (!find_user_file(file_location, "tokens.d", false)) {
+		if (!find_user_file(file_location, "tokens.d", false, true)) {
 			if (!owner.empty()) {
 				dprintf(D_FULLDEBUG, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
 				return false;
@@ -490,7 +490,7 @@ Condor_Auth_Passwd::fetchLogin()
 					token,
 					signature);
 
-		if (!found_token) {
+		if (!found_token && SecMan::getTagTokenOwner().empty()) {
 			// Check to see if we have access to the master key and generate a token accordingly.
 			std::string issuer;
 			param(issuer, "TRUST_DOMAIN");

@@ -371,7 +371,10 @@ extern "C" {
 	// this function allows tests to set the actual backend data for a param value and returns the old value.
 	// make sure that live_value stays in scope until you put the old value back
 	const char * set_live_param_value(const char * name, const char * live_value);
-	bool find_user_file(MyString & filename, const char * basename, bool check_access);
+		// Find a file associated with a user; by default, this fails if called in a context
+		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
+		// condor.
+	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 

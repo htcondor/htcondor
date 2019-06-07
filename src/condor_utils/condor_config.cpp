@@ -1061,7 +1061,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
 	if (!user_config_name.empty()) {
-		if (find_user_file(user_config_source, user_config_name.c_str(), true)) {
+		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
 			local_config_sources.append(user_config_source.c_str());
@@ -1490,13 +1490,13 @@ find_global(int config_options)
 // if basename is a fully qualified path, then it is used as-is. otherwise
 // it is prefixed with ~/.condor/ to create the effective file location
 bool
-find_user_file(MyString &file_location, const char * basename, bool check_access)
+find_user_file(MyString &file_location, const char * basename, bool check_access, bool daemon_ok)
 {
 	file_location.clear();
 	if ( ! basename || ! basename[0])
 		return false;
 
-	if (can_switch_ids())
+	if (!daemon_ok && can_switch_ids())
 		return false;
 	if ( fullpath(basename)) {
 		file_location = basename;
