@@ -406,9 +406,10 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 {
 
-	if( !m_collector_requirements ) {
+	if( !m_collector_requirements && (command != UPDATE_OWN_SUBMITTOR_AD)) {
 			// no need to do any of the following checks if the admin has
-			// not configured any COLLECTOR_REQUIREMENTS
+			// not configured any COLLECTOR_REQUIREMENTS and there aren't
+			// any mandatory checks.
 		return true;
 	}
 
@@ -483,13 +484,24 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 		if (!clientAd->EvaluateAttrString(check_owner, ad_owner)) {
 			return false;
 		}
-		if (!strcmp(sock_owner, ad_owner.c_str())) {
+		auto at_sign = ad_owner.find("@");
+		if (at_sign != std::string::npos) {
+			ad_owner = ad_owner.substr(0, at_sign);
+		}
+		auto last_dot = ad_owner.find_last_of(".");
+		if (last_dot != std::string::npos) {
+			ad_owner = ad_owner.substr(last_dot+1);
+		}
+		if (strcmp(sock_owner, ad_owner.c_str())) {
 			return false;
 		}
 	}
 
 
 		// Now verify COLLECTOR_REQUIREMENTS
+	if( !m_collector_requirements ) {
+		return true;
+	}
 	bool collector_req_result = false;
 	if( !EvalBool(COLLECTOR_REQUIREMENTS,m_collector_requirements,clientAd,collector_req_result) ) {
 		dprintf(D_ALWAYS,"WARNING: %s did not evaluate to a boolean result.\n",COLLECTOR_REQUIREMENTS);

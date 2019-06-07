@@ -1726,7 +1726,7 @@ Scheduler::count_jobs()
 			// add "extra" flock targets currently.  Otherwise, a malicious Unix user A
 			// could submit jobs that cause Unix user B to flock to a pool controlled
 			// by Unix user A.
-		if (SubDat.owners.size() > 1) {continue;}
+		if (SubDat.owners.size() != 1) {continue;}
 		for (const auto &flock_map_entries : SubDat.flock) {
 			const auto &pool = flock_map_entries.first;
 			if (FlockPools.find(pool) == FlockPools.end()) {
@@ -1737,10 +1737,12 @@ Scheduler::count_jobs()
 				auto iter = FlockExtra.find(pool);
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					value.second->setOwner(*SubDat.owners.begin());
 					auto iter2 = FlockExtra.insert(std::move(value));
 					iter = iter2.first;
 				}
-				iter->second->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+				// TODO: Some refactoring required before we can do non-blocking mode here.
+				iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq, NULL, false );
 			}
 		}
 	}

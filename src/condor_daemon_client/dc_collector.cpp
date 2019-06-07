@@ -115,6 +115,8 @@ DCCollector::deepCopy( const DCCollector& copy )
 	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
+
+	m_owner = copy.m_owner;
 }
 
 
@@ -281,6 +283,11 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 	bool send_submitter_secrets = false;
 	if (!ad2 && verinfo && verinfo->built_since_version(8, 9, 3)) {
 		send_submitter_secrets = true;
+	}
+
+	if (!self->m_owner.empty() && !sock->set_crypto_mode(true)) {
+		// Secrets must be encrypted!
+		send_submitter_secrets = false;
 	}
 
 	int options = send_submitter_secrets ? 0: PUT_CLASSAD_NO_PRIVATE;
@@ -488,6 +495,10 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 	}
 
 	if(nonblocking) {
+		if (!m_owner.empty()) {
+			dprintf(D_FAILURE, "Unable to send non-blocking updates for owner-mode.\n");
+			return false;
+		}
 		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this);
 		if (this->pending_update_list.size() == 1)
 		{
@@ -496,7 +507,17 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		return true;
 	}
 
+	std::string old_tag = SecMan::getTag();
+	if (!m_owner.empty()) {
+		SecMan::setTag(m_owner);
+		SecMan::setTagAuthenticationMethods(CLIENT_PERM, {"TOKEN"});
+		SecMan::setTagTokenOwner(m_owner);
+	}
 	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20, NULL, NULL, raw_protocol);
+	if (!m_owner.empty()) {
+		SecMan::setTag(old_tag);
+	}
+
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send UDP update command to collector" );
@@ -561,6 +582,11 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		update_rsock = NULL;
 	}
 	if(nonblocking) {
+		if (!m_owner.empty()) {
+			dprintf(D_FAILURE, "Unable to send non-blocking updates for owner-mode.\n");
+			return false;
+		}
+
 		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this);
 			// Note that UpdateData automatically adds itself to the pending_update_list.
 		if (this->pending_update_list.size() == 1)
@@ -569,7 +595,18 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		}
 		return true;
 	}
+
+	std::string old_tag = SecMan::getTag();
+	if (!m_owner.empty()) {
+		SecMan::setTag(m_owner);
+		SecMan::setTagAuthenticationMethods(CLIENT_PERM, {"TOKEN"});
+		SecMan::setTagTokenOwner(m_owner);
+	}
 	Sock *sock = startCommand(cmd, Sock::reli_sock, 20);
+	if (!m_owner.empty()) {
+		SecMan::setTag(old_tag);
+	}
+
 	if(!sock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send TCP update command to collector" );
