@@ -264,6 +264,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				if (policy) {
 					std::string issuer;
 					if (policy->EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, issuer)) {
+						dprintf(D_SECURITY|D_FULLDEBUG, "Will use issuer %s for remote server.\n", issuer.c_str());
 						tmp_auth->set_remote_issuer(issuer);
 					}
 					std::string key_str;

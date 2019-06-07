@@ -183,7 +183,7 @@ findTokens(const std::string &issuer,
 			dirpath = file_location;
 		}
 	}
-	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s\n", dirpath.c_str());
+	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
 	const char* _errstr;
 	int _erroffset;

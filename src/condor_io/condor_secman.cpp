@@ -944,6 +944,14 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	action_ad->Insert(buf);
 
 	UpdateAuthenticationMetadata(*action_ad);
+	std::string trust_domain;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+		action_ad->InsertAttr(ATTR_SEC_TRUST_DOMAIN, trust_domain);
+	}
+	std::string issuer_keys;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, issuer_keys)) {
+		action_ad->InsertAttr(ATTR_SEC_ISSUER_KEYS, issuer_keys);
+	}
 
 	return action_ad;
 
@@ -1834,7 +1842,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 
 				// Record the remote trust domain, if present
 			std::string trust_domain;
-			if (m_auth_info.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+			if (auth_response.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
 				m_sock->setTrustDomain(trust_domain);
 			}
 
@@ -1871,6 +1879,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);

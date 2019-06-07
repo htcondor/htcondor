@@ -1585,11 +1585,11 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
+			bool blocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, blocking );
+			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
-			// Note that flocking updates are always non-blocking; hence, we may
-			// not notice that a token request is necessary until the next interval.
 		calc_token_requests(FlockCollectors, "");
 	}
 
@@ -13740,6 +13740,7 @@ Scheduler::Init()
 	// Clear out any pending token requests.
 	m_token_requests.clear();
 	m_initial_update = true;
+	m_flock_collectors_init.clear();
 
 	first_time_in_init = false;
 }
@@ -17592,7 +17593,7 @@ Scheduler::try_token_request(PendingRequest &req)
 		}
 		if (token.empty()) {
 			req.m_request_id = request_id;
-			dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
+			dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
 			return true;
 		} else {
 			dprintf(D_ALWAYS, "Token request auto-approved.\n");
@@ -17610,7 +17611,7 @@ Scheduler::try_token_request(PendingRequest &req)
 		}
 		if (token.empty()) {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", req.m_request_id.c_str());
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
 			return true;
 		} else {
 			dprintf(D_ALWAYS, "Token request approved.\n");

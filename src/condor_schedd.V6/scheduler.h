@@ -31,6 +31,7 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -1022,6 +1023,7 @@ private:
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
+	std::unordered_set<Daemon*>	m_flock_collectors_init;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
