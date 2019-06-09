@@ -4878,7 +4878,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetMatchListLen
 	{SUBMIT_KEY_LastMatchListLength, ATTR_LAST_MATCH_LIST_LENGTH, SimpleSubmitKeyword::f_as_int},
 	// formerly SetDAGManJobId
-	{SUBMIT_KEY_DAGManJobId, ATTR_DAGMAN_JOB_ID, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_DAGManJobId, ATTR_DAGMAN_JOB_ID, SimpleSubmitKeyword::f_as_uint},
 	// formerly SetLogNotes
 	{SUBMIT_KEY_LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserNotes

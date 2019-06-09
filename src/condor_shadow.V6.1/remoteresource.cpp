@@ -1476,6 +1476,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup( "ToE" ));
+	if( toeTag ) {
+		CopyAttribute( "ToE", *jobAd, *update_ad );
+
+		// Required to actually update the schedd's copy.  (sigh)
+		shadow->watchJobAttr( "ToE" );
+	}
+
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
     CopyAttribute("StatsLastUpdateTimeStarter", *jobAd, "StatsLastUpdateTime", *update_ad);

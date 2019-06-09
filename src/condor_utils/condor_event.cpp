@@ -32,21 +32,13 @@
 
 #include "misc_utils.h"
 #include "utc_time.h"
+#include "ToE.h"
 
 //added by Ameet
 #include "condor_environ.h"
 //--------------------------------------------------------
 #include "condor_debug.h"
 //--------------------------------------------------------
-
-#ifdef WIN32
- #if ! defined timegm
-  // timegm is the Linux name for the gm version of mktime, on Windows it is called _mkgmtime
-  #define timegm _mkgmtime
-  auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
-  auto __inline gmtime_r(const time_t*time, struct tm*result) { return gmtime_s(result, time); }
- #endif
-#endif
 
 // define this to turn off seeking in the event reader methods
 #define DONT_EVER_SEEK 1
@@ -3056,7 +3048,7 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 
 
 // ----- JobAbortedEvent class
-JobAbortedEvent::JobAbortedEvent (void)
+JobAbortedEvent::JobAbortedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_JOB_ABORTED;
 	reason = NULL;
@@ -3064,9 +3056,24 @@ JobAbortedEvent::JobAbortedEvent (void)
 
 JobAbortedEvent::~JobAbortedEvent(void)
 {
-	delete[] reason;
+	if( reason ) {
+		delete[] reason;
+	}
+	if( toeTag ) {
+		delete toeTag;
+	}
 }
 
+void
+JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
+	if(! tt) { return; }
+	if( toeTag ) { delete toeTag; }
+	toeTag = new ToE::Tag();
+	if(! ToE::decode( tt, * toeTag )) {
+		delete toeTag;
+		toeTag = NULL;
+	}
+}
 
 void
 JobAbortedEvent::setReason( const char* reason_str )
@@ -3101,6 +3108,11 @@ JobAbortedEvent::formatBody( std::string &out )
 			return false;
 		}
 	}
+	if( toeTag ) {
+		if(! toeTag->writeToString( out )) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -3119,6 +3131,26 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if (read_optional_line(line, file, got_sync_line, true)) {
 		line.trim();
 		reason = line.detach_buffer();
+	}
+
+	// Try to read the ToE tag.
+	if( got_sync_line ) { return 1; }
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if( line.empty() ) {
+			if(! read_optional_line( line, file, got_sync_line )) {
+				return 0;
+			}
+		}
+
+		if( line.remove_prefix( "\tJob terminated by " ) ) {
+			if( toeTag != NULL ) { delete toeTag; }
+			toeTag = new ToE::Tag();
+			if(! toeTag->readFromString( line )) {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
 	}
 #else
 	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
@@ -3162,6 +3194,20 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
+	if( toeTag ) {
+		classad::ClassAd * tt = new classad::ClassAd();
+		if(! ToE::encode( * toeTag, tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+		if(! myad->Insert( "ToE", tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+	}
+
 	return myad;
 }
 
@@ -3179,10 +3225,12 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 		free(multi);
 		multi = NULL;
 	}
+
+	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" )) );
 }
 
 // ----- TerminatedEvent baseclass
-TerminatedEvent::TerminatedEvent(void)
+TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 {
 	normal = false;
 	core_file = NULL;
@@ -3199,8 +3247,16 @@ TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
 	delete[] core_file;
+	if( toeTag ) { delete toeTag; }
 }
 
+void
+TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
+	if( tt ) {
+		if( toeTag ) { delete toeTag; }
+		toeTag = new classad::ClassAd( * tt );
+	}
+}
 
 void
 TerminatedEvent::setCoreFile( const char* core_name )
@@ -3548,10 +3604,23 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 bool
 JobTerminatedEvent::formatBody( std::string &out )
 {
-  if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
-	  return false;
-  }
-  return TerminatedEvent::formatBody( out, "Job" );
+	if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
+		return false;
+	}
+	bool rv = TerminatedEvent::formatBody( out, "Job" );
+	if( rv && toeTag != NULL ) {
+		ToE::Tag tag;
+		if( ToE::decode( toeTag, tag ) ) {
+			if( tag.howCode == 0 ) {
+				if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
+					return false;
+				}
+			} else {
+				rv = tag.writeToString( out );
+			}
+		}
+	}
+	return rv;
 }
 
 
@@ -3568,7 +3637,48 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 #endif
-	return TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	if(! rv) { return rv; }
+
+	MyString line;
+	if( got_sync_line ) { return 1; }
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if(line.empty()) {
+			if( read_optional_line( line, file, got_sync_line ) ) {
+				return 0;
+			}
+		}
+		if( line.remove_prefix( "\tJob terminated of its own accord at " ) ) {
+			if( toeTag != NULL ) {
+				delete toeTag;
+			}
+			toeTag = new classad::ClassAd();
+
+			toeTag->InsertAttr( "Who", ToE::itself );
+			toeTag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+			toeTag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
+
+			// This code gets more complicated if we don't assume UTC i/o.
+			struct tm eventTime;
+			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
+			toeTag->InsertAttr( "When", timegm(&eventTime) );
+		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
+			ToE::Tag tag;
+			if(! tag.readFromString( line )) {
+				return 0;
+			}
+
+			if(toeTag != NULL) {
+				delete toeTag;
+			}
+			toeTag = new ClassAd();
+			ToE::encode( tag, toeTag );
+		} else {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 ClassAd*
@@ -3652,6 +3762,14 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
+	if( toeTag ) {
+	    classad::ExprTree * tt = toeTag->Copy();
+		if(! myad->Insert("ToE", tt)) {
+			delete myad;
+			return NULL;
+		}
+	}
+
 	return myad;
 }
 
@@ -3701,6 +3819,9 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
+
+	if( toeTag ) { delete toeTag; }
+	toeTag = dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" ));
 }
 
 JobImageSizeEvent::JobImageSizeEvent(void)
@@ -4636,6 +4757,7 @@ NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_NODE_TERMINATED;
 	node = -1;
+	pusageAd = NULL;
 }
 
 
