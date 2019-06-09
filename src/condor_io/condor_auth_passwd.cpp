@@ -217,8 +217,8 @@ findTokens(const std::string &issuer,
 	const char *file;
 	std::vector<std::string> tokens;
 	std::string subsys_token_file;
-	std::string subsys = get_mySubSystemName();
-	subsys += "_auto_generated_token";
+	std::string subsys_agt_name = get_mySubSystemName();
+	subsys_agt_name += "_auto_generated_token";
 
 	while ( (file = dir.Next()) ) {
 		if (dir.IsDirectory()) {
@@ -226,7 +226,7 @@ findTokens(const std::string &issuer,
 		}
 		if(!excludeFilesRegex.match(file)) {
 			tokens.emplace_back(dir.GetFullPath());
-			if (!strcasecmp(file, subsys.c_str())) {
+			if (!strcasecmp(file, subsys_agt_name.c_str())) {
 				subsys_token_file = dir.GetFullPath();
 			}
 		} else {
