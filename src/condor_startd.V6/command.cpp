@@ -108,8 +108,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		claim_is_closing = false;
 	}
 
-	// The rest of this function seems to assume that rip is always valid.
-	if( rip && rip->r_cur ) {
+	if( rip->r_cur ) {
 		struct timeval when;
 		// This ClassAd gets delete()d by toe when toe goes out of scope,
 		// because Insert() transfers ownership.
