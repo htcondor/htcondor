@@ -32,6 +32,10 @@
 #include "glexec_privsep_helper.linux.h"
 #endif
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
 	represent a running job.
@@ -403,6 +407,9 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
+
+		// Manage the data reuse directory.
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 #endif
