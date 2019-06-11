@@ -398,7 +398,17 @@ void SubmitHash::setup_macro_defaults()
 // set the value that $(SUBMIT_FILE) will expand to. (set into the defaults table, not the submit hash table)
 void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & source)
 {
-	insert_source(filename, source);
+	// don't insert the source if already has a source id.
+	bool insert_it = true;
+	if (source.id > 0 && (size_t)source.id < SubmitMacroSet.sources.size()) {
+		const char * tmp = macro_source_filename(source, SubmitMacroSet);
+		if (strcmp(tmp, filename) == MATCH) {
+			insert_it = false;
+		}
+	}
+	if (insert_it) {
+		insert_source(filename, source);
+	}
 
 	// if the defaults table pointer for SUBMIT_FILE is unset, set it to point to the filename we just inserted.
 	condor_params::key_value_pair *pdi = const_cast<condor_params::key_value_pair *>(SubmitMacroSet.defaults->table);
