@@ -484,7 +484,8 @@ public:
 	YourString(const MyString & s) : m_str(s.Data) {}
 	YourString(const YourString &rhs) : m_str(rhs.m_str) {}
 
-	void operator =(const char *str) { m_str = str; }
+	YourString& operator =(const YourString &rhs) { m_str = rhs.m_str; return *this; }
+	YourString& operator =(const char *rhs) { m_str = rhs; return *this; }
 	const char * c_str() const { return m_str ? m_str : ""; }
 	const char * Value() const { return m_str ? m_str : ""; }
 	const char * ptr() const { return m_str; }
@@ -514,6 +515,8 @@ public:
 	YourStringNoCase(const std::string &str) : YourString(str.c_str()) {}
 	YourStringNoCase(const YourString &rhs) : YourString(rhs) {}
 	YourStringNoCase(const YourStringNoCase &rhs) : YourString(rhs.m_str) {}
+
+	YourStringNoCase& operator =(const YourStringNoCase &rhs) { m_str = rhs.m_str; return *this; }
 
 	bool operator ==(const char * str) const;
 	bool operator ==(const std::string & str) const { return operator==(str.c_str()); }
