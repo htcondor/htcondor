@@ -1073,12 +1073,9 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 
 ###########################################
 #extra build flags and link libs.
-if (HAVE_EXT_OPENSSL)
-	add_definitions(-DWITH_OPENSSL) # used only by SOAP
-endif(HAVE_EXT_OPENSSL)
 
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+if (NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "openssl libraries not found!")
 endif()
 
 ###########################################
