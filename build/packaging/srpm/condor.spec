@@ -241,6 +241,10 @@ BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
 %if 0%{?rhel} >= 6
 BuildRequires: glibc-static
+%if 0%{?rhel} >= 7
+# libstdc++.a moved to a separate -static package in EL7
+BuildRequires: libstdc++-static
+%endif
 BuildRequires: libuuid-devel
 %else
 BuildRequires: glibc-devel
