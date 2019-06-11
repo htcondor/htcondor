@@ -1376,7 +1376,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
-			if ( write( fd, adXML.c_str(), adXML.length() ) < 0) {
+			if ( write( fd, adXML.c_str(), adXML.length() ) < (ssize_t)adXML.length() ) {
 				success = false;
 			} else {
 				success = true;
@@ -1386,7 +1386,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 		std::string output;
 		success = event->formatEvent( output, format_opts );
 		output += SynchDelimiter;
-		if ( success && write( fd, output.c_str(), output.length() ) < 0 ) {
+		if ( success && write( fd, output.c_str(), output.length() ) < (ssize_t)output.length() ) {
 			// TODO Should we print a '\n...\n' like in the older code?
 			success = false;
 		}
