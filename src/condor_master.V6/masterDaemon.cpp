@@ -785,6 +785,7 @@ int daemon::RealStart( )
 	char *daemon_args = param( buf );
 
 	// Automatically set -localname if appropriate.
+	bool setLocalName = false;
 	if( isDC ) {
 		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
 		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
@@ -804,6 +805,8 @@ int daemon::RealStart( )
 							daemon_sock_buf = configArgs.GetArg(i + 1);
 							daemon_sock_buf.lower_case();
 							daemon_sock = daemon_sock_buf.c_str();
+							localName = daemon_sock_buf;
+							setLocalName = true;
 						}
 						break;
 					}
@@ -815,6 +818,8 @@ int daemon::RealStart( )
 					// Don't set daemon_sock here, since we'll catch it
 					// below if we haven't, and that avoids duplicating
 					// the code.
+					localName = name_in_config_file;
+					setLocalName = true;
 				}
 			}
 
@@ -822,6 +827,7 @@ int daemon::RealStart( )
 			// version of any param()s it does while doing this start-up.
 		}
 	}
+	if(! setLocalName) { localName.clear(); }
 
 	// If the daemon shares a binary with the HAD or REPLICATION daemons,
 	// respect the setting of the corresponding <SUBSYS>_USE_SHARED_PORT.
@@ -1412,7 +1418,12 @@ daemon::Obituary( int status )
 		NextStart());
 
 
-	if( log_name ) {
+	// If the daemon was given a -localname parameter, it becomes nontrivial
+	// to determine what its log file should be, and in general the only way
+	// to be sure is for the daemon to actually tell us.  Rather than do all
+	// that work in the stable series, we'll just make sure that we at least
+	// don't tail the _wrong_ file.
+	if( log_name && localName.empty() ) {
 		email_asciifile_tail( mailer, log_name, Lines );
 	}
 
@@ -1585,15 +1596,12 @@ daemon::InitParams()
 		tmp = NULL;
 	}
 
-		// check that log file is necessary
-	if ( log_filename_in_config_file != NULL) {
+	// GT#7103: We need to know this for the obituary message.
+	if( log_filename_in_config_file != NULL ) {
 		if( log_name ) {
 			free( log_name );
 		}
-		// We now set a sane default for <DAEMON_NAME>_LOG, so don't bother
-		// to warn if it's unset -- especially since that's not the right
-		// name for <DAEMON_NAME>.<SUBSYS>_LOG, which is what they'll
-		// actually be looking for.
+		log_name = param(log_filename_in_config_file);
 	}
 }
 
