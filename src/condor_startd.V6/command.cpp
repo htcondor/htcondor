@@ -88,7 +88,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		return FALSE;
 	}
 
-	int rval;
+	int rval = 0;
 	bool claim_is_closing = rip->curClaimIsClosing();
 
 		// send response to shadow before killing starter to avoid a
