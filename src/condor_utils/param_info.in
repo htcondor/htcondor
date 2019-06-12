@@ -713,7 +713,7 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_AGRESSIVE_SUBMIT]
+[DAGMAN_AGGRESSIVE_SUBMIT]
 default=false
 type=bool
 tags=dagman,dagman_main
@@ -3313,7 +3313,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 
