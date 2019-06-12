@@ -3306,7 +3306,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 
