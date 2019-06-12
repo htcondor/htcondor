@@ -293,7 +293,6 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	//
 	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
 		std::string varline(line);
-
 		//
 		// Find the terminating '\0'
 		//
@@ -1053,22 +1052,66 @@ parse_parent(
 	//
 	
 	Job *parent;
+	Job *child;
+	static int numJoinNodes = 0;
+	bool useJoinNodes = param_boolean( "DAGMAN_USE_JOIN_NODES", false );
+
 	parents.Rewind();
-	while ((parent = parents.Next()) != NULL) {
-		Job *child;
-		children.Rewind();
-		while ((child = children.Next()) != NULL) {
-			if (!dag->AddDependency (parent, child)) {
+
+	// If this statement has multiple parent nodes and multiple child nodes, we
+	// can optimize the dag structure by creating an intermediate "join node"
+	// connecting the two sets.
+	if (useJoinNodes && parents.Number() > 1 && children.Number() > 1) {
+		// First create the join node and add it
+		MyString failReason = "";
+		// Ugly static_cast statement is to keep certain compilers happy
+		std::string joinNodeName = "_condor_join_node" + 
+			std::to_string(static_cast<long long>(++numJoinNodes));
+		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
+			false, false, failReason);
+		if (!joinNode) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
+				" add join node\n", failReason.Value(), lineNumber);
+		}
+		// Now connect all parents and children to the join node
+		while ((parent = parents.Next()) != NULL) {
+			if (!dag->AddDependency(parent, joinNode)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-						" to add dependency between parent"
-						" node \"%s\" and child node \"%s\"\n",
-							  filename, lineNumber,
-							  parent->GetJobName(), child->GetJobName() );
+					" to add dependency between parent"
+					" node \"%s\" and join node \"%s\"\n",
+					filename, lineNumber,
+					parent->GetJobName(), joinNode->GetJobName() );
 				return false;
 			}
-			debug_printf( DEBUG_DEBUG_3,
-						  "Added Dependency PARENT: %s  CHILD: %s\n",
-						  parent->GetJobName(), child->GetJobName() );
+		}
+		children.Rewind();
+		while ((child = children.Next()) != NULL) {
+			if (!dag->AddDependency(joinNode, child)) {
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
+					" to add dependency between join"
+					" node \"%s\" and child node \"%s\"\n",
+					filename, lineNumber,
+					joinNode->GetJobName(), child->GetJobName() );
+				return false;
+			}
+		}
+	}
+	else {
+		while ((parent = parents.Next()) != NULL) {
+			children.Rewind();
+			while ((child = children.Next()) != NULL) {
+				if (!dag->AddDependency (parent, child)) {
+					debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
+							" to add dependency between parent"
+							" node \"%s\" and child node \"%s\"\n",
+								filename, lineNumber,
+								parent->GetJobName(), child->GetJobName() );
+					return false;
+				}
+				debug_printf( DEBUG_DEBUG_3,
+							"Added Dependency PARENT: %s  CHILD: %s\n",
+							parent->GetJobName(), child->GetJobName() );
+			}
 		}
 	}
 	return true;
