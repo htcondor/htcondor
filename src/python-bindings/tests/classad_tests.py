@@ -231,8 +231,8 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd()
         ad["foo"] = classad.ExprTree('regexp(12, 34)')
         ad["bar"] = classad.Value.Undefined
-        self.assertEqual(ad["foo"].eval(), classad.Value.Error)
-        self.assertNotEqual(ad["foo"].eval(), ad["bar"])
+        self.assertTrue(ad["foo"].eval() is classad.Value.Error)
+        self.assertFalse(ad["foo"].eval() is ad["bar"])
         self.assertEqual(classad.Value.Undefined, ad["bar"])
 
     def test_ad_iterator(self):
@@ -252,7 +252,7 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd()
         ad["foo"] = classad.Value.Error
         self.assertTrue(isinstance(ad.lookup("foo"), classad.ExprTree))
-        self.assertEqual(ad.lookup("foo").eval(), classad.Value.Error)
+        self.assertTrue(ad.lookup("foo").eval() is classad.Value.Error)
 
     def test_get(self):
         ad = classad.ClassAd()
@@ -360,7 +360,7 @@ class TestClassad(unittest.TestCase):
         self.assertTrue(isinstance(expr, classad.ExprTree))
         self.assertEqual(expr.eval(), "hello world")
         expr = classad.Function("regexp", ".*")
-        self.assertEqual(expr.eval(), classad.Value.Error)
+        self.assertTrue(expr.eval() is classad.Value.Error)
 
     def test_flatten(self):
         expr = classad.Attribute("foo") == classad.Attribute("bar")

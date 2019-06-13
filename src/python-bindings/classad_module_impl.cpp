@@ -155,6 +155,15 @@ boost::python::object Value__eq__(classad::Value::ValueType val, boost::python::
     if (right == boost::python::object()) {
         return boost::python::object(false);
     }
+        // For backward compatibility, make `Undefined == Undefined` evaluate to true; making
+        // it false is probably more correct in the ClassAd language, but too many unit tests
+        // have been written at this point.
+    boost::python::extract<classad::Value::ValueType> right_val(right);
+    if (right_val.check() && right_val() == classad::Value::ValueType::UNDEFINED_VALUE)
+    {
+        return boost::python::object(true);
+    }
+
     ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
     boost::python::object left(tmp);
     return left.attr("__eq__")(right);
