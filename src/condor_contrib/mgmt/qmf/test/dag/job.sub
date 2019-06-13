@@ -1,8 +1,0 @@
-executable = /bin/sleep
-arguments = 20
-output = $(cluster).$(process).out
-error = $(cluster).$(process).err
-log = $(cluster).$(process).log
-should_transfer_files = if_needed
-when_to_transfer_output = on_exit
-queue
