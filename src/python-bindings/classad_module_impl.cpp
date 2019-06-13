@@ -145,6 +145,98 @@ bool ValueBool(classad::Value::ValueType val) {
     return false;
 }
 
+
+boost::python::object Value__eq__(classad::Value::ValueType val, boost::python::object right) {
+        // Special case; boost python 1.53 uses an equality comparison (probably a bug?)
+        // against None as part of the construction of the Value object itself.  If we don't
+        // special case it, the default macro will cause the following to be evaluated:
+        //   ExprTree("undefined") == None
+        // This code bypasses all these layers and just returns False.
+    if (right == boost::python::object()) {
+        return boost::python::object(false);
+    }
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    boost::python::object left(tmp);
+    return left.attr("__eq__")(right);
+}
+
+boost::python::object ValueInt(classad::Value::ValueType val) {
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    boost::python::object expr(tmp);
+    return expr.attr("__int__")();
+}
+
+
+boost::python::object ValueFloat(classad::Value::ValueType val) {
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    boost::python::object expr(tmp);
+    return expr.attr("__float__")();
+}
+
+
+// Some macros to cut down repitition in defining operator overloads for ValueTypes
+#define VALUE_THIS_OPERATOR(pykind) \
+    boost::python::objects::add_to_namespace(value_type, "__"#pykind"__", boost::python::make_function(Value__##pykind##__));
+
+#define VALUE_THIS_OPERATOR_DECLARE(pykind) \
+    boost::python::object Value__##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        boost::python::object left(tmp); \
+        return getattr(left, "__"#pykind"__")(right); \
+    }
+
+#define VALUE_THIS_ROPERATOR_DECLARE(pykind) \
+    boost::python::object Value__r##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        boost::python::object left(tmp); \
+        return getattr(left, "__r"#pykind"__")(right); \
+    }
+
+#define VALUE_THIS_ROPERATOR(pykind) \
+    boost::python::objects::add_to_namespace(value_type, "__r"#pykind"__", boost::python::make_function(Value__r##pykind##__));
+
+#define VALUE_UNARY_OPERATOR_DECLARE(pykind) \
+    boost::python::object Value__##pykind##__(classad::Value::ValueType val) { \
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        boost::python::object left(tmp); \
+        return getattr(left, "__"#pykind"__")(); \
+    }
+
+#define VALUE_UNARY_OPERATOR(pykind) \
+    boost::python::objects::add_to_namespace(value_type, "__"#pykind"__", boost::python::make_function(Value__##pykind##__));
+
+VALUE_THIS_OPERATOR_DECLARE(lt)
+VALUE_THIS_OPERATOR_DECLARE(le)
+VALUE_THIS_OPERATOR_DECLARE(ne)
+VALUE_THIS_OPERATOR_DECLARE(ge)
+VALUE_THIS_OPERATOR_DECLARE(gt)
+VALUE_THIS_OPERATOR_DECLARE(is)
+VALUE_THIS_OPERATOR_DECLARE(isnt)
+VALUE_THIS_OPERATOR_DECLARE(add)
+VALUE_THIS_ROPERATOR_DECLARE(add)
+VALUE_THIS_OPERATOR_DECLARE(sub)
+VALUE_THIS_ROPERATOR_DECLARE(sub)
+VALUE_THIS_OPERATOR_DECLARE(mul)
+VALUE_THIS_ROPERATOR_DECLARE(mul)
+VALUE_THIS_OPERATOR_DECLARE(div)
+VALUE_THIS_ROPERATOR_DECLARE(div)
+VALUE_THIS_OPERATOR_DECLARE(mod)
+VALUE_THIS_ROPERATOR_DECLARE(mod)
+VALUE_THIS_OPERATOR_DECLARE(land)
+VALUE_THIS_OPERATOR_DECLARE(lor)
+VALUE_THIS_OPERATOR_DECLARE(and)
+VALUE_THIS_ROPERATOR_DECLARE(and)
+VALUE_THIS_OPERATOR_DECLARE(or)
+VALUE_THIS_ROPERATOR_DECLARE(or)
+VALUE_THIS_OPERATOR_DECLARE(xor)
+VALUE_THIS_ROPERATOR_DECLARE(xor)
+VALUE_THIS_OPERATOR_DECLARE(lshift)
+VALUE_THIS_ROPERATOR_DECLARE(lshift)
+VALUE_THIS_OPERATOR_DECLARE(rshift)
+VALUE_THIS_ROPERATOR_DECLARE(rshift)
+VALUE_UNARY_OPERATOR_DECLARE(invert)
+VALUE_UNARY_OPERATOR_DECLARE(not)
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
@@ -663,6 +755,48 @@ export_classad()
         "__nonzero__",
         boost::python::make_function(&ValueBool)
     );
+    boost::python::objects::add_to_namespace(
+        value_type,
+        "__int__",
+        boost::python::make_function(&ValueInt)
+    );
+    boost::python::objects::add_to_namespace(
+        value_type,
+        "__float__",
+        boost::python::make_function(&ValueFloat)
+    );
+    VALUE_THIS_OPERATOR(lt)
+    VALUE_THIS_OPERATOR(le)
+    VALUE_THIS_OPERATOR(ne)
+    VALUE_THIS_OPERATOR(eq)
+    VALUE_THIS_OPERATOR(ge)
+    VALUE_THIS_OPERATOR(gt)
+    VALUE_THIS_OPERATOR(is)
+    VALUE_THIS_OPERATOR(isnt)
+    VALUE_THIS_OPERATOR(add)
+    VALUE_THIS_ROPERATOR(add)
+    VALUE_THIS_OPERATOR(sub)
+    VALUE_THIS_ROPERATOR(sub)
+    VALUE_THIS_OPERATOR(mul)
+    VALUE_THIS_ROPERATOR(mul)
+    VALUE_THIS_OPERATOR(div)
+    VALUE_THIS_ROPERATOR(div)
+    VALUE_THIS_OPERATOR(mod)
+    VALUE_THIS_ROPERATOR(mod)
+    VALUE_THIS_OPERATOR(land)
+    VALUE_THIS_OPERATOR(lor)
+    VALUE_THIS_OPERATOR(and)
+    VALUE_THIS_ROPERATOR(and)
+    VALUE_THIS_OPERATOR(or)
+    VALUE_THIS_ROPERATOR(or)
+    VALUE_THIS_OPERATOR(xor)
+    VALUE_THIS_ROPERATOR(xor)
+    VALUE_THIS_OPERATOR(lshift)
+    VALUE_THIS_ROPERATOR(lshift)
+    VALUE_THIS_OPERATOR(rshift)
+    VALUE_THIS_ROPERATOR(rshift)
+    VALUE_UNARY_OPERATOR(invert)
+    VALUE_UNARY_OPERATOR(not)
 
     class_<OldClassAdIterator>("OldClassAdIterator", no_init)
         .def(NEXT_FN, &OldClassAdIterator::next)

@@ -366,7 +366,27 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
 ExprTreeHolder
 ExprTreeHolder::apply_this_operator(classad::Operation::OpKind kind, boost::python::object obj) const
 {
-    classad::ExprTree *right = convert_python_to_exprtree(obj);
+    classad::ExprTree *right = nullptr;
+    try
+    {
+        right = convert_python_to_exprtree(obj);
+    }
+    catch (boost::python::error_already_set &)
+    {
+        if (PyErr_ExceptionMatches(PyExc_TypeError))
+        {
+                if (kind == classad::Operation::OpKind::EQUAL_OP || kind == classad::Operation::OpKind::IS_OP) {
+                    PyErr_Clear();
+                    ExprTreeHolder holder(classad::Literal::MakeBool(false));
+                    return holder;
+                } else if (kind == classad::Operation::OpKind::NOT_EQUAL_OP || kind == classad::Operation::OpKind::ISNT_OP) {
+                    PyErr_Clear();
+                    ExprTreeHolder holder(classad::Literal::MakeBool(true));
+                    return holder;
+                }
+        }
+        throw;
+    }
     classad::ExprTree *expr = classad::Operation::MakeOperation(kind, get(), right);
     ExprTreeHolder holder(expr);
     return holder;
@@ -929,7 +949,7 @@ convert_python_to_exprtree(boost::python::object value)
     {
         PyErr_Clear();
     }
-    PyErr_SetString(PyExc_TypeError, "Unknown ClassAd value type.");
+    PyErr_SetString(PyExc_TypeError, "Unable to convert Python object to a ClassAd expression.");
     boost::python::throw_error_already_set();
     return NULL;
 }
