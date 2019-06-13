@@ -132,6 +132,19 @@ struct exprtree_pickle_suite : boost::python::pickle_suite
     }
 };
 
+
+bool ValueBool(classad::Value::ValueType val) {
+    switch (val) {
+        case classad::Value::ERROR_VALUE:
+            THROW_EX(RuntimeError, "Expression evaluated to ClassAd ERROR value.")
+        case classad::Value::UNDEFINED_VALUE:
+            return false;
+        default:
+            THROW_EX(RuntimeError, "Unrecognized ClassAd value.");
+    };
+    return false;
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
@@ -635,10 +648,21 @@ export_classad()
 
     register_ptr_to_python< boost::shared_ptr<ClassAdWrapper> >();
 
-    boost::python::enum_<classad::Value::ValueType>("Value")
+    boost::python::enum_<classad::Value::ValueType> value_type("Value");
+    value_type
         .value("Error", classad::Value::ERROR_VALUE)
         .value("Undefined", classad::Value::UNDEFINED_VALUE)
         ;
+    boost::python::objects::add_to_namespace(
+        value_type,
+        "__bool__",
+        boost::python::make_function(&ValueBool)
+    );
+    boost::python::objects::add_to_namespace(
+        value_type,
+        "__nonzero__",
+        boost::python::make_function(&ValueBool)
+    );
 
     class_<OldClassAdIterator>("OldClassAdIterator", no_init)
         .def(NEXT_FN, &OldClassAdIterator::next)
