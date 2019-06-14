@@ -4265,10 +4265,9 @@ namespace {
 	{
 		MyString msk;
 		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "Mask is \"%s\"\n",msk.Value());
+		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
 		Tokenize(msk.Value());
 		while(const char* mask = GetNextToken(",",true)) {
-			dprintf( D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
 			ulog->AddToMask(ULogEventNumber(atoi(mask)));
 		}
 	}
