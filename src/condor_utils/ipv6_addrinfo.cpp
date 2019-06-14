@@ -296,7 +296,7 @@ int ipv6_getaddrinfo(const char *node, const char *service,
 	double timediff = _condor_debug_get_time_double() - begin;
 	getaddrinfo_runtime += timediff;
 	if (timediff > getaddrinfo_slow_limit) {
-		dprintf(D_ALWAYS, "getaddrinfo(%s) took %f seconds.\n", node, timediff);
+		dprintf(D_ALWAYS, "WARNING: Saw slow DNS query, which may impact entire system: getaddrinfo(%s) took %f seconds.\n", node, timediff);
 	}
 	if (e!=0) {
 		getaddrinfo_fail_runtime += timediff;

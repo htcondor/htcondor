@@ -59,6 +59,7 @@ char const *UNAUTHENTICATED_FQU = "unauthenticated@unmapped";
 char const *UNAUTHENTICATED_USER = "unauthenticated";
 char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
 char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
+char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU = "negotiator-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
@@ -320,6 +321,16 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				dprintf(D_SECURITY|D_FULLDEBUG,"AUTHENTICATE: no available authentication methods succeeded!\n");
 				errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
 						"Failed to authenticate with any method");
+
+					// Now that TOKEN is enabled by default, we should suggest
+					// that a TOKEN request is always tried.  This is because
+					// the TOKEN auth method is removed from the list of default
+					// methods if we don't have a client side token (precisely when
+					// we want this to be set to true!).
+					// In the future, we can always reproduce the entire chain of
+					// logic to determine if TOKEN auth is tried.
+					m_should_try_token_request |= mySock->isClient();
+
 				return 0;
 
 			default:

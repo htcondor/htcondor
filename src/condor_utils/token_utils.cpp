@@ -54,9 +54,11 @@ write_out_token(const std::string &token_name, const std::string &token)
 	if (result != static_cast<ssize_t>(token.size())) {
 		fprintf(stderr, "Failed to write token to %s: %s (errno=%d)\n",
 			token_file.c_str(), strerror(errno), errno);
+		close(fd);
 		return 1;
 	}
 	std::string newline = "\n";
 	_condor_full_write(fd, newline.c_str(), 1);
+	close(fd);
 	return 0;
 }

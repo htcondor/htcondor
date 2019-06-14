@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_RunAsNobody = false;
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
+	m_committed_time_finalized = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -638,7 +639,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     int int_value = (last_ckpt_time > current_start_time) ?
                         last_ckpt_time : current_start_time;
 
-    if( int_value > 0 ) {
+    if( int_value > 0 && !m_committed_time_finalized ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		int delta = (int)time(NULL) - int_value;
@@ -651,6 +652,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
 		slot_time += slot_weight * delta;
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
+
+		m_committed_time_finalized = true;
     }
 
 	CommitSuspensionTime(jobAd);
@@ -981,7 +984,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.run_remote_rusage = run_remote_rusage;
 		event.total_remote_rusage = run_remote_rusage;
-	
+
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -991,12 +994,14 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
-	
+
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
 			event.setCoreFile( corefile.c_str() );
 		}
 
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1009,7 +1014,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
-	
+
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1076,7 +1081,9 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.pusageAd = puAd;
 	}
 #endif
-	
+
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

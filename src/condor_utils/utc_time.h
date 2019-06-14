@@ -37,6 +37,19 @@ inline
 void condor_gettimestamp(struct timeval &tv) {
 	tv.tv_sec = (long)condor_gettimestamp(tv.tv_usec);
 }
+
+#include <time.h>
+#if ! defined timegm
+
+	// timegm is the Linux name for the gm version of mktime,
+	// on Windows it is called _mkgmtime
+	#define timegm _mkgmtime
+	auto __inline localtime_r(const time_t*time, struct tm*result)
+		{ return localtime_s(result, time); }
+	auto __inline gmtime_r(const time_t*time, struct tm*result)
+		{ return gmtime_s(result, time); }
+#endif
+
 #else
 void condor_gettimestamp(struct timeval &tv);
 

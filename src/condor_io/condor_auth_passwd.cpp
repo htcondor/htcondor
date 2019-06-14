@@ -42,8 +42,14 @@
 #include "condor_base64.h"
 #include "Regex.h"
 #include "directory.h"
+#include "subsystem_info.h"
+#include "secure_file.h"
 
 #include "condor_auth_passwd.h"
+
+bool Condor_Auth_Passwd::m_should_search_for_tokens = true;
+bool Condor_Auth_Passwd::m_tokens_avail = false;
+
 
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.
@@ -79,6 +85,8 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
 
+bool Condor_Auth_Passwd::m_attempt_pool_password = true;
+
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #include "jwt-cpp/jwt.h"
@@ -98,7 +106,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use examine tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
 /*
 	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
 	if (!tokenfile) {
@@ -134,12 +142,12 @@ bool findToken(const std::string &tokenfilename,
 				continue;
 			}
 			const std::string &tmp_key_id = decoded_jwt.get_key_id();
-			if (server_key_ids.find(tmp_key_id) == server_key_ids.end()) {
+			if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
 				continue;
 			}
 			dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 			const std::string &tmp_issuer = decoded_jwt.get_issuer();
-			if (issuer != tmp_issuer) {
+			if (!issuer.empty() && issuer != tmp_issuer) {
 				continue;
 			}
 			if (!decoded_jwt.has_subject()) {
@@ -201,19 +209,26 @@ findTokens(const std::string &issuer,
 
 	Directory dir(dirpath.c_str());
 	if (!dir.Rewind()) {
-		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)",
+		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)\n",
 			dirpath.c_str(), strerror(errno), errno);
 			return false;
 	}
 
 	const char *file;
 	std::vector<std::string> tokens;
+	std::string subsys_token_file;
+	std::string subsys_agt_name = get_mySubSystemName();
+	subsys_agt_name += "_auto_generated_token";
+
 	while ( (file = dir.Next()) ) {
 		if (dir.IsDirectory()) {
 			continue;
 		}
 		if(!excludeFilesRegex.match(file)) {
 			tokens.emplace_back(dir.GetFullPath());
+			if (!strcasecmp(file, subsys_agt_name.c_str())) {
+				subsys_token_file = dir.GetFullPath();
+			}
 		} else {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring token file "
 				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
@@ -221,6 +236,13 @@ findTokens(const std::string &issuer,
 		}
 	}
 	std::sort(tokens.begin(), tokens.end());
+
+	if (!subsys_token_file.empty() && findToken(subsys_token_file, issuer,
+		server_key_ids, username, token, signature))
+	{
+		return true;
+	}
+
 	for (const auto &token_filename : tokens) {
 		if (findToken(token_filename, issuer, server_key_ids,
 			username, token, signature))
@@ -1499,9 +1521,12 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
 
-	auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
-
-	token = jwt_token;
+	try {
+		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
+		token = jwt_token;
+	} catch (...) {
+		return false;
+	}
 	return true;
 }
 
@@ -2628,6 +2653,8 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
+	check_pool_password();
+
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::string issuer;
 	if (param(issuer, "TRUST_DOMAIN")) {
@@ -2649,6 +2676,88 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 		ad.InsertAttr(ATTR_SEC_ISSUER_KEYS, creds_str.c_str(), creds_str.size()-1);
 	}
 	return true;
+}
+
+void
+Condor_Auth_Passwd::check_pool_password()
+{
+		// Only attempt to drop the pool password once.
+	if (!m_attempt_pool_password) {return;}
+	m_attempt_pool_password = false;
+
+	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
+		return;
+	}
+
+	std::string pool_password;
+	if (!param(pool_password, "SEC_PASSWORD_FILE")) {
+		return;
+	}
+
+		// Try to create the pool password file if it doesn't exist.
+	int fd = -1;
+	{
+#ifdef WIN32
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL | O_BINARY;
+#else
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL;
+#endif
+		mode_t access_mode = 0600;
+
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fd = safe_open_wrapper_follow(pool_password.c_str(), open_flags, access_mode);
+	}
+	if (fd < 0) {
+		return;
+	} else {
+		close(fd);
+	}
+
+		// Generate a password.
+	char password_buffer[65];
+	password_buffer[64] = '\0';
+	if (!RAND_bytes(reinterpret_cast<unsigned char *>(password_buffer), 64)) {
+		// Insufficient entropy available; bail out!
+		return;
+	}
+
+		// Write out the password.
+	write_password_file(pool_password.c_str(), password_buffer);
+}
+
+
+bool
+Condor_Auth_Passwd::should_try_auth()
+{
+	bool has_named_creds = false;
+	std::vector<std::string> creds;
+	CondorError err;
+	if (listNamedCredentials(creds, &err)) {
+		has_named_creds = !creds.empty();
+	}
+	if (has_named_creds) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+		// Did we perform the search recently?  If so,
+		// we should just return the prior result.
+	if (!m_should_search_for_tokens) {
+		return m_tokens_avail;
+	}
+	m_should_search_for_tokens = false;
+
+	std::string issuer;
+	std::set<std::string> server_key_ids;
+	std::string username, token, signature;
+
+	m_tokens_avail = findTokens(issuer, server_key_ids, username, token, signature);
+	if (m_tokens_avail) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one token.\n");
+	}
+	return m_tokens_avail;
 }
 
 

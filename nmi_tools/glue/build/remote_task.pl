@@ -184,12 +184,14 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 } elsif ($taskname eq $RUN_UNIT_TESTS) {
     if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     } else {
-        $execstr = "ctest -v --output-on-failure";
+        $execstr = "ctest -v --output-on-failure -L batlab";
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "/bin:$ENV{PATH}:/home/condorauto/cov-analysis-linux64-8.6.0/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$execstr = get_cmake_args();
+	$execstr .= " -DBUILD_TESTING:bool=false ";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 

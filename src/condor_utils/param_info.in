@@ -715,7 +715,7 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_AGRESSIVE_SUBMIT]
+[DAGMAN_AGGRESSIVE_SUBMIT]
 default=false
 type=bool
 tags=dagman,dagman_main
@@ -798,6 +798,13 @@ restart=never
 default=true
 type=bool
 customization=expert
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_USE_JOIN_NODES]
+default=false
+type=bool
+customization=normal
 tags=dagman,dagman_main
 restart=never
 
@@ -1821,6 +1828,14 @@ friendly_name=Expression to determine Singularity image
 review=?
 tags=startd
 
+[SINGULARITY_MOUNT_HOME]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Allow singluarity to bind moont home
+tags=startd
+
 [UPDATE_INTERVAL]
 default=300
 type=int
@@ -2446,7 +2461,7 @@ type=string
 tags=misc_utils
 
 [SEC_PASSWORD_FILE]
-default=
+default=$(SEC_PASSWORD_DIRECTORY)/POOL
 type=string
 tags=store_cred
 
@@ -2510,7 +2525,35 @@ tags=io,condor_auth_claim
 default=false
 description=Disable client host checks for SSL authentication.
 type=bool
-tags=condor_auth_sl
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CERTFILE]
+default=/etc/pki/tls/certs/localhost.crt
+win32_default=
+description=Location of the host X509 certificate
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_KEYFILE]
+default=/etc/pki/tls/private/localhost.key
+win32_default=
+description=Location of the host private key
+type=path
+tags=condor_auth_ssl
 
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
@@ -3354,7 +3397,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 

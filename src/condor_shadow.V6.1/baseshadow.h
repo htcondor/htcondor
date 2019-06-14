@@ -499,6 +499,10 @@ class BaseShadow : public Service
 		// Insist on a fast shutdown of the starter?
 	bool m_force_fast_starter_shutdown;
 
+		// Has CommittedTime in the job ad been updated to reflect
+		// job termination?
+	bool m_committed_time_finalized;
+
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );

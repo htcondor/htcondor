@@ -32,6 +32,7 @@
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
 #include <sstream>
+#include <unordered_set>
 
 class MapFile;
 extern int reconfig_user_maps();
@@ -65,18 +66,14 @@ static StringList ClassAdUserLibs;
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
 
-// The Windows compiler doesn't like this C++11 style of object
-// initialization.
-#if !defined(WIN32)
-classad::References ClassAdPrivateAttrs = { ATTR_CAPABILITY,
+namespace {
+
+typedef std::unordered_set<std::string, classad::ClassadAttrNameHash, classad::CaseIgnEqStr> classad_hashmap;
+classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
 		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
-#else
-static const std::string private_attrs[] = { ATTR_CAPABILITY,
-		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
-		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
-classad::References ClassAdPrivateAttrs( private_attrs, private_attrs + COUNTOF(private_attrs) );
-#endif
+
+}
 
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
@@ -84,6 +81,7 @@ bool ClassAd::m_strictEvaluation = false;
 void ClassAd::
 Reconfig()
 {
+	//ClassAdPrivateAttrs.rehash(11);
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 
@@ -1821,15 +1819,15 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 bool
 ClassAdAttributeIsPrivate( const std::string &name )
 {
-	return ClassAdPrivateAttrs.find( name ) != ClassAdPrivateAttrs.end();
+	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
 
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr)
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree * expr)
 {
 	return classad::ClassAd::Insert( attrName, expr );
 }
 
-int ClassAd::Insert( const char *name, classad::ExprTree *& expr )
+int ClassAd::Insert( const char *name, classad::ExprTree * expr )
 {
 	string str(name);
 	return Insert( str, expr ) ? TRUE : FALSE;

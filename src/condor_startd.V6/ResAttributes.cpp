@@ -571,11 +571,40 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 					owners[ii].dyn_id = 0;
 					return true;
 				}
-				break;
 			}
 		}
 	}
 	return false;
+}
+
+const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, const char * sep)
+{
+	slotres_devIds_map_t::const_iterator f;
+	for (f = m_machres_devIds_map.begin(); f != m_machres_devIds_map.end(); ++f) {
+		// if a tag was provided, ignore entries that don't match it.
+		if (tag && strcasecmp(tag, f->first.c_str())) continue;
+
+		const slotres_assigned_ids_t & ids(f->second);
+		const slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[f->first];
+		buf += f->first;
+		buf += ":{";
+		for (auto id = ids.begin(); id != ids.end(); ++id) {
+			buf += *id;
+			buf += ", ";
+		}
+		buf += "}{";
+		for (auto own = owners.begin(); own != owners.end(); ++own) {
+			if (own->dyn_id) {
+				formatstr_cat(buf, "%d_%d, ", own->id, own->dyn_id);
+			} else {
+				formatstr_cat(buf, "%d, ", own->id);
+			}
+		}
+		buf += "}";
+		if (tag && sep)
+			buf += sep;
+	}
+	return buf.c_str();
 }
 
 // res_value is a string that contains either a number, which is the count of a
@@ -1221,6 +1250,11 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 	if ( ! map)
 		return;
 
+	if (IsFulldebug(D_ALWAYS)) {
+		std::string ids_dump;
+		::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+	}
+
 	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
 		int cAssigned = int(j->second);
 
@@ -1237,17 +1271,29 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 				} else {
 					c_slotres_ids_map[j->first].push_back(id);
+					::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d bound %s %d\n",
+						slot_id, slot_sub_id, id, (int)c_slotres_ids_map[j->first].size());
 				}
 			}
 		}
 	}
 
+	if (IsFulldebug(D_ALWAYS)) {
+		std::string ids_dump;
+		::dprintf(D_ALWAYS, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+	}
 }
 
 void
 CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungable resource ids
 {
 	if ( ! map) return;
+
+	if (IsFulldebug(D_ALWAYS)) {
+		std::string ids_dump;
+		::dprintf(D_FULLDEBUG, "unbind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+	}
+
 	if ( ! slot_sub_id) return;
 
 	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
@@ -1255,10 +1301,17 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 		if (k != c_slotres_ids_map.end()) {
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j->first];
 			while ( ! ids.empty()) {
-				map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
+				bool released = map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
+				::dprintf(released ? D_FULLDEBUG : D_ALWAYS, "ubind_DevIds for slot%d.%d unbind %s %d %s\n",
+					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();
 			}
 		}
+	}
+
+	if (IsFulldebug(D_ALWAYS)) {
+		std::string ids_dump;
+		::dprintf(D_FULLDEBUG, "unbind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 }
 

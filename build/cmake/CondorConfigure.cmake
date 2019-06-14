@@ -703,7 +703,7 @@ if (UW_BUILD OR WINDOWS)
 
   # so the clipped detection will try to match glibc vers and if it fails will disable
   if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" OFF)
+	option(CLIPPED "enable/disable the standard universe" ON)
   else()
 	option(CLIPPED "enable/disable the standard universe" ON)
   endif()
@@ -1073,12 +1073,9 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 
 ###########################################
 #extra build flags and link libs.
-if (HAVE_EXT_OPENSSL)
-	add_definitions(-DWITH_OPENSSL) # used only by SOAP
-endif(HAVE_EXT_OPENSSL)
 
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+if (NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "openssl libraries not found!")
 endif()
 
 ###########################################

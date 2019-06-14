@@ -9,6 +9,10 @@ with an emphasized title) take place on the Linux machine. You can
 perform the web-based steps from wherever is convenient, although it
 will save you some copying if you run the browser on the Linux machine.
 
+If your Linux machine will be an EC2 instance, read
+`Using Instance Credentials`_ first; by taking some care in how you start
+the instance, you can save yourself some drudgery.
+
 Before using *condor_annex* for the first time, you'll have to do three
 things:
 
@@ -210,21 +214,48 @@ Prepare your AWS account
 Since v8.7.1, the *condor_annex* tool has included a -setup command
 which will prepare your AWS account.
 
-If, and only if, you will be using *condor_annex* from an EC2 instance
-to which you have assigned an IAM role with sufficient
-privileges [1]_, you may skip down to the
-**Checking the Setup** heading after running the following command.
+.. _using_instance_credentials:
 
-::
+Using Instance Credentials
+''''''''''''''''''''''''''
 
-    $ condor_annex -setup FROM INSTANCE
-    Creating configuration bucket (this takes less than a minute)....... complete.
-    Creating Lambda functions (this takes about a minute)........ complete.
-    Creating instance profile (this takes about two minutes)................... complete.
-    Creating security group (this takes less than a minute)..... complete.
-    Setup successful.
+If you will not be running *condor_annex* on an EC2 instance, skip
+to `Obtaining an Access Key`_.
 
-Otherwise, continue by obtaining an access key, as follows.
+When you start an instance on EC2 [1]_, you can grant it some of your AWS
+privileges, for instance, for starting instances.  This (usually) means that
+any user logged into the instance can, for instance, start instances (as
+you).  A given collection of privileges is called an "instance profile"; a
+full description of them is outside the scope of this document.  If, however,
+you'll be the only person who can log into the instance you're creating and
+on which you will be running *condor_annex*, it may be simpler to start an
+instance with your privileges than to deal with `Obtaining an Access Key`_.
+
+You will need a privileged instance profile; if you don't already have one,
+you will only need to create it once.  When launching an instance with
+the `EC2 console <https://console.aws.amazon.com/ec2/>`_, step 3
+(labelled 'Configure Instance Details') includes an entry for 'IAM role';
+the AWS web interface creates the corresponding instance profile for you
+automatically.  If you've already created a privileged role, select it here
+and carry on launching your instance as usual.  If you haven't:
+
+#. Follow the 'Create new IAM role' link.
+#. Click the 'Create Role' button.
+#. Select 'EC2' under "the service that will use this role".
+#. Click the 'Next: Permissions' button.
+#. Select 'Administrator Access' and click the 'Next: Tags' button.
+#. Click the 'Next: Review' button.
+#. Enter a role name; 'HTCondorAnnexRole' is fine.
+#. Click the 'Create role' button.
+
+When you switch back to the previous tab, you may need to click the circular
+arrow (refresh) icon before you can select the role name you entered in the
+second-to-last step.
+
+If you'd like step-by-step instructions for creating a HTCondor-in-the-Cloud,
+see :ref:`condor_in_the_cloud`.
+
+.. _obtain_an_access_key:
 
 Obtaining an Access Key
 '''''''''''''''''''''''
@@ -278,6 +309,8 @@ privilege; other accounts may as well.)
 
 The 'annex-user' now has full privileges to your account.
 
+.. _configure_condor_annex:
+
 Configure *condor_annex*
 ------------------------
 
@@ -287,6 +320,9 @@ keep around. These components can take quite some time to create;
 *condor_annex* checks each for completion every ten seconds and prints
 an additional dot (past the first three) when it does so, to let you
 know that everything's still working.
+
+If you're `using instance credentials`_, add ` FROM INSTANCE` to the end
+of the first line.
 
 ::
 
@@ -335,8 +371,8 @@ URL and delete the 'HTCondorAnnex-KeyPair' key:
 
 .. rubric: Footnotes
 
-.. [1] You may assign an IAM role to an EC2 instance when you launch it, or
-   at any subsequent time, through the AWS web console (or other interfaces
+.. [1] You may assign an intance profile to an EC2 instance when you launch it,
+   or at any subsequent time, through the AWS web console (or other interfaces
    with which you may be familiar). If you start the instance using HTCondor's
    EC2 universe, you may specify the IAM instance profile with the
    **ec2_iam_profile_name** or **ec2_iam_profile_arn** submit commands.

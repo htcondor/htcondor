@@ -94,6 +94,8 @@
 #include <algorithm>
 #include "pccc.h"
 #include "shared_port_endpoint.h"
+#include "condor_auth_passwd.h"
+#include "condor_secman.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -148,6 +150,8 @@ extern DedicatedScheduler dedicated_scheduler;
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
+
+extern int write_out_token(const std::string &token_name, const std::string &token);
 
 // These functions are defined in qmgmt.cpp.
 // We don't have a good schedd-internal header file, so we declare them
@@ -580,6 +584,7 @@ ContactStartdArgs::~ContactStartdArgs()
 
 Scheduler::Scheduler() :
 	OtherPoolStats(stats),
+	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
 	GridJobOwners(UserIdentity::HashFcn),
@@ -625,6 +630,7 @@ Scheduler::Scheduler() :
 	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
+	m_token_daemon = nullptr;
 
 	stats.InitMain();
 
@@ -851,6 +857,56 @@ Scheduler::~Scheduler()
 
 	delete slotWeightOfJob;
 	delete slotWeightGuessAd;
+}
+
+
+bool
+Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
+{
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+		return false;
+	}
+
+	// Internally, the negotiator session is serialized as a ClaimID.
+	// Obviously, there is no Claim here -- but it's simpler to keep
+	// this aligned with the rest of the infrastructure.
+
+	// ClaimId string is of the form:
+	// (keep this in sync with condor_claimid_parser)
+	// "<ip:port>#schedd_bday#sequence_num#cookie"
+
+	m_negotiator_seq++;
+
+	std::string id;
+
+	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+		m_scheduler_startup, m_negotiator_seq);
+
+	// A keylength of 32 bytes = 256 bits.
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+		Condor_Crypt_Base::randomHexKey(keylen),
+		free
+	};
+	if (!keybuf.get()) {
+		return false;
+	}
+
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		NEGOTIATOR,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration
+	);
+	if (retval) {
+		capability = id + "#" + session_info + keybuf.get();
+	}
+	return retval;
 }
 
 
@@ -1468,10 +1524,21 @@ Scheduler::count_jobs()
 #endif
 
 		// Update collectors
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
+	m_initial_update = false;
+
+		// Check to see if we need to perform a token request.
+	auto collector_list = daemonCore->getCollectorList();
+	if (collector_list && collector_list->shouldTryTokenRequest()) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
+		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
+			"Scheduler::try_token_request", this);
+	} else if (num_updates == 0) {
+		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
+	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1499,6 +1566,15 @@ Scheduler::count_jobs()
 	m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
+
+		// This is called at most every 5 seconds, meaning this can cause
+		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
+		// collector.
+	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+	std::string capability;
+	if (SetupNegotiatorSession(duration, capability)) {
+		m_adBase->InsertAttr(ATTR_CAPABILITY, capability);
+	}
 
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
@@ -1574,6 +1650,12 @@ Scheduler::count_jobs()
 				}
 			}
 
+				// Same comment about potentially creating hundreds of sessions applies
+				// here as above for the primary collector...
+			unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+			std::string capability;
+			SetupNegotiatorSession(duration, capability);
+
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
@@ -1587,6 +1669,10 @@ Scheduler::count_jobs()
 					// we will use this "tag" later to identify which
 					// CM we are negotiating with when we negotiate
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
+				if (!capability.empty()) {
+					pAd.InsertAttr(ATTR_CAPABILITY, capability);
+				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
@@ -3422,8 +3508,11 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 		}
 	}
 
+	bool wantPS = 0;
+	job_ad->LookupBool("WantParallelScheduling", wantPS);
+
 	if( (job_universe == CONDOR_UNIVERSE_MPI) || 
-		(job_universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		(job_universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		job_id.proc = 0;		// Parallel and MPI shadow is always associated with proc 0
 	} 
 
@@ -3782,9 +3871,10 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 			break;
 	}
 
-	if ( status == COMPLETED || status == REMOVED ) {
+	if ( (status == COMPLETED || status == REMOVED) &&
+	     ! scheduler.FindSrecByProcID(jobad->jid) )
+	{
 		DestroyProc(cluster,proc);
-		return 1;
 	}
 
 	return 1;
@@ -3998,6 +4088,11 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		}
 		break;
 	default:
+		bool wantPS = 0;
+		GetAttributeBool( cluster, proc, "WantParallelScheduling", &wantPS );
+		if (wantPS && (proc > 0)) {
+			return true;
+		}
 		break;
 	}
 	ASSERT( srec != NULL );
@@ -4269,7 +4364,10 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
-	if ( universe == CONDOR_UNIVERSE_PARALLEL ) {
+        bool wantPS = 0;
+        job->LookupBool("WantParallelScheduling", wantPS);
+
+	if ( (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		if ( job->jid.proc > 0) {
 			return true;;
 		}
@@ -4322,6 +4420,15 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
 		free( reason );
+	}
+
+	// Jobs usually have a shadow, and this event is usually written after
+	// that shadow dies, but that's by no means certain.  If we happen to
+	// have gotten a ToE tag, tell the abort event about it.
+	ClassAd * ja = GetJobAd( job_id.cluster, job_id.proc );
+	if( ja ) {
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd*>(ja->Lookup("ToE"));
+		event.setToeTag( toeTag );
 	}
 
 	bool status =
@@ -8835,8 +8942,11 @@ Scheduler::StartJobHandler()
 		int universe = srec->universe;
 		callAboutToSpawnJobHandler( cluster, proc, srec );
 
+		bool wantPS = 0;
+		job_ad->LookupBool("WantParallelScheduling", wantPS);
+
 		if( (universe == CONDOR_UNIVERSE_MPI) || 
-			(universe == CONDOR_UNIVERSE_PARALLEL)) {
+			(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 			
 			if (proc != 0) {
 				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
@@ -11389,8 +11499,11 @@ mark_job_stopped(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
+	int wantPS = 0;
+	GetAttributeInt(job_id->cluster, job_id->proc, "WantParallelScheduling",
+					&wantPS);
 	if( (universe == CONDOR_UNIVERSE_MPI) || 
-		(universe == CONDOR_UNIVERSE_PARALLEL)){
+		(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ){
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -11705,7 +11818,9 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 
 		int universe = -1;
 		GetAttributeInt(p.cluster, p.proc, ATTR_JOB_UNIVERSE, &universe);
-		if ((universe != CONDOR_UNIVERSE_MPI) && (universe != CONDOR_UNIVERSE_PARALLEL))
+		int wantPS = 0;
+		GetAttributeInt(p.cluster, p.proc, "WantParallelScheduling", &wantPS);
+		if ((universe != CONDOR_UNIVERSE_MPI) && (universe != CONDOR_UNIVERSE_PARALLEL) && (!wantPS))
 			continue;
 		
 		
@@ -11775,10 +11890,13 @@ set_job_status(int cluster, int proc, int status)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 
+	int wantPS = 0;
+	GetAttributeInt(cluster, proc, "WantParallelScheduling", &wantPS);
+
 	BeginTransaction();
 
 	if( ( universe == CONDOR_UNIVERSE_MPI) || 
-		( universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		( universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -12540,7 +12658,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	int reason_code;
 	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-	ASSERT( job_ad ); // No job ad?
+	if ( ! job_ad ) {
+		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
+			job_id.cluster, job_id.proc );
+		return;
+	}
 	{
 		UserPolicy policy;
 #ifdef USE_NON_MUTATING_USERPOLICY
@@ -13768,6 +13890,13 @@ Scheduler::Register()
 	m_tdman.register_handlers();
 
 	m_xfer_queue_mgr.RegisterHandlers();
+
+	// Clear out any pending token requests.
+	m_token_client_id = "";
+	m_token_request_id = "";
+		// We don't own this memory - just clear the reference.
+	m_token_daemon = nullptr; 
+	m_initial_update = true;
 }
 
 void
@@ -14525,10 +14654,13 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 
 int Scheduler::AlreadyMatched(JobQueueJob * job, int universe)
 {
+	bool wantPS = 0;
+	job->LookupBool("WantParallelScheduling", wantPS);
+
 	if ( ! job || ! job->IsJob() ||
 		 (universe == CONDOR_UNIVERSE_MPI) ||
 		 (universe == CONDOR_UNIVERSE_GRID) ||
-		 (universe == CONDOR_UNIVERSE_PARALLEL) ) {
+		 (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
 		return FALSE;
 	}
 
@@ -17364,4 +17496,83 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		dprintf( D_ALWAYS, "failed to send success response.\n" );
 	}
 	return TRUE;
+}
+
+void
+Scheduler::try_token_request()
+{
+	dprintf(D_SECURITY, "Trying token request to remote host.\n");
+	std::string token;
+	if (m_token_client_id.empty()) {
+		m_token_daemon = nullptr;
+		m_token_request_id = "";
+		std::vector<char> hostname;
+		hostname.reserve(MAXHOSTNAMELEN);
+		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
+			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
+			return;
+		}
+		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
+			std::to_string(get_csrng_uint() % 1000);
+
+		auto collector_list = daemonCore->getCollectorList();
+		if (!collector_list || collector_list->IsEmpty()) {
+			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
+			m_token_client_id = "";
+			return;
+		}
+		Daemon *daemon = nullptr;
+		collector_list->Rewind();
+		collector_list->Current(daemon);
+
+		if (!daemon) {
+			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
+			m_token_client_id = "";
+			return;
+		}
+
+		std::string request_id;
+		std::vector<std::string> authz_list;
+		authz_list.push_back("ADVERTISE_SCHEDD");
+		int lifetime = -1;
+		CondorError err;
+		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
+			token, request_id, &err))
+		{
+			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		m_token_request_id = request_id;
+		m_token_daemon = daemon;
+		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
+		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
+			"Scheduler::try_token_request", this);
+	} else {
+		CondorError err;
+		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
+			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
+			m_token_client_id = "";
+			return;
+		}
+		if (token.empty()) {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
+			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
+				"Scheduler::try_token_request", this);
+			return;
+		} else {
+			dprintf(D_ALWAYS, "Token request approved.\n");
+				// Flush the cached result of the token search.
+			Condor_Auth_Passwd::retry_token_search();
+				// Flush out the security sessions; will need to force a re-auth.
+			daemonCore->getSecMan()->reconfig();
+				// Reset the timeout timer, causing the schedd to advertise itself.
+			daemonCore->Reset_Timer(timeoutid,0,1);
+		}
+		m_token_client_id = "";
+	}
+	if (!token.empty()) {
+		write_out_token("schedd_auto_generated_token", token);
+	}
 }

@@ -1495,6 +1495,36 @@ a file that receives job events, but across all users and user's jobs.
     specified by ``EVENT_LOG``) will be locked before being written to.
     When ``False``, HTCondor does not lock the file before writing.
 
+``EVENT_LOG_FORMAT_OPTIONS`` :index:`EVENT_LOG_FORMAT_OPTIONS`
+    A list of case-insensitive keywords that control formatting of the log events
+    and of timestamps for the log specified by ``EVENT_LOG``.  Use zero or one of the
+    following formatting options:
+
+    ``XML``
+        Log events in XML format. This has the same effect ``EVENT_LOG_USE_XML`` below
+
+    ``JSON``
+        Log events in JSON format. This conflicts with ``EVENT_LOG_USE_XML`` below
+
+    And zero or more of the following option flags:
+
+    ``UTC``
+        Log event timestamps as Universal Coordinated Time. The time value will be printed
+        with a timezone value of Z to indicate that times are UTC.
+
+    ``ISO_DATE``
+        Log event timestamps in ISO 8601 format. This format includes a 4 digit year and is
+        printed in a way that makes sorting by date easier.
+
+    ``SUB_SECOND``
+        Include fractional seconds in event timestamps.
+
+    ``LEGACY``
+        Set all time formatting flags to be compatible with older versions of HTCondor.
+
+    All of the above options are case-insensitive, and can be preceeded by a ! to invert their meaning,
+    so configuring ``!UTC, !ISO_DATE, !SUB_SECOND`` gives the same result as configuring ``LEGACY``.
+
 ``EVENT_LOG_USE_XML`` :index:`EVENT_LOG_USE_XML`
     A boolean value that defaults to ``False``. When ``True``, events
     are logged in XML format. If ``EVENT_LOG`` is not defined, this
@@ -1509,6 +1539,11 @@ a file that receives job events, but across all users and user's jobs.
     the same as the job ClassAd attribute ``JobAdInformationAttrs`` (see
     :doc:`/classad-attributes/job-classad-attributes`), but it
     applies to the system Event Log rather than the user job log.
+
+``DEFAULT_USERLOG_FORMAT_OPTIONS`` :index:`DEFAULT_USERLOG_FORMAT_OPTIONS`
+    A list of case-insensitive keywords that control formatting of the events
+    and of timestamps for the log specified by a job's ``UserLog`` or ``DAGManNodesLog``
+    attributes. see ``EVENT_LOG_FORMAT_OPTIONS`` above for the permitted options.
 
 DaemonCore Configuration File Entries
 -------------------------------------
@@ -8849,22 +8884,71 @@ These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
 ``SEC_*_AUTHENTICATION`` :index:`SEC_*_AUTHENTICATION`
-    This section has not yet been written
+    Whether authentication is required for a specified permission level.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_READ_AUTHENTICATION = REQUIRED``
+    indicates that any command requiring ``READ`` authorization will fail
+    unless authentication is performed.  The special value,
+    ``SEC_DEFAULT_AUTHENTICATION``, controls the default setting if no
+    others are specified.
 
 ``SEC_*_ENCRYPTION`` :index:`SEC_*_ENCRYPTION`
-    This section has not yet been written
+    Whether encryption is required for a specified permission level.
+    Encryption prevents another entity on the same network from understanding
+    the contents of the transfer between client and server.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_WRITE_ENCRYPTION = REQUIRED``
+    indicates that any command requiring ``WRITE`` authorization will fail
+    unless the channel is encrypted.  The special value,
+    ``SEC_DEFAULT_ENCRYPTION``, controls the default setting if no
+    others are specified.
 
 ``SEC_*_INTEGRITY`` :index:`SEC_*_INTEGRITY`
-    This section has not yet been written
+    Whether integrity-checking is required for a specified permission level.
+    Integrity checking allows the client and server to detect changes
+    (malicious or otherwise)  to the contents of the transfer.
+    Acceptable values are ``REQUIRED``, ``PREFERRED``, ``OPTIONAL``, and
+    ``NEVER``.  For example, setting ``SEC_WRITE_INTEGRITY = REQUIRED``
+    indicates that any command requiring ``WRITE`` authorization will fail
+    unless the channel is integrity-checked.  The special value,
+    ``SEC_DEFAULT_INTEGRITY``, controls the default setting if no
+    others are specified.
+
+    As a special exception, file transfers are not integrity checked unless
+    they are also encrypted.
 
 ``SEC_*_NEGOTIATION`` :index:`SEC_*_NEGOTIATION`
-    This section has not yet been written
+    Whether the client and server should negotiate security parameters (such
+    as encryption, integrity, and authentication) for a given authorization
+    level.  For example, setting ``SEC_DEFAULT_NEGOTIATION = REQUIRED`` will
+    require a security negotiation for all permission levels by default.
+    There is very little penalty for security negotiation and it is strongly
+    suggested to leave this as the default (``REQUIRED``) at all times.
 
 ``SEC_*_AUTHENTICATION_METHODS`` :index:`SEC_*_AUTHENTICATION_METHODS`
-    This section has not yet been written
+    An ordered list of allowed authentication methods for a given authorization
+    level.  This set of configuration variables controls both the ordering and
+    the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
+    ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
+    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``TOKEN``,
+    ``SCITOKEN``,  and ``ANONYMOUS``.
+    See the :doc:`/admin-manual/security` section for a discussion of the
+    relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
+    no security at all.  The default authentication methods are
+    ``NTSSPI,FS,TOKEN,KERBEROS,GSI,SSL``.
+
+    These methods are tried in order until one succeeds or they all fail; for
+    this reason, we do not recommend changing the default method list.
+
+    The special value, ``SEC_DEFAULT_AUTHENTICATION_METHODS``, controls the
+    default setting if no others are specified.
 
 ``SEC_*_CRYPTO_METHODS`` :index:`SEC_*_CRYPTO_METHODS`
-    This section has not yet been written
+    When encryption is enabled for a session at a specified authorization,
+    the cryptographic algorithm used to encrypt the conversation.  Possible
+    values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
+    the setting per authorization level; it is recommended to leave these
+    settings untouched.
 
 ``GSI_DAEMON_NAME`` :index:`GSI_DAEMON_NAME`
     This configuration variable is retired. Instead use ``ALLOW_CLIENT``
@@ -9158,6 +9242,19 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path and file name of the file containing the
     pool password for password authentication.
 
+``SEC_PASSWORD_DIRECTORY`` :index:`SEC_PASSWORD_DIRECTORY`
+    For Unix machines, the path to the directory containing password files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+
+``SEC_TOKEN_SYSTEM_DIRECTORY`` :index:`SEC_TOKEN_SYSTEM_DIRECTORY`
+    For Unix machines, the path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.  Defaults to
+    ``/etc/condor/tokens.d``.
+
+``SEC_TOKEN_DIRECTORY`` :index:`SEC_TOKEN_DIRECTORY`
+    For Unix machines, the path to the directory containing tokens for
+    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+
 ``AUTH_SSL_SERVER_CAFILE`` :index:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
@@ -9197,6 +9294,15 @@ macros are described in the :doc:`/admin-manual/security` section.
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
+
+``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK`
+    A boolean variable that controls whether a host check is performed
+    by the client during an SSL authentication of a Condor daemon. This
+    check requires the daemon's host name to match either the "distinguished
+    name" or a subject alternate name embedded in the server's host certificate
+    When the  default value of ``False`` is set, the check is not skipped.
+    When ``True``, this check is skipped, and hosts will not be rejected due
+    to a mismatch of certificate and host name.
 
 ``CERTIFICATE_MAPFILE`` :index:`CERTIFICATE_MAPFILE`
     A path and file name of the unified map file.
@@ -9280,6 +9386,11 @@ macros are described in the :doc:`/admin-manual/security` section.
 ``KERBEROS_CLIENT_KEYTAB`` :index:`KERBEROS_CLIENT_KEYTAB`
     The path and file name of the keytab file for the client in Kerberos
     authentication. This variable has no default value.
+
+``SCITOKENS_FILE`` :index:`SCITOKENS_FILE`
+    The path and file name of a file containing a SciToken for use by
+    the client during the SCITOKENS authentication methods.  This variable
+    has no default value.
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

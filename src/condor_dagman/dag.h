@@ -583,10 +583,10 @@ class Dag {
 	void CheckAllJobs();
 
 		/** Returns a delimited string listing the node names of all
-			of the given node's parents.
+			of the given node's parents if the number of parents is less than or equal to max_parents
 			@return delimited string of parent node names
 		*/
-	const MyString ParentListString( Job *node, const char delim = ',' ) const;
+	const MyString ParentListString( Job *node, size_t max_parents=256, const char delim = ',' ) const;
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
@@ -763,6 +763,9 @@ class Dag {
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 	bool GetPostRun() const { return _alwaysRunPost; }
 	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
+
+	int GetDryRun() const { return _dry_run; }
+	void SetDryRun(int dry) { _dry_run = dry; }
 
 		// Set the overall priority for this DAG (set on command
 		// line (could be from higher-level DAG) or via config).
@@ -1240,6 +1243,10 @@ private:
 	// If true, run the POST script, regardless of the exit status of the PRE script
 	// Defaults to true
 	bool _alwaysRunPost;
+
+	// If true, don't dry-run the dag. pretending that all jobs terminated successfully
+	// upon submission
+	int _dry_run;
 
 		// The priority for this DAG. (defaults to 0)
 	int _dagPriority;

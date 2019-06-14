@@ -375,6 +375,14 @@ private:
 
 	void sweep_timer_handler( void );
 
+	void try_token_request();
+
+		// State of the in-flight token request; for now, we only allow
+		// one at a time.
+	std::string m_token_request_id;
+	std::string m_token_client_id;
+	Daemon *m_token_daemon{nullptr};
+
 #if HAVE_BACKFILL
 	bool backfillConfig( void );
 	bool m_backfill_shutdown_pending;

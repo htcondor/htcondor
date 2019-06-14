@@ -5864,14 +5864,28 @@ pid_t CreateProcessForkit::fork_exec() {
 			// CLONE_VFORK to ensure the child is done with the stack
 			// before the parent throws it away.
 		const int stack_size = 16384;
-		char child_stack[stack_size];
+		char child_stack[stack_size + 16]; // additional padding for aligning
 
 			// Beginning of stack is at end on all processors that run
 			// Linux, except for HP PA.  Here we just detect at run-time
 			// which way it goes.
 		char *child_stack_ptr = child_stack;
 		if( stack_direction() == STACK_GROWS_DOWN ) {
-			child_stack_ptr += stack_size;
+
+			child_stack_ptr = &child_stack[stack_size];
+
+			// ARM requires stack pointer to be 16 byte aligned
+			// probably helps performance to do it everywhere
+
+			// RHEL 7's gcc claims to be C++11, but doesn't have std::align
+
+			// size_t new_stack_size = stack_size;
+			// child_stack_ptr = std::align(16, 1, child_stack_ptr, new_stack_size);
+
+			std::uintptr_t mask = ~(std::uintptr_t)0 << 4;
+			child_stack_ptr = (char *) (((std::uintptr_t)child_stack_ptr) & mask);
+
+			ASSERT(child_stack_ptr);
 		}
 
 			// save some state in dprintf

@@ -1191,6 +1191,76 @@ themselves to the *condor_collector* daemon.
     SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
     ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 
+Token Authentication
+''''''''''''''''''''
+
+Password authentication requires both parties (client and server) in
+an authenticated session to have access to the same password file.  Further,
+both client and server authenticate the remote side as the user ``condor_pool``
+which, by default, has a high level of privilege to the entire pool.  Hence,
+it is only reasonable for daemon-to-daemon authentication.  Further, as
+only *one* password is allowed, it is impossible to use ``PASSWORD``
+authentication to flock to a remote pool.
+
+Token-based authentication is a newer extension to ``PASSWORD`` authentication
+that allows the pool administrator to generate new, low-privilege tokens
+from a pool password.  It also allows the administrator to install multiple
+passwords.  As tokens are derived from a specific password, if an administrator
+removes the password from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
+then all derived tokens are immediately invalid.  Most simple installs will
+utilize a single password, kept in ``SEC_PASSWORD_FILE`` (identical to ``PASSWORD``
+authentication).
+
+To generate a token, the administrator may utilize the ``condor_token_create``
+command-line utility:
+
+::
+
+    # condor_token_create -identity frida@pool.example.com
+
+The resulting token may be given to Frida and appended to a file in the directory
+specified by ``SEC_TOKEN_DIRECTORY`` (defaults to ``~/.condor/tokens.d``).  Subsequent
+authentications to the pool will utilize this token and cause Frida to be authenticated
+as the identity ``frida@pool.example.com``.  For daemons, tokens are stored in
+``SEC_TOKEN_SYSTEM_DIRECTORY``; on Unix platforms, this defaults to
+``/etc/condor/tokens.d``.
+
+*Note* that each password is named (the pool password defaults to the special name
+``POOL``) by its corresponding filename in ``SEC_PASSWORD_DIRECTORY``; HTCondor
+will assume that, for all daemons in the same *trust domain* (defaulting to the
+HTCondor pool) will have the same passwords for the same name.  That is, the
+password contained in ``key1`` in host ``pool.example.com`` is identical to the
+password contained in ``key1`` in host ``submit.example.com``.
+
+Unlike pool passwords, tokens can have a limited lifetime and can limit the
+authorizations allowed to the client.  For example,
+
+::
+
+    # condor_token_create -identity condor@pool.example.com \
+          -lifetime 3600 \
+          -authz ADVERTISE_STARTD
+
+will create a new token that maps to user ``condor@pool.example.com``.  However,
+this token is *only* valid for the ``ADVERTISE_STARTD`` authorization, regardless
+of what the server has configured for the ``condor`` user (the intersection of
+the identity's configured authorization and the token's authorizations, if specified,
+are used).  Further, the token will only be valid for 3600 seconds (one hour).
+
+Users may create their own tokens with ``condor_token_fetch``.  This command-line
+utility will contact the default ``condor_schedd`` and request a new
+token given the user's authenticated identity.  Unlike ``condor_token_create``,
+the ``condor_token_fetch`` has no control over the mapped identity (but does not
+need to read the files in ``SEC_PASSWORD_DIRECTORY``).
+
+To setup TOKEN authentication, create the pool password using ``condor_store_cred``
+and then enable it in the list of authentication methods:
+
+::
+
+    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
+    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
+
 File System Authentication
 ''''''''''''''''''''''''''
 

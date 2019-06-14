@@ -1383,7 +1383,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 						 event->eventNumber,
 						 (format_opts & ULogEvent::formatOpt::JSON) ? "JSON" : "XML");
 			}
-			if ( write( fd, output.data(), output.length() ) < 0) {
+			if ( write( fd, output.data(), output.length() ) < (ssize_t)output.length() ) {
 				success = false;
 			} else {
 				success = true;
@@ -1393,7 +1393,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 		std::string output;
 		success = event->formatEvent( output, format_opts );
 		output += SynchDelimiter;
-		if ( success && write( fd, output.data(), output.length() ) < 0 ) {
+		if ( success && write( fd, output.data(), output.length() ) < (ssize_t)output.length() ) {
 			// TODO Should we print a '\n...\n' like in the older code?
 			success = false;
 		}

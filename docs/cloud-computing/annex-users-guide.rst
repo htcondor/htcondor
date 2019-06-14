@@ -68,6 +68,8 @@ two things:
 #. How many instances you want. For your first annex, when you're
    checking to make sure things work, you may only want one instance.
 
+.. _start_an_annex:
+
 Start an Annex
 --------------
 
@@ -320,11 +322,13 @@ Using Different or Multiple AWS Regions
 ---------------------------------------
 
 It sometimes advantageous to use multiple AWS regions, or convenient to
-use an AWS region other than the default, which is us-east-1). To change
+use an AWS region other than the default, which is ``us-east-1``. To change
 the default, set the configuration macro ANNEX_DEFAULT_AWS_REGION
 :index:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
-the *condor_annex* automatic setup, you can edit the user_config file
-in .condor directory in your home directory.) Once you do this, you'll
+the *condor_annex* automatic setup, you can edit the ``user_config`` file
+in ``.condor directory`` in your home directory; this file uses the normal
+HTCondor configuration file syntax.  (See
+:ref:`ordered_evaluation_to_set_the_configuration`.) Once you do this, you'll
 have to re-do the setup, as setup is region-specific.
 
 If you'd like to use multiple AWS regions, you can specify which reason

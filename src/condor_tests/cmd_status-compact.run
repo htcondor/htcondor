@@ -31,7 +31,7 @@ my $testname = "cmd_status-compact";
 # needs to specify every time before a check
 my $command_arg;
 my $pid;
-my $executable = "sleep.exe";
+my $executable = "x_sleep.pl";
 my $arguments;
 my $submit_content;
 my $submitfile;

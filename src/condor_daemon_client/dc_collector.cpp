@@ -274,19 +274,31 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 bool
 DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 )
 {
+		// Only send secrets in the case where there's a private ad (ad2)
+		// or the collector has been build since 8.9.3 and understands not
+		// to share submitter secrets.
+	auto *verinfo = sock->get_peer_version();
+	bool send_submitter_secrets = false;
+	if (!ad2 && verinfo && verinfo->built_since_version(8, 9, 3)) {
+		send_submitter_secrets = true;
+	}
+
+	int options = send_submitter_secrets ? 0: PUT_CLASSAD_NO_PRIVATE;
+
 	// This is a static function so that we can call it from a
 	// nonblocking startCommand() callback without worrying about
 	// longevity of the DCCollector instance.
 
 	sock->encode();
-	if( ad1 && ! putClassAd(sock, *ad1) ) {
+	if( ad1 && ! putClassAd(sock, *ad1, options) ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			                "Failed to send ClassAd #1 to collector" );
 		}
 		return false;
 	}
-	if( ad2 && ! putClassAd(sock, *ad2) ) {
+		// This is always a private ad.
+	if( ad2 && ! putClassAd(sock, *ad2, 0) ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send ClassAd #2 to collector" );

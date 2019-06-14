@@ -248,7 +248,11 @@ JobEvent::Py_Values() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( convert_value_to_python( v ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -273,7 +277,12 @@ JobEvent::Py_Items() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -317,7 +326,11 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -341,7 +354,11 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.

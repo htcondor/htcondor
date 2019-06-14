@@ -59,7 +59,7 @@ ResumeDag(Dagman &dm)
 	return true;
 }
 
-bool
+Job*
 AddNode( Dag *dag, const char *name,
 		 const char* directory,
 		 const char* submitFile,
@@ -70,11 +70,11 @@ AddNode( Dag *dag, const char *name,
 	MyString why;
 	if( !IsValidNodeName( dag, name, why ) ) {
 		failReason = why;
-		return false;
+		return NULL;
 	}
 	if( !IsValidSubmitFileName( submitFile, why ) ) {
 		failReason = why;
-		return false;
+		return NULL;
 	}
 	if( done && isFinal) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
@@ -89,7 +89,7 @@ AddNode( Dag *dag, const char *name,
 			// we already know we're out of memory, so filling in
 			// FailReason will likely fail, but give it a shot...
 		failReason = "out of memory!";
-		return false;
+		return NULL;
 	}
 	node->SetNoop( noop );
 	if( done ) {
@@ -102,10 +102,10 @@ AddNode( Dag *dag, const char *name,
 		failReason += isFinal? "Final " : "";
 		failReason += "node to DAG";
 		delete node;
-		return false;
+		return NULL;
 	}
 	failReason = "n/a";
-	return true;
+	return node;
 }
 
 bool

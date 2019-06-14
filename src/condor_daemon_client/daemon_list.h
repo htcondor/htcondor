@@ -76,6 +76,8 @@ public:
 	void deleteCurrent();
 	void DeleteCurrent();
 
+	bool shouldTryTokenRequest();
+
  protected:
 	SimpleList<Daemon*> list;
 

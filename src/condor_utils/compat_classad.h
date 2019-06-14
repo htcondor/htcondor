@@ -45,7 +45,6 @@ namespace compat_classad {
 
 class ClassAdFileParseHelper;
 
-extern classad::References ClassAdPrivateAttrs;
 bool ClassAdAttributeIsPrivate( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
@@ -191,6 +190,9 @@ class ClassAd : public classad::ClassAd
 
 	virtual ~ClassAd();
 
+	ClassAd &operator=(const ClassAd &rhs)
+		{ classad::ClassAd::operator=(rhs); return *this; }
+
 		/**@name Deprecated functions (only for use within Condor) */
 		//@{
 
@@ -198,9 +200,9 @@ class ClassAd : public classad::ClassAd
 		 * our own Insert() below, our parent's Insert() won't be found
 		 * by users of this class.
 		 */
-	bool Insert( const std::string &attrName, classad::ExprTree *& expr );
+	bool Insert( const std::string &attrName, classad::ExprTree * expr );
 
-	int Insert(const char *name, classad::ExprTree *& expr );
+	int Insert(const char *name, classad::ExprTree * expr );
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
@@ -238,6 +240,9 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,unsigned long value)
 	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
 
+	int Assign(char const *name,unsigned long long value)
+	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
 
@@ -248,8 +253,8 @@ class ClassAd : public classad::ClassAd
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
 		// lookup values in classads  (for simple assignments)
-      classad::ExprTree* LookupExpr(const char* name) const
-	  { return Lookup( name ); }
+	classad::ExprTree* LookupExpr(const char* name) const
+	{ return Lookup( name ); }
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute

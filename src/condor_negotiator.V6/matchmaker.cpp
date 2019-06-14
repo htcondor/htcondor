@@ -43,6 +43,7 @@
 #include "consumption_policy.h"
 #include "condor_classad.h"
 #include "subsystem_info.h"
+#include "authentication.h"
 
 #include <vector>
 #include <string>
@@ -842,6 +843,46 @@ reinitialize ()
 	return TRUE;
 }
 
+void
+Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
+{
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+		return;
+	}
+	dprintf(D_SECURITY, "Will look for match security sessions.\n");
+
+	std::set<std::pair<std::string, std::string>> capabilities;
+	submitterAds.Open();
+	classad::ClassAd *ad;
+	while ((ad = submitterAds.Next())) {
+		std::string capability;
+		std::string sinful;
+		if (ad->EvaluateAttrString(ATTR_CAPABILITY, capability) &&
+			ad->EvaluateAttrString(ATTR_MY_ADDRESS, sinful))
+		{
+			capabilities.insert(std::make_pair(sinful, capability));
+		} else {
+			dprintf(D_SECURITY, "No capability present for ad from %s.\n", sinful.c_str());
+			dPrintAd(D_SECURITY, *ad, false);
+		}
+	}
+	submitterAds.Close();
+
+	auto secman = daemonCore->getSecMan();
+	for (const auto &capability_pair : capabilities) {
+		ClaimIdParser cidp(capability_pair.second.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability_pair.second.c_str());
+		secman->CreateNonNegotiatedSecuritySession(
+			CLIENT_PERM,
+			cidp.secSessionId(),
+			cidp.secSessionKey(),
+			cidp.secSessionInfo(),
+			SUBMIT_SIDE_MATCHSESSION_FQU,
+			capability_pair.first.c_str(),
+			1200
+		);
+	}
+}
 
 int Matchmaker::
 RESCHEDULE_commandHandler (int, Stream *strm)
@@ -1528,6 +1569,8 @@ negotiationTime ()
 	// insert RemoteUserPrio and related attributes so they are
 	// available during matchmaking
 	addRemoteUserPrios( startdAds );
+
+	SetupMatchSecurity(submitterAds);
 
     if (hgq_groups.size() <= 1) {
         // If there is only one group (the root group) we are in traditional non-HGQ mode.

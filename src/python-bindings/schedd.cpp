@@ -23,6 +23,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/version.hpp>
+#include <boost/python/raw_function.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -641,7 +642,12 @@ struct SubmitStepFromPyIter {
 			Py_ssize_t pos = 0;
 			while (PyDict_Next(obj, &pos, &k, &v)) {
 				std::string key = extract<std::string>(k);
-				m_livevars[key] = extract<std::string>(v);
+
+				boost::python::handle<> value_handle(v);
+				boost::python::str value_str(value_handle);
+				boost::python::extract<std::string> item_extract(value_str);
+
+				m_livevars[key] = item_extract();
 				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
 			}
 		} else if (PyList_Check(obj)) {
@@ -661,13 +667,20 @@ struct SubmitStepFromPyIter {
 			const char * key = m_fea.vars.first();
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
-				m_livevars[key] = extract<std::string>(v);
+
+				boost::python::handle<> value_handle(v);
+				boost::python::str value_str(value_handle);
+				boost::python::extract<std::string> item_extract(value_str);
+
+				m_livevars[key] = item_extract();
 				key = m_fea.vars.next();
 				if ( ! key) break;
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
-			extract<std::string> item_extract(obj);
+			boost::python::handle<> handle(obj);
+			boost::python::str obj_str(handle);
+			extract<std::string> item_extract(obj_str);
 			if ( ! item_extract.check()) {
 				m_errmsg = "'from' data must be an iterator of strings or of dicts";
 				return -1;
@@ -2232,7 +2245,8 @@ struct Submit
 	static MACRO_SOURCE EmptyMacroSrc;
 public:
     Submit()
-       : m_ms_inline("", 0, EmptyMacroSrc)
+       : m_src_pystring(EmptyMacroSrc),
+		 m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
@@ -2240,16 +2254,50 @@ public:
 
 
     Submit(boost::python::dict input)
-       : m_ms_inline("", 0, EmptyMacroSrc)
+       : m_src_pystring(EmptyMacroSrc),
+         m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
         update(input);
     }
 
+    static
+    boost::python::object
+    rawInit(boost::python::tuple args, boost::python::dict kwargs) {
+        boost::python::object self = args[0];
+        if (py_len(args) > 2) {
+            THROW_EX(TypeError, "Keyword constructor cannot take more than one positional argument");
+        } else if (py_len(args) == 1) {
+            return self.attr("__init__")(kwargs);
+        } else {
+            // Can it be converted to a dictionary?  If so, we use that dictionary.
+            // Otherwise, we convert it to a string.
+            try {
+                boost::python::dict input(args[1]);
+                self.attr("__init__")(input);
+                self.attr("update")(kwargs);
+                return boost::python::object();
+            } catch (boost::python::error_already_set &) {
+                if (PyErr_ExceptionMatches(PyExc_ValueError)) {
+                    PyErr_Clear();
+                    boost::python::str input_str(args[1]);
+                    self.attr("__init__")(input_str);
+                    self.attr("update")(kwargs);
+                    return boost::python::object();
+                } else {
+                    throw;
+                }
+            }
+			// UNREACHABLE
+            //return boost::python::object();
+        }
+    }
+
 
 	Submit(const std::string lines)
-       : m_ms_inline("", 0, EmptyMacroSrc)
+       : m_src_pystring(EmptyMacroSrc) 
+       , m_ms_inline("", 0, EmptyMacroSrc) 
        , m_queue_may_append_to_cluster(false)
 	{
 		m_hash.init();
@@ -2314,8 +2362,9 @@ public:
 
 
     std::string
-    setDefault(const std::string attr, const std::string default_value)
+    setDefault(const std::string attr, boost::python::object value_obj)
     {
+        std::string default_value = convertToSubmitValue(value_obj);
         const char *val = m_hash.lookup(attr.c_str());
         if (val == NULL)
         {
@@ -2327,8 +2376,9 @@ public:
 
 
     void
-    setItem(const std::string attr, const std::string value)
+    setItem(const std::string attr, boost::python::object obj)
     {
+        std::string value = convertToSubmitValue(obj);
         m_hash.set_submit_param(attr.c_str(), value.c_str());
     }
 
@@ -2458,8 +2508,11 @@ public:
 
             boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
             std::string attr = boost::python::extract<std::string>(tup[0]);
-            std::string value = boost::python::extract<std::string>(tup[1]);
-            m_hash.set_submit_param(attr.c_str(), value.c_str());
+
+            boost::python::object value(tup[0]);
+            std::string value_str = convertToSubmitValue(tup[1]);
+
+            m_hash.set_submit_param(attr.c_str(), value_str.c_str());
         }
     }
 
@@ -2820,6 +2873,17 @@ public:
 
 		JOB_ID_KEY jid;
 		int step=0, item_index=0, rval;
+
+		if (!PyIter_Check(from.ptr())) {
+			// if we have been passed an iterable, turn it into an iterator.
+			PyObject *py_iter = PyObject_GetIter(from.ptr());
+			if (!py_iter) {
+				boost::python::throw_error_already_set();
+			}
+			boost::python::handle<> handle(py_iter);
+			from = boost::python::object(handle);
+		}
+
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
 		if (factory_submit) {
@@ -2929,7 +2993,7 @@ public:
 
 // (boost::python::arg("self"),
 	//boost::python::arg("count")=1,
-	//boost::python::arg("from")=boost::python::object(),
+	//boost::python::arg("itemdata")=boost::python::object(),
 	//boost::python::arg("clusterid")=1,
 	//boost::python::arg("procid")=0,
 	//boost::python::arg("qdate")=0
@@ -3060,6 +3124,32 @@ public:
 	}
 
 private:
+
+    std::string
+    convertToSubmitValue(boost::python::object value) {
+        boost::python::extract<std::string> extract_str(value);
+        std::string attr;
+        if (extract_str.check()) {
+            attr = extract_str();
+        } else {
+            boost::python::extract<ExprTreeHolder*> extract_expr(value);
+            if (extract_expr.check()) {
+                ExprTreeHolder *holder = extract_expr();
+                attr = holder->toString();
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(value);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    attr = wrapper->toRepr();
+                } else {
+                    boost::python::str value_str(value);
+                    attr = boost::python::extract<std::string>(value_str);
+                }
+            }
+        }
+        return attr;
+    }
+
     SubmitHash m_hash;
     std::string m_qargs;
     std::string m_remainder; // holds remainder of input after queue statement.
@@ -3527,8 +3617,12 @@ void export_schedd()
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.
-            )C0ND0R",
-        init<boost::python::dict>(
+            )C0ND0R", boost::python::no_init)
+        .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
+            R"C0ND0R(
+            Construct the Submit object from a number of ``key = value`` keyword arguments.
+            )C0ND0R")
+        .def(init<boost::python::dict>(
             R"C0ND0R(
             :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description,
                 or a string containing the text of a submit file.
@@ -3541,7 +3635,8 @@ void export_schedd()
             :type input: dict or str
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
-        .def(init<std::string>())
+        .def(init<std::string>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
+	.def(init<>((boost::python::arg("self"))))
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand,
             R"C0ND0R(
@@ -3569,30 +3664,38 @@ void export_schedd()
             :rtype: int
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn")=boost::python::object(), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
             Submit the current object to a remote queue.
 
-            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
+            If the `data` parameter is provided, then a job per item in the list will
+            be created.  If the parameter is a list of dictionaries, the keys in the dictionary
+            will be treated as keys in the :class:`Submit` object macros.  For example, if the
+            submit command `transfer_input_files = $(filename)` is present and the data provided
+            is `[{'filename': 'input.txt'}]`, then the resulting job will have
+            `transfer_input_files = input.txt`.
+
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).  If `None`,
+                then the default current transaction is used.
             :type txn: :class:`Transaction`
             :param int count: A queue count for each item from the iterator, defaults to 1.
-            :param from: an iterator of strings or dictionaries containing the itemdata
+            :param itemdata: an iterable (list) of strings or dictionaries containing the itemdata
                 for each job as in ``queue in`` or ``queue from``.
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids Cluster ID of the submitted job(s).
             :rtype: :class:`SubmitResult`
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("from")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn")=boost::python::object(), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
             )
         .def("jobs", &Submit::iterjobs,
             R"C0ND0R(
             Turn the current object into a sequence of simulated job ClassAds
 
-            :param int count: the queue count for each item in the from list, defaults to 1
-            :param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
+            :param int count: the queue count for each item in the data list, defaults to 1
+            :param itemdata: a iterable (list) of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
             :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
             :param int procid: the initial value for ProcId when making job ads, defaults to 0
             :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
@@ -3601,7 +3704,7 @@ void export_schedd()
 
             :raises RuntimeError: if valid job ads cannot be made
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("itemdata")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
         .def("procs", &Submit::iterprocs,
             R"C0ND0R(
@@ -3609,7 +3712,7 @@ void export_schedd()
             The first ClassAd will be the cluster ad plus a ProcId attribute
 
             :param int count: the queue count for each item in the from list, defaults to 1
-            :param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
+            :param itemdata: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
             :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
             :param int procid: the initial value for ProcId when making job ads, defaults to 0
             :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
@@ -3618,7 +3721,7 @@ void export_schedd()
 
             :raises RuntimeError: if valid job ads cannot be made
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+            (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("itemdata")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
             )
         .def("itemdata", &Submit::iterqitems,
             R"C0ND0R(
