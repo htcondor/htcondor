@@ -263,6 +263,7 @@
 #define ATTR_HAS_PVM  "HasPVM"
 #define ATTR_HAS_RECONNECT  "HasReconnect"
 #define ATTR_HAS_REMOTE_SYSCALLS  "HasRemoteSyscalls"
+#define ATTR_HAS_SELF_CHECKPOINT_TRANSFERS "HasSelfCheckpointTransfers"
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
 #define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
