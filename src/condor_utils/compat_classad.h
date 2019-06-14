@@ -202,58 +202,56 @@ class ClassAd : public classad::ClassAd
 		 */
 	bool Insert( const std::string &attrName, classad::ExprTree * expr );
 
-	int Insert(const char *name, classad::ExprTree * expr );
-
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
 		 */
-	int Insert(const char *str);
-	int Insert(const std::string &str); // somewhat faster than above
+	bool Insert(const char *str);
+	bool Insert(const std::string &str); // somewhat faster than above
 
 		/* Insert an attribute/value into the Classad
 		 */
-	int AssignExpr(char const *name,char const *value);
+	bool AssignExpr(const std::string &name, const char *value);
 
 		/* Insert an attribute/value into the Classad with the
 		 * appropriate type.
 		 */
-	int Assign(char const *name, MyString const &value)
-	{ return InsertAttr( name, value.Value()) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, const MyString &value)
+	{ return InsertAttr(name, value.Value()); }
 
-	int Assign(char const *name, std::string const &value)
-	{ return InsertAttr( name, value.c_str()) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, const std::string &value)
+	{ return InsertAttr(name, value); }
 
-	int Assign(char const *name,char const *value);
+	bool Assign(const std::string &name,char const *value);
 
-	int Assign(char const *name,int value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, int value)
+	{ return InsertAttr(name, value); }
 
-	int Assign(char const *name,unsigned int value)
-	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, unsigned int value)
+	{ return InsertAttr(name, (long long)value); }
 
-	int Assign(char const *name,long value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name,long value)
+	{ return InsertAttr(name, value); }
 
-	int Assign(char const *name,long long value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, long long value)
+	{ return InsertAttr(name, value); }
 
-	int Assign(char const *name,unsigned long value)
-	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, unsigned long value)
+	{ return InsertAttr(name, (long long)value); }
 
-	int Assign(char const *name,unsigned long long value)
-	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, unsigned long long value)
+	{ return InsertAttr(name, (long long)value); }
 
-	int Assign(char const *name,float value)
-	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, float value)
+	{ return InsertAttr(name, (double)value); }
 
-	int Assign(char const *name,double value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, double value)
+	{ return InsertAttr(name, value); }
 
-	int Assign(char const *name,bool value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	bool Assign(const std::string &name, bool value)
+	{ return InsertAttr(name, value); }
 
 		// lookup values in classads  (for simple assignments)
-	classad::ExprTree* LookupExpr(const char* name) const
+	classad::ExprTree* LookupExpr(const std::string &name) const
 	{ return Lookup( name ); }
 
 		/** Lookup (don't evaluate) an attribute that is a string.
@@ -262,45 +260,69 @@ class ClassAd : public classad::ClassAd
 		 *  @param max_len The maximum number of bytes in the string to copy
 		 *  @return true if the attribute exists and is a string, false otherwise
 		 */
-	int LookupString(const char *name, char *value, int max_len) const;
+	bool LookupString(const std::string &name, char *value, int max_len) const
+	{ return EvaluateAttrString( name, value, max_len ); }
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute
 		 *  @param value The string, allocated with malloc() not new.
 		 *  @return true if the attribute exists and is a string, false otherwise
 		 */
-	int LookupString (const char *name, char **value) const;
+	bool LookupString(const std::string &name, char **value) const
+	{
+		std::string sval;
+		bool rc = EvaluateAttrString(name, sval);
+		if ( rc ) *value = strdup(sval.c_str());
+		return rc;
+	}
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute
 		 *  @param value The string
 		 *  @return true if the attribute exists and is a string, false otherwise
 		 */
-	int LookupString(const char *name, MyString &value) const; 
+	bool LookupString(const std::string &name, MyString &value) const
+	{
+		std::string sval;
+		bool rc = EvaluateAttrString(name, sval);
+		if ( rc ) value = sval;
+		return rc;
+	}
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute
 		 *  @param value The string
 		 *  @return true if the attribute exists and is a string, false otherwise
 		 */
-	int LookupString(const char *name, std::string &value) const; 
+	bool LookupString(const std::string &name, std::string &value) const
+	{ return EvaluateAttrString( name, value ); }
 
 		/** Lookup (don't evaluate) an attribute that is an integer.
 		 *  @param name The attribute
 		 *  @param value The integer
 		 *  @return true if the attribute exists and is an integer, false otherwise
 		 */
-	int LookupInteger(const char *name, int &value) const;
-	int LookupInteger(const char *name, long &value) const;
-	int LookupInteger(const char *name, long long &value) const;
+	bool LookupInteger(const std::string &name, int &value) const
+	{ return EvaluateAttrNumber(name, value); }
+	bool LookupInteger(const std::string &name, long &value) const
+	{ return EvaluateAttrNumber(name, value); }
+	bool LookupInteger(const std::string &name, long long &value) const
+	{ return EvaluateAttrNumber(name, value); }
 
 		/** Lookup (don't evaluate) an attribute that is a float.
 		 *  @param name The attribute
 		 *  @param value The integer
 		 *  @return true if the attribute exists and is a float, false otherwise
 		 */
-	int LookupFloat(const char *name, float &value) const;
-	int LookupFloat(const char *name, double &value) const;
+	bool LookupFloat(const std::string &name, float &value) const
+	{
+		double dval;
+		bool rc = EvaluateAttrNumber(name, dval);
+		if ( rc ) value = dval;
+		return rc;
+	}
+	bool LookupFloat(const std::string &name, double &value) const
+	{ return EvaluateAttrNumber(name, value); }
 
 		/** Lookup (don't evaluate) an attribute that can be considered a boolean
 		 *  @param name The attribute
@@ -308,7 +330,8 @@ class ClassAd : public classad::ClassAd
 		 *  @return true if the attribute exists and is a boolean/integer, false otherwise
 		 */
 
-	int LookupBool(const char *name, bool &value) const;
+	bool LookupBool(const std::string &name, bool &value) const
+	{ return EvaluateAttrBoolEquiv(name, value); }
 
 	static void Reconfig();
 	static bool m_initConfig;
@@ -319,8 +342,8 @@ class ClassAd : public classad::ClassAd
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 
 	// and quietly leak the tree.
-	int Assign(char const *name,classad::ExprTree * tree)
-	{ return Insert(name, tree) ? TRUE : FALSE; }
+	bool Assign(const std::string &name,classad::ExprTree * tree)
+	{ return Insert(name, tree); }
 
 };
 

@@ -1827,13 +1827,7 @@ bool ClassAd::Insert( const std::string &attrName, classad::ExprTree * expr)
 	return classad::ClassAd::Insert( attrName, expr );
 }
 
-int ClassAd::Insert( const char *name, classad::ExprTree * expr )
-{
-	string str(name);
-	return Insert( str, expr ) ? TRUE : FALSE;
-}
-
-int
+bool
 ClassAd::Insert(const std::string &str)
 {
 	// this is not the optimial path, it would be better to
@@ -1841,17 +1835,14 @@ ClassAd::Insert(const std::string &str)
 	return this->Insert(str.c_str());
 }
 
-int
+bool
 ClassAd::Insert( const char *str )
 {
-	if ( ! InsertLongFormAttrValue(*this, str, true)) {
-		return FALSE;
-	}
-	return TRUE;
+	return InsertLongFormAttrValue(*this, str, true);
 }
 
-int ClassAd::
-AssignExpr(char const *name,char const *value)
+bool ClassAd::
+AssignExpr(const std::string &name, const char *value)
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
@@ -1861,113 +1852,23 @@ AssignExpr(char const *name,char const *value)
 		value = "Undefined";
 	}
 	if ( !par.ParseExpression( value, expr, true ) ) {
-		return FALSE;
+		return false;
 	}
 	if ( !Insert( name, expr ) ) {
 		delete expr;
-		return FALSE;
+		return false;
 	}
-	return TRUE;
+	return true;
 }
 
-int ClassAd::
-Assign(char const *name,char const *value)
+bool ClassAd::
+Assign(const std::string &name, char const *value)
 {
 	if ( value == NULL ) {
 		return AssignExpr( name, NULL );
 	} else {
-		return InsertAttr( name, value ) ? TRUE : FALSE;
+		return InsertAttr( name, value );
 	}
-}
-
-int ClassAd::
-LookupString(const char *name, char *value, int max_len) const
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strncpy( value, strVal.c_str( ), max_len );
-	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
-	return 1;
-}
-
-int ClassAd::
-LookupString (const char *name, char **value) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	const char *strValCStr = strVal.c_str( );
-	*value = (char *) malloc(strlen(strValCStr) + 1);
-	if (*value != NULL) {
-		strcpy(*value, strValCStr);
-		return 1;
-	}
-
-	return 0;
-}
-
-int ClassAd::
-LookupString( const char *name, MyString &value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	value = strVal.c_str();
-	return 1;
-} 
-
-int ClassAd::
-LookupString( const char *name, std::string &value ) const 
-{
-	if( !EvaluateAttrString( string( name ), value ) ) {
-		return 0;
-	}
-	return 1;
-} 
-
-int ClassAd::
-LookupInteger( const char *name, int &value ) const 
-{
-	return EvaluateAttrNumber(name, value);
-}
-
-int ClassAd::
-LookupInteger( const char *name, long &value ) const 
-{
-	return EvaluateAttrNumber(name, value);
-}
-
-int ClassAd::
-LookupInteger( const char *name, long long &value ) const 
-{
-	return EvaluateAttrNumber(name, value);
-}
-
-int ClassAd::
-LookupFloat( const char *name, float &value ) const
-{
-	double dval;
-	bool rc = EvaluateAttrNumber(name, dval);
-	if ( rc ) {
-		value = dval;
-	}
-	return rc;
-}
-
-int ClassAd::
-LookupFloat( const char *name, double &value ) const
-{
-	return EvaluateAttrNumber(name, value);
-}
-
-int ClassAd::
-LookupBool( const char *name, bool &value ) const
-{
-	return EvaluateAttrBoolEquiv(name, value);
 }
 
 int
