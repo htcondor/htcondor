@@ -209,6 +209,9 @@
 #define SUBMIT_KEY_RetryUntil "retry_until"
 #define SUBMIT_KEY_SuccessExitCode "success_exit_code"
 
+// Self-Checkpointing Parameters
+#define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters

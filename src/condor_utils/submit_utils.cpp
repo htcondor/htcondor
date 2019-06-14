@@ -3600,6 +3600,11 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_WANT_CHECKPOINT, JobUniverse == CONDOR_UNIVERSE_STANDARD);
 	}
 
+	// The starter ignores ATTR_SUCCESS_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
+	if (job->Lookup(ATTR_SUCCESS_CHECKPOINT_EXIT_CODE)) {
+		AssignJobVal(ATTR_WANT_FT_ON_CHECKPOINT, true);
+	}
+
 	// Interactive jobs that don't specify a job description get the description "interactive job"
 	if (IsInteractiveJob && ! job->Lookup(ATTR_JOB_DESCRIPTION)) {
 		AssignJobString(ATTR_JOB_DESCRIPTION, "interactive job");
@@ -4928,6 +4933,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxTransferInputMB, ATTR_MAX_TRANSFER_INPUT_MB, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_MaxTransferOutputMB, ATTR_MAX_TRANSFER_OUTPUT_MB, SimpleSubmitKeyword::f_as_expr},
 
+	// Self-checkpointing
+	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name },
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -5742,19 +5750,19 @@ int SubmitHash::SetRequirements()
 
 	GetExprReferences(answer.Value(),req_ad,&job_refs,&machine_refs);
 
-	bool checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
-	bool checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
+	bool	checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
+	bool	checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_SHORT_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_LEGACY );
-	bool checks_disk =  machine_refs.count( ATTR_DISK );
-	bool checks_cpus =   machine_refs.count( ATTR_CPUS );
-	bool checks_tdp =  machine_refs.count( ATTR_HAS_TDP );
-	bool checks_encrypt_exec_dir = machine_refs.count( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+	bool	checks_disk =  machine_refs.count( ATTR_DISK );
+	bool	checks_cpus =   machine_refs.count( ATTR_CPUS );
+	bool	checks_tdp =  machine_refs.count( ATTR_HAS_TDP );
+	bool	checks_encrypt_exec_dir = machine_refs.count( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
-	bool checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
+	bool	checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
 #endif
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
@@ -5762,6 +5770,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
+	bool	checks_hsct = false;
 
 	if (JobUniverse == CONDOR_UNIVERSE_STANDARD || JobUniverse == CONDOR_UNIVERSE_VM) {
 		checks_ckpt_arch = job_refs.count( ATTR_CKPT_ARCH );
@@ -5775,6 +5784,7 @@ int SubmitHash::SetRequirements()
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
 		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
 	}
+	checks_hsct = machine_refs.count( ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
 	bool checks_mem = machine_refs.count(ATTR_MEMORY);
 	//bool checks_reqmem = job_refs.count(ATTR_REQUEST_MEMORY);
@@ -6196,6 +6206,13 @@ int SubmitHash::SetRequirements()
 		answer += tmp_rao.Value();
 	}
 #endif
+
+	bool want_ft_on_checkpoint = false;
+	if (job->LookupBool(ATTR_WANT_FT_ON_CHECKPOINT, want_ft_on_checkpoint) && want_ft_on_checkpoint) {
+		if( ! checks_hsct ) {
+			answer += " && TARGET." ATTR_HAS_SELF_CHECKPOINT_TRANSFERS;
+		}
+	}
 
 	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
 	RETURN_IF_ABORT();
@@ -7699,6 +7716,7 @@ ClassAd* SubmitHash::make_job_ad (
 		// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 		// SetCronTab(), and SetPerFileEncryption()
 		//
+		// FIXME? (TJ): and after SetAutoAttributes().
 	SetRequirements();
 
 

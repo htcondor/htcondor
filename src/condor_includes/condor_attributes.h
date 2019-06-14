@@ -649,6 +649,7 @@
 #define ATTR_SUBMITTER_NEGOTIATING_GROUP  "SubmitterNegotiatingGroup"
 #define ATTR_SUBNET  "Subnet"
 #define ATTR_SUBNET_MASK  "SubnetMask"
+#define ATTR_SUCCESS_CHECKPOINT_EXIT_CODE "SuccessCheckpointExitCode"
 #define ATTR_SUSPEND  "Suspend"
 #define ATTR_SUSPEND_REASON  "SuspendReason"
 #define ATTR_SUSPEND_JOB_AT_EXEC  "SuspendJobAtExec"
