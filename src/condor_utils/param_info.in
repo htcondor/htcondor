@@ -799,13 +799,6 @@ customization=expert
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_USE_JOIN_NODES]
-default=false
-type=bool
-customization=normal
-tags=dagman,dagman_main
-restart=never
-
 [CKPT_SERVER_DIR]
 default=
 type=string
