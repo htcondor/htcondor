@@ -1064,7 +1064,6 @@ parse_parent(
 	if (useJoinNodes && parents.Number() > 1 && children.Number() > 1) {
 		// First create the join node and add it
 		MyString failReason = "";
-		// Ugly static_cast statement is to keep certain compilers happy
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
 		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
