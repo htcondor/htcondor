@@ -24,7 +24,7 @@ even if the job is interrupted in a way that doesn't allow for files to
 be transferred (e.g., power failure), or if the file transfer doesn't
 complete in the time allowed.
 
-For a job can to use ``CheckpointExitCode`` successfully, its ``executable``
+For a job to use ``CheckpointExitCode`` successfully, its ``executable``
 must meet a number of requirements.
 
 Requirements
