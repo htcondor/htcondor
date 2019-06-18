@@ -6408,6 +6408,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 									 const std::string &metadata_file,
 									 bool preemptible,
 									 const std::string &json_file,
+									 const std::vector< std::pair< std::string, std::string > > & labels,
 									 std::string &instance_id )
 {
 	static const char* command = "GCE_INSTANCE_INSERT";
@@ -6437,6 +6438,14 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	reqline += preemptible ? "true" : "false";
 	reqline += " ";
 	reqline += json_file.empty() ? NULLSTRING : escapeGahpString( json_file );
+
+	for( auto i : labels ) {
+		reqline += i.first;
+		reqline += " ";
+		reqline += i.second;
+		reqline += " ";
+	}
+    reqline += NULLSTRING;
 
 	const char *buf = reqline.c_str();
 

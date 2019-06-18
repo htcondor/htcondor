@@ -196,6 +196,8 @@
 #define ATTR_BLOCK_WRITE_BYTES  "BlockWriteBytes"
 #define ATTR_BLOCK_READS "BlockReads"
 #define ATTR_BLOCK_WRITES "BlockWrites"
+#define ATTR_CLOUD_LABEL_NAMES "CloudLabelNames"
+#define ATTR_CLOUD_LABEL_PREFIX "CloudLabel"
 #define ATTR_FILE_SEEK_COUNT  "FileSeekCount"
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLAVOR  "Flavor"
