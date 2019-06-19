@@ -3821,7 +3821,10 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
 
 	if( toeTag ) { delete toeTag; }
-	toeTag = dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" ));
+
+	ExprTree * fail = ad->Lookup( "ToE" );
+	classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( fail );
+	if( ca ) { toeTag = new classad::ClassAd( * ca ); }
 }
 
 JobImageSizeEvent::JobImageSizeEvent(void)

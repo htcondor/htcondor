@@ -1946,8 +1946,27 @@ Job ClassAd Attributes
 ``SubmitterNegotiatingGroup``
     The accounting group name under which the resource negotiated when
     it was claimed, as set by the *condor_negotiator*.
-    :index:`SuccessPreExitBySignal<single: SuccessPreExitBySignal; ClassAd job attribute>`
-    :index:`ClassAd job attribute<single: ClassAd job attribute; SuccessPreExitBySignal>`
+
+:index:`SuccessCheckpointExitBySignal<single: SuccessCheckpointExitBySignal; ClassAd job attribute>`
+
+``SuccessCheckpointExitBySignal``
+    Specifies if the ``executable`` exits with a signal after a successful
+    self-checkpoint.
+
+:index:`SuccessCheckpointExitCode<single: SuccessCheckpointExitCode; ClassAd job attribute>`
+
+``SuccessCheckpointExitCode``
+    Specifies the exit code, if any, with which the ``executable`` exits
+    after a successful self-checkpoint.
+
+:index:`SuccessCheckpointExitSignal<single: SuccessCheckpointExitSignal; ClassAd job attribute>`
+
+``SuccessCheckpointExitSignal``
+    Specifies the signal, if any, by which the ``executable`` exits after
+    a successful self-checkpoint.
+
+:index:`SuccessPreExitBySignal<single: SuccessPreExitBySignal; ClassAd job attribute>`
+:index:`ClassAd job attribute<single: ClassAd job attribute; SuccessPreExitBySignal>`
 
 ``SuccessPreExitBySignal``
     Specifies if a succesful pre command must exit with a signal.
@@ -2144,7 +2163,18 @@ Job ClassAd Attributes
 ``UserLog``
     The full path and file name on the submit machine of the log file of
     job events.
-    :index:`WantGracefulRemoval<single: WantGracefulRemoval; ClassAd job attribute>`
+
+:index:`WantFTOnCheckpoint<single: WantFTOnCheckpoint; ClassAd job attribute>`
+
+``WantFTOnCheckpoint``
+    A boolean that, when ``True``, specifies that when the ``executable``
+    exits as described by ``SuccessCheckpointExitCode``,
+    ``SuccessCheckpointExitBySignal``, and ``SuccessCheckpointExitSignal``,
+    HTCondor should do (output) file transfer and immediately continue the
+    job in the same sandbox by restarting ``executable`` with the same
+    arguments as the first time.
+
+:index:`WantGracefulRemoval<single: WantGracefulRemoval; ClassAd job attribute>`
 
 ``WantGracefulRemoval``
     A boolean expression that, when ``True``, specifies that a graceful
