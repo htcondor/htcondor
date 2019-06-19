@@ -27,6 +27,11 @@ New Features:
 
 Bugs Fixed:
 
+-  If a user accidentally submits a parallel universe job with thousands
+   of times more nodes than exist in the pool, the *condor_schedd* no longer
+   gets stuck for hours sorting that out.
+   :ticket:`7055`
+
 -  Fixed a bug on the ARM architecture that caused the *condor_schedd*
    to crash when starting jobs and responding to *condor_history* queries.
    :ticket:`7102`
