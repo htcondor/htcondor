@@ -550,19 +550,19 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 }
 
 /** Get the configuration file (if any) and the submit append commands
-	(if any), specified by the given list of DAG files.  If more than one
-	DAG file specifies a configuration file, they must specify the same file.
-	@param dagFiles: the list of DAG files
-	@param useDagDir: run DAGs in directories from DAG file paths 
-			if true
-	@param configFile: holds the path to the config file; if a config
-			file is specified on the command line, configFile should
-			be set to that value before this method is called; the
-			value of configFile will be changed if it's not already
-			set and the DAG file(s) specify a configuration file
-	@param attrLines: a StringList to receive the submit attributes
-	@param errMsg: a MyString to receive any error message
-	@return true if the operation succeeded; otherwise false
+    (if any), specified by the given list of DAG files.  If more than one
+    DAG file specifies a configuration file, they must specify the same file.
+    @param dagFiles: the list of DAG files
+    @param useDagDir: run DAGs in directories from DAG file paths 
+            if true
+    @param configFile: holds the path to the config file; if a config
+            file is specified on the command line, configFile should
+            be set to that value before this method is called; the
+            value of configFile will be changed if it's not already
+            set and the DAG file(s) specify a configuration file
+    @param attrLines: a StringList to receive the submit attributes
+    @param errMsg: a MyString to receive any error message
+    @return true if the operation succeeded; otherwise false
 */
 bool
 DagmanUtils::GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir, 
@@ -700,26 +700,279 @@ DagmanUtils::GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir
 }
 
 /** Make the given path into an absolute path, if it is not already.
-	@param filePath: the path to make absolute (filePath is changed)
-	@param errMsg: a MyString to receive any error message.
-	@return true if the operation succeeded; otherwise false
+    @param filePath: the path to make absolute (filePath is changed)
+    @param errMsg: a MyString to receive any error message.
+    @return true if the operation succeeded; otherwise false
 */
 bool
 DagmanUtils::MakePathAbsolute(MyString &filePath, MyString &errMsg)
 {
-	bool result = true;
+    bool result = true;
 
-	if ( !fullpath( filePath.Value() ) ) {
-		MyString currentDir;
-		if ( !condor_getcwd( currentDir ) ) {
-			formatstr( errMsg, "condor_getcwd() failed with errno %d (%s) at %s:%d",
-			           errno, strerror(errno), __FILE__, __LINE__ );
-			result = false;
-		}
+    if ( !fullpath( filePath.Value() ) ) {
+        MyString currentDir;
+        if ( !condor_getcwd( currentDir ) ) {
+            formatstr( errMsg, "condor_getcwd() failed with errno %d (%s) at %s:%d",
+                       errno, strerror(errno), __FILE__, __LINE__ );
+            result = false;
+        }
 
-		filePath = currentDir + DIR_DELIM_STRING + filePath;
-	}
+        filePath = currentDir + DIR_DELIM_STRING + filePath;
+    }
 
-	return result;
+    return result;
+}
+
+/** Finds the number of the last existing rescue DAG file for the
+    given "primary" DAG.
+    @param primaryDagFile The primary DAG file name
+    @param multiDags Whether we have multiple DAGs
+    @param maxRescueDagNum the maximum legal rescue DAG number
+    @return The number of the last existing rescue DAG (0 if there
+        is none)
+*/
+int
+DagmanUtils::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
+            int maxRescueDagNum )
+{
+    int lastRescue = 0;
+
+    for ( int test = 1; test <= maxRescueDagNum; test++ ) {
+        MyString testName = RescueDagName( primaryDagFile, multiDags,
+                    test );
+        if ( access( testName.Value(), F_OK ) == 0 ) {
+            if ( test > lastRescue + 1 ) {
+                    // This should probably be a fatal error if
+                    // DAGMAN_USE_STRICT is set, but I'm avoiding
+                    // that for now because the fact that this code
+                    // is used in both condor_dagman and condor_submit_dag
+                    // makes that harder to implement. wenger 2011-01-28
+                dprintf( D_ALWAYS, "Warning: found rescue DAG "
+                            "number %d, but not rescue DAG number %d\n",
+                            test, test - 1);
+            }
+            lastRescue = test;
+        }
+    }
+    
+    if ( lastRescue >= maxRescueDagNum ) {
+        dprintf( D_ALWAYS,
+                    "Warning: FindLastRescueDagNum() hit maximum "
+                    "rescue DAG number: %d\n", maxRescueDagNum );
+    }
+
+    return lastRescue;
+}
+
+/** Creates a rescue DAG name, given a primary DAG name and rescue
+    DAG number
+    @param primaryDagFile The primary DAG file name
+    @param multiDags Whether we have multiple DAGs
+    @param rescueDagNum The rescue DAG number
+    @return The full name of the rescue DAG
+*/
+MyString
+DagmanUtils::RescueDagName(const char *primaryDagFile, bool multiDags,
+            int rescueDagNum)
+{
+    ASSERT( rescueDagNum >= 1 );
+
+    MyString fileName(primaryDagFile);
+    if ( multiDags ) {
+        fileName += "_multi";
+    }
+    fileName += ".rescue";
+    fileName.formatstr_cat( "%.3d", rescueDagNum );
+
+    return fileName;
+}
+
+/** Renames all rescue DAG files for this primary DAG after the
+    given one (as long as the numbers are contiguous).  For example,
+    if rescueDagNum is 3, we will rename .rescue4, .rescue5, etc.
+    @param primaryDagFile The primary DAG file name
+    @param multiDags Whether we have multiple DAGs
+    @param rescueDagNum The rescue DAG number to rename *after*
+    @param maxRescueDagNum the maximum legal rescue DAG number
+*/
+void
+DagmanUtils::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
+            int rescueDagNum, int maxRescueDagNum)
+{
+        // Need to allow 0 here so condor_submit_dag -f can rename all
+        // rescue DAGs.
+    ASSERT( rescueDagNum >= 0 );
+
+    dprintf( D_ALWAYS, "Renaming rescue DAGs newer than number %d\n",
+                rescueDagNum );
+
+    int firstToDelete = rescueDagNum + 1;
+    int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags,
+                maxRescueDagNum );
+
+    for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
+                rescueNum++ ) {
+        MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
+                    rescueNum );
+        dprintf( D_ALWAYS, "Renaming %s\n", rescueDagName.Value() );
+        MyString newName = rescueDagName + ".old";
+            // Unlink here to be safe on Windows.
+        tolerant_unlink( newName.Value() );
+        if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
+            EXCEPT( "Fatal error: unable to rename old rescue file "
+                        "%s: error %d (%s)\n", rescueDagName.Value(),
+                        errno, strerror( errno ) );
+        }
+    }
+}
+
+/** Generates the halt file name based on the primary DAG name.
+    @return The halt file name.
+*/
+MyString
+DagmanUtils::HaltFileName( const MyString &primaryDagFile )
+{
+    MyString haltFile = primaryDagFile + ".halt";
+
+    return haltFile;
+}
+
+/** Attempts to unlink the given file, and prints an appropriate error
+    message if this fails (but doesn't return an error, so only call
+    this if a failure of the unlink is okay).
+    @param pathname The path of the file to unlink
+*/
+void
+DagmanUtils::tolerant_unlink( const char *pathname )
+{
+    if ( unlink( pathname ) != 0 ) {
+        if ( errno == ENOENT ) {
+            dprintf( D_SYSCALLS,
+                        "Warning: failure (%d (%s)) attempting to unlink file %s\n",
+                        errno, strerror( errno ), pathname );
+        } else {
+            dprintf( D_ALWAYS,
+                        "Error (%d (%s)) attempting to unlink file %s\n",
+                        errno, strerror( errno ), pathname );
+
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
+bool 
+DagmanUtils::fileExists(const MyString &strFile)
+{
+    int fd = safe_open_wrapper_follow(strFile.Value(), O_RDONLY);
+    if (fd == -1)
+        return false;
+    close(fd);
+    return true;
+}
+
+//---------------------------------------------------------------------------
+void 
+DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
+            SubmitDagShallowOptions &shallowOpts)
+{
+    int maxRescueDagNum = param_integer("DAGMAN_MAX_RESCUE_NUM",
+                MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM);
+
+    if (deepOpts.doRescueFrom > 0)
+    {
+        MyString rescueDagName = RescueDagName(shallowOpts.primaryDagFile.Value(),
+                shallowOpts.dagFiles.number() > 1, deepOpts.doRescueFrom);
+        if (!fileExists(rescueDagName))
+        {
+            fprintf( stderr, "-dorescuefrom %d specified, but rescue "
+                        "DAG file %s does not exist!\n", deepOpts.doRescueFrom,
+                        rescueDagName.Value() );
+            exit( 1 );
+        }
+    }
+
+        // Get rid of the halt file (if one exists).
+    tolerant_unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+
+    if (deepOpts.bForce)
+    {
+        tolerant_unlink(shallowOpts.strSubFile.Value());
+        tolerant_unlink(shallowOpts.strSchedLog.Value());
+        tolerant_unlink(shallowOpts.strLibOut.Value());
+        tolerant_unlink(shallowOpts.strLibErr.Value());
+        RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
+                    shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
+    }
+
+        // Check whether we're automatically running a rescue DAG -- if
+        // so, allow things to continue even if the files generated
+        // by condor_submit_dag already exist.
+    bool autoRunningRescue = false;
+    if (deepOpts.autoRescue) {
+        int rescueDagNum = FindLastRescueDagNum(shallowOpts.primaryDagFile.Value(),
+                    shallowOpts.dagFiles.number() > 1, maxRescueDagNum);
+        if (rescueDagNum > 0) {
+            printf("Running rescue DAG %d\n", rescueDagNum);
+            autoRunningRescue = true;
+        }
+    }
+
+    bool bHadError = false;
+        // If not running a rescue DAG, check for existing files
+        // generated by condor_submit_dag...
+    if (!autoRunningRescue && deepOpts.doRescueFrom < 1 && !deepOpts.updateSubmit) {
+        if (fileExists(shallowOpts.strSubFile))
+        {
+            fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+                     shallowOpts.strSubFile.Value() );
+            bHadError = true;
+        }
+        if (fileExists(shallowOpts.strLibOut))
+        {
+            fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+                     shallowOpts.strLibOut.Value() );
+            bHadError = true;
+        }
+        if (fileExists(shallowOpts.strLibErr))
+        {
+            fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+                     shallowOpts.strLibErr.Value() );
+            bHadError = true;
+        }
+        if (fileExists(shallowOpts.strSchedLog))
+        {
+            fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+                     shallowOpts.strSchedLog.Value() );
+            bHadError = true;
+        }
+    }
+
+        // This is checking for the existance of an "old-style" rescue
+        // DAG file.
+    if (!deepOpts.autoRescue && deepOpts.doRescueFrom < 1 &&
+                fileExists(shallowOpts.strRescueFile))
+    {
+        fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+                 shallowOpts.strRescueFile.Value() );
+        fprintf( stderr, "  You may want to resubmit your DAG using that "
+                 "file, instead of \"%s\"\n", shallowOpts.primaryDagFile.Value());
+        fprintf( stderr, "  Look at the HTCondor manual for details about DAG "
+                 "rescue files.\n" );
+        fprintf( stderr, "  Please investigate and either remove \"%s\",\n",
+                 shallowOpts.strRescueFile.Value() );
+        fprintf( stderr, "  or use it as the input to condor_submit_dag.\n" );
+        bHadError = true;
+    }
+
+    if (bHadError) 
+    {
+        fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
+                 dagman_exe );
+        fprintf( stderr, "Either rename them,\nuse the \"-f\" option to "
+                 "force them to be overwritten, or use\n"
+                 "the \"-update_submit\" option to update the submit "
+                 "file and continue.\n" );
+        exit( 1 );
+    }
 }
 

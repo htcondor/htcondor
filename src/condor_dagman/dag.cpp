@@ -204,7 +204,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagIsHalted = false;
 	_dagIsAborted = false;
 	_dagFiles.rewind();
-	_haltFile = HaltFileName( _dagFiles.next() );
+	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
 	_allNodesIt = NULL;
@@ -2158,7 +2158,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		rescueDagFile = dagFile;
 		rescueDagFile += ".parse_failed";
 	} else {
-		int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
+		int nextRescue = _dagmanUtils.FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
 		if ( overwrite && nextRescue > 1 ) {
 			nextRescue--;
@@ -2166,7 +2166,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		if ( nextRescue > maxRescueDagNum ) {
 			nextRescue = maxRescueDagNum;
 		}
-		rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
+		rescueDagFile = _dagmanUtils.RescueDagName( dagFile, multiDags, nextRescue );
 	}
 
 		// Note: there could possibly be a race condition here if two
@@ -2775,7 +2775,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		tolerant_unlink(temp_dot_file_name.Value());
+		_dagmanUtils.tolerant_unlink(temp_dot_file_name.Value());
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
@@ -2812,7 +2812,7 @@ Dag::DumpDotFile(void)
 			fclose(temp_dot_file);
 				// Note:  we do tolerant_unlink because renaming over an
 				// existing file fails on Windows.
-			tolerant_unlink(current_dot_file_name.Value());
+			_dagmanUtils.tolerant_unlink(current_dot_file_name.Value());
 			if ( rename(temp_dot_file_name.Value(),
 						current_dot_file_name.Value()) != 0 ) {
 				debug_printf( DEBUG_NORMAL,
@@ -2900,7 +2900,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
-	tolerant_unlink( tmpStatusFile.Value() );
+	_dagmanUtils.tolerant_unlink( tmpStatusFile.Value() );
 
 	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );
 	if ( outfile == NULL ) {
@@ -3152,7 +3152,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
 				statusFileName.Value() );
 #endif
-	tolerant_unlink( statusFileName.Value() );
+	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
 	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
