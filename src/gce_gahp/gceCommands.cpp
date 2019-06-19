@@ -1201,9 +1201,11 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
 
+	// This is documented incorrectly at https://cloud.google.com/compute/docs/labeling-resources;
+	// the actual API is the sane one you'd expect.
 	int endOfTagList = 14;
 	if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
-		insert_request.requestBody += " \"labels\": [";
+		insert_request.requestBody += " \"labels\": {";
 		for( ; endOfTagList < argc - 2; endOfTagList += 2 ) {
 			if( strcasecmp( argv[endOfTagList], NULLSTRING ) == 0 ) { break; }
 			std::string key = argv[endOfTagList];
@@ -1237,7 +1239,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 			}
 
 			insert_request.requestBody +=
-				"{ \"" + key + "\": \"" + value + "\" },";
+				"\"" + key + "\": \"" + value + "\",";
 		}
 		if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
 			result_string = create_failure_result( requestID,
@@ -1245,8 +1247,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 			return true;
 		}
 		insert_request.requestBody.erase( insert_request.requestBody.length() - 1 );
-		insert_request.requestBody += "],\n";
-dprintf( D_ALWAYS, "%s", insert_request.requestBody.c_str() );
+		insert_request.requestBody += "},\n";
 	}
 
 	insert_request.requestBody += " \"name\": \"";

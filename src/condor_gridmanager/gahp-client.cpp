@@ -6440,12 +6440,13 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	reqline += json_file.empty() ? NULLSTRING : escapeGahpString( json_file );
 
 	for( auto i : labels ) {
+		reqline += " ";
 		reqline += i.first;
 		reqline += " ";
 		reqline += i.second;
-		reqline += " ";
 	}
-    reqline += NULLSTRING;
+	reqline += " ";
+	reqline += NULLSTRING;
 
 	const char *buf = reqline.c_str();
 
