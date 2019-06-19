@@ -31,6 +31,11 @@ Bugs Fixed:
    ``CommittedSlotTime`` reporting overly-large values.
    :ticket:`7083`
 
+-  Fixed a bug that prevented the inclusion of the last `OBITUARY_LOG_LENGTH`
+   lines of the dead daemon's log in the obituary.  Increased the default
+   `OBITUARY_LOG_LENGTH` from 20 to 200.
+   :ticket:`7103`
+
 Version 8.8.3
 -------------
 
