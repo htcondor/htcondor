@@ -1618,7 +1618,6 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		while (ClassAd *m = resources->Next()) {
 			int cpus = 0;
 			m->LookupInteger(ATTR_CPUS, cpus);
-			if (cpus == 0) cpus = 1;
 			total_cores += cpus;
 		}
 		resources->Rewind();
