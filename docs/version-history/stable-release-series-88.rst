@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug on the ARM architecture that caused the *condor_schedd*
+   to crash when starting jobs and responding to *condor_history* queries.
+   :ticket:`7102`
+
 -  Fixed a bug that could cause the *condor_schedd* to crash when a
    scheduler universe job is removed.
    :ticket:`7095`
