@@ -19,7 +19,11 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Dagman can now submit directly to the Schedd without using *condor_submit*
+   This provides a workaround for slow submission rates for very large DAGs.
+   This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
+   which defaults to ``True``.  When it is ``False``, Dagman will contact the
+   local Schedd directly to submit jobs. :ticket:`6974`
 
 Bugs Fixed:
 
