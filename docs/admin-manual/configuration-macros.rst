@@ -8303,6 +8303,15 @@ General
     shared port-related error messages from appearing in ``dagman.out``
     files. (Introduced in version 8.6.1.)
 
+``DAGMAN_USE_CONDOR_SUBMIT`` :index:`DAGMAN_USE_CONDOR_SUBMIT`
+    A boolan value that controls wither *condor_dagman* submits jobs using
+    *condor_submit* or by opening a direct connection to the *condor_schedd*.
+    ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
+    *condor_dagman* will submit jobs to the local Schedd by connnecting to it
+    directly.  This is faster than using *condor_submit*, especially for very 
+    large DAGs; But this method will ignore some submit file features such as
+    ``max_materialize`` and more than one ``QUEUE`` statement.
+
 Throttling
 ''''''''''
 

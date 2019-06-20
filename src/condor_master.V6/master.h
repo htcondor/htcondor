@@ -155,6 +155,8 @@ private:
 	bool m_never_use_shared_port;
 	bool m_waiting_for_startup;
 	bool m_only_stop_when_master_stops;
+
+	std::string localName;
 };
 
 

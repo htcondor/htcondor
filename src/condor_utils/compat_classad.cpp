@@ -66,21 +66,12 @@ static StringList ClassAdUserLibs;
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
 
-// The Windows compiler doesn't like this C++11 style of object
-// initialization.
 namespace {
 
 typedef std::unordered_set<std::string, classad::ClassadAttrNameHash, classad::CaseIgnEqStr> classad_hashmap;
-#if !defined(WIN32)
 classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
 		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
-#else
-static const std::string private_attrs[] = { ATTR_CAPABILITY,
-		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
-		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
-classad_hashmap ClassAdPrivateAttrs( private_attrs, private_attrs + COUNTOF(private_attrs) );
-#endif
 
 }
 
@@ -90,7 +81,7 @@ bool ClassAd::m_strictEvaluation = false;
 void ClassAd::
 Reconfig()
 {
-	ClassAdPrivateAttrs.rehash(11);
+	//ClassAdPrivateAttrs.rehash(11);
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 

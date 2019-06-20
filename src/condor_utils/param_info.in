@@ -715,7 +715,7 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_AGRESSIVE_SUBMIT]
+[DAGMAN_AGGRESSIVE_SUBMIT]
 default=false
 type=bool
 tags=dagman,dagman_main
@@ -798,6 +798,13 @@ restart=never
 default=true
 type=bool
 customization=expert
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_USE_JOIN_NODES]
+default=false
+type=bool
+customization=normal
 tags=dagman,dagman_main
 restart=never
 
@@ -3390,7 +3397,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 

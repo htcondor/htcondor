@@ -2511,27 +2511,27 @@ ClaimId::dropFile( int slot_id )
 		return;
 	}
 
-	MyString filename_old = filename;
-	MyString filename_new = filename;
+	MyString filename_final = filename;
+	MyString filename_tmp = filename;
 	free( filename );
 	filename = NULL;
 
-	filename_new += ".new";
+	filename_tmp += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_new.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.Value(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
-				 filename_new.Value(), strerror(errno), errno );
+				 filename_tmp.Value(), strerror(errno), errno );
  		return;
 	}
 	fprintf( NEW_FILE, "%s\n", c_id );
 	fclose( NEW_FILE );
-	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
+	if( rotate_file(filename_tmp.Value(), filename_final.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
-				 filename_new.Value() );
-		if (unlink(filename_new.Value()) < 0) {
-			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+				 filename_tmp.Value() );
+		if (unlink(filename_tmp.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.Value() );
 		}
 	}
 }

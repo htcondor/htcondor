@@ -88,7 +88,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		return FALSE;
 	}
 
-	int rval;
+	int rval = 0;
 	bool claim_is_closing = rip->curClaimIsClosing();
 
 		// send response to shadow before killing starter to avoid a
@@ -108,8 +108,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		claim_is_closing = false;
 	}
 
-	// The rest of this function seems to assume that rip is always valid.
-	if( rip && rip->r_cur ) {
+	if( rip->r_cur ) {
 		struct timeval when;
 		// This ClassAd gets delete()d by toe when toe goes out of scope,
 		// because Insert() transfers ownership.
@@ -131,13 +130,13 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		std::string jobAdFileName;
 		formatstr( jobAdFileName, "%s/dir_%d/.job.ad", rip->r_cur->executeDir(), rip->r_cur->starterPID() );
 		ToE::writeTag( & toe, jobAdFileName );
-	}
 
-	if(graceful) {
-		rval = rip->deactivate_claim();
-	}
-	else {
-		rval = rip->deactivate_claim_forcibly();
+		if(graceful) {
+			rval = rip->deactivate_claim();
+		}
+		else {
+			rval = rip->deactivate_claim_forcibly();
+		}
 	}
 
 	if( claim_is_closing && rip->r_cur ) {
