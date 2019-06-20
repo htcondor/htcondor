@@ -322,10 +322,6 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if %blahp && ! %uw_build
-BuildRequires: blahp
-%endif
-
 %if 0%{?rhel} >= 6 || 0%{?fedora}
 BuildRequires: boost-python
 BuildRequires: libuuid-devel
