@@ -387,6 +387,9 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 void
 SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 {
+	// We need the trust domain for TOKEN auto-request, but auto-request
+	// happens if and only if TOKEN isn't in the method list (indicating
+	// that we didn't have one).
 	std::string issuer;
 	if (param(issuer, "TRUST_DOMAIN")) {
 		issuer = issuer.substr(0, issuer.find_first_of(", \t"));

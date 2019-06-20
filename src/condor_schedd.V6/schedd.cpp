@@ -1292,6 +1292,10 @@ void Scheduler::calc_token_requests(DaemonList *collector_list, const std::strin
 		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.first.c_str());
 		m_token_requests.emplace_back();
 		auto &back = m_token_requests.back();
+		// Note that the empty string means "the default daemon identity" to
+		// the token request code.  Distinguishing token requests by identity
+		// will become useful with per-submitter flocking.
+		back.m_identity = identity;
 		back.m_trust_domain = trust_domain.first;
 		back.m_daemon = trust_domain.second;
 	}
@@ -1561,9 +1565,15 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
-		// Update collectors
+	// Update collectors -- block on the initial update so that we can detect
+	// authorization failures and request a TOKEN.  GT #7093 will allow us to
+	// detect authorization failures asynchronously.  (This assumes that the
+	// other authorization methods will never fail if they succeed on their
+	// first try.  For our intended use cases, that will be true; and
+	// detecting authorization failures asynchronously will eliminate that
+	// assumption anyway.)
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
-	dprintf( D_FULLDEBUG, 
+	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
 	m_initial_update = false;
@@ -1585,8 +1595,9 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			bool blocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, blocking );
+			// See the "update collectors" comment for an explanation.
+			bool nonblocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, nonblocking );
 			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
