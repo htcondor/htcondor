@@ -56,6 +56,9 @@ Bugs Fixed:
 -  Improved the error messages generated when GSI authentication fails.
    :ticket:`7052`
 
+-  Improved detection of failures writing to the job event logs.
+   :ticket:`7008`
+
 Version 8.8.3
 -------------
 
