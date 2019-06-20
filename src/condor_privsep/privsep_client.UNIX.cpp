@@ -121,10 +121,6 @@ PRIVSEP_CREATE_PIPES_FAILURE:
 		fclose(in_fp);
 		in_pipe[1] = -1;
 	}
-	if (err_fp != NULL) {
-		fclose(err_fp);
-		err_pipe[0] = -1;
-	}
 	if (in_pipe[0] != -1) {
 		close(in_pipe[0]);
 	}
