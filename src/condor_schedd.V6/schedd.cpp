@@ -1585,8 +1585,9 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			bool blocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, blocking );
+				// Do a non-blocking update after that first update.
+			bool nonblocking = (m_flock_collectors_init.find(d) != m_flock_collectors_init.end());
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, nonblocking );
 			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
