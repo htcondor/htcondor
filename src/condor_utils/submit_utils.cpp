@@ -4934,7 +4934,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxTransferOutputMB, ATTR_MAX_TRANSFER_OUTPUT_MB, SimpleSubmitKeyword::f_as_expr},
 
 	// Self-checkpointing
-	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name },
+	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
