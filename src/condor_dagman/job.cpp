@@ -32,6 +32,8 @@
 static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 
+StringSpace Job::stringSpace;
+
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
@@ -59,10 +61,10 @@ const char * Job::status_t_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-	free(_directory);
-	free(_cmdFile);
-	free(_dagFile);
-	free(_jobName);
+    stringSpace.free_dedup(_directory); _directory = NULL;
+    stringSpace.free_dedup(_cmdFile); _cmdFile = NULL;
+    free(_dagFile); _dagFile = NULL;
+    free(_jobName); _jobName = NULL;
 
 	varsFromDag->Rewind();
 	NodeVar *var;
@@ -94,11 +96,16 @@ Job::Job( const char* jobName,
 	countedAsDone = false;
 
 	_jobName = strdup (jobName);
-	_directory = strdup (directory);
-	_cmdFile = strdup (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 
+    // Initialize _directory and _cmdFile in a de-duped stringSpace since
+    // these strings may be repeated in thousands of nodes
+    _directory = stringSpace.strdup_dedup(directory);
+    ASSERT(_directory);
+    _cmdFile = stringSpace.strdup_dedup(cmdFile);
+    ASSERT(_cmdFile);
+    
     // _condorID struct initializes itself
 
 		// jobID is a primary key (a database term).  All should be unique
@@ -162,9 +169,10 @@ Job::PrefixDirectory(MyString &prefix)
 	newdir += "/";
 	newdir += _directory;
 
-	free(_directory);
+    stringSpace.free_dedup(_directory);
 
-	_directory = strdup(newdir.Value());
+	_directory = stringSpace.strdup_dedup(newdir.Value());
+    ASSERT(_directory);
 }
 
 //---------------------------------------------------------------------------
