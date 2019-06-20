@@ -1080,16 +1080,13 @@ Scheduler::check_claim_request_timeouts()
   no longer flock and/or be advertised).
 */
 bool
-Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int dprint_level)
+Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level)
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
-	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
 	if (Owner.FlockLevel >= flock_level) {
 		pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
 	} else if (Owner.OldFlockLevel >= flock_level ||
 				Counters.JobsRunning > 0) {
 		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
@@ -1111,44 +1108,24 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 	}
 
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, JobsRunningHere);
 
 	pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
 	pAd.Assign(ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
 
 	pAd.Assign(ATTR_HELD_JOBS, Counters.JobsHeld);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Counters.JobsHeld);
 
 	pAd.Assign(ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
 
 	if (publish_stats_to_flockers || flock_level < 1) {
 		//PRAGMA_REMIND("tj: move OwnerStats into OwnerData objects.")
@@ -1179,9 +1156,6 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 		int num_prios = Owner.PrioSet.size();
 		if (num_prios > max_entries) {
 			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
-			if (want_dprintf)
-				dprintf (dprint_level, "Changed attribute: %s = %d\n",
-						 ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
 		} else {
 			// if no overflow, do not advertise ATTR_JOB_PRIO_ARRAY_OVERFLOW
 			pAd.Delete(ATTR_JOB_PRIO_ARRAY_OVERFLOW);
@@ -1201,14 +1175,10 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 		}
 		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str.Value());
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %s\n", ATTR_JOB_PRIO_ARRAY,str.Value());
 	}
 
 	str.formatstr("%s@%s", Owner.Name(), UidDomain);
 	pAd.Assign(ATTR_NAME, str.Value());
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owner.Name(), UidDomain);
 
 	return true;
 }
@@ -1594,7 +1564,7 @@ Scheduler::count_jobs()
 				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
-		if ( !fill_submitter_ad(pAd, SubDat, -1, D_FULLDEBUG) ) continue;
+		if ( !fill_submitter_ad(pAd, SubDat, -1) ) continue;
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -1660,7 +1630,7 @@ Scheduler::count_jobs()
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
-				if ( !fill_submitter_ad(pAd,SubDat,flock_level,D_NEVER) ) {
+				if ( !fill_submitter_ad(pAd,SubDat,flock_level) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
@@ -1751,7 +1721,6 @@ Scheduler::count_jobs()
 		}
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
-		//dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
 #if defined(HAVE_DLOPEN)
 	// update plugins
@@ -1892,7 +1861,7 @@ int Scheduler::make_ad_list(
       if (Owner.empty()) continue;
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
-      if ( ! fill_submitter_ad(*cad, Owner, -1, D_NEVER)) {
+      if ( ! fill_submitter_ad(*cad, Owner, -1)) {
          delete cad;
          continue;
       }
@@ -8326,7 +8295,11 @@ Scheduler::StartJobs()
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		StartJob( rec );
+			// If it's not in M_CLAIMED status, then it's not ready
+			// to start a job.
+		if ( rec->status == M_CLAIMED ) {
+			StartJob( rec );
+		}
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		AddRunnableLocalJobs();
