@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "stringSpace.h"
 #include "iso_dates.h"
 #define HAVE_DLOPEN 1
 #ifdef HAVE_DLOPEN // Used to be CLASSAD_FUNCTIONS
@@ -35,7 +34,6 @@
 
 #define LARGE_NUMBER_OF_CLASSADS 10000
 
-extern StringSpace classad_string_space; // for debugging only!
 
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
@@ -509,7 +507,6 @@ main(
 	*/
 
 	test_results.PrintResults();
-	//classad_string_space.dump();
 
 #endif
 	// Clean up when we're done.
