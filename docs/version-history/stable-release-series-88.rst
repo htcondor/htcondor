@@ -27,6 +27,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
+   work as expected.
+   :ticket:`7075`
+
 -  If a user accidentally submits a parallel universe job with thousands
    of times more nodes than exist in the pool, the *condor_schedd* no longer
    gets stuck for hours sorting that out.
