@@ -129,6 +129,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_maxJobHolds		  (0),
 	_reject				  (false),
 	_alwaysRunPost		  (true),
+	_dry_run			  (0),
 	_dagPriority		  (0),
 	_metrics			  (NULL)
 {
@@ -203,7 +204,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagIsHalted = false;
 	_dagIsAborted = false;
 	_dagFiles.rewind();
-	_haltFile = HaltFileName( _dagFiles.next() );
+	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 
 	_allNodesIt = NULL;
@@ -1669,6 +1670,11 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						catThrottle->_maxJobs );
 			deferredJobs.Prepend( job, -job->_effectivePriority );
 			_catThrottleDeferredCount++;
+		} else if (_dry_run) {
+			// Don't actually submit the job. Just terminate it right away
+			debug_printf(DEBUG_NORMAL, "Processing job: %s\n", job->GetJobName());
+			TerminateJob(job, false, false);
+			numSubmitsThisCycle++;
 		} else {
 
 				// Note:  I'm not sure why we don't just use the default
@@ -1689,6 +1695,13 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				EXCEPT( "Illegal submit_result_t value: %d", submit_result );
 			}
 		}
+	}
+
+	// if we didn't actually invoke condor_submit, and we submitted any jobs
+	// we should now send a reschedule command
+	if (numSubmitsThisCycle > 0 && !_dry_run)
+	{
+		send_reschedule(dm);
 	}
 
 		// Put any deferred jobs back into the ready queue for next time.
@@ -2145,7 +2158,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		rescueDagFile = dagFile;
 		rescueDagFile += ".parse_failed";
 	} else {
-		int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
+		int nextRescue = _dagmanUtils.FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
 		if ( overwrite && nextRescue > 1 ) {
 			nextRescue--;
@@ -2153,7 +2166,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		if ( nextRescue > maxRescueDagNum ) {
 			nextRescue = maxRescueDagNum;
 		}
-		rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
+		rescueDagFile = _dagmanUtils.RescueDagName( dagFile, multiDags, nextRescue );
 	}
 
 		// Note: there could possibly be a race condition here if two
@@ -2681,24 +2694,22 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 
 //-------------------------------------------------------------------------
 const MyString
-Dag::ParentListString( Job *node, const char delim ) const
+Dag::ParentListString( Job *node, size_t max_items, const char delim ) const
 {
-	Job* parent;
-	const char* parent_name = NULL;
 	MyString parents_str;
 
 	set<JobID_t> &parent_list = node->GetQueueRef( Job::Q_PARENTS );
-	set<JobID_t>::const_iterator pit;
-
-	for (pit = parent_list.begin(); pit != parent_list.end(); pit++) {
-		parent = FindNodeByNodeID( *pit );
-		parent_name = parent->GetJobName();
-		ASSERT( parent_name );
-		if( ! parents_str.IsEmpty() ) {
-			parents_str += delim;
+	if (parent_list.size() < max_items) {
+		for (auto pit = parent_list.begin(); pit != parent_list.end(); pit++) {
+			Job* parent = FindNodeByNodeID( *pit );
+			const char* parent_name = parent->GetJobName();
+			ASSERT( parent_name );
+			if( ! parents_str.IsEmpty() ) {
+				parents_str += delim;
+			}
+			parents_str += parent_name;
 		}
-		parents_str += parent_name;
-	}
+		}
 	return parents_str;
 }
 
@@ -2764,7 +2775,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		tolerant_unlink(temp_dot_file_name.Value());
+		_dagmanUtils.tolerant_unlink(temp_dot_file_name.Value());
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
@@ -2801,7 +2812,7 @@ Dag::DumpDotFile(void)
 			fclose(temp_dot_file);
 				// Note:  we do tolerant_unlink because renaming over an
 				// existing file fails on Windows.
-			tolerant_unlink(current_dot_file_name.Value());
+			_dagmanUtils.tolerant_unlink(current_dot_file_name.Value());
 			if ( rename(temp_dot_file_name.Value(),
 						current_dot_file_name.Value()) != 0 ) {
 				debug_printf( DEBUG_NORMAL,
@@ -2889,7 +2900,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
-	tolerant_unlink( tmpStatusFile.Value() );
+	_dagmanUtils.tolerant_unlink( tmpStatusFile.Value() );
 
 	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );
 	if ( outfile == NULL ) {
@@ -3141,7 +3152,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
 				statusFileName.Value() );
 #endif
-	tolerant_unlink( statusFileName.Value() );
+	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
 	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
@@ -4062,6 +4073,7 @@ Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
+	bool use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
@@ -4110,7 +4122,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    		submit_success = fake_condor_submit( condorID, 0,
 					node->GetJobName(), node->GetDirectory(),
 					_defaultNodeLog );
-	} else {
+	} else if (use_condor_submit) {
 			// Note: assigning the ParentListString() return value
 			// to a variable here, instead of just passing it directly
 			// to condor_submit(), fixes a memory leak(!).
@@ -4134,6 +4146,27 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					node->GetDirectory(), _defaultNodeLog,
 					node->NumChildren() > 0 && dm._claim_hold_time > 0,
 					batchName );
+	} else {
+		MyString parents = ParentListString(node);
+		if (parents.empty() && node->NumParents() > 0) {
+			debug_printf(DEBUG_NORMAL, "Warning: node %s has too many parents "
+				"to list in its classad; leaving its DAGParentNodeNames "
+				"attribute undefined\n", node->GetJobName());
+			check_warning_strictness(DAG_STRICT_3);
+		}
+
+		// This is to allow specifying a top-level batch name of
+		// " " to *not* override batch names specified at a lower
+		// level.
+		const char *batchName;
+		if (!node->GetDagFile() && dm._batchName == " ") {
+			batchName = "";
+		} else {
+			batchName = dm._batchName.Value();
+		}
+
+		submit_success = direct_condor_submit(dm, node,
+			_defaultNodeLog, parents.c_str(), batchName, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

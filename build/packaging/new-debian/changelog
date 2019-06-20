@@ -1,3 +1,14 @@
+condor (8.9.2-1) unstable; urgency=medium
+
+  * The HTTP/HTTPS file transfer plugin will timeout and retry transfers
+  * A new multi-file box.com file transfer plugin to download files
+  * The manual has been moved to Read the Docs
+  * Configuration options for job-log time-stamps (UTC, ISO 8601, sub-second)
+  * Several improvements to SSL authentication
+  * New TOKEN authentication method enables fine-grained authorization control
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 05 Jun 2019 08:03:56 -0500
+
 condor (8.8.3-1) stable; urgency=medium
 
   * Fixed a bug where jobs were killed instead of peacefully shutting down

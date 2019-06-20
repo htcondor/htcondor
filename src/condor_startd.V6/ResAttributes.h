@@ -236,6 +236,7 @@ public:
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
 	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:

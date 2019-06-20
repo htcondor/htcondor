@@ -209,6 +209,9 @@
 #define SUBMIT_KEY_RetryUntil "retry_until"
 #define SUBMIT_KEY_SuccessExitCode "success_exit_code"
 
+// Self-Checkpointing Parameters
+#define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -281,6 +284,7 @@
 #define SUBMIT_KEY_EC2VpcSubnet "ec2_vpc_subnet"
 #define SUBMIT_KEY_EC2VpcIP "ec2_vpc_ip"
 #define SUBMIT_KEY_EC2TagNames "ec2_tag_names"
+#define SUBMIT_KEY_EC2TagPrefix "ec2_tag_"
 #define SUBMIT_KEY_EC2SpotPrice "ec2_spot_price"
 #define SUBMIT_KEY_EC2BlockDeviceMapping "ec2_block_device_mapping"
 #define SUBMIT_KEY_EC2ParamNames "ec2_parameter_names"
@@ -310,6 +314,10 @@
 #define SUBMIT_KEY_AzureAdminUsername "azure_admin_username"
 #define SUBMIT_KEY_AzureAdminKey "azure_admin_key"
 
+// Common cloud parameters
+#define SUBMIT_KEY_CloudLabelNames "cloud_label_names"
+#define SUBMIT_KEY_CloudLabelPrefix "cloud_label_"
+
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
@@ -317,6 +325,7 @@
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
 #define SUBMIT_KEY_JobMaterializeMaxIdleAlt "materialize_max_idle"
+
 
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 
@@ -777,6 +786,10 @@ private:
 	int SetRequestMem(const char * key);   /* used by SetRequestResources */
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
+
+	void handleAVPairs(const char * s, const char * j,
+	  const char * sp, const char * jp,
+	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
 	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 };

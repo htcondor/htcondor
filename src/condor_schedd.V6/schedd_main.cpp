@@ -28,6 +28,7 @@
 
 #include "exit.h"
 
+#include "authentication.h"
 #include "condor_daemon_core.h"
 #include "util_lib_proto.h"
 #include "qmgmt.h"
@@ -275,6 +276,12 @@ main_config()
 	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
 	dedicated_scheduler.reconfig();
+
+		// Punch a hole in the auth table for negotiator match sessions.
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+		auto ipv = daemonCore->getIpVerify();
+		ipv->PunchHole( NEGOTIATOR, NEGOTIATOR_SIDE_MATCHSESSION_FQU );
+	}
 }
 
 

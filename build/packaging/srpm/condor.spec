@@ -1693,6 +1693,14 @@ fi
 %endif
 
 %changelog
+* Tue Jun 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.2-1
+- The HTTP/HTTPS file transfer plugin will timeout and retry transfers
+- A new multi-file box.com file transfer plugin to download files
+- The manual has been moved to Read the Docs
+- Configuration options for job-log time-stamps (UTC, ISO 8601, sub-second)
+- Several improvements to SSL authentication
+- New TOKEN authentication method enables fine-grained authorization control
+
 * Wed May 22 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.3-1
 - Fixed a bug where jobs were killed instead of peacefully shutting down
 - Fixed a bug where a restarted schedd wouldn't connect to its running jobs

@@ -14,15 +14,44 @@ Version 8.8.4
 Release Notes:
 
 -  HTCondor version 8.8.4 not yet released.
+
 .. HTCondor version 8.8.4 released on Month Date, 2019.
 
 New Features:
 
--  None.
+-  Dagman can now submit directly to the Schedd without using *condor_submit*
+   This provides a workaround for slow submission rates for very large DAGs.
+   This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
+   which defaults to ``True``.  When it is ``False``, Dagman will contact the
+   local Schedd directly to submit jobs. :ticket:`6974`
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
+   work as expected.
+   :ticket:`7075`
+
+-  If a user accidentally submits a parallel universe job with thousands
+   of times more nodes than exist in the pool, the *condor_schedd* no longer
+   gets stuck for hours sorting that out.
+   :ticket:`7055`
+
+-  Fixed a bug on the ARM architecture that caused the *condor_schedd*
+   to crash when starting jobs and responding to *condor_history* queries.
+   :ticket:`7102`
+
+-  Fixed a bug that could cause the *condor_schedd* to crash when a
+   scheduler universe job is removed.
+   :ticket:`7095`
+
+-  Fixed a bug that could result in job attributes ``CommittedTime`` and
+   ``CommittedSlotTime`` reporting overly-large values.
+   :ticket:`7083`
+
+-  Fixed a bug that prevented the inclusion of the last `OBITUARY_LOG_LENGTH`
+   lines of the dead daemon's log in the obituary.  Increased the default
+   `OBITUARY_LOG_LENGTH` from 20 to 200.
+   :ticket:`7103`
 
 Version 8.8.3
 -------------

@@ -41,6 +41,7 @@
 #include "setenv.h"
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
+#include "condor_auth_ssl.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -311,7 +312,7 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 		*result = p;
 		free (p);
 	} else {
-		*result = SecMan::getDefaultAuthenticationMethods();
+		*result = SecMan::getDefaultAuthenticationMethods(perm);
 	}
 }
 
@@ -386,6 +387,15 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 void
 SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 {
+	// We need the trust domain for TOKEN auto-request, but auto-request
+	// happens if and only if TOKEN isn't in the method list (indicating
+	// that we didn't have one).
+	std::string issuer;
+	if (param(issuer, "TRUST_DOMAIN")) {
+		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
+	}
+
 	std::string method_list_str;
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
@@ -486,7 +496,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// auth methods
 	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		MyString methods = SecMan::getDefaultAuthenticationMethods();
+		MyString methods = SecMan::getDefaultAuthenticationMethods(auth_level);
 		if(auth_level == READ) {
 			methods += ",CLAIMTOBE";
 			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
@@ -937,6 +947,14 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	action_ad->Insert(buf);
 
 	UpdateAuthenticationMetadata(*action_ad);
+	std::string trust_domain;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+		action_ad->InsertAttr(ATTR_SEC_TRUST_DOMAIN, trust_domain);
+	}
+	std::string issuer_keys;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, issuer_keys)) {
+		action_ad->InsertAttr(ATTR_SEC_ISSUER_KEYS, issuer_keys);
+	}
 
 	return action_ad;
 
@@ -1825,6 +1843,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 				dPrintAd( D_SECURITY, auth_response );
 			}
 
+				// Record the remote trust domain, if present
+			std::string trust_domain;
+			if (auth_response.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+				m_sock->setTrustDomain(trust_domain);
+			}
+
 				// Get rid of our sinful address in what will become
 				// the session policy ad.  It's there because we sent
 				// it to our peer, but no need to keep it around in
@@ -1858,6 +1882,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
@@ -2153,12 +2178,18 @@ SecManStartCommand::receivePostAuthInfo_inner()
 						m_sock->peer_addr().to_ip_string().Value()
 						);
 				} else {
+					if (response_method != "TOKEN") {
+						m_sock->setShouldTryTokenRequest(true);
+					}
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
 						response_rc.c_str(), response_user.c_str(), response_method.Value());
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
 				return StartCommandFailed;
+			} else {
+				// Hey, it worked!  Make sure we don't request a new token.
+				m_sock->setShouldTryTokenRequest(false);
 			}
 
 			// if we made it here, we're going to proceed as if the server authorized
@@ -2881,7 +2912,7 @@ SecMan::invalidateExpiredCache()
 	}
 }
 
-MyString SecMan::getDefaultAuthenticationMethods() {
+MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	MyString methods;
 #if defined(WIN32)
 	// default windows method
@@ -2901,6 +2932,9 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods += ",GSI";
 #endif
 
+	// SSL is last as this may cause the client to be anonymous.
+	methods += ",SSL";
+
 	StringList meth_iter( methods.c_str() );
 	meth_iter.rewind();
 	char *tmp = NULL;
@@ -2916,6 +2950,15 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 				}
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
 				break;
+			}
+			case CAUTH_SCITOKENS: // fallthrough
+			case CAUTH_SSL: {
+					// Client auth doesn't require a SSL cert, so
+					// we always will try this
+				if (CLIENT_PERM == perm) {break;}
+				if (!Condor_Auth_SSL::should_try_auth()) {
+					continue;
+				}
 			}
 			// As additional filters are made, we can add them here.
 			default:

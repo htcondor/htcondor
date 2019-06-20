@@ -1069,7 +1069,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; startd will perform a token request\n");
 		daemonCore->Register_Timer(0, (TimerHandlercpp)&ResMgr::try_token_request,
 			"ResMgr::try_token_request", this);
-	} else {
+	} else if (res == 0) {
 		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
 	}
 
@@ -2669,10 +2669,9 @@ ResMgr::try_token_request()
 			return;
 		}
 		Daemon *daemon = nullptr;
+		collector_list->Rewind();
 		collector_list->Current(daemon);
-		//while (daemon && !daemon->shouldTryTokenRequest() && collector_list->Next(daemon)) {}
 
-		//if (!daemon || !daemon->shouldTryTokenRequest()) {
 		if (!daemon) {
 			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
 			m_token_client_id = "";
@@ -2710,6 +2709,7 @@ ResMgr::try_token_request()
 				"ResMgr::try_token_request", this);
 			return;
 		} else {
+			dprintf(D_ALWAYS, "Token request approved.\n");
 			Condor_Auth_Passwd::retry_token_search();
 			daemonCore->getSecMan()->reconfig();
 			if( up_tid != -1 ) {
@@ -2719,5 +2719,7 @@ ResMgr::try_token_request()
 		}
 		m_token_client_id = "";
 	}
-	write_out_token("startd_auto_generated_token", token);
+	if (!token.empty()) {
+		write_out_token("startd_auto_generated_token", token);
+	}
 }

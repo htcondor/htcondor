@@ -228,6 +228,10 @@ extern char const *EXECUTE_SIDE_MATCHSESSION_FQU;
    id. */
 extern char const *SUBMIT_SIDE_MATCHSESSION_FQU;
 
+/* This is the hard-coded name of the negotiator as seen by the schedd
+ * when using non-negotiated security sessions based on the schedd's
+ * generated capabilities. */
+extern char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU;
 
 extern char const *CONDOR_CHILD_FQU;
 extern char const *CONDOR_PARENT_FQU;

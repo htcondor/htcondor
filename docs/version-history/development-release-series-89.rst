@@ -10,6 +10,7 @@ Version 8.9.3
 Release Notes:
 
 -  HTCondor version 8.9.3 not yet released.
+
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
 New Features:
@@ -25,27 +26,37 @@ Version 8.9.2
 
 Release Notes:
 
--  HTCondor version 8.9.2 is scheduled for release on June 4, 2019.
+-  HTCondor version 8.9.2 released on June 4, 2019.
+
+-  The default setting for ``CREDD_OAUTH_MODE`` is now ``true``.  This only
+   affects people who were using the *condor_credd* to manage Kerberos credentials
+   in the ``SEC_CREDENTIAL_DIRECTORY``.
+   :ticket:`7046`
 
 New Features:
 
--  Add job ad attribute ``JobDisconnectedDate``.
-   When the *condor_shadow* and *condor_starter* are disconnected from each other,
-   this attribute is set to the time at which the disconnection happened.
-   :ticket:`6978`
+-  The default file transfer plugin for HTTP/HTTPS will timeout transfers
+   that make no progress as opposed to waiting indefinitely.  :ticket:`6971`
+
+-  Added a new multifile transfer plugin for downloading files from Box.com user accounts. This
+   supports URLs like "box://path/to/file" and using the plugin requires the admin configure the
+   *condor_credd* to allow users to obtain Box.com tokens and requires the user request Box.com
+   tokens in their submit file. :ticket:`7007`
+
+-  The HTCondor manual has been migrated to
+   `Read the Docs <https://htcondor.readthedocs.io/en/latest/>`_.
+   :ticket:`6908`
+
 -  Python bindings docstrings have been improved. The Python built-in ``help``
    function should now give better results on objects and function in the bindings.
    :ticket:`6953`
 
--  X.509 proxies now work properly with job materialization.
-   In particular, the job attributes describing the X.509 credential
-   are now set properly.
-   :ticket:`6972`
-
--  A new authentication method, ``TOKEN``, has been added.  This method provides
-   the pool administrator with more fine-grained authorization control (making it
-   appropriate for end-user use) and provides the ability for multiple pool passwords
-   to exist within a single setup. :ticket:`6947`
+-  The system administrator can now configure better time stamps for the global event log
+   and for all jobs that specify a user log or DAGMan nodes log. There are two new configuration
+   variables that control this; ``EVENT_LOG_FORMAT_OPTIONS`` controls the format of the global event log
+   and ``DEFAULT_USERLOG_FORMAT_OPTIONS`` controls formatting of user log and DAGMan nodes logs.  These
+   configuration variables can individually enable UTC time, ISO 8601 time stamps, and fractional seconds.
+   :ticket:`6941`
 
 -  The implementation of SSL authentication has been made non-blocking, improving
    scalability and responsiveness when this method is used. :ticket:`6981`
@@ -53,12 +64,6 @@ New Features:
 -  SSL authentication no longer requires a client X509 certificate present in
    order to establish a security session.  If no client certificate is available,
    then the client is mapped to the user ``unauthenticated``. :ticket:`7032`
-
--  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
-   client saves the token to the file specified in ``SCITOKENS_FILE``, that token
-   will be used to authenticate with the remote server.  Further, for HTCondor-C
-   jobs, the token file can be specified by the job attribute ``ScitokensFile``.
-   :ticket:`7011`
 
 -  During SSL authentication, clients now verify that the server hostname matches
    the host's X509 certificate, using the rules from RFC 2818.  This matches the
@@ -72,12 +77,42 @@ New Features:
    that was not appropriate for cryptographic contexts.  As a side-effect of this
    change, HTCondor can no longer be built without OpenSSL support. :ticket:`6990`
 
+-  A new authentication method, ``TOKEN``, has been added.  This method provides
+   the pool administrator with more fine-grained authorization control (making it
+   appropriate for end-user use) and provides the ability for multiple pool passwords
+   to exist within a single setup. :ticket:`6947`
+
+-  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
+   client saves the token to the file specified in ``SCITOKENS_FILE``, that token
+   will be used to authenticate with the remote server.  Further, for HTCondor-C
+   jobs, the token file can be specified by the job attribute ``ScitokensFile``.
+   :ticket:`7011`
+
+-  *condor_submit* and the python bindings submit now use a table to convert most submit keywords
+   to job attributes. This should make adding new submit keywords in the future quicker and more reliable.
+   :ticket:`7044`
+
+-  File transfer plugins can now be supplied by the job. :ticket:`6855`
+
+-  Add job ad attribute ``JobDisconnectedDate``.
+   When the *condor_shadow* and *condor_starter* are disconnected from each other,
+   this attribute is set to the time at which the disconnection happened.
+   :ticket:`6978`
+
+-  HTCondor EC2 components are now packaged for Debian and Ubuntu.
+   :ticket:`7043`
+
 Bugs Fixed:
 
 -  *condor_status -af:r* now properly prints nested ClassAds.  The handling
    of undefined attribute references has also been corrected, so that that
    they print ``undefined`` instead of the name of the undefined attribute.
    :ticket:`6979`
+
+-  X.509 proxies now work properly with job materialization.
+   In particular, the job attributes describing the X.509 credential
+   are now set properly.
+   :ticket:`6972`
 
 -  Argument names for all functions in the Python bindings
    (including class constructors and methods) have been normalized.

@@ -59,6 +59,7 @@ char const *UNAUTHENTICATED_FQU = "unauthenticated@unmapped";
 char const *UNAUTHENTICATED_USER = "unauthenticated";
 char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
 char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
+char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU = "negotiator-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
@@ -263,6 +264,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				if (policy) {
 					std::string issuer;
 					if (policy->EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, issuer)) {
+						dprintf(D_SECURITY|D_FULLDEBUG, "Will use issuer %s for remote server.\n", issuer.c_str());
 						tmp_auth->set_remote_issuer(issuer);
 					}
 					std::string key_str;
@@ -376,12 +378,6 @@ authenticate:
 				m_continue_auth = true;
 				return 2;
 			}
-		}
-		if (m_method_name == "TOKEN") {
-			// Even if token auth did not work, it might work if the caller requests a
-			// token from the remote host.  Note we enable the request retry even if the
-			// authentication fails as the authorization might be denied.
-			m_should_try_token_request = mySock->isClient();
 		}
 
 			// check to see if the auth IP is the same as the socket IP

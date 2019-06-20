@@ -31,6 +31,7 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -767,6 +768,13 @@ class Scheduler : public Service
 
 private:
 
+	// Setup a new security session for a remote negotiator.
+	// Returns a capability that can be included in an ad sent to the collector.
+	bool SetupNegotiatorSession(unsigned duration, std::string &capability);
+	// Negotiator sessions have claim IDs, which includes a sequence number
+	uint64_t m_negotiator_seq{0};
+	time_t m_scheduler_startup{0};
+
 	// We have to evaluate requirements in the listed order to maintain
 	// user sanity, so the submit requirements data structure must ordered.
 	typedef struct SubmitRequirementsEntry_t {
@@ -916,7 +924,7 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int debug_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
@@ -1015,6 +1023,7 @@ private:
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
+	std::unordered_set<Daemon*>	m_flock_collectors_init;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
@@ -1077,13 +1086,27 @@ private:
 	bool m_matchPasswordEnabled;
 
 	// State for token request.
-	void try_token_request();
+	void try_token_requests();
 	// Right now, we will at most have one token request in flight;
 	// when we are ready to do this for multiple pools at a time, we
 	// will make these data structs into vectors.
-	std::string m_token_request_id;
-	std::string m_token_client_id;
-	Daemon *m_token_daemon;
+
+	struct PendingRequest {
+		std::string m_request_id;
+		std::string m_client_id;
+		std::string m_identity;
+		std::string m_trust_domain;
+		Daemon *m_daemon{nullptr};
+	};
+
+		// Try a specific token request; returns True if the timer
+		// should reschedule.
+	bool try_token_request(PendingRequest &);
+	void calc_token_requests(DaemonList *collector_list, const std::string &identity);
+
+	std::vector<PendingRequest> m_token_requests;
+	int m_token_requests_tid{-1};
+
 	bool m_initial_update{true}; // First update to the collector after reconfig blocks so we can trigger
 					// token auth if needed
 

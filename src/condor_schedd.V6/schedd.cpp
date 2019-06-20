@@ -584,6 +584,7 @@ ContactStartdArgs::~ContactStartdArgs()
 
 Scheduler::Scheduler() :
 	OtherPoolStats(stats),
+	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
 	GridJobOwners(UserIdentity::HashFcn),
@@ -858,6 +859,56 @@ Scheduler::~Scheduler()
 }
 
 
+bool
+Scheduler::SetupNegotiatorSession(unsigned duration, std::string &capability)
+{
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+		return false;
+	}
+
+	// Internally, the negotiator session is serialized as a ClaimID.
+	// Obviously, there is no Claim here -- but it's simpler to keep
+	// this aligned with the rest of the infrastructure.
+
+	// ClaimId string is of the form:
+	// (keep this in sync with condor_claimid_parser)
+	// "<ip:port>#schedd_bday#sequence_num#cookie"
+
+	m_negotiator_seq++;
+
+	std::string id;
+
+	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+		m_scheduler_startup, m_negotiator_seq);
+
+	// A keylength of 32 bytes = 256 bits.
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+		Condor_Crypt_Base::randomHexKey(keylen),
+		free
+	};
+	if (!keybuf.get()) {
+		return false;
+	}
+
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		NEGOTIATOR,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration
+	);
+	if (retval) {
+		capability = id + "#" + session_info + keybuf.get();
+	}
+	return retval;
+}
+
+
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
 // So we kill this job
@@ -1028,16 +1079,13 @@ Scheduler::check_claim_request_timeouts()
   no longer flock and/or be advertised).
 */
 bool
-Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int dprint_level)
+Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level)
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
-	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
 	if (Owner.FlockLevel >= flock_level) {
 		pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
 	} else if (Owner.OldFlockLevel >= flock_level ||
 				Counters.JobsRunning > 0) {
 		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
@@ -1059,44 +1107,24 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 	}
 
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, JobsRunningHere);
 
 	pAd.Assign(ATTR_IDLE_JOBS, Counters.JobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Counters.JobsIdle);
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
 	pAd.Assign(ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
 
 	pAd.Assign(ATTR_HELD_JOBS, Counters.JobsHeld);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Counters.JobsHeld);
 
 	pAd.Assign(ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
 
 	if (publish_stats_to_flockers || flock_level < 1) {
 		//PRAGMA_REMIND("tj: move OwnerStats into OwnerData objects.")
@@ -1127,9 +1155,6 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 		int num_prios = Owner.PrioSet.size();
 		if (num_prios > max_entries) {
 			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
-			if (want_dprintf)
-				dprintf (dprint_level, "Changed attribute: %s = %d\n",
-						 ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
 		} else {
 			// if no overflow, do not advertise ATTR_JOB_PRIO_ARRAY_OVERFLOW
 			pAd.Delete(ATTR_JOB_PRIO_ARRAY_OVERFLOW);
@@ -1149,14 +1174,10 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 		}
 		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str.Value());
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %s\n", ATTR_JOB_PRIO_ARRAY,str.Value());
 	}
 
 	str.formatstr("%s@%s", Owner.Name(), UidDomain);
 	pAd.Assign(ATTR_NAME, str.Value());
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owner.Name(), UidDomain);
 
 	return true;
 }
@@ -1206,6 +1227,48 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
             m_userlog_file_cache.erase(f);
         }
     }
+}
+
+
+	// Check to see if we need to perform a token request.
+void Scheduler::calc_token_requests(DaemonList *collector_list, const std::string &identity) {
+	if (!collector_list) {return;}
+
+	if (!collector_list->shouldTryTokenRequest()) {return;}
+
+	dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
+	Daemon *coll;
+	collector_list->rewind();
+	std::set<std::pair<std::string, Daemon*>> failed_trust_domains;
+	while (collector_list->Next(coll)) {
+		if (coll->shouldTryTokenRequest() && !coll->getTrustDomain().empty()) {
+			failed_trust_domains.insert({coll->getTrustDomain(), coll});
+		}
+	}
+		// Avoiding requesting tokens for already-pending requests.
+	for (const auto &pending_request : m_token_requests) {
+		if (pending_request.m_identity != identity) {
+			continue;
+		}
+		for (auto it = failed_trust_domains.begin(); it != failed_trust_domains.end();) {
+			if (it->first == pending_request.m_trust_domain) {
+				it = failed_trust_domains.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+	for (const auto &trust_domain : failed_trust_domains) {
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.first.c_str());
+		m_token_requests.emplace_back();
+		auto &back = m_token_requests.back();
+		// Note that the empty string means "the default daemon identity" to
+		// the token request code.  Distinguishing token requests by identity
+		// will become useful with per-submitter flocking.
+		back.m_identity = identity;
+		back.m_trust_domain = trust_domain.first;
+		back.m_daemon = trust_domain.second;
+	}
 }
 
 
@@ -1472,20 +1535,23 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
-		// Update collectors
+	// Update collectors -- block on the initial update so that we can detect
+	// authorization failures and request a TOKEN.  GT #7093 will allow us to
+	// detect authorization failures asynchronously.  (This assumes that the
+	// other authorization methods will never fail if they succeed on their
+	// first try.  For our intended use cases, that will be true; and
+	// detecting authorization failures asynchronously will eliminate that
+	// assumption anyway.)
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
-	dprintf( D_FULLDEBUG, 
+	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
 	m_initial_update = false;
 
 		// Check to see if we need to perform a token request.
 	auto collector_list = daemonCore->getCollectorList();
-	if (collector_list && collector_list->shouldTryTokenRequest()) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
-		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
-	} else if (num_updates == 0) {
+	calc_token_requests(collector_list, "");
+	if (!(collector_list && collector_list->shouldTryTokenRequest()) && (num_updates == 0)) {
 		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
 	}
 
@@ -1499,9 +1565,19 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
+			// See the "update collectors" comment for an explanation.
+			bool nonblocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, nonblocking );
+			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
+		calc_token_requests(FlockCollectors, "");
+	}
+
+	if (!m_token_requests.empty() && m_token_requests_tid == -1) {
+		m_token_requests_tid = daemonCore->Register_Timer( 0,
+			(TimerHandlercpp)&Scheduler::try_token_requests,
+			"Scheduler::try_token_requests", this );
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -1515,6 +1591,15 @@ Scheduler::count_jobs()
 	m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
+
+		// This is called at most every 5 seconds, meaning this can cause
+		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
+		// collector.
+	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+	std::string capability;
+	if (SetupNegotiatorSession(duration, capability)) {
+		m_adBase->InsertAttr(ATTR_CAPABILITY, capability);
+	}
 
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
@@ -1533,7 +1618,7 @@ Scheduler::count_jobs()
 				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
-		if ( !fill_submitter_ad(pAd, SubDat, -1, D_FULLDEBUG) ) continue;
+		if ( !fill_submitter_ad(pAd, SubDat, -1) ) continue;
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -1590,10 +1675,16 @@ Scheduler::count_jobs()
 				}
 			}
 
+				// Same comment about potentially creating hundreds of sessions applies
+				// here as above for the primary collector...
+			unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+			std::string capability;
+			SetupNegotiatorSession(duration, capability);
+
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
-				if ( !fill_submitter_ad(pAd,SubDat,flock_level,D_NEVER) ) {
+				if ( !fill_submitter_ad(pAd,SubDat,flock_level) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
@@ -1603,6 +1694,10 @@ Scheduler::count_jobs()
 					// we will use this "tag" later to identify which
 					// CM we are negotiating with when we negotiate
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
+				if (!capability.empty()) {
+					pAd.InsertAttr(ATTR_CAPABILITY, capability);
+				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
@@ -1680,7 +1775,6 @@ Scheduler::count_jobs()
 		}
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
-		//dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
 #if defined(HAVE_DLOPEN)
 	// update plugins
@@ -1821,7 +1915,7 @@ int Scheduler::make_ad_list(
       if (Owner.empty()) continue;
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
-      if ( ! fill_submitter_ad(*cad, Owner, -1, D_NEVER)) {
+      if ( ! fill_submitter_ad(*cad, Owner, -1)) {
          delete cad;
          continue;
       }
@@ -3801,9 +3895,10 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 			break;
 	}
 
-	if ( status == COMPLETED || status == REMOVED ) {
+	if ( (status == COMPLETED || status == REMOVED) &&
+	     ! scheduler.FindSrecByProcID(jobad->jid) )
+	{
 		DestroyProc(cluster,proc);
-		return 1;
 	}
 
 	return 1;
@@ -4193,10 +4288,9 @@ namespace {
 	{
 		MyString msk;
 		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "Mask is \"%s\"\n",msk.Value());
+		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
 		Tokenize(msk.Value());
 		while(const char* mask = GetNextToken(",",true)) {
-			dprintf( D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
 			ulog->AddToMask(ULogEventNumber(atoi(mask)));
 		}
 	}
@@ -4349,6 +4443,15 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
 		free( reason );
+	}
+
+	// Jobs usually have a shadow, and this event is usually written after
+	// that shadow dies, but that's by no means certain.  If we happen to
+	// have gotten a ToE tag, tell the abort event about it.
+	ClassAd * ja = GetJobAd( job_id.cluster, job_id.proc );
+	if( ja ) {
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd*>(ja->Lookup("ToE"));
+		event.setToeTag( toeTag );
 	}
 
 	bool status =
@@ -8246,7 +8349,11 @@ Scheduler::StartJobs()
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		StartJob( rec );
+			// If it's not in M_CLAIMED status, then it's not ready
+			// to start a job.
+		if ( rec->status == M_CLAIMED ) {
+			StartJob( rec );
+		}
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		AddRunnableLocalJobs();
@@ -12578,7 +12685,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	int reason_code;
 	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-	ASSERT( job_ad ); // No job ad?
+	if ( ! job_ad ) {
+		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
+			job_id.cluster, job_id.proc );
+		return;
+	}
 	{
 		UserPolicy policy;
 #ifdef USE_NON_MUTATING_USERPOLICY
@@ -13618,6 +13729,11 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
+	// Clear out any pending token requests.
+	m_token_requests.clear();
+	m_initial_update = true;
+	m_flock_collectors_init.clear();
+
 	first_time_in_init = false;
 }
 
@@ -13807,12 +13923,6 @@ Scheduler::Register()
 
 	m_xfer_queue_mgr.RegisterHandlers();
 
-	// Clear out any pending token requests.
-	m_token_client_id = "";
-	m_token_request_id = "";
-		// We don't own this memory - just clear the reference.
-	m_token_daemon = nullptr; 
-	m_initial_update = true;
 }
 
 void
@@ -17414,71 +17524,89 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	return TRUE;
 }
 
+
 void
-Scheduler::try_token_request()
+Scheduler::try_token_requests()
+{
+	bool should_reschedule = false;
+	dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		m_token_requests.size());
+	for (auto & request : m_token_requests)
+	{
+		should_reschedule |= try_token_request(request);
+	}
+	if (should_reschedule) {
+		daemonCore->Reset_Timer(m_token_requests_tid, 5, 1);
+		dprintf(D_SECURITY|D_FULLDEBUG, "Will reschedule another poll of requests.\n");
+	} else {
+		daemonCore->Cancel_Timer(m_token_requests_tid);
+		m_token_requests_tid = -1;
+	}
+	m_token_requests.erase(
+		std::remove_if(m_token_requests.begin(),
+			m_token_requests.end(),
+			[](const PendingRequest &req) {return req.m_client_id.empty();}),
+		m_token_requests.end()
+	);
+}
+
+
+bool
+Scheduler::try_token_request(PendingRequest &req)
 {
 	dprintf(D_SECURITY, "Trying token request to remote host.\n");
+	if (!req.m_daemon) {
+		dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+		return false;
+	}
 	std::string token;
-	if (m_token_client_id.empty()) {
-		m_token_daemon = nullptr;
-		m_token_request_id = "";
+	if (req.m_client_id.empty()) {
+		req.m_request_id = "";
 		std::vector<char> hostname;
 		hostname.reserve(MAXHOSTNAMELEN);
 		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
 			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-			return;
+			return false;
 		}
-		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
+		req.m_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
 			std::to_string(get_csrng_uint() % 1000);
-
-		auto collector_list = daemonCore->getCollectorList();
-		if (!collector_list || collector_list->IsEmpty()) {
-			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
-			m_token_client_id = "";
-			return;
-		}
-		Daemon *daemon = nullptr;
-		collector_list->Current(daemon);
-		//while (daemon && !daemon->shouldTryTokenRequest() && collector_list->Next(daemon)) {}
-
-		//if (!daemon || !daemon->shouldTryTokenRequest()) {
-		if (!daemon) {
-			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
-			m_token_client_id = "";
-			return;
-		}
 
 		std::string request_id;
 		std::vector<std::string> authz_list;
 		authz_list.push_back("ADVERTISE_SCHEDD");
 		int lifetime = -1;
 		CondorError err;
-		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
-			token, request_id, &err))
+		if (!req.m_daemon->startTokenRequest(req.m_identity, authz_list, lifetime,
+			req.m_client_id, token, request_id, &err))
 		{
 			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
+			req.m_client_id = "";
+			return false;
 		}
-		m_token_request_id = request_id;
-		m_token_daemon = daemon;
-		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
-		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
+		if (token.empty()) {
+			req.m_request_id = request_id;
+			dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
+			return true;
+		} else {
+			dprintf(D_ALWAYS, "Token request auto-approved.\n");
+			Condor_Auth_Passwd::retry_token_search();
+			daemonCore->getSecMan()->reconfig();
+			daemonCore->Reset_Timer(timeoutid,0,1);
+			req.m_client_id = "";
+		}
 	} else {
 		CondorError err;
-		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
+		if (!req.m_daemon->finishTokenRequest(req.m_client_id, req.m_request_id, token, &err)) {
 			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
+			req.m_client_id = "";
+			return false;
 		}
 		if (token.empty()) {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
-			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-				"Scheduler::try_token_request", this);
-			return;
+			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
+			return true;
 		} else {
+			dprintf(D_ALWAYS, "Token request approved.\n");
 				// Flush the cached result of the token search.
 			Condor_Auth_Passwd::retry_token_search();
 				// Flush out the security sessions; will need to force a re-auth.
@@ -17486,7 +17614,10 @@ Scheduler::try_token_request()
 				// Reset the timeout timer, causing the schedd to advertise itself.
 			daemonCore->Reset_Timer(timeoutid,0,1);
 		}
-		m_token_client_id = "";
+		req.m_client_id = "";
 	}
-	write_out_token("schedd_auto_generated_token", token);
+	if (!token.empty()) {
+		write_out_token("schedd_auto_generated_token", token);
+	}
+	return false;
 }

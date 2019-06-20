@@ -4,7 +4,7 @@ Users' Manual
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
    welcome-to-htcondor
    introduction-users-manual
    matchmaking-with-classads
@@ -17,6 +17,7 @@ Users' Manual
    dagman-applications
    virtual-machine-applications
    docker-universe-applications
+   self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   potential-problems      
+   potential-problems

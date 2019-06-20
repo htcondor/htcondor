@@ -284,7 +284,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		// instances.  Otherwise, the lease may not fire.
 		GetFunction * gf = new GetFunction( leaseFunctionARN,
 			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
+			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
 
 		UploadFile * uf = NULL;
@@ -344,9 +344,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			(void (Service::*)()) & FunctorSequence::operator(),
 			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
+		eventsGahp->setNotificationTimerId( functorSequenceTimer );
+		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+		s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else if( annexType == "odi" ) {
@@ -383,7 +383,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		GetFunction * gf = new GetFunction( leaseFunctionARN,
 			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
+			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
 
 		UploadFile * uf = NULL;
@@ -419,9 +419,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			(void (Service::*)()) & FunctorSequence::operator(),
 			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
+		eventsGahp->setNotificationTimerId( functorSequenceTimer );
+		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+		s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else {

@@ -119,6 +119,8 @@ bool hostname_match(const char *match_pattern, const char *hostname)
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
+#else
+static unsigned long (*SSL_CTX_set_options_ptr)(SSL_CTX *, unsigned long) = NULL;
 #endif
 static int (*SSL_peek_ptr)(SSL *ssl, void *buf, int num) = NULL;
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
@@ -163,11 +165,16 @@ static void (*enforcer_destroy_ptr)(Enforcer) = nullptr;
 static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scitokens, Acl **acls, char **err_msg) = nullptr;
 static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 #endif
+static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
+static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
+
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
+bool Condor_Auth_SSL::m_should_search_for_cert = true;
+bool Condor_Auth_SSL::m_cert_avail = false;
 
 Condor_Auth_SSL::AuthState::~AuthState() {
 	if (m_ctx) {(*SSL_CTX_free_ptr)(m_ctx); m_ctx = nullptr;}
@@ -215,6 +222,8 @@ bool Condor_Auth_SSL::Initialize()
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
+#else
+		 !(SSL_CTX_set_options_ptr = (unsigned long (*)(SSL_CTX *, unsigned long))dlsym(dl_hdl, "SSL_CTX_set_options")) ||
 #endif
 		 !(SSL_peek_ptr = (int (*)(SSL *ssl, void *buf, int num))dlsym(dl_hdl, "SSL_peek")) ||
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
@@ -245,9 +254,9 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
-		 !(SSL_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
+		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
@@ -294,6 +303,8 @@ bool Condor_Auth_SSL::Initialize()
 #else
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
+#else
+	SSL_CTX_set_options_ptr = SSL_CTX_set_options;
 #endif
 	SSL_peek_ptr = SSL_peek;
 	SSL_CTX_free_ptr = SSL_CTX_free;
@@ -320,6 +331,8 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_read_ptr = SSL_read;
 	SSL_set_bio_ptr = SSL_set_bio;
 	SSL_write_ptr = SSL_write;
+	ERR_get_error_ptr = ERR_get_error;
+	ERR_error_string_ptr = ERR_error_string;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_method_ptr = SSLv23_method;
 #else
@@ -472,7 +485,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    ouch("SSL: library failure.  see error queue?\n");
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", (*ERR_error_string_ptr)((*ERR_get_error_ptr)(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
@@ -784,7 +797,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    ouch("SSL: library failure.  see error queue?\n");
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", (*ERR_error_string_ptr)((*ERR_get_error_ptr)(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
@@ -1704,7 +1717,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
-    priv_state priv;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1749,34 +1761,37 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	}
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	// disable SSLv2.  it has vulnerabilities.
-	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv3, NULL );
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1, NULL );
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_TLSv1_1, NULL );
+#endif
+#else
+	(*SSL_CTX_set_options_ptr)( ctx, SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 #endif
 
-    if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
+	// Only load the verify locations if they are explicitly specified;
+	// otherwise, we will use the system default.
+    if( (cafile || cadir) && (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
         dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
 		 cafile, cadir);
 	goto setup_server_ctx_err;
     }
-    if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
-        ouch( "Error loading certificate from file" );
-        goto setup_server_ctx_err;
+    {
+        TemporaryPrivSentry sentry(PRIV_ROOT);
+        if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
+            ouch( "Error loading certificate from file" );
+            goto setup_server_ctx_err;
+        }
+        if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
+            ouch( "Error loading private key from file" );
+            goto setup_server_ctx_err;
+        }
     }
-    priv = set_root_priv();
-    if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
-        set_priv(priv);
-        ouch( "Error loading private key from file" );
-        goto setup_server_ctx_err;
-    }
-    set_priv(priv);
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-    //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
-    (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
-#endif
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
@@ -1798,5 +1813,37 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 }
 
 
- 
+bool
+Condor_Auth_SSL::should_try_auth()
+{
+	if (!m_should_search_for_cert) {
+		return m_cert_avail;
+	}
+	m_should_search_for_cert = false;
+	m_cert_avail = false;
+
+	std::string certfile, keyfile;
+	if (!param(certfile, AUTH_SSL_SERVER_CERTFILE_STR)) {
+		return false;
+	}
+	if (!param(keyfile, AUTH_SSL_SERVER_KEYFILE_STR)) {
+		return false;
+	}
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		int fd = open(certfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			return false;
+		}
+		close(fd);
+		fd = open(keyfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			return false;
+		}
+		close(fd);
+	}
+	m_cert_avail = true;
+	return true;
+}
 #endif

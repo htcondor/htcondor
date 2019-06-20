@@ -52,6 +52,8 @@ Example:
     HOUR            = (60 * $(MINUTE))
     SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 
+.. _ordered_evaluation_to_set_the_configuration:
+
 Ordered Evaluation to Set the Configuration
 -------------------------------------------
 
