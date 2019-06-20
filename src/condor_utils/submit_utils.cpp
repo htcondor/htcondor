@@ -2850,6 +2850,95 @@ static bool extract_gridtype(const char * grid_resource, MyString & gtype) {
 	return validate_gridtype(gtype);
 }
 
+void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
+  const char * submitPrefix, const char * jobPrefix, const YourStringNoCase & gridType ) {
+	//
+	// Collect all the tag names, then param for each.  In the glorious
+	// future, we'll merge all our different pattern-based walks of the
+	// hashtable and call a function with the keys (and probably values,
+	// since it'll be cheaper to fetch them during he walk) of interest.
+	//
+	// EC2TagNames is needed because EC2 tags are case-sensitive
+	// and ClassAd attribute names are not. We build it for the
+	// user, but also let the user override entries in it with
+	// their own case preference. Ours will always be lower-cased.
+	//
+
+	char * tmp;
+	StringList tagNames;
+	if ((tmp = submit_param(submitKey, jobKey))) {
+		tagNames.initializeFromString(tmp);
+		free(tmp); tmp = NULL;
+	} else {
+		std::string names;
+		if (job->LookupString(jobKey, names)) {
+			tagNames.initializeFromString(names.c_str());
+		}
+	}
+
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
+	int submit_prefix_len = (int)strlen(submitPrefix);
+	int job_prefix_len = (int)strlen(jobPrefix);
+	for (;!hash_iter_done(it); hash_iter_next(it)) {
+		const char *key = hash_iter_key(it);
+		const char *name = NULL;
+		if (!strncasecmp(key, submitPrefix, submit_prefix_len) &&
+			key[submit_prefix_len]) {
+			name = &key[submit_prefix_len];
+		} else if (!strncasecmp(key, jobPrefix, job_prefix_len) &&
+				   key[job_prefix_len]) {
+			name = &key[job_prefix_len];
+		} else {
+			continue;
+		}
+
+		if (strncasecmp(name, "Names", 5) &&
+			!tagNames.contains_anycase(name)) {
+			tagNames.append(name);
+		}
+	}
+	hash_iter_delete(&it);
+
+	char *tagName;
+	tagNames.rewind();
+	while ((tagName = tagNames.next())) {
+		// XXX: Check that tagName does not contain an equal sign (=)
+		std::string submitKey(submitPrefix); submitKey.append(tagName);
+		std::string jobKey(jobPrefix); jobKey.append(tagName);
+		char *value = NULL;
+		if ((value = submit_param(submitKey.c_str(), jobKey.c_str()))) {
+			AssignJobString(jobKey.c_str(), value);
+			free(value); value = NULL;
+		} else {
+			// this should only happen when tagNames is initialized from the base job ad
+			// i.e. when make procid > 0, especially when doing late materialization
+		}
+	}
+
+	// For compatibility with the AWS Console, set the Name tag to
+	// be the executable, which is just a label for EC2 jobs
+	tagNames.rewind();
+	if( gridType == "ec2" && (!tagNames.contains_anycase("Name")) ) {
+		bool wantsNameTag = submit_param_bool(SUBMIT_KEY_WantNameTag, NULL, true );
+		if( wantsNameTag ) {
+			std::string ename;
+			if (job->LookupString(ATTR_JOB_CMD, ename)) {
+				std::string attributeName;
+				formatstr( attributeName, "%sName", jobPrefix );
+				AssignJobString(attributeName.c_str(), ename.c_str());
+			}
+		}
+	}
+
+	if ( !tagNames.isEmpty() ) {
+		auto_free_ptr names(tagNames.print_to_delimed_string(","));
+		AssignJobString(jobKey, names);
+	}
+}
+
+
+
+
 
 int SubmitHash::SetGridParams()
 {
@@ -3247,87 +3336,13 @@ int SubmitHash::SetGridParams()
 		free( paramNamesStr );
 	}
 
-
-		//
-		// Handle EC2 tags - don't require user to specify the list of tag names
-		//
-		// Collect all the EC2 tag names, then param for each
-		//
-		// EC2TagNames is needed because EC2 tags are case-sensitive
-		// and ClassAd attribute names are not. We build it for the
-		// user, but also let the user override entries in it with
-		// their own case preference. Ours will always be lower-cased.
-		//
-
-	StringList tagNames;
-	if ((tmp = submit_param(SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES))) {
-		tagNames.initializeFromString(tmp);
-		free(tmp); tmp = NULL;
-	} else {
-		std::string names;
-		if (job->LookupString(ATTR_EC2_TAG_NAMES, names)) {
-			tagNames.initializeFromString(names.c_str());
-		}
-	}
-
-	HASHITER it = hash_iter_begin(SubmitMacroSet);
-	int prefix_len = (int)strlen(ATTR_EC2_TAG_PREFIX);
-	for (;!hash_iter_done(it); hash_iter_next(it)) {
-		const char *key = hash_iter_key(it);
-		const char *name = NULL;
-		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
-			key[prefix_len]) {
-			name = &key[prefix_len];
-		} else if (!strncasecmp(key, "ec2_tag_", 8) &&
-				   key[8]) {
-			name = &key[8];
-		} else {
-			continue;
-		}
-
-		if (strncasecmp(name, "Names", 5) &&
-			!tagNames.contains_anycase(name)) {
-			tagNames.append(name);
-		}
-	}
-	hash_iter_delete(&it);
-
-	char *tagName;
-	tagNames.rewind();
-	while ((tagName = tagNames.next())) {
-			// XXX: Check that tagName does not contain an equal sign (=)
-		std::string tag;
-		std::string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
-		std::string tagCmd("ec2_tag_"); tagCmd.append(tagName);
-		char *value = NULL;
-		if ((value = submit_param(tagCmd.c_str(), tagAttr.c_str()))) {
-			AssignJobString(tagAttr.c_str(), value);
-			free(value); value = NULL;
-		} else {
-			// this should only happen when tagNames is initialized from the base job ad
-			// i.e. when make procid > 0, especially when doing late materialization
-		}
-	}
-
-		// For compatibility with the AWS Console, set the Name tag to
-		// be the executable, which is just a label for EC2 jobs
-	tagNames.rewind();
-	if (!tagNames.contains_anycase("Name")) {
-		if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "ec2") {
-			bool wantsNameTag = submit_param_bool(SUBMIT_KEY_WantNameTag, NULL, true );
-			if( wantsNameTag ) {
-				std::string ename;
-				if (job->LookupString(ATTR_JOB_CMD, ename)) {
-					AssignJobString(ATTR_EC2_TAG_PREFIX "Name", ename.c_str());
-				}
-			}
-		}
-	}
-
-	if ( !tagNames.isEmpty() ) {
-		auto_free_ptr names(tagNames.print_to_delimed_string(","));
-		AssignJobString(ATTR_EC2_TAG_NAMES, names);
-	}
+	//
+	// Handle (EC2) tags and (GCE) labels.
+	//
+	handleAVPairs( SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES,
+		SUBMIT_KEY_EC2TagPrefix, ATTR_EC2_TAG_PREFIX, gridType );
+	handleAVPairs( SUBMIT_KEY_CloudLabelNames, ATTR_CLOUD_LABEL_NAMES,
+		SUBMIT_KEY_CloudLabelPrefix, ATTR_CLOUD_LABEL_PREFIX, gridType );
 
 	if ( (tmp = submit_param( SUBMIT_KEY_BoincAuthenticatorFile,
 							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
