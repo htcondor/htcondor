@@ -224,7 +224,7 @@ if (BUILD_TESTING)
 	# TODO: Not a CTEST because it overlaps with a target of the same name in src/condor_negotiator.V6
 	condor_pl_test( test_protocol_matching "test: Protocol matching" "core;quick;full;quicknolink")
 
-	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink" CTEST)
+	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_logrotation "basic log rotation test" "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "core;quick;quicknolink" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
