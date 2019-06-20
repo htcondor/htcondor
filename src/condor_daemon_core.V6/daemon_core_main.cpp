@@ -3498,7 +3498,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
-								"handle_dc_session_token()", 0, ALLOW );
+								"handle_dc_session_token()", 0, ALLOW, D_COMMAND, true );
 
 		//
 		// Start a token request workflow.
