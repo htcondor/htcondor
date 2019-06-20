@@ -53,7 +53,7 @@ Bugs Fixed:
    `OBITUARY_LOG_LENGTH` from 20 to 200.
    :ticket:`7103`
 
--  Improved the error messages generated with GSI authentication fails.
+-  Improved the error messages generated when GSI authentication fails.
    :ticket:`7052`
 
 Version 8.8.3
