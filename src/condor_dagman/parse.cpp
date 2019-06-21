@@ -40,7 +40,6 @@
 #include "basename.h"
 #include "extArray.h"
 #include "condor_string.h"  /* for strnewp() */
-#include "dagman_recursive_submit.h"
 #include "condor_getcwd.h"
 
 static const char   COMMENT    = '#';
