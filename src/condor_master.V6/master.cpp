@@ -1796,6 +1796,31 @@ main( int argc, char **argv )
     }
 #endif
 
+#ifdef LINUX
+    // Check for necessary directories if we were started by the system
+    if (getuid() == 0 && getppid() == 1) {
+        // If the condor user is in LDAP, systemd will silently fail to create
+        // these necessary directories at boot. The condor user and paths are
+        // hard coded here, because they match the systemd configuration.
+        struct stat sbuf;
+        struct passwd *pwbuf = getpwnam("condor");
+        if (pwbuf) {
+            if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/run/condor", 0775) == 0) {
+                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
+                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                }
+            }
+            if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor", 0775) == 0) {
+                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
+                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                }
+            }
+        }
+    }
+#endif
+
 	return dc_main( argc, argv );
 }
 
