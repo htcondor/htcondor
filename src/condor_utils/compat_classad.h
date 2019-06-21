@@ -212,6 +212,9 @@ class ClassAd : public classad::ClassAd
 
 	virtual ~ClassAd();
 
+	ClassAd &operator=(const ClassAd &rhs)
+		{ classad::ClassAd::operator=(rhs); return *this; }
+
 		/**@name Deprecated functions (only for use within Condor) */
 		//@{
 

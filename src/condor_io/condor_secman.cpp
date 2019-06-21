@@ -387,6 +387,15 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 void
 SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 {
+	// We need the trust domain for TOKEN auto-request, but auto-request
+	// happens if and only if TOKEN isn't in the method list (indicating
+	// that we didn't have one).
+	std::string issuer;
+	if (param(issuer, "TRUST_DOMAIN")) {
+		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
+	}
+
 	std::string method_list_str;
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
@@ -938,6 +947,14 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	action_ad->Insert(buf);
 
 	UpdateAuthenticationMetadata(*action_ad);
+	std::string trust_domain;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+		action_ad->InsertAttr(ATTR_SEC_TRUST_DOMAIN, trust_domain);
+	}
+	std::string issuer_keys;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, issuer_keys)) {
+		action_ad->InsertAttr(ATTR_SEC_ISSUER_KEYS, issuer_keys);
+	}
 
 	return action_ad;
 
@@ -1826,6 +1843,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 				dPrintAd( D_SECURITY, auth_response );
 			}
 
+				// Record the remote trust domain, if present
+			std::string trust_domain;
+			if (auth_response.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+				m_sock->setTrustDomain(trust_domain);
+			}
+
 				// Get rid of our sinful address in what will become
 				// the session policy ad.  It's there because we sent
 				// it to our peer, but no need to keep it around in
@@ -1859,6 +1882,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);

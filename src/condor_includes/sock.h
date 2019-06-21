@@ -408,6 +408,10 @@ public:
 	bool shouldTryTokenRequest() const { return _should_try_token_request; }
 	void setShouldTryTokenRequest(bool val) { _should_try_token_request = val; }
 
+		// Trust domain of the remote host (empty if unknown).
+	void setTrustDomain(const std::string &trust_domain) { _trust_domain = trust_domain; }
+	const std::string &getTrustDomain() const { return _trust_domain; }
+
 		/// Returns true if the fully qualified user name is
 		/// a non-anonymous user name (i.e. something not from
 		/// the unmapped domain)
@@ -559,6 +563,7 @@ protected:
 	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
 	bool            _should_try_token_request{false};
+	std::string	_trust_domain;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
 

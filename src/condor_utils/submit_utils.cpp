@@ -398,7 +398,17 @@ void SubmitHash::setup_macro_defaults()
 // set the value that $(SUBMIT_FILE) will expand to. (set into the defaults table, not the submit hash table)
 void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & source)
 {
-	insert_source(filename, source);
+	// don't insert the source if already has a source id.
+	bool insert_it = true;
+	if (source.id > 0 && (size_t)source.id < SubmitMacroSet.sources.size()) {
+		const char * tmp = macro_source_filename(source, SubmitMacroSet);
+		if (strcmp(tmp, filename) == MATCH) {
+			insert_it = false;
+		}
+	}
+	if (insert_it) {
+		insert_source(filename, source);
+	}
 
 	// if the defaults table pointer for SUBMIT_FILE is unset, set it to point to the filename we just inserted.
 	condor_params::key_value_pair *pdi = const_cast<condor_params::key_value_pair *>(SubmitMacroSet.defaults->table);
@@ -2840,6 +2850,95 @@ static bool extract_gridtype(const char * grid_resource, MyString & gtype) {
 	return validate_gridtype(gtype);
 }
 
+void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
+  const char * submitPrefix, const char * jobPrefix, const YourStringNoCase & gridType ) {
+	//
+	// Collect all the tag names, then param for each.  In the glorious
+	// future, we'll merge all our different pattern-based walks of the
+	// hashtable and call a function with the keys (and probably values,
+	// since it'll be cheaper to fetch them during he walk) of interest.
+	//
+	// EC2TagNames is needed because EC2 tags are case-sensitive
+	// and ClassAd attribute names are not. We build it for the
+	// user, but also let the user override entries in it with
+	// their own case preference. Ours will always be lower-cased.
+	//
+
+	char * tmp;
+	StringList tagNames;
+	if ((tmp = submit_param(submitKey, jobKey))) {
+		tagNames.initializeFromString(tmp);
+		free(tmp); tmp = NULL;
+	} else {
+		std::string names;
+		if (job->LookupString(jobKey, names)) {
+			tagNames.initializeFromString(names.c_str());
+		}
+	}
+
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
+	int submit_prefix_len = (int)strlen(submitPrefix);
+	int job_prefix_len = (int)strlen(jobPrefix);
+	for (;!hash_iter_done(it); hash_iter_next(it)) {
+		const char *key = hash_iter_key(it);
+		const char *name = NULL;
+		if (!strncasecmp(key, submitPrefix, submit_prefix_len) &&
+			key[submit_prefix_len]) {
+			name = &key[submit_prefix_len];
+		} else if (!strncasecmp(key, jobPrefix, job_prefix_len) &&
+				   key[job_prefix_len]) {
+			name = &key[job_prefix_len];
+		} else {
+			continue;
+		}
+
+		if (strncasecmp(name, "Names", 5) &&
+			!tagNames.contains_anycase(name)) {
+			tagNames.append(name);
+		}
+	}
+	hash_iter_delete(&it);
+
+	char *tagName;
+	tagNames.rewind();
+	while ((tagName = tagNames.next())) {
+		// XXX: Check that tagName does not contain an equal sign (=)
+		std::string submitKey(submitPrefix); submitKey.append(tagName);
+		std::string jobKey(jobPrefix); jobKey.append(tagName);
+		char *value = NULL;
+		if ((value = submit_param(submitKey.c_str(), jobKey.c_str()))) {
+			AssignJobString(jobKey.c_str(), value);
+			free(value); value = NULL;
+		} else {
+			// this should only happen when tagNames is initialized from the base job ad
+			// i.e. when make procid > 0, especially when doing late materialization
+		}
+	}
+
+	// For compatibility with the AWS Console, set the Name tag to
+	// be the executable, which is just a label for EC2 jobs
+	tagNames.rewind();
+	if( gridType == "ec2" && (!tagNames.contains_anycase("Name")) ) {
+		bool wantsNameTag = submit_param_bool(SUBMIT_KEY_WantNameTag, NULL, true );
+		if( wantsNameTag ) {
+			std::string ename;
+			if (job->LookupString(ATTR_JOB_CMD, ename)) {
+				std::string attributeName;
+				formatstr( attributeName, "%sName", jobPrefix );
+				AssignJobString(attributeName.c_str(), ename.c_str());
+			}
+		}
+	}
+
+	if ( !tagNames.isEmpty() ) {
+		auto_free_ptr names(tagNames.print_to_delimed_string(","));
+		AssignJobString(jobKey, names);
+	}
+}
+
+
+
+
 
 int SubmitHash::SetGridParams()
 {
@@ -3237,87 +3336,13 @@ int SubmitHash::SetGridParams()
 		free( paramNamesStr );
 	}
 
-
-		//
-		// Handle EC2 tags - don't require user to specify the list of tag names
-		//
-		// Collect all the EC2 tag names, then param for each
-		//
-		// EC2TagNames is needed because EC2 tags are case-sensitive
-		// and ClassAd attribute names are not. We build it for the
-		// user, but also let the user override entries in it with
-		// their own case preference. Ours will always be lower-cased.
-		//
-
-	StringList tagNames;
-	if ((tmp = submit_param(SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES))) {
-		tagNames.initializeFromString(tmp);
-		free(tmp); tmp = NULL;
-	} else {
-		std::string names;
-		if (job->LookupString(ATTR_EC2_TAG_NAMES, names)) {
-			tagNames.initializeFromString(names.c_str());
-		}
-	}
-
-	HASHITER it = hash_iter_begin(SubmitMacroSet);
-	int prefix_len = (int)strlen(ATTR_EC2_TAG_PREFIX);
-	for (;!hash_iter_done(it); hash_iter_next(it)) {
-		const char *key = hash_iter_key(it);
-		const char *name = NULL;
-		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
-			key[prefix_len]) {
-			name = &key[prefix_len];
-		} else if (!strncasecmp(key, "ec2_tag_", 8) &&
-				   key[8]) {
-			name = &key[8];
-		} else {
-			continue;
-		}
-
-		if (strncasecmp(name, "Names", 5) &&
-			!tagNames.contains_anycase(name)) {
-			tagNames.append(name);
-		}
-	}
-	hash_iter_delete(&it);
-
-	char *tagName;
-	tagNames.rewind();
-	while ((tagName = tagNames.next())) {
-			// XXX: Check that tagName does not contain an equal sign (=)
-		std::string tag;
-		std::string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
-		std::string tagCmd("ec2_tag_"); tagCmd.append(tagName);
-		char *value = NULL;
-		if ((value = submit_param(tagCmd.c_str(), tagAttr.c_str()))) {
-			AssignJobString(tagAttr.c_str(), value);
-			free(value); value = NULL;
-		} else {
-			// this should only happen when tagNames is initialized from the base job ad
-			// i.e. when make procid > 0, especially when doing late materialization
-		}
-	}
-
-		// For compatibility with the AWS Console, set the Name tag to
-		// be the executable, which is just a label for EC2 jobs
-	tagNames.rewind();
-	if (!tagNames.contains_anycase("Name")) {
-		if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "ec2") {
-			bool wantsNameTag = submit_param_bool(SUBMIT_KEY_WantNameTag, NULL, true );
-			if( wantsNameTag ) {
-				std::string ename;
-				if (job->LookupString(ATTR_JOB_CMD, ename)) {
-					AssignJobString(ATTR_EC2_TAG_PREFIX "Name", ename.c_str());
-				}
-			}
-		}
-	}
-
-	if ( !tagNames.isEmpty() ) {
-		auto_free_ptr names(tagNames.print_to_delimed_string(","));
-		AssignJobString(ATTR_EC2_TAG_NAMES, names);
-	}
+	//
+	// Handle (EC2) tags and (GCE) labels.
+	//
+	handleAVPairs( SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES,
+		SUBMIT_KEY_EC2TagPrefix, ATTR_EC2_TAG_PREFIX, gridType );
+	handleAVPairs( SUBMIT_KEY_CloudLabelNames, ATTR_CLOUD_LABEL_NAMES,
+		SUBMIT_KEY_CloudLabelPrefix, ATTR_CLOUD_LABEL_PREFIX, gridType );
 
 	if ( (tmp = submit_param( SUBMIT_KEY_BoincAuthenticatorFile,
 							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
@@ -3588,6 +3613,11 @@ int SubmitHash::SetAutoAttributes()
 	}
 	if (! job->Lookup(ATTR_WANT_CHECKPOINT)) {
 		AssignJobVal(ATTR_WANT_CHECKPOINT, JobUniverse == CONDOR_UNIVERSE_STANDARD);
+	}
+
+	// The starter ignores ATTR_SUCCESS_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
+	if (job->Lookup(ATTR_SUCCESS_CHECKPOINT_EXIT_CODE)) {
+		AssignJobVal(ATTR_WANT_FT_ON_CHECKPOINT, true);
 	}
 
 	// Interactive jobs that don't specify a job description get the description "interactive job"
@@ -4918,6 +4948,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxTransferInputMB, ATTR_MAX_TRANSFER_INPUT_MB, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_MaxTransferOutputMB, ATTR_MAX_TRANSFER_OUTPUT_MB, SimpleSubmitKeyword::f_as_expr},
 
+	// Self-checkpointing
+	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -5732,19 +5765,19 @@ int SubmitHash::SetRequirements()
 
 	GetExprReferences(answer.Value(),req_ad,&job_refs,&machine_refs);
 
-	bool checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
-	bool checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
+	bool	checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
+	bool	checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_SHORT_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_LEGACY );
-	bool checks_disk =  machine_refs.count( ATTR_DISK );
-	bool checks_cpus =   machine_refs.count( ATTR_CPUS );
-	bool checks_tdp =  machine_refs.count( ATTR_HAS_TDP );
-	bool checks_encrypt_exec_dir = machine_refs.count( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+	bool	checks_disk =  machine_refs.count( ATTR_DISK );
+	bool	checks_cpus =   machine_refs.count( ATTR_CPUS );
+	bool	checks_tdp =  machine_refs.count( ATTR_HAS_TDP );
+	bool	checks_encrypt_exec_dir = machine_refs.count( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
-	bool checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
+	bool	checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
 #endif
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
@@ -5752,6 +5785,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
+	bool	checks_hsct = false;
 
 	if (JobUniverse == CONDOR_UNIVERSE_STANDARD || JobUniverse == CONDOR_UNIVERSE_VM) {
 		checks_ckpt_arch = job_refs.count( ATTR_CKPT_ARCH );
@@ -5765,6 +5799,7 @@ int SubmitHash::SetRequirements()
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
 		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
 	}
+	checks_hsct = machine_refs.count( ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
 	bool checks_mem = machine_refs.count(ATTR_MEMORY);
 	//bool checks_reqmem = job_refs.count(ATTR_REQUEST_MEMORY);
@@ -6186,6 +6221,13 @@ int SubmitHash::SetRequirements()
 		answer += tmp_rao.Value();
 	}
 #endif
+
+	bool want_ft_on_checkpoint = false;
+	if (job->LookupBool(ATTR_WANT_FT_ON_CHECKPOINT, want_ft_on_checkpoint) && want_ft_on_checkpoint) {
+		if( ! checks_hsct ) {
+			answer += " && TARGET." ATTR_HAS_SELF_CHECKPOINT_TRANSFERS;
+		}
+	}
 
 	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
 	RETURN_IF_ABORT();
@@ -7689,6 +7731,7 @@ ClassAd* SubmitHash::make_job_ad (
 		// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 		// SetCronTab(), and SetPerFileEncryption()
 		//
+		// FIXME? (TJ): and after SetAutoAttributes().
 	SetRequirements();
 
 

@@ -1,3 +1,0 @@
-author: Rob Rati
-organization: Red Hat Inc.
-e-mail: rrati@redhat.com

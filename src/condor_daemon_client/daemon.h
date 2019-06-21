@@ -639,6 +639,11 @@ public:
 		 */
 	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
 
+		/**
+		 * Last recorded trust domain from this daemon.
+		 */
+	std::string getTrustDomain() const {return m_trust_domain;}
+
 protected:
 	// Data members
 	char* _name;
@@ -893,7 +898,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request );
+	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request, std::string &trust_domain);
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -923,6 +928,7 @@ private:
 
 	ClassAd *m_daemon_ad_ptr;
 
+	std::string m_trust_domain;
 };
 
 /** This helper class is derived from the Daemon class; it allows

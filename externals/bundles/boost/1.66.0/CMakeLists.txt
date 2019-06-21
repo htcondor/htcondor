@@ -111,7 +111,7 @@ else (WINDOWS)
 			# This only appears to affect Python 3.
 			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
 			#   has multiple directories.
-			if(${PYTHONLIBS_VERSION_STRING} VERSION_LESS "3.0.0")
+			if("${PYTHONLIBS_VERSION_STRING}" VERSION_LESS "3.0.0")
 				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 			else()
 				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam

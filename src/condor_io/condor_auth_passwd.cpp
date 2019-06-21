@@ -183,7 +183,7 @@ findTokens(const std::string &issuer,
 			dirpath = file_location;
 		}
 	}
-	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s\n", dirpath.c_str());
+	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
 	const char* _errstr;
 	int _erroffset;
@@ -2656,11 +2656,6 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 	check_pool_password();
 
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
-	std::string issuer;
-	if (param(issuer, "TRUST_DOMAIN")) {
-		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
-		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
-	}
 	std::vector<std::string> creds;
 	CondorError err;
 	if (!listNamedCredentials(creds, &err)) {

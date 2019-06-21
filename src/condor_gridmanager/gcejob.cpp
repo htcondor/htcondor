@@ -176,6 +176,25 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	// get VM machine type
 	jobAd->LookupString( ATTR_GCE_MACHINE_TYPE, m_machineType );
 
+	// get labels
+	std::string buffer;
+	if( jobAd->LookupString( ATTR_CLOUD_LABEL_NAMES, buffer ) ) {
+		char * labelName = NULL;
+		StringList labelNames( buffer.c_str() );
+
+		labelNames.rewind();
+		while( (labelName = labelNames.next()) ) {
+			std::string labelAttr(ATTR_CLOUD_LABEL_PREFIX);
+			labelAttr += labelName;
+
+			// Labels don't have to have values.
+			std::string labelValue;
+			jobAd->LookupString( labelAttr.c_str(), labelValue );
+
+            m_labels.push_back( std::make_pair( labelName, labelValue ) );
+		}
+	}
+
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
 	if ( condorState != HELD &&
@@ -522,6 +541,7 @@ void GCEJob::doEvaluateState()
 													m_metadataFile,
 													m_preemptible,
 													m_jsonFile,
+													m_labels,
 													instance_id );
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||

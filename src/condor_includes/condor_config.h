@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <string>
+#include <limits>
 
 typedef std::vector<const char *> MACRO_SOURCES;
 class CondorError;
@@ -198,6 +199,14 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						bool use_default, int default_value,
 						bool check_ranges = true,
 						int min_value = INT_MIN, int max_value = INT_MAX,
+                        ClassAd *me=NULL, ClassAd *target=NULL,
+						bool use_param_table = true );
+
+	bool param_longlong( const char *name, long long int &value,
+						bool use_default, long long default_value,
+						bool check_ranges = true,
+						long long min_value = (std::numeric_limits<long long>::min)(),
+						long long max_value = (std::numeric_limits<long long>::max)(),
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 

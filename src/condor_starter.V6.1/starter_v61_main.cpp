@@ -93,6 +93,7 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
     printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
+    printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
 		/*
 		  Attributes describing what kinds of Job Info Communicators

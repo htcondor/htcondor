@@ -2224,6 +2224,92 @@ param_integer( const char *name, int &value,
 }
 
 
+bool
+param_longlong( const char *name, long long int &value,
+			   bool use_default, long long default_value,
+			   bool check_ranges, long long min_value, long long max_value,
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
+{
+	if(use_param_table) {
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		int was_truncated = false;
+		int is_long = 0;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
+		bool tbl_check_ranges = 
+			(param_range_long(name, &min_value, &max_value)==-1) 
+				? false : true;
+
+
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
+		if (def_valid) {
+			use_default = true;
+			default_value = tbl_default_value;
+		}
+		if (tbl_check_ranges) {
+			check_ranges = true;
+		}
+	}
+	
+	long long long_result;
+	char *string = NULL;
+
+	ASSERT( name );
+	string = param( name );
+	if( ! string ) {
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %lld\n",
+				 name, default_value );
+		if ( use_default ) {
+			value = default_value;
+		}
+		return false;
+	}
+
+	int err_reason = 0;
+	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
+	if ( ! valid) {
+		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %lld to %lld "
+				   "(default %lld).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %lld to %lld "
+				   "(default %lld).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = default_value;
+	}
+
+	if ( check_ranges  &&  ( long_result < min_value )  ) {
+		EXCEPT( "%s in the condor configuration is too low (%s)."
+				"  Please set it to an integer in the range %lld to %lld"
+				" (default %lld).",
+				name, string, min_value, max_value, default_value );
+	}
+	else if ( check_ranges  && ( long_result > max_value )  ) {
+		EXCEPT( "%s in the condor configuration is too high (%s)."
+				"  Please set it to an integer in the range %lld to %lld"
+				" (default %lld).",
+				name, string, min_value, max_value, default_value );
+	}
+	free( string );
+
+	value = long_result;
+	return true;
+}
+
+
 /*
 ** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
@@ -2327,7 +2413,7 @@ param_double( const char *name, double default_value,
 		double tbl_default_value = param_default_double(name, subsys, &def_valid);
 
 		// if the min_value & max_value are changed, we use it.
-		param_range_double(name, &min_value, &max_value);
+
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
