@@ -59,6 +59,11 @@ Bugs Fixed:
 -  Improved detection of failures writing to the job event logs.
    :ticket:`7008`
 
+-  HTCondor properly starts up when the ``condor`` user is in LDAP.
+   The *condor_master* creates ``/var/run/condor`` and ``/var/lock/condor``
+   as needed at start up.
+   :ticket:`7101`
+
 Version 8.8.3
 -------------
 
