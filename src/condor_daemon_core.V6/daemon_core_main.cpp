@@ -235,7 +235,7 @@ public:
 		}
 
 		auto peer_location = token_request.getPeerLocation();
-		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %d rules.\n", m_approval_rules.size());
+		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %lu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!rule.m_approval_netblock->find_matches_withnetwork(
 					peer_location.c_str(), nullptr)) {
