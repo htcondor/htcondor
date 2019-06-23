@@ -52,6 +52,8 @@ class FileLockBase
 	FileLockBase( void );
 	virtual ~FileLockBase(void);
 
+	FileLockBase(const FileLockBase &) = delete;
+
 		// Read only access functions
 	bool isBlocking(void) const			// whether or not operations will block
 		{ return m_blocking; };
