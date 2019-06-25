@@ -61,8 +61,16 @@ const char * Job::status_t_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-    stringSpace.free_dedup(_directory); _directory = NULL;
-    stringSpace.free_dedup(_cmdFile); _cmdFile = NULL;
+
+	// We _should_ free_dedup() here, but it turns out both Job and
+	// stringSpace objects are static, and thus the order of desrtuction when
+	// dagman shuts down is unknown (global desctructors).  Thus dagman
+	// may end up segfaulting on exit.  Since Job objects are never destroyed
+	// by dagman until it is exiting, no need to free_dedup.
+	//
+    // stringSpace.free_dedup(_directory); _directory = NULL;
+    // stringSpace.free_dedup(_cmdFile); _cmdFile = NULL;
+
     free(_dagFile); _dagFile = NULL;
     free(_jobName); _jobName = NULL;
 
