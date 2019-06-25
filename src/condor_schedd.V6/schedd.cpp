@@ -121,8 +121,6 @@ extern "C"
 {
 /*	int SetCkptServerHost(const char *host);
 	int RemoveLocalOrRemoteFile(const char *, const char *);
-	int FileExists(const char *, const char *);
-	int getdtablesize();
 */
 	int prio_compar(prio_rec*, prio_rec*);
 }
@@ -12872,10 +12870,9 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			 job_id );
 }
 
-#ifdef WIN32
-	// On Win32, we don't deal with the old ckpt server, so we stub it,
+#ifdef CLIPPED
+	// If clipped, we don't deal with the old ckpt server, so we stub it,
 	// thus we do not have to link in the ckpt_server_api.
-#include "directory.h"
 int 
 RemoveLocalOrRemoteFile(const char *, const char *, const char *)
 {
@@ -12886,7 +12883,7 @@ SetCkptServerHost(const char *)
 {
 	return 0;
 }
-#endif // of ifdef WIN32
+#endif // of ifdef CLIPPED
 
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
