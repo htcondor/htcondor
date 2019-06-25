@@ -36,8 +36,12 @@ Reqexp::Reqexp( Resource* res_ip )
 	this->rip = res_ip;
 	MyString tmp;
 
-	tmp.formatstr("%s = (%s) && (%s)", 
-		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
+	if (resmgr->starter_mgr.haveStandardUni()) {
+		tmp.formatstr("%s = (%s) && (%s)", 
+			ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
+	} else {
+		tmp.formatstr("%s = START", ATTR_REQUIREMENTS);
+	}
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 		tmp.formatstr_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );

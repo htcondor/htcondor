@@ -164,6 +164,9 @@ struct SubmitDagDeepOptions
 class DagmanUtils {
 
 public:
+
+    bool usingPythonBindings = false;
+
     void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
         /* const */ StringList &dagFileAttrLines );

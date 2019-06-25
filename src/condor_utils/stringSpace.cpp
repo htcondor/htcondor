@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "stringSpace.h"
 
 const char *
@@ -32,7 +33,7 @@ strdup_dedup(const char *input)
     }
     value.count++;
 
-    return (const char *)value.pstr;    
+    return (const char *)value.pstr;
 }
 
 int 
@@ -41,7 +42,7 @@ free_dedup(const char *input)
 {
     int ret_value = 0;
 
-    if (input == NULL) return NULL;
+    if (input == NULL) return INT_MAX;
     std::string key = input;
     ssentry & value = ss_map[key];
     if (value.pstr) {
@@ -54,7 +55,7 @@ free_dedup(const char *input)
     else {
         // If we get here, the input pointer either was not created
         // with strdup_dedup(), or it was already deallocated with free_dedup()
-        EXCEPT("free_dedup() called with invalid input");
+        dprintf(D_ALWAYS | D_BACKTRACE, "free_dedup() called with invalid input");
     }
 
     return ret_value;

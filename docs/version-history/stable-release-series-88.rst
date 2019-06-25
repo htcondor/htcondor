@@ -53,6 +53,17 @@ Bugs Fixed:
    `OBITUARY_LOG_LENGTH` from 20 to 200.
    :ticket:`7103`
 
+-  Improved the error messages generated when GSI authentication fails.
+   :ticket:`7052`
+
+-  Improved detection of failures writing to the job event logs.
+   :ticket:`7008`
+
+-  HTCondor properly starts up when the ``condor`` user is in LDAP.
+   The *condor_master* creates ``/var/run/condor`` and ``/var/lock/condor``
+   as needed at start up.
+   :ticket:`7101`
+
 Version 8.8.3
 -------------
 

@@ -1165,14 +1165,6 @@ subsystem corresponding to the daemon.
     interval may yield higher performance due to fewer files being
     opened and closed.
 
-``EVENT_LOG_COUNT_EVENTS`` :index:`EVENT_LOG_COUNT_EVENTS`
-    A boolean value that is ``False`` by default. When ``True``, upon
-    rotation of the user's job event log, a count of the number of job
-    events is taken by scanning the log, such that the newly created,
-    post-rotation user job event log will have this count in its header.
-    This configuration variable is relevant when rotation of the user's
-    job event log is enabled.
-
 ``CREATE_LOCKS_ON_LOCAL_DISK`` :index:`CREATE_LOCKS_ON_LOCAL_DISK`
     A boolean value utilized only for Unix operating systems, that
     defaults to ``True``. This variable is only relevant if
@@ -1494,6 +1486,14 @@ a file that receives job events, but across all users and user's jobs.
     ``True`` on Windows platforms. When ``True``, the event log (as
     specified by ``EVENT_LOG``) will be locked before being written to.
     When ``False``, HTCondor does not lock the file before writing.
+
+``EVENT_LOG_COUNT_EVENTS`` :index:`EVENT_LOG_COUNT_EVENTS`
+    A boolean value that is ``False`` by default. When ``True``, upon
+    rotation of the user's job event log, a count of the number of job
+    events is taken by scanning the log, such that the newly created,
+    post-rotation user job event log will have this count in its header.
+    This configuration variable is relevant when rotation of the user's
+    job event log is enabled.
 
 ``EVENT_LOG_FORMAT_OPTIONS`` :index:`EVENT_LOG_FORMAT_OPTIONS`
     A list of case-insensitive keywords that control formatting of the log events
@@ -8308,7 +8308,7 @@ General
     *condor_submit* or by opening a direct connection to the *condor_schedd*.
     ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
     *condor_dagman* will submit jobs to the local Schedd by connnecting to it
-    directly.  This is faster than using *condor_submit*, especially for very 
+    directly.  This is faster than using *condor_submit*, especially for very
     large DAGs; But this method will ignore some submit file features such as
     ``max_materialize`` and more than one ``QUEUE`` statement.
 

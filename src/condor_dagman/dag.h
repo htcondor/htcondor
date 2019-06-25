@@ -840,8 +840,8 @@ class Dag {
 	HashTable<MyString, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
-	  StringList& _dagFiles;
-	  
+	StringList& _dagFiles;
+
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
 

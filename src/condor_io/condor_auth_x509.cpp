@@ -1219,7 +1219,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		gss_buffer_desc                     tmp_buffer_desc = GSS_C_EMPTY_BUFFER;
 		gss_buffer_t                        tmp_buffer = &tmp_buffer_desc;
 		char * gss_name = NULL;
-		major_status = (*gss_display_name_ptr)(&minor_status2,
+		major_status = (*gss_display_name_ptr)(&minor_status,
 			m_client_name,
 			tmp_buffer,
 			NULL);
