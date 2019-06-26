@@ -1943,7 +1943,7 @@ int submit_jobs (
 			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
 				MyString items_fn = create_local_factory_file;
 				items_fn += ".items";
-				dynamic_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
