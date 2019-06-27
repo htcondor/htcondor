@@ -938,7 +938,7 @@ these batch jobs. ``GLITE_LOCATION`` :index:`GLITE_LOCATION` is
 the path to the directory containing the GAHP's configuration file and
 auxiliary binaries. In the HTCondor distribution, these files are
 located in ``$(LIBEXEC)``/glite. The batch GAHP's configuration file is
-in ``$(GLITE_LOCATION)``/etc/batch_gahp.config. The batch GAHP's
+in ``$(GLITE_LOCATION)``/etc/blah.config. The batch GAHP's
 auxiliary binaries are to be in the directory ``$(GLITE_LOCATION)``/bin.
 The HTCondor configuration file appears
 
