@@ -579,7 +579,6 @@ Summary: External packages built into HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: %name-external-libs%{?_isa} = %version-%release
-Provides: blahp
 
 %description externals
 Includes the external packages built when UW_BUILD is enabled
@@ -1525,65 +1524,6 @@ rm -rf %{buildroot}
 
 %files externals
 %_sbindir/unicore_gahp
-%if %blahp
-%_libexecdir/condor/glite/bin/BLClient
-%_libexecdir/condor/glite/bin/BLParserLSF
-%_libexecdir/condor/glite/bin/BLParserPBS
-%_libexecdir/condor/glite/bin/BNotifier
-%_libexecdir/condor/glite/bin/BPRclient
-%_libexecdir/condor/glite/bin/BPRserver
-%_libexecdir/condor/glite/bin/BUpdaterCondor
-%_libexecdir/condor/glite/bin/BUpdaterLSF
-%_libexecdir/condor/glite/bin/BUpdaterPBS
-%_libexecdir/condor/glite/bin/BUpdaterSGE
-%_libexecdir/condor/glite/bin/batch_gahp
-%_libexecdir/condor/glite/bin/batch_gahp_daemon
-%_libexecdir/condor/glite/bin/blah_check_config
-%_libexecdir/condor/glite/bin/blah_common_submit_functions.sh
-%_libexecdir/condor/glite/bin/blah_job_registry_add
-%_libexecdir/condor/glite/bin/blah_job_registry_dump
-%_libexecdir/condor/glite/bin/blah_job_registry_lkup
-%_libexecdir/condor/glite/bin/blah_job_registry_scan_by_subject
-%_libexecdir/condor/glite/bin/blah_load_config.sh
-%_libexecdir/condor/glite/bin/blparser_master
-%_libexecdir/condor/glite/bin/condor_cancel.sh
-%_libexecdir/condor/glite/bin/condor_hold.sh
-%_libexecdir/condor/glite/bin/condor_resume.sh
-%_libexecdir/condor/glite/bin/condor_status.sh
-%_libexecdir/condor/glite/bin/condor_submit.sh
-%_libexecdir/condor/glite/bin/lsf_cancel.sh
-%_libexecdir/condor/glite/bin/lsf_hold.sh
-%_libexecdir/condor/glite/bin/lsf_resume.sh
-%_libexecdir/condor/glite/bin/lsf_status.sh
-%_libexecdir/condor/glite/bin/lsf_submit.sh
-%_libexecdir/condor/glite/bin/pbs_cancel.sh
-%_libexecdir/condor/glite/bin/pbs_hold.sh
-%_libexecdir/condor/glite/bin/pbs_resume.sh
-%_libexecdir/condor/glite/bin/pbs_status.py
-%_libexecdir/condor/glite/bin/pbs_status.sh
-%_libexecdir/condor/glite/bin/pbs_submit.sh
-%_libexecdir/condor/glite/bin/runcmd.pl.template
-%_libexecdir/condor/glite/bin/sge_cancel.sh
-%_libexecdir/condor/glite/bin/sge_filestaging
-%_libexecdir/condor/glite/bin/sge_helper
-%_libexecdir/condor/glite/bin/sge_hold.sh
-%_libexecdir/condor/glite/bin/sge_local_submit_attributes.sh
-%_libexecdir/condor/glite/bin/sge_resume.sh
-%_libexecdir/condor/glite/bin/sge_status.sh
-%_libexecdir/condor/glite/bin/sge_submit.sh
-%_libexecdir/condor/glite/bin/test_condor_logger
-# does this really belong here?
-%dir %_libexecdir/condor/glite/etc
-%_libexecdir/condor/glite/etc/glite-ce-blahparser
-%_libexecdir/condor/glite/etc/glite-ce-blparser
-%_libexecdir/condor/glite/etc/glite-ce-check-blparser
-%_libexecdir/condor/glite/etc/batch_gahp.config
-%_libexecdir/condor/glite/etc/batch_gahp.config.template
-%_libexecdir/condor/glite/etc/blparser.conf.template
-%dir %_libexecdir/condor/glite/share
-%dir %_libexecdir/condor/glite/share/doc
-%_libexecdir/condor/glite/share/doc/glite-ce-blahp-@PVER@/LICENSE
-%endif
 
 %endif
 
