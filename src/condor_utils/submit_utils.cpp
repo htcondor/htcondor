@@ -8748,6 +8748,11 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 		omit_knobs.insert(SUBMIT_CMD_GetEnvironmentAlt);
 		omit_knobs.insert(SUBMIT_CMD_AllowStartupScript);
 		omit_knobs.insert(SUBMIT_CMD_AllowStartupScriptAlt);
+
+		//PRAGMA_REMIND("tj: This will cause a bug where $() in user requirments are ignored during late materialization - a better fix is needed for this")
+		// omit user specified requirements because we set FACTORY.Requirements
+		// we set FACTORY.Requirements because we cannot afford to generate requirements using a pruned digest
+		omit_knobs.insert(SUBMIT_KEY_Requirements);
 	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
