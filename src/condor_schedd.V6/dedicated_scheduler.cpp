@@ -1402,7 +1402,7 @@ DedicatedScheduler::sortJobs( void )
 			continue;
 		}
 			// If we found the job ad, make sure it's still idle
-		if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
+		if (job->LookupInteger(ATTR_JOB_STATUS, status) == false) {
 			dprintf( D_ALWAYS, "Job %d.0 has no %s attribute.  Ignoring\n",  
 					 cluster, ATTR_JOB_STATUS );
 			continue;
