@@ -1849,7 +1849,7 @@ AssignExpr(const std::string &name, const char *value)
 	par.SetOldClassAd( true );
 
 	if ( value == NULL ) {
-		value = "Undefined";
+		return false;
 	}
 	if ( !par.ParseExpression( value, expr, true ) ) {
 		return false;
@@ -1865,7 +1865,7 @@ bool ClassAd::
 Assign(const std::string &name, char const *value)
 {
 	if ( value == NULL ) {
-		return AssignExpr( name, NULL );
+		return AssignExpr( name, "Undefined" );
 	} else {
 		return InsertAttr( name, value );
 	}
