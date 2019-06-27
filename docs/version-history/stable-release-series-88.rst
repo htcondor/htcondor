@@ -25,6 +25,13 @@ New Features:
    which defaults to ``True``.  When it is ``False``, Dagman will contact the
    local Schedd directly to submit jobs. :ticket:`6974`
 
+-  Added an optimization into DAGMan for graphs that use many-PARENT-many-CHILD
+   statements. A new configuration variable ``DAGMAN_USE_JOIN_NODES`` can be
+   used to automatically add an intermediate *join node* between the set of 
+   parent nodes and set of child nodes. When these sets are large, join nodes
+   significantly improve *condor_dagman* memory footprint, parse time and
+   submit speed. :ticket:`7108`
+
 Bugs Fixed:
 
 -  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
