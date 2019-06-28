@@ -422,7 +422,7 @@ void BaseJob::UpdateRuntimeStats()
 		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
 		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
-		jobAd->Assign( ATTR_JOB_WALL_CLOCK_CKPT,(char *)NULL );
+		jobAd->AssignExpr( ATTR_JOB_WALL_CLOCK_CKPT, "Undefined" );
 		jobAd->AssignExpr( ATTR_SHADOW_BIRTHDATE, "UNDEFINED" );
 
 		requestScheddUpdate( this, false );

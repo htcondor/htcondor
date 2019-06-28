@@ -1865,7 +1865,7 @@ bool ClassAd::
 Assign(const std::string &name, char const *value)
 {
 	if ( value == NULL ) {
-		return AssignExpr( name, "Undefined" );
+		return false;
 	} else {
 		return InsertAttr( name, value );
 	}
