@@ -82,7 +82,7 @@ auto_approve(const std::string &pool, const std::string &name, daemon_t dtype,
 	}
 
 	printf("Successfully installed auto-approval rule for netblock %s with lifetime of %.2f hours\n",
-		netblock.c_str(), static_cast<float>(lifetime/3600));
+		netblock.c_str(), static_cast<float>(lifetime)/3600 );
 
 	printRemainingRequests(std::move(daemon));
 	return 0;

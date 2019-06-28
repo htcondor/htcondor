@@ -233,6 +233,23 @@ public:
 				return false;
 			}
 		}
+			// Only auto-approve requests that aren't pending.
+		if (token_request.getState() != State::Pending) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+				" because it is pending.\n");
+			return false;
+		}
+			// Only auto-approve requests that haven't expired.
+		if (now > (token_request.m_request_time + \
+				(token_request.m_lifetime < 0 ?
+				86400 * 365 : token_request.m_lifetime))) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+				" because it is expired (token was requested at %ld"
+				"; lifetime is %ld; now is %ld).\n",
+				token_request.m_request_time,
+				token_request.m_lifetime, now);
+			return false;
+		}
 
 		auto peer_location = token_request.getPeerLocation();
 		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %lu rules.\n", m_approval_rules.size());
@@ -247,25 +264,10 @@ public:
 				free(netblock);
 				continue;
 			}
-			if (token_request.getState() != State::Pending) {
-				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
-					" because it is pending.\n");
-				continue;
-			}
 			if (token_request.m_request_time > rule.m_expiry_time) {
 				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
 					" because request time (%ld) is after rule expiration (%ld).\n",
 					token_request.m_request_time, rule.m_expiry_time);
-				continue;
-			}
-			if (now > (token_request.m_request_time + \
-					(token_request.m_lifetime < 0 ?
-					86400 * 365 : token_request.m_lifetime))) {
-				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
-					" because it is expired (token was requested at %ld"
-					"; lifetime is %ld; now is %ld).\n",
-					token_request.m_request_time,
-					token_request.m_lifetime, now);
 				continue;
 			}
 				// Approve requests that came in up to 60s before the
@@ -2091,6 +2093,8 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 	}
 
 	time_t now = time(NULL);
+    // We otherwise only evaluate each request as it comes in, so we have to
+    // check all of them now if we want to approve ones that came in recently.
 	dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
 		"auto-approval.\n", g_request_map.size());
 	for (auto &iter : g_request_map) {
