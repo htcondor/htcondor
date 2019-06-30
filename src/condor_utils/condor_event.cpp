@@ -88,6 +88,11 @@ const char ULogEventNumberNames[][41] = {
 	"ULOG_FACTORY_RESUMED",			// Factory resumed
 	"ULOG_NONE",					// None (try again later)
 	"ULOG_FILE_TRANSFER",			// File transfer
+	"ULOG_RESERVE_SPACE",			// Space reserved
+	"ULOG_RELEASE_SPACE",			// Space released
+	"ULOG_FILE_COMPLETE",			// File transfer has completed successfully
+	"ULOG_FILE_USED",				// File in reuse dir utilized
+	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -229,6 +234,21 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_FILE_TRANSFER:
 		return new FileTransferEvent;
+
+	case ULOG_RESERVE_SPACE:
+		return new ReserveSpaceEvent;
+
+	case ULOG_RELEASE_SPACE:
+		return new ReleaseSpaceEvent;
+
+	case ULOG_FILE_COMPLETE:
+		return new FileCompleteEvent;
+
+	case ULOG_FILE_USED:
+		return new FileUsedEvent;
+
+	case ULOG_FILE_REMOVED:
+		return new FileRemovedEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
@@ -635,6 +655,16 @@ ULogEvent::toClassAd(bool event_time_utc)
 	case ULOG_FILE_TRANSFER:
 		SetMyTypeName(*myad, "FileTransferEvent");
 		break;
+	case ULOG_RESERVE_SPACE:
+		SetMyTypeName(*myad, "ReserveSpaceEvent");
+	case ULOG_RELEASE_SPACE:
+		SetMyTypeName(*myad, "ReleaseSpaceEvent");
+	case ULOG_FILE_COMPLETE:
+		SetMyTypeName(*myad, "FileCompleteEvent");
+	case ULOG_FILE_USED:
+		SetMyTypeName(*myad, "FileUsedEvent");
+	case ULOG_FILE_REMOVED:
+		SetMyTypeName(*myad, "FileRemovedEvent");
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
 		break;
@@ -7639,4 +7669,616 @@ FileTransferEvent::initFromClassAd( ClassAd * ad ) {
 	ad->LookupInteger( "QueueingDelay", queueingDelay );
 
 	ad->LookupString( "Host", host );
+}
+
+
+void
+ReserveSpaceEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	time_t expiry_time;
+	if (ad->EvaluateAttrInt("ExpirationTime", expiry_time)) {
+		m_expiry = std::chrono::system_clock::from_time_t(expiry_time);
+	}
+	long long reserved_space;
+	if (ad->EvaluateAttrInt("ReservedSpace", reserved_space)) {
+		m_reserved_space = reserved_space;
+	}
+	std::string uuid;
+	if (ad->EvaluateAttrString("UUID", uuid)) {
+		m_uuid = uuid;
+	}
+	std::string tag;
+	if (ad->EvaluateAttrString("Tag", tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+ReserveSpaceEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	time_t expiry_time = std::chrono::system_clock::to_time_t(m_expiry);
+	if (!ad->InsertAttr("ExpirationTime", expiry_time)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("ReservedSpace", static_cast<long long>(m_reserved_space))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("UUID", m_uuid)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("Tag", m_tag)) {
+		return nullptr;
+	}
+	return ad.release();
+}
+
+
+bool
+ReserveSpaceEvent::formatBody(std::string &out)
+{
+	if (m_reserved_space &&
+		formatstr_cat(out, "\tBytes reserved: %lu\n",
+		m_reserved_space) < 0)
+	{
+		return false;
+	}
+
+	time_t expiry = std::chrono::system_clock::to_time_t(m_expiry);
+	if (formatstr_cat(out, "\tReservation Expiration: %lu\n", expiry) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+	return true;
+}
+
+
+int
+ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for bytes reserved.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "\tBytes reserved: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_reserved_space = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes reserved line missing.\n");
+		return false;
+	}
+
+		// Check the reservation expiry time.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tReservation Expiration: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long expiry_long;
+		try {
+			expiry_long = stoll(expiry_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert reservation expiration to integer: %s\n",
+				expiry_str.c_str());
+			return false;
+		}
+		m_expiry = std::chrono::system_clock::from_time_t(expiry_long);
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation expiration line missing.\n");
+		return false;
+	}
+
+		// Check the reservation UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tReservation UUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
+		return false;
+	}
+
+		// Check the reservation tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
+		return false;
+	}
+
+
+	return true;
+}
+
+
+void
+ReleaseSpaceEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	std::string uuid;
+	if (ad->EvaluateAttrString("UUID", uuid)) {
+		m_uuid = uuid;
+	}
+}
+
+
+ClassAd *
+ReleaseSpaceEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr("UUID", m_uuid)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+ReleaseSpaceEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check the reservation UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "\tReservation UUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid= optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+void
+FileCompleteEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	long long size;
+	if (ad->EvaluateAttrInt("Size", size)) {
+		m_size = size;
+	}
+
+	std::string checksum;
+	if (ad->EvaluateAttrString("Checksum", checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string uuid;
+	if (ad->EvaluateAttrString("UUID", uuid)) {
+		m_uuid = uuid;
+	}
+}
+
+
+ClassAd *
+FileCompleteEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr("Size", static_cast<long long>(m_size))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("Checksum", m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("UUID", m_uuid)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileCompleteEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\tBytes: %lu\n", m_size) < 0)
+	{
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tUUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for filesize in bytes.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "\tBytes: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_size = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes line missing.\n");
+		return false;
+	}
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the file UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tUUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+void
+FileUsedEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	std::string checksum;
+	if (ad->EvaluateAttrString("Checksum", checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string tag;
+	if (ad->EvaluateAttrString("Tag", tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+FileUsedEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr("Checksum", m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("Tag", m_tag)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileUsedEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "\tChecksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the reservation tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
+		return false;
+	}
+
+
+	return true;
+}
+
+
+void
+FileRemovedEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	long long size;
+	if (ad->EvaluateAttrInt("Size", size)) {
+		m_size = size;
+	}
+
+	std::string checksum;
+	if (ad->EvaluateAttrString("Checksum", checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string tag;
+	if (ad->EvaluateAttrString("Tag", tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+FileRemovedEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr("Size", static_cast<long long>(m_size))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("Checksum", m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr("Tag", m_tag)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileRemovedEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\tBytes: %lu\n", m_size) < 0)
+	{
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for filesize in bytes.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "\tBytes: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_size = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes line missing.\n");
+		return false;
+	}
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the file tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "File tag line missing.\n");
+		return false;
+	}
+
+	return true;
 }
