@@ -59,18 +59,6 @@
 #include <sys/user.h>
 #endif 
 
-#ifdef AIX
-#include <procinfo.h>
-#include <sys/types.h>
-BEGIN_C_DECLS
-/* For being the "new" interface for AIX, this isn't defined in the headers. */
-extern int getprocs64(struct procentry64*, int, struct fdsinfo64*, int,
-        pid_t*, int);
-END_C_DECLS
-/* AIX # defines the following symbol, which we use later as a formal param*/
-#undef l_name
-#endif
-
 #else // It's WIN32...
 // Warning: WIN32 stuff below.
 

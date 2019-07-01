@@ -578,7 +578,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	PrivSepForkExec psforkexec;
 	char ** args_array = args.GetStringArray();
 	int error_pipe[2];
-		// AIX 5.2, Solaris 5.9, HPUX 11 don't have AF_LOCAL
 
 	if(pipe(stdin_pipes) < 0)
 	  {

@@ -57,8 +57,6 @@
 #	include "condor_sys_solaris.h"
 #elif defined(Darwin)
 #	include "condor_sys_bsd.h"
-#elif defined(AIX)
-#	include "condor_sys_aix.h"
 #elif defined(CONDOR_FREEBSD)
 #	include "condor_sys_bsd.h"
 #else
@@ -216,21 +214,10 @@
  * it thinks its parent is gone, and general badness.
  */
 
-  #if defined(AIX) && HAVE_READDIR64
-
-    typedef DIR64 condor_DIR;
-    #define condor_opendir opendir64
-    #define condor_closedir closedir64
-    #define condor_rewinddir rewinddir64
-
-  #else
-
-    typedef DIR condor_DIR;
-    #define condor_opendir opendir
-    #define condor_closedir closedir
-    #define condor_rewinddir rewinddir
-
-  #endif
+  typedef DIR condor_DIR;
+  #define condor_opendir opendir
+  #define condor_closedir closedir
+  #define condor_rewinddir rewinddir
 
   #if HAVE_READDIR64
     typedef struct dirent64 condor_dirent;

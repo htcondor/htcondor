@@ -101,8 +101,6 @@ sysapi_kernel_version_raw(void)
 
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
 	_sysapi_kernel_version = strdup(buf.release);
-#elif defined(AIX)
-	_sysapi_kernel_version = strdup(buf.release);
 #elif defined(HPUX)
 	_sysapi_kernel_version = strdup(buf.release);
 #elif defined(WIN32)

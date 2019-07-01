@@ -282,7 +282,7 @@ utmp_pty_idle_time( time_t now )
 
 		// fread returns number of items read, not bytes
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == 1) {
-#if defined(AIX) || defined(LINUX)
+#if defined(LINUX)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
@@ -424,8 +424,6 @@ all_pty_idle_time( time_t now )
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
-#elif defined( AIX )
-#include <sys/types.h>
 #else
 #include <sys/mkdev.h>
 #endif

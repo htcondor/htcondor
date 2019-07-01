@@ -111,21 +111,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE const unsigned int
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
-#elif defined(AIX)
-	#define SOCKET_DATA_TYPE void*
-	#define SOCKET_LENGTH_TYPE socklen_t
-	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
-	#define SOCKET_DATA_CONST const
-	#define SOCKET_MSG_CONST const
-	#define SOCKET_ADDR_TYPE struct sockaddr*
-	#define SOCKET_ADDR_CONST_CONNECT
-	#define SOCKET_ADDR_CONST_BIND const
-	#define SOCKET_ADDR_CONST_ACCEPT
-	#define SOCKET_SENDRECV_TYPE int
-	#define SOCKET_RECVFROM_TYPE int
-	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
-	#define SOCKET_FLAGS_TYPE unsigned int
-	#define SOCKET_COUNT_TYPE int
 #elif defined(CONDOR_FREEBSD)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE unsigned int
