@@ -13,13 +13,24 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- If you run a CCB server, please note that the default value for
+  ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
+  set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
+  after you upgrade.  To avoid this problem,
+  set ``CCB_RECONNECT_FILE`` to its default path before upgrading.  (Look in
+  the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
+  don't see one, you don't have to do anything.)
+
 New Features:
 
 -  None.
 
 Bugs Fixed:
 
--  None.
+- The default ``CCB_RECONNECT_FILE`` name now includes the shared port ID
+  instead of the port number, if available, which prevents multiple CCBs
+  behind the same shared port from interfering with each other's state file.
+  :ticket:`7135`
 
 Version 8.9.2
 -------------

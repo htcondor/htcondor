@@ -1929,7 +1929,7 @@ More information about networking in HTCondor can be found in
     The full path and file name of the file that the CCB server writes
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
-    ``$(SPOOL)/.ccb_reconnect``.
+    ``$(SPOOL)/<ip address>-<shared port ID or port number>.ccb_reconnect``.
 
 ``COLLECTOR_USES_SHARED_PORT`` :index:`COLLECTOR_USES_SHARED_PORT`
     A boolean value that specifies whether the *condor_collector* uses
