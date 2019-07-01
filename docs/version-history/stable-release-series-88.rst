@@ -71,6 +71,16 @@ Bugs Fixed:
    as needed at start up.
    :ticket:`7101`
 
+- Updated the ``ChildCollector`` and ``CollectorNode`` configuration templates
+  to set ``CCB_RECONNECT_FILE``.  This avoids a bug where each collector
+  running behind the same shared port daemon uses the same reconnect file,
+  corrupting it.  (This corruption will cause new connections to a daemon
+  using CCB to fail if the collector has restarted since the daemon initially
+  registered.)  If your configuration does not use the templates to run
+  multiple collectors behind the same shared port daemon, you will need to
+  update your configuration by hand.
+  :ticket:`7134`
+
 Version 8.8.3
 -------------
 
