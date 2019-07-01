@@ -5951,8 +5951,9 @@ default: @end
    else
       COLLECTOR$(1)_ARGS= -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_NAME=collector$(1)
+   COLLECTOR$(1).COLLECTOR_NAME=Collector$(1)
    COLLECTOR$(1).CONDOR_VIEW_HOST=$(TOP_COLLECTOR_HOST)
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
    # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
    TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
@@ -5972,7 +5973,8 @@ default: @end
    else
       COLLECTOR$(1)_ARGS=-f -local-name COLLECTOR$(1) -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log 
+   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
 @end
 
