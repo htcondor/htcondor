@@ -238,10 +238,6 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 
 #elif defined(LINUX)
 	ncpus_linux(num_cpus,num_hyperthread_cpus );
-#elif defined(AIX)
-	int cpus = sysconf(_SC_NPROCESSORS_ONLN);
-	if( num_cpus ) *num_cpus = cpus;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(CONDOR_FREEBSD)
 	int mib[2], cpus;
 	size_t len;

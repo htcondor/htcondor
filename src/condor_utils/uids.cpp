@@ -949,12 +949,6 @@ delete_passwd_cache() {
 
 #include <grp.h>
 
-#if defined(AIX31) || defined(AIX32)
-#include <sys/types.h>
-#include <sys/id.h>
-#define SET_EFFECTIVE_UID(id) setuidx(ID_REAL|ID_EFFECTIVE,id)
-#define SET_REAL_UID(id) setuidx(ID_SAVED|ID_REAL|ID_EFFECTIVE,id)
-#else
 #define SET_EFFECTIVE_UID(id) seteuid(id)
 #define SET_REAL_UID(id) setuid(id)
 #define SET_EFFECTIVE_GID(id) setegid(id)
@@ -963,7 +957,6 @@ delete_passwd_cache() {
 #define GET_REAL_UID() getuid()
 #define GET_EFFECTIVE_GID() getegid()
 #define GET_REAL_GID() getgid()
-#endif
 
 #include "condor_debug.h"
 #include "passwd_cache.unix.h"

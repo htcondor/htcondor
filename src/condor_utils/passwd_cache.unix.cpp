@@ -301,14 +301,9 @@ passwd_cache::cache_uid(const char* user) {
 			
 			// Under linux, getpwnam sets errno to ENOENT the former case, so
 			// we consider that as well.
-
-			// Under AIX, getpwnam sets errno to ESRCH the former case, so
-			// we consider that as well.
 		if( errno == 0 
 #if defined(LINUX)
 			|| errno == ENOENT
-#elif defined(AIX)
-			|| errno == ESRCH
 #endif
 		) 
 		{
