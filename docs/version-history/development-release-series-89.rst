@@ -27,6 +27,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where schedd would not start if the history file
+  size, named by MAX_HISTORY_SIZE was more than 2 Gigabytes.
+  :ticket:`7023`
+
 - The default ``CCB_RECONNECT_FILE`` name now includes the shared port ID
   instead of the port number, if available, which prevents multiple CCBs
   behind the same shared port from interfering with each other's state file.
