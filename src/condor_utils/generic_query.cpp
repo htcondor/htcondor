@@ -439,11 +439,11 @@ copyQueryObject (const GenericQuery &from)
 
 	// copy string constraints
    	for (i = 0; i < from.stringThreshold; i++)
-		copyStringCategory (stringConstraints[i], from.stringConstraints[i]);
+		if (stringConstraints) copyStringCategory (stringConstraints[i], from.stringConstraints[i]);
 	
 	// copy integer constraints
 	for (i = 0; i < from.integerThreshold; i++)
-		copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
+		if (integerConstraints) copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
 
 	// copy custom constraints
 	copyStringCategory (customANDConstraints, const_cast<List<char> &>(from.customANDConstraints));
