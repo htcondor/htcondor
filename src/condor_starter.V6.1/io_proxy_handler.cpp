@@ -853,8 +853,7 @@ int IOProxyHandler::convert( int result, int unix_errno )
 			return CHIRP_ERROR_IS_DIR;
 		case ENOTDIR:
 			return CHIRP_ERROR_NOT_DIR;
-/* ENOTEMPTY is equal to EEXIST under AIX */
-#if defined(ENOTEMPTY) && !defined(AIX) 
+#if defined(ENOTEMPTY)
 		case ENOTEMPTY:
 			return CHIRP_ERROR_NOT_EMPTY;
 #endif

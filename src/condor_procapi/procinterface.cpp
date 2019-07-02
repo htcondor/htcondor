@@ -33,7 +33,7 @@ ProcAd::~ProcAd() {
 
   /* getProcAd returns a ClassAd containing information about one process.
      Information can be retrieved on any process owned by the same user, 
-     and on some systems (Linux, HPUX, Sol2.6) information can be gathered 
+     and on some systems (Linux, Sol2.6) information can be gathered 
      from all processes.  See the ProcInfo struct definitions in procapi.h
      to see the exact definitions of what gets returned.  */
 ClassAd * ProcAd::getProcAd ( pid_t pid ) {

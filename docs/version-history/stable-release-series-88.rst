@@ -25,6 +25,13 @@ New Features:
    which defaults to ``True``.  When it is ``False``, Dagman will contact the
    local Schedd directly to submit jobs. :ticket:`6974`
 
+-  Added an optimization into DAGMan for graphs that use many-PARENT-many-CHILD
+   statements. A new configuration variable ``DAGMAN_USE_JOIN_NODES`` can be
+   used to automatically add an intermediate *join node* between the set of 
+   parent nodes and set of child nodes. When these sets are large, join nodes
+   significantly improve *condor_dagman* memory footprint, parse time and
+   submit speed. :ticket:`7108`
+
 Bugs Fixed:
 
 -  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
@@ -63,6 +70,16 @@ Bugs Fixed:
    The *condor_master* creates ``/var/run/condor`` and ``/var/lock/condor``
    as needed at start up.
    :ticket:`7101`
+
+- Updated the ``ChildCollector`` and ``CollectorNode`` configuration templates
+  to set ``CCB_RECONNECT_FILE``.  This avoids a bug where each collector
+  running behind the same shared port daemon uses the same reconnect file,
+  corrupting it.  (This corruption will cause new connections to a daemon
+  using CCB to fail if the collector has restarted since the daemon initially
+  registered.)  If your configuration does not use the templates to run
+  multiple collectors behind the same shared port daemon, you will need to
+  update your configuration by hand.
+  :ticket:`7134`
 
 Version 8.8.3
 -------------

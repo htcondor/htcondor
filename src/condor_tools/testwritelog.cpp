@@ -275,9 +275,6 @@ grab_val( const char *str, const char *pattern )
 	return -1;
 }
 
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
-
 /*
   Initialize information from the configuration files.
 */

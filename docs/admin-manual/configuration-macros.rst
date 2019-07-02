@@ -1929,7 +1929,7 @@ More information about networking in HTCondor can be found in
     The full path and file name of the file that the CCB server writes
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
-    ``$(SPOOL)/.ccb_reconnect``.
+    ``$(SPOOL)/<ip address>-<shared port ID or port number>.ccb_reconnect``.
 
 ``COLLECTOR_USES_SHARED_PORT`` :index:`COLLECTOR_USES_SHARED_PORT`
     A boolean value that specifies whether the *condor_collector* uses
@@ -8311,6 +8311,14 @@ General
     directly.  This is faster than using *condor_submit*, especially for very
     large DAGs; But this method will ignore some submit file features such as
     ``max_materialize`` and more than one ``QUEUE`` statement.
+
+``DAGMAN_USE_JOIN_NODES`` :index:`DAGMAN_USE_JOIN_NODES`
+    A boolean value that defaults to ``False``. When ``True``, causes
+    *condor_dagman* to break up many-PARENT-many-CHILD relationships with an
+    intermediate *join node*. When these sets are large, this significantly
+    optimizes the graph structure by reducing the number of dependencies, 
+    resulting in a significant improvement to the *condor_dagman* memory 
+    footprint, parse time and submit speed.
 
 Throttling
 ''''''''''

@@ -193,8 +193,8 @@ CCBServer::InitAndReconfig()
 			spool,
 			DIR_DELIM_CHAR,
 			myHost,
-			my_addr.getPort() ? my_addr.getPort() : "0");
-dprintf( D_ALWAYS, "m_reconnect_fname = %s\n", m_reconnect_fname.Value() );
+			my_addr.getSharedPortID() ?	my_addr.getSharedPortID() :
+				my_addr.getPort() ? my_addr.getPort() : "0" );
 
 		free( myHost );
 		free( spool );
