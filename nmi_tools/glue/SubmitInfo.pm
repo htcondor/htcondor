@@ -321,7 +321,9 @@ our %submit_info = (
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+                '-DWITH_PYTHON_BINDINGS:BOOL' => 'OFF',
+            },
 			'prereqs'	=> [ ],
 			'xtests'	=> undef,
 		},
