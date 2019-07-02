@@ -86,6 +86,10 @@ Bugs Fixed:
    resources with the same identifier
    :ticket:`7104`
 
+-  The *condor_q* tool now displays ``-nobatch`` mode by default when the ``-run``
+   option is used.
+   :ticket:`7068`
+
 Version 8.8.3
 -------------
 
