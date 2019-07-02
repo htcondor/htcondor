@@ -386,13 +386,13 @@ clearQueryObject (void)
 {
 	int i;
 	for (i = 0; i < stringThreshold; i++)
-		clearStringCategory (stringConstraints[i]);
+		if (stringConstraints) clearStringCategory (stringConstraints[i]);
 	
 	for (i = 0; i < integerThreshold; i++)
-		clearIntegerCategory (integerConstraints[i]);
+		if (integerConstraints) clearIntegerCategory (integerConstraints[i]);
 
 	for (i = 0; i < floatThreshold; i++)
-		clearFloatCategory (floatConstraints[i]);
+		if (integerConstraints) clearFloatCategory (floatConstraints[i]);
 
 	clearStringCategory (customANDConstraints);
 	clearStringCategory (customORConstraints);
