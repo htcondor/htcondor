@@ -24,8 +24,6 @@
 
 using namespace std;
 
-extern "C" int SetSyscalls () { return 0; }
-
 int main (void)
 {
     char        buffer[1024];

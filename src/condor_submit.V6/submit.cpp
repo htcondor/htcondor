@@ -240,7 +240,6 @@ int process_job_credentials();
 extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
-int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
@@ -2590,10 +2589,6 @@ init_params()
 
 }
 
-
-extern "C" {
-int SetSyscalls( int foo ) { return foo; }
-}
 
 // The code below needs work before it can build on Windows or older Macs
 

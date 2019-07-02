@@ -21,8 +21,6 @@
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 
-extern "C" int SetSyscalls(int val){return val;}
-
 class Foo : public Service
 {
 	public:
