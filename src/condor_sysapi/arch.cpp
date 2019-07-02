@@ -726,7 +726,6 @@ sysapi_get_unix_info( const char *sysname,
                         int         append_version)
 {
 	char tmp[64];
-	char ver[24];
 	const char * pver="";
 	char *tmpopsys;
 
