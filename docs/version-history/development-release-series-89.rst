@@ -21,6 +21,9 @@ Release Notes:
   the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
   don't see one, you don't have to do anything.)
 
+- Singularity jobs no longer mount the user's home directory by default.
+  To re-enable this, set the knob SINGULARITY_MOUNT_HOME = true
+
 New Features:
 
 -  None.
