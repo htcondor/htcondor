@@ -395,7 +395,7 @@ Comments and Line Continuations
 An HTCondor configuration file may contain comments and line
 continuations. A comment is any line beginning with a pound character
 (#). A continuation is any entry that continues across multiples lines.
-Line continuation is accomplished by placing the backslash character (/)
+Line continuation is accomplished by placing the backslash character (\\)
 at the end of any line to be continued onto another. Valid examples of
 line continuation are
 
