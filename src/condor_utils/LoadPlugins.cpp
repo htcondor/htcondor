@@ -92,7 +92,7 @@ LoadPlugins()
 			Directory directory(plugin_dir.Value());
 			while (NULL != (plugin_file = directory.Next())) {
 					// NOTE: This should eventually support .dll for
-					// Windows, .dylib for Darwin, .sl for HPUX, etc
+					// Windows, .dylib for Darwin, etc
 				if (0 == strcmp(".so", plugin_file + strlen(plugin_file) - 3)) {
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, found: %s\n",

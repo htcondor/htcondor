@@ -23,33 +23,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
  
-#if defined(HPUX)
-
-#include <sys/pstat.h>
-
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	struct pst_static s;
-	unsigned long pages, pagesz;
-	double size;
-						   
-	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-		pages = s.physical_memory;
-		pagesz = s.page_size >> 10;
-		size = (double)pages * (double)pagesz;
-		size /= 1024.0;
-
-		if (size > INT_MAX){
-			return INT_MAX;
-		}
-		return (int)size;
-	} else {
-		return -1;
-	}
-}
-
-#elif defined(Solaris) 
+#if defined(Solaris) 
 
 /*
  * This works for Solaris >= 2.3

@@ -156,7 +156,7 @@ long long sysapi_disk_space_raw( const char *filename);
 long long sysapi_disk_space_raw();
 #endif
 
-#if defined(LINUX) || defined(HPUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(LINUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 

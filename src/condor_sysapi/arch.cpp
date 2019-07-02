@@ -780,21 +780,6 @@ sysapi_get_unix_info( const char *sysname,
         sprintf( tmp, "Solaris %s.%s", version, pver );
 	}
 
-	else if( !strcmp(sysname, "HP-UX") ) {
-        sprintf( tmp, "HPUX" );
-		if( !strcmp(release, "B.10.20") ) {
-			pver = "10";
-		}
-		else if( !strcmp(release, "B.11.00") ) {
-			pver = "11";
-		}
-		else if( !strcmp(release, "B.11.11") ) {
-			pver = "11";
-		}
-		else {
-			pver = release;
-		}
-	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s", sysname);

@@ -51,8 +51,6 @@
 
 #if defined(LINUX)
 #	include "condor_sys_linux.h"
-#elif defined(HPUX)
-#	include "condor_sys_hpux.h"
 #elif defined(Solaris)
 #	include "condor_sys_solaris.h"
 #elif defined(Darwin)

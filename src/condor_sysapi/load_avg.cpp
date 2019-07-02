@@ -21,7 +21,7 @@
 /* This file contains each implementation of load average that we need. */
 
 /* The essence of the format looks like this for each type of machine:
-	#if defined(HPUX) 
+	#if defined(LINUX) 
 		code
 	#endif
 
@@ -50,48 +50,7 @@ sysapi_load_avg(void)
 	}
 }
 
-#if defined(HPUX)
-/** Nicely ask the system what the one minute load average is.
-    For more info, see the pstat manpage and sys/pstat.h
-*/
-
-#include "condor_uid.h"
-
-#include <sys/pstat.h>
-
-float
-sysapi_load_avg_raw(void)
-{
-  struct pst_dynamic d;
-  	/* make numcpus static so we do not have to recompute
-	 * numcpus every time the load average is requested.
-	 * after all, the number of cpus is not going to change!
-	 * we need to multiply the value the HPUX kerenel gives
-	 * us by the number of CPUs, because on SMP HPUX the kernel
-	 * "distributes" the load average across all CPUs.  But
-	 * no other Unix does that, so our startd assumes otherwise.
-	 * So we multiply by the number of CPUs so HPUX SMP load avg
-	 * is reported the same way as other Unixes. -Todd
-	 */
-  static int numcpus = 0;  
-
-  sysapi_internal_reconfig();
-  if ( numcpus == 0 ) {
-    numcpus = sysapi_ncpus();
-	if ( numcpus < 1 ) {
-		numcpus = 1;
-	}
-  }
-
-  if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-    return (d.psd_avg_1_min * numcpus);
-  }
-  else {
-    return -1.0;
-  }
-}
-
-#elif defined(LINUX)
+#if defined(LINUX)
 
 //prototype
 void get_k_vars(void);

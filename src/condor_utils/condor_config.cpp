@@ -120,7 +120,6 @@ void process_config_source(const char*, int depth, const char*, const char*, int
 void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
-void check_params();
 
 // External variables
 //extern int	ConfigLineNo;
@@ -1164,10 +1163,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// WARNING!! if you insert new params after this, the able *might*
 		// be de-optimized.
 	optimize_macros(ConfigMacroSet);
-
-		// We have to do some platform-specific checking to make sure
-		// all the parameters we think are defined really are.
-	check_params();
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
 
@@ -3005,37 +3000,6 @@ int  get_config_stats(struct _macro_stats *pstats)
 	return macro_stats(ConfigMacroSet, *pstats);
 }
 
-
-void
-check_params()
-{
-#if defined( HPUX )
-		// Only on HPUX does this check matter...
-	char* tmp;
-	if( !(tmp = param("ARCH")) ) {
-			// Arch isn't defined.  That means the user didn't define
-			// it _and_ the special file we use that maps workstation
-			// models to CPU types doesn't exist either.  Print a
-			// verbose message and exit.  -Derek Wright 8/14/98
-		fprintf( stderr, "ERROR: %s must know if you are running "
-				 "on an HPPA1 or an HPPA2 CPU.\n",
-				 myDistro->Get() );
-		fprintf( stderr, "Normally, we look in %s for your model.\n",
-				 "/opt/langtools/lib/sched.models" );
-		fprintf( stderr, "This file lists all HP models and the "
-				 "corresponding CPU type.  However,\n" );
-		fprintf( stderr, "this file does not exist on your machine "
-				 "or your model (%s)\n", sysapi_uname_arch() );
-		fprintf( stderr, "was not listed.  You should either explicitly "
-				 "set the ARCH parameter\n" );
-		fprintf( stderr, "in your config source, or install the "
-				 "sched.models file.\n" );
-		exit( 1 );
-	} else {
-		free( tmp );
-	}
-#endif
-}
 
 /* Begin code for runtime support for modifying a daemon's config source.
    See condor_daemon_core.V6/README.config for more details. */

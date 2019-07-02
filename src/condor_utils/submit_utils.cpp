@@ -1955,7 +1955,7 @@ int SubmitHash::SetCoreSize()
 	long coresize = 0;
 
 	if (size == NULL) {
-#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
+#if defined(WIN32) /* RLIMIT_CORE not supported */
 		size = "";
 #else
 		struct rlimit rl;
@@ -3653,7 +3653,7 @@ int SubmitHash::SetAutoAttributes()
 	// and not from the schedd, but we can count on the Lookup() never failing when doing late materialization.
 	if ( ! job->Lookup(ATTR_CORE_SIZE)) {
 		long coresize = 0;
-	#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
+	#if defined(WIN32) /* RLIMIT_CORE not supported */
 	#else
 		struct rlimit rl;
 		if (getrlimit(RLIMIT_CORE, &rl) == -1) {
