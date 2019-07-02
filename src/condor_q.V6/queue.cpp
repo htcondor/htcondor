@@ -1717,7 +1717,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobNormal ||
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory) {
+				if ( ! dash_factory && ! dash_run) {
 					dash_batch = dash_batch_is_default;
 				}
 			}
