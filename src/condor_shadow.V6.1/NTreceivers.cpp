@@ -1264,7 +1264,8 @@ case CONDOR_getfile:
 		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
 		if(fd >= 0) {
 			struct stat info;
-			stat(path, &info);
+			int rc = stat(path, &info);
+			ASSERT(rc)
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
 			ASSERT( buf );
