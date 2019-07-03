@@ -287,7 +287,12 @@ public:
 		return false;
 	}
 
-	static void addApprovalRule(std::string netblock, time_t lifetime) {
+	static bool addApprovalRule(std::string netblock, time_t lifetime, CondorError & error ) {
+		if( lifetime <= 0 ) {
+			error.push( "DAEMON", -1, "Auto-approval rule lifetimes must be greater than zero." );
+			return false;
+		}
+
 		m_approval_rules.emplace_back();
 		auto &rule = m_approval_rules.back();
 		rule.m_approval_netblock.reset(new NetStringList(netblock.c_str()));
@@ -298,6 +303,7 @@ public:
 		} else {
 			rule.m_expiry_time = rule.m_issue_time + lifetime;
 		}
+		return true;
 	}
 
 	static void clearApprovalRules() {m_approval_rules.clear();}
@@ -2076,56 +2082,63 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 	int max_lifetime = param_integer("TOKEN_REQUEST_AUTO_APPROVE_MAX_LIFETIME", 3600);
 	if (lifetime > max_lifetime) lifetime = max_lifetime;
 
-	TokenRequest::addApprovalRule(netblock, lifetime);
-	dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
-		" with lifetime %ld.\n", netblock.c_str(), lifetime);
-
 	stream->encode();
 	classad::ClassAd result_ad;
 
 	CondorError err;
 	int error_code = 0;
 	std::string error_string;
-	std::string final_key_name = get_token_signing_key(err);
-	if (final_key_name.empty()) {
-		error_string = err.getFullText();
-		error_code = err.code();
-	}
 
-	time_t now = time(NULL);
-    // We otherwise only evaluate each request as it comes in, so we have to
-    // check all of them now if we want to approve ones that came in recently.
-	dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
-		"auto-approval.\n", g_request_map.size());
-	for (auto &iter : g_request_map) {
-		if (error_code) {break;}
+	if( TokenRequest::addApprovalRule(netblock, lifetime, err) ) {
+		dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
+			" with lifetime %ld.\n", netblock.c_str(), lifetime);
 
-		std::string rule_text;
-		if (!TokenRequest::ShouldAutoApprove(*(iter.second), now, rule_text)) {
-			continue;
-		}
-		auto &token_request = *(iter.second);
-		CondorError err;
-		std::string token;
-		if (!Condor_Auth_Passwd::generate_token(
-			token_request.getRequestedIdentity(),
-			final_key_name,
-			token_request.getBoundingSet(),
-			token_request.getLifetime(),
-			token,
-			&err))
-		{
+		std::string final_key_name = get_token_signing_key(err);
+		if (final_key_name.empty()) {
 			error_string = err.getFullText();
 			error_code = err.code();
-			token_request.setFailed();
-		} else {
-			token_request.setToken(token);
-			dprintf(D_SECURITY|D_FULLDEBUG,
-				"Auto-approved existing request %d.\n",
-				iter.first);
-			dprintf(D_ALWAYS, "Token request %s passed via auto-approval rule %s.\n",
-				token_request.getPublicString().c_str(), rule_text.c_str());
 		}
+
+		time_t now = time(NULL);
+		// We otherwise only evaluate each request as it comes in, so we have to
+		// check all of them now if we want to approve ones that came in recently.
+		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
+			"auto-approval.\n", g_request_map.size());
+		for (auto &iter : g_request_map) {
+			if (error_code) {break;}
+
+			std::string rule_text;
+			if (!TokenRequest::ShouldAutoApprove(*(iter.second), now, rule_text)) {
+				continue;
+			}
+			auto &token_request = *(iter.second);
+			CondorError err;
+			std::string token;
+			if (!Condor_Auth_Passwd::generate_token(
+				token_request.getRequestedIdentity(),
+				final_key_name,
+				token_request.getBoundingSet(),
+				token_request.getLifetime(),
+				token,
+				&err))
+			{
+				error_string = err.getFullText();
+				error_code = err.code();
+				token_request.setFailed();
+			} else {
+				token_request.setToken(token);
+				dprintf(D_SECURITY|D_FULLDEBUG,
+					"Auto-approved existing request %d.\n",
+					iter.first);
+				dprintf(D_ALWAYS, "Token request %s passed via auto-approval rule %s.\n",
+					token_request.getPublicString().c_str(), rule_text.c_str());
+			}
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "Rejected new auto-approve rule for netblock %s "
+			"with lifetime %ld: %s\n", netblock.c_str(), lifetime, err.getFullText().c_str());
+		error_string = err.getFullText();
+		error_code = err.code();
 	}
 
 	result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);

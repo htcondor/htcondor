@@ -3021,9 +3021,15 @@ Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
 		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
 		return false;
 	}
-	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
-		if (err) err->pushf("DAEMON", 1, "Unable to set lifetime.");
-		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set lifetime.\n");
+	if( lifetime > 0 ) {
+		if(! ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set lifetime.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set lifetime.\n");
+			return false;
+		}
+	} else {
+		if (err) err->pushf("DAEMON", 1, "Auto-approval rule lifetimes must be greater than zero." );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval lifetimes must be greater than zero.\n" );
 		return false;
 	}
 
