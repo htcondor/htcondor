@@ -46,7 +46,9 @@ case "$1" in
             # "human" user with the same name, so only proceed when the
             # respective user is locked down
             SH=$(getent passwd | egrep '^condor:'| cut -d : -f 7)
-            if [ "$SH" = "/bin/false" -o "$SH" = "/usr/sbin/nologin" ]; then
+            if [ "$SH" = "/bin/true" -o "$SH" = "/bin/false" -o \
+                 "$SH" = "/sbin/nologin" -o "$SH" = "/usr/sbin/nologin" -o \
+                 "$SH" = "/bin/nosh" ]; then
                 echo "WARNING: HTCondor will be running under an existing non-system user account 'condor'."
             else
                 echo "ERROR: HTCondor cannot run under unlocked non-system account 'condor'" 1>&2
