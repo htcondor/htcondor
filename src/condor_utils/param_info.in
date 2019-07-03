@@ -3615,7 +3615,12 @@ type=string
 tags=annex
 
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-098354a57b99f8284
 type=string
 tags=annex
 
@@ -3625,7 +3630,12 @@ type=string
 tags=annex
 
 [eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-0ea8a09ffcba25387
 type=string
 tags=annex
 
@@ -3635,7 +3645,12 @@ type=string
 tags=annex
 
 [eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-04d9855a808fcc4bd
 type=string
 tags=annex
 
@@ -3645,12 +3660,27 @@ type=string
 tags=annex
 
 [eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-08049d1871f14f2f9
 type=string
 tags=annex
 
 [eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
 default = ami-07ed49c22921c0d31
+type=string
+tags=annex
+
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-029bbf2574767da49
 type=string
 tags=annex
 
