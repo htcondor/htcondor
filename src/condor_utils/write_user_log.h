@@ -307,6 +307,8 @@ class WriteUserLog
 		mask.push_back(e);
 	}
 
+	FileLockBase *getLock();
+
   private:
 
 	///
