@@ -2307,6 +2307,7 @@ public:
 	size_t getReservedSpace() const {return m_reserved_space;}
 
 	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	std::string generateUUID();
 	const std::string &getUUID() const {return m_uuid;}
 
 	void setTag(const std::string &tag) {m_tag = tag;}

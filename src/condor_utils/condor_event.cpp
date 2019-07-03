@@ -40,6 +40,10 @@
 #include "condor_debug.h"
 //--------------------------------------------------------
 
+#ifndef WIN32
+#include <uuid/uuid.h>
+#endif
+
 // define this to turn off seeking in the event reader methods
 #define DONT_EVER_SEEK 1
 
@@ -7827,6 +7831,20 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	return true;
 }
 
+
+std::string
+ReserveSpaceEvent::generateUUID()
+{
+#ifdef WIN32
+	return "";
+#else
+	char uuid_str[37];
+	uuid_t uuid;
+	uuid_generate_random(uuid);
+	uuid_unparse(uuid, uuid_str);
+	return std::string(uuid_str, 36);
+#endif
+}
 
 void
 ReleaseSpaceEvent::initFromClassAd( ClassAd *ad )
