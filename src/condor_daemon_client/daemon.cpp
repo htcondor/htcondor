@@ -36,6 +36,7 @@
 #include "time_offset.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"
+#include "condor_netaddr.h"
 #include "condor_sinful.h"
 
 #include "counted_ptr.h"
@@ -3016,10 +3017,19 @@ Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
 		if (err) err->pushf("DAEMON", 1, "No netblock provided.");
 		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): No netblock provided.");
 		return false;
-	} else if (!ad.InsertAttr(ATTR_SUBNET, netblock)) {
-		if (err) err->pushf("DAEMON", 1, "Unable to set netblock.");
-		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
-		return false;
+	} else {
+		condor_netaddr na;
+		if(! na.from_net_string(netblock.c_str())) {
+			err->pushf( "DAEMON", 2, "Auto-approval rule netblock invalid." );
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule netblock is invalid.\n");
+			return false;
+		}
+
+		if (!ad.InsertAttr(ATTR_SUBNET, netblock)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set netblock.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
+			return false;
+		}
 	}
 	if( lifetime > 0 ) {
 		if(! ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
@@ -3028,8 +3038,8 @@ Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
 			return false;
 		}
 	} else {
-		if (err) err->pushf("DAEMON", 1, "Auto-approval rule lifetimes must be greater than zero." );
-		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval lifetimes must be greater than zero.\n" );
+		if (err) err->pushf("DAEMON", 2, "Auto-approval rule lifetimes must be greater than zero." );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule lifetimes must be greater than zero.\n" );
 		return false;
 	}
 

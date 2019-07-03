@@ -41,6 +41,7 @@
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 #include "store_cred.h"
+#include "condor_netaddr.h"
 #include "net_string_list.h"
 
 #include <chrono>
@@ -290,6 +291,12 @@ public:
 	static bool addApprovalRule(std::string netblock, time_t lifetime, CondorError & error ) {
 		if( lifetime <= 0 ) {
 			error.push( "DAEMON", -1, "Auto-approval rule lifetimes must be greater than zero." );
+			return false;
+		}
+
+		condor_netaddr na;
+		if(! na.from_net_string(netblock.c_str())) {
+			error.push( "DAEMON", -2, "Auto-approval rule netblock invalid." );
 			return false;
 		}
 
