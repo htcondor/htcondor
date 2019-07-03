@@ -44,8 +44,8 @@
 
 #include <sys/types.h>
 
-#include "condor_fix_sys_stat.h"
-#include "condor_fix_unistd.h"
+#include <sys/stat.h>
+#include <unistd.h>
 
 /* Allows use of setgroups() */
 /* It turns out we can't allow this inclusion to fix some other warnings
@@ -77,19 +77,13 @@
    before we check for and define it ourselves */ 
 #include <sys/param.h>
 
-/* There is no <sys/select.h> on Linux, select() and friends are 
-   defined in <sys/time.h> */
-#include "condor_fix_sys_time.h"
+#include <sys/time.h>
 
 /* Need these to get statfs and friends defined */
 #include <sys/stat.h>
 #include <sys/vfs.h>
 
-/* This headerfile must be included before sys/wait.h because on glibc22
-	machines sys/wait.h brings in sys/resource.h and we need to modify
-	a few prototypes in sys/resource.h to be POSIX compliant.
-	-psilord 4/25/2001 */
-#include "condor_fix_sys_resource.h"
+#include <sys/resource.h>
 #include <sys/wait.h>
 /* Some versions of Linux don't define WCOREFLG, but we need it */
 #if !defined( WCOREFLG )
