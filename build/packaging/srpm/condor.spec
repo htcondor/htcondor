@@ -331,6 +331,7 @@ BuildRequires: gridsite-devel
 
 %if 0%{?rhel} >= 7
 %ifarch x86_64
+BuildRequires: python3-devel
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
 %endif
