@@ -39,6 +39,7 @@
 #include <chrono>
 #include <algorithm>
 #include <iterator>
+#include <unordered_set>
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -1550,15 +1551,29 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 		// If we can, try reading out the passwords as root.
 	TemporaryPrivSentry sentry(get_priv_state() == PRIV_UNKNOWN ? PRIV_UNKNOWN : PRIV_ROOT);
 
+	m_creds.clear();
+	std::unordered_set<std::string> tmp_creds;
+
+	std::string pool_password;
+	if (param(pool_password, "SEC_PASSWORD_FILE")) {
+		if (0 == access(pool_password.c_str(), R_OK)) {
+			tmp_creds.insert("POOL");
+		}
+	}
+
 	Directory dir(dirpath.c_str());
 	if (!dir.Rewind()) {
 		if (err) {
 			err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
 				dirpath.c_str(), strerror(errno), errno);
 		}
-		return false;
+		if (!tmp_creds.empty()) {
+			std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
+			std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+		} else {
+			return false;
+		}
 	}
-	m_creds.clear();
 
 	const char *file;
 	while( (file = dir.Next()) ) {
@@ -1567,7 +1582,7 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 		}
 		if(!excludeFilesRegex.match(file)) {
 			if (0 == access(dir.GetFullPath(), R_OK)) {
-				m_creds.push_back(file);
+				tmp_creds.insert(file);
 			}
 		} else {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring password file "
@@ -1576,13 +1591,7 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 		}
 	}
 
-	std::string pool_password;
-	if (param(pool_password, "SEC_PASSWORD_FILE")) {
-		if (0 == access(pool_password.c_str(), R_OK)) {
-			m_creds.push_back("POOL");
-		}
-	}
-
+	std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
 	std::sort(m_creds.begin(), m_creds.end());
 	std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
 

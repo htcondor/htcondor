@@ -81,6 +81,15 @@ Bugs Fixed:
   update your configuration by hand.
   :ticket:`7134`
 
+-  Fixed a bug that could cause custom resources to fail to be released from a
+   dynamic slot to partitionable slot correctly when there were multiple custom
+   resources with the same identifier
+   :ticket:`7104`
+
+-  The *condor_q* tool now displays ``-nobatch`` mode by default when the ``-run``
+   option is used.
+   :ticket:`7068`
+
 Version 8.8.3
 -------------
 

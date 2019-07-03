@@ -1837,7 +1837,7 @@ struct Schedd {
             {
                 {
                 condor::ModuleLock ml;
-                result = -1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str());
+                result = -1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str(), SetAttribute_NoAck);
                 }
                 if (result)
                 {
@@ -1850,7 +1850,7 @@ struct Schedd {
         {
             {
             condor::ModuleLock ml;
-            result = -1 == SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str());
+            result = -1 == SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str(), SetAttribute_NoAck);
             }
             if (result)
             {

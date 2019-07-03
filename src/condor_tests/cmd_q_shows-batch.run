@@ -155,7 +155,7 @@ if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_ar
 ##############################################################
 ########################## -run ##############################
 ##############################################################
-$command_arg = '-run -wide';
+$command_arg = '-run -wide -batch';
 $ClusterId = 100;
 $pid = $$;
 $arguments = 600;
