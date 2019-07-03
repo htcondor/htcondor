@@ -67,7 +67,7 @@ inline
 double condor_gettimestamp_double() {
 	struct timeval tv;
 	condor_gettimestamp( tv );
-	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+	return ( double(tv.tv_sec) + ( double(tv.tv_usec) * 0.000001 ) );
 }
 
 /* These functions work like the timersub() function.
@@ -89,8 +89,8 @@ long timersub_usec( const struct timeval &a, const struct timeval &b ) {
 
 inline
 double timersub_double( const struct timeval &a, const struct timeval &b ) {
-	double usec_diff = a.tv_usec - b.tv_usec;
-	double sec_diff = a.tv_sec - b.tv_sec;
+	double usec_diff = double(a.tv_usec) - double(b.tv_usec);
+	double sec_diff = double(a.tv_sec) - double(b.tv_sec);
 	return sec_diff + (usec_diff / 1000000.0);
 }
 
