@@ -20,6 +20,7 @@
 #ifndef CONDOR_SYSTEM_H
 #define CONDOR_SYSTEM_H
 
+#include "config.h"
 
 /******************************
 ** Windows specifics

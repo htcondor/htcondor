@@ -20,6 +20,8 @@
 #ifndef CONDOR_FIX_ACCESS_H
 #define CONDOR_FIX_ACCESS_H
 
+#include "condor_header_features.h"
+
 /* access() uses the real uid when performing its work. This is a problem
 	because the daemons often run as root and just change the euid to perform
 	checks to see if the uid of the user(as the euid of the root process) 
