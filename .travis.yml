@@ -18,9 +18,9 @@ matrix:
         - os: linux
           env: UW_BUILD=ON PROPER=OFF CLIPPED=ON
         - os: linux
-          env: UW_BUILD=ON PROPER=OFF CLIPPED=OFF DOCKER_IMAGE=centos:centos7
+          env: UW_BUILD=ON PROPER=OFF CLIPPED=ON DOCKER_IMAGE=centos:centos7
         - os: linux
-          env: UW_BUILD=ON PROPER=OFF CLIPPED=OFF DOCKER_IMAGE=fedora:28
+          env: UW_BUILD=ON PROPER=OFF CLIPPED=ON DOCKER_IMAGE=fedora:28
 
 cache:
     directories:
