@@ -2178,9 +2178,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 						m_sock->peer_addr().to_ip_string().Value()
 						);
 				} else {
-					if (response_method != "TOKEN") {
-						m_sock->setShouldTryTokenRequest(true);
-					}
+					m_sock->setShouldTryTokenRequest(true);
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
 						response_rc.c_str(), response_user.c_str(), response_method.Value());
 				}
