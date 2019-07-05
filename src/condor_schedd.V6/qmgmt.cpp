@@ -3339,8 +3339,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 						 SetAttributeFlags_t flags)
 {
 	ClassAd	*ad;
-	int match_count = 0;
+	int cluster_match_count = 0;
+	int job_match_count = 0;
 	int had_error = 0;
+	int rval = -1;
 	int terrno = 0;
 	JobQueueKey key;
 
@@ -3399,6 +3401,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
 		JobQueueJob * job = static_cast<JobQueueJob*>(ad);
+
 		// ignore header and ads.
 		if (job->IsHeader())
 			continue;
@@ -3408,7 +3411,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			continue;
 
 		if (EvalBool(ad, constraint.Expr())) {
-			match_count += 1;
+			if (job->IsCluster())
+				cluster_match_count += 1;
+			else
+				job_match_count += 1;
 			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
 				terrno = errno;
@@ -3425,17 +3431,22 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		return -1;
 	}
 
-	// if this is a queryonly call, return the match count
-	if (flags & SetAttribute_QueryOnly) {
-		return match_count;
+	// At this point we need to determine the return value.
+	// If 1 or more jobs matched, we wanted to return the number of job matches.
+	// If 0 jobs matched, but clusters matched, return the number of cluster matches.
+	// If no jobs or clusters matched, return value is -1 (error)
+	if (job_match_count > 0) {
+		rval = job_match_count;
+	}
+	else if (cluster_match_count > 0) {
+		rval = cluster_match_count;
+	}
+	else {
+		errno = ENOENT;
+		rval = -1;
 	}
 
-	// for non-query calls treat 'no jobs matched' the same as failure.
-	if ( match_count == 0 ) {
-		match_count = -1;
-		errno = ENOENT;
-	}
-	return match_count;
+	return rval;
 }
 
 // Set up an efficient lookup table for attributes that need special processing in SetAttribute
