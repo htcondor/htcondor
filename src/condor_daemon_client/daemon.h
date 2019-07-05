@@ -889,7 +889,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request, std::string &trust_domain);
+	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id);
 
 		/**
 		   Internal function used by public versions of startCommand().

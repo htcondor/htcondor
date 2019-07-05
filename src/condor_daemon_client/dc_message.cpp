@@ -359,6 +359,12 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		msg->name(),
 		msg->getRawProtocol(),
 		msg->getSecSessionId());
+
+	// TODO: Brian - get rid if this code and do the right thing to propagate these...
+	if (m_callback_sock) {
+		m_daemon->m_should_try_token_request = m_callback_sock->shouldTryTokenRequest();
+		m_daemon->m_trust_domain = m_callback_sock->getTrustDomain();
+	}
 }
 
 void
