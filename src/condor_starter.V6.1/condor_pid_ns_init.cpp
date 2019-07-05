@@ -143,9 +143,12 @@ retry:
 
 		// Child has exited.  First see if we failed to exec
 		struct stat buf;
-		result = stat(getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME"), &buf);
-		if (result != 0) {
-			write_status("Exited", status);
+		const char *filename = getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME");
+		if (filename) {
+			result = stat(filename, &buf);
+			if (result != 0) {
+				write_status("Exited", status);
+			}
 		}
 		exit(WEXITSTATUS(status));
 	}
