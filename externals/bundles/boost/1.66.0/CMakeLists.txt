@@ -58,8 +58,29 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	#  set (Boost_DEBUG TRUE)
+	set (Boost_DEBUG TRUE)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
+
+    message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
+    if (DEFINED SYSTEM_NAME)
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
+            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+                message (STATUS "Using system boost169 for 64-bit EL7" )
+                set(BOOST_INCLUDEDIR "/usr/include/boost169")
+                set(BOOST_LIBRARYDIR "/usr/lib64/boost169")
+                set(Boost_INCLUDE_DIR "/usr/include/boost169")
+                set(Boost_LIBRARY_DIR "/usr/lib64/boost169")
+                set(USE_SYSTEM_BOOST True)
+            endif()
+        endif()
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+        if (${SYSTEM_NAME} MATCHES "fc")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+    endif()
+
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
@@ -88,12 +109,15 @@ else (WINDOWS)
 			set (BOOST_VER ${Boost_VERSION})
 			set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
 			set (BOOST_LD ${Boost_LIBRARY_DIRS})
+            if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
+                set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+            endif()
 		endif()
 
 	endif(Boost_FOUND)
 
 	# we only use our version of boost if the system is not good enough
-	if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
+    if (NOT PROPER AND NOT USE_SYSTEM_BOOST)
 
 		if (WINDOWS)
 			# building boost on windows here doesn't work right now. must use the pre-built boost external.
@@ -179,7 +203,7 @@ else (WINDOWS)
 		else()
 			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 		endif()
-	endif(NOT PROPER)
+	endif()
 endif(WINDOWS)
 
 

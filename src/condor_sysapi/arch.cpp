@@ -306,14 +306,6 @@ static const char* utsname_release = NULL;
 static const char* utsname_version = NULL;
 static const char* utsname_machine = NULL;
 
-#ifdef HPUX
-const char* get_hpux_arch();
-#endif
-
-#ifdef AIX
-const char* get_aix_arch( struct utsname* );
-#endif
-
 void 
 init_utsname(void)
 {
@@ -734,7 +726,6 @@ sysapi_get_unix_info( const char *sysname,
                         int         append_version)
 {
 	char tmp[64];
-	char ver[24];
 	const char * pver="";
 	char *tmpopsys;
 
@@ -789,28 +780,6 @@ sysapi_get_unix_info( const char *sysname,
         sprintf( tmp, "Solaris %s.%s", version, pver );
 	}
 
-	else if( !strcmp(sysname, "HP-UX") ) {
-        sprintf( tmp, "HPUX" );
-		if( !strcmp(release, "B.10.20") ) {
-			pver = "10";
-		}
-		else if( !strcmp(release, "B.11.00") ) {
-			pver = "11";
-		}
-		else if( !strcmp(release, "B.11.11") ) {
-			pver = "11";
-		}
-		else {
-			pver = release;
-		}
-	}
-	else if ( !strncmp(sysname, "AIX", 3) ) {
-        sprintf(tmp, "%s", sysname);
-		if ( !strcmp(version, "5") ) {
-			sprintf(ver, "%s%s", version, release);
-            pver = ver;
-		}
-	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s", sysname);
@@ -926,23 +895,6 @@ sysapi_translate_arch( const char *machine, const char *)
 	char tmp[64];
 	char *tmparch;
 
-#if defined(AIX)
-	/* AIX machines have a ton of different models encoded into the uname
-		structure, so go to some other function to decode and group the
-		architecture together */
-	struct utsname buf;
-
-	if( uname(&buf) < 0 ) {
-		return NULL;
-	}
-
-	return( get_aix_arch( &buf ) );
-
-#elif defined(HPUX)
-
-	return( get_hpux_arch( ) );
-#else
-
 		// Get ARCH
 		//mikeu: I modified this to also accept values from Globus' LDAP server
 	if( !strcmp(machine, "alpha") ) {
@@ -1033,7 +985,6 @@ sysapi_translate_arch( const char *machine, const char *)
 		EXCEPT( "Out of memory!" );
 	}
 	return( tmparch );
-#endif /* if HPUX else */
 }
 
 
@@ -1184,255 +1135,5 @@ sysapi_utsname_machine(void)
 	return utsname_machine;
 }
 
-
-#if defined(HPUX)
-const char*
-get_hpux_arch( void )
-{
-	/* As of 3/22/2006, it has been ten years since HP has made
-		a HPPA1 machine.  Just assume that this is a HPPA2 machine,
-		and if it is not the user can force the setting in the
-		ARCH config file setting
-   	*/
-#if defined(IS_IA64_HPUX)
-	return strdup("IA64");
-#else
-	return strdup("HPPA2");
-#endif
-
-}
-#endif /* HPUX */
-
-#ifdef AIX
-
-const char*
-get_aix_arch( struct utsname *buf )
-{
-	char *ret = "UNK";
-	char d[3];
-	int model;
-
-	/* The model number is encoded in the last two non zero digits of the
-		model code. */
-	d[0] = buf->machine[ strlen( buf->machine ) - 4 ];
-	d[1] = buf->machine[ strlen( buf->machine ) - 3 ];
-	d[2] = '\0';
-	model = strtol(d, NULL, 16);
-
-	/* ok, group the model numbers into processor families: */
-	switch(model)
-	{
-	  case 0x10:
-		/* Model 530/730 */
-		break;
-
-	  case 0x11:
-	  case 0x14:
-		/* Model 540 */
-		break;
-
-	  case 0x18:
-		/* Model 530H */
-		break;
-
-	  case 0x1C:
-		/* Model 550 */
-		break;
-
-	  case 0x20:
-		/* Model 930 */
-		break;
-
-	  case 0x2E:
-		/* Model 950/950E */
-		break;
-
-	  case 0x30:
-		/* Model 520 or 740/741 */
-		break;
-
-	  case 0x31:
-		/* Model 320 */
-		break;
-
-	  case 0x34:
-		/* Model 520H */
-		break;
-
-	  case 0x35:
-		/* Model 32H/320E */
-		break;
-
-	  case 0x37:
-		/* Model 340/34H */
-		break;
-
-	  case 0x38:
-		/* Model 350 */
-		break;
-
-	  case 0x41:
-		/* Model 220/22W/22G/230 */
-		break;
-
-	  case 0x42:
-		/* Model 41T/41W */
-		break;
-
-	  case 0x43:
-		/* Model M20 */
-		break;
-
-	  case 0x45:
-		/* Model 220/M20/230/23W */
-		break;
-
-	  case 0x46:
-	  case 0x49:
-		/* Model 250 */
-		break;
-
-	  case 0x47:
-		/* Model 230 */
-		break;
-
-	  case 0x48:
-		/* Model C10 */
-		break;
-
-	  case 0x4C:
-		/* PowerPC 603/604 model, and later */
-		ret = strdup("PWR3II");
-		break;
-
-	  case 0x4D:
-		/* Model 40P */
-		break;
-
-	  case 0x57:
-		/* Model 390/3AT/3BT */
-		break;
-
-	  case 0x58:
-		/* Model 380/3AT/3BT */
-		break;
-
-	  case 0x59:
-		/* Model 39H/3CT */
-		break;
-
-	  case 0x5C:
-		/* Model 560 */
-		break;
-
-	  case 0x63:
-		/* Model 970/97B */
-		break;
-
-	  case 0x64:
-		/* Model 980/98B */
-		break;
-
-	  case 0x66:
-		/* Model 580/58F */
-		break;
-
-	  case 0x67:
-		/* Model 570/770/R10 */
-		break;
-
-	  case 0x70:
-		/* Model 590 */
-		break;
-
-	  case 0x71:
-		/* Model 58H */
-		break;
-
-	  case 0x72:
-		/* Model 59H/58H/R12/R20 */
-		break;
-
-	  case 0x75:
-		/* Model 370/375/37T */
-		break;
-
-	  case 0x76:
-		/* Model 360/365/36T */
-		break;
-
-	  case 0x77:
-		/* Model 315/350/355/510/550H/550L */
-		break;
-
-	  case 0x79:
-		/* Model 591 */
-		break;
-
-	  case 0x80:
-		/* Model 990 */
-		break;
-
-	  case 0x81:
-		/* Model R24 */
-		break;
-
-	  case 0x82:
-		/* Model R00/R24 */
-		break;
-
-	  case 0x89:
-		/* Model 595 */
-		break;
-
-	  case 0x90:
-		/* Model C20 */
-		break;
-
-	  case 0x91:
-		/* Model 42T */
-		break;
-
-	  case 0x94:
-		/* Model 397 */
-		break;
-
-	  case 0xA0:
-		/* Model J30 */
-		break;
-
-	  case 0xA1:
-		/* Model J40 */
-		break;
-
-	  case 0xA3:
-		/* Model R30 */
-		break;
-
-	  case 0xA4:
-		/* Model R40 */
-		break;
-
-	  case 0xA6:
-		/* Model G30 */
-		break;
-
-	  case 0xA7:
-		/* Model G40 */
-		break;
-
-	  case 0xC4:
-		/* Model F30 */
-		break;
-
-	  default:
-	  	/* unknown model, use default value of ret */
-		break;
-	}
-
-	return ret;
-}
-
-#endif /* AIX */
 
 #endif /* ! WIN32 */

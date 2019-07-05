@@ -26,7 +26,6 @@
 #include "jic_shadow.h"
 
 #include "NTsenders.h"
-#include "syscall_numbers.h"
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"

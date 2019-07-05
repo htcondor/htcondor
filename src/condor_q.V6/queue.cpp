@@ -71,7 +71,6 @@ int getDisplayWidth() {
 	return testing_width;
 }
 
-extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, const char *[]);
 
@@ -1717,7 +1716,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobNormal ||
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory) {
+				if ( ! dash_factory && ! dash_run) {
 					dash_batch = dash_batch_is_default;
 				}
 			}

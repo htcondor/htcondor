@@ -993,9 +993,6 @@ void check_tmp_dir(){
 }
 
 
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
-
 /*
   Initialize information from the configuration files.
 */

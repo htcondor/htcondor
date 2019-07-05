@@ -117,8 +117,10 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
     fprintf(pSubFile, "on_exit_remove\t= %s\n", removeExpr.Value() );
 
-    fprintf(pSubFile, "copy_to_spool\t= %s\n", shallowOpts.copyToSpool ?
+    if (!usingPythonBindings) {
+        fprintf(pSubFile, "copy_to_spool\t= %s\n", shallowOpts.copyToSpool ?
                 "True" : "False" );
+    }
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp
@@ -968,10 +970,16 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
     {
         fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
                  dagman_exe );
-        fprintf( stderr, "Either rename them,\nuse the \"-f\" option to "
+        if(!usingPythonBindings) {
+            fprintf( stderr, "Either rename them,\nuse the \"-f\" option to "
                  "force them to be overwritten, or use\n"
                  "the \"-update_submit\" option to update the submit "
                  "file and continue.\n" );
+        }
+        else {
+            fprintf( stderr, "Either rename them,\nor set the { \"force\" : 1 }"
+                " option to force them to be overwritten.\n" );
+        }
         exit( 1 );
     }
 }

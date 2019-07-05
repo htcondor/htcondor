@@ -240,7 +240,6 @@ int process_job_credentials();
 extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
-int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
@@ -1943,7 +1942,7 @@ int submit_jobs (
 			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
 				MyString items_fn = create_local_factory_file;
 				items_fn += ".items";
-				dynamic_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
@@ -2590,10 +2589,6 @@ init_params()
 
 }
 
-
-extern "C" {
-int SetSyscalls( int foo ) { return foo; }
-}
 
 // The code below needs work before it can build on Windows or older Macs
 

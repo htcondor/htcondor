@@ -17,11 +17,11 @@
  ############################################################### 
 
 
-condor_selective_glob("server_interface.*" ServerAPISrcs )
 
-set( CKPT_SERVER_UTIL_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/network2.cpp;${CMAKE_CURRENT_SOURCE_DIR}/network2.h;${ServerAPISrcs}" PARENT_SCOPE )
 
-if(STD_UNIVERSE)
+if (NOT CLIPPED)
+	condor_selective_glob("server_interface.*" ServerAPISrcs )
+	set( CKPT_SERVER_UTIL_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/network2.cpp;${CMAKE_CURRENT_SOURCE_DIR}/network2.h;${ServerAPISrcs}" PARENT_SCOPE )
 	condor_glob( HeaderFiles SourceFiles "${ServerAPISrcs}" )
 	condor_exe( condor_ckpt_server "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
-endif(STD_UNIVERSE)
+endif(NOT CLIPPED)

@@ -178,9 +178,7 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 	int fam_status;
 	int rval;
 
-#ifndef HPUX
 	buildPidList();
-#endif
 
 	buildProcInfoList();
 
@@ -474,11 +472,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	piPTR cur = allProcInfos;
 	int fam_index = 0;
 
-#ifndef HPUX        // everyone except HPUX needs a pidlist built.
 	buildPidList();
-#endif
 
-	buildProcInfoList();  // HPUX has its own version of this, too.
+	buildProcInfoList();
 
 	// buildProcInfoList() just changed allProcInfos pointer, so update cur.
 	cur = allProcInfos;

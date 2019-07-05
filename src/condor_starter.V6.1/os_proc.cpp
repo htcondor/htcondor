@@ -34,8 +34,6 @@
 #endif
 
 #include "condor_attributes.h"
-#include "condor_syscall_mode.h"
-#include "syscall_numbers.h"
 #include "classad_helpers.h"
 #include "sig_name.h"
 #include "exit.h"
@@ -1208,6 +1206,12 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	Env env;
 	MyString env_errors;
 	Starter->GetJobEnv(JobAd,&env,&env_errors);
+
+	std::string target_dir;
+        bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	if (has_target) {
+		htcondor::Singularity::retargetEnvs(env, target_dir, "");
+	}
 
 	singExecPid = daemonCore->Create_Process(
 		"/usr/bin/nsenter",

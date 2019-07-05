@@ -2852,14 +2852,16 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 		// If a slot has been preempted, don't coalesce it.
 		Resource * r = resmgr->get_by_cur_id( claimID );
-		dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
+		if (r) {
+			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
 		// Despite appearances, this also transfers the nonfungible resources.
-		*(parent->r_attr) += *(r->r_attr);
-		*(r->r_attr) -= *(r->r_attr);
+			*(parent->r_attr) += *(r->r_attr);
+			*(r->r_attr) -= *(r->r_attr);
 
-		// Destroy the old slot.
-		r->kill_claim();
+			// Destroy the old slot.
+			r->kill_claim();
+		}
 	}
 
 	// We just updated the partitionable slot's resources...

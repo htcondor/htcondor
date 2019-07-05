@@ -22,13 +22,7 @@
 
 #include "network_adapter.h"
 
-/* On AIX 5.2, <net/if.h> pulls in <net/if_arp.h>, which defines
- * a global data symbol named 'fc_softc'. globus_uuid.c in the
- * globus_common library includes the same header file. When
- * both libraries are statically linked in the same binary,
- * the two definitions conflict.
- */
-#if defined(HAVE_NET_IF_H) && !defined(AIX)
+#if defined(HAVE_NET_IF_H)
 # include <net/if.h>
 #endif
 

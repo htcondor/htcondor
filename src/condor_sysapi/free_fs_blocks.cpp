@@ -156,13 +156,11 @@ long long sysapi_disk_space_raw( const char *filename);
 long long sysapi_disk_space_raw();
 #endif
 
-#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(LINUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
-#if defined(AIX)
-#include <sys/statfs.h>
-#elif defined(Solaris)
+#if defined(Solaris)
 #include <sys/statvfs.h>
 #endif
 
@@ -180,8 +178,6 @@ long long sysapi_disk_space_raw(const char * filename)
 
 #if defined(Solaris)
 	if(statvfs(filename, &statfsbuf) < 0) {
-#elif defined(AIX)
-	if(statfs((char *)filename, &statfsbuf) < 0) {
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif

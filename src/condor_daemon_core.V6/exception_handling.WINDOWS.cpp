@@ -236,15 +236,17 @@ LPCTSTR ExceptionHandler::GetExceptionString(DWORD dwCode, LPTSTR szBuf, size_t 
 
 	// If not one of the "known" exceptions, try to get the string
 	// from NTDLL.DLL's message table.
-	FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+	DWORD cch = FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
 		GetModuleHandle(_T("NTDLL.DLL")),
 		dwCode, 0, szBuf, (DWORD)cchBuf, 0);
+	if ( ! cch) szBuf[0] = 0;
 	return szBuf;
 }
 
 LPCTSTR ExceptionHandler::GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR szBuf, size_t cchBuf)
 {
 	DWORD dwCode = per->ExceptionCode;
+	szBuf[0] = 0; // return "" if we have nothing to say
 
 	// two of the most common exceptions have useful information in the ExceptionInformation
 	if ((EXCEPTION_ACCESS_VIOLATION == dwCode) || (EXCEPTION_IN_PAGE_ERROR == dwCode)) {

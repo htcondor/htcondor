@@ -321,13 +321,6 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
 
-#ifdef HPUX
-	/* I have no idea why this is happening, but I have seen it happen many
-	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
-	if ( full_path == "/usr/lib/nls////strerror.cat" )
-		full_path = "/usr/lib/nls/C/strerror.cat\0";
-#endif
-
 	if( use_local_access(full_path.Value()) ) {
 		method = "local";
 	} else {

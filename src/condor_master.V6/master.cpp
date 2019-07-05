@@ -126,11 +126,23 @@ int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
 
-const char	*default_daemon_list[] = {
-	"MASTER",
-	"STARTD",
-	"SCHEDD",
-	0};
+// daemons in this list are used when DAEMON_LIST is not configured
+// all will added to the list of daemons that condor_on can use
+// auto_start daemons will be started automatically when the master starts up
+// this list must contain only DC daemons
+static const struct {
+	const char * name;
+	bool auto_start;           // start automatically on startup
+	bool only_if_shared_port;  // start automatically only if shared port is enabled
+} default_daemon_list[] = {
+	{ "MASTER",       true , false},
+	{ "SHARED_PORT",  true,  true},
+	{ "COLLECTOR",    false, false},
+	{ "NEGOTIATOR",   false, false},
+	{ "STARTD",       false, false},
+	{ "SCHEDD",       false, false},
+	{ NULL, false, false}, // mark of list record
+};
 
 // NOTE: When adding something here, also add it to the various condor_config
 // examples in src/condor_examples
@@ -1244,6 +1256,12 @@ init_daemon_list()
 			// Tolerate a trailing comma in the list
 		daemon_names.remove( "" );
 
+			// if the master is not in the list, pretend it is.
+			// so we end up creating a daemon object for it, and don't just abort
+		if ( ! daemon_names.contains("MASTER")) {
+			daemon_names.append("MASTER");
+		}
+
 
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
@@ -1296,10 +1314,21 @@ init_daemon_list()
 			}
 		}
 	} else {
-		daemons.ordered_daemon_names.create_union( dc_daemon_names, false );
-		for(int i = 0; default_daemon_list[i]; i++) {
-			new class daemon(default_daemon_list[i]);
+		// some daemons should start only if shared port is enabled
+		bool shared_port = SharedPortEndpoint::UseSharedPort() && param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST", true);
+
+		// use the default daemon list to decide which daemons to start now, and which will we allow to start
+		for(int i = 0; default_daemon_list[i].name; i++) {
+			const char * name = default_daemon_list[i].name;
+			daemon_names.append(name); // add to list of allowed daemons
+			// should we start it now?
+			if (default_daemon_list[i].auto_start) {
+				if (shared_port || ! default_daemon_list[i].only_if_shared_port) {
+					new class daemon(default_daemon_list[i].name);
+				}
+			}
 		}
+		daemons.ordered_daemon_names.create_union(daemon_names, false);
 	}
 
 }
@@ -1793,6 +1822,31 @@ main( int argc, char **argv )
        } else {
           return (int)err;
        }
+    }
+#endif
+
+#ifdef LINUX
+    // Check for necessary directories if we were started by the system
+    if (getuid() == 0 && getppid() == 1) {
+        // If the condor user is in LDAP, systemd will silently fail to create
+        // these necessary directories at boot. The condor user and paths are
+        // hard coded here, because they match the systemd configuration.
+        struct stat sbuf;
+        struct passwd *pwbuf = getpwnam("condor");
+        if (pwbuf) {
+            if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/run/condor", 0775) == 0) {
+                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
+                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                }
+            }
+            if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor", 0775) == 0) {
+                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
+                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                }
+            }
+        }
     }
 #endif
 

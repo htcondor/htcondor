@@ -37,11 +37,6 @@
 #include <sys/types.h>     // various types needed.
 #include <time.h>          // use of time() for process age. 
 
-#ifdef HPUX                // hpux has to be different, of course.
-#include <sys/param.h>     // used in pstat().
-#include <sys/pstat.h>
-#endif
-
 #ifdef Darwin
 #include <sys/sysctl.h>
 #include <mach/mach.h>
@@ -58,18 +53,6 @@
 #include <sys/proc.h>
 #include <sys/user.h>
 #endif 
-
-#ifdef AIX
-#include <procinfo.h>
-#include <sys/types.h>
-BEGIN_C_DECLS
-/* For being the "new" interface for AIX, this isn't defined in the headers. */
-extern int getprocs64(struct procentry64*, int, struct fdsinfo64*, int,
-        pid_t*, int);
-END_C_DECLS
-/* AIX # defines the following symbol, which we use later as a formal param*/
-#undef l_name
-#endif
 
 #else // It's WIN32...
 // Warning: WIN32 stuff below.
@@ -185,7 +168,7 @@ typedef long birthday_t;
     calls don't have to be made.  All OS's support the given information,
     WITH THE EXCEPTION OF MAJ/MIN FAULTS:
     <ul>
-     <li> Linux and Hpux return a reasonable-looking number.
+     <li> Linux returns a reasonable-looking number.
      <li> Solaris 2.5.1 and 2.6 *Sometimes* returns small number of major 
         faults, and I've only seen a 0 for minor faults.  The documentation
         claims that they are inexact values, anyway.
@@ -435,7 +418,7 @@ class ProcAPI {
 
   /** getProcInfo returns information about one process.  Information 
       can be retrieved on any process owned by the same user, and on some
-      systems (Linux, HPUX, Sol2.6) information can be gathered from all 
+      systems (Linux, Sol2.6) information can be gathered from all 
       processes.  
 
       @param pid The pid of the process you want info on.

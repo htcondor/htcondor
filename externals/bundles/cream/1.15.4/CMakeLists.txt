@@ -203,13 +203,18 @@ if ( WITH_CREAM )
 		# build cream c api library
 		condor_pre_external( CREAM glite-ce-cream-client-api-c-1.15.4-p1 "lib;include;include/glite/security;opt" "done")
 
-		if(BOOST_INSTALL_LOC)
-			set (BOOST_PATH ${BOOST_INSTALL_LOC})
-			set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a ${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a ${BOOST_INSTALL_LOC}/lib/libboost_system.a)
-		else()
-			set (BOOST_PATH /usr)
-			set (BOOST_LIB libboost_thread.a libbosst_filesystem.a libboost_system.a)
-		endif()
+        if(BOOST_INSTALL_LOC)
+            set (BOOST_INCLUDE_PATH ${BOOST_INSTALL_LOC}/include)
+            set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a ${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a ${BOOST_INSTALL_LOC}/lib/libboost_system.a)
+        else()
+            set (BOOST_INCLUDE_PATH "/usr/include")
+            set (BOOST_LIB libboost_thread.a libboost_filesystem.a libboost_system.a)
+        endif()
+
+        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            set (BOOST_LIB ${BOOST_LD}/libboost_thread.a ${BOOST_LD}/libboost_filesystem.a ${BOOST_LD}/libboost_system.a)
+        endif()
+
 
 		set (CREAM_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch -p1)
 		if ( PREFER_CPP11 )
@@ -235,7 +240,7 @@ if ( WITH_CREAM )
 				-DGLOBUS_GSSAPI_GSI_INCLUDE_DIRS:string=${GLOBUS_INSTALL_LOC}/include/globus 
 				-DGLITE_GSS_INCLUDE_DIRS:string=${GLITE_SECURITY_INSTALL_LOC}/include 
 				-DGLITE_PLUGIN_INCLUDE_DIRS:string=${CREAM_SOAP_PLUGIN_INSTALL_LOC}/include 
-				-DBoost_INCLUDE_DIRS:string=${BOOST_PATH}/include .
+                -DBoost_INCLUDE_DIRS:string=${BOOST_INCLUDE_PATH} .
 			#--Build Step ----------
 			BUILD_COMMAND PATH=${CREAMSOAP_INSTALL_LOC}/bin:$ENV{PATH} make
 			BUILD_IN_SOURCE 1

@@ -608,7 +608,7 @@ class stats_ema {
 	void Update(double value,time_t interval,stats_ema_config::horizon_config &config) {
 		if( config.cached_interval != interval ) {
 			config.cached_interval = interval;
-			config.cached_alpha = 1.0 - exp(-(double)interval/config.horizon);
+			config.cached_alpha = 1.0 - exp(-(double)interval/double(config.horizon));
 		}
 		this->ema = config.cached_alpha*value + (1.0-config.cached_alpha)*ema;
 		this->total_elapsed_time += interval;

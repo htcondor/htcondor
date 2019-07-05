@@ -137,7 +137,7 @@ const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, cl
 		return NULL;
 	classad::Value::NumberFactor f;
 	const classad::Value * pval = &dynamic_cast<classad::Literal*>(expr)->getValue(f);
-	if (pval->GetType() != vt)
+	if (!pval || (pval->GetType() != vt))
 		return NULL;
 	return pval;
 }
@@ -1955,7 +1955,7 @@ int SubmitHash::SetCoreSize()
 	long coresize = 0;
 
 	if (size == NULL) {
-#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
+#if defined(WIN32) /* RLIMIT_CORE not supported */
 		size = "";
 #else
 		struct rlimit rl;
@@ -3653,7 +3653,7 @@ int SubmitHash::SetAutoAttributes()
 	// and not from the schedd, but we can count on the Lookup() never failing when doing late materialization.
 	if ( ! job->Lookup(ATTR_CORE_SIZE)) {
 		long coresize = 0;
-	#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
+	#if defined(WIN32) /* RLIMIT_CORE not supported */
 	#else
 		struct rlimit rl;
 		if (getrlimit(RLIMIT_CORE, &rl) == -1) {
@@ -8748,6 +8748,11 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 		omit_knobs.insert(SUBMIT_CMD_GetEnvironmentAlt);
 		omit_knobs.insert(SUBMIT_CMD_AllowStartupScript);
 		omit_knobs.insert(SUBMIT_CMD_AllowStartupScriptAlt);
+
+		//PRAGMA_REMIND("tj: This will cause a bug where $() in user requirments are ignored during late materialization - a better fix is needed for this")
+		// omit user specified requirements because we set FACTORY.Requirements
+		// we set FACTORY.Requirements because we cannot afford to generate requirements using a pruned digest
+		omit_knobs.insert(SUBMIT_KEY_Requirements);
 	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet, flags);

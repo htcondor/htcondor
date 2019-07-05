@@ -189,22 +189,7 @@ Reqexp::compute( amask_t how_much )
 
                 m_within_resource_limits_expr = strdup(estr.c_str());
 		} else {
-			static const char * climit =
-			#if 0 // tj tries to express the above with a simpler expression.
-				"("
-				"MY.Cpus > 0 && MY.Cpus >= ifThenElse(TARGET._condor_RequestCpus is UNDEFINED,"
-					"IfThenElse(TARGET.RequestCpus is UNDEFINED, 1, TARGET.RequestCpus),"
-					"TARGET._condor_RequestCpus)"
-				" && "
-				"MY.Memory > 0 && MY.Memory >= ifThenElse(TARGET._condor_RequestMemory is UNDEFINED,"
-					"TARGET.RequestMemory,"
-					"TARGET._condor_RequestMemory)"
-				" && "
-				"MY.Disk > 0 && MY.Disk >= ifThenElse(TARGET._condor_RequestDisk is UNDEFINED,"
-					"TARGET.RequestDisk,"
-					"TARGET._condor_RequestDisk)"
-				")";
-			#else
+			static const char * climit_full =
 				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
 					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
@@ -224,7 +209,25 @@ Reqexp::compute( amask_t how_much )
 						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 						"FALSE))"
 				")";
-			#endif
+
+			// This one assumes job._condor_Request* never set
+			//  and job.Request* is always set to some value.  If 
+			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
+			static const char *climit_simple = 
+			"("
+				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
+				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
+				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
+			")"; 
+
+			static const char *climit = nullptr;
+	
+			if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", true)) {
+				climit = climit_simple;	
+			} else {
+				climit = climit_full;	
+			}
+
 			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
 			if (resmap.empty()) {
 				m_within_resource_limits_expr = strdup(climit);

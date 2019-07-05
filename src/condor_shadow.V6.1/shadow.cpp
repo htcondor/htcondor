@@ -233,7 +233,7 @@ void
 UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 {
 	Email mailer;
-	float recvd_bytes, sent_bytes;
+	float recvd_bytes = 0, sent_bytes = 0;
 
 	if (kind == US_TERMINATE_PENDING) {
 		/* I don't have a remote resource, so get the values directly from

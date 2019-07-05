@@ -52,7 +52,7 @@ BOOL LocalSysCalls( void );
 BOOL RemoteSysCalls( void );
 BOOL MappingFileDescriptors( void );
 
-#if defined(HPUX) || defined(Solaris)
+#if defined(Solaris)
 	int syscall( int, ... );
 #endif
 
