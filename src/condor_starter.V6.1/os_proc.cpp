@@ -1207,6 +1207,12 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	MyString env_errors;
 	Starter->GetJobEnv(JobAd,&env,&env_errors);
 
+	std::string target_dir;
+        bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	if (has_target) {
+		htcondor::Singularity::retargetEnvs(env, target_dir, "");
+	}
+
 	singExecPid = daemonCore->Create_Process(
 		"/usr/bin/nsenter",
 		args,
