@@ -1336,6 +1336,7 @@ rm -rf %{buildroot}
 %_bindir/condor_token_fetch
 %_bindir/condor_token_request
 %_bindir/condor_token_request_approve
+%_bindir/condor_token_request_auto_approve
 %_bindir/condor_token_request_list
 %_bindir/condor_token_list
 %_bindir/condor_drain
