@@ -66,6 +66,9 @@ else (WINDOWS)
         if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
             if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
                 message (STATUS "Using system boost169 for 64-bit EL7" )
+                # If you look for python on cmake 2.8.12.2 it fails.
+                # Looking for thread finds boost for python for me.
+                set (BOOST_COMPONENTS thread)
                 set(BOOST_INCLUDEDIR "/usr/include/boost169")
                 set(BOOST_LIBRARYDIR "/usr/lib64/boost169")
                 set(Boost_INCLUDE_DIR "/usr/include/boost169")
