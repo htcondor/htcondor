@@ -244,6 +244,7 @@ BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
+BuildRequires: perl(Data::Dumper)
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -274,7 +275,6 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-BuildRequires: perl(Data::Dumper)
 BuildRequires: python-devel
 BuildRequires: libcurl-devel
 %endif
