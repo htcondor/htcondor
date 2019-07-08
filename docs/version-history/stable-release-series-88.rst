@@ -50,6 +50,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that caused editing a job Classad in the schedd via the
+   Python bindings to be needlessly inefficient.
+   :ticket:`7124`
+
 -  Fixed a bug that could cause the *condor_schedd* to crash when a
    scheduler universe job is removed.
    :ticket:`7095`
