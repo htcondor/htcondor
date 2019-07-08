@@ -304,12 +304,7 @@ public:
 		auto &rule = m_approval_rules.back();
 		rule.m_approval_netblock.reset(new NetStringList(netblock.c_str()));
 		rule.m_issue_time = time(NULL);
-		if (lifetime < 0) {
-			// 1 year should be enough for anyone...
-			rule.m_expiry_time = rule.m_issue_time + 86400*365;
-		} else {
-			rule.m_expiry_time = rule.m_issue_time + lifetime;
-		}
+		rule.m_expiry_time = rule.m_issue_time + lifetime;
 		return true;
 	}
 
