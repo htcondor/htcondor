@@ -90,6 +90,13 @@ Bugs Fixed:
    option is used.
    :ticket:`7068`
 
+-  HTCondor EC2 components are now packaged for Debian and Ubuntu.
+   :ticket:`7084`
+
+-  Fixed a bug that could cause *condor_submit* to send invalid job
+   ClassAds to the *condor_schedd* when the executable attribute was
+   not the same for all jobs in that submission. :ticket:`6719`
+
 Version 8.8.3
 -------------
 
