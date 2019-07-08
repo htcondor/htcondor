@@ -32,6 +32,11 @@ New Features:
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
 
+-  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
+   pools with 8.8.4 (and later) stable-series startds can run jobs submitted
+   using a new feature in 8.9.3 (and later).
+   :ticket:`7112`
+
 Bugs Fixed:
 
 -  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
