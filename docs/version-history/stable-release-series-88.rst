@@ -97,6 +97,11 @@ Bugs Fixed:
    ClassAds to the *condor_schedd* when the executable attribute was
    not the same for all jobs in that submission. :ticket:`6719`
 
+-  The *condor_master* will no longer abort when the ``DAEMON_LIST`` does not contain
+   ``MASTER``;  And when the ``DAEMON_LIST`` is empty, the *condor_master* will now
+   start the ``SHARED_PORT`` daemon if shared port is enabled.
+   :ticket:`7133`
+
 Version 8.8.3
 -------------
 
