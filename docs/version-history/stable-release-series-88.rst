@@ -51,6 +51,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that caused editing a job Classad in the schedd via the
+   Python bindings to be needlessly inefficient.
+   :ticket:`7124`
+
 -  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
    work as expected.
    :ticket:`7075`
