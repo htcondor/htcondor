@@ -247,6 +247,10 @@ class ReadUserLog
 					   const char *& error_str,
 					   unsigned &line_num ) const;
 
+	/** These methods only do anything useful for anything other
+	    than job event logs (which do not rotate). */
+	size_t getOffset() const { return ftell(m_fp); }
+	void setOffset(size_t offset) { fseek(m_fp, offset, SEEK_SET); }
 
 	/** Methods to serialize the state.
 		Always use InitFileState() to initialize this structure.

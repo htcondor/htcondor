@@ -72,3 +72,13 @@ dprintf( D_ALWAYS, "%d = readEvent( , %d )\n", o, timeout - elapsedMilliseconds 
 		}
 	}
 }
+
+size_t
+WaitForUserLog::getOffset() const {
+    return reader.getOffset();
+}
+
+void
+WaitForUserLog::setOffset( size_t offset ) {
+    reader.setOffset(offset);
+}
