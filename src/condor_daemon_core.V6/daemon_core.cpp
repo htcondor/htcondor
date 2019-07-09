@@ -4300,7 +4300,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					req,
 					comTable[index].command_descrip,
 					user,
-					stream->peer_description());
+					stream ? stream->peer_description() : "");
 			handler_start_time = _condor_debug_get_time_double();
 		}
 
