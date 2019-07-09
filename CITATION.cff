@@ -5,7 +5,7 @@ authors:
     location: "Computer Sciences Department, University of Wisconsin-Madison"
     city: "Madison"
     region: "Wisconsin"
-title: HTCondor 8.8.3
+title: HTCondor
 references:
   - type: article
     authors:
@@ -26,8 +26,8 @@ references:
 license: Apache-2.0
 # --- Updates happen below this line. ---
 # Required.
-date-released: 2019-05-28
+date-released: 2019-07-09
 # Required.
-version: 8.8.3
+version: 8.8.4
 # Strongly recommended.  Really ought to correspond to the version above.
-doi: 10.5281/zenodo.3229339
+doi: 10.5281/zenodo.3275871

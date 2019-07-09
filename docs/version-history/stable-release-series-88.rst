@@ -13,22 +13,21 @@ Version 8.8.4
 
 Release Notes:
 
--  HTCondor version 8.8.4 not yet released.
-
-.. HTCondor version 8.8.4 released on Month Date, 2019.
+-  HTCondor version 8.8.4 released on July 9, 2019.
 
 Known Issues:
 
 -  In the Python bindings, there are known issues with reference counting of
    ClassAds and ExprTrees. These problems are exacerbated by the more
-   aggresive garbage collection in Python 3. See the ticket for more details.
+   aggressive garbage collection in Python 3. See the ticket for more details.
    :ticket:`6721`
 
 New Features:
 
--  The python bindings are now available for Python 3. To use these bindings
-   on Enterprise Linux 7 systems, the EPEL repositories are required to provide
-   Python 3.6 and Boost 1.69. :ticket:`6327`
+-  The Python bindings are now available for Python 3 on Debian, Ubuntu, and
+   Enterprise Linux 7. To use these bindings on Enterprise Linux 7 systems,
+   the EPEL repositories are required to provide Python 3.6 and Boost 1.69.
+   :ticket:`6327`
 
 -  Added an optimization into DAGMan for graphs that use many-PARENT-many-CHILD
    statements. A new configuration variable ``DAGMAN_USE_JOIN_NODES`` can be
@@ -50,7 +49,7 @@ New Features:
 
 Bugs Fixed:
 
--  Fixed a bug that caused editing a job Classad in the schedd via the
+-  Fixed a bug that caused editing a job ClassAd in the schedd via the
    Python bindings to be needlessly inefficient.
    :ticket:`7124`
 

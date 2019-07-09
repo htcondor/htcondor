@@ -2050,6 +2050,14 @@ fi
 %endif
 
 %changelog
+* Tue Jul 09 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.4-1
+- Python 3 bindings - see version history for details (requires EPEL on EL7)
+- Can configure DAGMan to dramatically reduce memory usage on some DAGs
+- Improved scalability when using the python bindings to qedit jobs
+- Fixed infrequent schedd crashes when removing scheduler universe jobs
+- The condor_master creates run and lock directories when systemd doesn't
+- The condor daemon obituary email now contains the last 200 lines of log
+
 * Wed May 22 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.3-1
 - Fixed a bug where jobs were killed instead of peacefully shutting down
 - Fixed a bug where a restarted schedd wouldn't connect to its running jobs
