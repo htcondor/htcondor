@@ -5881,7 +5881,7 @@ pid_t CreateProcessForkit::fork_exec() {
 			// child_stack_ptr = std::align(16, 1, child_stack_ptr, new_stack_size);
 
 			std::uintptr_t mask = ~(std::uintptr_t)0 << 4;
-			child_stack_ptr = (char *) (((std::uintptr_t)child_stack_ptr) & mask);
+			child_stack_ptr = (char *) (((std::uintptr_t)child_stack_ptr + 16) & mask);
 
 			ASSERT(child_stack_ptr);
 		}
