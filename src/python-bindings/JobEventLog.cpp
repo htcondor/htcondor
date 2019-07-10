@@ -164,20 +164,17 @@ JobEventLog::next() {
 
 boost::python::tuple
 JobEventLogPickler::getinitargs( JobEventLog & self ) {
-dprintf( D_ALWAYS, "JobEventLogPickler::getInitArgs()\n" );
 	return boost::python::make_tuple( self.wful.getFilename() );
 }
 
 boost::python::tuple
 JobEventLogPickler::getstate( boost::python::object & self ) {
-dprintf( D_ALWAYS, "JobEventLogPickler::getState()\n" );
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
 	return boost::python::make_tuple( self.attr("__dict__"), jel->deadline, jel->wful.getOffset() );
 }
 
 void
 JobEventLogPickler::setstate( boost::python::object & self, boost::python::tuple & state ) {
-dprintf( D_ALWAYS, "JobEventLogPickler::setState()\n" );
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
 	self.attr("__dict__") = state[0];
 	jel->deadline = boost::python::extract<time_t>( state[1] );
