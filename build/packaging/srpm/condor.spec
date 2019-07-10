@@ -244,6 +244,7 @@ BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
+BuildRequires: perl(Data::Dumper)
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -271,8 +272,8 @@ BuildRequires: nss-devel
 BuildRequires: openssl-devel
 BuildRequires: libxml2-devel
 BuildRequires: expat-devel
-BuildRequires: perl-Archive-Tar
-BuildRequires: perl-XML-Parser
+BuildRequires: perl(Archive::Tar)
+BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
 BuildRequires: python-devel
 BuildRequires: libcurl-devel
@@ -331,6 +332,7 @@ BuildRequires: gridsite-devel
 
 %if 0%{?rhel} >= 7
 %ifarch x86_64
+BuildRequires: python36-devel
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
 %endif
@@ -2048,6 +2050,14 @@ fi
 %endif
 
 %changelog
+* Tue Jul 09 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.4-1
+- Python 3 bindings - see version history for details (requires EPEL on EL7)
+- Can configure DAGMan to dramatically reduce memory usage on some DAGs
+- Improved scalability when using the python bindings to qedit jobs
+- Fixed infrequent schedd crashes when removing scheduler universe jobs
+- The condor_master creates run and lock directories when systemd doesn't
+- The condor daemon obituary email now contains the last 200 lines of log
+
 * Wed May 22 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.3-1
 - Fixed a bug where jobs were killed instead of peacefully shutting down
 - Fixed a bug where a restarted schedd wouldn't connect to its running jobs

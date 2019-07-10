@@ -64,5 +64,8 @@ where the exit code is the value 100. The following table lists these codes:
 | 115     | JOB_EXITED_AND_CLAIM_CLOSING       | the job exited (not killed) but the *condor_startd*          |
 |         |                                    | is not accepting any more jobs on this claim                 |
 +---------+------------------------------------+--------------------------------------------------------------+
+| 116     | JOB_RECONNECT_FAILED               | the *condor_shadow* was started in reconnect mode, and yet   |
+|         |                                    | failed to reconnect to the starter                           |
++---------+------------------------------------+--------------------------------------------------------------+
 
 
