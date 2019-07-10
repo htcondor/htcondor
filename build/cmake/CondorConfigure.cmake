@@ -81,8 +81,9 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 # To find python in Windows we will use alternate technique
+option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 if(NOT WINDOWS)
-    if(${OS_NAME} STREQUAL "DARWIN")
+    if((${OS_NAME} STREQUAL "DARWIN") OR WANT_PYTHON_WHEELS)
         include (FindPythonInterp)
         message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
         # As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
@@ -799,7 +800,6 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
 #####################################
 # PROPER option
