@@ -364,11 +364,11 @@ tokenizeNumber (void)
 			// get octal or real
 			numberType = INTEGER;
 			while( isdigit( ch ) ) {
-				wind( );
-				if( !isodigit( ch ) ) {
+				if( numberType == INTEGER && !isodigit( ch ) ) {
 					// not an octal number
 					numberType = REAL;
 				}
+				wind();
 			}
 			if( ch == '.' || tolower( ch ) == 'e' ) {
 				numberType = REAL;
@@ -431,9 +431,13 @@ tokenizeNumber (void)
 		long long l;
 		int base = 0;
 		if ( _useOldClassAdSemantics || jsonLex ) {
-			// Old ClassAds don't support octal or hexidecimal
+			// Old ClassAds and JSON don't support octal or hexidecimal
 			// representations for integers.
 			base = 10;
+			if ( lexBuffer[0] == '0' && lexBuffer.length() > 1 ) {
+				tokenType = LEX_TOKEN_ERROR;
+				return( tokenType );
+			}
 		}
 #ifdef WIN32
 		l = _strtoi64( lexBuffer.c_str(), NULL, base );

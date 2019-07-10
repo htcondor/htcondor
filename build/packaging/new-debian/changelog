@@ -1,3 +1,14 @@
+condor (8.8.4-1) stable; urgency=medium
+
+  * Python 3 bindings - see version history for details (requires EPEL on EL7)
+  * Can configure DAGMan to dramatically reduce memory usage on some DAGs
+  * Improved scalability when using the python bindings to qedit jobs
+  * Fixed infrequent schedd crashes when removing scheduler universe jobs
+  * The condor_master creates run and lock directories when systemd doesn't
+  * The condor daemon obituary email now contains the last 200 lines of log
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 09 Jul 2019 10:15:38 -0500
+
 condor (8.9.2-1) unstable; urgency=medium
 
   * The HTTP/HTTPS file transfer plugin will timeout and retry transfers
