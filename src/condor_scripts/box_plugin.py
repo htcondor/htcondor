@@ -239,7 +239,7 @@ class BoxPlugin:
             elif (('next_marker' in folder_items) and
                     (folder_items['next_marker'] not in [None, ''])):
                 params['next_marker'] = folder_items['next_marker']
-                folder_items = self.api_call(endpoint, params)
+                folder_items = self.api_call(endpoint, params = params)
             else:
                 raise IOError(2, 'Object not found', object_name)
 
