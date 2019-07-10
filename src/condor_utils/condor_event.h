@@ -327,7 +327,9 @@ class ULogEvent {
 	time_t				eventclock;
 	long				event_usec;
 };
- 
+
+#define USERLOG_FORMAT_DEFAULT ULogEvent::formatOpt::ISO_DATE
+
 //----------------------------------------------------------------------------
 /** Instantiates an event object based on the given event number.
     @param event The event number
