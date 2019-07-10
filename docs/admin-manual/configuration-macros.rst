@@ -2642,10 +2642,12 @@ These macros control the *condor_master*.
 
     .. note::
 
-        This configuration variable cannot be changed by using
-        *condor_reconfig* or by sending a SIGHUP. To change this
-        configuration variable, restart the *condor_master* daemon by using
-        *condor_restart*. Only then will the change take effect.
+        The *condor_shared_port* daemon will be included in this list
+        automatically when ``USE_SHARED_PORT`` is configured to ``True``.
+        While adding ``SHARED_PORT`` to the ``DAEMON_LIST`` without setting
+        ``USE_SHARED_PORT`` to ``True`` will start the *condor_shared_port*
+        daemon, but it will not be used.  So there is generally no point
+        in adding ``SHARED_PORT`` to the daemon list.
 
     .. note::
 

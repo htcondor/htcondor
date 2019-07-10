@@ -10,6 +10,7 @@ except ImportError:
     from urlparse import urlparse # Python 2
 import posixpath
 import json
+import mimetypes
 
 import requests
 import classad
@@ -33,6 +34,7 @@ Options:
                               file transfer plugin.
   -infile <input-filename>    Input ClassAd file
   -outfile <output-filename>  Output ClassAd file
+  -upload
 '''
     stream.write(help_msg.format(sys.argv[0]))
 
@@ -56,7 +58,7 @@ def parse_args():
     # <this> -classad
     # <this> -infile <input-filename> -outfile <output-filename>
     # <this> -outfile <output-filename> -infile <input-filename>
-    if not len(sys.argv) in [2, 5]:
+    if not len(sys.argv) in [2, 5, 6]:
         print_help()
         sys.exit(-1)
 
@@ -65,31 +67,36 @@ def parse_args():
         print_capabilities()
         sys.exit(0)
 
-    # -infile and -outfile must be in the first and third position
-    else:
-        if not (
-                ('-infile' in sys.argv[1:]) and
-                ('-outfile' in sys.argv[1:]) and
-                (sys.argv[1] in ['-infile', '-outfile']) and
-                (sys.argv[3] in ['-infile', '-outfile']) and
-                (len(sys.argv) == 5)):
-            print_help()
-            sys.exit(-1)
-        infile = None
-        outfile = None
-        try:
-            for i, arg in enumerate(sys.argv):
-                if i == 0:
-                    continue
-                elif arg == '-infile':
-                    infile = sys.argv[i+1]
-                elif arg == '-outfile':
-                    outfile = sys.argv[i+1]
-        except IndexError:
-            print_help()
-            sys.exit(-1)
+    # If -upload, set is_upload to True and remove it from the args list
+    is_upload = False
+    if '-upload' in sys.argv[1:]:
+        is_upload = True
+        sys.argv.remove('-upload')        
 
-    return {'infile': infile, 'outfile': outfile}
+    # -infile and -outfile must be in the first and third position
+    if not (
+            ('-infile' in sys.argv[1:]) and
+            ('-outfile' in sys.argv[1:]) and
+            (sys.argv[1] in ['-infile', '-outfile']) and
+            (sys.argv[3] in ['-infile', '-outfile']) and
+            (len(sys.argv) == 5)):
+        print_help()
+        sys.exit(-1)
+    infile = None
+    outfile = None
+    try:
+        for i, arg in enumerate(sys.argv):
+            if i == 0:
+                continue
+            elif arg == '-infile':
+                infile = sys.argv[i+1]
+            elif arg == '-outfile':
+                outfile = sys.argv[i+1]
+    except IndexError:
+        print_help()
+        sys.exit(-1)
+
+    return {'infile': infile, 'outfile': outfile, 'upload': is_upload}
 
 def get_token_name(url):
     scheme = url.split('://')[0]
@@ -130,31 +137,83 @@ def get_error_dict(error, url = ''):
 class DrivePlugin:
 
     def __init__(self, token_path):
-        self.token = self.get_token(token_path)
+        self.token_path = token_path        
+        self.token = self.get_token(self.token_path)
         self.headers = {'Authorization': 'Bearer {0}'.format(self.token)}
+        self.path_ids = {'/': u'root'}
 
     def get_token(self, token_path):
         with open(token_path, 'r') as f:
             access_token = json.load(f)['access_token']
         return access_token
 
-    def api_call(self, endpoint, method = 'GET', params = None, data = {}):
+    def reload_token(self):
+        self.token = self.get_token(self.token_path)
+        self.headers['Authorization'] = 'Bearer {0}'.format(self.token)
+        
+    def get_headers_copy(self):
+        self.reload_token()
+        headers = {'Authorization': 'Bearer {0}'.format(self.token)}
+        return headers
+
+    def parse_url(self, url):
+
+        # Build the folder tree
+        parsed_url = urlparse(url)
+        folder_tree = []
+
+        if parsed_url.netloc != '':
+            folder_tree.append(parsed_url.netloc)
+        if parsed_url.path != '':
+            path = posixpath.split(parsed_url.path)
+            while path[1] != '':
+                folder_tree.insert(1, path[1])
+                path = posixpath.split(path[0])
+
+        # The file is the last item in the tree
+        filename = folder_tree.pop()
+
+        return (filename, folder_tree)
+
+    def api_call(self, endpoint, method = 'GET', params = None, data = {}, headers = None):
         url = DRIVE_API_BASE_URL + endpoint
+        if headers is None:
+            headers = self.get_headers_copy()
+        
         kwargs = {
-            'headers': self.headers,
+            'headers': headers,
             'timeout': DEFAULT_TIMEOUT,
         }
-        if method in ['GET'] and params is not None:
+            
+        if params is not None:
             kwargs['params'] = params
+
         if method in ['POST', 'PUT', 'PATCH']:
             kwargs['data'] = data
+            
         response = requests.request(method, url, **kwargs)
         response.raise_for_status()
+
         return response.json()
+
+    def create_folder(self, folder_name, parent_id):
+
+        endpoint = '/files'
+        data = json.dumps({
+            'name': folder_name,
+            'parents': [parent_id],
+            'mimeType': 'application/vnd.google-apps.folder',
+        })
+        headers = self.get_headers_copy()
+        headers['Content-Type'] = 'application/json'
+        
+        folder_info = self.api_call(endpoint, 'POST', data = data, headers = headers)
+
+        return folder_info['id']
 
     def format_query(self, q):
         folder_comparison = ['!=', '=']
-        query_strings = []
+        query_strings = ['trashed = false']
 
         if 'name' in q:
             query_strings.append("name = '{0}'".format(q['name']))
@@ -172,80 +231,86 @@ class DrivePlugin:
 
         query = " and ".join(query_strings)
         return query
-    
-    def get_file_info(self, url):
-        
-        # Build the folder tree
-        parsed_url = urlparse(url)
-        folder_tree = []
-        if parsed_url.netloc != '':
-            folder_tree.append(parsed_url.netloc)
-        if parsed_url.path != '':
-            path = posixpath.split(parsed_url.path)
-            while path[1] != '':
-                folder_tree.insert(1, path[1])
-                path = posixpath.split(path[0])
 
-        # The file is the last item in the tree
-        filename = folder_tree.pop() 
-
-        # Traverse the folder tree, starting at the root
-        folder_endpoint = '/files'
-        folder_id = 'root'
-
-        searched_path = ''
-        for folder in folder_tree:
-            searched_path += '/{0}'.format(folder)
-
-            query = {
-                'parents': folder_id,
-                'name': folder,
-                'is_folder': True
-            }
-            params = {'q': self.format_query(query)}
-            
-            folder_info = self.api_call(folder_endpoint, params = params)
-            if 'files' in folder_info:
-                if len(folder_info['files']) == 1:
-                    folder_id = folder_info['files'][0]['id']
-                elif len(folder_info['files']) > 1:
-                    raise IOError(5, 'Multiple folders found in Drive matching', searched_path)
-                else:
-                    raise IOError(2, 'Folder not found in Drive', searched_path)
-            else:
-                raise IOError(2, 'Folder not found in Drive', searched_path)
-
-        # Get the file info
-        file_endpoint = '/files'
-
-        searched_path += '/{0}'.format(filename)
+    def get_object_id(self, object_name, object_type, object_parents):
+        endpoint = '/files'
+        fields = ['id', 'name']
+        limit = 1000
 
         query = {
-            'parents': folder_id,
-            'name': filename,
-            'is_folder': False
+            'parents': object_parents,
+            'name': object_name,
+            'is_folder': object_type == 'folder',
         }
-        params = {'q': self.format_query(query)}
+        
+        params = {
+            'q': self.format_query(query),
+            'fields': 'files(' + ','.join(fields) + '),nextPageToken',
+            'pageSize': limit,
+        }
 
-        file_info = self.api_call(file_endpoint, params = params)
-        if 'files' in file_info:
-            if len(file_info['files']) == 1:
+        file_items = self.api_call(endpoint, params = params)
+
+        object_found = False
+        while not object_found:
+            for entry in file_items['files']:
+                if entry['name'] == object_name:
+                    object_id = entry['id']
+                    object_found = True
+                    break
+
+            # Go to next page if it exists and if haven't found object yet
+            if object_found:
                 pass
-            elif len(file_info['files']) > 1:
-                raise IOError(5, 'Multiple files found in Drive matching', searched_path)
+            elif (('nextPageToken' in file_items) and
+                    (file_items['nextPageToken'] not in [None, ''])):
+                params['pageToken'] = file_items['nextPageToken']
+                file_items = self.api_call(endpoint, params = params)
             else:
-                raise IOError(2, 'File not found in Drive', searched_path)
-        else:
-            raise IOError(2, 'File not found in Drive', searched_path)
+                raise IOError(2, 'Object not found', object_name)
 
-        return file_info['files'][0]
+        return object_id
+
+    def get_parent_folders_ids(self, folder_tree, create_if_missing = False):
+
+        # Traverse the folder tree, starting at the root (id = 0)
+        parent_ids = [u'root']
+        searched_path = ''
+        for folder_name in folder_tree:
+            searched_path += '/{0}'.format(folder_name)
+            if searched_path in self.path_ids: # Check the cached ids
+                parent_id = self.path_ids[searched_path]
+            else:
+                try:
+                    parent_id = self.get_object_id(folder_name, 'folder', parent_ids[-1])
+                except IOError:
+                    if create_if_missing:
+                        parent_id = self.create_folder(folder_name, parent_id = parent_ids[-1])
+                    else:
+                        raise IOError(2, 'Folder not found in Drive', searched_path)
+                self.path_ids[searched_path] = parent_id # Update the cached ids
+            parent_ids.append(parent_id)
+
+        return parent_ids
+    
+    def get_file_id(self, url):
+        
+        # Parse out the filename and folder_tree and get folder_ids
+        (filename, folder_tree) = self.parse_url(url)
+        parent_ids = self.get_parent_folders_ids(folder_tree)
+        
+        try:
+            file_id = self.get_object_id(filename, 'file', parent_ids[-1])
+        except IOError:
+            raise IOError(2, 'File not found in Box', '{0}/{1}'.format('/'.join(folder_tree), filename))
+
+        return file_id
 
     def download_file(self, url, local_file_path):
 
         start_time = time.time()
         
-        file_info = self.get_file_info(url)
-        file_id = file_info['id']
+        file_id = self.get_file_id(url)
         
         endpoint = '/files/{0}'.format(file_id)
         url = DRIVE_API_BASE_URL + endpoint
@@ -253,6 +318,7 @@ class DrivePlugin:
 
         # Stream the data to disk, chunk by chunk,
         # instead of loading it all into memory.
+        self.reload_token()
         connection_start_time = time.time()
         response = requests.get(url, headers = self.headers, params = params,
                                     stream = True, timeout = DEFAULT_TIMEOUT)
@@ -298,6 +364,88 @@ class DrivePlugin:
         }
 
         return transfer_stats
+
+    def upload_file(self, url, local_file_path):
+
+        start_time = time.time()
+
+        # Check if file exists
+        file_id = None
+        try:
+            file_id = self.get_file_id(url)
+            metadata = None
+        except IOError:
+            (filename, folder_tree) = self.parse_url(url)
+            parent_ids = self.get_parent_folders_ids(folder_tree, create_if_missing = True)
+            parent_id = parent_ids[-1]
+            metadata = {
+                'name': filename,
+                'parents': [parent_id]
+            }
+                
+        # Not actually "files" but requests will turn these tuples into
+        # multipart/form-data in the correct order (metadata, then file).
+        params = {'uploadType': 'multipart'}
+        files = (
+            ('metadata', (
+                None,
+                json.dumps(metadata),
+                'application/json; charset=UTF-8')),
+            ('file', (
+                os.path.basename(local_file_path),
+                open(local_file_path, 'rb'),
+                mimetypes.guess_type(local_file_path)[0] or 'application/octet-stream'))
+            )
+
+        self.reload_token()
+        if file_id is None:
+
+            # Upload a new file
+            upload_url = 'https://www.googleapis.com/upload/drive/v3/files'
+            connection_start_time = time.time()
+            response = requests.post(upload_url, headers = self.headers, params = params, files = files)
+
+        else:
+
+            # Upload a new version of the file
+            upload_url = 'https://www.googleapis.com/upload/drive/v3/files/{0}'.format(file_id)
+            connection_start_time = time.time()
+            response = requests.patch(upload_url, headers = self.headers, params = params, files = files)
+
+        response.raise_for_status()
+
+        try:
+            content_length = int(response.request.headers['Content-Length'])
+        except (ValueError, KeyError):
+            content_length = False
+
+        try:
+            file_id = response.json()['id']
+            endpoint = '/files/{0}'.format(file_id)
+            params = {'fields': 'size'}
+            file_size = int(self.api_call(endpoint, params = params)['size'])
+        except Exception:
+            file_size = os.stat(local_file_path).st_size
+
+        end_time = time.time()
+
+        # Including TransferUrl makes little sense here, too.
+        transfer_stats = {
+            'TransferSuccess': True,
+            'TransferProtocol': 'https',
+            'TransferType': 'upload',
+            'TransferFileName': local_file_path,
+            'TransferFileBytes': file_size,
+            'TransferTotalBytes': content_length or file_size,
+            'TransferStartTime': int(start_time),
+            'TransferEndTime': int(end_time),
+            'ConnectionTimeSeconds': end_time - connection_start_time,
+            'TransferHostName': urlparse(upload_url).netloc,
+            'TransferLocalMachineName': socket.gethostname(),
+            'TransferUrl': 'https://www.googleapis.com/upload/drive/v3/files',
+        }
+
+        return transfer_stats
             
 
 if __name__ == '__main__':
@@ -327,14 +475,27 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     try:
+        running_plugins = {}
         with open(args['outfile'], 'w') as outfile:
             for ad in infile_ads:
                 try:
                     token_name = get_token_name(ad['Url'])
                     token_path = get_token_path(token_name)
-                    box = DrivePlugin(token_path)
 
-                    outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                    # Use existing plugin objects if possible because they have
+                    # cached object ids, which make path lookups much faster in
+                    # the case of multiple file downloads/uploads.
+                    if token_path in running_plugins:
+                        drive = running_plugins[token_path]
+                    else:
+                        drive = DrivePlugin(token_path)
+                        running_plugins[token_path] = drive
+
+                    if not args['upload']:
+                        outfile_dict = drive.download_file(ad['Url'], ad['LocalFileName'])
+                    else:
+                        outfile_dict = drive.upload_file(ad['Url'], ad['LocalFileName'])
+                        
                     outfile.write(str(classad.ClassAd(outfile_dict)))
                 
                 except Exception as err:

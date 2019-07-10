@@ -8,22 +8,43 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.5
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.5 not yet released.
+
+.. HTCondor version 8.8.5 released on Month Date, 2019.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.8.4
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.4 not yet released.
+-  HTCondor version 8.8.4 released on July 9, 2019.
 
-.. HTCondor version 8.8.4 released on Month Date, 2019.
+Known Issues:
+
+-  In the Python bindings, there are known issues with reference counting of
+   ClassAds and ExprTrees. These problems are exacerbated by the more
+   aggressive garbage collection in Python 3. See the ticket for more details.
+   :ticket:`6721`
 
 New Features:
 
--  Dagman can now submit directly to the Schedd without using *condor_submit*
-   This provides a workaround for slow submission rates for very large DAGs.
-   This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
-   which defaults to ``True``.  When it is ``False``, Dagman will contact the
-   local Schedd directly to submit jobs. :ticket:`6974`
+-  The Python bindings are now available for Python 3 on Debian, Ubuntu, and
+   Enterprise Linux 7. To use these bindings on Enterprise Linux 7 systems,
+   the EPEL repositories are required to provide Python 3.6 and Boost 1.69.
+   :ticket:`6327`
 
 -  Added an optimization into DAGMan for graphs that use many-PARENT-many-CHILD
    statements. A new configuration variable ``DAGMAN_USE_JOIN_NODES`` can be
@@ -32,11 +53,26 @@ New Features:
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
 
+-  Dagman can now submit directly to the Schedd without using *condor_submit*
+   This provides a workaround for slow submission rates for very large DAGs.
+   This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
+   which defaults to ``True``.  When it is ``False``, Dagman will contact the
+   local Schedd directly to submit jobs. :ticket:`6974`
+
+-  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
+   pools with 8.8.4 (and later) stable-series startds can run jobs submitted
+   using a new feature in 8.9.3 (and later).
+   :ticket:`7112`
+
 Bugs Fixed:
 
--  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
-   work as expected.
-   :ticket:`7075`
+-  Fixed a bug that caused editing a job ClassAd in the schedd via the
+   Python bindings to be needlessly inefficient.
+   :ticket:`7124`
+
+-  Fixed a bug that could cause the *condor_schedd* to crash when a
+   scheduler universe job is removed.
+   :ticket:`7095`
 
 -  If a user accidentally submits a parallel universe job with thousands
    of times more nodes than exist in the pool, the *condor_schedd* no longer
@@ -47,18 +83,29 @@ Bugs Fixed:
    to crash when starting jobs and responding to *condor_history* queries.
    :ticket:`7102`
 
--  Fixed a bug that could cause the *condor_schedd* to crash when a
-   scheduler universe job is removed.
-   :ticket:`7095`
+-  HTCondor properly starts up when the ``condor`` user is in LDAP.
+   The *condor_master* creates ``/var/run/condor`` and ``/var/lock/condor``
+   as needed at start up.
+   :ticket:`7101`
 
--  Fixed a bug that could result in job attributes ``CommittedTime`` and
-   ``CommittedSlotTime`` reporting overly-large values.
-   :ticket:`7083`
+-  The *condor_master* will no longer abort when the ``DAEMON_LIST`` does not contain
+   ``MASTER``;  And when the ``DAEMON_LIST`` is empty, the *condor_master* will now
+   start the ``SHARED_PORT`` daemon if shared port is enabled.
+   :ticket:`7133`
 
 -  Fixed a bug that prevented the inclusion of the last `OBITUARY_LOG_LENGTH`
    lines of the dead daemon's log in the obituary.  Increased the default
    `OBITUARY_LOG_LENGTH` from 20 to 200.
    :ticket:`7103`
+
+-  Fixed a bug that could cause custom resources to fail to be released from a
+   dynamic slot to partitionable slot correctly when there were multiple custom
+   resources with the same identifier
+   :ticket:`7104`
+
+-  Fixed a bug that could result in job attributes ``CommittedTime`` and
+   ``CommittedSlotTime`` reporting overly-large values.
+   :ticket:`7083`
 
 -  Improved the error messages generated when GSI authentication fails.
    :ticket:`7052`
@@ -66,29 +113,30 @@ Bugs Fixed:
 -  Improved detection of failures writing to the job event logs.
    :ticket:`7008`
 
--  HTCondor properly starts up when the ``condor`` user is in LDAP.
-   The *condor_master* creates ``/var/run/condor`` and ``/var/lock/condor``
-   as needed at start up.
-   :ticket:`7101`
-
-- Updated the ``ChildCollector`` and ``CollectorNode`` configuration templates
-  to set ``CCB_RECONNECT_FILE``.  This avoids a bug where each collector
-  running behind the same shared port daemon uses the same reconnect file,
-  corrupting it.  (This corruption will cause new connections to a daemon
-  using CCB to fail if the collector has restarted since the daemon initially
-  registered.)  If your configuration does not use the templates to run
-  multiple collectors behind the same shared port daemon, you will need to
-  update your configuration by hand.
-  :ticket:`7134`
-
--  Fixed a bug that could cause custom resources to fail to be released from a
-   dynamic slot to partitionable slot correctly when there were multiple custom
-   resources with the same identifier
-   :ticket:`7104`
+-  Updated the ``ChildCollector`` and ``CollectorNode`` configuration templates
+   to set ``CCB_RECONNECT_FILE``.  This avoids a bug where each collector
+   running behind the same shared port daemon uses the same reconnect file,
+   corrupting it.  (This corruption will cause new connections to a daemon
+   using CCB to fail if the collector has restarted since the daemon initially
+   registered.)  If your configuration does not use the templates to run
+   multiple collectors behind the same shared port daemon, you will need to
+   update your configuration by hand.
+   :ticket:`7134`
 
 -  The *condor_q* tool now displays ``-nobatch`` mode by default when the ``-run``
    option is used.
    :ticket:`7068`
+
+-  HTCondor EC2 components are now packaged for Debian and Ubuntu.
+   :ticket:`7084`
+
+-  Fixed a bug that could cause *condor_submit* to send invalid job
+   ClassAds to the *condor_schedd* when the executable attribute was
+   not the same for all jobs in that submission. :ticket:`6719`
+
+-  Fixed a bug in the Standard Universe where ``SOFT_UID_DOMAIN`` did not
+   work as expected.
+   :ticket:`7075`
 
 Version 8.8.3
 -------------
