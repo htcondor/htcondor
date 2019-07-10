@@ -1,23 +1,17 @@
 Advanced Tutorials
 ==================
 
-These tutorials are also available as a series of runnable Jupyter notebooks: |binder|
+:doc:`advanced_schedd`
 
-.. |binder| image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/htcondor/htcondor-python-bindings-tutorials/stable?urlpath=lab/tree/index.ipynb
+:doc:`scalable_job_tracking`
 
-
-:doc:`Advanced-Schedd-Interactions`
-
-:doc:`Interacting-With-Daemons`
-
-:doc:`Scalable-Job-Tracking`
+:doc:`interacting_with_daemons`
 
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
-   Advanced-Schedd-Interactions
-   Scalable-Job-Tracking
-   Interacting-With-Daemons
+   advanced_schedd.rst
+   scalable_job_tracking.rst
+   interacting_with_daemons.rst
