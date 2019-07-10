@@ -401,6 +401,7 @@ class BoxPlugin:
             'ConnectionTimeSeconds': end_time - connection_start_time,
             'TransferHostName': urlparse(upload_url).netloc,
             'TransferLocalMachineName': socket.gethostname(),
+            'TransferUrl': 'https://upload.box.com/api/2.0/files',
         }
 
         return transfer_stats
