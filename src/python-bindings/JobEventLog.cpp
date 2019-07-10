@@ -415,9 +415,12 @@ JobEvent::Py_Repr() {
 
 std::string
 JobEvent::Py_Str() {
+	int fo = 0;
+	auto_free_ptr fmt(param("DEFAULT_USERLOG_FORMAT_OPTIONS"));
+	if(fmt) { fo = ULogEvent::parse_opts(fmt, USERLOG_FORMAT_DEFAULT); }
+
 	std::string buffer;
-	// TODO: where do we get event formatting options?
-	if(! event->formatEvent( buffer, 0 )) {
+	if(! event->formatEvent( buffer, fo )) {
 		buffer = Py_Repr();
 	}
 	return buffer;
