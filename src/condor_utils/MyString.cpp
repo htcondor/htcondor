@@ -224,7 +224,7 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (sz <= capacity && capacity > 0) {
+	if (sz <= capacity && capacity > 0 && Data) {
 		success = true;
 	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
