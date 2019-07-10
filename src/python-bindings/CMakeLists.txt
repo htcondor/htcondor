@@ -380,6 +380,12 @@ else()
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
+      if ("${PYTHON_VERSION_MAJOR}" MATCHES "3")
+        set ( PYTHON_BOOST_LIB boost_python3 )
+      else()
+        set ( PYTHON_BOOST_LIB boost_python )
+      endif()
+      include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # first, check if building in source
       set( PYPI_BUILD_DIR "${CMAKE_BINARY_DIR}/build/packaging/pypi" )
