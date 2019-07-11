@@ -2937,6 +2937,8 @@ int process_job_credentials()
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
 				exit( 1 );
 			}
+			free(ut64);
+			free(zkmbuf);
 		}
 	}  // end of block to run a credential producer
 
@@ -2970,7 +2972,7 @@ int SendLastExecutable()
 												true);
 		}
 
-		MyString hash;
+		std::string hash;
 		if (try_ickpt_sharing) {
 			Condor_MD_MAC cmm;
 			unsigned char* hash_raw;
@@ -2987,16 +2989,16 @@ int SendLastExecutable()
 			}
 			else {
 				for (int i = 0; i < MAC_SIZE; i++) {
-					hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
+					formatstr_cat(hash, "%02x", static_cast<int>(hash_raw[i]));
 				}
 				free(hash_raw);
 			}
 		}
 		int ret;
-		if ( ! hash.IsEmpty()) {
+		if ( ! hash.empty()) {
 			ClassAd tmp_ad;
 			tmp_ad.Assign(ATTR_OWNER, owner);
-			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
+			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash);
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}
 		else {

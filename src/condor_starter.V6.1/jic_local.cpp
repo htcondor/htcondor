@@ -407,7 +407,7 @@ JICLocal::initJobInfo( void )
 			// add the job's iwd to the job_cmd, so exec will work. 
 		dprintf( D_FULLDEBUG, "warning: %s not specified as full path, "
 				 "prepending job's IWD (%s)\n", ATTR_JOB_CMD, job_iwd );
-		MyString job_cmd;
+		std::string job_cmd;
 		formatstr( job_cmd, "%s%c%s", job_iwd, DIR_DELIM_CHAR, orig_job_name );
 		job_ad->Assign( ATTR_JOB_CMD, job_cmd );
 	}

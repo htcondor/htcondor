@@ -1113,7 +1113,7 @@ FutureEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	myad->Assign("EventHead", head.c_str());
+	myad->Assign("EventHead", head);
 	if ( ! payload.empty()) {
 		StringTokenIterator lines(payload, 120, "\r\n");
 		const std::string * str;

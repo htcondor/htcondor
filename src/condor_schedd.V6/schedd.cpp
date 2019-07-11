@@ -1147,7 +1147,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 		m_xfer_queue_mgr.publish_user_stats(&pAd, Owner.Name(), IF_VERBOSEPUB | IF_RECENTPUB);
 	}
 
-	MyString str;
+	std::string str;
 	if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) ) {
 		int max_entries = param_integer("MAX_GLOBAL_JOB_PRIOS",500);
 		int num_prios = Owner.PrioSet.size();
@@ -1164,18 +1164,17 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 			 rit != Owner.PrioSet.rend() && num_entries < max_entries;
 			 ++rit)
 		{
-			if ( !str.IsEmpty() ) {
+			if ( !str.empty() ) {
 				str += ",";
 			}
 			str += IntToStr( *rit );
 			num_entries++;
 		}
-		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
-		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str.Value());
+		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
 	}
 
-	str.formatstr("%s@%s", Owner.Name(), UidDomain);
-	pAd.Assign(ATTR_NAME, str.Value());
+	formatstr(str, "%s@%s", Owner.Name(), UidDomain);
+	pAd.Assign(ATTR_NAME, str);
 
 	return true;
 }
@@ -1750,14 +1749,14 @@ Scheduler::count_jobs()
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the Hits counter that was set above.
 	// that are not in the current list (the current list has only owners w/ idle jobs)
-	MyString submitter_name;
+	std::string submitter_name;
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		SubmitterData & SubDat = it->second;
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (SubDat.num.Hits > 0) continue;
 
-		submitter_name.formatstr("%s@%s", SubDat.Name(), UidDomain);
+		formatstr(submitter_name, "%s@%s", SubDat.Name(), UidDomain);
 		int old_flock_level = SubDat.OldFlockLevel;
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
@@ -1772,7 +1771,7 @@ Scheduler::count_jobs()
 			SubDat.name.clear();
 		}
 
-		pAd.Assign(ATTR_NAME, submitter_name.Value());
+		pAd.Assign(ATTR_NAME, submitter_name);
 
 #if defined(HAVE_DLOPEN)
 	// update plugins
@@ -14297,14 +14296,14 @@ Scheduler::invalidate_ads()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & Owner = it->second;
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
-		MyString submitter;
-		submitter.formatstr("%s@%s", Owner.Name(), UidDomain);
-		cad->Assign( ATTR_NAME, submitter.Value() );
+		std::string submitter;
+		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
+		cad->Assign( ATTR_NAME, submitter );
 
 		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_REQUIREMENTS,
 					  ATTR_SCHEDD_NAME, Name,
-					  ATTR_NAME, submitter.Value() );
+					  ATTR_NAME, submitter.c_str() );
 		cad->Insert( line.Value() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();

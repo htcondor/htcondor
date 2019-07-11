@@ -2214,7 +2214,7 @@ case CONDOR_getdir:
 				had_error = true;
 				break;
 			}
-			MyString b64 = zkm_base64_encode(buf, len);
+			std::string b64 = Base64::zkm_base64_encode(buf, len);
 			free(buf);
 
 			ClassAd ad;

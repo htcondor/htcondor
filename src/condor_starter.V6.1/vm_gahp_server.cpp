@@ -1461,7 +1461,7 @@ VMGahpServer::killVM(void)
 		return;
 	}
 
-	MyString matchstring;
+	std::string matchstring;
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		if( create_name_for_VM(m_job_ad, matchstring) == false ) {
 			dprintf(D_ALWAYS, "VMGahpServer::killVM() : "
@@ -1474,7 +1474,7 @@ VMGahpServer::killVM(void)
 		matchstring = m_workingdir;
 	}
 
-	if( matchstring.IsEmpty() ) {
+	if( matchstring.empty() ) {
 		dprintf(D_ALWAYS, "VMGahpServer::killVM() : empty matchstring\n");
 		return;
 	}
@@ -1519,7 +1519,7 @@ VMGahpServer::killVM(void)
 
 	if( ret == 0 ) {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() is called with "
-							"'%s'\n", matchstring.Value());
+							"'%s'\n", matchstring.c_str());
 	}else {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() failed!\n");
 	}

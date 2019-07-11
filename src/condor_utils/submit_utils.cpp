@@ -188,19 +188,11 @@ bool DeltaClassAd::Assign(const char* attr, long long val)
 
 bool DeltaClassAd::Assign(const char* attr, const char * val)
 {
-	if ( ! val) {
-		const classad::Value * pval = HasParentValue(attr, classad::Value::UNDEFINED_VALUE);
-		if (pval) {
-			ad.PruneChildAttr(attr, false);
-			return true;
-		}
-	} else {
-		const char * cstr = NULL;
-		const classad::Value * pval = HasParentValue(attr, classad::Value::STRING_VALUE);
-		if (pval && pval->IsStringValue(cstr) && cstr && (MATCH == strcmp(cstr, val))) {
-			ad.PruneChildAttr(attr, false);
-			return true;
-		}
+	const char * cstr = NULL;
+	const classad::Value * pval = HasParentValue(attr, classad::Value::STRING_VALUE);
+	if (val && pval && pval->IsStringValue(cstr) && cstr && (MATCH == strcmp(cstr, val))) {
+		ad.PruneChildAttr(attr, false);
+		return true;
 	}
 	return ad.Assign(attr, val);
 }

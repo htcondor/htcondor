@@ -256,11 +256,11 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		while ((req = missing.Next())) {
 			// fill in everything we need to pass
 			ClassAd ad;
-			MyString tmpname;
-			MyString tmpvalue;
-			MyString secret_filename;
+			std::string tmpname;
+			std::string tmpvalue;
+			std::string secret_filename;
 
-			MyString service;
+			std::string service;
 			req->LookupString("Service", service);
 			ad.Assign("Provider", service);
 
@@ -286,9 +286,9 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			tmpvalue.clear();
 			char *buf = NULL;
 			size_t buf_len = 0;
-			int secret_len = 0;
+			size_t secret_len = 0;
 			if (param(secret_filename, tmpname.c_str()) && ! secret_filename.empty() &&
-				read_secure_file(secret_filename.Value(), (void**)&buf, &buf_len, true)) {
+				read_secure_file(secret_filename.c_str(), (void**)&buf, &buf_len, true)) {
 				// Read the file and use the contents before the first
 				// newline, if any. remember the buffer is probably not null terminated!
 				size_t i = 0;
@@ -299,8 +299,8 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 						break;
 					}
 				}
-				secret_len = (int)i;  // the secret length might be less than the file length
-				tmpvalue.set(buf, secret_len); // copy so that we can null terminate
+				secret_len = i;  // the secret length might be less than the file length
+				tmpvalue.assign(buf, secret_len); // copy so that we can null terminate
 				memset(buf, 0, buf_len); // overwrite the secret before freeing the buffer
 				free(buf);
 			} else {
@@ -341,10 +341,10 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			sPrintAd(contents, ad);
 
 			if (IsDebugVerbose(D_FULLDEBUG)) {
-				MyString tmp;
-				tmp.formatstr("<contents of %s> %d bytes", secret_filename.Value(), secret_len);
-				ad.Assign("ClientSecret", tmp.Value());
-				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.Value());
+				std::string tmp;
+				formatstr(tmp, "<contents of %s> %d bytes", secret_filename.c_str(), (int)secret_len);
+				ad.Assign("ClientSecret", tmp);
+				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.c_str());
 				dPrintAd(D_FULLDEBUG, ad);
 			}
 		}

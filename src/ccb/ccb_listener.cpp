@@ -90,9 +90,9 @@ CCBListener::RegisterWithCCBServer(bool blocking)
 	}
 
 		// for debugging purposes only, identify ourselves to the CCB server
-	MyString name;
-	name.formatstr("%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
-	msg.Assign( ATTR_NAME, name.Value() );
+	std::string name;
+	formatstr(name, "%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
+	msg.Assign( ATTR_NAME, name );
 
 	bool success = SendMsgToCCB(msg,blocking);
 	if( success ) {

@@ -2064,17 +2064,17 @@ void CollectorDaemon::init_classad(int interval)
         free( tmp );
     }
 
-    MyString id;
+    std::string id;
     if( CollectorName ) {
             if( strchr( CollectorName, '@' ) ) {
-               id.formatstr( "%s", CollectorName );
+               formatstr( id, "%s", CollectorName );
             } else {
-               id.formatstr( "%s@%s", CollectorName, get_local_fqdn().Value() );
+               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().Value() );
             }
     } else {
-            id.formatstr( "%s", get_local_fqdn().Value() );
+            formatstr( id, "%s", get_local_fqdn().Value() );
     }
-    ad->Assign( ATTR_NAME, id.Value() );
+    ad->Assign( ATTR_NAME, id );
 
     ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 

@@ -265,7 +265,7 @@ public:
 #if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
-    int disableResources ( const MyString &state );
+    int disableResources ( const std::string &state );
 	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
@@ -399,7 +399,7 @@ private:
 	int					m_hibernate_tid;
 	bool				m_hibernating;
 	void checkHibernate(void);
-	int	 allHibernating( MyString &state_str ) const;
+	int	 allHibernating( std::string &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();

@@ -1475,7 +1475,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		pa_ad.Assign(ATTR_SEC_SID, m_sid);
 
 		// other commands this session is good for
-		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()).Value());
+		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()));
 
 		// what happened with command authorization?
 		if(m_reqFound) {

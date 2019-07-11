@@ -175,7 +175,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			}
 			else
 			{
-				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, "FALSE" );
+				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, false );
 				m_RunAsNobody=true;
 				dprintf(D_ALWAYS, "init_user_ids() now running as user nobody\n");
 			}
@@ -446,7 +446,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 }
 
 void
-BaseShadow::mockTerminateJob( MyString exit_reason, 
+BaseShadow::mockTerminateJob( std::string exit_reason,
 		bool exited_by_signal, int exit_code, int exit_signal, 
 		bool core_dumped )
 {
@@ -463,7 +463,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 			 exit_code,
 			 exit_signal,
 			 core_dumped ? "TRUE" : "FALSE",
-			 exit_reason.Value());
+			 exit_reason.c_str());
 
 	if( ! jobAd ) {
 		dprintf(D_ALWAYS, "BaseShadow::mockTerminateJob(): NULL JobAd! "

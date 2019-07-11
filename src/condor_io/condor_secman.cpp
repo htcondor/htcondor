@@ -623,9 +623,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 		// For historical reasons, session duration is inserted as a string
 		// in the ClassAd
-	MyString session_duration_buf;
-	session_duration_buf.formatstr("%d",session_duration);
-	ad->Assign ( ATTR_SEC_SESSION_DURATION, session_duration_buf );
+	ad->Assign ( ATTR_SEC_SESSION_DURATION, IntToStr(session_duration) );
 
 	int session_lease = 3600;
 	SecMan::getIntSecSetting(session_lease, "SEC_%s_SESSION_LEASE", auth_level);

@@ -1003,13 +1003,13 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 					attr = ATTR_OFFLINE_PREFIX; attr += k->first;
 					string ids;
 					join(k->second, ",", ids);
-					cp->Assign(attr.c_str(), ids.c_str());
+					cp->Assign(attr.c_str(), ids);
 				}
 			}
 			machine_resources += " ";
 			machine_resources += j->first;
 			}
-		cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources.c_str());
+		cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
 	}
 
 		// We don't want this inserted into the public ad automatically
@@ -1044,7 +1044,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	// Advertise chroot information
 	if ( m_named_chroot.size() > 0 ) {
-		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
+		cp->Assign( "NamedChroot", m_named_chroot );
 	}
 	
 	// Advertise Docker Volumes
@@ -1368,7 +1368,7 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 				attr += j->first;
 				string ids;
 				join(k->second, ",", ids);
-				cp->Assign(attr.c_str(), ids.c_str());
+				cp->Assign(attr.c_str(), ids);
 			}
 		}
 	}

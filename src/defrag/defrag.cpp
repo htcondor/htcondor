@@ -862,7 +862,7 @@ Defrag::publish(ClassAd *ad)
 	SetMyTypeName(*ad, "Defrag");
 	SetTargetTypeName(*ad, "");
 
-	ad->Assign(ATTR_NAME,m_daemon_name.c_str());
+	ad->Assign(ATTR_NAME,m_daemon_name);
 
 	m_stats.Tick();
 	m_stats.Publish(*ad);
@@ -885,6 +885,6 @@ Defrag::invalidatePublicAd() {
 
 	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
-	invalidate_ad.Assign(ATTR_NAME, m_daemon_name.c_str());
+	invalidate_ad.Assign(ATTR_NAME, m_daemon_name);
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }

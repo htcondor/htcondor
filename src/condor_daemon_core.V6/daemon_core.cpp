@@ -2751,8 +2751,8 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
-	MyString res;
+std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
+	std::string res;
 	int		i;
 	DCpermissionHierarchy hierarchy( perm );
 	DCpermission const *perms = hierarchy.getImpliedPerms();
@@ -2764,8 +2764,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 				(comTable[i].perm == perm) &&
 				(!comTable[i].force_authentication || is_authenticated))
 			{
-				char const *comma = res.Length() ? "," : "";
-				res.formatstr_cat( "%s%i", comma, comTable[i].num );
+				char const *comma = res.length() ? "," : "";
+				formatstr_cat( res, "%s%i", comma, comTable[i].num );
 			}
 		}
 	}
@@ -6989,7 +6989,7 @@ int DaemonCore::Create_Process(
 		// so the child knows it can use this session to contact the parent.
 		std::string valid_coms;
 		formatstr( valid_coms, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS,
-				   GetCommandsInAuthLevel(DAEMON,true).Value() );
+				   GetCommandsInAuthLevel(DAEMON,true).c_str() );
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
 			session_id_c_str,

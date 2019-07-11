@@ -1091,9 +1091,9 @@ VMGahp::killAllProcess()
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
-			MyString vmname;
+			std::string vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				XenType::killVMFast(vmname.Value());
+				XenType::killVMFast(vmname.c_str());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
@@ -1102,9 +1102,9 @@ VMGahp::killAllProcess()
 			     CONDOR_VM_UNIVERSE_KVM ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
-			MyString vmname;
+			std::string vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				KVMType::killVMFast(vmname.Value());
+				KVMType::killVMFast(vmname.c_str());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}

@@ -198,26 +198,18 @@ TransferRequest::get_num_transfers(void)
 }
 
 void
-TransferRequest::set_transfer_service(MyString &mode)
+TransferRequest::set_transfer_service(const std::string &mode)
 {
-	ASSERT(m_ip != NULL);
-
-	set_transfer_service(mode.Value());
-}
-
-void
-TransferRequest::set_transfer_service(const char *mode)
-{
-	ASSERT(m_ip != NULL);
-
 	m_ip->Assign( ATTR_IP_TRANSFER_SERVICE, mode );
 }
 
+#if 0
 void
 TransferRequest::set_transfer_service(TreqMode  /*mode*/)
 {
 	// XXX TODO
 }
+#endif
 
 
 TreqMode
@@ -314,26 +306,15 @@ TransferRequest::get_used_constraint(void)
 }
 
 void
-TransferRequest::set_peer_version(const MyString &pv)
+TransferRequest::set_peer_version(const std::string &pv)
 {
 	ASSERT(m_ip != NULL);
 
 	m_ip->Assign( ATTR_IP_PEER_VERSION, pv );
 }
 
-void
-TransferRequest::set_peer_version(char *pv)
-{
-	MyString str;
-	ASSERT(m_ip != NULL);
-
-	str = pv;
-
-	set_peer_version(str);
-}
-
 // This will make a copy when you assign the return value to something.
-MyString
+std::string
 TransferRequest::get_peer_version(void)
 {
 	std::string pv;
@@ -355,24 +336,24 @@ TransferRequest::todo_tasks(void)
 }
 
 void
-TransferRequest::set_capability(const MyString &capability)
+TransferRequest::set_capability(const std::string &capability)
 {
 	m_cap = capability;
 }
 
-MyString
+const std::string&
 TransferRequest::get_capability()
 {
 	return m_cap;
 }
 
 void
-TransferRequest::set_rejected_reason(const MyString &reason)
+TransferRequest::set_rejected_reason(const std::string &reason)
 {
 	m_rejected_reason = reason;
 }
 
-MyString
+const std::string&
 TransferRequest::get_rejected_reason()
 {
 	return m_rejected_reason;

@@ -269,7 +269,7 @@ TransferD::read_files_thread(void *targ, Stream *sock)
 			return EXIT_FAILURE;
 		}
 
-		ftrans.setPeerVersion(treq->get_peer_version().Value());
+		ftrans.setPeerVersion(treq->get_peer_version().c_str());
 
 		// We're "uploading" from here to the client.
 		result = ftrans.UploadFiles();
@@ -318,7 +318,7 @@ int
 TransferD::read_files_reaper(int tid, int exit_status)
 {
 	TransferRequest *treq = NULL;
-	MyString str;
+	std::string str;
 	ClassAd result;
 	int exit_code;
 	int signal;
@@ -356,7 +356,7 @@ TransferD::read_files_reaper(int tid, int exit_status)
 		result.Assign(ATTR_TREQ_SIGNALED, TRUE);
 		result.Assign(ATTR_TREQ_SIGNAL, signal);
 		result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-		str.formatstr("Died with signal %d", signal);
+		formatstr(str, "Died with signal %d", signal);
 		result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 
 	} else {
@@ -374,7 +374,7 @@ TransferD::read_files_reaper(int tid, int exit_status)
 
 			default:
 				result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-				str.formatstr("File transfer exited with incorrect exit code %d",
+				formatstr(str, "File transfer exited with incorrect exit code %d",
 					exit_code);
 				result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 				result.Assign(ATTR_TREQ_SIGNALED, FALSE);

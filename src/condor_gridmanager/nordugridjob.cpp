@@ -263,7 +263,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }

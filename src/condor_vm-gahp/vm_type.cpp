@@ -329,7 +329,7 @@ VMType::deleteNonTransferredFiles()
 // Create a name representing a virtual machine
 // Usually this name is used in vm config file
 bool 
-VMType::createVMName(ClassAd *ad, MyString& vmname)
+VMType::createVMName(ClassAd *ad, std::string& vmname)
 {
 	if( !ad ) {
 		return false;
