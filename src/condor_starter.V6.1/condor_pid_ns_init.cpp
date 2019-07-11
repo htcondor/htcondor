@@ -87,7 +87,10 @@ int main(int argc, char **argv, char **envp) {
 	sa.sa_flags = 0;
 
 	// Remove the status file, if it exists
-	unlink(getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME"));
+	const char *status_filename = getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME");
+	if (status_filename) {
+		unlink(status_filename);
+	}
 	
 	// Install the signal handlers, so if we're running as pid 1 they will
 	// get delivered.
