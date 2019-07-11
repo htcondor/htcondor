@@ -255,7 +255,7 @@ FileTransfer::~FileTransfer()
 	if (EncryptOutputFiles) delete EncryptOutputFiles;
 	if (DontEncryptInputFiles) delete DontEncryptInputFiles;
 	if (DontEncryptOutputFiles) delete DontEncryptOutputFiles;
-	if (OutputDestination) delete OutputDestination;
+	if (OutputDestination) free(OutputDestination);
 	if (IntermediateFiles) delete IntermediateFiles;
 	if (SpooledIntermediateFiles) free(SpooledIntermediateFiles);
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
