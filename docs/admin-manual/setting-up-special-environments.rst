@@ -493,8 +493,7 @@ universe. However, these jobs cannot take checkpoints and migrate.
 To relink programs with HTCondor, we provide the *condor_compile* tool.
 As installed by default, *condor_compile* works with the following
 commands: *gcc*, *g++*, *g77*, *cc*, *acc*, *c89*, *CC*, *f77*,
-*fort77*, *ld*. See the :doc:`/man-pages/condor_compile` manual page for
-details on using *condor_compile*.
+*fort77*, *ld*.
 
 *condor_compile* can work transparently with all commands on the
 system, including *make*. The basic idea here is to replace the system

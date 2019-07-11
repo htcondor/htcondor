@@ -53,7 +53,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'nbsphinx',
     'ticket',
     'macro',
     'index',

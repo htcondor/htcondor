@@ -5,7 +5,7 @@ A user of *condor_annex* may be a regular job submitter, or she may be
 an HTCondor pool administrator. This guide will cover basic
 *condor_annex* usage first, followed by advanced usage that may be of
 less interest to the submitter. Users interested in customizing
-*condor_annex* should consult the 
+*condor_annex* should consult the
 :doc:`/cloud-computing/annex-customization-guide`.
 
 Considerations and Limitations
@@ -405,11 +405,22 @@ page before you submit the Spot Fleet request; it is labeled 'JSON
 config'. You may need to create an IAM role the first time you make a
 Spot Fleet request; please do so before running *condor_annex*.
 
-You must select the instance role profile used by your on-demand
-instances for *condor_annex* to work. This value will have been stored
-in the configuration macro ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN
-:index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN` by the setup
-procedure.
+- You must select the instance role profile used by your on-demand
+  instances for *condor_annex* to work. This value will have been stored
+  in the configuration macro ``ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN``
+  :index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN` by the setup
+  procedure.
+
+- You must select a security group which allows inbound access on HTCondor's
+  port (9618) for *condor_annex* to work.  You may use the value stored in
+  the configuration macro ``ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS`` by the
+  setup procedure; this security group also allows inbound SSH access.
+
+- If you wish to be able to SSH to your instances, you must select an SSH
+  key pair (for which you have the corresponding private key); this is
+  not required for *condor_ssh_to_job*.  You may use the value stored in
+  the configuration macro ``ANNEX_DEFAULT_ODI_KEY_NAME`` by the setup
+  procedure.
 
 Specify the JSON configuration file using
 **-aws-spot-fleet-config-file**, or set the configuration macro
