@@ -604,8 +604,15 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 			args.AppendArg(cmd);
-			args.AppendArgsFromClassAd(JobAd, &arg_errors);
-			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
+
+			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
