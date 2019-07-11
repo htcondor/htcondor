@@ -1490,7 +1490,17 @@ class DaemonCore : public Service
 		*/
 	bool Do_Wake_up_select();
 
-		/** Registers a socket for read and then calls HandleReq to
+		/**
+			gather info about the wakeup select pipe from a thread that may be async to the main thread
+		*/
+	bool AsyncInfo_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd);
+
+		/**
+			check hotness of wakeup select socket from an async thread. used for debugging
+		*/
+	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, MyString & status);
+
+	/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
 			available.
 		*/
@@ -1976,10 +1986,11 @@ class DaemonCore : public Service
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+	volatile bool async_pipe_signal;
 #else
 	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
+	volatile unsigned int async_pipe_signal;
 #endif
-	volatile bool async_pipe_signal;
 
 	// Data memebers for queuing up waitpid() events
 	struct WaitpidEntry_s
