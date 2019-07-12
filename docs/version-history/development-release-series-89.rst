@@ -22,11 +22,22 @@ Release Notes:
   don't see one, you don't have to do anything.)
 
 - Singularity jobs no longer mount the user's home directory by default.
-  To re-enable this, set the knob SINGULARITY_MOUNT_HOME = true
+  To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
+
+- The format of the terminated and aborted events has changed.  This will
+  only affect you if you're not using one the readers provided by HTCondor.
 
 New Features:
 
--  None.
+- The terminated and abort events now include "Tickets of Execution", which
+  specify when the job terminated, who requested the termination, and the
+  mechanism used to make the request (as both a string an integer).  This
+  information is also present in the job ad (in the ``ToE`` attribute).
+  Presently, tickets are only issued for normal job terminations (when the
+  job terminated itself of its own accord), and for terminations resulting
+  from the ``DEACTIVATE_CLAIM`` command.  We expect to support tickets for
+  the other mechanisms in future releases.
+  :ticket:`6984`
 
 Bugs Fixed:
 
