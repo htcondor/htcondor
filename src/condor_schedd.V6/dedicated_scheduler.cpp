@@ -864,7 +864,11 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec )
 	DCStartd d( m_rec->peer );
 
     rsock.timeout(2);
-	rsock.connect( m_rec->peer );
+	if (!rsock.connect( m_rec->peer)) {
+        dprintf( D_ALWAYS, "ERROR in releaseClaim(): canot connect to startd %s\n", m_rec->peer); 
+		return false;
+	}
+
 	rsock.encode();
     d.startCommand( RELEASE_CLAIM, &rsock);
 	rsock.put( m_rec->claimId() );
