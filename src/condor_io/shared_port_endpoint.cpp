@@ -522,10 +522,6 @@ void ThreadSafeLogError(const char * msg, int err) {
 #define ThreadSafeLogError (void)
 #endif
 
-#ifdef WIN32
-auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
-#endif
-
 // a thread safe accumulation of messages
 static void sldprintf(MyString &str, const char * fmt, ...)
 {
