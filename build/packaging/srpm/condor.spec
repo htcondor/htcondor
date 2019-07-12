@@ -330,7 +330,7 @@ Requires: blahp >= 1.16.1
 Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
-# Box file transfer plugin requires python-requests
+# Box and Google Drive file transfer plugins require python-requests
 Requires: python-requests
 
 Requires: initscripts
@@ -1219,6 +1219,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
+%_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/gdrive_plugin.pyc
+%_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
