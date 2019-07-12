@@ -4165,7 +4165,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			ClassAd *machineAd = NULL;
 			while ( (machineAd = machines.Next())) {
 					// Now lookup machine here...
-				char *mach_name;
+				char *mach_name=NULL;
 				machineAd->LookupString( ATTR_NAME, &mach_name);
 
 				dprintf( D_FULLDEBUG, "Trying to match %s to %s\n", mach_name, host);
