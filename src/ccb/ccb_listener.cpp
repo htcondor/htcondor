@@ -180,7 +180,7 @@ CCBListener::WriteMsgToCCB(ClassAd &msg)
 }
 
 void
-CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack*/,void *misc_data)
+CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /*trust_domain*/, bool /*should_try_token_auth*/, void *misc_data)
 {
 	CCBListener *self = (CCBListener *)misc_data;
 

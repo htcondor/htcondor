@@ -605,7 +605,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, misc_data );
+			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
 			return StartCommandSucceeded;
 		} else {
 			return StartCommandFailed;

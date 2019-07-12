@@ -5499,7 +5499,8 @@ public:
 		m_startd(startdAddr),
 		m_nonblocking(nonblocking) {}
 
-	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,void *misc_data)
+	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
+		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
 	{
 		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
 		ASSERT(misc_data);

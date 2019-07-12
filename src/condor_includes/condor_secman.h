@@ -40,7 +40,7 @@
 #include "reli_sock.h"
 
 
-typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 extern char const *USE_TMP_SEC_SESSION;
 

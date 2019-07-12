@@ -1127,7 +1127,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	StartCommandResult receivePostAuthInfo_inner();
 
 		// This is called when the TCP auth attempt completes.
-	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 		// This is the _inner() function for TCPAuthCallback().
 	StartCommandResult TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock );
@@ -1247,7 +1247,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		bool success = result == StartCommandSucceeded;
 		CondorError *cb_errstack = m_errstack == &m_internal_errstack ?
 		                           NULL : m_errstack;
-		(*m_callback_fn)(success,m_sock,cb_errstack,m_misc_data);
+		(*m_callback_fn)(success,m_sock,cb_errstack, m_sock->getTrustDomain(), false, m_misc_data);
 
 		m_callback_fn = NULL;
 		m_misc_data = NULL;
@@ -2449,7 +2449,7 @@ SecManStartCommand::DoTCPAuth_inner()
 }
 
 void
-SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/,void * misc_data)
+SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string &, bool, void * misc_data)
 {
 	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
 

@@ -401,7 +401,7 @@ DCMessenger::doneWithSock(Stream *sock)
 }
 
 void
-DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, void *misc_data)
+DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *misc_data)
 {
 	ASSERT(misc_data);
 
@@ -411,6 +411,8 @@ DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, void *misc
 	self->m_callback_msg = NULL;
 	self->m_callback_sock = NULL;
 	self->m_pending_operation = NOTHING_PENDING;
+	self->m_daemon->m_trust_domain = trust_domain;
+	self->m_daemon->m_should_try_token_request = should_try_token_request;
 
 	if(!success) {
 		if( sock->deadline_expired() ) {
