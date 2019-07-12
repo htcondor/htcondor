@@ -1146,7 +1146,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
+SecMan::startCommand(const StartCommandRequest &req)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -1159,7 +1159,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errst
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(
+		req.m_cmd,
+		req.m_sock,
+		req.m_raw_protocol,
+		req.m_errstack,
+		req.m_subcmd,
+		req.m_callback_fn,
+		req.m_misc_data,
+		req.m_nonblocking,
+		req.m_cmd_description,
+		req.m_sec_session_id,
+		this);
 
 	ASSERT(sc.get());
 
