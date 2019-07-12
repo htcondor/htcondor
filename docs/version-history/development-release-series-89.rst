@@ -44,6 +44,13 @@ New Features:
   the output location of file when using ``transfer_output_remaps``.
   :ticket:`7085`
 
+- Added a new multifile transfer plugin for downloading and uploading
+  files from/to Google Drive user accounts. This supports URLs like
+  "gdrive://path/to/file" and using the plugin requires the admin
+  configure the *condor_credd* to allow users to obtain Google Drive
+  tokens and requires the user request Google Drive tokens in their
+  submit file. :ticket:`7136`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
