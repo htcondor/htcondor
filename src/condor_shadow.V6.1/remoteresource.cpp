@@ -1160,7 +1160,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		tmp = NULL;
 	}
 
-	char* starter_version;
+	char* starter_version=NULL;
 	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
 	}
