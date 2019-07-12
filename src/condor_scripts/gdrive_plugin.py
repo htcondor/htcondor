@@ -20,10 +20,10 @@ TOKEN_FILE_EXT = '.use'
 
 DEFAULT_TIMEOUT = 30
 
-DRIVE_PLUGIN_VERSION = '1.0.0'
+GDRIVE_PLUGIN_VERSION = '1.0.0'
 
-DRIVE_API_VERSION = 'v3'
-DRIVE_API_BASE_URL = 'https://www.googleapis.com/drive/' + DRIVE_API_VERSION
+GDRIVE_API_VERSION = 'v3'
+GDRIVE_API_BASE_URL = 'https://www.googleapis.com/drive/' + GDRIVE_API_VERSION
 
 def print_help(stream = sys.stderr):
     help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
@@ -42,8 +42,8 @@ def print_capabilities():
     capabilities = {
          'MultipleFileSupport': True,
          'PluginType': 'FileTransfer',
-         'SupportedMethods': 'drive',
-         'Version': DRIVE_PLUGIN_VERSION,
+         'SupportedMethods': 'gdrive',
+         'Version': GDRIVE_PLUGIN_VERSION,
     }
     sys.stdout.write(classad.ClassAd(capabilities).printOld())
     
@@ -134,7 +134,7 @@ def get_error_dict(error, url = ''):
 
     return error_dict
 
-class DrivePlugin:
+class GDrivePlugin:
 
     def __init__(self, token_path):
         self.token_path = token_path        
@@ -176,7 +176,7 @@ class DrivePlugin:
         return (filename, folder_tree)
 
     def api_call(self, endpoint, method = 'GET', params = None, data = {}, headers = None):
-        url = DRIVE_API_BASE_URL + endpoint
+        url = GDRIVE_API_BASE_URL + endpoint
         if headers is None:
             headers = self.get_headers_copy()
         
@@ -287,7 +287,7 @@ class DrivePlugin:
                     if create_if_missing:
                         parent_id = self.create_folder(folder_name, parent_id = parent_ids[-1])
                     else:
-                        raise IOError(2, 'Folder not found in Drive', searched_path)
+                        raise IOError(2, 'Folder not found in Google Drive', searched_path)
                 self.path_ids[searched_path] = parent_id # Update the cached ids
             parent_ids.append(parent_id)
 
@@ -302,7 +302,7 @@ class DrivePlugin:
         try:
             file_id = self.get_object_id(filename, 'file', parent_ids[-1])
         except IOError:
-            raise IOError(2, 'File not found in Box', '{0}/{1}'.format('/'.join(folder_tree), filename))
+            raise IOError(2, 'File not found in Google Drive', '{0}/{1}'.format('/'.join(folder_tree), filename))
 
         return file_id
 
@@ -313,7 +313,7 @@ class DrivePlugin:
         file_id = self.get_file_id(url)
         
         endpoint = '/files/{0}'.format(file_id)
-        url = DRIVE_API_BASE_URL + endpoint
+        url = GDRIVE_API_BASE_URL + endpoint
         params = {'alt': 'media'} # https://developers.google.com/drive/api/v3/manage-downloads
 
         # Stream the data to disk, chunk by chunk,
@@ -486,15 +486,15 @@ if __name__ == '__main__':
                     # cached object ids, which make path lookups much faster in
                     # the case of multiple file downloads/uploads.
                     if token_path in running_plugins:
-                        drive = running_plugins[token_path]
+                        gdrive = running_plugins[token_path]
                     else:
-                        drive = DrivePlugin(token_path)
-                        running_plugins[token_path] = drive
+                        gdrive = GDrivePlugin(token_path)
+                        running_plugins[token_path] = gdrive
 
                     if not args['upload']:
-                        outfile_dict = drive.download_file(ad['Url'], ad['LocalFileName'])
+                        outfile_dict = gdrive.download_file(ad['Url'], ad['LocalFileName'])
                     else:
-                        outfile_dict = drive.upload_file(ad['Url'], ad['LocalFileName'])
+                        outfile_dict = gdrive.upload_file(ad['Url'], ad['LocalFileName'])
                         
                     outfile.write(str(classad.ClassAd(outfile_dict)))
                 
