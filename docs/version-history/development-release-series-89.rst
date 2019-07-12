@@ -39,6 +39,11 @@ New Features:
   the other mechanisms in future releases.
   :ticket:`6984`
 
+- The Box.com multifile transfer plugin now supports uploads. The
+  plugin will be used when a user lists a "box://path/to/file" URL as
+  the output location of file when using ``transfer_output_remaps``.
+  :ticket:`7085`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
