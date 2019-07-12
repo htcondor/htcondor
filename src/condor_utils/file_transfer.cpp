@@ -4322,7 +4322,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		char *stats = s->get_statistics();
 		std::string full_stats;
 		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
-			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+			cluster, proc, numFiles, (long long)*total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
 		dprintf(D_STATS, "%s", full_stats.c_str());
 	}

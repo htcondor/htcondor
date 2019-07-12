@@ -589,9 +589,16 @@ VanillaProc::StartJob()
 			filename = Starter->GetWorkingDir();
 			filename += "/.condor_pid_ns_status";
 		
-			env.MergeFrom(JobAd, &env_errors);
+			if (!env.MergeFrom(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
-			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			this->m_pid_ns_status_filename = filename;

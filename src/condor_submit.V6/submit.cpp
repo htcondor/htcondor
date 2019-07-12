@@ -1073,7 +1073,10 @@ main( int argc, const char *argv[] )
 	//  Parse the file and queue the jobs
 	int as_factory = 0;
 	if (has_late_materialize) {
-		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? 2 : 0);
+		// turn dash_factory command line option and default_to_factory flag as bits
+		// so submit_jobs can be clever about defaults
+		// 0=not factory, 1=always factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
+		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? (1|2) : 0);
 	}
 	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
 	if( rval < 0 ) {
@@ -1864,6 +1867,12 @@ int submit_jobs (
 		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
 		// to decide whether this is a factory or not.
+		if (as_factory == 3) {
+			// if as_factory == 3, then we want 'smart' factory, where we use late materialize
+			// for multi-proc and non-factory for single proc
+			want_factory = (selected_item_count > 1 || o.queue_num > 1) ? 1 : 0;
+			need_factory = want_factory;
+		}
 		if (GotQueueCommand == 1) {
 			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 				want_factory = 1;
