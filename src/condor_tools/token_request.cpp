@@ -27,8 +27,7 @@
 #include "dc_collector.h"
 #include "directory.h"
 #include "condor_netdb.h"
-
-extern int write_out_token(const std::string &token_name, const std::string &token);
+#include "token_utils.h"
 
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
@@ -103,7 +102,7 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 		}
 	}
 
-	return write_out_token(token_name, token);
+	return htcondor::write_out_token(token_name, token);
 }
 
 int main(int argc, char *argv[]) {

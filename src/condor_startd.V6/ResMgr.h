@@ -330,6 +330,7 @@ public:
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 
 private:
+	static void token_request_callback(bool success, void *miscdata);
 
 	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
@@ -417,6 +418,8 @@ private:
 	int total_draining_badput;
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
+
+	DCTokenRequester m_token_requester;
 };
 
 

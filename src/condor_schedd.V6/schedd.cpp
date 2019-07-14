@@ -96,6 +96,7 @@
 #include "shared_port_endpoint.h"
 #include "condor_auth_passwd.h"
 #include "condor_secman.h"
+#include "token_utils.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -148,8 +149,6 @@ extern DedicatedScheduler dedicated_scheduler;
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
-
-extern int write_out_token(const std::string &token_name, const std::string &token);
 
 // These functions are defined in qmgmt.cpp.
 // We don't have a good schedd-internal header file, so we declare them
@@ -594,7 +593,8 @@ Scheduler::Scheduler() :
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0),
-	m_matchPasswordEnabled(false)
+	m_matchPasswordEnabled(false),
+	m_token_requester(&Scheduler::token_request_callback, this)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -1228,48 +1228,6 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 }
 
 
-	// Check to see if we need to perform a token request.
-void Scheduler::calc_token_requests(DaemonList *collector_list, const std::string &identity) {
-	if (!collector_list) {return;}
-
-	if (!collector_list->shouldTryTokenRequest()) {return;}
-
-	dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
-	Daemon *coll;
-	collector_list->rewind();
-	std::set<std::pair<std::string, Daemon*>> failed_trust_domains;
-	while (collector_list->Next(coll)) {
-		if (coll->shouldTryTokenRequest() && !coll->getTrustDomain().empty()) {
-			failed_trust_domains.insert({coll->getTrustDomain(), coll});
-		}
-	}
-		// Avoiding requesting tokens for already-pending requests.
-	for (const auto &pending_request : m_token_requests) {
-		if (pending_request.m_identity != identity) {
-			continue;
-		}
-		for (auto it = failed_trust_domains.begin(); it != failed_trust_domains.end();) {
-			if (it->first == pending_request.m_trust_domain) {
-				it = failed_trust_domains.erase(it);
-			} else {
-				++it;
-			}
-		}
-	}
-	for (const auto &trust_domain : failed_trust_domains) {
-		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.first.c_str());
-		m_token_requests.emplace_back();
-		auto &back = m_token_requests.back();
-		// Note that the empty string means "the default daemon identity" to
-		// the token request code.  Distinguishing token requests by identity
-		// will become useful with per-submitter flocking.
-		back.m_identity = identity;
-		back.m_trust_domain = trust_domain.first;
-		back.m_daemon = trust_domain.second;
-	}
-}
-
-
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1533,25 +1491,10 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
-	// Update collectors -- block on the initial update so that we can detect
-	// authorization failures and request a TOKEN.  GT #7093 will allow us to
-	// detect authorization failures asynchronously.  (This assumes that the
-	// other authorization methods will never fail if they succeed on their
-	// first try.  For our intended use cases, that will be true; and
-	// detecting authorization failures asynchronously will eliminate that
-	// assumption anyway.)
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
 	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
-	m_initial_update = false;
-
-		// Check to see if we need to perform a token request.
-	auto collector_list = daemonCore->getCollectorList();
-	calc_token_requests(collector_list, "");
-	if (!(collector_list && collector_list->shouldTryTokenRequest()) && (num_updates == 0)) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
-	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1563,19 +1506,11 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			// See the "update collectors" comment for an explanation.
-			bool nonblocking = (m_flock_collectors_init.find(d) == m_flock_collectors_init.end());
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, nonblocking );
+			auto data = m_token_requester.createCallbackData(col->addr(), DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, &data );
 			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
-		calc_token_requests(FlockCollectors, "");
-	}
-
-	if (!m_token_requests.empty() && m_token_requests_tid == -1) {
-		m_token_requests_tid = daemonCore->Register_Timer( 0,
-			(TimerHandlercpp)&Scheduler::try_token_requests,
-			"Scheduler::try_token_requests", this );
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -13726,9 +13661,6 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
-	// Clear out any pending token requests.
-	m_token_requests.clear();
-	m_initial_update = true;
 	m_flock_collectors_init.clear();
 
 	first_time_in_init = false;
@@ -17523,98 +17455,11 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 
 void
-Scheduler::try_token_requests()
+Scheduler::token_request_callback(bool success, void *miscdata)
 {
-	bool should_reschedule = false;
-	dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
-		m_token_requests.size());
-	for (auto & request : m_token_requests)
-	{
-		should_reschedule |= try_token_request(request);
-	}
-	if (should_reschedule) {
-		daemonCore->Reset_Timer(m_token_requests_tid, 5, 1);
-		dprintf(D_SECURITY|D_FULLDEBUG, "Will reschedule another poll of requests.\n");
-	} else {
-		daemonCore->Cancel_Timer(m_token_requests_tid);
-		m_token_requests_tid = -1;
-	}
-	m_token_requests.erase(
-		std::remove_if(m_token_requests.begin(),
-			m_token_requests.end(),
-			[](const PendingRequest &req) {return req.m_client_id.empty();}),
-		m_token_requests.end()
-	);
-}
+	auto self = reinterpret_cast<Scheduler*>(miscdata);
 
-
-bool
-Scheduler::try_token_request(PendingRequest &req)
-{
-	dprintf(D_SECURITY, "Trying token request to remote host.\n");
-	if (!req.m_daemon) {
-		dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
-		return false;
+	if (success) {
+		daemonCore->Reset_Timer(self->timeoutid,0,1);
 	}
-	std::string token;
-	if (req.m_client_id.empty()) {
-		req.m_request_id = "";
-		std::vector<char> hostname;
-		hostname.reserve(MAXHOSTNAMELEN);
-		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
-			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-			return false;
-		}
-		req.m_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 1000);
-
-		std::string request_id;
-		std::vector<std::string> authz_list;
-		authz_list.push_back("ADVERTISE_SCHEDD");
-		int lifetime = -1;
-		CondorError err;
-		if (!req.m_daemon->startTokenRequest(req.m_identity, authz_list, lifetime,
-			req.m_client_id, token, request_id, &err))
-		{
-			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
-			req.m_client_id = "";
-			return false;
-		}
-		if (token.empty()) {
-			req.m_request_id = request_id;
-			dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
-			return true;
-		} else {
-			dprintf(D_ALWAYS, "Token request auto-approved.\n");
-			Condor_Auth_Passwd::retry_token_search();
-			daemonCore->getSecMan()->reconfig();
-			daemonCore->Reset_Timer(timeoutid,0,1);
-			req.m_client_id = "";
-		}
-	} else {
-		CondorError err;
-		if (!req.m_daemon->finishTokenRequest(req.m_client_id, req.m_request_id, token, &err)) {
-			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
-			req.m_client_id = "";
-			return false;
-		}
-		if (token.empty()) {
-			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
-			return true;
-		} else {
-			dprintf(D_ALWAYS, "Token request approved.\n");
-				// Flush the cached result of the token search.
-			Condor_Auth_Passwd::retry_token_search();
-				// Flush out the security sessions; will need to force a re-auth.
-			daemonCore->getSecMan()->reconfig();
-				// Reset the timeout timer, causing the schedd to advertise itself.
-			daemonCore->Reset_Timer(timeoutid,0,1);
-		}
-		req.m_client_id = "";
-	}
-	if (!token.empty()) {
-		write_out_token("schedd_auto_generated_token", token);
-	}
-	return false;
 }

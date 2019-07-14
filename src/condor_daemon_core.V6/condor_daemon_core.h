@@ -62,6 +62,7 @@
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
 #include "daemon_keep_alive.h"
+
 #include <vector>
 
 #include "../condor_procd/proc_family_io.h"
@@ -265,6 +266,51 @@ class DCSignalMsg: public DCMsg {
 		// true if DaemonCore sends the signal through some means
 		// other than delivery of this network message through DCMessenger
 	bool m_messenger_delivery;
+};
+
+
+/**
+ * This is the class that internally manages the token request process;
+ * the actual logic implementation is in a separate class in daemon_core_main;
+ * this provides a clean, separate interface to that class.
+ */
+
+// Typedef of function we will call when a token request finished.
+typedef void RequestCallbackFn(bool success, void *miscdata);
+
+class DCTokenRequester {
+public:
+	DCTokenRequester(RequestCallbackFn callback, void *miscdata)
+	  : m_callback(callback),
+	    m_callback_data(miscdata)
+	{}
+
+	static const std::string default_identity;
+
+		// Remove/stop any pending token requests.
+	void clearRequests();
+
+	void *createCallbackData(const std::string &daemon_addr, const std::string &identity,
+		const std::string &authz_name);
+
+	static void
+	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain,
+		bool should_try_token_request, void *miscdata);
+
+	static void
+	tokenRequestCallback(bool success, void *miscdata);
+
+	struct DCTokenRequesterData {
+		std::string m_addr;
+		std::string m_identity;
+		std::string m_authz_name;
+		RequestCallbackFn *m_callback_fn;
+		void *m_callback_data;
+	};
+
+private:
+	RequestCallbackFn *m_callback;
+	void *m_callback_data{nullptr};
 };
 
 
@@ -1454,8 +1500,9 @@ class DaemonCore : public Service
 		   @param nonblock Should the update use non-blocking communication.
 		   @return The number of successful updates that were sent.
 		*/
-	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL,
-					bool nonblock = false);
+	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL, bool nonblock = false,
+		DCTokenRequester *requester = nullptr, const std::string &identity = "",
+		const std::string &authz_name = "");
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
