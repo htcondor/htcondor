@@ -298,7 +298,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 				 daemon->addr() );
 		void *data = nullptr;
 		if (token_requester) {
-			data = token_requester->createCallbackData(daemon->addr(),
+			data = token_requester->createCallbackData(daemon->name(),
 				identity, authz_name);
 		}
 		if( daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,

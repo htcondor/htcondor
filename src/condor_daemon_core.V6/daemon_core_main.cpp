@@ -623,10 +623,10 @@ DCTokenRequester::createCallbackData(const std::string &daemon_addr, const std::
 void
 DCTokenRequester::tokenRequestCallback(bool success, void *miscdata)
 {
-	auto data = reinterpret_cast<DCTokenRequester *>(miscdata);
-	std::unique_ptr<DCTokenRequester> data_uptr(data);
+	auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData *>(miscdata);
+	std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data_uptr(data);
 
-	(*data->m_callback)(success, data->m_callback_data);
+	(*data->m_callback_fn)(success, data->m_callback_data);
 }
 
 

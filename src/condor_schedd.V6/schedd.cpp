@@ -1491,7 +1491,8 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true,
+		&m_token_requester, DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
 	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
@@ -1506,8 +1507,9 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			auto data = m_token_requester.createCallbackData(col->addr(), DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, &data );
+			auto data = m_token_requester.createCallbackData(col->name(),
+				DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
 			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}

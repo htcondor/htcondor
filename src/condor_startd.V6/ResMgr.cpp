@@ -1064,7 +1064,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 	num_updates++;
 
 	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock, &m_token_requester,
-		DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
+		DCTokenRequester::default_identity, "ADVERTISE_STARTD");
 
 	if (first_time) {
 		first_time = false;
