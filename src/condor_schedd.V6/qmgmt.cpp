@@ -1779,7 +1779,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
-			clusterad->SetClusterSize(num_procs);
+			if (clusterad) clusterad->SetClusterSize(num_procs);
 			TotalJobsCount++;
 		}
 	} // WHILE
