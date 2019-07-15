@@ -2450,7 +2450,7 @@ SecManStartCommand::DoTCPAuth_inner()
 }
 
 void
-SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string &, bool, void * misc_data)
+SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /* trust_domain */, bool /* should_try_token_request */, void * misc_data)
 {
 	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
 

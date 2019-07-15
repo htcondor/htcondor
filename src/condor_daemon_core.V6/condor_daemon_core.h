@@ -309,7 +309,7 @@ public:
 	};
 
 private:
-	RequestCallbackFn *m_callback;
+	RequestCallbackFn *m_callback{nullptr};
 	void *m_callback_data{nullptr};
 };
 

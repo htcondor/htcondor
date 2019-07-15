@@ -2644,7 +2644,7 @@ ResMgr::token_request_callback(bool success, void *miscdata)
 	auto self = reinterpret_cast<ResMgr *>(miscdata);
 		// In the successful case, instantly re-fire the timer
 		// that will send an update to the collector.
-	if (success && (self->up_tid != 1)) {
+	if (success && (self->up_tid != -1)) {
 		daemonCore->Reset_Timer( self->up_tid, update_offset,
 			update_interval );
 	}
