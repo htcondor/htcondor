@@ -10899,7 +10899,8 @@ DaemonCore::getCollectorList() {
 
 
 int
-DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
+DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
+	DCTokenRequester *token_requester, const std::string &identity, const std::string &authz_name )
 {
 	ASSERT(ad1);
 	ASSERT(m_collector_list);
@@ -10923,7 +10924,8 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
 
 		// Even if we just decided to shut ourselves down, we should
 		// still send the updates originally requested by the caller.
-	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock);
+	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock, token_requester,
+		identity, authz_name);
 }
 
 

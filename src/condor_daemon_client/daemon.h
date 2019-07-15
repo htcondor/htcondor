@@ -898,7 +898,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id);
+	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
