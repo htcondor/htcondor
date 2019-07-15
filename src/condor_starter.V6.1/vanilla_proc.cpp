@@ -591,12 +591,14 @@ VanillaProc::StartJob()
 		
 			if (!env.MergeFrom(JobAd, &env_errors)) {
 				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
 
 			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 
