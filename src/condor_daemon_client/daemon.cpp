@@ -541,7 +541,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -550,20 +550,18 @@ Daemon::startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *er
 	// NOTE: if there is a callback function, we _must_ guarantee that it is
 	// eventually called in all code paths.
 
-	StartCommandResult start_command_result = StartCommandFailed;
-
-	ASSERT(sock);
+	ASSERT(req.m_sock);
 
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
-	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
+	ASSERT(!req.m_nonblocking || req.m_callback_fn || req.m_sock->type() == Stream::safe_sock);
 
 	// set up the timeout
 	if( timeout ) {
-		sock->timeout( timeout );
+		req.m_sock->timeout( timeout );
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
+	auto start_command_result = sec_man->startCommand(req);
 	// when sec_man->startCommand returns, sock may have been closed and the sock object deleted.
 	// do NOT add code referencing the sock here!!!
 	return start_command_result;
@@ -607,35 +605,48 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, misc_data );
+			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
 			return StartCommandSucceeded;
 		} else {
 			return StartCommandFailed;
 		}
 	}
 
-	return startCommand_internal (
-						 cmd,
-						 *sock,
-						 timeout,
-						 errstack,
-						 subcmd,
-						 callback_fn,
-						 misc_data,
-						 nonblocking,
-						 cmd_description,
-						 &_sec_man,
-						 raw_protocol,
-						 sec_session_id);
+	// Prepare the request.
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = *sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
+	req.m_nonblocking = nonblocking;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	return startCommand_internal( req, timeout, &_sec_man );
 }
 
 
 bool
 Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
 	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	auto rc = startCommand_internal(req, timeout, &_sec_man);
+
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -714,17 +725,39 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, 
 StartCommandResult
 Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
 	// This is the nonblocking version of startCommand().
-	const bool nonblocking = true;
-	return startCommand_internal(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	req.m_nonblocking = true;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	return startCommand_internal(req, timeout, &_sec_man);
 }
 
 bool
 Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
-	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
+	// This is the blocking version of startCommand().
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;

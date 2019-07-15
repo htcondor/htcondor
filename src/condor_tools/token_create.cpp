@@ -26,8 +26,7 @@
 #include "daemon.h"
 #include "dc_collector.h"
 #include "directory.h"
-
-extern int write_out_token(const std::string &token_name, const std::string &token);
+#include "token_utils.h"
 
 void print_usage(const char *argv0) {
 	fprintf(stderr, "Usage: %s -identity USER@DOMAIN [-key KEYID] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n"
@@ -119,5 +118,5 @@ int main(int argc, char *argv[]) {
 		exit(2);
 	}
 
-	return write_out_token(token_name, token);
+	return htcondor::write_out_token(token_name, token);
 }

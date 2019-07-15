@@ -43,6 +43,9 @@
 #include "store_cred.h"
 #include "condor_netaddr.h"
 #include "net_string_list.h"
+#include "dc_collector.h"
+#include "condor_netdb.h"
+#include "token_utils.h"
 
 #include <chrono>
 #include <sstream>
@@ -134,9 +137,13 @@ static bool doAuthInit = true;
 // It can be set to false by calling the DC_Skip_Core_Init() function.
 static bool doCoreInit = true;
 
+
+	// Right now, the default ID is simply the empty string.
+const std::string DCTokenRequester::default_identity = "";
+
 namespace {
 
-class TokenRequest {
+class TokenRequest : public Service {
 public:
 
 	enum class State {
@@ -319,7 +326,169 @@ public:
 		);
 	}
 
+		// Callbacks for collector updates; determine whether a token request would be useful!
+	static void
+	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *miscdata) {
+		if (success || !should_try_token_request || !sock) return;
+
+		auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
+		if (!data) {
+			return;
+		}
+
+			// Avoiding requesting tokens for already-pending requests.
+		for (const auto &pending_request : m_token_requests) {
+			if (pending_request.m_identity != data->m_identity) {
+				continue;
+			}
+			if (pending_request.m_trust_domain == trust_domain) {
+				return;
+			}
+		}
+
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.c_str());
+		m_token_requests.emplace_back();
+		auto &back = m_token_requests.back();
+			// Note that the default identity is simply the empty string in
+			// the token request code.  Distinguishing token requests by identity
+			// will become useful with per-submitter flocking.
+		back.m_identity = DCTokenRequester::default_identity;
+		back.m_trust_domain = trust_domain;
+		back.m_authz_name = data->m_authz_name;
+		back.m_daemon.reset(new DCCollector(data->m_addr.c_str()));
+		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
+		back.m_callback_data = data;
+
+		if (m_token_requests_tid == -1) {
+			m_token_requests_tid = daemonCore->Register_Timer( 0,
+			(TimerHandler)&TokenRequest::tryTokenRequests,
+			"TokenRequest::tryTokenRequests" );
+		}
+
+	}
+
+	static void
+	clearTokenRequests() {m_token_requests.clear();}
+
 private:
+	struct PendingRequest {
+			// Request ID sent to the remote server.
+		std::string m_request_id;
+			// My auto-generated client ID; an empty
+			// client ID indicates the token request has not
+			// been sent to the remote daemon yet.
+		std::string m_client_id;
+			// Identity requested for this token
+		std::string m_identity;
+		std::string m_trust_domain;
+			// Authorization level name
+		std::string m_authz_name;
+		std::unique_ptr<Daemon> m_daemon{nullptr};
+		RequestCallbackFn *m_callback_fn{nullptr};
+			// Callback data must be guaranteed to outlive the request;
+			// borrowed reference.
+		void *m_callback_data{nullptr};
+	};
+
+	static void
+	tryTokenRequests() {
+		bool should_reschedule = false;
+		dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		m_token_requests.size());
+		for (auto & request : m_token_requests)
+		{
+			should_reschedule |= tryTokenRequest(request);
+		}
+		if (should_reschedule) {
+			daemonCore->Reset_Timer(m_token_requests_tid, 5, 1);
+			dprintf(D_SECURITY|D_FULLDEBUG, "Will reschedule another poll of requests.\n");
+		} else {
+			daemonCore->Cancel_Timer(m_token_requests_tid);
+			m_token_requests_tid = -1;
+		}
+		m_token_requests.erase(
+			std::remove_if(m_token_requests.begin(),
+				m_token_requests.end(),
+				[](const PendingRequest &req) {return req.m_client_id.empty();}),
+					m_token_requests.end()
+			);
+	};
+
+	static bool
+	tryTokenRequest(PendingRequest &req) {
+		std::string subsys_name = get_mySubSystemName();
+
+		dprintf(D_SECURITY, "Trying token request to remote host.\n");
+		if (!req.m_daemon) {
+			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			return false;
+		}
+		std::string token;
+		if (req.m_client_id.empty()) {
+			req.m_request_id = "";
+			std::vector<char> hostname;
+			hostname.reserve(MAXHOSTNAMELEN);
+			if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
+				dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
+				(*req.m_callback_fn)(false, req.m_callback_data);
+				return false;
+			}
+			req.m_client_id = subsys_name + "-" + std::string(&hostname[0]) + "-" +
+			std::to_string(get_csrng_uint() % 1000);
+
+			std::string request_id;
+			std::vector<std::string> authz_list;
+			authz_list.push_back(req.m_authz_name);
+			int lifetime = -1;
+			CondorError err;
+			if (!req.m_daemon->startTokenRequest(req.m_identity, authz_list, lifetime,
+				req.m_client_id, token, request_id, &err))
+			{
+				dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
+				req.m_client_id = "";
+				(*req.m_callback_fn)(false, req.m_callback_data);
+				return false;
+			}
+			if (token.empty()) {
+				req.m_request_id = request_id;
+				dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
+				return true;
+			} else {
+				dprintf(D_ALWAYS, "Token request auto-approved.\n");
+				Condor_Auth_Passwd::retry_token_search();
+				daemonCore->getSecMan()->reconfig();
+				(*req.m_callback_fn)(true, req.m_callback_data);
+				req.m_client_id = "";
+			}
+		} else {
+			CondorError err;
+			if (!req.m_daemon->finishTokenRequest(req.m_client_id, req.m_request_id, token, &err)) {
+				dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
+				req.m_client_id = "";
+				(*req.m_callback_fn)(false, req.m_callback_data);
+				return false;
+			}
+			if (token.empty()) {
+				dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+				dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
+				return true;
+			} else {
+				dprintf(D_ALWAYS, "Token request approved.\n");
+					// Flush the cached result of the token search.
+				Condor_Auth_Passwd::retry_token_search();
+					// Flush out the security sessions; will need to force a re-auth.
+				daemonCore->getSecMan()->reconfig();
+					// Reset the timeout timer, causing the schedd to advertise itself.
+				(*req.m_callback_fn)(true, req.m_callback_data);
+			}
+			req.m_client_id = "";
+		}
+		if (!token.empty()) {
+			htcondor::write_out_token(subsys_name + "_auto_generated_token", token);
+		}
+		return false;
+	}
+
 	// The initial state of a request should always be pending.
 	State m_state{State::Pending};
 
@@ -342,9 +511,18 @@ private:
 	};
 
 	static std::vector<ApprovalRule> m_approval_rules;
+
+	static std::vector<PendingRequest> m_token_requests;
+	static int m_token_requests_tid;
 };
 
+
+int TokenRequest::m_token_requests_tid{-1};
+
+
 std::vector<TokenRequest::ApprovalRule> TokenRequest::m_approval_rules;
+
+std::vector<TokenRequest::PendingRequest> TokenRequest::m_token_requests;
 
 typedef std::unordered_map<int, std::unique_ptr<TokenRequest>> TokenMap;
 
@@ -425,6 +603,40 @@ void cleanup_request_map() {
 }
 
 }
+
+
+void*
+DCTokenRequester::createCallbackData(const std::string &daemon_addr, const std::string &identity,
+	const std::string &authz_name)
+{
+	DCTokenRequesterData *data = new DCTokenRequesterData();
+	data->m_addr = daemon_addr;
+	data->m_identity = identity;
+	data->m_authz_name = authz_name;
+	data->m_callback_fn = m_callback;
+	data->m_callback_data = m_callback_data;
+
+	return data;
+}
+
+
+void
+DCTokenRequester::tokenRequestCallback(bool success, void *miscdata)
+{
+	auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData *>(miscdata);
+	std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data_uptr(data);
+
+	(*data->m_callback_fn)(success, data->m_callback_data);
+}
+
+
+void
+DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain,
+                bool should_try_token_request, void *miscdata)
+{
+	TokenRequest::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, miscdata);
+}
+
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -2761,6 +2973,7 @@ dc_reconfig()
 	for (auto &entry : g_request_map) {
 		entry.second->setFailed();
 	}
+	TokenRequest::clearTokenRequests();
 
 	// call this daemon's specific main_config()
 	dc_main_config();

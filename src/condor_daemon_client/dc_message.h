@@ -325,7 +325,7 @@ public:
 	friend class DCMsg;
 private:
 		// This is called by DaemonClient when startCommand has finished.
-	static void connectCallback(bool success, Sock *sock, CondorError *errstack, void *misc_data);
+	static void connectCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 		// This is called by DaemonCore when the sock has data.
 	int receiveMsgCallback(Stream *sock);

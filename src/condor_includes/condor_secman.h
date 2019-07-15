@@ -40,7 +40,7 @@
 #include "reli_sock.h"
 
 
-typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 extern char const *USE_TMP_SEC_SESSION;
 
@@ -105,6 +105,28 @@ public:
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
 
+		// A struct to order all the startCommand parameters below (as opposed
+		// to having 10 parameters to a single function).
+		//
+		// Mostly a duplicate of the internal "SecManStartCommand" class, except
+		// simpler and stripped down.
+	struct StartCommandRequest {
+
+		StartCommandRequest() {}
+		StartCommandRequest(const StartCommandRequest &) = delete;
+
+		int m_cmd{-1};
+		Sock *m_sock{nullptr};
+		bool m_raw_protocol{false};
+		CondorError *m_errstack{nullptr};
+		int m_subcmd{-1};
+		StartCommandCallbackType *m_callback_fn{nullptr};
+		void *m_misc_data{nullptr};
+		bool m_nonblocking{false};
+		const char *m_cmd_description{nullptr};
+		const char *m_sec_session_id{nullptr};
+	};
+
 		// Prepare a socket for sending a CEDAR command.  This takes
 		// care of security negotiation and authentication.
 		// (If raw_protocol=true, then no security negotiation or
@@ -117,7 +139,7 @@ public:
 		// spawn off a non-blocking attempt to create a security
 		// session so that in the future, a UDP command could succeed
 		// without StartCommandWouldBlock.
-	StartCommandResult startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id);
+	StartCommandResult startCommand(const StartCommandRequest &req);
 
 		// Authenticate a socket using whatever authentication methods
 		// have been configured for the specified perm level.
