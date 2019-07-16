@@ -4943,6 +4943,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
+    // AppendToOutputAnderror
+    {SUBMIT_KEY_AppendOutputAndError, ATTR_APPEND_OUTPUT_AND_ERROR, SimpleSubmitKeyword::f_as_bool},
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods

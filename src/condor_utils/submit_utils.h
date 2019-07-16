@@ -212,6 +212,9 @@
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
 
+// ...
+#define SUBMIT_KEY_AppendOutputAndError "append_output_and_error"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
