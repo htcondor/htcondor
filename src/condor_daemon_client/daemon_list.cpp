@@ -297,7 +297,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
 		void *data = nullptr;
-		if (token_requester) {
+		if (token_requester && daemon->name()) {
 			data = token_requester->createCallbackData(daemon->name(),
 				identity, authz_name);
 		}
