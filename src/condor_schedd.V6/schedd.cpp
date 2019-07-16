@@ -1506,8 +1506,10 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			auto data = m_token_requester.createCallbackData(col->name(),
-				DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
+			auto data = col->name() ?
+					m_token_requester.createCallbackData(col->name(),
+					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
+				: nullptr;
 			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
 			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
