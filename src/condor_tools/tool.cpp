@@ -2046,5 +2046,3 @@ int strncmp_auto(const char *s1, const char *s2)
 {
     return strncasecmp(s1, s2, strlen(s2));
 }
-
-extern "C" int SetSyscalls() {return 0;}

@@ -37,6 +37,19 @@ inline
 void condor_gettimestamp(struct timeval &tv) {
 	tv.tv_sec = (long)condor_gettimestamp(tv.tv_usec);
 }
+
+#include <time.h>
+#if ! defined timegm
+
+	// timegm is the Linux name for the gm version of mktime,
+	// on Windows it is called _mkgmtime
+	#define timegm _mkgmtime
+	auto __inline localtime_r(const time_t*time, struct tm*result)
+		{ return localtime_s(result, time); }
+	auto __inline gmtime_r(const time_t*time, struct tm*result)
+		{ return gmtime_s(result, time); }
+#endif
+
 #else
 void condor_gettimestamp(struct timeval &tv);
 
@@ -54,7 +67,7 @@ inline
 double condor_gettimestamp_double() {
 	struct timeval tv;
 	condor_gettimestamp( tv );
-	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+	return ( double(tv.tv_sec) + ( double(tv.tv_usec) * 0.000001 ) );
 }
 
 /* These functions work like the timersub() function.
@@ -76,8 +89,8 @@ long timersub_usec( const struct timeval &a, const struct timeval &b ) {
 
 inline
 double timersub_double( const struct timeval &a, const struct timeval &b ) {
-	double usec_diff = a.tv_usec - b.tv_usec;
-	double sec_diff = a.tv_sec - b.tv_sec;
+	double usec_diff = double(a.tv_usec) - double(b.tv_usec);
+	double sec_diff = double(a.tv_sec) - double(b.tv_sec);
 	return sec_diff + (usec_diff / 1000000.0);
 }
 

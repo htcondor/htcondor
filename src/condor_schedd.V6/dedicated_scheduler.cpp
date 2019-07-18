@@ -51,7 +51,6 @@
 #include "schedd_negotiate.h"
 
 #include <vector>
-using std::vector;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -623,7 +622,7 @@ DedicatedScheduler::shutdown_fast( void )
 	match_rec* mrec;
 	all_matches->startIterations();
     while( all_matches->iterate( mrec ) ) {
-		releaseClaim( mrec, false );
+		releaseClaim( mrec );
 	}
 	return TRUE;
 }
@@ -636,7 +635,7 @@ DedicatedScheduler::shutdown_graceful( void )
 	match_rec* mrec;
 	all_matches->startIterations();
     while( all_matches->iterate( mrec ) ) {
-		releaseClaim( mrec, true );
+		releaseClaim( mrec );
 	}
 	return TRUE;
 }
@@ -852,11 +851,9 @@ DedicatedScheduler::callHandleDedicatedJobs( void )
 #pragma warning(suppress: 6262) // warning: function uses about 64k of stack
 #endif
 bool
-DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
+DedicatedScheduler::releaseClaim( match_rec* m_rec )
 {
-	Sock *sock;
     ReliSock rsock;
-	SafeSock ssock;
 
 	if( ! m_rec ) {
         dprintf( D_ALWAYS, "ERROR in releaseClaim(): NULL m_rec\n" ); 
@@ -866,18 +863,16 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 
 	DCStartd d( m_rec->peer );
 
-    if( use_tcp ) {
-		sock = &rsock;
-	} else {
-		sock = &ssock;
+    rsock.timeout(2);
+	if (!rsock.connect( m_rec->peer)) {
+        dprintf( D_ALWAYS, "ERROR in releaseClaim(): canot connect to startd %s\n", m_rec->peer); 
+		return false;
 	}
 
-    sock->timeout(2);
-	sock->connect( m_rec->peer );
-	sock->encode();
-    d.startCommand( RELEASE_CLAIM, sock);
-	sock->put( m_rec->claimId() );
-	sock->end_of_message();
+	rsock.encode();
+    d.startCommand( RELEASE_CLAIM, &rsock);
+	rsock.put( m_rec->claimId() );
+	rsock.end_of_message();
 
 	if( IsFulldebug(D_FULLDEBUG) ) { 
 		char name_buf[256];
@@ -1402,7 +1397,7 @@ DedicatedScheduler::sortJobs( void )
 			continue;
 		}
 			// If we found the job ad, make sure it's still idle
-		if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
+		if (job->LookupInteger(ATTR_JOB_STATUS, status) == false) {
 			dprintf( D_ALWAYS, "Job %d.0 has no %s attribute.  Ignoring\n",  
 					 cluster, ATTR_JOB_STATUS );
 			continue;
@@ -1614,7 +1609,6 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		while (ClassAd *m = resources->Next()) {
 			int cpus = 0;
 			m->LookupInteger(ATTR_CPUS, cpus);
-			if (cpus == 0) cpus = 1;
 			total_cores += cpus;
 		}
 		resources->Rewind();
@@ -3192,14 +3186,14 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	for (int i=0; i<alloc->num_procs; i++ ) {
         MRecArray* matches = (*alloc->matches)[i];
         int n = matches->getlast();
-        vector<match_rec*> delmr;
+        std::vector<match_rec*> delmr;
         // Save match_rec pointers into a vector, because deactivation of claims 
         // alters the MRecArray object (*matches) destructively:
         for (int j = 0;  j <= n;  ++j) delmr.push_back((*matches)[j]);
-        for (vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
+        for (std::vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
             if (kill) {
                 dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-                releaseClaim(*mr, true );
+                releaseClaim(*mr);
             } else {
                 deactivateClaim(*mr);
             }
@@ -4171,7 +4165,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			ClassAd *machineAd = NULL;
 			while ( (machineAd = machines.Next())) {
 					// Now lookup machine here...
-				char *mach_name;
+				char *mach_name=NULL;
 				machineAd->LookupString( ATTR_NAME, &mach_name);
 
 				dprintf( D_FULLDEBUG, "Trying to match %s to %s\n", mach_name, host);

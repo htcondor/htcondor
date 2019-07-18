@@ -131,10 +131,8 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--cap-drop=all");
 			
 		// --no-new-privileges flag appears in docker 1.11
-		if (DockerAPI::majorVersion > 1 ||
-		    DockerAPI::minorVersion > 10) {
-			runArgs.AppendArg("--no-new-privileges");
-		}
+		runArgs.AppendArg("--security-opt");
+		runArgs.AppendArg("no-new-privileges");
 	}
 
 	// Give the container a useful name

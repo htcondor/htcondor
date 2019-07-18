@@ -24,6 +24,7 @@
 #include "condor_daemon_core.h"
 #include "counted_ptr.h"
 #include "basename.h"
+#include "utc_time.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -521,6 +522,28 @@ void ThreadSafeLogError(const char * msg, int err) {
 #define ThreadSafeLogError (void)
 #endif
 
+// a thread safe accumulation of messages
+static void sldprintf(MyString &str, const char * fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+	if (str.Length() > 10000) {
+		// set an upper limit on the number of messages that can be appended.
+		return;
+	}
+
+	struct tm tm;
+	struct timeval tv;
+	condor_gettimestamp(tv);
+	time_t now = tv.tv_sec;
+	localtime_r(&now, &tm);
+	str.formatstr_cat("\t%02d:%02d:%02d.%03d ", tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+	str.vformatstr_cat(fmt, args);
+
+	va_end(args);
+}
+
 /*
   The following function runs in its own thread.  We must therefore be
   very careful about what we do here.  Much of condor code is not
@@ -532,6 +555,12 @@ void ThreadSafeLogError(const char * msg, int err) {
 void
 SharedPortEndpoint::PipeListenerThread()
 {
+	// temp variables for use in debug logging
+	void *dst = NULL, *src = NULL;
+	int dst_fd = 0, src_fd = 0;
+	MyString msgs;
+	MyString wake_status;
+
 	while(true)
 	{
 		// a bit wierd, but ConnectNamedPipe returns true on success. OR it
@@ -572,6 +601,8 @@ SharedPortEndpoint::PipeListenerThread()
 			EXCEPT("SharedPortEndpoint: Failed to write PID, error value: %d", error);
 		}
 		//FlushFileBuffers(pipe_end);
+
+		sldprintf(msgs, "SharedPortEndpoint: Pipe connected and pid %u sent\n", pID);
 
 		int expected = sizeof(WSAPROTOCOL_INFO) + sizeof(int);
 		int buffSize = expected;
@@ -617,16 +648,50 @@ SharedPortEndpoint::PipeListenerThread()
 			WSAPROTOCOL_INFO *last_rec = (WSAPROTOCOL_INFO *)HeapAlloc(GetProcessHeap(), 0, sizeof(WSAPROTOCOL_INFO));
 			memcpy_s(last_rec, sizeof(WSAPROTOCOL_INFO), storeBuff+sizeof(int), sizeof(WSAPROTOCOL_INFO));
 			ThreadSafeLogError("SharedPortEndpoint: Copied WSAPROTOCOL_INFO", wake_select_dest ? 1 : 0);
-			
+
+			if (!wake_select_dest) {
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					bool woke = daemonCore->AsyncInfo_Wake_up_select(dst, dst_fd, src, src_fd);
+					sldprintf(msgs, "SharedPortEndpoint: Got WSAPROTOCOL_INFO, queueing pump work. wake dst(%p=%d), src(%p=%d) %d\n", dst, dst_fd, src, src_fd, woke);
+				}
+			} else {
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					sldprintf(msgs, "SharedPortEndpoint: Got WSAPROTOCOL_INFO, waking up select. dst(%p=%d), src(%p=%d)\n",
+						wake_select_source, wake_select_source->get_file_desc(),
+						wake_select_dest, wake_select_dest->get_file_desc()
+					);
+				}
+			}
+
 			EnterCriticalSection(&received_lock);
 			received_sockets.push(last_rec);
 			LeaveCriticalSection(&received_lock);
 			
 			if(!wake_select_dest)
 			{
+				char * msg = msgs.detach_buffer();
 				ThreadSafeLogError("SharedPortEndpoint: Registering Pump worker to move the socket", 0);
-				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, NULL);
+				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, msg);
 				ThreadSafeLogError("SharedPortEndpoint: back from Register_PumpWork_TS with status", status);
+
+				// debug logging, we expect the wakeup select socket to be hot now. this is a bit of a race
+				// but if it is not hot AND select does not log the above pumpwork immediately, then we have a problem.
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					int hotness = daemonCore->Async_test_Wake_up_select(dst, dst_fd, src, src_fd, wake_status);
+					if (!(hotness & 1)) {
+						sldprintf(msgs, "SharedPortEndpoint: WARNING wake socket not hot dst(%p=%d), src(%p=%d) %d %s\n",
+							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
+						msg = msgs.detach_buffer();
+						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
+					} else {
+					#if 0
+						sldprintf(msgs, "SharedPortEndpoint: OK wake socket is hot dst(%p=%d), src(%p=%d) %d %s\n",
+							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
+						msg = msgs.detach_buffer();
+						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
+					#endif
+					}
+				}
 			}
 			else
 			{
@@ -657,11 +722,33 @@ SharedPortEndpoint::PipeListenerThread()
 /* static */
 int SharedPortEndpoint::PipeListenerHelper(void* pv, void* data)
 {
+	if (data) {
+		char * msgs = (char*)data;
+		if (msgs) {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got messages from Listener thread:\n%s", msgs);
+			delete[] msgs;
+		}
+	}
 	SharedPortEndpoint * pthis = (SharedPortEndpoint *)pv;
 	//dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside PumpWork PipeListenerHelper\n");
 	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper", 0);
 	pthis->DoListenerAccept(NULL);
 	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper returning", 0);
+	return 0;
+}
+
+/* static */
+int SharedPortEndpoint::DebugLogHelper(void* /*pv*/, void* data)
+{
+	if (data) {
+		char * msgs = (char*)data;
+		if (msgs) {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got messages from Listener thread:\n%s", msgs);
+			delete[] msgs;
+		} else {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got NULL debug messages from Listener thread!\n");
+		}
+	}
 	return 0;
 }
 

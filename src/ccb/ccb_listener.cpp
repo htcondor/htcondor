@@ -90,9 +90,9 @@ CCBListener::RegisterWithCCBServer(bool blocking)
 	}
 
 		// for debugging purposes only, identify ourselves to the CCB server
-	MyString name;
-	name.formatstr("%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
-	msg.Assign( ATTR_NAME, name.Value() );
+	std::string name;
+	formatstr(name, "%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
+	msg.Assign( ATTR_NAME, name );
 
 	bool success = SendMsgToCCB(msg,blocking);
 	if( success ) {
@@ -180,7 +180,7 @@ CCBListener::WriteMsgToCCB(ClassAd &msg)
 }
 
 void
-CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack*/,void *misc_data)
+CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /*trust_domain*/, bool /*should_try_token_auth*/, void *misc_data)
 {
 	CCBListener *self = (CCBListener *)misc_data;
 

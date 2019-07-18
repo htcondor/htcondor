@@ -626,9 +626,23 @@ public:
 		CondorError *err=nullptr ) noexcept;
 
 		/**
+		 * Create a rule to auto-approve future requests.
+		 *
+		 * The `netblock` (example: 192.168.0.1/24) and `lifetime` (seconds)
+		 * define the tool we are to install.
+		 */
+	bool autoApproveTokens( const std::string &netblock, time_t lifetime,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
 		 * When authentication fails - but TOKEN is a valid method - this is set to true.
 		 */
 	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
+
+		/**
+		 * Last recorded trust domain from this daemon.
+		 */
+	std::string getTrustDomain() const {return m_trust_domain;}
 
 protected:
 	// Data members
@@ -884,7 +898,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request );
+	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -914,6 +928,7 @@ private:
 
 	ClassAd *m_daemon_ad_ptr;
 
+	std::string m_trust_domain;
 };
 
 /** This helper class is derived from the Daemon class; it allows

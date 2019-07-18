@@ -2622,7 +2622,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
 
 
-				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign(ATTR_NAME, name); // the hash key
 				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(name));
 
@@ -3181,8 +3181,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					"  Negotiation with %s skipped because of time limits:\n",
 					submitterName.c_str());
 				dprintf(D_ALWAYS,
-					"  %d seconds spent on this schedd, MAX_TIME_PER_SCHEDD is %d secs\n ",
-					totalTimeSchedd, MaxTimePerSchedd);
+					"  %d seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %d secs\n ",
+					totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
 				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
@@ -5500,7 +5500,8 @@ public:
 		m_startd(startdAddr),
 		m_nonblocking(nonblocking) {}
 
-	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,void *misc_data)
+	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
+		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
 	{
 		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
 		ASSERT(misc_data);
@@ -5803,9 +5804,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// NOTE: Because the Concurrency Limits should be available to
 		// the Schedd, they must be stashed before PERMISSION_AND_AD
 		// is sent.
-	MyString limits;
+	std::string limits;
 	if (EvalString(ATTR_CONCURRENCY_LIMITS, &request, offer, limits)) {
-		limits.lower_case();
+		lower_case(limits);
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
@@ -6766,22 +6767,22 @@ SetAttrN( ClassAd *ad, char const *attr, int n, double value )
 static void
 SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
 {
-	MyString attrn;
-	attrn.formatstr("%s%d",attr,n);
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
 
-	MyString value;
+	std::string value;
 	std::set<std::string>::iterator it;
 	for(it = string_list.begin();
 		it != string_list.end();
 		it++)
 	{
-		if( !value.IsEmpty() ) {
+		if( !value.empty() ) {
 			value += ", ";
 		}
-		value += it->c_str();
+		value += *it;
 	}
 
-	ad->Assign(attrn.Value(),value.Value());
+	ad->Assign(attrn.c_str(),value);
 }
 
 

@@ -1,6 +1,0 @@
-Job  A job.sub
-Job  B job.sub
-Job  C job.sub
-Job  D job.sub
-PARENT A CHILD B C
-PARENT B C CHILD D

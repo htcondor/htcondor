@@ -39,6 +39,13 @@
 #define valgrind_exe "valgrind"
 #endif
 
+// The default maximum rescue DAG number.
+const int MAX_RESCUE_DAG_DEFAULT = 100;
+
+// The absolute maximum allowed rescue DAG number (the real maximum
+// is normally configured lower).
+const int ABS_MAX_RESCUE_DAG_NUM = 999;
+
 class EnvFilter : public Env
 {
 public:
@@ -157,6 +164,9 @@ struct SubmitDagDeepOptions
 class DagmanUtils {
 
 public:
+
+    bool usingPythonBindings = false;
+
     void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
         /* const */ StringList &dagFileAttrLines );
@@ -173,6 +183,24 @@ public:
         MyString &configFile, StringList &attrLines, MyString &errMsg );
 
     bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+
+    int FindLastRescueDagNum(const char *primaryDagFile,
+        bool multiDags, int maxRescueDagNum);
+
+    bool fileExists(const MyString &strFile);
+
+    void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
+        SubmitDagShallowOptions &shallowOpts);
+
+    MyString RescueDagName(const char *primaryDagFile,
+        bool multiDags, int rescueDagNum);
+
+    void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 
+        int rescueDagNum, int maxRescueDagNum);
+
+    MyString HaltFileName( const MyString &primaryDagFile );
+
+    void tolerant_unlink( const char *pathname );
 
 };
 

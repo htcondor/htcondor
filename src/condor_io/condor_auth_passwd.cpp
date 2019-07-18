@@ -197,7 +197,7 @@ findTokens(const std::string &issuer,
 			dirpath = file_location;
 		}
 	}
-	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s\n", dirpath.c_str());
+	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
 	const char* _errstr;
 	int _erroffset;
@@ -230,12 +230,19 @@ findTokens(const std::string &issuer,
 
 	const char *file;
 	std::vector<std::string> tokens;
+	std::string subsys_token_file;
+	std::string subsys_agt_name = get_mySubSystemName();
+	subsys_agt_name += "_auto_generated_token";
+
 	while ( (file = dir.Next()) ) {
 		if (dir.IsDirectory()) {
 			continue;
 		}
 		if(!excludeFilesRegex.match(file)) {
 			tokens.emplace_back(dir.GetFullPath());
+			if (!strcasecmp(file, subsys_agt_name.c_str())) {
+				subsys_token_file = dir.GetFullPath();
+			}
 		} else {
 			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring token file "
 				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
@@ -243,6 +250,13 @@ findTokens(const std::string &issuer,
 		}
 	}
 	std::sort(tokens.begin(), tokens.end());
+
+	if (!subsys_token_file.empty() && findToken(subsys_token_file, issuer,
+		server_key_ids, username, token, signature))
+	{
+		return true;
+	}
+
 	for (const auto &token_filename : tokens) {
 		if (findToken(token_filename, issuer, server_key_ids,
 			username, token, signature))
@@ -2657,11 +2671,6 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 	check_pool_password();
 
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
-	std::string issuer;
-	if (param(issuer, "TRUST_DOMAIN")) {
-		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
-		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
-	}
 	std::vector<std::string> creds;
 	CondorError err;
 	if (!listNamedCredentials(creds, &err)) {

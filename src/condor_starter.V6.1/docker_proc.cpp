@@ -149,7 +149,7 @@ int DockerProc::StartJob() {
 		getpid() );
 
 	ClassAd recoveryAd;
-	recoveryAd.Assign("DockerContainerName", containerName.c_str());
+	recoveryAd.Assign("DockerContainerName", containerName);
 	Starter->WriteRecoveryFile(&recoveryAd);
 
 	int childFDs[3] = { 0, 0, 0 }; 

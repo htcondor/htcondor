@@ -422,7 +422,7 @@ void BaseJob::UpdateRuntimeStats()
 		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
 		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
-		jobAd->Assign( ATTR_JOB_WALL_CLOCK_CKPT,(char *)NULL );
+		jobAd->AssignExpr( ATTR_JOB_WALL_CLOCK_CKPT, "Undefined" );
 		jobAd->AssignExpr( ATTR_SHADOW_BIRTHDATE, "UNDEFINED" );
 
 		requestScheddUpdate( this, false );
@@ -451,7 +451,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	}
 	if ( !new_job_id.empty() ) {
 		ASSERT( JobsByRemoteId.insert( new_job_id, this ) == 0 );
-		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.c_str() );
+		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id );
 	} else {
 		// new job id is NULL
 		m_lastRemoteStatusUpdate = 0;
@@ -489,7 +489,7 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 		jobAd->AssignExpr( ATTR_GRID_JOB_STATUS, "Undefined" );
 	}
 	if ( !new_job_status.empty() ) {
-		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.c_str() );
+		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status );
 	}
 	requestScheddUpdate( this, false );
 	return true;

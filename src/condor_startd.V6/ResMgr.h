@@ -265,7 +265,7 @@ public:
 #if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
-    int disableResources ( const MyString &state );
+    int disableResources ( const std::string &state );
 	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
@@ -330,6 +330,7 @@ public:
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 
 private:
+	static void token_request_callback(bool success, void *miscdata);
 
 	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
@@ -399,7 +400,7 @@ private:
 	int					m_hibernate_tid;
 	bool				m_hibernating;
 	void checkHibernate(void);
-	int	 allHibernating( MyString &state_str ) const;
+	int	 allHibernating( std::string &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
@@ -417,6 +418,8 @@ private:
 	int total_draining_badput;
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
+
+	DCTokenRequester m_token_requester;
 };
 
 

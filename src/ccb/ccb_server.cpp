@@ -62,9 +62,9 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 }
 
 void
-CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
+CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,std::string &ccb_contact)
 {
-	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
+	formatstr(ccb_contact,"%s#%lu",my_address,ccbid);
 }
 
 CCBServer::CCBServer():
@@ -193,8 +193,8 @@ CCBServer::InitAndReconfig()
 			spool,
 			DIR_DELIM_CHAR,
 			myHost,
-			my_addr.getPort() ? my_addr.getPort() : "0");
-dprintf( D_ALWAYS, "m_reconnect_fname = %s\n", m_reconnect_fname.Value() );
+			my_addr.getSharedPortID() ?	my_addr.getSharedPortID() :
+				my_addr.getPort() ? my_addr.getPort() : "0" );
 
 		free( myHost );
 		free( spool );
@@ -461,7 +461,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	sock->encode();
 
 	ClassAd reply_msg;
-	MyString ccb_contact;
+	std::string ccb_contact;
 
 
 		// We send our address as part of the CCB contact string, rather
@@ -473,7 +473,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
-	reply_msg.Assign(ATTR_CCBID,ccb_contact.Value());
+	reply_msg.Assign(ATTR_CCBID,ccb_contact);
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);
 	reply_msg.Assign(ATTR_CLAIM_ID,reconnect_cookie_str);
 

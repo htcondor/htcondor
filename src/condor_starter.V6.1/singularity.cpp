@@ -204,23 +204,8 @@ Singularity::setup(ClassAd &machineAd,
 			sing_args.AppendArg(target_dir.c_str());
 		}
 		// Update the environment variables
-		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
-		job_env.SetEnv("TEMP", target_dir.c_str());
-		job_env.SetEnv("TMP", target_dir.c_str());
-		job_env.SetEnv("TMPDIR", target_dir.c_str());
-		std::string chirp = target_dir + "/.chirp.config";
-		std::string machine_ad = target_dir + "/.machine.ad";
-		std::string job_ad = target_dir + "/.job.ad";
-		job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
-		job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
-		job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
-		MyString proxy_file;
-		if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
-		     strncmp( execute_dir.c_str(), proxy_file.Value(),
-                      execute_dir.length() ) == 0 ) {
-			std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
-			job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
-		}
+		retargetEnvs(job_env, target_dir, execute_dir);
+
 	}
 	sing_args.AppendArg("-B");
 	sing_args.AppendArg(bind_spec.c_str());
@@ -281,6 +266,31 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 	return true;
 }
 
+bool
+Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
+	
+	// if SINGULARITY_TARGET_DIR is set, we need to reset
+	// all the job's environment variables that refer to the scratch dir
+
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
+	job_env.SetEnv("TEMP", target_dir.c_str());
+	job_env.SetEnv("TMP", target_dir.c_str());
+	job_env.SetEnv("TMPDIR", target_dir.c_str());
+	std::string chirp = target_dir + "/.chirp.config";
+	std::string machine_ad = target_dir + "/.machine.ad";
+	std::string job_ad = target_dir + "/.job.ad";
+	job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
+	job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
+	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
+	MyString proxy_file;
+	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
+	     strncmp( execute_dir.c_str(), proxy_file.Value(),
+	      execute_dir.length() ) == 0 ) {
+		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
+		job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
+	}
+	return true;
+}
 bool 
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;

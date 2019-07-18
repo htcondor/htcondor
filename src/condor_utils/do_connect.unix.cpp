@@ -307,9 +307,6 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
 	if ( selector.failed() ) {
 		EXCEPT( "select() returns %d, errno = %d", selector.select_retval(), selector.select_errno() );
     }
-	/*
-	 ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count) );
-	 */
 
     if( selector.timed_out() ) {
 		return -2;

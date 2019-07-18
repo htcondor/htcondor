@@ -949,12 +949,6 @@ delete_passwd_cache() {
 
 #include <grp.h>
 
-#if defined(AIX31) || defined(AIX32)
-#include <sys/types.h>
-#include <sys/id.h>
-#define SET_EFFECTIVE_UID(id) setuidx(ID_REAL|ID_EFFECTIVE,id)
-#define SET_REAL_UID(id) setuidx(ID_SAVED|ID_REAL|ID_EFFECTIVE,id)
-#else
 #define SET_EFFECTIVE_UID(id) seteuid(id)
 #define SET_REAL_UID(id) setuid(id)
 #define SET_EFFECTIVE_GID(id) setegid(id)
@@ -963,7 +957,6 @@ delete_passwd_cache() {
 #define GET_REAL_UID() getuid()
 #define GET_EFFECTIVE_GID() getegid()
 #define GET_REAL_GID() getgid()
-#endif
 
 #include "condor_debug.h"
 #include "passwd_cache.unix.h"
@@ -1314,33 +1307,12 @@ init_nobody_ids( int is_quiet )
 	if (! result ) {
 
 
-#ifdef HPUX
-		// the HPUX9 release does not have a default entry for nobody,
-		// so we'll help condor admins out a bit here...
-		nobody_uid = 59999;
-		nobody_gid = 59999;
-#else
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, 
 					 "Can't find UID for \"nobody\" in passwd file\n" );
 		}
 		return FALSE;
-#endif
 	} 
-
-#ifdef HPUX
-	// HPUX9 has a bug in that getpwnam("nobody") always returns
-	// a gid of 60001, no matter what the group file (or NIS) says!
-	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
-	// patch here, we will generate an EXCEPT later when we try a
-	// setgid().  -Todd Tannenbaum, 3/95
-	if( (nobody_uid > 59999) || (nobody_uid <= 0) ) {
-		nobody_uid = 59999;
-	}
-	if( (nobody_gid > 59999) || (nobody_gid <= 0) ) {
-		nobody_gid = 59999;
-	}
-#endif
 
 	/* WARNING: At the top of this function, we initialized 
 	   nobody_uid and nobody_gid to 0, so if for some terrible 

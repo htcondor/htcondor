@@ -23,10 +23,6 @@
 
 #include "condor_getmnt.h"
 
-#if !defined(AIX31) && !defined(AIX32)
-#define NFDS(x) (x)
-#endif
-
 
 #if !defined(LINUX)
 struct qelem {

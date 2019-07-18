@@ -545,6 +545,7 @@ IsStringValue( char *s, int len ) const
 {
 	if( valueType == STRING_VALUE ) {
 		strncpy( s, strValue->c_str( ), len );
+		if( s && len && s[len-1] ) s[len-1] = '\0';
 		return( true );
 	}
 	return( false );

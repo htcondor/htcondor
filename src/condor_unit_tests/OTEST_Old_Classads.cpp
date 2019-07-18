@@ -963,7 +963,7 @@ static bool test_lookup_string_normal() {
 	const char* attribute_name = "D";
 	int expectInt = 1;
 	const char* expectString = "alain";
-	char* result;
+	char* result = NULL;
 	int found = classad.LookupString(attribute_name, &result);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -999,7 +999,7 @@ static bool test_lookup_string_long() {
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);
 	int expectInt = 1;
-	char* result;
+	char* result = NULL;
 	int found = classad.LookupString(attribute_name, &result);
 	emit_input_header();
 	emit_param("ClassAd", "");
@@ -1028,7 +1028,7 @@ static bool test_lookup_string_file() {
 	const char* attribute_name = "D";
 	int expectInt = 1;
 	const char* expectString = "alain";
-	char* result;
+	char* result = NULL;
 	int found = classad->LookupString(attribute_name, &result);
 	emit_input_header();
 	emit_param("Attribute", attribute_name);
@@ -2093,7 +2093,7 @@ static bool test_from_file() {
 	emit_test("Test that reading a classad from a file works correctly.");
 	compat_classad::ClassAd* classad = get_classad_from_file();
 	int actual1 = -1, actual2 = -1;
-	char* actual3;
+	char* actual3 = NULL;
 	bool retVal1 = classad->LookupInteger("B", actual1);
 	bool retVal2 = classad->LookupInteger("C", actual2);
 	bool retVal3 = classad->LookupString("D", &actual3);

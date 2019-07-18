@@ -321,9 +321,6 @@ keep around. These components can take quite some time to create;
 an additional dot (past the first three) when it does so, to let you
 know that everything's still working.
 
-If you're `using instance credentials`_, add ` FROM INSTANCE` to the end
-of the first line.
-
 ::
 
     $ condor_annex -setup

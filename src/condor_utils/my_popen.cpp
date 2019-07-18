@@ -1192,7 +1192,7 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 
 		time_t now = time(NULL);
 		time_t elapsed_time = now - begin_time;
-		if (elapsed_time >= (unsigned int)timeout) {
+		if (elapsed_time >= timeout) {
 			error = ETIMEDOUT;
 			break;
 		}

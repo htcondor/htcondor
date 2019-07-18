@@ -1165,14 +1165,6 @@ subsystem corresponding to the daemon.
     interval may yield higher performance due to fewer files being
     opened and closed.
 
-``EVENT_LOG_COUNT_EVENTS`` :index:`EVENT_LOG_COUNT_EVENTS`
-    A boolean value that is ``False`` by default. When ``True``, upon
-    rotation of the user's job event log, a count of the number of job
-    events is taken by scanning the log, such that the newly created,
-    post-rotation user job event log will have this count in its header.
-    This configuration variable is relevant when rotation of the user's
-    job event log is enabled.
-
 ``CREATE_LOCKS_ON_LOCAL_DISK`` :index:`CREATE_LOCKS_ON_LOCAL_DISK`
     A boolean value utilized only for Unix operating systems, that
     defaults to ``True``. This variable is only relevant if
@@ -1494,6 +1486,14 @@ a file that receives job events, but across all users and user's jobs.
     ``True`` on Windows platforms. When ``True``, the event log (as
     specified by ``EVENT_LOG``) will be locked before being written to.
     When ``False``, HTCondor does not lock the file before writing.
+
+``EVENT_LOG_COUNT_EVENTS`` :index:`EVENT_LOG_COUNT_EVENTS`
+    A boolean value that is ``False`` by default. When ``True``, upon
+    rotation of the user's job event log, a count of the number of job
+    events is taken by scanning the log, such that the newly created,
+    post-rotation user job event log will have this count in its header.
+    This configuration variable is relevant when rotation of the user's
+    job event log is enabled.
 
 ``EVENT_LOG_FORMAT_OPTIONS`` :index:`EVENT_LOG_FORMAT_OPTIONS`
     A list of case-insensitive keywords that control formatting of the log events
@@ -1929,7 +1929,7 @@ More information about networking in HTCondor can be found in
     The full path and file name of the file that the CCB server writes
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
-    ``$(SPOOL)/.ccb_reconnect``.
+    ``$(SPOOL)/<ip address>-<shared port ID or port number>.ccb_reconnect``.
 
 ``COLLECTOR_USES_SHARED_PORT`` :index:`COLLECTOR_USES_SHARED_PORT`
     A boolean value that specifies whether the *condor_collector* uses
@@ -2642,10 +2642,12 @@ These macros control the *condor_master*.
 
     .. note::
 
-        This configuration variable cannot be changed by using
-        *condor_reconfig* or by sending a SIGHUP. To change this
-        configuration variable, restart the *condor_master* daemon by using
-        *condor_restart*. Only then will the change take effect.
+        The *condor_shared_port* daemon will be included in this list
+        automatically when ``USE_SHARED_PORT`` is configured to ``True``.
+        While adding ``SHARED_PORT`` to the ``DAEMON_LIST`` without setting
+        ``USE_SHARED_PORT`` to ``True`` will start the *condor_shared_port*
+        daemon, but it will not be used.  So there is generally no point
+        in adding ``SHARED_PORT`` to the daemon list.
 
     .. note::
 
@@ -8302,6 +8304,23 @@ General
     to ever change this value; it was introduced to prevent spurious
     shared port-related error messages from appearing in ``dagman.out``
     files. (Introduced in version 8.6.1.)
+
+``DAGMAN_USE_CONDOR_SUBMIT`` :index:`DAGMAN_USE_CONDOR_SUBMIT`
+    A boolan value that controls wither *condor_dagman* submits jobs using
+    *condor_submit* or by opening a direct connection to the *condor_schedd*.
+    ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
+    *condor_dagman* will submit jobs to the local Schedd by connnecting to it
+    directly.  This is faster than using *condor_submit*, especially for very
+    large DAGs; But this method will ignore some submit file features such as
+    ``max_materialize`` and more than one ``QUEUE`` statement.
+
+``DAGMAN_USE_JOIN_NODES`` :index:`DAGMAN_USE_JOIN_NODES`
+    A boolean value that defaults to ``False``. When ``True``, causes
+    *condor_dagman* to break up many-PARENT-many-CHILD relationships with an
+    intermediate *join node*. When these sets are large, this significantly
+    optimizes the graph structure by reducing the number of dependencies, 
+    resulting in a significant improvement to the *condor_dagman* memory 
+    footprint, parse time and submit speed.
 
 Throttling
 ''''''''''

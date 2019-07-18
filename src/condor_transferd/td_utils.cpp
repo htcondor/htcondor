@@ -27,7 +27,7 @@
 
 // generate a capability that is unique against all the capabilities presently
 // generated.
-MyString
+std::string
 TransferD::gen_capability(void)
 {
 	TransferRequest *dummy = NULL;

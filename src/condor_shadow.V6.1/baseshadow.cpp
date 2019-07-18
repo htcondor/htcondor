@@ -175,7 +175,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			}
 			else
 			{
-				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, "FALSE" );
+				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, false );
 				m_RunAsNobody=true;
 				dprintf(D_ALWAYS, "init_user_ids() now running as user nobody\n");
 			}
@@ -446,7 +446,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 }
 
 void
-BaseShadow::mockTerminateJob( MyString exit_reason, 
+BaseShadow::mockTerminateJob( std::string exit_reason,
 		bool exited_by_signal, int exit_code, int exit_signal, 
 		bool core_dumped )
 {
@@ -463,7 +463,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 			 exit_code,
 			 exit_signal,
 			 core_dumped ? "TRUE" : "FALSE",
-			 exit_reason.Value());
+			 exit_reason.c_str());
 
 	if( ! jobAd ) {
 		dprintf(D_ALWAYS, "BaseShadow::mockTerminateJob(): NULL JobAd! "
@@ -984,7 +984,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.run_remote_rusage = run_remote_rusage;
 		event.total_remote_rusage = run_remote_rusage;
-	
+
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -994,12 +994,14 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
-	
+
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
 			event.setCoreFile( corefile.c_str() );
 		}
 
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1012,7 +1014,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
-	
+
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1079,7 +1081,9 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.pusageAd = puAd;
 	}
 #endif
-	
+
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup( "ToE" ));
+	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

@@ -23,11 +23,9 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "condor_syscall_mode.h"
 #include "exit.h"
 #include "vanilla_proc.h"
 #include "starter.h"
-#include "syscall_numbers.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -591,9 +589,18 @@ VanillaProc::StartJob()
 			filename = Starter->GetWorkingDir();
 			filename += "/.condor_pid_ns_status";
 		
-			env.MergeFrom(JobAd, &env_errors);
+			if (!env.MergeFrom(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
-			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			this->m_pid_ns_status_filename = filename;
@@ -606,8 +613,15 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 			args.AppendArg(cmd);
-			args.AppendArgsFromClassAd(JobAd, &arg_errors);
-			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
+
+			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				return 0;
+			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {

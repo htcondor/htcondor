@@ -35,6 +35,10 @@
 
 #include <string>
 
+namespace ToE {
+    class Tag;
+}
+
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
 	black box pointer and never needs to know the size of the actual
@@ -46,7 +50,7 @@ namespace classad {
 	class ClassAd;
 }
 namespace compat_classad {
-  class ClassAd;
+	class ClassAd;
 }
 using namespace compat_classad;
 
@@ -323,7 +327,9 @@ class ULogEvent {
 	time_t				eventclock;
 	long				event_usec;
 };
- 
+
+#define USERLOG_FORMAT_DEFAULT ULogEvent::formatOpt::ISO_DATE
+
 //----------------------------------------------------------------------------
 /** Instantiates an event object based on the given event number.
     @param event The event number
@@ -729,8 +735,11 @@ class JobAbortedEvent : public ULogEvent
 	const char* getReason(void) const;
 	void setReason( const char* );
 
+	void setToeTag( classad::ClassAd * toeTag );
+
  private:
 	char* reason;
+	ToE::Tag * toeTag;
 };
 
 
@@ -930,6 +939,14 @@ class TerminatedEvent : public ULogEvent
 	float total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
+
+	// Subclasses wishing to be more efficient can override this to store
+	// the values in the toeTag that they care about in member variables.
+	// This method just makes a copy of toeTag (if it's not NULL).
+	virtual void setToeTag( classad::ClassAd * toeTag );
+
+ protected:
+	classad::ClassAd * toeTag;
 
  private:
 

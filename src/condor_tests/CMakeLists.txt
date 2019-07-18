@@ -76,6 +76,11 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
+	if( WINDOWS )
+		add_dependencies(x_complete_params utils_genparams)
+	else( WINDOWS )
+		add_dependencies(x_complete_params.exe utils_genparams)
+	endif( WINDOWS)
 	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	condor_exe_test(validate_job_queue.exe "validate_job_queue.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 
@@ -224,7 +229,7 @@ if (BUILD_TESTING)
 	# TODO: Not a CTEST because it overlaps with a target of the same name in src/condor_negotiator.V6
 	condor_pl_test( test_protocol_matching "test: Protocol matching" "core;quick;full;quicknolink")
 
-	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink" CTEST)
+	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_logrotation "basic log rotation test" "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "core;quick;quicknolink" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
@@ -261,6 +266,7 @@ if (BUILD_TESTING)
 		# Tests of the python bindings.
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 

@@ -224,7 +224,7 @@ class DedicatedScheduler : public Service {
 	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
-	bool releaseClaim( match_rec* m_rec, bool use_tcp = true );
+	bool releaseClaim( match_rec* m_rec );
 	bool deactivateClaim( match_rec* m_rec );
 	void sendAlives( void );
 

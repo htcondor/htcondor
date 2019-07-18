@@ -414,6 +414,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_FINISH_TOKEN_REQUEST (DC_BASE+48) // Poll remote daemon for available token.
 #define DC_LIST_TOKEN_REQUEST (DC_BASE+49) // Poll for the existing token requests.
 #define DC_APPROVE_TOKEN_REQUEST (DC_BASE+50) // Approve a token request.
+#define DC_AUTO_APPROVE_TOKEN_REQUEST (DC_BASE+51) // Auto-approve token requests.
 
 /*
 *** Log type supported by DC_FETCH_LOG

@@ -420,7 +420,7 @@ CreamJob::CreamJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -1185,10 +1185,10 @@ void CreamJob::doEvaluateState()
 			
 			int stage_time;
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_START, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_START, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_START, "Undefined" );
 			}
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_FINISH, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_FINISH, "Undefined" );
 			}
 
 			if ( wantRematch ) {
@@ -1480,10 +1480,10 @@ char *CreamJob::buildSubmitAd()
 
 		isb.insert( tmp_str2.c_str() );
 
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2.c_str() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2 );
 	} else {
 		//PRE-STAGED
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str.c_str() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str );
 	}
 
 		//ARGUMENTS
@@ -1518,12 +1518,12 @@ char *CreamJob::buildSubmitAd()
 			tmp_str2 = condor_basename( tmp_str.c_str() );
 			isb.insert(condor_basename( tmp_str2.c_str() ) );
 			
-			submitAd.Assign( ATTR_STD_INPUT, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_INPUT, tmp_str2 );
 		} else {
 			//PRE-STAGED. Be careful, if stdin is not found in WN, job
 			// will not complete successfully.
 			if ( tmp_str[0] == '/' ) { //Only add absolute path
-				submitAd.Assign( ATTR_STD_INPUT, tmp_str.c_str() );
+				submitAd.Assign( ATTR_STD_INPUT, tmp_str );
 			}
 		}
 	}
@@ -1559,11 +1559,11 @@ char *CreamJob::buildSubmitAd()
 
 		if (result) {
 			tmp_str2 = condor_basename( tmp_str.c_str() );
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2 );
 
 			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str );
 		}
 	}
 
@@ -1575,11 +1575,11 @@ char *CreamJob::buildSubmitAd()
 
 		if (result) {
 			tmp_str2 = condor_basename( tmp_str.c_str() );
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str2 );
 
 			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str );
 		}
 	}
 

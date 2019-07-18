@@ -36,8 +36,8 @@ if (HAVE_EXT_GLOBUS)
 				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
 				OFF )
 
-	if ( NOT PROPER )
-		add_dependencies(nordugrid_gahp globus)
+	if ( NOT PROPER AND GLOBUS_REF )
+		add_dependencies(nordugrid_gahp ${GLOBUS_REF})
 	endif()
 
 	# Check nordugrid_gahp's shared library dependencies and copy a

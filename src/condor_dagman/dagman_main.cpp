@@ -54,6 +54,8 @@ static Dagman dagman;
 
 strict_level_t Dagman::_strict = DAG_STRICT_1;
 
+DagmanUtils dagmanUtils;
+
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
@@ -363,7 +365,12 @@ Dagman::Config()
 	if( !condorSubmitExe ) {
 		condorSubmitExe = strdup( "condor_submit" );
 		ASSERT( condorSubmitExe );
+	} else {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", condorSubmitExe);
 	}
+	bool _use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_USE_CONDOR_SUBMIT setting: %s\n",
+		_use_condor_submit ? "True" : "False");
 
 	free( condorRmExe );
 	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
@@ -571,7 +578,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 	}
 	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	dagman.PublishStats();
-	tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
@@ -595,7 +602,7 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
 	dagman.PublishStats();
-	tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
 }
@@ -622,6 +629,7 @@ void main_init (int argc, char ** const argv) {
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
+	int dash_dry_run = 0; // -DryRun command line argument
 
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
@@ -779,7 +787,10 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
-        } else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
+		} else if (!strcasecmp("-DryRun", argv[i])) {
+			dash_dry_run = 1;
+
+		} else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
 			dagman.useDagDir = true;
 
         } else if( !strcasecmp( "-AutoRescue", argv[i] ) ) {
@@ -1097,11 +1108,11 @@ void main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.formatstr( "Rescue DAG number %d specified", rescueDagNum );
-		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		dagmanUtils.RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
-		rescueDagNum = FindLastRescueDagNum(
+		rescueDagNum = dagmanUtils.FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.formatstr( "Found rescue DAG number %d", rescueDagNum );
@@ -1146,6 +1157,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
+	dagman.dag->SetDryRun(dash_dry_run);
 	if( dagman._priority != 0 ) {
 		dagman.dag->SetDagPriority(dagman._priority);
 	}
@@ -1186,7 +1198,7 @@ void main_init (int argc, char ** const argv) {
 			// introducing a syntax error, and then did condor_release).
 			// (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
@@ -1212,7 +1224,7 @@ void main_init (int argc, char ** const argv) {
 		// are lifted!
 		//
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = RescueDagName(
+		dagman.rescueFileToRun = dagmanUtils.RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
@@ -1247,7 +1259,7 @@ void main_init (int argc, char ** const argv) {
 			// rescue DAG) file introducing a syntax error, and then
 			// did condor_release). (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().

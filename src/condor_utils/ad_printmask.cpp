@@ -730,11 +730,9 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 			// The string format type is a very special case, because it will
 			// UNPARSE when the attr is not an expression and doesn't evaluate to a string...
 			if (fmt->fmtKind == CustomFormatFn::PRINTF_FMT && (fmt_type == PFT_STRING) && ! attr_is_expr) {
-				char * value_from_classad = NULL;
-				if (EvalString(attr, al, target, &value_from_classad)) {
+				std::string value_from_classad;
+				if (EvalString(attr, al, target, value_from_classad)) {
 					pval->SetStringValue(value_from_classad);
-					free(value_from_classad);
-					value_from_classad = NULL;
 					col_is_valid = true;
 				} else {
 					// For the %s format, if we can't evaluate then unparse.

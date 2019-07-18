@@ -345,15 +345,9 @@ VMProc::StartJob()
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.
-	std::string string_value;
-	if( JobAd->LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
-		m_vm_mac = string_value;
-	}
+	JobAd->LookupString(ATTR_VM_CKPT_MAC, m_vm_mac);
 	/*
-	string_value = "";
-	if( JobAd->LookupString(ATTR_VM_CKPT_IP, string_value) == 1 ) {
-		m_vm_ip = string_value;
-	}
+	JobAd->LookupString(ATTR_VM_CKPT_IP, m_vm_ip);
 	*/
 
 	// For Xen and KVM jobs, the vm-gahp issues libvirt commands as root
@@ -375,14 +369,14 @@ VMProc::StartJob()
 	}
 
 	ClassAd recovery_ad = *JobAd;
-	MyString vm_name;
+	std::string vm_name;
 	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
 		vm_name = Starter->GetWorkingDir();
 	}
-	recovery_ad.Assign( "JobVMId", vm_name.Value() );
+	recovery_ad.Assign( "JobVMId", vm_name );
 	Starter->WriteRecoveryFile( &recovery_ad );
 
 	// //
@@ -1460,11 +1454,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if( m_vm_checkpoint ) {
-		if( m_vm_mac.IsEmpty() == false ) {
+		if( m_vm_mac.empty() == false ) {
 			// Update MAC addresss of VM
 			ad->Assign(ATTR_VM_CKPT_MAC, m_vm_mac);
 		}
-		if( m_vm_ip.IsEmpty() == false ) {
+		if( m_vm_ip.empty() == false ) {
 			// Update IP addresss of VM
 			ad->Assign(ATTR_VM_CKPT_IP, m_vm_ip);
 		}
@@ -1627,35 +1621,35 @@ VMProc::setVMPID(int vm_pid)
 void
 VMProc::setVMMAC(const char* mac)
 {
-	if( !strcasecmp(m_vm_mac.Value(), mac) ) {
+	if( !strcasecmp(m_vm_mac.c_str(), mac) ) {
 		// MAC for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"MAC for VM is changed from [%s] to [%s]\n", 
-			m_vm_mac.Value(), mac);
+			m_vm_mac.c_str(), mac);
 
 	m_vm_mac = mac;
 
 	// Report this MAC to local startd
-	reportVMInfoToStartd(VM_UNIV_GUEST_MAC, m_vm_mac.Value());
+	reportVMInfoToStartd(VM_UNIV_GUEST_MAC, m_vm_mac.c_str());
 }
 
 void
 VMProc::setVMIP(const char* ip)
 {
-	if( !strcasecmp(m_vm_ip.Value(), ip) ) {
+	if( !strcasecmp(m_vm_ip.c_str(), ip) ) {
 		// IP for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"IP for VM is changed from [%s] to [%s]\n", 
-			m_vm_ip.Value(), ip);
+			m_vm_ip.c_str(), ip);
 
 	m_vm_ip = ip;
 
 	// Report this IP to local startd
-	reportVMInfoToStartd(VM_UNIV_GUEST_IP, m_vm_ip.Value());
+	reportVMInfoToStartd(VM_UNIV_GUEST_IP, m_vm_ip.c_str());
 }
 
 void

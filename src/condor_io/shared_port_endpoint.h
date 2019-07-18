@@ -101,6 +101,7 @@ class SharedPortEndpoint: Service {
 	void PipeListenerThread();
 
 	static int PipeListenerHelper(void* pthis, void* data);
+	static int DebugLogHelper(void* pthis, void* data);
 
 	//Event used to notify the class that the thread is dead.
 	HANDLE thread_killed;

@@ -196,7 +196,6 @@ MakePathAbsolute(MyString &filePath, MyString &errMsg)
 
 	return result;
 }
-#endif
 
 //-------------------------------------------------------------------------
 int
@@ -307,3 +306,4 @@ tolerant_unlink( const char *pathname )
 		}
 	}
 }
+#endif

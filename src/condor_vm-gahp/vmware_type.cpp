@@ -1853,7 +1853,7 @@ VMwareType::CreateConfigFile()
 	m_configVars.append(tmp_line.Value());
 
 	// Add displyName to m_configVars
-	tmp_line.formatstr("displayName = \"%s\"", m_vm_name.Value());
+	tmp_line.formatstr("displayName = \"%s\"", m_vm_name.c_str());
 	m_configVars.append(tmp_line.Value());
 
 	// Add networking parameters to m_configVars

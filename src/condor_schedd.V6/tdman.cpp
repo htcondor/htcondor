@@ -112,21 +112,12 @@ TransferDaemon::get_schedd_sinful()
 }
 
 void
-TransferDaemon::set_sinful(MyString sinful)
+TransferDaemon::set_sinful(const std::string &sinful)
 {
 	m_sinful = sinful;
 }
 
-void
-TransferDaemon::set_sinful(char *sinful)
-{
-	MyString sin;
-	sin = sinful;
-
-	set_sinful(sin);
-}
-
-MyString
+const std::string &
 TransferDaemon::get_sinful()
 {
 	return m_sinful;
@@ -455,7 +446,7 @@ TransferDaemon::reap_all_transfer_requests(void)
 {
 	TransferRequest *treq = NULL;
 	TreqAction ret;
-	MyString key;
+	std::string key;
 
 	////////////////////////////////////////////////////////////////////////
 	// For each transfer request, call the associated reaper for it.

@@ -30,14 +30,16 @@
 #include "credmon_interface.h"
 #include "condor_auth_passwd.h"
 #include "condor_netdb.h"
+#include "token_utils.h"
 
 #include "slot_builder.h"
 
 #include "strcasestr.h"
 
-extern int write_out_token(const std::string &token_name, const std::string &token);
-
-ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
+ResMgr::ResMgr() :
+	extras_classad( NULL ),
+	max_job_retirement_time_override(-1),
+	m_token_requester(&ResMgr::token_request_callback, this)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -1060,18 +1062,9 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 
 		// Increment the resmgr's count of updates.
 	num_updates++;
-		// Actually do the updates, and return the # of updates sent.
-	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, first_time ? false : nonblock);
 
-	// Check to see if we need to perform a token request.
-	auto collector_list = daemonCore->getCollectorList();
-	if (collector_list && collector_list->shouldTryTokenRequest()) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; startd will perform a token request\n");
-		daemonCore->Register_Timer(0, (TimerHandlercpp)&ResMgr::try_token_request,
-			"ResMgr::try_token_request", this);
-	} else if (res == 0) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
-	}
+	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_STARTD");
 
 	if (first_time) {
 		first_time = false;
@@ -1346,13 +1339,13 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 
 			std::string reason = "[unknown reason]";
 			cap->LookupString( reasonName.c_str(), reason );
-			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+			extras_classad->Assign( reasonName.c_str(), reason );
 		} else {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.
 			offlineUniverses.erase( universeName );
-			extras_classad->Assign( reasonTime.c_str(), "undefined" );
-			extras_classad->Assign( reasonName.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonTime.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonName.c_str(), "undefined" );
 		}
 	}
 
@@ -1896,7 +1889,7 @@ void ResMgr::updateHibernateConfiguration() {
 
 
 int
-ResMgr::allHibernating( MyString &target ) const
+ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
@@ -1911,7 +1904,7 @@ ResMgr::allHibernating( MyString &target ) const
 		// We take largest value as the representative
 		// hibernation level for this machine
 	target = "";
-	MyString str;
+	std::string str;
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
@@ -1922,11 +1915,11 @@ ResMgr::allHibernating( MyString &target ) const
 		}
 
 		int tmp = m_hibernation_manager->stringToSleepState (
-			str.Value () );
+			str.c_str () );
 
 		dprintf ( D_FULLDEBUG,
 			"allHibernating: resource #%d: '%s' (0x%x)\n",
-			i + 1, str.Value (), tmp );
+			i + 1, str.c_str (), tmp );
 
 		if ( 0 == tmp ) {
 			activity = true;
@@ -1953,7 +1946,7 @@ ResMgr::checkHibernate( void )
 
 		// If all resources have gone unused for some time
 		// then put the machine to sleep
-	MyString	target;
+	std::string target;
 	int level = allHibernating( target );
 	if( level > 0 ) {
 
@@ -2065,7 +2058,7 @@ ResMgr::cancelHibernateTimer( void )
 
 
 int
-ResMgr::disableResources( const MyString &state_str )
+ResMgr::disableResources( const std::string &state_str )
 {
 
 	dprintf (
@@ -2076,7 +2069,7 @@ ResMgr::disableResources( const MyString &state_str )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetState ( state_str.Value() );
+	m_hibernation_manager->setTargetState ( state_str.c_str() );
 
 	/* update the CM */
 	bool ok = true;
@@ -2646,80 +2639,13 @@ ResMgr::checkForDrainCompletion() {
 
 
 void
-ResMgr::try_token_request()
+ResMgr::token_request_callback(bool success, void *miscdata)
 {
-	dprintf(D_SECURITY, "Trying token request to remote host.\n");
-	std::string token;
-	if (m_token_client_id.empty()) {
-		m_token_daemon = nullptr;
-		m_token_request_id = "";
-		std::vector<char> hostname;
-		hostname.reserve(MAXHOSTNAMELEN);
-		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
-			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-			return;
-		}
-		m_token_client_id = "startd-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 1000);
-
-		auto collector_list = daemonCore->getCollectorList();
-		if (!collector_list || collector_list->IsEmpty()) {
-			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
-			m_token_client_id = "";
-			return;
-		}
-		Daemon *daemon = nullptr;
-		collector_list->Rewind();
-		collector_list->Current(daemon);
-
-		if (!daemon) {
-			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
-			m_token_client_id = "";
-			return;
-		}
-
-		std::string request_id;
-		std::vector<std::string> authz_list;
-		authz_list.push_back("ADVERTISE_STARTD");
-		int lifetime = -1;
-		CondorError err;
-		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
-			token, request_id, &err))
-		{
-			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
-		}
-		m_token_request_id = request_id;
-		m_token_daemon = daemon;
-		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
-		daemonCore->Register_Timer(5, (TimerHandlercpp)&ResMgr::try_token_request,
-			"ResMgr::try_token_request", this);
-	} else {
-		CondorError err;
-		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
-			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
-		}
-		if (token.empty()) {
-			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
-			daemonCore->Register_Timer(5, (TimerHandlercpp)&ResMgr::try_token_request,
-				"ResMgr::try_token_request", this);
-			return;
-		} else {
-			dprintf(D_ALWAYS, "Token request approved.\n");
-			Condor_Auth_Passwd::retry_token_search();
-			daemonCore->getSecMan()->reconfig();
-			if( up_tid != -1 ) {
-				daemonCore->Reset_Timer( up_tid, update_offset,
-					update_interval );
-			}
-		}
-		m_token_client_id = "";
-	}
-	if (!token.empty()) {
-		write_out_token("startd_auto_generated_token", token);
+	auto self = reinterpret_cast<ResMgr *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->up_tid != -1)) {
+		daemonCore->Reset_Timer( self->up_tid, update_offset,
+			update_interval );
 	}
 }

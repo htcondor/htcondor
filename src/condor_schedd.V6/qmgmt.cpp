@@ -1229,7 +1229,7 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 				np += v.c_str() + strlen(o);
 				dprintf(D_ALWAYS,"Changing job %d.%d %s from %s to %s\n",
 						cluster, proc, attr, o, np.c_str());
-				job_ad->Assign(attr,np.c_str());
+				job_ad->Assign(attr,np);
 			}
 			continue;
 		}
@@ -1489,10 +1489,10 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	JobQueueKey cluster_key;
 	std::string	owner;
 	std::string	user;
-	MyString	correct_user;
+	std::string correct_user;
 	MyString	buf;
 	std::string	attr_scheduler;
-	MyString	correct_scheduler;
+	std::string correct_scheduler;
 	std::string buffer;
 
 	if (!JobQueue->Lookup(HeaderKey, ad)) {
@@ -1519,7 +1519,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.formatstr( "DedicatedScheduler@%s", Name );
+	formatstr( correct_scheduler, "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
@@ -1641,7 +1641,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
-			correct_user.formatstr( "%s%s@%s",
+			formatstr( correct_user, "%s%s@%s",
 					 (nice_user) ? "nice-user." : "", owner.c_str(),
 					 scheduler.uidDomain() );
 
@@ -1649,7 +1649,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf( D_FULLDEBUG,
 						"Job %s has no %s attribute.  Inserting one now...\n",
 						job_id.c_str(), ATTR_USER);
-				ad->Assign( ATTR_USER, correct_user.Value() );
+				ad->Assign( ATTR_USER, correct_user );
 				JobQueueDirty = true;
 			} else {
 					// ATTR_USER exists, make sure it's correct, and
@@ -1660,7 +1660,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 							 "Job %s has stale %s attribute.  "
 							 "Inserting correct value now...\n",
 							 job_id.c_str(), ATTR_USER );
-					ad->Assign( ATTR_USER, correct_user.Value() );
+					ad->Assign( ATTR_USER, correct_user );
 					JobQueueDirty = true;
 				}
 			}
@@ -1674,7 +1674,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", job_id.c_str(),
 							 ATTR_SCHEDULER );
-					ad->Assign( ATTR_SCHEDULER, correct_scheduler.Value() );
+					ad->Assign( ATTR_SCHEDULER, correct_scheduler );
 					JobQueueDirty = true;
 				} else {
 
@@ -1779,7 +1779,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
-			clusterad->SetClusterSize(num_procs);
+			if (clusterad) clusterad->SetClusterSize(num_procs);
 			TotalJobsCount++;
 		}
 	} // WHILE
@@ -3325,8 +3325,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 						 SetAttributeFlags_t flags)
 {
 	ClassAd	*ad;
-	int match_count = 0;
+	int cluster_match_count = 0;
+	int job_match_count = 0;
 	int had_error = 0;
+	int rval = -1;
 	int terrno = 0;
 	JobQueueKey key;
 
@@ -3385,6 +3387,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
 		JobQueueJob * job = static_cast<JobQueueJob*>(ad);
+
 		// ignore header and ads.
 		if (job->IsHeader())
 			continue;
@@ -3394,7 +3397,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			continue;
 
 		if (EvalExprBool(ad, constraint.Expr())) {
-			match_count += 1;
+			if (job->IsCluster())
+				cluster_match_count += 1;
+			else
+				job_match_count += 1;
 			if (SetAttribute(key.cluster, key.proc, attr_name, attr_value, flags) < 0) {
 				had_error = 1;
 				terrno = errno;
@@ -3411,17 +3417,22 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		return -1;
 	}
 
-	// if this is a queryonly call, return the match count
-	if (flags & SetAttribute_QueryOnly) {
-		return match_count;
+	// At this point we need to determine the return value.
+	// If 1 or more jobs matched, we wanted to return the number of job matches.
+	// If 0 jobs matched, but clusters matched, return the number of cluster matches.
+	// If no jobs or clusters matched, return value is -1 (error)
+	if (job_match_count > 0) {
+		rval = job_match_count;
+	}
+	else if (cluster_match_count > 0) {
+		rval = cluster_match_count;
+	}
+	else {
+		errno = ENOENT;
+		rval = -1;
 	}
 
-	// for non-query calls treat 'no jobs matched' the same as failure.
-	if ( match_count == 0 ) {
-		match_count = -1;
-		errno = ENOENT;
-	}
-	return match_count;
+	return rval;
 }
 
 // Set up an efficient lookup table for attributes that need special processing in SetAttribute
@@ -5830,7 +5841,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						break;
 					}
 
-					MyString result;
+					std::string result;
 					isok = EvalString(INTERNAL_DD_EXPR, &tmpJobAd, startd_ad, result);
 					if( ! isok ) {
 						attribute_not_found = true;

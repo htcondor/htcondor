@@ -87,7 +87,10 @@ int main(int argc, char **argv, char **envp) {
 	sa.sa_flags = 0;
 
 	// Remove the status file, if it exists
-	unlink(getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME"));
+	const char *status_filename = getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME");
+	if (status_filename) {
+		unlink(status_filename);
+	}
 	
 	// Install the signal handlers, so if we're running as pid 1 they will
 	// get delivered.
@@ -143,9 +146,12 @@ retry:
 
 		// Child has exited.  First see if we failed to exec
 		struct stat buf;
-		result = stat(getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME"), &buf);
-		if (result != 0) {
-			write_status("Exited", status);
+		const char *filename = getenv("_CONDOR_PID_NS_INIT_STATUS_FILENAME");
+		if (filename) {
+			result = stat(filename, &buf);
+			if (result != 0) {
+				write_status("Exited", status);
+			}
 		}
 		exit(WEXITSTATUS(status));
 	}

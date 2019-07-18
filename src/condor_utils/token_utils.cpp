@@ -19,13 +19,16 @@
 
 #include "condor_common.h"
 
-#include <string>
+#include "token_utils.h"
+
 #include "condor_config.h"
 #include "condor_string.h"
 #include "directory.h"
 
+#include <string>
+
 int
-write_out_token(const std::string &token_name, const std::string &token)
+htcondor::write_out_token(const std::string &token_name, const std::string &token)
 {
 	if (token_name.empty()) {
 		printf("%s\n", token.c_str());

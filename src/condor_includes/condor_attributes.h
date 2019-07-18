@@ -196,6 +196,8 @@
 #define ATTR_BLOCK_WRITE_BYTES  "BlockWriteBytes"
 #define ATTR_BLOCK_READS "BlockReads"
 #define ATTR_BLOCK_WRITES "BlockWrites"
+#define ATTR_CLOUD_LABEL_NAMES "CloudLabelNames"
+#define ATTR_CLOUD_LABEL_PREFIX "CloudLabel"
 #define ATTR_FILE_SEEK_COUNT  "FileSeekCount"
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLOCK_TO "FlockTo"
@@ -264,6 +266,7 @@
 #define ATTR_HAS_PVM  "HasPVM"
 #define ATTR_HAS_RECONNECT  "HasReconnect"
 #define ATTR_HAS_REMOTE_SYSCALLS  "HasRemoteSyscalls"
+#define ATTR_HAS_SELF_CHECKPOINT_TRANSFERS "HasSelfCheckpointTransfers"
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
 #define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
@@ -649,6 +652,7 @@
 #define ATTR_SUBMITTER_NEGOTIATING_GROUP  "SubmitterNegotiatingGroup"
 #define ATTR_SUBNET  "Subnet"
 #define ATTR_SUBNET_MASK  "SubnetMask"
+#define ATTR_SUCCESS_CHECKPOINT_EXIT_CODE "SuccessCheckpointExitCode"
 #define ATTR_SUSPEND  "Suspend"
 #define ATTR_SUSPEND_REASON  "SuspendReason"
 #define ATTR_SUSPEND_JOB_AT_EXEC  "SuspendJobAtExec"
@@ -883,6 +887,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRUST_DOMAIN "TrustDomain"
 #define ATTR_SEC_CLIENT_ID "ClientId"
 #define ATTR_SEC_REQUEST_ID "RequestId"
+#define ATTR_SEC_LIFETIME "Lifetime"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

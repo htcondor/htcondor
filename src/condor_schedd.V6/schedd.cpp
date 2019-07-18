@@ -96,6 +96,7 @@
 #include "shared_port_endpoint.h"
 #include "condor_auth_passwd.h"
 #include "condor_secman.h"
+#include "token_utils.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -121,8 +122,6 @@ extern "C"
 {
 /*	int SetCkptServerHost(const char *host);
 	int RemoveLocalOrRemoteFile(const char *, const char *);
-	int FileExists(const char *, const char *);
-	int getdtablesize();
 */
 	int prio_compar(prio_rec*, prio_rec*);
 }
@@ -150,8 +149,6 @@ extern DedicatedScheduler dedicated_scheduler;
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
-
-extern int write_out_token(const std::string &token_name, const std::string &token);
 
 // These functions are defined in qmgmt.cpp.
 // We don't have a good schedd-internal header file, so we declare them
@@ -592,7 +589,8 @@ Scheduler::Scheduler() :
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0),
-	m_matchPasswordEnabled(false)
+	m_matchPasswordEnabled(false),
+	m_token_requester(&Scheduler::token_request_callback, this)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -626,7 +624,6 @@ Scheduler::Scheduler() :
 	RecentlyWarnedMaxJobsRunning = true;
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
-	m_token_daemon = nullptr;
 
 	stats.InitMain();
 
@@ -1108,11 +1105,10 @@ Scheduler::check_claim_request_timeouts()
   no longer flock and/or be advertised).
 */
 bool
-Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level, int dprint_level)
+Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level)
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
-	const bool want_dprintf = IsDebugCatAndVerbosity(dprint_level); // dprintf if not flocking
 
 	int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
 	if ((Owner.FlockLevel >= flock_level) || (flock_level == INT_MAX)) {
@@ -1124,10 +1120,6 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		}
 		pAd.Assign(ATTR_IDLE_JOBS, jobs_idle);
 		pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, weighted_jobs_idle);
-		if (want_dprintf) {
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, jobs_idle);
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, weighted_jobs_idle);
-		}
 	} else if (Owner.OldFlockLevel >= flock_level ||
 				Counters.JobsRunning > 0) {
 		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
@@ -1162,36 +1154,20 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	}
 
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, JobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
 	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
 	pAd.Assign(ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_SCHEDULER_JOBS, Counters.SchedulerJobsIdle);
 
 	pAd.Assign(ATTR_HELD_JOBS, Counters.JobsHeld);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Counters.JobsHeld);
 
 	pAd.Assign(ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, JobsRunningElsewhere);
 
 	if (publish_stats_to_flockers || flock_level < 1) {
 		//PRAGMA_REMIND("tj: move OwnerStats into OwnerData objects.")
@@ -1216,15 +1192,12 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		m_xfer_queue_mgr.publish_user_stats(&pAd, Owner.Name(), IF_VERBOSEPUB | IF_RECENTPUB);
 	}
 
-	MyString str;
+	std::string str;
 	if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) ) {
 		int max_entries = param_integer("MAX_GLOBAL_JOB_PRIOS",500);
 		int num_prios = Owner.PrioSet.size();
 		if (num_prios > max_entries) {
 			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
-			if (want_dprintf)
-				dprintf (dprint_level, "Changed attribute: %s = %d\n",
-						 ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
 		} else {
 			// if no overflow, do not advertise ATTR_JOB_PRIO_ARRAY_OVERFLOW
 			pAd.Delete(ATTR_JOB_PRIO_ARRAY_OVERFLOW);
@@ -1236,22 +1209,17 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 			 rit != Owner.PrioSet.rend() && num_entries < max_entries;
 			 ++rit)
 		{
-			if ( !str.IsEmpty() ) {
+			if ( !str.empty() ) {
 				str += ",";
 			}
 			str += IntToStr( *rit );
 			num_entries++;
 		}
-		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
-		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str.Value());
-		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %s\n", ATTR_JOB_PRIO_ARRAY,str.Value());
+		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
 	}
 
-	str.formatstr("%s@%s", Owner.Name(), UidDomain);
-	pAd.Assign(ATTR_NAME, str.Value());
-	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owner.Name(), UidDomain);
+	formatstr(str, "%s@%s", Owner.Name(), UidDomain);
+	pAd.Assign(ATTR_NAME, str);
 
 	return true;
 }
@@ -1584,22 +1552,11 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
-		// Update collectors
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, !m_initial_update);
-	dprintf( D_FULLDEBUG, 
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true,
+		&m_token_requester, DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
+	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
-	m_initial_update = false;
-
-		// Check to see if we need to perform a token request.
-	auto collector_list = daemonCore->getCollectorList();
-	if (collector_list && collector_list->shouldTryTokenRequest()) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed; schedd will perform a token request\n");
-		daemonCore->Register_Timer(0, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
-	} else if (num_updates == 0) {
-		dprintf(D_FULLDEBUG|D_SECURITY, "Authentication failed but no token request will be tried.\n");
-	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1611,7 +1568,12 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for(int ii=0; d && ii < FlockLevel; ii++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true );
+			auto data = col->name() ?
+					m_token_requester.createCallbackData(col->name(),
+					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
+				: nullptr;
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
 	}
@@ -1656,7 +1618,7 @@ Scheduler::count_jobs()
 				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
-		if ( !fill_submitter_ad(pAd, SubDat, "", -1, D_FULLDEBUG) ) continue;
+		if ( !fill_submitter_ad(pAd, SubDat, "", -1) ) continue;
 
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -1699,7 +1661,7 @@ Scheduler::count_jobs()
 			// update submitter ad in this pool for each owner
 			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 				SubmitterData & SubDat = it->second;
-				if ( !fill_submitter_ad(pAd,SubDat,flock_col->name(),flock_level,D_NEVER) ) {
+				if ( !fill_submitter_ad(pAd,SubDat,flock_col->name(),flock_level) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
@@ -1730,7 +1692,7 @@ Scheduler::count_jobs()
 		for (const auto &flock_map_entries : SubDat.flock) {
 			const auto &pool = flock_map_entries.first;
 			if (FlockPools.find(pool) == FlockPools.end()) {
-				if (!fill_submitter_ad(pAd, SubDat, pool, INT_MAX, D_NEVER)) {continue;}
+				if (!fill_submitter_ad(pAd, SubDat, pool, INT_MAX)) {continue;}
 
 				pAd.Assign(ATTR_SUBMITTER_TAG, pool);
 
@@ -1795,14 +1757,14 @@ Scheduler::count_jobs()
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the Hits counter that was set above.
 	// that are not in the current list (the current list has only owners w/ idle jobs)
-	MyString submitter_name;
+	std::string submitter_name;
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		SubmitterData & SubDat = it->second;
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (SubDat.num.Hits > 0) continue;
 
-		submitter_name.formatstr("%s@%s", SubDat.Name(), UidDomain);
+		formatstr(submitter_name, "%s@%s", SubDat.Name(), UidDomain);
 		int old_flock_level = SubDat.OldFlockLevel;
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
@@ -1817,8 +1779,7 @@ Scheduler::count_jobs()
 			SubDat.name.clear();
 		}
 
-		pAd.Assign(ATTR_NAME, submitter_name.Value());
-		//dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
+		pAd.Assign(ATTR_NAME, submitter_name);
 
 #if defined(HAVE_DLOPEN)
 	// update plugins
@@ -1959,7 +1920,7 @@ int Scheduler::make_ad_list(
       if (Owner.empty()) continue;
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
-      if ( ! fill_submitter_ad(*cad, Owner, "", -1, D_NEVER)) {
+      if ( ! fill_submitter_ad(*cad, Owner, "", -1)) {
          delete cad;
          continue;
       }
@@ -4371,10 +4332,9 @@ namespace {
 	{
 		MyString msk;
 		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "Mask is \"%s\"\n",msk.Value());
+		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
 		Tokenize(msk.Value());
 		while(const char* mask = GetNextToken(",",true)) {
-			dprintf( D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
 			ulog->AddToMask(ULogEventNumber(atoi(mask)));
 		}
 	}
@@ -4527,6 +4487,15 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
 		free( reason );
+	}
+
+	// Jobs usually have a shadow, and this event is usually written after
+	// that shadow dies, but that's by no means certain.  If we happen to
+	// have gotten a ToE tag, tell the abort event about it.
+	ClassAd * ja = GetJobAd( job_id.cluster, job_id.proc );
+	if( ja ) {
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd*>(ja->Lookup("ToE"));
+		event.setToeTag( toeTag );
 	}
 
 	bool status =
@@ -8452,7 +8421,11 @@ Scheduler::StartJobs()
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		StartJob( rec );
+			// If it's not in M_CLAIMED status, then it's not ready
+			// to start a job.
+		if ( rec->status == M_CLAIMED ) {
+			StartJob( rec );
+		}
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		AddRunnableLocalJobs();
@@ -12978,10 +12951,9 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			 job_id );
 }
 
-#ifdef WIN32
-	// On Win32, we don't deal with the old ckpt server, so we stub it,
+#ifdef CLIPPED
+	// If clipped, we don't deal with the old ckpt server, so we stub it,
 	// thus we do not have to link in the ckpt_server_api.
-#include "directory.h"
 int 
 RemoveLocalOrRemoteFile(const char *, const char *, const char *)
 {
@@ -12992,7 +12964,7 @@ SetCkptServerHost(const char *)
 {
 	return 0;
 }
-#endif // of ifdef WIN32
+#endif // of ifdef CLIPPED
 
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
@@ -13839,6 +13811,8 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
+	m_flock_collectors_init.clear();
+
 	first_time_in_init = false;
 }
 
@@ -14028,12 +14002,6 @@ Scheduler::Register()
 
 	m_xfer_queue_mgr.RegisterHandlers();
 
-	// Clear out any pending token requests.
-	m_token_client_id = "";
-	m_token_request_id = "";
-		// We don't own this memory - just clear the reference.
-	m_token_daemon = nullptr; 
-	m_initial_update = true;
 }
 
 void
@@ -14411,14 +14379,14 @@ Scheduler::invalidate_ads()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & Owner = it->second;
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
-		MyString submitter;
-		submitter.formatstr("%s@%s", Owner.Name(), UidDomain);
-		cad->Assign( ATTR_NAME, submitter.Value() );
+		std::string submitter;
+		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
+		cad->Assign( ATTR_NAME, submitter );
 
 		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_REQUIREMENTS,
 					  ATTR_SCHEDD_NAME, Name,
-					  ATTR_NAME, submitter.Value() );
+					  ATTR_NAME, submitter.c_str() );
 		cad->Insert( line.Value() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
@@ -17635,81 +17603,13 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	return TRUE;
 }
 
+
 void
-Scheduler::try_token_request()
+Scheduler::token_request_callback(bool success, void *miscdata)
 {
-	dprintf(D_SECURITY, "Trying token request to remote host.\n");
-	std::string token;
-	if (m_token_client_id.empty()) {
-		m_token_daemon = nullptr;
-		m_token_request_id = "";
-		std::vector<char> hostname;
-		hostname.reserve(MAXHOSTNAMELEN);
-		if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
-			dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-			return;
-		}
-		m_token_client_id = "schedd-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 1000);
+	auto self = reinterpret_cast<Scheduler*>(miscdata);
 
-		auto collector_list = daemonCore->getCollectorList();
-		if (!collector_list || collector_list->IsEmpty()) {
-			dprintf(D_ALWAYS, "Unable to start token request because no collectors are available.\n");
-			m_token_client_id = "";
-			return;
-		}
-		Daemon *daemon = nullptr;
-		collector_list->Rewind();
-		collector_list->Current(daemon);
-
-		if (!daemon) {
-			dprintf(D_ALWAYS, "Unable to start token request because collector not found.\n");
-			m_token_client_id = "";
-			return;
-		}
-
-		std::string request_id;
-		std::vector<std::string> authz_list;
-		authz_list.push_back("ADVERTISE_SCHEDD");
-		int lifetime = -1;
-		CondorError err;
-		if (!daemon->startTokenRequest("", authz_list, lifetime, m_token_client_id,
-			token, request_id, &err))
-		{
-			dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
-		}
-		m_token_request_id = request_id;
-		m_token_daemon = daemon;
-		dprintf(D_ALWAYS, "Token requested; please ask collector admin to approve request ID %s.\n", request_id.c_str());
-		daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-			"Scheduler::try_token_request", this);
-	} else {
-		CondorError err;
-		if (!m_token_daemon->finishTokenRequest(m_token_client_id, m_token_request_id, token, &err)) {
-			dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
-			m_token_client_id = "";
-			return;
-		}
-		if (token.empty()) {
-			dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
-			dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector admin to approve request ID %s.\n", m_token_request_id.c_str());
-			daemonCore->Register_Timer(5, (TimerHandlercpp)&Scheduler::try_token_request,
-				"Scheduler::try_token_request", this);
-			return;
-		} else {
-			dprintf(D_ALWAYS, "Token request approved.\n");
-				// Flush the cached result of the token search.
-			Condor_Auth_Passwd::retry_token_search();
-				// Flush out the security sessions; will need to force a re-auth.
-			daemonCore->getSecMan()->reconfig();
-				// Reset the timeout timer, causing the schedd to advertise itself.
-			daemonCore->Reset_Timer(timeoutid,0,1);
-		}
-		m_token_client_id = "";
-	}
-	if (!token.empty()) {
-		write_out_token("schedd_auto_generated_token", token);
+	if (success) {
+		daemonCore->Reset_Timer(self->timeoutid,0,1);
 	}
 }

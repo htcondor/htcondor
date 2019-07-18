@@ -204,7 +204,7 @@ class BaseShadow : public Service
 			how the job exited. So this call places how the job exited into
 			the jobad, but doesn't write any events about it.
 		*/
-	void mockTerminateJob( MyString exit_reason, bool exited_by_signal, 
+	void mockTerminateJob( std::string exit_reason, bool exited_by_signal,
 		int exit_code, int exit_signal, bool core_dumped );
 
 		/** Set a timer to call terminateJob() so we retry

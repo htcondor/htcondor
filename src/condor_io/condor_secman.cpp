@@ -429,6 +429,15 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 void
 SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 {
+	// We need the trust domain for TOKEN auto-request, but auto-request
+	// happens if and only if TOKEN isn't in the method list (indicating
+	// that we didn't have one).
+	std::string issuer;
+	if (param(issuer, "TRUST_DOMAIN")) {
+		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
+	}
+
 	std::string method_list_str;
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
@@ -661,9 +670,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 		// For historical reasons, session duration is inserted as a string
 		// in the ClassAd
-	MyString session_duration_buf;
-	session_duration_buf.formatstr("%d",session_duration);
-	ad->Assign ( ATTR_SEC_SESSION_DURATION, session_duration_buf );
+	ad->Assign ( ATTR_SEC_SESSION_DURATION, IntToStr(session_duration) );
 
 	int session_lease = 3600;
 	SecMan::getIntSecSetting(session_lease, "SEC_%s_SESSION_LEASE", auth_level);
@@ -985,6 +992,14 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	action_ad->Insert(buf);
 
 	UpdateAuthenticationMetadata(*action_ad);
+	std::string trust_domain;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+		action_ad->InsertAttr(ATTR_SEC_TRUST_DOMAIN, trust_domain);
+	}
+	std::string issuer_keys;
+	if (srv_ad.EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, issuer_keys)) {
+		action_ad->InsertAttr(ATTR_SEC_ISSUER_KEYS, issuer_keys);
+	}
 
 	return action_ad;
 
@@ -1157,7 +1172,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	StartCommandResult receivePostAuthInfo_inner();
 
 		// This is called when the TCP auth attempt completes.
-	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 		// This is the _inner() function for TCPAuthCallback().
 	StartCommandResult TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock );
@@ -1176,7 +1191,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
+SecMan::startCommand(const StartCommandRequest &req)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -1189,7 +1204,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool raw_protocol, CondorError* errst
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(
+		req.m_cmd,
+		req.m_sock,
+		req.m_raw_protocol,
+		req.m_errstack,
+		req.m_subcmd,
+		req.m_callback_fn,
+		req.m_misc_data,
+		req.m_nonblocking,
+		req.m_cmd_description,
+		req.m_sec_session_id,
+		this);
 
 	ASSERT(sc.get());
 
@@ -1266,7 +1292,8 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		bool success = result == StartCommandSucceeded;
 		CondorError *cb_errstack = m_errstack == &m_internal_errstack ?
 		                           NULL : m_errstack;
-		(*m_callback_fn)(success,m_sock,cb_errstack,m_misc_data);
+		(*m_callback_fn)(success,m_sock,cb_errstack, m_sock->getTrustDomain(),
+			m_sock->shouldTryTokenRequest(), m_misc_data);
 
 		m_callback_fn = NULL;
 		m_misc_data = NULL;
@@ -1873,6 +1900,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 				dPrintAd( D_SECURITY, auth_response );
 			}
 
+				// Record the remote trust domain, if present
+			std::string trust_domain;
+			if (auth_response.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
+				m_sock->setTrustDomain(trust_domain);
+			}
+
 				// Get rid of our sinful address in what will become
 				// the session policy ad.  It's there because we sent
 				// it to our peer, but no need to keep it around in
@@ -1906,6 +1939,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
@@ -2201,9 +2235,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 						m_sock->peer_addr().to_ip_string().Value()
 						);
 				} else {
-					if (response_method != "TOKEN") {
-						m_sock->setShouldTryTokenRequest(true);
-					}
+					m_sock->setShouldTryTokenRequest(true);
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
 						response_rc.c_str(), response_user.c_str(), response_method.Value());
 				}
@@ -2463,7 +2495,7 @@ SecManStartCommand::DoTCPAuth_inner()
 }
 
 void
-SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/,void * misc_data)
+SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /* trust_domain */, bool /* should_try_token_request */, void * misc_data)
 {
 	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
 

@@ -13,13 +13,54 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- If you run a CCB server, please note that the default value for
+  ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
+  set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
+  after you upgrade.  To avoid this problem,
+  set ``CCB_RECONNECT_FILE`` to its default path before upgrading.  (Look in
+  the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
+  don't see one, you don't have to do anything.)
+
+- Singularity jobs no longer mount the user's home directory by default.
+  To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
+
+- The format of the terminated and aborted events has changed.  This will
+  only affect you if you're not using one the readers provided by HTCondor.
+
 New Features:
 
--  None.
+- The terminated and abort events now include "Tickets of Execution", which
+  specify when the job terminated, who requested the termination, and the
+  mechanism used to make the request (as both a string an integer).  This
+  information is also present in the job ad (in the ``ToE`` attribute).
+  Presently, tickets are only issued for normal job terminations (when the
+  job terminated itself of its own accord), and for terminations resulting
+  from the ``DEACTIVATE_CLAIM`` command.  We expect to support tickets for
+  the other mechanisms in future releases.
+  :ticket:`6984`
+
+- The Box.com multifile transfer plugin now supports uploads. The
+  plugin will be used when a user lists a "box://path/to/file" URL as
+  the output location of file when using ``transfer_output_remaps``.
+  :ticket:`7085`
+
+- Added a new multifile transfer plugin for downloading and uploading
+  files from/to Google Drive user accounts. This supports URLs like
+  "gdrive://path/to/file" and using the plugin requires the admin
+  configure the *condor_credd* to allow users to obtain Google Drive
+  tokens and requires the user request Google Drive tokens in their
+  submit file. :ticket:`7136`
 
 Bugs Fixed:
 
--  None.
+- Fixed a bug where schedd would not start if the history file
+  size, named by MAX_HISTORY_SIZE was more than 2 Gigabytes.
+  :ticket:`7023`
+
+- The default ``CCB_RECONNECT_FILE`` name now includes the shared port ID
+  instead of the port number, if available, which prevents multiple CCBs
+  behind the same shared port from interfering with each other's state file.
+  :ticket:`7135`
 
 Version 8.9.2
 -------------

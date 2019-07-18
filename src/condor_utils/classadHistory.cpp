@@ -70,8 +70,10 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     DoDailyHistoryRotation = param_boolean("ROTATE_HISTORY_DAILY", false);
     DoMonthlyHistoryRotation = param_boolean("ROTATE_HISTORY_MONTHLY", false);
 
-    MaxHistoryFileSize = param_integer("MAX_HISTORY_LOG", 
-                                       20 * 1024 * 1024); // 20MB is default
+	long long default_history = 20 * 1024 * 1024;
+	long long history_filesize = 0;
+    param_longlong("MAX_HISTORY_LOG", history_filesize, true, default_history);
+	MaxHistoryFileSize = history_filesize;
     NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS", 
                                           2,  // default
                                           1); // minimum

@@ -62,6 +62,7 @@
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
 #include "daemon_keep_alive.h"
+
 #include <vector>
 
 #include "../condor_procd/proc_family_io.h"
@@ -265,6 +266,51 @@ class DCSignalMsg: public DCMsg {
 		// true if DaemonCore sends the signal through some means
 		// other than delivery of this network message through DCMessenger
 	bool m_messenger_delivery;
+};
+
+
+/**
+ * This is the class that internally manages the token request process;
+ * the actual logic implementation is in a separate class in daemon_core_main;
+ * this provides a clean, separate interface to that class.
+ */
+
+// Typedef of function we will call when a token request finished.
+typedef void RequestCallbackFn(bool success, void *miscdata);
+
+class DCTokenRequester {
+public:
+	DCTokenRequester(RequestCallbackFn callback, void *miscdata)
+	  : m_callback(callback),
+	    m_callback_data(miscdata)
+	{}
+
+	static const std::string default_identity;
+
+		// Remove/stop any pending token requests.
+	void clearRequests();
+
+	void *createCallbackData(const std::string &daemon_addr, const std::string &identity,
+		const std::string &authz_name);
+
+	static void
+	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain,
+		bool should_try_token_request, void *miscdata);
+
+	static void
+	tokenRequestCallback(bool success, void *miscdata);
+
+	struct DCTokenRequesterData {
+		std::string m_addr;
+		std::string m_identity;
+		std::string m_authz_name;
+		RequestCallbackFn *m_callback_fn;
+		void *m_callback_data;
+	};
+
+private:
+	RequestCallbackFn *m_callback{nullptr};
+	void *m_callback_data{nullptr};
 };
 
 
@@ -1454,8 +1500,9 @@ class DaemonCore : public Service
 		   @param nonblock Should the update use non-blocking communication.
 		   @return The number of successful updates that were sent.
 		*/
-	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL,
-					bool nonblock = false);
+	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL, bool nonblock = false,
+		DCTokenRequester *requester = nullptr, const std::string &identity = "",
+		const std::string &authz_name = "");
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
@@ -1490,7 +1537,17 @@ class DaemonCore : public Service
 		*/
 	bool Do_Wake_up_select();
 
-		/** Registers a socket for read and then calls HandleReq to
+		/**
+			gather info about the wakeup select pipe from a thread that may be async to the main thread
+		*/
+	bool AsyncInfo_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd);
+
+		/**
+			check hotness of wakeup select socket from an async thread. used for debugging
+		*/
+	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, MyString & status);
+
+	/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
 			available.
 		*/
@@ -1731,7 +1788,7 @@ class DaemonCore : public Service
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
-	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
+	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,
@@ -1980,10 +2037,11 @@ class DaemonCore : public Service
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+	volatile bool async_pipe_signal;
 #else
 	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
+	volatile unsigned int async_pipe_signal;
 #endif
-	volatile bool async_pipe_signal;
 
 	// Data memebers for queuing up waitpid() events
 	struct WaitpidEntry_s

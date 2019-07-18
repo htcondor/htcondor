@@ -240,7 +240,6 @@ int process_job_credentials();
 extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
-int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
@@ -1074,7 +1073,10 @@ main( int argc, const char *argv[] )
 	//  Parse the file and queue the jobs
 	int as_factory = 0;
 	if (has_late_materialize) {
-		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? 2 : 0);
+		// turn dash_factory command line option and default_to_factory flag as bits
+		// so submit_jobs can be clever about defaults
+		// 0=not factory, 1=always factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
+		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? (1|2) : 0);
 	}
 	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
 	if( rval < 0 ) {
@@ -1865,6 +1867,12 @@ int submit_jobs (
 		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
 		// to decide whether this is a factory or not.
+		if (as_factory == 3) {
+			// if as_factory == 3, then we want 'smart' factory, where we use late materialize
+			// for multi-proc and non-factory for single proc
+			want_factory = (selected_item_count > 1 || o.queue_num > 1) ? 1 : 0;
+			need_factory = want_factory;
+		}
 		if (GotQueueCommand == 1) {
 			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 				want_factory = 1;
@@ -1943,7 +1951,7 @@ int submit_jobs (
 			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
 				MyString items_fn = create_local_factory_file;
 				items_fn += ".items";
-				dynamic_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
@@ -2591,10 +2599,6 @@ init_params()
 }
 
 
-extern "C" {
-int SetSyscalls( int foo ) { return foo; }
-}
-
 // The code below needs work before it can build on Windows or older Macs
 
 MyString credd_has_tokens(MyString m) {
@@ -2942,6 +2946,8 @@ int process_job_credentials()
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
 				exit( 1 );
 			}
+			free(ut64);
+			free(zkmbuf);
 		}
 	}  // end of block to run a credential producer
 
@@ -2975,7 +2981,7 @@ int SendLastExecutable()
 												true);
 		}
 
-		MyString hash;
+		std::string hash;
 		if (try_ickpt_sharing) {
 			Condor_MD_MAC cmm;
 			unsigned char* hash_raw;
@@ -2992,16 +2998,16 @@ int SendLastExecutable()
 			}
 			else {
 				for (int i = 0; i < MAC_SIZE; i++) {
-					hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
+					formatstr_cat(hash, "%02x", static_cast<int>(hash_raw[i]));
 				}
 				free(hash_raw);
 			}
 		}
 		int ret;
-		if ( ! hash.IsEmpty()) {
+		if ( ! hash.empty()) {
 			ClassAd tmp_ad;
 			tmp_ad.Assign(ATTR_OWNER, owner);
-			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
+			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash);
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}
 		else {

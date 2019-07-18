@@ -894,11 +894,14 @@ int DaemonCore::DoPumpWork() {
 	PumpWorkItem * work;
 	PumpWorkItem * last = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead);
 	if (last) {
+		int num = 1;
 		last->slist.Next = NULL;
 		while ((work = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead))) {
 			work->slist.Next = &(last->slist);
 			last = work;
+			++num;
 		}
+		dprintf(D_DAEMONCORE, "Processing %d pump work item(s)\n", num);
 	}
 
 	// now process the items.
@@ -2751,8 +2754,8 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
-	MyString res;
+std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
+	std::string res;
 	int		i;
 	DCpermissionHierarchy hierarchy( perm );
 	DCpermission const *perms = hierarchy.getImpliedPerms();
@@ -2764,8 +2767,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 				(comTable[i].perm == perm) &&
 				(!comTable[i].force_authentication || is_authenticated))
 			{
-				char const *comma = res.Length() ? "," : "";
-				res.formatstr_cat( "%s%i", comma, comTable[i].num );
+				char const *comma = res.length() ? "," : "";
+				formatstr_cat( res, "%s%i", comma, comTable[i].num );
 			}
 		}
 	}
@@ -3215,29 +3218,99 @@ DaemonCore::Wake_up_select()
 bool
 DaemonCore::Do_Wake_up_select()
 {
+#ifdef WIN32
+	if (GetCurrentThreadId() == dcmainThreadId) {
+		dprintf(D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
+		return false;
+	}
+#endif
+
 	// note, this code is called by threads other than the main thread,
 	// and (on windows) threads other than condor_threads.  it should be
 	// thread safe and it should not depend on the caller being a condor_thread.
 	// it should never be called by the master thread.
 	//
+#ifdef WIN32
 	bool fSuccess = true;  // return success if the pipe is not empty
-	if ( ! async_pipe_signal) {
+	
+	// set the async_pipe_signal flag before we write into the pipe
+	// to avoid a potential race condition. better to have the flag 
+	// say the pipe is signalled and have it not be than the reverse.
+	if ( ! InterlockedExchange(&async_pipe_signal, 1)) {
+		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
+	}
+#else
+	bool fSuccess = true;  // return success if the pipe is not empty
+	if (! async_pipe_signal) {
 		// set the async_pipe_signal flag before we write into the pipe
 		// to avoid a potential race condition. better to have the flag 
 		// say the pipe is signalled and have it not be than the reverse.
 		async_pipe_signal = true;
-#ifdef WIN32
-		if (GetCurrentThreadId() == dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.\n");
-			return false;
-		}
-		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
-#else
 		fSuccess = write(async_pipe[1],"!",1) > 0;
-#endif
 	}
+#endif
 	return fSuccess;
 }
+
+bool
+DaemonCore::AsyncInfo_Wake_up_select(
+	void * &dst,
+	int & dst_fd,
+	void* &src,
+	int & src_fd)
+{
+	dst = src = NULL;
+	dst_fd = src_fd = -1;
+#ifdef WIN32
+	if (GetCurrentThreadId() == dcmainThreadId) {
+		dprintf(D_ALWAYS, "DaemonCore::AsyncInfo_Wake_up_select called from main thread. this is unexpected.");
+		return false;
+	} else {
+		dst = &async_pipe[0];
+		dst_fd = async_pipe[0].get_file_desc();
+		//dst_sock = async_pipe[0].get_socket(); // get_socket() and get_file_desc() return the same value, just typecast differently.
+		src = &async_pipe[1];
+		src_fd = async_pipe[1].get_file_desc();
+		//src_sock = async_pipe[1].get_socket();
+	}
+#else
+#endif
+	return async_pipe_signal;
+}
+
+int
+DaemonCore::Async_test_Wake_up_select(
+	void * &dst,
+	int & dst_fd,
+	void* &src,
+	int & src_fd,
+	MyString & status)
+{
+	int hotness = AsyncInfo_Wake_up_select(dst, dst_fd, src, src_fd) ? 2 : 0;
+	status.clear();
+#ifdef WIN32
+	WSAPOLLFD wfd[2];
+	wfd[0].fd = dst_fd;
+	wfd[0].events = POLLIN;
+	wfd[1].fd = src_fd;
+	wfd[1].events = POLLOUT;
+	int hots = WSAPoll(wfd, 2, 0);
+	if (hots) {
+		if (wfd[0].revents & POLLRDNORM) {
+			hotness |= 1;
+		} else {
+			formatstr(status, "%d=0x%04x %d=0x%04x", wfd[0].fd, wfd[0].revents, wfd[1].fd, wfd[1].revents);
+		}
+	} else {
+		if (hots == SOCKET_ERROR) {
+			formatstr(status, "err %d", WSAGetLastError());
+		}
+	}
+#else
+#endif
+	return hotness;
+}
+
 
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
@@ -3527,7 +3600,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_ALWAYS, "PERF: entering select. timeout=%d\n", (int)timeout);
+			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%d\n", (int)timeout);
 		}
 
 		selector.execute();
@@ -3571,13 +3644,13 @@ void DaemonCore::Driver()
 		// Drain our async_pipe (which is really a socket)
 		// extra error checking because we had problems with the pipe getting stuck
 		// in the signalled state in 7.5.5. 
+		unsigned int pipe_was_signalled = InterlockedExchange(&async_pipe_signal, 0);
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
-            dc_stats.AsyncPipe += 1;
-			if ( ! async_pipe_signal) {
+			dc_stats.AsyncPipe += 1;
+			if ( ! pipe_was_signalled) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.\n");
 			}
-			async_pipe_signal = false;
 			while (int cb = async_pipe[0].bytes_available_to_read()) {
 				if (cb < 0) {
 					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d\n", 
@@ -3591,6 +3664,9 @@ void DaemonCore::Driver()
 					break;
 				}
 			}
+			// clear the flag again to make sure that Do_Wake_up_select knows the pipe is empty
+			// this could result in an extra wakeup, but prevents us missing a wakeup
+			InterlockedExchange(&async_pipe_signal, 0);
 		}
 #endif
 
@@ -3598,7 +3674,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_ALWAYS, "PERF: leaving select\n");
+			dprintf(D_PERF_TRACE, "PERF: leaving select\n");
 			selector.display();
 		}
 
@@ -4300,7 +4376,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					req,
 					comTable[index].command_descrip,
 					user,
-					stream->peer_description());
+					stream ? stream->peer_description() : "");
 			handler_start_time = _condor_debug_get_time_double();
 		}
 
@@ -5864,14 +5940,28 @@ pid_t CreateProcessForkit::fork_exec() {
 			// CLONE_VFORK to ensure the child is done with the stack
 			// before the parent throws it away.
 		const int stack_size = 16384;
-		char child_stack[stack_size];
+		char child_stack[stack_size + 16]; // additional padding for aligning
 
 			// Beginning of stack is at end on all processors that run
 			// Linux, except for HP PA.  Here we just detect at run-time
 			// which way it goes.
 		char *child_stack_ptr = child_stack;
 		if( stack_direction() == STACK_GROWS_DOWN ) {
-			child_stack_ptr += stack_size;
+
+			child_stack_ptr = &child_stack[stack_size];
+
+			// ARM requires stack pointer to be 16 byte aligned
+			// probably helps performance to do it everywhere
+
+			// RHEL 7's gcc claims to be C++11, but doesn't have std::align
+
+			// size_t new_stack_size = stack_size;
+			// child_stack_ptr = std::align(16, 1, child_stack_ptr, new_stack_size);
+
+			std::uintptr_t mask = ~(std::uintptr_t)0 << 4;
+			child_stack_ptr = (char *) (((std::uintptr_t)child_stack_ptr + 16) & mask);
+
+			ASSERT(child_stack_ptr);
 		}
 
 			// save some state in dprintf
@@ -6975,7 +7065,7 @@ int DaemonCore::Create_Process(
 		// so the child knows it can use this session to contact the parent.
 		std::string valid_coms;
 		formatstr( valid_coms, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS,
-				   GetCommandsInAuthLevel(DAEMON,true).Value() );
+				   GetCommandsInAuthLevel(DAEMON,true).c_str() );
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
 			session_id_c_str,
@@ -10812,7 +10902,8 @@ DaemonCore::getCollectorList() {
 
 
 int
-DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
+DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
+	DCTokenRequester *token_requester, const std::string &identity, const std::string &authz_name )
 {
 	ASSERT(ad1);
 	ASSERT(m_collector_list);
@@ -10836,7 +10927,8 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
 
 		// Even if we just decided to shut ourselves down, we should
 		// still send the updates originally requested by the caller.
-	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock);
+	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock, token_requester,
+		identity, authz_name);
 }
 
 

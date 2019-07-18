@@ -632,6 +632,7 @@ class GahpClient : public GenericGahpClient {
 								 const std::string &metadata_file,
 								 bool preemptible,
 								 const std::string &json_file,
+								 const std::vector< std::pair< std::string, std::string > > & labels,
 								 std::string &instance_id );
 
 		int gce_instance_delete( std::string service_url,

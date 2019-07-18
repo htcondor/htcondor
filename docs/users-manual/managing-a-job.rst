@@ -668,6 +668,42 @@ These are all of the events that can show up in a job log file:
   occurs: transfer queued, transfer started, or transfer finished, for
   both the input and output sandboxes.
 
+Job Termination
+---------------
+
+:index:`termination<single: termination, job>`
+
+From time to time, and for a variety of reasons, HTCondor may terminate
+a job before it completes.  For instance, a job could be removed (via
+*condor_rm*), preempted (by a user a with higher priority), or killed
+(for using more memory than it requested).  In these cases, it might be
+helpful to know why HTCondor terminated the job.  HTCondor calls its
+records of these reasons "Tickets of Execution".
+
+A ticket of execution is usually issued by the *condor_startd*, and
+includes:
+
+- when the *condor_startd* was told, or otherwise decided, to terminate the job;
+- who made the decision to terminate, usually a Sinful string;
+- and what method was employed to command the termination, as both as
+  string and an integer.
+
+The relevant log events include a human-readable rendition of the ToE,
+and the job ad is updated with the ToE after the usual delay.
+
+As of version 8.9.3, HTCondor only issues ToE in two cases:
+
+- when the job terminates of its own accord (issued by the starter);
+- and when the startd terminates the job because it received a
+  ``DEACTIVATE_CLAIM`` command.
+
+In both cases, HTCondor records the ToE in the job ad.  In the event
+log(s), event 005 (job completion) includes the ToE for the first case,
+and event 009 (job aborted) includes the ToE for the second case.
+
+Future HTCondor releases will issue ToEs in additional cases and include
+them in additional log events.
+
 Job Completion
 --------------
 

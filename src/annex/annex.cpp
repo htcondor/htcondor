@@ -466,8 +466,8 @@ void prepareCommandAd( const ClassAd & commandArguments, int commandInt ) {
 	command->Assign( "RequestVersion", 1 );
 
 	// We don't trust the client the supply the command ID or annex ID.
-	command->Assign( "CommandID", (const char *)NULL );
-	command->Assign( "AnnexID", (const char *)NULL );
+	command->AssignExpr( "CommandID", "Undefined" );
+	command->AssignExpr( "AnnexID", "Undefined" );
 }
 
 int create_annex( ClassAd & commandArguments ) {

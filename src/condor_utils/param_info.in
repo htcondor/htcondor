@@ -715,7 +715,7 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_AGRESSIVE_SUBMIT]
+[DAGMAN_AGGRESSIVE_SUBMIT]
 default=false
 type=bool
 tags=dagman,dagman_main
@@ -798,6 +798,13 @@ restart=never
 default=true
 type=bool
 customization=expert
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_USE_JOIN_NODES]
+default=false
+type=bool
+customization=normal
 tags=dagman,dagman_main
 restart=never
 
@@ -3395,7 +3402,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 
@@ -3613,7 +3620,12 @@ type=string
 tags=annex
 
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-098354a57b99f8284
 type=string
 tags=annex
 
@@ -3623,7 +3635,12 @@ type=string
 tags=annex
 
 [eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-0ea8a09ffcba25387
 type=string
 tags=annex
 
@@ -3633,7 +3650,12 @@ type=string
 tags=annex
 
 [eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-04d9855a808fcc4bd
 type=string
 tags=annex
 
@@ -3643,7 +3665,12 @@ type=string
 tags=annex
 
 [eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-08049d1871f14f2f9
 type=string
 tags=annex
 
@@ -3652,8 +3679,23 @@ default = ami-07ed49c22921c0d31
 type=string
 tags=annex
 
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-029bbf2574767da49
+type=string
+tags=annex
+
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-0c2bae939a03e211a
 type=string
 tags=annex
 
@@ -3663,7 +3705,12 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-02a90df644af3b003
 type=string
 tags=annex
 
@@ -3673,7 +3720,12 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-0f433606b5f80ccab
 type=string
 tags=annex
 
@@ -3683,7 +3735,12 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-05cabd3969196c5ba
 type=string
 tags=annex
 
@@ -4992,8 +5049,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -6086,8 +6143,9 @@ default: @end
    else
       COLLECTOR$(1)_ARGS= -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_NAME=collector$(1)
+   COLLECTOR$(1).COLLECTOR_NAME=Collector$(1)
    COLLECTOR$(1).CONDOR_VIEW_HOST=$(TOP_COLLECTOR_HOST)
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
    # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
    TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
@@ -6107,7 +6165,8 @@ default: @end
    else
       COLLECTOR$(1)_ARGS=-f -local-name COLLECTOR$(1) -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log 
+   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
 @end
 

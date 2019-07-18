@@ -124,8 +124,8 @@ class VMProc : public OsProc
 
 		int m_vm_id;
 		int m_vm_pid;
-		MyString m_vm_mac;
-		MyString m_vm_ip;
+		std::string m_vm_mac;
+		std::string m_vm_ip;
 
 		struct procInfo m_vm_exited_pinfo;
 		struct procInfo m_vm_alive_pinfo;

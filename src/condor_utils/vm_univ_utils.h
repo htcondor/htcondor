@@ -56,6 +56,6 @@ void parse_param_string(const char *line, MyString &name, MyString &value, bool 
 
 // Create name for virtual machine
 // name consists of user + cluster id + proc id
-bool create_name_for_VM(ClassAd *ad, MyString& vmname);
+bool create_name_for_VM(ClassAd *ad, std::string& vmname);
 
 #endif /* VM_UNIV_UTILS_H */

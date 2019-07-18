@@ -8,6 +8,7 @@
 %define plumage 0
 %define systemd 0
 %define cgroups 0
+%define python 0
 
 %if 0%{?rhel} >= 6
 %define cgroups 1
@@ -47,6 +48,14 @@
 %if 0%{?hcc}
 %define blahp 0
 %define cream 0
+%endif
+
+# Python on 64-bit platform or rhel6
+%ifarch x86_64
+%define python 1
+%endif
+%if 0%{?rhel} == 6
+%define python 1
 %endif
 
 # Don't bother building CREAM for 32-bit RHEL7
@@ -194,12 +203,17 @@ BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
+BuildRequires: perl(Data::Dumper)
 
 %if %uw_build
 BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
 %if 0%{?rhel} >= 6
 BuildRequires: glibc-static
+%if 0%{?rhel} >= 7
+# libstdc++.a moved to a separate -static package in EL7
+BuildRequires: libstdc++-static
+%endif
 BuildRequires: libuuid-devel
 %else
 BuildRequires: glibc-devel
@@ -217,8 +231,8 @@ BuildRequires: nss-devel
 BuildRequires: openssl-devel
 BuildRequires: libxml2-devel
 BuildRequires: expat-devel
-BuildRequires: perl-Archive-Tar
-BuildRequires: perl-XML-Parser
+BuildRequires: perl(Archive::Tar)
+BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
 BuildRequires: python-devel
 BuildRequires: libcurl-devel
@@ -270,8 +284,12 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if %blahp && ! %uw_build
-BuildRequires: blahp
+%if 0%{?rhel} >= 7
+%ifarch x86_64
+BuildRequires: python36-devel
+BuildRequires: boost169-devel
+BuildRequires: boost169-static
+%endif
 %endif
 
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -312,7 +330,7 @@ Requires: blahp >= 1.16.1
 Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
-# Box file transfer plugin requires python-requests
+# Box and Google Drive file transfer plugins require python-requests
 Requires: python-requests
 
 Requires: initscripts
@@ -503,12 +521,18 @@ host as the DedicatedScheduler.
 
 
 #######################
+%if %python
 %package -n python2-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
 %{?python_provide:%python_provide python2-condor}
+%if 0%{?rhel} >= 7
+%ifarch x86_64
+Requires: boost169-python2
+%endif
+%endif
 # Remove before F30
 Provides: %{name}-python = %{version}-%{release}
 Provides: %{name}-python%{?_isa} = %{version}-%{release}
@@ -528,6 +552,35 @@ Provides: htcondor.so
 %description -n python2-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
+
+
+%if 0%{?rhel} >= 7
+%ifarch x86_64
+#######################
+%package -n python3-condor
+Summary: Python bindings for HTCondor.
+Group: Applications/System
+Requires: python36
+Requires: %name = %version-%release
+Requires: boost169-python3
+
+%if 0%{?rhel} >= 7 && ! %uw_build
+# auto provides generator does not pick these up for some reason
+    %ifarch x86_64
+Provides: classad.so()(64bit)
+Provides: htcondor.so()(64bit)
+    %else
+Provides: classad.so
+Provides: htcondor.so
+    %endif
+%endif
+
+%description -n python3-condor
+The python bindings allow one to directly invoke the C++ implementations of
+the ClassAd library and HTCondor from python
+%endif
+%endif
+%endif
 
 
 #######################
@@ -705,6 +758,11 @@ cmake \
 %else
        -DWITH_CREAM:BOOL=FALSE \
 %endif
+%ifarch %{ix86}
+%if 0%{?rhel} >= 7
+       -DWITH_PYTHON_BINDINGS:BOOL=FALSE \
+%endif
+%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -784,9 +842,9 @@ cmake \
 
 %if %uw_build
 # build externals first to avoid dependency issues
-make %{?_smp_mflags} externals
+make externals
 %endif
-make %{?_smp_mflags}
+make
 
 %install
 # installation happens into a temporary location, this function is
@@ -812,6 +870,11 @@ populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
 populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
+
+# Only trigger on 32-bit RHEL6
+if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
+    mv %{buildroot}%{_datadir}/condor/python2.6 %{buildroot}%{_libdir}/
+fi
 
 %if %qmf
 populate %{_libdir}/condor/plugins %{buildroot}/%{_usr}/libexec/*-plugin.so
@@ -895,6 +958,11 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
+# Remove condor_top with no python bindings
+%if ! %python
+rm -f %{buildroot}/%{_bindir}/condor_top
+%endif
+
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
@@ -935,9 +1003,13 @@ cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 # Install perl modules
 
 # Install python-binding libs
-mkdir -p %{buildroot}%{python_sitearch}
-install -m 0755 src/python-bindings/{classad,htcondor}.so %{buildroot}%{python_sitearch}
-install -m 0755 src/python-bindings/libpyclassad*.so %{buildroot}%{_libdir}
+%if 0%{?rhel} >= 7
+%ifarch x86_64
+mv %{buildroot}/usr/lib64/python3.6/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.6/site-packages/classad.so
+mv %{buildroot}/usr/lib64/python3.6/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.6/site-packages/htcondor.so
+%endif
+%endif
+
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/etc/examples %_builddir/%name-%tarball_version
@@ -1016,6 +1088,8 @@ rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_undertaker.1*
 
 rm -rf %{buildroot}%{_datadir}/condor/python/{htcondor,classad}.so
 rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
+rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
+rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
 # Install BOSCO
 mkdir -p %{buildroot}%{python_sitelib}
@@ -1145,6 +1219,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
+%_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/gdrive_plugin.pyc
+%_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
@@ -1156,7 +1233,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
-%_libexecdir/condor/libcollector_python_plugin.so
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1265,6 +1341,7 @@ rm -rf %{buildroot}
 %_bindir/condor_token_fetch
 %_bindir/condor_token_request
 %_bindir/condor_token_request_approve
+%_bindir/condor_token_request_auto_approve
 %_bindir/condor_token_request_list
 %_bindir/condor_token_list
 %_bindir/condor_drain
@@ -1461,13 +1538,29 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
+%if %python
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
+%_libexecdir/condor/libcollector_python_plugin.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
+
+%if 0%{?rhel} >= 7
+%ifarch x86_64
+%files -n python3-condor
+%defattr(-,root,root,-)
+%_bindir/condor_top
+%_libdir/libpy3classad*.so
+%_libexecdir/condor/libclassad_python3_user.so
+%_libexecdir/condor/libcollector_python3_plugin.so
+/usr/lib64/python3.6/site-packages/classad.so
+/usr/lib64/python3.6/site-packages/htcondor.so
+%endif
+%endif
+%endif
 
 %files bosco
 %defattr(-,root,root,-)
@@ -1693,6 +1786,14 @@ fi
 %endif
 
 %changelog
+* Tue Jul 09 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.4-1
+- Python 3 bindings - see version history for details (requires EPEL on EL7)
+- Can configure DAGMan to dramatically reduce memory usage on some DAGs
+- Improved scalability when using the python bindings to qedit jobs
+- Fixed infrequent schedd crashes when removing scheduler universe jobs
+- The condor_master creates run and lock directories when systemd doesn't
+- The condor daemon obituary email now contains the last 200 lines of log
+
 * Tue Jun 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.2-1
 - The HTTP/HTTPS file transfer plugin will timeout and retry transfers
 - A new multi-file box.com file transfer plugin to download files

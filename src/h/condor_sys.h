@@ -26,7 +26,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if defined(HPUX) || defined(LINUX)
+#if defined(LINUX)
 #include <syscall.h> 
 #endif
 

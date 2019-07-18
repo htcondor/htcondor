@@ -1111,10 +1111,10 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   MyString attrAcctGroup;
   MyString attrIsAcctGroup;
   char  name[128], policy[32];
-  float priority, Factor, AccUsage = -1;
+  float priority = 0, Factor = 0, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
-  float wtResUsed, requested;
+  float wtResUsed, requested = 0;
   std::string AcctGroup;
   bool IsAcctGroup;
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;

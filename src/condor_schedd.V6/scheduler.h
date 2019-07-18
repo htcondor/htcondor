@@ -982,7 +982,7 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level, int debug_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
@@ -1073,6 +1073,8 @@ private:
 	
 	void			expand_mpi_procs(StringList *, StringList *);
 
+	static void		token_request_callback(bool success, void *miscdata);
+
 	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
@@ -1086,6 +1088,7 @@ private:
 
 	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
 
+	std::unordered_set<Daemon*>	m_flock_collectors_init;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
@@ -1147,17 +1150,8 @@ private:
 
 	bool m_matchPasswordEnabled;
 
-	// State for token request.
-	void try_token_request();
-	// Right now, we will at most have one token request in flight;
-	// when we are ready to do this for multiple pools at a time, we
-	// will make these data structs into vectors.
-	std::string m_token_request_id;
-	std::string m_token_client_id;
-	Daemon *m_token_daemon;
-	bool m_initial_update{true}; // First update to the collector after reconfig blocks so we can trigger
-					// token auth if needed
 	bool m_include_default_flock_param{true};
+	DCTokenRequester m_token_requester;
 
 	friend class DedicatedScheduler;
 };

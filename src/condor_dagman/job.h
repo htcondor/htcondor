@@ -30,6 +30,7 @@
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
 #include "CondorError.h"
+#include "stringSpace.h"
 #include <set>
 
 class ThrottleByCategory;
@@ -514,12 +515,18 @@ private:
 		*/
 	std::vector<unsigned char> _onHold;	
 
+        // StringSpace class de-dups _directory and _cmdFile strings, since
+        // these two string may be repeated thousands of times in a large DAG
+    static StringSpace stringSpace;
+
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
-	char * _directory;
+        // Do not malloc or free! _directory is managed in a StringSpace!
+	const char * _directory;
 
-    // filename of condor submit file
-    char * _cmdFile;
+        // filename of condor submit file
+        // Do not malloc or free! _directory is managed in a StringSpace!
+    const char * _cmdFile;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).

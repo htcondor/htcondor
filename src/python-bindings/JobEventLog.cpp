@@ -156,6 +156,40 @@ JobEventLog::next() {
 	}
 }
 
+//
+// The JobEventLog constructor deliberately accepts only the filename,
+// so we have to do all three pickling methods to get and set the deadline
+// and the offset.
+//
+
+boost::python::tuple
+JobEventLogPickler::getinitargs( JobEventLog & self ) {
+	return boost::python::make_tuple( self.wful.getFilename() );
+}
+
+boost::python::tuple
+JobEventLogPickler::getstate( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	return boost::python::make_tuple( self.attr("__dict__"), jel->deadline, jel->wful.getOffset() );
+}
+
+void
+JobEventLogPickler::setstate( boost::python::object & self, boost::python::tuple & state ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	self.attr("__dict__") = state[0];
+	jel->deadline = boost::python::extract<time_t>( state[1] );
+	jel->wful.setOffset( boost::python::extract<size_t>( state[2] ) );
+}
+
+std::string
+JobEventLog::Py_Repr() {
+	std::string constructorish;
+	formatstr( constructorish,
+		"JobEventLog(filename=%s, deadline=%ld, offset=%lu)",
+		wful.getFilename().c_str(), deadline, wful.getOffset() );
+	return constructorish;
+}
+
 // ----------------------------------------------------------------------------
 
 JobEvent::JobEvent( ULogEvent * e ) : event( e ), ad( NULL ) { }
@@ -248,7 +282,11 @@ JobEvent::Py_Values() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( convert_value_to_python( v ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -273,7 +311,12 @@ JobEvent::Py_Items() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -317,7 +360,11 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -341,7 +388,11 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -364,9 +415,12 @@ JobEvent::Py_Repr() {
 
 std::string
 JobEvent::Py_Str() {
+	int fo = 0;
+	auto_free_ptr fmt(param("DEFAULT_USERLOG_FORMAT_OPTIONS"));
+	if(fmt) { fo = ULogEvent::parse_opts(fmt, USERLOG_FORMAT_DEFAULT); }
+
 	std::string buffer;
-	// TODO: where do we get event formatting options?
-	if(! event->formatEvent( buffer, 0 )) {
+	if(! event->formatEvent( buffer, fo )) {
 		buffer = Py_Repr();
 	}
 	return buffer;
@@ -408,6 +462,8 @@ void export_event_log() {
             boost::python::args("self"))
 		.def("__enter__", &JobEventLog::enter, "(Iterable context management.)")
 		.def("__exit__", &JobEventLog::exit, "(Iterable context management.)")
+		.def("__repr__", &JobEventLog::Py_Repr, "...")
+		.def_pickle(JobEventLogPickler())
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.

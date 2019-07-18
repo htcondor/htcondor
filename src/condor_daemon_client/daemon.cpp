@@ -36,6 +36,7 @@
 #include "time_offset.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"
+#include "condor_netaddr.h"
 #include "condor_sinful.h"
 
 #include "counted_ptr.h"
@@ -540,7 +541,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id, bool &should_try_token_request )
+Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -549,22 +550,20 @@ Daemon::startCommand_internal( int cmd, Sock* sock, int timeout, CondorError *er
 	// NOTE: if there is a callback function, we _must_ guarantee that it is
 	// eventually called in all code paths.
 
-	StartCommandResult start_command_result = StartCommandFailed;
-
-	ASSERT(sock);
+	ASSERT(req.m_sock);
 
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
-	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
+	ASSERT(!req.m_nonblocking || req.m_callback_fn || req.m_sock->type() == Stream::safe_sock);
 
 	// set up the timeout
 	if( timeout ) {
-		sock->timeout( timeout );
+		req.m_sock->timeout( timeout );
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
-	should_try_token_request = sock->shouldTryTokenRequest();
-
+	auto start_command_result = sec_man->startCommand(req);
+	// when sec_man->startCommand returns, sock may have been closed and the sock object deleted.
+	// do NOT add code referencing the sock here!!!
 	return start_command_result;
 }
 
@@ -606,36 +605,48 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, misc_data );
+			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
 			return StartCommandSucceeded;
 		} else {
 			return StartCommandFailed;
 		}
 	}
 
-	return startCommand_internal (
-						 cmd,
-						 *sock,
-						 timeout,
-						 errstack,
-						 subcmd,
-						 callback_fn,
-						 misc_data,
-						 nonblocking,
-						 cmd_description,
-						 &_sec_man,
-						 raw_protocol,
-						 sec_session_id,
-						 m_should_try_token_request);
+	// Prepare the request.
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = *sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
+	req.m_nonblocking = nonblocking;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	return startCommand_internal( req, timeout, &_sec_man );
 }
 
 
 bool
 Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
 	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	auto rc = startCommand_internal(req, timeout, &_sec_man);
+
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -714,17 +725,39 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, 
 StartCommandResult
 Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
 	// This is the nonblocking version of startCommand().
-	const bool nonblocking = true;
-	return startCommand_internal(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
+	req.m_nonblocking = true;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	return startCommand_internal(req, timeout, &_sec_man);
 }
 
 bool
 Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
-	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand_internal(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id,m_should_try_token_request);
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
+	// This is the blocking version of startCommand().
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+
+	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -2644,6 +2677,9 @@ Daemon::startTokenRequest( const std::string identity,
 			_addr ? _addr : "(unknown)");
 		return false;
 	}
+		// Try forcing encryption.  If it's not available, then this request will be
+		// queued ONLY IF auto-approval is allowed.
+	rSock.set_crypto_mode(true);
 
 	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
 		if (err) { err->pushf("DAEMON", 1, "Failed to send "
@@ -2897,7 +2933,7 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 	CondorError *err ) noexcept
 {
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "Daemon::listTokenRequest() making connection to "
+		dprintf( D_COMMAND, "Daemon::approveTokenRequest() making connection to "
 			"'%s'\n", _addr ? _addr : "NULL" );
 	}
 
@@ -2937,11 +2973,10 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 
 	if (!startCommand( DC_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
 		if (err) { err->pushf("DAEMON", 1,
-			"command for listing token requests with remote daemon at '%s'.",
+			"command for approving token requests with remote daemon at '%s'.",
 			_addr ? _addr : "(unknown)"); }
-		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to start "
-			"command for listing token requests with remote daemon at '%s'.\n",
-			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to start command for "
+			"approving token requests with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
 		return false;
 	}
 
@@ -2992,6 +3027,111 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 		if (err_msg.empty()) {err_msg = "Unknown error.";}
 
 		if (err) { err->push("DAEMON", error_code, err_msg.c_str()); }
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::autoApproveTokenRequest() making connection to "
+		"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (netblock.empty()) {
+		if (err) err->pushf("DAEMON", 1, "No netblock provided.");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): No netblock provided.");
+		return false;
+	} else {
+		condor_netaddr na;
+		if(! na.from_net_string(netblock.c_str())) {
+			err->pushf( "DAEMON", 2, "Auto-approval rule netblock invalid." );
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule netblock is invalid.\n");
+			return false;
+		}
+
+		if (!ad.InsertAttr(ATTR_SUBNET, netblock)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set netblock.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
+			return false;
+		}
+	}
+	if( lifetime > 0 ) {
+		if(! ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set lifetime.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set lifetime.\n");
+			return false;
+		}
+	} else {
+		if (err) err->pushf("DAEMON", 2, "Auto-approval rule lifetimes must be greater than zero." );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule lifetimes must be greater than zero.\n" );
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_AUTO_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to start command for "
+			"auto-approving token requests with remote daemon at '%s'.\n",
+			_addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to recieve response "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	int error_code = 0;
+	if (!result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		if (err) err->pushf("DAEMON", 1, "Remote daemon at '%s' did not return a result.",
+			_addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() - Remote daemon at '%s' did "
+			"not return a result", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (error_code) {
+		std::string err_msg;
+		result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg);
+		if (err_msg.empty()) {err_msg = "Unknown error.";}
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
 		return false;
 	}
 	return true;

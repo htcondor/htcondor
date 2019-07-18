@@ -40,7 +40,7 @@ enum vm_status {
 class VMType
 {
 public:
-	static bool createVMName(ClassAd *ad, MyString& vmname);
+	static bool createVMName(ClassAd *ad, std::string& vmname);
 
 	VMType(const char* prog_for_script, const char* scriptname, 
 			const char* workingpath, ClassAd *ad);
@@ -87,7 +87,7 @@ protected:
 	bool isTransferedFile(const char* file_name, MyString& fullname);
 
 	MyString m_vmtype;
-	MyString m_vm_name;
+	std::string m_vm_name;
 	int m_vm_id;
 
 	int	m_vm_pid;	// PID of acutal vmware process for this VM

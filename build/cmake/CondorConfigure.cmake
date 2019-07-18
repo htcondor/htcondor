@@ -81,25 +81,131 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 # To find python in Windows we will use alternate technique
-if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-	include (FindPythonInterp)
-	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
-	# As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
-	# This helps ensure we get the same version of the libraries and python
-	# on systems with both python2 and python3.
-	if (DEFINED PYTHON_VERSION_STRING)
-		set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
-	endif()
-	include (FindPythonLibs)
-	message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
-else()
-	if(WINDOWS)
-		#only for Visual Studio 2012
-		if(NOT (MSVC_VERSION LESS 1700))
-			message(STATUS "=======================================================")
-			message(STATUS "Searching for python installation(s)")
-			#look at registry for 32-bit view of 64-bit registry first
-			message(STATUS "  Looking for python 2.7 in HKLM\\Software\\Wow3264Node")
+option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
+if(NOT WINDOWS)
+    if((${OS_NAME} STREQUAL "DARWIN") OR WANT_PYTHON_WHEELS)
+        include (FindPythonInterp)
+        message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+        # As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
+        # This helps ensure we get the same version of the libraries and python
+        # on systems with both python2 and python3.
+        if (DEFINED PYTHON_VERSION_STRING)
+            set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
+        endif()
+        include (FindPythonLibs)
+        message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
+    else()
+        # We need to do this the hard way for both python2 and python3 support in the same build
+        # This will be easier in cmake 3
+        find_program(PYTHON_EXECUTABLE python2)
+        if (PYTHON_EXECUTABLE)
+            set(PYTHONINTERP_FOUND TRUE)
+            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
+            set(PYTHON_QUERY_PART_02 "import sys;")
+            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]));")
+            set(PYTHON_QUERY_PART_04 "print(sys.version_info[0]);")
+            set(PYTHON_QUERY_PART_05 "print(sys.version_info[1]);")
+            set(PYTHON_QUERY_PART_06 "print(sys.version_info[2]);")
+            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
+            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
+            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
+            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
+            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(1)[5:]);")
+
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
+            execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
+                            RESULT_VARIABLE _PYTHON_SUCCESS
+                            OUTPUT_VARIABLE _PYTHON_VALUES
+                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
+                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+            # Convert the process output into a list
+            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+            list(GET _PYTHON_VALUES 0 PYTHON_VERSION_STRING)
+            list(GET _PYTHON_VALUES 1 PYTHON_VERSION_MAJOR)
+            list(GET _PYTHON_VALUES 2 PYTHON_VERSION_MINOR)
+            list(GET _PYTHON_VALUES 3 PYTHON_VERSION_PATCH)
+            list(GET _PYTHON_VALUES 4 PYTHON_INCLUDE_DIRS)
+            list(GET _PYTHON_VALUES 5 PYTHON_LIBDIR)
+            list(GET _PYTHON_VALUES 6 PYTHON_MULTIARCH)
+            list(GET _PYTHON_VALUES 7 PYTHON_LIB)
+            list(GET _PYTHON_VALUES 8 C_PYTHONARCHLIB)
+            set(C_PYTHONARCHLIB ${C_PYTHONARCHLIB})
+            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_LIB}")
+                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_LIB}")
+                set(PYTHONLIBS_FOUND TRUE)
+            endif()
+            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
+                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
+                set(PYTHONLIBS_FOUND TRUE)
+            endif()
+            set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
+            set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
+
+            message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
+            message(STATUS "PYTHON_INCLUDE_PATH = ${PYTHON_INCLUDE_PATH}")
+            message(STATUS "PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+        endif()
+        find_program(PYTHON3_EXECUTABLE python3)
+        if (PYTHON3_EXECUTABLE)
+            set(PYTHON3INTERP_FOUND TRUE)
+            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
+            set(PYTHON_QUERY_PART_02 "import sys;")
+            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info.major) + '.' + str(sys.version_info.minor) + '.' + str(sys.version_info.micro));")
+            set(PYTHON_QUERY_PART_04 "print(sys.version_info.major);")
+            set(PYTHON_QUERY_PART_05 "print(sys.version_info.minor);")
+            set(PYTHON_QUERY_PART_06 "print(sys.version_info.micro);")
+            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
+            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
+            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
+            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
+            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(1)[5:]);")
+
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
+            execute_process(COMMAND "${PYTHON3_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
+                            RESULT_VARIABLE _PYTHON_SUCCESS
+                            OUTPUT_VARIABLE _PYTHON_VALUES
+                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
+                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+            # Convert the process output into a list
+            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+            list(GET _PYTHON_VALUES 0 PYTHON3_VERSION_STRING)
+            list(GET _PYTHON_VALUES 1 PYTHON3_VERSION_MAJOR)
+            list(GET _PYTHON_VALUES 2 PYTHON3_VERSION_MINOR)
+            list(GET _PYTHON_VALUES 3 PYTHON3_VERSION_PATCH)
+            list(GET _PYTHON_VALUES 4 PYTHON3_INCLUDE_DIRS)
+            list(GET _PYTHON_VALUES 5 PYTHON3_LIBDIR)
+            list(GET _PYTHON_VALUES 6 PYTHON3_MULTIARCH)
+            list(GET _PYTHON_VALUES 7 PYTHON3_LIB)
+            list(GET _PYTHON_VALUES 8 C_PYTHON3ARCHLIB)
+            set(C_PYTHON3ARCHLIB ${C_PYTHON3ARCHLIB})
+            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
+                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
+                set(PYTHON3LIBS_FOUND TRUE)
+            endif()
+            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
+                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
+                set(PYTHON3LIBS_FOUND TRUE)
+            endif()
+            set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
+            set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
+
+            message(STATUS "PYTHON3_LIBRARIES = ${PYTHON3_LIBRARIES}")
+            message(STATUS "PYTHON3_INCLUDE_PATH = ${PYTHON3_INCLUDE_PATH}")
+            message(STATUS "PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
+        endif()
+    endif()
+    else()
+        if(WINDOWS)
+            #only for Visual Studio 2012
+            if(NOT (MSVC_VERSION LESS 1700))
+                message(STATUS "=======================================================")
+                message(STATUS "Searching for python installation(s)")
+                #look at registry for 32-bit view of 64-bit registry first
+                message(STATUS "  Looking for python 2.7 in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 			#when registry reading fails cmake returns with c:\registry
 			message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
@@ -694,7 +800,6 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
 #####################################
 # PROPER option
@@ -1073,12 +1178,9 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 
 ###########################################
 #extra build flags and link libs.
-if (HAVE_EXT_OPENSSL)
-	add_definitions(-DWITH_OPENSSL) # used only by SOAP
-endif(HAVE_EXT_OPENSSL)
 
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+if (NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "openssl libraries not found!")
 endif()
 
 ###########################################

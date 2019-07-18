@@ -29,7 +29,6 @@
 #include <vector>
 #include <map>
 #include <set>
-#define USERLOG_FORMAT_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

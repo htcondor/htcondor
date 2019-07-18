@@ -329,7 +329,7 @@ public:
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
 
 
-	bool register_transferd(MyString sinful, MyString id, int timeout, 
+	bool register_transferd(const std::string &sinful, const std::string &id, int timeout, 
 		ReliSock **regsock_ptr, CondorError *errstack);
 	
 

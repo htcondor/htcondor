@@ -29,8 +29,7 @@ Here are all the steps needed to run a job using HTCondor.
     completed job, should the machine on which the job is executing
     become unavailable. To use the standard universe, it is necessary to
     relink the program with the HTCondor library using the
-    *condor_compile* command. The :doc:`/man-pages/condor_compile` manual page
-    has details.
+    *condor_compile* command.
 
     The vanilla universe provides a way to run jobs that cannot be
     relinked. There is no way to take a checkpoint or migrate a job
