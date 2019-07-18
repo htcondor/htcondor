@@ -97,12 +97,8 @@ $success = sub
 	$diditpass = 1;
 	
 	my $global_logfile = `condor_config_val EVENT_LOG`;
-	open GLOBALLOG, "<$global_logfile" || die "Could not get global event log\n";
-	open USERLOG, "<$userlog" || die "Could not get user log\n";
-	@globallog = <GLOBALLOG>;
-	@userlog = <USERLOG>;
-	close GLOBALLOG;
-	close USERLOG;
+	@globallog = split "\n", `condor_wait -echo:ISO_DATE $global_logfile`;
+	@userlog = split "\n", `condor_wait -echo:ISO_DATE $userlog`;
 	for($i=0;$i<=$#globallog;++$i){
 		last if($globallog[$i] eq $userlog[0]);
 	}
