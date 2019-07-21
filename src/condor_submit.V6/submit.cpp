@@ -1428,10 +1428,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 			}
 
 			if (is_crlf_shebang(ename)) {
-				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+				fprintf( stderr, "\n%s: Executable file %s is a script with "
+					"CRLF (DOS/Windows) line endings.\n",
 					allow_crlf_script ? "WARNING" : "ERROR", ename );
 				if (!allow_crlf_script) {
-					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					fprintf( stderr, "This generally doesn't work, and you "
+						"should probably run 'dos2unix %s' -- or a similar "
+						"tool -- before you resubmit.\n", ename );
 					return 1; // abort
 				}
 			}
