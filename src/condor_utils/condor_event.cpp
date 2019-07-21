@@ -3100,7 +3100,7 @@ bool
 JobAbortedEvent::formatBody( std::string &out )
 {
 
-	if( formatstr_cat( out, "Job was aborted by the user.\n" ) < 0 ) {
+	if( formatstr_cat( out, "Job was aborted.\n" ) < 0 ) {
 		return false;
 	}
 	if( reason ) {
@@ -3124,7 +3124,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 	reason = NULL;
 #ifdef DONT_EVER_SEEK
 	MyString line;
-	if ( ! read_line_value("Job was aborted by the user.", line, file, got_sync_line)) {
+	if ( ! read_line_value("Job was aborted", line, file, got_sync_line)) {
 		return 0;
 	}
 	// try to read the reason, this is optional
@@ -3153,30 +3153,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 		}
 	}
 #else
-	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
-		return 0;
-	}
-	// try to read the reason, but if its not there,
-	// rewind so we don't slurp up the next event delimiter
-	fpos_t filep;
-	fgetpos( file, &filep );
-	char reason_buf[BUFSIZ];
-	if( !fgets( reason_buf, BUFSIZ, file ) ||
-		   	strcmp( reason_buf, "...\n" ) == 0 ) {
-		setReason( NULL );
-		fsetpos( file, &filep );
-		return 1;	// backwards compatibility
-	}
-
-	chomp( reason_buf );  // strip the newline, if it's there.
-		// This is strange, sometimes we get the \t from fgets(), and
-		// sometimes we don't.  Instead of trying to figure out why,
-		// we just check for it here and do the right thing...
-	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		setReason( &reason_buf[1] );
-	} else {
-		setReason( reason_buf );
-	}
+    #error New JobAbortedEvent::readEvent() not implemented with seeking.
 #endif
 	return 1;
 }
