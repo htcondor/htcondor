@@ -8612,19 +8612,17 @@ Scheduler::AddRunnableLocalJobs()
 		int	max_hosts;
 
 		if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
-			cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
+			cur_hosts = 0; // At this point the job must be status idle
 		}
 		if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
-			max_hosts = ((status == IDLE) ? 1 : 0);
+			max_hosts = 1; 
 		}
 	
 		//
 		// Before evaluating whether we can run this job, first make 
 		// sure its even eligible to run
-		// We do not count REMOVED or HELD jobs
 		//
-		if ( max_hosts > cur_hosts &&
-			(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
+		if ( max_hosts > cur_hosts) {
 			
 			if (!IsLocalJobEligibleToRun(job)) {
 				continue;
