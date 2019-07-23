@@ -188,10 +188,13 @@ public:
 	static void setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods);
 	static const std::string getTagAuthenticationMethods(DCpermission perm);
 
-	// Setup the tag TOKEN owner name; this is considered an override and cleared when the
+	// Setup the tag credential owner name; this is considered an override and cleared when the
 	// tag is changed.
-	static void setTagTokenOwner(const std::string &owner) {m_tag_token_owner = owner;}
-	static const std::string &getTagTokenOwner() {return m_tag_token_owner;}
+	//
+	// When non-empty, the authentication method should proceed as-if the daemon was running as
+	// the specified owner.  While `tag` is an opaque string, this is interpreted as a username.
+	static void setTagCredentialOwner(const std::string &owner) {m_tag_token_owner = owner;}
+	static const std::string &getTagCredentialOwner() {return m_tag_token_owner;}
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
 									ClassAd* ad,

@@ -187,7 +187,8 @@ findTokens(const std::string &issuer,
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
 		MyString file_location;
-		if (!find_user_file(file_location, "tokens.d", false, true)) {
+			// Only utilize a "user_file" if the owner is set.
+		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
 				dprintf(D_FULLDEBUG, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
 				return false;
@@ -499,12 +500,12 @@ Condor_Auth_Passwd::fetchLogin()
 		std::string signature;
 		auto found_token = findTokens(m_server_issuer,
 					m_server_keys,
-					SecMan::getTagTokenOwner(),
+					SecMan::getTagCredentialOwner(),
 					username,
 					token,
 					signature);
 
-		if (!found_token && SecMan::getTagTokenOwner().empty()) {
+		if (!found_token && SecMan::getTagCredentialOwner().empty()) {
 			// Check to see if we have access to the master key and generate a token accordingly.
 			std::string issuer;
 			param(issuer, "TRUST_DOMAIN");
@@ -2762,7 +2763,7 @@ Condor_Auth_Passwd::should_try_auth()
 	std::set<std::string> server_key_ids;
 	std::string username, token, signature;
 
-	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagTokenOwner(), username, token, signature);
+	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagCredentialOwner(), username, token, signature);
 	if (m_tokens_avail) {
 		dprintf(D_SECURITY|D_FULLDEBUG,
 			"Can try token auth because we have at least one token.\n");

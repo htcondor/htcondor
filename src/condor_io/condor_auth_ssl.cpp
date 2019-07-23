@@ -30,6 +30,7 @@
 #include "openssl/rand.h"
 #include "condor_netdb.h"
 #include "condor_sinful.h"
+#include "condor_secman.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -1730,7 +1731,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		cadir      = param( AUTH_SSL_CLIENT_CADIR_STR );
 		if (m_scitokens_mode) {
 			param( m_scitokens_file, "SCITOKENS_FILE" );
-		} else {
+			// Only load the provided cert if we're not overriding the
+			// default credential.  All non-default credential owners
+			// will auth anonymously.
+		} else if (SecMan::getTagCredentialOwner().empty()) {
 			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
 			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
 		}
