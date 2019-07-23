@@ -644,8 +644,8 @@ public:
 		 */
 	std::string getTrustDomain() const {return m_trust_domain;}
 
-		// Set the owner for this collector object; if possible, always
-		// authenticate with the remote collector as this owner.
+		// Set the owner for this daemon; if possible, always
+		// authenticate with the remote daemon as this owner.
 	void setOwner(const std::string &owner) {m_owner = owner;}
 	const std::string &getOwner() const {return m_owner;}
 

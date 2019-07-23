@@ -3239,7 +3239,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			dprintf(D_FULLDEBUG, "Job will flock by default.\n");
 			for (const auto &flock_entry : scheduler.FlockPools) {
 				SubData->flock[flock_entry].JobsIdle += job_idle;
-				SubData->flock[flock_entry].WeightedJobsIdle -= job_idle_weight;
+				SubData->flock[flock_entry].WeightedJobsIdle += job_idle_weight;
 			}
 		}
 
