@@ -128,6 +128,12 @@ public:
 		bool m_nonblocking{false};
 		const char *m_cmd_description{nullptr};
 		const char *m_sec_session_id{nullptr};
+			// Do the start command on behalf of a specific owner;
+			// empty tag is the default (`condor` for daemons...).
+		std::string m_owner;
+			// If m_owner is set, then we can also specify the authentication
+			// methods to use for that owner.
+		std::vector<std::string> m_methods;
 	};
 
 		// Prepare a socket for sending a CEDAR command.  This takes

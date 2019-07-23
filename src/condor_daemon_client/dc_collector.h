@@ -82,10 +82,6 @@ public:
 		/// Destructor
 	~DCCollector();
 
-		// Set the owner for this collector object; if possible, always
-		// authenticate with the remote collector as this owner.
-	void setOwner(const std::string &owner) {m_owner = owner;}
-
 		/** Send a classad update to this collector.  This will look
 			in the config file for TCP_COLLECTOR_HOST, and if defined,
 			we'll use a ReliSock (TCP) to connect and send the update.
@@ -147,9 +143,6 @@ private:
 	// Items to manage the sequence numbers
 	time_t startTime;
 	time_t reconfigTime;
-
-	// The virtual 'owner' of this collector object
-	std::string m_owner;
 };
 
 

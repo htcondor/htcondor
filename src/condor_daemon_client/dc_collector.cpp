@@ -115,8 +115,6 @@ DCCollector::deepCopy( const DCCollector& copy )
 	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
-
-	m_owner = copy.m_owner;
 }
 
 
@@ -294,8 +292,11 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 		send_submitter_secrets = true;
 	}
 
-	if (!self->m_owner.empty() && !sock->set_crypto_mode(true)) {
-		// Secrets must be encrypted!
+		// If we are advertising to an admin-configured pool, then
+		// we allow the admin to skip authorization; they presumably
+		// know what they are doing.  However, if we are acting on
+		// behalf of a user, then we assume that secrets must be encrypted!
+	if (!self->getOwner().empty() && !sock->set_crypto_mode(true)) {
 		send_submitter_secrets = false;
 	}
 
@@ -533,16 +534,7 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		return true;
 	}
 
-	std::string old_tag = SecMan::getTag();
-	if (!m_owner.empty()) {
-		SecMan::setTag(m_owner);
-		SecMan::setTagAuthenticationMethods(CLIENT_PERM, {"TOKEN"});
-		SecMan::setTagTokenOwner(m_owner);
-	}
 	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20, NULL, NULL, raw_protocol);
-	if (!m_owner.empty()) {
-		SecMan::setTag(old_tag);
-	}
 
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
@@ -623,16 +615,7 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		return true;
 	}
 
-	std::string old_tag = SecMan::getTag();
-	if (!m_owner.empty()) {
-		SecMan::setTag(m_owner);
-		SecMan::setTagAuthenticationMethods(CLIENT_PERM, {"TOKEN"});
-		SecMan::setTagTokenOwner(m_owner);
-	}
 	Sock *sock = startCommand(cmd, Sock::reli_sock, 20);
-	if (!m_owner.empty()) {
-		SecMan::setTag(old_tag);
-	}
 
 	if(!sock) {
 		newError( CA_COMMUNICATION_ERROR,

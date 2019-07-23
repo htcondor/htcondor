@@ -1010,7 +1010,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	SecManStartCommand (
 		int cmd,Sock *sock,bool raw_protocol,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
-		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,SecMan *sec_man):
+		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
+		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
 
 		m_cmd(cmd),
 		m_subcmd(subcmd),
@@ -1022,7 +1023,9 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_nonblocking(nonblocking),
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
-		m_use_tmp_sec_session(false)
+		m_use_tmp_sec_session(false),
+		m_owner(owner),
+		m_methods(methods)
 	{
 		m_sec_session_id_hint = sec_session_id_hint ? sec_session_id_hint : "";
 		if( m_sec_session_id_hint == USE_TMP_SEC_SESSION ) {
@@ -1136,6 +1139,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	KeyCacheEntry *m_enc_key;
 	KeyInfo* m_private_key;
 	MyString m_sec_session_id_hint;
+	std::string m_owner;
+	std::vector<std::string> m_methods;
 
 	enum StartCommandState {
 		SendAuthInfo,
@@ -1215,6 +1220,8 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_nonblocking,
 		req.m_cmd_description,
 		req.m_sec_session_id,
+		req.m_owner,
+		req.m_methods,
 		this);
 
 	ASSERT(sc.get());
@@ -1336,6 +1343,18 @@ SecManStartCommand::startCommand_inner()
 {
 	// NOTE: like all _inner() functions, the caller of this function
 	// must ensure that the m_callback_fn is called (if there is one).
+	std::string old_owner;
+		// Reset tag on function exit.
+	std::shared_ptr<int> x(nullptr,
+		[&](int *){ if (!m_owner.empty()) SecMan::setTag(old_owner); });
+	if (!m_owner.empty()) {
+		old_owner = SecMan::getTag();
+		SecMan::setTag(m_owner);
+		if (!m_methods.empty()) {
+			SecMan::setTagAuthenticationMethods(CLIENT_PERM, m_methods);
+		}
+		SecMan::setTagCredentialOwner(m_owner);
+	}
 
 	ASSERT(m_sock);
 	ASSERT(m_errstack);
@@ -2477,6 +2496,8 @@ SecManStartCommand::DoTCPAuth_inner()
 		m_nonblocking,
 		m_cmd_description.Value(),
 		m_sec_session_id_hint.Value(),
+		m_owner,
+		m_methods,
 		&m_sec_man);
 
 	StartCommandResult auth_result = m_tcp_auth_command->startCommand();
