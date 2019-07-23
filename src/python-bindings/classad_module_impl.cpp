@@ -553,11 +553,11 @@ export_classad()
             :return: The JSON representation of the ad.
             :rtype: str
             )C0ND0R")
-        .def("get", &ClassAdWrapper::get, get_overloads(
+        .def("get", &ClassAdWrapper::get, condor::classad_expr_return_policy<>(), get_overloads(
             R"C0ND0R(
             As :meth:`dict.get`.
             )C0ND0R"))
-        .def("setdefault", &ClassAdWrapper::setdefault, setdefault_overloads(
+        .def("setdefault", &ClassAdWrapper::setdefault, condor::classad_expr_return_policy<>(), setdefault_overloads(
             R"C0ND0R(
             As :meth:`dict.setdefault`.
             )C0ND0R"))
@@ -565,7 +565,7 @@ export_classad()
             R"C0ND0R(
             As :meth:`dict.update`.
             )C0ND0R")
-        .def("flatten", &ClassAdWrapper::Flatten,
+        .def("flatten", &ClassAdWrapper::Flatten, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Given ExprTree object expression, perform a partial evaluation.
             All the attributes in expression and defined in this ad are evaluated and expanded.
@@ -686,7 +686,7 @@ export_classad()
             :rtype: bool
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("expr")))
-        .def("and_", &ExprTreeHolder::__land__,
+        .def("and_", &ExprTreeHolder::__land__, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Return a new expression, formed by ``self && expr``.
 
@@ -696,7 +696,7 @@ export_classad()
             :rtype: :class:`ExprTree`
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("expr")))
-        .def("or_", &ExprTreeHolder::__lor__,
+        .def("or_", &ExprTreeHolder::__lor__, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Return a new expression, formed by ``self || expr``.
 
@@ -706,7 +706,7 @@ export_classad()
             :rtype: :class:`ExprTree`
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("expr")))
-        .def("is_", &ExprTreeHolder::__is__,
+        .def("is_", &ExprTreeHolder::__is__, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Logical comparison using the 'meta-equals' operator.
 
@@ -716,7 +716,7 @@ export_classad()
             :rtype: :class:`ExprTree`
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("expr")))
-        .def("isnt_", &ExprTreeHolder::__isnt__,
+        .def("isnt_", &ExprTreeHolder::__isnt__, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Logical comparison using the 'meta-not-equals' operator.
 
