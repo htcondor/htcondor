@@ -1573,7 +1573,6 @@ Scheduler::count_jobs()
 					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
 				: nullptr;
 			col->sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
-			m_flock_collectors_init.insert(d);
 			FlockCollectors->next( d );
 		}
 	}
@@ -1700,11 +1699,21 @@ Scheduler::count_jobs()
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
 					value.second->setOwner(*SubDat.owners.begin());
+					value.second->setAuthenticationMethods({"TOKEN"});
 					auto iter2 = FlockExtra.insert(std::move(value));
 					iter = iter2.first;
 				}
-				// TODO: Some refactoring required before we can do non-blocking mode here.
-				iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq, NULL, false );
+
+				if (iter->second->name()) {
+						// NOTE we limit this token to ALLOW-level authorization.
+					auto data = m_token_requester.createCallbackData(iter->second->name(),
+						*SubDat.owners.begin(), "ALLOW");
+					dprintf(D_FULLDEBUG, "Will update collector %s for with ad for "
+						"owner %s\n", iter->second->name(),
+						SubDat.owners.begin()->c_str());
+					iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq,
+						NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+				}
 			}
 		}
 	}
@@ -2923,7 +2932,6 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 				ATTR_JOB_STATUS);
 		return 0;
 	}
-	dprintf(D_FULLDEBUG, "Counting a job!\n");
 
 	bool noop = false;
 	job->LookupBool(ATTR_JOB_NOOP, noop);
@@ -13810,8 +13818,6 @@ Scheduler::Init()
 
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
-
-	m_flock_collectors_init.clear();
 
 	first_time_in_init = false;
 }

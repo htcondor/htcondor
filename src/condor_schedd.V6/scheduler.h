@@ -1088,7 +1088,6 @@ private:
 
 	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
 
-	std::unordered_set<Daemon*>	m_flock_collectors_init;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
