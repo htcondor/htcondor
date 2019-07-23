@@ -4365,7 +4365,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		user = sock->getFullyQualifiedUser();
+		user = sock ? sock->getFullyQualifiedUser() : nullptr;
 		if( !user ) {
 			user = "";
 		}
