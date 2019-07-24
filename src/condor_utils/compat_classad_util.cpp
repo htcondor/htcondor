@@ -259,6 +259,143 @@ bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_a
 	return false;
 }
 
+// return true if the expression is a comparision between an Attribute and a literal
+// returns attr name, the comparison operation, and the literal value if it returns true.
+bool ExprTreeIsAttrCmpLiteral(classad::ExprTree * tree, classad::Operation::OpKind & cmp_op, std::string & attr, classad::Value & value)
+{
+	if (! tree) return false;
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind != classad::ExprTree::OP_NODE)
+		return false;
+
+	classad::Operation::OpKind	op;
+	classad::ExprTree *t1, *t2, *t3;
+	((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+	if (op < classad::Operation::__COMPARISON_START__ || op > classad::Operation::__COMPARISON_END__)
+		return false;
+
+	t1 = SkipExprParens(t1);
+	t2 = SkipExprParens(t2);
+
+	if (ExprTreeIsAttrRef(t1, attr) && ExprTreeIsLiteral(t2, value)) {
+		cmp_op = op;
+		return true;
+	} else if (ExprTreeIsLiteral(t1, value) && ExprTreeIsAttrRef(t2, attr)) {
+		cmp_op = op;
+		return true;
+	}
+	return false;
+}
+
+// returns true if the expression is one of these forms
+//   ClusterId == <number>
+//   ClusterId == <number> && ProcId == <number>
+//   ClusterId == <number> && ProcId is undefined
+//
+// parens are ignored, as is the order of the arguments
+// so (<number> == ClusterId) will return true
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * tree, int & cluster, int & proc, bool & cluster_only)
+{
+	cluster = proc = -1;
+	cluster_only = false;
+	if (! tree) return false;
+
+	std::string attr1, attr2;
+	classad::Value value1, value2;
+
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind == classad::ExprTree::OP_NODE) {
+		classad::Operation::OpKind	op;
+		classad::ExprTree *t1, *t2, *t3;
+		((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+		if (op == classad::Operation::LOGICAL_AND_OP) {
+			if (ExprTreeIsAttrCmpLiteral(t1, op, attr1, value1) &&
+				ExprTreeIsAttrCmpLiteral(t2, op, attr2, value2)) {
+
+				classad::Value * procval = NULL;
+				// check for ClusterId == N && ProcId == N
+				if (MATCH == strcasecmp(attr1.c_str(), "ClusterId") &&
+					value1.IsNumber(cluster) &&
+					MATCH == strcasecmp(attr2.c_str(), "ProcId")) {
+					procval = &value2;
+				} else if (MATCH == strcasecmp(attr1.c_str(), "ProcId") && 
+					MATCH == strcasecmp(attr2.c_str(), "ClusterId") &&
+					value2.IsNumber(cluster)) {
+					procval = &value1;
+				}
+				// check for proc to be compared to a number or to undefined
+				if (procval) {
+					if (procval->IsUndefinedValue()) {
+						cluster_only = true;
+						proc = -1;
+						return true;
+					} else if (procval->IsNumber(proc)) {
+						return true;
+					}
+				}
+			}
+		} else {
+			// it was an op node, but not a logical &&, so it might be ==, 
+			if (ExprTreeIsAttrCmpLiteral(tree, op, attr1, value1)) {
+				if ((op == classad::Operation::EQUAL_OP || op == classad::Operation::META_EQUAL_OP) &&
+					MATCH == strcasecmp(attr1.c_str(), "ClusterId") &&
+					value1.IsNumber(cluster)) {
+					proc = -1;
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+// Returns true if expression is
+//   ClusterId == <number>
+//   ClusterId == <number> && ProcId == <number>
+//   ClusterId == <number> && ProcId is undefined
+//   <any of the above 3> || DagmanJobId == <number>
+//
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * tree, int & cluster, int & proc, bool & cluster_only, bool & dagman_job_id)
+{
+	cluster = proc = -1;
+	dagman_job_id = cluster_only = false;
+	if ( ! tree) return false;
+
+	int dagid = -1;
+	std::string attr;
+	classad::Value value;
+
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind == classad::ExprTree::OP_NODE) {
+		classad::Operation::OpKind	op;
+		classad::ExprTree *t1, *t2, *t3;
+		((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+		if (op == classad::Operation::LOGICAL_OR_OP) {
+			if (ExprTreeIsAttrCmpLiteral(t2, op, attr, value) &&
+				MATCH == strcasecmp(attr.c_str(), "DAGManJobId") &&
+				value.IsNumber(dagid)) {
+				dagman_job_id = true;
+			}
+			if ( ! dagman_job_id)
+				return false;
+			// no compare the right hand side of the || to see if it is a job id constraint
+			tree = t1;
+		}
+	}
+
+	if (ExprTreeIsJobIdConstraint(tree, cluster, proc, cluster_only)) {
+		if (dagman_job_id && dagid != cluster) {
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
 static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * attrs, classad::References *scopes);
 
 // check to see that a classad expression is valid, and optionally return the names of the attributes that it references

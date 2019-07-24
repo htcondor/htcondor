@@ -4397,6 +4397,16 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 	// print constraint
 	const char * constr_str = constr.Str();
 	fprintf(stderr, "Constraint: %s\n", constr_str ? constr_str : "<null>");
+	int cluster = -99, proc = -99;
+	bool cluster_only = false, dagman_job_id = false;
+	bool is_job_id_constr = ExprTreeIsJobIdConstraint(constr.Expr(), cluster, proc, cluster_only, dagman_job_id);
+	fprintf(stderr, "  IsJobId: %s %d.%d%s%s\n",
+		is_job_id_constr ? "true" : "false",
+		cluster, proc,
+		cluster_only ? " cluster_only" : "",
+		dagman_job_id ? " dag_id" : ""
+	);
+
 	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
 
 	// print projection
