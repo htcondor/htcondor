@@ -1926,7 +1926,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 		std::string rule_text;
 		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
-			auto &token_request = *(iter->second);
+			auto token_request = *(iter->second);
 			CondorError err;
 			std::string token;
 			if (!Condor_Auth_Passwd::generate_token(
