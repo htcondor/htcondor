@@ -30,6 +30,9 @@ namespace htcondor {
 int
 write_out_token(const std::string &token_name, const std::string &token);
 
+	// Generate a client ID appropriate for a token request
+std::string generate_client_id();
+
 }
 
 #endif
