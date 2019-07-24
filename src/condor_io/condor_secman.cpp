@@ -90,6 +90,7 @@ const char SecMan::sec_req_rev[][10] = {
 KeyCache SecMan::m_default_session_cache;
 std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
 std::string SecMan::m_tag;
+std::string SecMan::m_token;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
 HashTable<MyString,MyString> SecMan::command_map(hashFunction);

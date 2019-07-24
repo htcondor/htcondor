@@ -44,6 +44,7 @@
 #include "directory.h"
 #include "subsystem_info.h"
 #include "secure_file.h"
+#include "condor_secman.h"
 
 #include "condor_auth_passwd.h"
 
@@ -99,6 +100,46 @@ GCC_DIAG_ON(cast-qual)
 
 namespace {
 
+bool checkToken(const std::string &line,
+	const std::string &issuer,
+	const std::set<std::string> &server_key_ids,
+	const std::string &tokenfilename,
+	std::string &username,
+	std::string &token,
+	std::string &signature)
+{
+	try {
+		auto decoded_jwt = jwt::decode(line);
+		if (!decoded_jwt.has_key_id()) {
+			dprintf(D_SECURITY, "Decoded JWT has no key ID; skipping.\n");
+			return false;
+		}
+		const std::string &tmp_key_id = decoded_jwt.get_key_id();
+		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
+			return false;
+		}
+		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
+		const std::string &tmp_issuer = decoded_jwt.get_issuer();
+		if (!issuer.empty() && issuer != tmp_issuer) {
+			return false;
+		}
+		if (!decoded_jwt.has_subject()) {
+			dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
+			return false;
+		}
+		username = decoded_jwt.get_subject();
+		token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+		signature = decoded_jwt.get_signature();
+	} catch (...) {
+		if (!tokenfilename.empty()) {
+			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Failed to decode provided JWT; ignoring.\n");
+		}
+	}
+	return true;
+}
+
 bool findToken(const std::string &tokenfilename,
 	const std::string &issuer,
 	const std::set<std::string> &server_key_ids,
@@ -107,14 +148,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &signature)
 {
 	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
-/*
-	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
-	if (!tokenfile) {
-		dprintf(D_ALWAYS, "Failed to open token file %s\n", tokenfilename.c_str());
-		return false;
-	}
 
-*/
 	std::unique_ptr<FILE,decltype(&fclose)> 
 		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
 
@@ -123,9 +157,6 @@ bool findToken(const std::string &tokenfilename,
 		    tokenfilename.c_str(), errno, strerror(errno));
 		return false;
 	}
-/*
-	for (std::string line; std::getline(tokenfile, line); ) {
-*/
     for( std::string line; readLine( line, f.get(), false ); ) {
         line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
@@ -135,32 +166,10 @@ bool findToken(const std::string &tokenfilename,
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
-		try {
-			auto decoded_jwt = jwt::decode(line);
-			if (!decoded_jwt.has_key_id()) {
-				dprintf(D_SECURITY, "Decoded JWT has no key ID; skipping.\n");
-				continue;
-			}
-			const std::string &tmp_key_id = decoded_jwt.get_key_id();
-			if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
-				continue;
-			}
-			dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
-			const std::string &tmp_issuer = decoded_jwt.get_issuer();
-			if (!issuer.empty() && issuer != tmp_issuer) {
-				continue;
-			}
-			if (!decoded_jwt.has_subject()) {
-				dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
-				continue;
-			}
-			username = decoded_jwt.get_subject();
-			token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
-			signature = decoded_jwt.get_signature();
-		} catch (...) {
-			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
+		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
+		if (good_token) {
+			return true;
 		}
-		return true;
 	}
 	return false;
 }
@@ -172,6 +181,13 @@ findTokens(const std::string &issuer,
         std::string &token,
         std::string &signature)
 {
+	const std::string &token_contents = SecMan::getToken();
+	if (!token_contents.empty() &&
+		checkToken(token_contents, issuer, server_key_ids, "", username, token, signature))
+	{
+		return true;
+	}
+
 	// Note we reuse the exclude regexp from the configuration subsys.
 
 	std::string dirpath;
@@ -483,6 +499,7 @@ Condor_Auth_Passwd::fetchLogin()
 		std::string username;
 		std::string token;
 		std::string signature;
+
 		auto found_token = findTokens(m_server_issuer,
 					m_server_keys,
 					username,

@@ -97,6 +97,9 @@ public:
 	// Manage the pool password
 	static std::string m_pool_password;
 
+		// Manage the in-memory token override
+	static std::string m_token;
+
 		// The following is indexed by session index name ( "addr,<cmd>" )
 	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
 
@@ -173,6 +176,11 @@ public:
 	static void setPoolPassword(const std::string &pool) {m_pool_password = pool;}
 	// An empty pool indicates this is not used.
 	static const std::string &getPoolPassword() {return m_pool_password;}
+
+		// Get and set the in-memory token.  See comments for similar approach in
+		// setPoolPassword
+	static void setToken(const std::string &token) {m_token = token;}
+	static const std::string &getToken() {return m_token;}
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
 									ClassAd* ad,
