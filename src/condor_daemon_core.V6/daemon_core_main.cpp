@@ -434,7 +434,7 @@ private:
 				return false;
 			}
 			req.m_client_id = subsys_name + "-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 1000);
+			std::to_string(get_csrng_uint() % 100000);
 
 			std::string request_id;
 			std::vector<std::string> authz_list;
@@ -2083,6 +2083,10 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
+	bool has_admin = daemonCore->Verify("list request", ADMINISTRATOR,
+		static_cast<ReliSock*>(stream)->peer_addr(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser());
+
 	// While it looks like we could use EvaluateAttrInt() here, we're storing
 	// request IDs as strings in case in turns out people don't like random
 	// 7-digit integers.  The std::stol() call is an optimization which we'll
@@ -2090,7 +2094,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	//
 	// The filter is optional; if it's absent, we'll list all pending requests.
 	std::string request_filter_str;
-	if (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty()) {
+	if (!error_code && (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty())) {
 		try {
 			std::stol(request_filter_str);
 		} catch (...) {
@@ -2123,6 +2127,14 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 			bounds = "";
 		} else {
 			bounds = bounds.substr(0, bounds.size()-1);
+		}
+
+			// If we do not have ADMINISTRATOR privileges, the requested identity
+			// and the authenticated identity must match!
+		if (!has_admin && strcmp(token_request->getRequestedIdentity().c_str(),
+			static_cast<Sock*>(stream)->getFullyQualifiedUser()))
+		{
+			continue;
 		}
 
 		if (!result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str) ||
@@ -2188,9 +2200,12 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
+	bool has_admin = daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser());
+
 	// See comment in handle_dc_list_token_request().
 	std::string request_id_str;
-	if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty())
+	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty()))
 	{
 		error_code = 1;
 		error_string = "Request ID not provided.";
@@ -2199,8 +2214,10 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	try {
 		request_id = std::stol(request_id_str);
 	} catch (...) {
-		error_code = 2;
-		error_string = "Unable to convert request ID to integer.";
+		if (!error_code) {
+			error_code = 2;
+			error_string = "Unable to convert request ID to integer.";
+		}
 	}
 
 	auto iter = g_request_map.find(request_id);
@@ -2212,7 +2229,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	}
 
 	std::string client_id;
-	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id) || client_id.empty())
+	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id) || client_id.empty()))
 	{
 		error_code = 1;
 		error_string = "Client ID not provided.";
@@ -2228,6 +2245,16 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	if (request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
 		error_code = 5;
 		error_string = "Request in incorrect state.";
+		request_id = -1;
+	}
+
+		// If we do not have ADMINISTRATOR privileges, the requested identity
+		// and the authenticated identity must match!
+	if (!has_admin && strcmp(iter->second->getRequestedIdentity().c_str(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser()))
+	{
+		error_code = 6;
+		error_string = "Insufficient privilege to approve request.";
 		request_id = -1;
 	}
 
@@ -4011,18 +4038,25 @@ int dc_main( int argc, char** argv )
 								"handle_dc_finish_token_request()", 0, ALLOW );
 
 		//
-		// List the outstanding token requests
+		// List the outstanding token requests.
+		//
+		// In the handler, we further restrict the returned information based on
+		// the user authorization.
 		//
 	daemonCore->Register_Command( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_list_token_request,
-		"handle_dc_list_token_request", 0, ADMINISTRATOR );
+		"handle_dc_list_token_request", 0, ALLOW, D_COMMAND, true );
 
 		//
 		// Approve a token request.
 		//
+		// In the handler, we further restrict the returned information based on
+		// the user authorization; non-ADMINISTRATORs can only approve their own
+		// requests..
+		//
 	daemonCore->Register_Command( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", 0, ADMINISTRATOR );
+		"handle_dc_approve_token_request", 0, ALLOW, D_COMMAND, true );
 
 		//
 		// Install an auto-approval rule
