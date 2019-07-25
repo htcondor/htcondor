@@ -23,7 +23,10 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  HTCondor daemons will no longer sit in a tight loop consuming the
+   CPU when a network connection closes unexpectedly.
+   :ticket:`7164`
+
 
 Version 8.8.4
 -------------
