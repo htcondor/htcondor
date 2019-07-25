@@ -62,6 +62,9 @@ Bugs Fixed:
   behind the same shared port from interfering with each other's state file.
   :ticket:`7135`
 
+- Fixed a large memory leak when using SSL authentication.
+  :ticket:`7145`
+
 Version 8.9.2
 -------------
 
