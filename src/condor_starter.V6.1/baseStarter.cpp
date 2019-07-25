@@ -2740,6 +2740,15 @@ CStarter::PeriodicCkpt( void )
 	return true;
 }
 
+void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
+	to.Clear();
+	from.Rewind();
+	UserProc * job = NULL;
+	while( (job = from.Next()) != NULL ) {
+		to.Append( job );
+	}
+}
+
 
 int
 CStarter::Reaper(int pid, int exit_status)
@@ -2827,16 +2836,36 @@ CStarter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
+	//
+	// The ToE tag code, via CStarter::publishUpdateAd() -- and in the
+	// future, maybe other features via and/or means in the future --
+	// calls Rewind() on m_job_list as well.  Rather than fixing only
+	// the ToE tag code and leaving this landmine, copy m_job_list
+	// before calling any of the JobReaper()s.  Because of this problem,
+	// we know that none of the other existing JobReaper() methods
+	// look at m_job_list or m_reaped_job_list, since they'd have the
+	// same problem, so it's safe to save updating those for the end.
+	//
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	// Is there a good reason to have neither assignment nor copy ctor?
+	List<UserProc> stable_job_list;
+	List<UserProc> stable_reaped_job_list;
+
+	copyProcList( m_job_list, stable_job_list );
+	copyProcList( m_reaped_job_list, stable_reaped_job_list );
+
+	stable_job_list.Rewind();
+	while ((job = stable_job_list.Next()) != NULL) {
 		all_jobs++;
 		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			m_job_list.DeleteCurrent();
-			m_reaped_job_list.Append(job);
+			stable_job_list.DeleteCurrent();
+			stable_reaped_job_list.Append(job);
 		}
 	}
+
+	copyProcList( stable_reaped_job_list, m_reaped_job_list );
+	copyProcList( stable_job_list, m_job_list );
 
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );
