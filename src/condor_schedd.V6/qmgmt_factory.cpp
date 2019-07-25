@@ -434,7 +434,7 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 // return value is 0 for 'can't materialize now, try later'
 // in which case retry_delay is set to indicate how long later should be
 // retry_delay of 0 means we are done, either because of failure or because we ran out of jobs to materialize.
-int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, int & retry_delay)
+int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, TransactionWatcher & txn, int & retry_delay)
 {
 	retry_delay = 0;
 	if (factory->IsPaused()) {
@@ -540,10 +540,14 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		}
 	}
 
+#if 1
+	txn.BeginOrContinue(jid.proc);
+#else
 	bool already_in_transaction = InTransaction();
 	if ( ! already_in_transaction) {
 		BeginTransaction();
 	}
+#endif
 
 	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id+1);
 	if ( ! no_items && (step+1 == step_size)) {
@@ -579,12 +583,19 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		factory->delete_job_ad();
 	}
 	if (rval < 0) {
+#if 1
+		txn.AbortIfAny();
+#else
 		if ( ! already_in_transaction) {
 			AbortTransaction();
 		}
+#endif
 		return rval; // failed instantiation
 	}
 
+#if 1
+	// our caller will commit the transaction (if any)
+#else
 	if( !already_in_transaction ) {
 		CondorError errorStack;
 		rval = CommitTransactionAndLive( 0, & errorStack );
@@ -593,6 +604,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 			return rval;
 		}
 	}
+#endif
 
 	return 1; // successful instantiation.
 }

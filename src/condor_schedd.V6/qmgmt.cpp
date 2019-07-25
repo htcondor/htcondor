@@ -165,7 +165,7 @@ int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 #endif
 void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
-int		MaterializeJobs(JobQueueCluster * clusterAd, int & retry_delay);
+int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
 static JobQueueType *JobQueue = 0;
@@ -574,13 +574,14 @@ JobMaterializeTimerCallback()
 						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
 						cad->ClusterSize());
 
+					TransactionWatcher txn;
 					int num_materialized = 0;
 					int cluster_size = cad->ClusterSize();
 					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						int rv = 0;
 						if (CheckMaterializePolicyExpression(cad, retry_delay)) {
-							rv = MaterializeNextFactoryJob(cad->factory, cad, retry_delay);
+							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay);
 						}
 						if (rv == 1) {
 							num_materialized += 1;
@@ -596,6 +597,17 @@ JobMaterializeTimerCallback()
 					}
 
 					if (num_materialized > 0) {
+						// If we materialized any jobs, we may need to commit the transaction now.
+						if (txn.InTransaction()) {
+							CondorError errorStack;
+							SetAttributeFlags_t flags = scheduler.getNonDurableLateMaterialize() ? NONDURABLE : 0;
+							int rv = txn.CommitIfAny(flags, &errorStack);
+							if (rv < 0) {
+								dprintf(D_ALWAYS, "CommitTransaction() failed for cluster %d rval=%d (%s)\n",
+									cad->jid.cluster, rv, errorStack.empty() ? "no message" : errorStack.message());
+								num_materialized = 0;
+							}
+						}
 						total_new_jobs += num_materialized;
 					} else {
 						int next_row = 0;
@@ -694,9 +706,21 @@ DeferredClusterCleanupTimerCallback()
 			if (clusterad->factory) {
 				dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has job factory, invoking it.\n", cluster_id);
 				int retry_delay = 0;
-				int num_materialized = MaterializeJobs(clusterad, retry_delay);
+				TransactionWatcher txn;
+				int num_materialized = MaterializeJobs(clusterad, txn, retry_delay);
 				if (num_materialized > 0) {
+					if (txn.InTransaction()) {
+						CondorError errorStack;
+						SetAttributeFlags_t flags = scheduler.getNonDurableLateMaterialize() ? NONDURABLE : 0;
+						int rv = txn.CommitIfAny(flags, &errorStack);
+						if (rv < 0) {
+							dprintf(D_ALWAYS, "CommitTransaction() failed for cluster %d rval=%d (%s)\n",
+								cluster_id, rv, errorStack.empty() ? "no message" : errorStack.message());
+							num_materialized = 0;
+						}
+					}
 					total_new_jobs += num_materialized;
+					// PRAGMA_REMIND("TJ: should we do_cleanup here if the transaction failed to commit?");
 					do_cleanup = false;
 				} else {
 					// if no jobs materialized, we have to decide if the factory is done, or in a recoverable pause state
@@ -1896,7 +1920,7 @@ DestroyJobQueue( void )
 }
 
 
-int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
+int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & retry_delay)
 {
 	retry_delay = 0;
 	if ( ! clusterad->factory)
@@ -1925,7 +1949,7 @@ int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
 			retry_delay = retry;
 			break;
 		}
-		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry) == 1) {
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry) == 1) {
 			num_materialized += 1;
 		} else {
 			retry_delay = MAX(retry_delay, retry);
@@ -2128,7 +2152,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			rval = OpenSpoolFactoryFile(cluster_id, filename, fd, "SetJobFactory", terrno);
 			if (0 == rval) {
 				size_t cbtext = strlen(digest_text);
-				size_t cbwrote = write(fd, digest_text, cbtext);
+				size_t cbwrote = write(fd, digest_text, (unsigned int)cbtext);
 				if (cbwrote != cbtext) {
 					terrno = errno;
 					dprintf(D_ALWAYS, "Failing remote SetJobFactory %d because write to '%s' failed, errno = %d (%s)\n",
@@ -4555,7 +4579,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 
 
 
-const char * mesh = "Rr1aLvzki/#6`QeNoWl^\"(!x\'=OE3HBn [A)GtKu?TJ.mdS9%Fh;<\\+w~4yPDIq>2Ufs$Xc_@g0Y5Mb|{&*}]7,CpV-j:8Z";
+static const char * mesh = "Rr1aLvzki/#6`QeNoWl^\"(!x\'=OE3HBn [A)GtKu?TJ.mdS9%Fh;<\\+w~4yPDIq>2Ufs$Xc_@g0Y5Mb|{&*}]7,CpV-j:8Z";
 
 char * simple_encode (int key, const char * src) {
 
@@ -4580,25 +4604,64 @@ char * simple_decode (int key, const char * src) {
   unsigned int i= 0;
   unsigned int j =0;
   unsigned int c =0;
+  unsigned int cm = (unsigned int)strlen(mesh);
 
   for (; j<strlen(src); j++) {
 
 	//
-    for (i=0; i<strlen (mesh); i++) {
+    for (i=0; i<cm; i++) {
       if (mesh[i] == src[j]) {
 		c = i;
 		break;
 		}
     }
 
-    c=(c+strlen(mesh)-(key%strlen(mesh)))%strlen(mesh);
+    c = (c+cm-(key%cm))%cm;
     
-    snprintf(buff, 2, "%c", c+(int)' ');
+    snprintf(buff, 2, "%c", c+' ');
     result[j]=buff[0];
     
   }
   return result;
 }
+
+// start a transaction, or continue one if we already started it
+int TransactionWatcher::BeginOrContinue(int id) {
+	ASSERT(! completed);
+	if (started) {
+		lastid = id;
+		return 0;
+	} else {
+		ASSERT( ! JobQueue->InTransaction());
+	}
+	started = true;
+	firstid = lastid = id;
+	return BeginTransaction();
+}
+
+// commit if we started a transaction
+int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack)
+{
+	int rval = 0;
+	if (started && ! completed) {
+		rval = CommitTransactionAndLive(flags, errorStack);
+		completed = true;
+	}
+	return rval;
+}
+
+// cancel if we started a transaction
+int TransactionWatcher::AbortIfAny()
+{
+	int rval = 0;
+	if (started && ! completed) {
+		ASSERT(JobQueue->InTransaction());
+		rval = AbortTransaction();
+		completed = true;
+	}
+	return rval;
+}
+
 
 bool
 InTransaction()
