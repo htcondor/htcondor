@@ -2167,7 +2167,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				i1->openUpper = false;
 				i2->openUpper = false;
 				if( vr->IsInitialized( ) ) {
-					vr->Intersect( i1, i2, false );
+					vr->Intersect2( i1, i2, false );
 				}
 				else {
 					vr->Init( i1, i2, false );
@@ -2267,10 +2267,10 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			i2->openUpper = false;
 			if( vr->IsInitialized( ) ) {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Intersect( i1, i2, true );
+					vr->Intersect2( i1, i2, true );
 				}
 				else {
-					vr->Intersect( i1, i2, undef );
+					vr->Intersect2( i1, i2, undef );
 				}
 			}
 			else {

@@ -678,9 +678,13 @@ on a non-EC2 image.
 
 %preun annex-ec2
 %if %systemd
-/bin/systemctl disable condor-annex-ec2
+if [ $1 == 0 ]; then
+    /bin/systemctl disable condor-annex-ec2
+fi
 %else
-/sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+if [ $1 == 0 ]; then
+    /sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+fi
 %endif
 
 %package all
