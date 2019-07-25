@@ -1265,11 +1265,33 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 	sigaction(signum, &sa, NULL);
 	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
 
+	// On linux, raise() calls tgkill() with values for tgid and tid that
+	// are cached in memory by glibc. If clone() was previously called with
+	// the CLONE_VM flag, glibc sets these cached values to -1. This will
+	// cause the tgkill() call in raise() to fail. raise() then returns
+	// failure with errno EINVAL.
+	// We use clonse() with CLONE_VM in Create_Process() in the schedd to
+	// make spawning of child processes more efficient.
+	// tgkill() isn't exposed by glibc, but we can call kill() on ourselves
+	// to re-raise the signal.
+	// There's a possibility that the signal will be delivered to another
+	// thread while this thread continues execution. For this case, add a
+	// short sleep to prevent _exit() from happening before the signal is.
+	// acted upon.
+#if defined(LINUX)
+	if ( kill(getpid(),signum) != 0) {
+#else
 	if ( raise(signum) != 0 ) {
+#endif
 		log_args[0] = (unsigned long)signum;
 		log_args[1] = (unsigned long)errno;
 		dprintf_async_safe("Error: raise(%0) failed: errno %1\n", log_args, 2);
 	}
+#if defined(LINUX)
+	else {
+		sleep(1);
+	}
+#endif
 
 	// If for whatever reason the second raise doesn't kill us properly, 
 	// we shall exit with a non-zero code so if anything depends on us,
@@ -1926,7 +1948,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 		std::string rule_text;
 		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
-			auto &token_request = *(iter->second);
+			auto token_request = *(iter->second);
 			CondorError err;
 			std::string token;
 			if (!Condor_Auth_Passwd::generate_token(
