@@ -885,7 +885,7 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const std::string &pool) {
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
 {
-	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+	if (!m_matchPasswordEnabled) {
 		return false;
 	}
 
@@ -13810,8 +13810,10 @@ Scheduler::Init()
 		IpVerify* ipv = daemonCore->getIpVerify();
 		if ( new_match_password ) {
 			ipv->PunchHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+			ipv->PunchHole( NEGOTIATOR, NEGOTIATOR_SIDE_MATCHSESSION_FQU );
 		} else {
 			ipv->FillHole( CLIENT_PERM, EXECUTE_SIDE_MATCHSESSION_FQU );
+			ipv->FillHole( NEGOTIATOR, NEGOTIATOR_SIDE_MATCHSESSION_FQU );
 		}
 		m_matchPasswordEnabled = new_match_password;
 	}
