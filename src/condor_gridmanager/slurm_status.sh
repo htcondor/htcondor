@@ -53,9 +53,15 @@ proxy_dir=~/.blah_jobproxy_dir
 for  reqfull in $pars ; do
   reqjob=`echo $reqfull | sed -e 's/^.*\///'`
 
+  cluster_name=`echo $reqjob | cut -s -f2 -d@`
+  if [ $cluster_name != "" ] ; then
+    reqjob=`echo $reqjob | cut -f1 -d@`
+    cluster_arg="-M $cluster_name"
+  fi
+
   staterr=/tmp/${reqjob}_staterr
 
-  result=`${slurm_binpath}/scontrol show job $reqjob 2>$staterr`
+  result=`${slurm_binpath}/scontrol $cluster_arg show job $reqjob 2>$staterr`
   stat_exit_code=$?
   result=`echo "$result" | awk -v job_id=$reqjob -v proxy_dir=$proxy_dir '
 BEGIN {
