@@ -31,6 +31,10 @@ Bugs Fixed:
    taken to upload a job's files.
    :ticket:`7147`
 
+-  Fixed a bug that caused the *condor_schedd* to not write a core file
+   when it crashes on linux.
+   :ticket:`7163`
+
 Version 8.8.4
 -------------
 
