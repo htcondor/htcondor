@@ -83,7 +83,7 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	gahp = NULL;
 
 	std::string gahp_name = batch_type;
-	if ( resource_name && *resource_name ) {
+	if ( *resource_name ) {
 		formatstr_cat( gahp_name, "/%s", resource_name );
 		m_gahpIsRemote = true;
 	}
