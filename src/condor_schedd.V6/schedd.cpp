@@ -1366,7 +1366,7 @@ Scheduler::count_jobs()
 			
 			SubDat->num.WeightedJobsRunning += job_weight;
 			SubDat->num.JobsRunning++;
-		} else {				// in remote pool, so add to Flocked count
+		} else if (!rec->getPool().empty()) { // non-empty pool name indicates a  remote pool, so add to Flocked count
 			auto iter = SubDat->flock.insert({rec->getPool(), SubmitterFlockCounters()});
 			iter.first->second.JobsRunning++;
 			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
@@ -1623,7 +1623,9 @@ Scheduler::count_jobs()
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
-		SubmitterMap.AddSubmitter("", SubDat.name, time_now);
+			// Note the submitter; the negotiator uses user@uid_domain when
+			// referring the submitter when it requests to negotiate.
+		SubmitterMap.AddSubmitter("", SubDat.name + "@" + UidDomain, time_now);
 		// Update non-flock collectors
 		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 		SubDat.lastUpdateTime = update_time;
@@ -1675,7 +1677,7 @@ Scheduler::count_jobs()
 					pAd.InsertAttr(ATTR_CAPABILITY, capability);
 				}
 
-				SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name, time_now);
+				SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + UidDomain, time_now);
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 			}
@@ -7008,7 +7010,7 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		int runnable = true;
 		if (match_ad) {
 			//PRAGMA_REMIND("add skip_all_such check to jobCanUseMatch")
-			runnable = scheduler.jobCanUseMatch(job, match_ad, getRemotePool(), because);
+			runnable = scheduler.jobCanUseMatch(job, match_ad, getRemotePool() ? getRemotePool() : "", because);
 			dprintf(D_MATCH | D_VERBOSE, "jobCanUseMatch returns %d for job %d.%d (%s)\n", runnable, job->jid.cluster, job->jid.proc, because);
 		} else {
 			runnable = scheduler.jobCanNegotiate(job, because);
