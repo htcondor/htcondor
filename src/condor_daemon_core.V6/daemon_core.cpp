@@ -3013,6 +3013,12 @@ DaemonCore::reconfig(void) {
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
+
+	m_iMaxUdpMsgsPerCycle = param_integer("MAX_UDP_MSGS_PER_CYCLE", 1);
+	if( m_iMaxUdpMsgsPerCycle != 1 ) {
+		dprintf(D_FULLDEBUG,"Setting maximum UDP messages per cycle %d.\n", m_iMaxUdpMsgsPerCycle);
+	}
+
 	/*
 		Default value of MAX_REAPS_PER_CYCLE is 0 - a value of 0 means
 		call as many reapers as are waiting at the time we exit select.
@@ -4040,6 +4046,46 @@ void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
     unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
+
+	// Dispatch UDP commands directly
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+			default_to_HandleCommand &&
+			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
+
+		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
+
+		// We don't care about the return value for UDP command sockets
+		HandleReq(i);
+		msg_cnt--;
+
+		// Make sure we didn't leak our priv state
+		CheckPrivState();
+
+		while ( msg_cnt ) {
+			Selector selector;
+			selector.set_timeout( 0, 0 );
+			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+			selector.execute();
+
+			if ( !selector.has_ready() ) {
+				// No more data, we're done
+				break;
+			}
+
+			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
+			{
+				// Looks like we got a fragment, try reading some more
+				continue;
+			}
+			// We don't care about the return value for UDP command sockets
+			HandleReq(i);
+			msg_cnt--;
+
+			// Make sure we didn't leak our priv state
+			CheckPrivState();
+		}
+		return;
+	}
 
     // if it is an accepting socket it will try for the connect
     // up (n) elements

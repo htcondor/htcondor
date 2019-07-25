@@ -1696,6 +1696,7 @@ class DaemonCore : public Service
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 	int m_MaxTimeSkip;
+	int m_iMaxUdpMsgsPerCycle;	// max number of udp messages read per loop
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()
