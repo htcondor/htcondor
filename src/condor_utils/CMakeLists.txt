@@ -126,6 +126,10 @@ if (DLOPEN_GSI_LIBS)
 else()
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} ${SCITOKENS_FOUND} )
 endif()
+if (LIBUUID_FOUND)
+	target_link_libraries(condor_utils ${LIBUUID_FOUND})
+endif()
+
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
@@ -161,6 +165,9 @@ endif()
 
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+if (LIBUUID_FOUND)
+target_link_libraries(condorapi ${LIBUUID_FOUND})
+endif()
 
 if (LINUX OR DARWIN)
 	condor_shared_lib( condorapi_shared "${ApiSrcs}" )

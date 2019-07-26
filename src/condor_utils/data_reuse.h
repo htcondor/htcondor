@@ -3,7 +3,9 @@
 #include "write_user_log.h"
 #include "MyString.h"
 
+#include <memory>
 #include <string>
+#include <vector>
 
 class CondorError;
 

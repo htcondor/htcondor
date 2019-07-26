@@ -9,6 +9,8 @@
 
 #include <stdio.h>
 
+#include <algorithm>
+
 using namespace htcondor;
 
 
@@ -215,9 +217,12 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 		};
 	} while (!all_done);
 
-	std::sort(m_contents.begin(), m_contents.end(), [](std::unique_ptr<FileEntry> &left, std::unique_ptr<FileEntry> &right) {
+	std::sort(m_contents.begin(), m_contents.end(),
+		[](const std::unique_ptr<FileEntry> &left, const std::unique_ptr<FileEntry> &right) {
 		return left->last_use() < right->last_use();
 	});
+
+	return true;
 }
 
 bool

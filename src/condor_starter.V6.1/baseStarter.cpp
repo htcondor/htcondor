@@ -325,7 +325,7 @@ CStarter::Config()
 
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
-		if (!m_reuse_dir.get() || (m_reuse_dir->getDirectory() != reuse_dir)) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
 			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
 		}
 	} else {
