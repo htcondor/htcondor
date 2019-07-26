@@ -2291,7 +2291,7 @@ class FileTransferEvent : public ULogEvent {
 
 class ReserveSpaceEvent final : public ULogEvent {
 public:
-	ReserveSpaceEvent() {};
+	ReserveSpaceEvent() {eventNumber = ULOG_RESERVE_SPACE;}
 	~ReserveSpaceEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
@@ -2301,7 +2301,7 @@ public:
 	virtual void initFromClassAd( ClassAd * ad ) override;
 
 	void setExpirationTime(const std::chrono::system_clock::time_point &expiry) {m_expiry = expiry;}
-	std::chrono::system_clock::time_point getExpirationTime() const;
+	std::chrono::system_clock::time_point getExpirationTime() const {return m_expiry;}
 
 	void setReservedSpace(size_t space) {m_reserved_space = space;}
 	size_t getReservedSpace() const {return m_reserved_space;}
@@ -2323,7 +2323,7 @@ private:
 
 class ReleaseSpaceEvent final : public ULogEvent {
 public:
-	ReleaseSpaceEvent() {};
+	ReleaseSpaceEvent() {eventNumber = ULOG_RELEASE_SPACE;}
 	~ReleaseSpaceEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
@@ -2342,7 +2342,7 @@ private:
 
 class FileCompleteEvent final : public ULogEvent {
 public:
-	FileCompleteEvent() {};
+	FileCompleteEvent() {eventNumber = ULOG_FILE_COMPLETE;}
 	~FileCompleteEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
@@ -2373,7 +2373,7 @@ private:
 
 class FileUsedEvent final : public ULogEvent {
 public:
-	FileUsedEvent() {};
+	FileUsedEvent() {eventNumber = ULOG_FILE_USED;}
 	~FileUsedEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
@@ -2399,7 +2399,7 @@ private:
 
 class FileRemovedEvent final : public ULogEvent {
 public:
-	FileRemovedEvent() {};
+	FileRemovedEvent() {eventNumber = ULOG_FILE_REMOVED;}
 	~FileRemovedEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;

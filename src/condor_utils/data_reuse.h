@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 class CondorError;
 
@@ -83,6 +84,29 @@ private:
 		const DataReuseDirectory &m_parent;
 	};
 
+	class SpaceReservationInfo {
+	public:
+		SpaceReservationInfo(std::chrono::system_clock::time_point expiry_time,
+			const std::string &tag, size_t reserved)
+		: m_expiry_time(expiry_time),
+		m_tag(tag),
+		m_reserved(reserved)
+		{}
+
+		const std::string &getTag() const {return m_tag;}
+
+		size_t getReservedSpace() const {return m_reserved;}
+		void setReservedSpace(size_t space) {m_reserved = space;}
+
+		std::chrono::system_clock::time_point getExpirationTime() const {return m_expiry_time;}
+		void setExpirationTime(std::chrono::system_clock::time_point updated) {m_expiry_time = updated;}
+
+	private:
+		std::chrono::system_clock::time_point m_expiry_time;
+		const std::string m_tag;
+		size_t m_reserved{0};
+	};
+
 	bool ClearSpace(uint64_t size, LogSentry &sentry, CondorError &err);
 	bool UpdateState(LogSentry &sentry, CondorError &err);
 	bool HandleEvent(ULogEvent &event, CondorError &err);
@@ -97,6 +121,7 @@ private:
 	bool m_valid{false};
 
 	uint64_t m_reserved_space{0};
+	uint64_t m_stored_space{0};
 	uint64_t m_allocated_space{0};
 
 	std::string m_dirpath;
@@ -105,6 +130,7 @@ private:
 	WriteUserLog m_log;
 	ReadUserLog m_rlog;
 
+	std::unordered_map<std::string, std::unique_ptr<SpaceReservationInfo>> m_space_reservations;
 	std::vector<std::unique_ptr<FileEntry>> m_contents;
 };
 

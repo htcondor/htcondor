@@ -196,7 +196,7 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 
 	bool all_done = false;
 	do {
-		ULogEvent *event;
+		ULogEvent *event = nullptr;
 		auto outcome = m_rlog.readEventWithLock(event, *sentry.lock());
 
 		switch (outcome) {
@@ -217,6 +217,16 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 		};
 	} while (!all_done);
 
+	auto now = std::chrono::system_clock::now();
+	auto iter = m_space_reservations.begin();
+	while (iter != m_space_reservations.end()) {
+		if (iter->second->getExpirationTime() < now) {
+			iter = m_space_reservations.erase(iter);
+		} else {
+			++iter;
+		}
+	}
+
 	std::sort(m_contents.begin(), m_contents.end(),
 		[](const std::unique_ptr<FileEntry> &left, const std::unique_ptr<FileEntry> &right) {
 		return left->last_use() < right->last_use();
@@ -226,7 +236,112 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 }
 
 bool
-DataReuseDirectory::HandleEvent(ULogEvent & /*event*/, CondorError & /*err*/)
+DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 {
+	switch (event.eventNumber) {
+	case ULOG_RESERVE_SPACE: {
+		auto resEvent = static_cast<ReserveSpaceEvent&>(event);
+		auto iter = m_space_reservations.find(resEvent.getUUID());
+		if (iter == m_space_reservations.end()) {
+			std::pair<std::string, std::unique_ptr<SpaceReservationInfo>> value(
+				resEvent.getUUID(),
+				std::unique_ptr<SpaceReservationInfo>(new SpaceReservationInfo(
+					resEvent.getExpirationTime(),
+					resEvent.getTag(),
+					resEvent.getReservedSpace()))
+			);
+			m_space_reservations.insert(std::move(value));
+		} else if (iter->second->getTag() != resEvent.getTag()) {
+			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
+				resEvent.getTag().c_str());
+			return false;
+		} else {
+				// Duplicate matching reservation is interpreted as a lease extension.
+			iter->second->setExpirationTime(resEvent.getExpirationTime());
+		}
+	}
+		break;
+	case ULOG_RELEASE_SPACE: {
+		auto relEvent = static_cast<ReleaseSpaceEvent&>(event);
+		auto iter = m_space_reservations.find(relEvent.getUUID());
+		if (iter == m_space_reservations.end()) {
+			dprintf(D_ALWAYS, "Release of space for reservation %s requested - but this"
+				" reservation is unknown!\n", relEvent.getUUID().c_str());
+			return false;
+		}
+		m_reserved_space -= iter->second->getReservedSpace();
+		m_space_reservations.erase(iter);
+		return true;
+	}
+		break;
+	case ULOG_FILE_COMPLETE: {
+		auto comEvent = static_cast<FileCompleteEvent&>(event);
+		auto iter = m_space_reservations.find(comEvent.getUUID());
+		if (iter == m_space_reservations.end()) {
+			dprintf(D_FAILURE, "File completed for non-existent space reservation %s.\n",
+				comEvent.getUUID().c_str());
+			return false;
+		}
+		if (iter->second->getReservedSpace() < comEvent.getSize()) {
+			dprintf(D_FAILURE, "File completed with size %lu, which is larger than the space"
+				" reservation size.\n", comEvent.getSize());
+			return false;
+		}
+		auto event_time = std::chrono::system_clock::from_time_t(event.GetEventclock());
+		if (iter->second->getExpirationTime() > event_time) {
+			dprintf(D_FAILURE, "File completed after space reservation ended.\n");
+			return false;
+		}
+		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());
+
+		std::unique_ptr<FileEntry> entry(new FileEntry(*this,
+			comEvent.getChecksum(),
+			comEvent.getChecksumType(),
+			iter->second->getTag(),
+			comEvent.getSize()));
+		m_contents.emplace_back(std::move(entry));
+	}
+		break;
+	case ULOG_FILE_USED: {
+		auto usedEvent = static_cast<FileUsedEvent&>(event);
+		auto iter = std::find_if(m_contents.begin(),
+			m_contents.end(),
+			[&](const std::unique_ptr<FileEntry> &entry) -> bool {
+				return entry->checksum_type() == usedEvent.getChecksumType() &&
+					entry->checksum() == usedEvent.getChecksum() &&
+					entry->tag() == usedEvent.getTag();
+			});
+		if (iter != m_contents.end()) {
+			(*iter)->update_last_use(event.GetEventclock());
+			return true;
+		}
+		dprintf(D_ALWAYS, "File with checksum %s used - but file is unknown to our state.\n",
+			usedEvent.getChecksum().c_str());
+		return false;
+	}
+		break;
+	case ULOG_FILE_REMOVED: {
+		auto remEvent = static_cast<FileRemovedEvent&>(event);
+		auto iter = std::find_if(m_contents.begin(),
+			m_contents.end(),
+			[&](const std::unique_ptr<FileEntry> &entry) -> bool {
+				return entry->checksum_type() == remEvent.getChecksumType() &&
+					entry->checksum() == remEvent.getChecksum() &&
+					entry->tag() == remEvent.getTag();
+			});
+		if (iter == m_contents.end()) {
+			dprintf(D_FAILURE, "File with checksum %s removed - but file is unknown to our state.\n",
+				remEvent.getChecksum().c_str());
+			return false;
+		}
+		m_contents.erase(iter);
+		m_stored_space += remEvent.getSize();
+	}
+		break;
+	default:
+		dprintf(D_ALWAYS, "Unknown event in data reuse log.\n");
+		return false;
+	}
+	dprintf(D_FAILURE, "Logic error - unhandled data reuse directory event.\n");
 	return false;
 }
