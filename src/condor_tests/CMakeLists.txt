@@ -276,6 +276,7 @@ if (BUILD_TESTING)
 		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now_internals "testing condor_now internals" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
+		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 	endif()
 
 	if(WITH_GANGLIA)
@@ -374,7 +375,6 @@ if (BUILD_TESTING)
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
-	condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full" CTEST DEPENDS "src/condor_tests/job_core_chirp_par.template;${CMAKE_BINARY_DIR}/src/condor_tests/job_core_chirp_par_executable.exe;src/condor_tests/x_chirpio_mkdata.pl")
