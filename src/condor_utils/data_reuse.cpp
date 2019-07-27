@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include <openssl/evp.h>
+
 using namespace htcondor;
 
 
@@ -129,7 +131,9 @@ DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, std::string &tag,
 		return false;
 	}
 
-	UpdateState(sentry, err);
+	if (!UpdateState(sentry, err)) {
+		return false;
+	}
 
 	if ((m_reserved_space + size > m_allocated_space) && !ClearSpace(size, sentry, err))
 	{
@@ -344,4 +348,317 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 	}
 	dprintf(D_FAILURE, "Logic error - unhandled data reuse directory event.\n");
 	return false;
+}
+
+
+bool
+DataReuseDirectory::CacheFile(const std::string &source, const std::string &checksum,
+	const std::string &checksum_type, const std::string &uuid,
+	CondorError &err)
+{
+	auto md = EVP_get_digestbyname(checksum_type.c_str());
+	if (!md) {
+		err.pushf("DataReuse", 9, "Failed to find impelmentation of checksum type %s.",
+			checksum_type.c_str());
+		return false;
+	}
+
+	int source_fd = -1;
+	{
+		TemporaryPrivSentry sentry(PRIV_USER);
+		source_fd = safe_open_wrapper_follow(source.c_str(), O_RDONLY);
+	}
+	if (source_fd == -1) {
+		err.pushf("DataReuse", errno, "Unable to open cache file source (%s): %s",
+			source.c_str(), strerror(errno));
+		return false;
+	}
+
+	struct stat stat_buf;
+	if (-1 == fstat(source_fd, &stat_buf)) {
+		err.pushf("DataReuse", errno, "Unable to determine source file size (%s): %s",
+			source.c_str(), strerror(errno));
+		close(source_fd);
+		return false;
+	}
+
+		//
+		// Ok, source file looks good - let's try caching it.  First, we'll need to
+		// grab the lock on the state.
+		//
+	LogSentry sentry = LockLog(err);
+	if (!sentry.acquired()) {
+		close(source_fd);
+		return false;
+	}
+
+	if (!UpdateState(sentry, err)) {
+		close(source_fd);
+		return false;
+	}
+
+	auto iter = m_space_reservations.find(uuid);
+	if (iter == m_space_reservations.end()) {
+		err.pushf("DataReuse", 1, "Unknown space reservation requested: %s\n", uuid.c_str());
+		close(source_fd);
+		return false;
+	}
+
+	if (iter->second->getReservedSpace() < static_cast<size_t>(stat_buf.st_size)) {
+		err.pushf("DataReuse", 2, "Insufficient space in reservation to save file.\n");
+		close(source_fd);
+		return false;
+	}
+
+	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size));
+	std::string dest_fname = new_entry->fname();
+	int dest_fd = -1;
+	{
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		dest_fd = safe_open_wrapper_follow(dest_fname.c_str(), O_EXCL | O_CREAT | O_WRONLY);
+	}
+	if (dest_fd == -1) {
+		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
+			dest_fname.c_str(), strerror(errno));
+		close(source_fd);
+		return false;
+	}
+
+	auto mdctx = EVP_MD_CTX_create();
+	EVP_DigestInit_ex(mdctx, md, NULL);
+
+	std::vector<char> memory_buffer;
+	memory_buffer.reserve(64*1024);
+	ssize_t bytes;
+	while (true) {
+		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		if (bytes <= 0) {
+			break;
+		}
+		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		if (write_bytes != bytes) {
+			bytes = -1;
+			break;
+		}
+		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+	}
+	if (bytes < 0) {
+		err.pushf("DataReuse", errno, "Failure when copying the file to cache directory: %s",
+			strerror(errno));
+		close(dest_fd);
+		close(source_fd);
+		EVP_MD_CTX_destroy(mdctx);
+		return false;
+	}
+	close(dest_fd);
+	close(source_fd);
+
+	unsigned char md_value[EVP_MAX_MD_SIZE];
+	unsigned int md_len;
+	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+	EVP_MD_CTX_destroy(mdctx);
+	std::vector<char> computed_checksum;
+	computed_checksum.reserve(2*md_len + 1);
+	computed_checksum[2*md_len] = '\0';
+	for (unsigned int idx = 0; idx < md_len; idx++) {
+		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+	}
+	if (strcmp(&computed_checksum[0], checksum.c_str())) {
+		err.pushf("DataReuse", 11, "Source file checksum does not match expected one.");
+		return false;
+	}
+
+	FileCompleteEvent event;
+	event.setUUID(uuid);
+	event.setSize(stat_buf.st_size);
+	event.setChecksumType(checksum_type);
+	event.setChecksum(checksum);
+	if (!m_log.writeEvent(&event)) {
+		err.pushf("DataReuse", 3, "Failed to write out file complete event.");
+		return false;
+	}
+
+	m_contents.push_back(std::move(new_entry));
+	return true;
+}
+
+
+bool
+DataReuseDirectory::Renew(uint32_t lifetime, std::string &tag, const std::string &uuid,
+	CondorError &err)
+{
+	LogSentry sentry = LockLog(err);
+	if (!sentry.acquired()) {
+		return false;
+	}
+
+	if (!UpdateState(sentry, err)) {
+		return false;
+	}
+
+	auto iter = m_space_reservations.find(uuid);
+	if (iter == m_space_reservations.end()) {
+		err.pushf("DataReuse", 4, "Failed to find space reservation (%s) to renew.",
+			uuid.c_str());
+		return false;
+	}
+	if (iter->second->getTag() != tag) {
+		err.pushf("DataReuse", 5, "Existing reservation's tag (%s) does not match requested one (%s).",
+			iter->second->getTag().c_str(), tag.c_str());
+		return false;
+	}
+
+	ReserveSpaceEvent event;
+	auto expiry = std::chrono::system_clock::now() + std::chrono::seconds(lifetime);
+	event.setExpirationTime(expiry);
+	iter->second->setExpirationTime(expiry);
+
+	if (!m_log.writeEvent(&event)) {
+		err.pushf("DataReuse", 6, "Failed to write out space reservation renewal.");
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+DataReuseDirectory::ReleaseSpace(const std::string &uuid, CondorError &err)
+{
+	LogSentry sentry = LockLog(err);
+	if (!sentry.acquired()) {
+		return false;
+	}
+
+	if (!UpdateState(sentry, err)) {
+		return false;
+	}
+
+	auto iter = m_space_reservations.find(uuid);
+	if (iter == m_space_reservations.end()) {
+		err.pushf("DataReuse", 7, "Failed to find space reservation (%s) to release.",
+			uuid.c_str());
+		return false;
+	}
+
+	ReleaseSpaceEvent event;
+	event.setUUID(uuid);
+	m_space_reservations.erase(iter);
+
+	return true;
+}
+
+
+bool
+DataReuseDirectory::RetrieveFile(const std::string &destination, const std::string &checksum,
+	const std::string &checksum_type, const std::string &tag, CondorError &err)
+{
+	LogSentry sentry = LockLog(err);
+	if (!sentry.acquired()) {
+		return false;
+	}
+
+	if (!UpdateState(sentry, err)) {
+		return false;
+	}
+
+	auto iter = std::find_if(m_contents.begin(),
+		m_contents.end(),
+		[&](const std::unique_ptr<FileEntry> &entry) -> bool {
+			return entry->checksum_type() == checksum_type &&
+				entry->checksum() == checksum &&
+				entry->tag() == tag;
+		});
+	if (iter == m_contents.end()) {
+		err.pushf("DataReuse", 8, "Failed to find requested file in state database.");
+		return false;
+	}
+
+	std::string source = (*iter)->fname();
+
+	int source_fd = -1;
+	{
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		source_fd = safe_open_wrapper_follow(source.c_str(), O_RDONLY);
+	}
+	if (source_fd == -1) {
+		err.pushf("DataReuse", errno, "Unable to open cache file source (%s): %s",
+			source.c_str(), strerror(errno));
+		return false;
+	}
+
+	int dest_fd = -1;
+	{
+		TemporaryPrivSentry sentry(PRIV_USER);
+		dest_fd = safe_open_wrapper_follow(destination.c_str(), O_EXCL | O_CREAT | O_WRONLY);
+	}
+	if (dest_fd == -1) {
+		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
+			destination.c_str(), strerror(errno));
+		close(source_fd);
+		return false;
+	}
+
+	auto md = EVP_get_digestbyname(checksum_type.c_str());
+	if (!md) {
+		err.pushf("DataReuse", 9, "Failed to find impelmentation of checksum type %s.",
+			checksum_type.c_str());
+		close(source_fd);
+		close(dest_fd);
+		return false;
+	}
+	auto mdctx = EVP_MD_CTX_create();
+	EVP_DigestInit_ex(mdctx, md, NULL);
+
+	std::vector<char> memory_buffer;
+	memory_buffer.reserve(64*1024);
+	ssize_t bytes;
+	while (true) {
+		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		if (bytes <= 0) {
+			break;
+		}
+		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		if (write_bytes != bytes) {
+			bytes = -1;
+			break;
+		}
+		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+	}
+	if (bytes < 0) {
+		err.pushf("DataReuse", errno, "Failure when copying the file to destination: %s",
+			strerror(errno));
+		close(dest_fd);
+		close(source_fd);
+		EVP_MD_CTX_destroy(mdctx);
+		return false;
+	}
+	close(dest_fd);
+	close(source_fd);
+
+	unsigned char md_value[EVP_MAX_MD_SIZE];
+	unsigned int md_len;
+	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+	EVP_MD_CTX_destroy(mdctx);
+	std::vector<char> computed_checksum;
+	computed_checksum.reserve(2*md_len + 1);
+	computed_checksum[2*md_len] = '\0';
+	for (unsigned int idx = 0; idx < md_len; idx++) {
+		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+	}
+	if (strcmp(&computed_checksum[0], checksum.c_str())) {
+		err.pushf("DataReuse", 10, "Source file checksum does not match expected one.");
+		// TODO: remove file.
+		return false;
+	}
+
+	FileUsedEvent event;
+	event.setChecksumType(checksum_type);
+	event.setChecksum(checksum);
+	event.setTag(tag);
+	if (!m_log.writeEvent(&event)) {
+		err.pushf("DataReuse", 8, "Failed to write out file use event.");
+		return false;
+	}
+	return true;
 }

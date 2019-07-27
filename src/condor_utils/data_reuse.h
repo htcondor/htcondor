@@ -23,10 +23,10 @@ public:
 
 	const std::string &GetDirectory() const {return m_dirpath;}
 
-	bool ReserveSpace(uint64_t size, uint32_t time, std::string &tag,
+	bool ReserveSpace(uint64_t size, uint32_t lifetime, std::string &tag,
 		std::string &id, CondorError &err);
 
-	bool Renew(uint32_t time, std::string &tag, const std::string &uuid,
+	bool Renew(uint32_t lifetime, std::string &tag, const std::string &uuid,
 		CondorError &err);
 
 	bool ReleaseSpace(const std::string &uuid, CondorError &err);
@@ -35,8 +35,9 @@ public:
 		const std::string &checksum_type, const std::string &uuid,
 		CondorError &err);
 
-	void UsedFile(const std::string &checksum, const std::string &checksum_type,
-		const std::string &tag);
+	bool RetrieveFile(const std::string &destination, const std::string &checksum,
+		const std::string &checksum_type, const std::string &tag,
+		CondorError &err);
 
 private:
 	class LogSentry {
@@ -61,6 +62,7 @@ private:
 			const std::string &checksum_type, const std::string &tag,
 			uint64_t size)
 		: m_size(size),
+		m_last_use(time(NULL)),
 		m_checksum(checksum),
 		m_checksum_type(checksum_type),
 		m_tag(tag),
