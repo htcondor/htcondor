@@ -100,6 +100,12 @@ Job ClassAd Attributes
     :index:`definition<single: definition; cluster>`
     :index:`cluster identifier<single: cluster identifier; job ID>`
 
+``CloudLabelNames``
+    Used for grid type gce jobs; a string taken from the definition of
+    the submit description file command
+    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`.
+    Defines the set of labels associated with the GCE instance.
+
 ``ClusterId``
     Integer cluster identifier for this job. A cluster is a group of
     jobs that were submitted together. Each job has its own unique job

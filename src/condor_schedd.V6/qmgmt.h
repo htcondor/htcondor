@@ -243,7 +243,7 @@ public:
 	void PopulateInfoAd(ClassAd & iad, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
 };
 
-
+class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
@@ -263,7 +263,7 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay);
 
 // returns true if there is no materialize policy expression, or if the expression evalues to true
 // returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set
@@ -452,6 +452,42 @@ public:
 protected:
 	HashTable<JOB_ID_KEY,JobQueueJob*> & table;
 	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
+};
+
+class TransactionWatcher {
+public:
+	TransactionWatcher() : firstid(-1), lastid(-1), started(false), completed(false) {}
+	~TransactionWatcher() { AbortIfAny(); }
+
+	// don't allow copy or assigment of this class
+	TransactionWatcher(const TransactionWatcher&) = delete;
+	TransactionWatcher& operator=(const TransactionWatcher) = delete;
+
+	bool InTransaction() { return started && ! completed; }
+
+	// start a transaction, or continue one if we already started it
+	int BeginOrContinue(int id);
+
+	// commit if we started a transaction
+	int CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack);
+
+	// cancel if we started a transaction
+	int AbortIfAny();
+
+	// return the range of ids passed to BeginOrContinue
+	// returns true if ids were set.
+	bool GetIdRange(int & first, int & last) {
+		if (! started) return false;
+		first = firstid;
+		last = lastid;
+		return true;
+	}
+
+private:
+	int firstid;
+	int lastid;
+	bool started;
+	bool completed;
 };
 
 // new for 8.3, use a non-string type as the key for the JobQueue

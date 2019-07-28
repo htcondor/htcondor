@@ -51,6 +51,11 @@ New Features:
   tokens and requires the user request Google Drive tokens in their
   submit file. :ticket:`7136`
 
+- Added new submit parameters ``cloud_label_names`` and
+  ``cloud_label_<name>``, which allowing the setting of labels on the
+  cloud instances created for **gce** grid jobs.
+  :ticket:`6993`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
@@ -61,6 +66,9 @@ Bugs Fixed:
   instead of the port number, if available, which prevents multiple CCBs
   behind the same shared port from interfering with each other's state file.
   :ticket:`7135`
+
+- Fixed a large memory leak when using SSL authentication.
+  :ticket:`7145`
 
 Version 8.9.2
 -------------

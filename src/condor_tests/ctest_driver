@@ -94,7 +94,7 @@ def main():
     else:
         os.environ['LD_LIBRARY_PATH'] = new_library_path
     os.environ['PATH'] = ":".join([os.path.join(args.prefix_path, "bin"), os.path.join(args.prefix_path, "sbin"), "/bin", "/sbin", "/usr/sbin", "/usr/bin"])
-    pythonpath = os.environ.setdefault('PYTHONPATH')
+    pythonpath = os.environ.setdefault('PYTHONPATH', '')
     os.environ['PYTHONPATH'] = ':'.join([".", os.path.join(args.prefix_path, "lib", "python"), pythonpath])
 
     write_base_config(args.prefix_path, java=args.java)
