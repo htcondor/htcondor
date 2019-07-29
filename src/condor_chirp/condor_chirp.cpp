@@ -725,7 +725,7 @@ int chirp_getdir(int argc, char **argv) {
 	struct chirp_client *client = 0;
 	CONNECT_STARTER(client);
 	
-	char *buffer;
+	char *buffer = NULL;
 	int status = -1;
 		
 		// Use getlongdir if '-l' specified
