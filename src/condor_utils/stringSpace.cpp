@@ -22,18 +22,58 @@
 #include "condor_debug.h"
 #include "stringSpace.h"
 
+
+#if 1
+StringSpace::ssentry* StringSpace::new_entry(const char * str) {
+	size_t cch = 0; if (str) { cch = strlen(str); }
+	ssentry* ptr = (ssentry*)malloc(sizeof(ssentry) + (cch & ~3));
+	ptr->count = 0;
+	strcpy(ptr->str, str);
+	return ptr;
+}
+
+void StringSpace::clear() {
+	for (auto it = ss_map.begin(); it != ss_map.end(); ++it) {
+		free(it->second);
+	}
+	ss_map.clear();
+}
+#endif
+
 const char *
 StringSpace::
 strdup_dedup(const char *input)
 {
     if (input == NULL) return NULL;
+#if 1
+	auto it = ss_map.find(input);
+	if (it != ss_map.end()) {
+		it->second->count += 1;
+		return &it->second->str[0];
+	}
+	ssentry * ptr = new_entry(input);
+	ptr->count = 1;
+	ss_map[ptr->str] = ptr;
+	return &ptr->str[0];
+#elif 1
+    auto it = ss_map.find(input);
+    if (it != ss_map.end()) {
+        it->second.count += 1;
+        return it->second.pstr;
+    }
+    char * ptr = strdup(input);
+    ssentry & value = ss_map[ptr];
+    value.pstr = ptr;
+    value.count = 1;
+    return ptr;
+#else
     ssentry & value = ss_map[input];
     if (value.pstr == NULL) {
         value.pstr = strdup(input);
     }
     value.count++;
-
     return (const char *)value.pstr;
+#endif
 }
 
 int 
@@ -43,6 +83,26 @@ free_dedup(const char *input)
     int ret_value = 0;
 
     if (input == NULL) return INT_MAX;
+#if 1
+	auto it = ss_map.find(input);
+	if (it != ss_map.end()) {
+		ASSERT(it->second->count > 0);
+		ret_value = --(it->second->count);
+		if (it->second->count == 0) {
+			free(it->second);
+			ss_map.erase(it);
+		}
+	}
+#elif 1
+    auto it = ss_map.find(input);
+    if (it != ss_map.end()) {
+        ASSERT(it->second.count > 0);
+        ret_value = --it->second.count;
+        if (it->second.count == 0) {
+            ss_map.erase(it);
+        }
+    }
+#else
     std::string key = input;
     ssentry & value = ss_map[key];
     if (value.pstr) {
@@ -52,6 +112,7 @@ free_dedup(const char *input)
             ss_map.erase(key);
         }
     }
+#endif
     else {
         // If we get here, the input pointer either was not created
         // with strdup_dedup(), or it was already deallocated with free_dedup()

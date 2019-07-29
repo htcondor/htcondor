@@ -98,8 +98,13 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 		// Sleep to ensure uniqueness of the ProcessId object.
 		//
 	if ( result == 0 && abortDuplicates ) {
+#if 1
+		const int maxSleepTime = 600; // seconds; arbitrarily chosen
+		int sleepTime = param_integer("DAGMAN_LOCK_FILE_SLEEP_TIME", 3);
+#else
 		const int maxSleepTime = 60; // seconds; arbitrarily chosen
 		int sleepTime = procId->computeWaitTime();
+#endif
 
 		if ( sleepTime > maxSleepTime ) {
 			debug_printf( DEBUG_QUIET, "Warning: ProcessId computed sleep "
