@@ -1358,7 +1358,7 @@ Scheduler::count_jobs()
 		SubDat->num.Hits += 1;
 		SubDat->LastHitTime = current_time;
 		if (at_sign) *at_sign = '@';
-		if (rec->shadowRec && !rec->getPool().empty()) {
+		if (rec->shadowRec && rec->getPool().empty()) {
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
@@ -1680,6 +1680,9 @@ Scheduler::count_jobs()
 				SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + UidDomain, time_now);
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+
+				dprintf( D_FULLDEBUG, "Sent ad to flocked collector %s for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
+					flock_col->name(), SubDat.name.c_str(), UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			}
 		}
 	}
@@ -3238,7 +3241,6 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			}
 		}
 		if (include_default_flock) {
-			dprintf(D_FULLDEBUG, "Job will flock by default.\n");
 			for (const auto &flock_entry : scheduler.FlockPools) {
 				SubData->flock[flock_entry].JobsIdle += job_idle;
 				SubData->flock[flock_entry].WeightedJobsIdle -= job_idle_weight;
