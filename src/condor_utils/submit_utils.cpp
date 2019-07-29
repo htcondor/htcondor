@@ -5636,8 +5636,9 @@ int SubmitHash::SetRequestResources()
 			continue;
 		}
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
-		// resource name should be nonempty
-		if (! *rname) continue;
+		const size_t min_tag_len = 2;
+		// resource name should be nonempty at least 2 characters long and not start with _
+		if ((strlen(rname) < min_tag_len) || *rname == '_') continue;
 		// could get this from 'it', but this prevents unused-line warnings:
 		char * val = submit_param(key);
 		if (val[0] == '\"')
@@ -5977,17 +5978,22 @@ int SubmitHash::SetRequirements()
 
 	classad::References tags;
 	std::string request_pre("Request");
-	const int prefix_len = sizeof("Request") - 1;
+	const size_t prefix_len = sizeof("Request") - 1;
+	const size_t min_tag_len = 2;
 	const classad::ClassAd *parent = procAd->GetChainedParentAd();
 	if (parent) {
 		for (classad::ClassAd::const_iterator it = parent->begin(); it != parent->end(); ++it) {
-			if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+			if (it->first.length() >= (prefix_len + min_tag_len) &&
+			    starts_with_ignore_case(it->first, request_pre) &&
+			    it->first[prefix_len] != '_') { // don't allow tags to start with _
 				tags.insert(it->first);
 			}
 		}
 	}
 	for (classad::ClassAd::const_iterator it = procAd->begin(); it != procAd->end(); ++it) {
-		if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+		if (it->first.length() >= (prefix_len + min_tag_len) &&
+		    starts_with_ignore_case(it->first, request_pre) &&
+		    it->first[prefix_len] != '_') { // don't allow tags to start with _
 			tags.insert(it->first);
 		}
 	}
