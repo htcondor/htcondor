@@ -463,6 +463,8 @@ SubmitHash::SubmitHash()
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
 	, JobDisableFileChecks(false)
+	, SubmitOnHold(false)
+	, SubmitOnHoldCode(0)
 	, already_warned_requirements_disk(false)
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
@@ -2048,16 +2050,22 @@ int SubmitHash::SetJobStatus()
 		}
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SubmittedOnHold);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SubmittedOnHold;
 
 		AssignJobString(ATTR_HOLD_REASON, "submitted on hold at user's request");
 	} else 
 	if ( IsRemoteJob ) {
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SpoolingInput;
 
 		AssignJobString(ATTR_HOLD_REASON, "Spooling input data files");
 	} else {
 		AssignJobVal(ATTR_JOB_STATUS, IDLE);
+		SubmitOnHold = false;
+		SubmitOnHoldCode = 0;
 	}
 
 	AssignJobVal(ATTR_ENTERED_CURRENT_STATUS, submit_time);
