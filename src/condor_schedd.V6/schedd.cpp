@@ -2283,7 +2283,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				// a child ad so we can send some extra attributes.
 				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
 				ClassAd iad;
-				cad->PopulateInfoAd(iad, true);
+				cad->PopulateInfoAd(iad, 0, true);
 				retval = putClassAd(sock, iad,
 						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 						projection.empty() ? NULL : &projection);

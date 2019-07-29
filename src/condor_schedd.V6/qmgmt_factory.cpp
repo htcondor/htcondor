@@ -126,6 +126,7 @@ protected:
 	SubmitForeachArgs fea;
 	char emptyItemString[4];
 	int cached_total_procs;
+	bool is_submit_on_hold;
 
 	// let these functions access internal factory data
 	friend bool LoadJobFactoryDigest(JobFactory* factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
@@ -134,6 +135,7 @@ protected:
 	friend int JobFactoryRowCount(JobFactory * factory);
 	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
+	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 
 	// we override this so that we can use an async foreach implementation.
 	int  load_q_foreach_items(
@@ -379,6 +381,13 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
 	return true;
 }
 
+bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code) {
+	if ( ! factory) {
+		hold_code = 0;
+		return false;
+	}
+	return factory->getSubmitOnHold(hold_code);
+}
 
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 {
@@ -391,6 +400,10 @@ void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
 	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
 	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
+	int code = 0;
+	if (factory->getSubmitOnHold(code)) {
+		iad.Assign("JobFactorySubmitOnHoldCode", code);
+	}
 }
 
 // returns true if the factory changed state, false otherwise.
@@ -515,8 +528,8 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
 	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
-	bool check_empty = true;
-	bool fail_empty = false;
+	const bool check_empty = true;
+	const bool fail_empty = false;
 	std::string empty_var_names;
 	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
 	if (row_num < row) {
