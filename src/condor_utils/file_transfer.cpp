@@ -65,6 +65,10 @@ const char * const StderrRemapName = "_condor_stderr";
 // 999 subcommands (999 is followed by a filename and then a ClassAd):
 // 7 - ClassAd contains information about a URL upload performed by
 //     the upload side.
+// 8 - ClassAd contains information about a list of files which will be
+//     sent later that may be eligible for reuse.  This is command requires
+//     a response indicating if the download side already has one of the
+//     files available.
 enum class TransferCommand {
 	Unknown = -1,
 	Finished = 0,
@@ -79,7 +83,8 @@ enum class TransferCommand {
 
 enum class TransferSubCommand {
 	Unknown = -1,
-	UploadUrl = 7
+	UploadUrl = 7,
+	ReuseInfo = 8
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -2278,6 +2283,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						"after encountering the following error: %s\n",
 						error_buf.Value());
 				}
+			} else if (subcommand == TransferSubCommand::ReuseInfo) {
+				if (m_reuse_dir == nullptr) {
+					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
+					ad
+					rc = 0;
+				} else {
+				}
+				if( !s->code(filename) ) {
+					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}               
+
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
