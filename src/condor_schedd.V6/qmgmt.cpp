@@ -344,13 +344,22 @@ void JobQueueCluster::JobStatusChanged(int old_status, int new_status)
 	}
 }
 
-void JobQueueCluster::PopulateInfoAd(ClassAd & iad, bool include_factory_info)
+void JobQueueCluster::PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info)
 {
-	iad.Assign("JobsPresent", num_attached);
-	iad.Assign("JobsIdle", num_idle);
+	int num_pending_held = 0, num_pending_idle = 0;
+	iad.Assign("JobsPresent", num_attached + num_pending);
+	if (num_pending) {
+		int code = -1;
+		if (this->factory && JobFactoryIsSubmitOnHold(this->factory, code)) {
+			num_pending_held = num_pending;
+		} else {
+			num_pending_idle = num_pending;
+		}
+	}
+	iad.Assign("JobsIdle", num_idle + num_pending_idle);
 	iad.Assign("JobsRunning", num_running);
-	iad.Assign("JobsHeld", num_held);
-	iad.Assign("ClusterSize", cluster_size);
+	iad.Assign("JobsHeld", num_held + num_pending_held);
+	iad.Assign("ClusterSize", cluster_size + num_pending);
 	if (this->factory && include_factory_info) {
 		PopulateFactoryInfoAd(this->factory, iad);
 	}
@@ -480,11 +489,14 @@ inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
 #endif
 
 #ifdef USE_MATERIALIZE_POLICY
-bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
+// num_pending should be the number of jobs that have been materialized, but not yet committed
+// returns bool if materialization of a single job is allowed by policy, if false retry_delay
+// will be set to a suggest delay before trying again.  a retry_delay > 10 "wait for a state change before retrying"
+bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int num_pending, int & retry_delay)
 {
 	long long max_idle = -1;
 	if (cad->LookupInteger(ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle) && max_idle >= 0) {
-		if (cad->getNumNotRunning() < max_idle) {
+		if ((cad->getNumNotRunning() + num_pending) < max_idle) {
 			return true;
 		} else {
 			retry_delay = 20; // don't bother to retry by polling, wait for a job to change state instead.
@@ -496,7 +508,7 @@ bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
 	if (cad->Lookup(ATTR_JOB_MATERIALIZE_CONSTRAINT)) {
 
 		ClassAd iad;
-		cad->PopulateInfoAd(iad, false);
+		cad->PopulateInfoAd(iad, num_pending, submit_on_hold, false);
 
 		classad::ExprTree * expr = NULL;
 		ParseClassAdRvalExpr("JobsIdle < 4", expr);
@@ -580,7 +592,7 @@ JobMaterializeTimerCallback()
 					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						int rv = 0;
-						if (CheckMaterializePolicyExpression(cad, retry_delay)) {
+						if (CheckMaterializePolicyExpression(cad, num_materialized, retry_delay)) {
 							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay);
 						}
 						if (rv == 1) {
@@ -1945,7 +1957,7 @@ int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & 
 	int cluster_size = clusterad->ClusterSize();
 	while ((cluster_size + num_materialized) < effective_limit) {
 		int retry = 0;
-		if ( ! CheckMaterializePolicyExpression(clusterad, retry)) {
+		if ( ! CheckMaterializePolicyExpression(clusterad, num_materialized, retry)) {
 			retry_delay = retry;
 			break;
 		}
