@@ -1590,7 +1590,7 @@ REMOTE_CONDOR_getdir(char *path, char *&buffer)
 	syscall_sock->decode();
 	result = ( syscall_sock->code(rval) );
 	ON_ERROR_RETURN( result );
-	if( rval <= 0 ) {
+	if( rval < 0 ) {
 		result = ( syscall_sock->code(terrno) );
 		ON_ERROR_RETURN( result );
 		result = ( syscall_sock->end_of_message() );
