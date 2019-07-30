@@ -1005,13 +1005,37 @@ LogEndTransaction::Play(void *) {
 	return 1;
 }
 
+
+int
+LogEndTransaction::WriteBody(FILE* fp)
+{
+	int rval = 0;
+	if (comment) {
+		int len = (int)strlen(comment);
+		if (len > 0) {
+			fputc('#', fp);
+			rval = fwrite(comment, sizeof(char), len, fp);
+			if (rval < len) {
+				return -1;
+			}
+			rval += 1; // account for the # character
+		}
+	}
+	return rval;
+}
+
 int 
 LogEndTransaction::ReadBody( FILE* fp )
 {
 	char 	ch;
 	int		rval = fread( &ch, sizeof(char), 1, fp );
-	if( rval < 1 || ch != '\n' ) {
+	if( rval < 1 || (ch != '\n' && ch != '#') ) {
 		return( -1 );
+	}
+	if (ch == '#') {
+		int cch = readline(fp, comment);
+		if (cch < 0)
+			return -1;
 	}
 	return( 1 );
 }

@@ -143,8 +143,8 @@ public:
 
 	void BeginTransaction();
 	bool AbortTransaction();
-	void CommitTransaction();
-	void CommitNondurableTransaction();
+	void CommitTransaction(const char * comment = NULL);
+	void CommitNondurableTransaction(const char * comment = NULL);
 	bool InTransaction() { return active_transaction != NULL; }
 	int SetTransactionTriggers(int mask);
 	int GetTransactionTriggers();
@@ -416,15 +416,25 @@ private:
 
 class LogEndTransaction : public LogRecord {
 public:
-	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
-	virtual ~LogEndTransaction(){};
+	LogEndTransaction() : comment(NULL) { op_type = CondorLogOp_EndTransaction; }
+	virtual ~LogEndTransaction() { free(comment); comment = NULL; }
 
 	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
+	const char * get_comment() { return comment; }
+	void set_comment(const char * cmt) {
+		// delete the old comment and set the new one
+		// never set an empty comment, that would lead to a parse error on read-back
+		if (comment) { free(comment); }
+		if (cmt && cmt[0]) {
+			comment = strdup(cmt);
+		}
+	}
 private:
-	virtual int WriteBody(FILE* /*fp*/) {return 0;}
+	virtual int WriteBody(FILE* fp);
 	virtual int ReadBody(FILE* fp);
 
 	virtual char const *get_key() {return NULL;}
+	char * comment;
 };
 
 // These are non-templated helper functions that do most of the work of the classad log
@@ -709,13 +719,14 @@ ClassAdLog<K,AD>::AbortTransaction()
 
 template <typename K, typename AD>
 void
-ClassAdLog<K,AD>::CommitTransaction()
+ClassAdLog<K,AD>::CommitTransaction(const char * comment /*=NULL*/)
 {
 	// Sometimes we do a CommitTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
 	if (!active_transaction) return;
 	if (!active_transaction->EmptyTransaction()) {
 		LogEndTransaction *log = new LogEndTransaction;
+		log->set_comment(comment);
 		active_transaction->AppendLog(log);
 		bool nondurable = m_nondurable_level > 0;
 		ClassAdLogTable<K,AD> la(table);
@@ -727,10 +738,10 @@ ClassAdLog<K,AD>::CommitTransaction()
 
 template <typename K, typename AD>
 void
-ClassAdLog<K,AD>::CommitNondurableTransaction()
+ClassAdLog<K,AD>::CommitNondurableTransaction(const char * comment /*=NULL*/)
 {
 	int old_level = IncNondurableCommitLevel();
-	CommitTransaction();
+	CommitTransaction(comment);
 	DecNondurableCommitLevel( old_level );
 }
 

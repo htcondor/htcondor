@@ -488,8 +488,12 @@ ClassAdLogParser::readEndTransactionBody(FILE *fp)
 
 	ch = fgetc(fp);
 
-	if( ch == EOF || ch != '\n' ) {
+	if( ch == EOF || (ch != '\n' && ch != '#')) {
 		return( -1 );
+	}
+	// if the next character is a #, the remaineder of the line is a comment
+	if (ch == '#') {
+		readline(fp, curCALogEntry.value);
 	}
 	return( 1 );
 }
