@@ -14825,7 +14825,7 @@ Scheduler::sendAlives()
 							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
-	CommitTransactionOrDieTrying();
+	CommitNonDurableTransactionOrDieTrying();
 
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
