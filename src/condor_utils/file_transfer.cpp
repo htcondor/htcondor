@@ -44,10 +44,44 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
+#include "condor_random_num.h"
+#include "data_reuse.h"
+
 #include <fstream>
 #include <algorithm>
 #include <numeric>
-#include "condor_random_num.h"
+
+namespace {
+
+class ReuseInfo
+{
+public:
+	ReuseInfo(const std::string &filename,
+		const std::string &checksum,
+		const std::string &checksum_type,
+		const std::string &tag,
+		uint64_t size)
+	: m_size(size),
+	m_filename(filename),
+	m_checksum(checksum),
+	m_checksum_type(checksum_type),
+	m_tag(tag)
+	{}
+
+	const std::string &filename() const {return m_filename;}
+	const std::string &checksum() const {return m_checksum;}
+	const std::string &checksum_type() const {return m_checksum_type;}
+	uint64_t size() const {return m_size;}
+
+private:
+	const uint64_t m_size{0};
+	const std::string m_filename;
+	const std::string m_checksum;
+	const std::string m_checksum_type;
+	const std::string m_tag;
+};
+
+}
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -1970,6 +2004,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 
+		/* Track the potential data reuse
+		 */
+	std::vector<ReuseInfo> reuse_info;
+	std::string reservation_id;
+
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for (;;) {
@@ -2116,6 +2155,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		} else {
 			fullname.formatstr("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.Value());
 		}
+
+		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
+			[&](ReuseInfo &info){return !strcmp(filename.Value(), info.filename().c_str());});
+		bool should_reuse = !reservation_id.empty() && m_reuse_dir && iter != reuse_info.end();
 
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
@@ -2284,17 +2327,95 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						error_buf.Value());
 				}
 			} else if (subcommand == TransferSubCommand::ReuseInfo) {
+				classad::ClassAd ad;
 				if (m_reuse_dir == nullptr) {
 					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
-					ad
 					rc = 0;
 				} else {
+					classad::Value value;
+					std::string tag;
+					if (!file_info.EvaluateAttr("ReuseList", value) ||
+						(value.GetType() != classad::Value::SLIST_VALUE &&
+						value.GetType() != classad::Value::LIST_VALUE) ||
+						!file_info.EvaluateAttrString("Tag", tag))
+					{
+						dprintf(D_FULLDEBUG, "The reuse info ClassAd is missing attributes.\n");
+						rc = 0;
+					} else {
+						classad_shared_ptr<classad::ExprList> exprlist;
+						value.IsSListValue(exprlist);
+						std::vector<std::string> retrieved_files;
+						for (auto list_entry : (*exprlist)) {
+							classad::Value file_ad_value;
+							if (!list_entry->Evaluate(file_ad_value)) {
+								dprintf(D_FULLDEBUG, "Failed to evaluate list entry.\n");
+								continue;
+							}
+							classad_shared_ptr<classad::ClassAd> file_ad;
+							if (!value.IsSClassAdValue(file_ad)) {
+								dprintf(D_FULLDEBUG, "Failed to evaluate list entry to ClassAd.\n");
+								continue;
+							}
+							std::string filename;
+							if (!file_ad->EvaluateAttrString("FileName", filename)) {
+								dprintf(D_FULLDEBUG, "List entry is missing FileName attr.\n");
+								continue;
+							}
+							std::string checksum_type;
+							if (!file_ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+								dprintf(D_FULLDEBUG, "List entry is missing ChecksumType attr.\n");
+								continue;
+							}
+							std::string checksum;
+							if (!file_ad->EvaluateAttrString("Checksum", checksum)) {
+								dprintf(D_FULLDEBUG, "List entry is missing Checksum attr.\n");
+								continue;
+							}
+							long long size;
+							if (!file_ad->EvaluateAttrInt("Size", size)) {
+								dprintf(D_FULLDEBUG, "List entry is missing Size attr.\n");
+								continue;
+							}
+							std::string dest_fname = std::string(Iwd) + DIR_DELIM_CHAR + filename;
+							CondorError err;
+							if (!m_reuse_dir->RetrieveFile(dest_fname, checksum, checksum_type, tag,
+								err))
+							{
+								dprintf(D_FULLDEBUG, "Failed to retrieve file from data"
+									" reuse directory: %s\n", err.getFullText().c_str());
+								reuse_info.emplace_back(filename, checksum, checksum_type,
+									tag, size);
+								continue;
+							}
+							retrieved_files.push_back(filename);
+						}
+						classad::ExprList retrieved_list;
+						for (auto file : retrieved_files) {
+							classad::ExprTree *expr = classad::Literal::MakeString(file);
+							retrieved_list.push_back(expr);
+						}
+						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
+							0, [](uint64_t val, ReuseInfo &info) {return info.size() + val;});
+						if (to_retrieve) {
+							CondorError err;
+							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,
+								err))
+							{
+								dprintf(D_FULLDEBUG, "Failed to reserve space for data reuse:"
+									" %s\n", err.getFullText().c_str());
+								retrieved_files.clear();
+							}
+						}
+						ad.Insert("ReuseList", &retrieved_list);
+						rc = 0;
+					}
 				}
-				if( !s->code(filename) ) {
+				s->encode();
+				if (!putClassAd(s, ad)) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
-				}               
-
+				}
+				s->decode();
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -2353,8 +2474,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			if( !isDeferredTransfer ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
-
 				rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
+				CondorError err;
+				if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
+					iter->checksum_type(), reservation_id, err))
+				{
+					dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
+					err.getFullText().c_str());
+				}
 			}
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
@@ -2440,6 +2567,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 		} else if ( TransferFilePermissions ) {
 			rc = s->get_file_with_permissions( &bytes, fullname.Value(), false, this_file_max_bytes, &xfer_queue );
+			CondorError err;
+			if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
+					iter->checksum_type(), reservation_id, err))
+			{
+				dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
+					err.getFullText().c_str());
+			}
 		} else {
 			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes, &xfer_queue );
 		}
@@ -2593,7 +2727,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
 			rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
 				LocalProxyName.Value(), false, nullptr );
-			if ( rc != 0 ) {
+			if (rc == 0) {
+/*  TODO: handle deferred files.
+				CondorError err;
+				if (should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
+					iter->checksum_type(), reservation_id, err))
+				{
+					dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
+						err.getFullText().c_str());
+				}
+*/
+			} else {
 				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file download failed: %s\n",
 					errstack.getFullText().c_str() );
 				download_success = false;
