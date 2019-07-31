@@ -887,7 +887,11 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( failed && job->_scriptPost == NULL ) {
 		if ( job->DoRetry() ) {
-			RestartNode( job, recovery );
+			// If this is a cluster job with multiple procs, do not restart it now.
+			// That should happen in ProcessClusterRemoveEvent().
+			if ( !job->is_factory ) {
+				RestartNode( job, recovery );
+			}
 		} else {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {
@@ -1303,6 +1307,13 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 		debug_printf(DEBUG_NORMAL, "ERROR: ProcessFactoryRemoveEvent() called"
 			" for job %s although %d procs still queued.\n", 
 			job->GetJobName(), job->_queuedNodeJobProcs);
+	}
+
+	// If this cluster did not complete successfully, restart it.
+	if( job->GetStatus() == Job::STATUS_ERROR ) {
+		if ( job->DoRetry() ) {
+			RestartNode( job, recovery );
+		}
 	}
 
 	// Cleanup the job and write succcess/failure to the log. 
