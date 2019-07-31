@@ -50,6 +50,7 @@
 #include <fstream>
 #include <algorithm>
 #include <numeric>
+#include <unordered_set>
 
 namespace {
 
@@ -1907,6 +1908,13 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    if ( m_reuse_dir && !reservation_id.empty() ) { \
+        CondorError err;                            \
+        if (!m_reuse_dir->ReleaseSpace(reservation_id, err)) { \
+            dprintf(D_FULLDEBUG, "Failed to release space: %s\n", \
+                err.getFullText().c_str());         \
+        }                                           \
+    }                                               \
     return i;
 
 
@@ -1947,6 +1955,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	downloadStartTime = condor_gettimestamp_double();
 
+		/* Track the potential data reuse
+		 */
+	std::vector<ReuseInfo> reuse_info;
+	std::string reservation_id;
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -2003,11 +2015,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	if( want_priv_change ) {
 		saved_priv = set_priv( desired_priv_state );
 	}
-
-		/* Track the potential data reuse
-		 */
-	std::vector<ReuseInfo> reuse_info;
-	std::string reservation_id;
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
@@ -2728,15 +2735,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
 				LocalProxyName.Value(), false, nullptr );
 			if (rc == 0) {
-/*  TODO: handle deferred files.
-				CondorError err;
-				if (should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
-					iter->checksum_type(), reservation_id, err))
-				{
-					dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
-						err.getFullText().c_str());
-				}
-*/
+				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
 			} else {
 				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file download failed: %s\n",
 					errstack.getFullText().c_str() );
@@ -3355,6 +3354,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
+		// Declaration to make the return_and_reset_priv macro happy.
+        std::string reservation_id;
+
+
 	// use an error stack to keep track of failures when invoke plugins,
 	// perhaps more of this can be instrumented with it later.
 	CondorError errstack;
@@ -3436,6 +3439,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
+	std::vector<ReuseInfo> reuse_info;
+	std::string tag, domain;
+	if (jobAd.EvaluateAttrString(ATTR_OWNER, tag) && param(domain, "UID_DOMAIN") \
+		&& !domain.empty())
+	{
+		tag = tag + "@" + domain;
+	} else {
+		tag = "";
+	}
+
 	// Pre-compute various attributes about the file transfers.
 	//
 	// Right now, this is limited to calculating output URLs (must be done after prior
@@ -3459,6 +3472,74 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
+		if (PeerDoesReuseInfo) {
+			std::string checksum_info;
+			if ((!tag.empty()) &&
+				(MATCH == file_strcmp(fileitem.srcName().c_str(), "condor_exec.")) &&
+				jobAd.EvaluateAttrString("ExecutableChecksum", checksum_info))
+			{
+				std::string checksum_type, checksum;
+				auto sep = checksum_info.find(':');
+				if (sep == std::string::npos) {
+					checksum_type = "sha256";
+					checksum = checksum_info;
+				} else {
+					checksum_type = checksum_info.substr(0, sep);
+					checksum = checksum_info.substr(sep + 1);
+				}
+				reuse_info.emplace_back("condor_exec.exe", checksum, checksum_type, tag, fileitem.fileSize());
+			}
+		}
+	}
+
+	std::unordered_set<std::string> skip_files;
+	if (!reuse_info.empty())
+	{
+			// Indicate a ClassAd-based command.
+		if( !s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message() ) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv( -1 );
+		}
+			// Fake an empty filename.
+		if (!s->put("") || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv(-1);
+		}
+		ClassAd file_info;
+		auto sub = static_cast<int>(TransferSubCommand::ReuseInfo);
+		file_info.InsertAttr("SubCommand", sub);
+		std::vector<ExprTree*> info_list;
+		for (auto &info : reuse_info) {
+			classad::ClassAd *ad = new classad::ClassAd();
+			ad->InsertAttr("FileName", info.filename());
+			ad->InsertAttr("ChecksumType", info.checksum_type());
+			ad->InsertAttr("Checksum", info.checksum());
+			ad->InsertAttr("Size", static_cast<long long>(info.size()));
+			info_list.push_back(ad);
+		}
+		file_info.Insert("ReuseList", classad::ExprList::MakeExprList(info_list));
+		if (!putClassAd(s, file_info) || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv(-1);
+		}
+		ClassAd reuse_ad;
+		if (!getClassAd(s, reuse_ad) || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv(-1);
+		}
+		classad::Value value;
+		classad_shared_ptr<classad::ExprList> exprlist;
+		if (reuse_ad.EvaluateAttr("ReuseList", value) && value.IsSListValue(exprlist))
+		{
+			for (auto list_entry : (*exprlist)) {
+				classad::Value entry_val;
+				std::string fname;
+				if (!list_entry->Evaluate(entry_val) || !entry_val.IsStringValue(fname)) {
+					continue;
+				}
+				skip_files.insert(fname);
+			}
+		}
 	}
 
 	std::sort(filelist.begin(), filelist.end());
@@ -3466,6 +3547,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	{
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
+
+			// Anything the remote side was able to reuse we do not send again.
+		if (skip_files.find(filename) != skip_files.end()) {
+			continue;
+		}
 
 		if( !dest_dir.empty() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: sending file %s to %s%c\n", filename.c_str(), dest_dir.c_str(), DIR_DELIM_CHAR);
@@ -4672,6 +4758,8 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	else {
 		PeerDoesXferInfo = false;
 	}
+
+	PeerDoesReuseInfo = peer_version.built_since_version(8,9,4);
 }
 
 
