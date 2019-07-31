@@ -173,7 +173,7 @@ Reading Job Events
    .. automethod:: items
 
 .. autoclass:: JobEventType
-
+.. autoclass:: FileTransferEventType
 
 HTCondor Configuration
 ----------------------
