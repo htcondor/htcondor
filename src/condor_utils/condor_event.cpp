@@ -7729,7 +7729,7 @@ bool
 ReserveSpaceEvent::formatBody(std::string &out)
 {
 	if (m_reserved_space &&
-		formatstr_cat(out, "\tBytes reserved: %lu\n",
+		formatstr_cat(out, "\n\tBytes reserved: %lu\n",
 		m_reserved_space) < 0)
 	{
 		return false;
@@ -7760,7 +7760,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 		return false;
 	}
 	optionalLine.chomp();
-	std::string prefix = "\tBytes reserved: ";
+	std::string prefix = "Bytes reserved:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
 		long long bytes_long;
@@ -7783,7 +7783,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 		return false;
 	}
 	optionalLine.chomp();
-	prefix = "\tReservation Expiration: ";
+	prefix = "\tReservation Expiration:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.Length());
 		long long expiry_long;
@@ -7805,7 +7805,6 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tReservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -7818,7 +7817,6 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -7874,7 +7872,7 @@ ReleaseSpaceEvent::toClassAd(bool event_time_utc) {
 bool
 ReleaseSpaceEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
+	if (formatstr_cat(out, "\n\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
 		return false;
 	}
 
@@ -7890,8 +7888,7 @@ ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
-	std::string prefix = "\tReservation UUID: ";
+	std::string prefix = "Reservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_uuid= optionalLine.substr(prefix.size(), optionalLine.Length());
 	} else {
@@ -7957,7 +7954,7 @@ FileCompleteEvent::toClassAd(bool event_time_utc) {
 bool
 FileCompleteEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
 	{
 		return false;
 	}
@@ -7987,7 +7984,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 		return false;
 	}
 	optionalLine.chomp();
-	std::string prefix = "\tBytes: ";
+	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
 		long long bytes_long;
@@ -8009,7 +8006,6 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8022,7 +8018,6 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8035,7 +8030,6 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tUUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8093,7 +8087,7 @@ FileUsedEvent::toClassAd(bool event_time_utc) {
 bool
 FileUsedEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+	if (formatstr_cat(out, "\n\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
 		return false;
 	}
 
@@ -8118,7 +8112,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 		return false;
 	}
 	optionalLine.chomp();
-	std::string prefix = "\tChecksum Value: ";
+	std::string prefix = "Checksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
 	} else {
@@ -8130,7 +8124,6 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8143,7 +8136,6 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8211,7 +8203,7 @@ FileRemovedEvent::toClassAd(bool event_time_utc) {
 bool
 FileRemovedEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
 	{
 		return false;
 	}
@@ -8241,7 +8233,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 		return false;
 	}
 	optionalLine.chomp();
-	std::string prefix = "\tBytes: ";
+	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
 		long long bytes_long;
@@ -8276,7 +8268,6 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
@@ -8289,7 +8280,6 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
 		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
