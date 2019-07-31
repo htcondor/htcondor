@@ -662,6 +662,7 @@ class Scheduler : public Service
 	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() { return NonDurableLateMaterialize; }
+	bool			getEnableJobQueueTimestamps() { return EnableJobQueueTimestamps; }
 	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
@@ -818,6 +819,7 @@ private:
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
+	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs

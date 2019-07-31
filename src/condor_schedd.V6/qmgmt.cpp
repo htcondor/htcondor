@@ -53,6 +53,7 @@
 #include "nullfile.h"
 #include "condor_url.h"
 #include "classad_helpers.h"
+#include "iso_dates.h"
 #include <param_info.h>
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -5086,6 +5087,7 @@ CommitTransactionAndLive( SetAttributeFlags_t flags,
 }
 
 int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
+
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
@@ -5124,12 +5126,30 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		}
 	}
 
+	// if job queue timestamps are enabled, build a commit comment
+	// consisting of the time and an optional NONDURABLE flag
+	// comment buffer sized to hold a timestamp and the word NONDURABLE and some whitespace
+	char comment[ISO8601_DateAndTimeBufferMax + 31];
+	const char * commit_comment = NULL;
+	if (scheduler.getEnableJobQueueTimestamps()) {
+		struct timeval tv;
+		struct tm eventTime;
+		condor_gettimestamp(tv);
+		time_t now = tv.tv_sec;
+		localtime_r(&now, &eventTime);
+		comment[0] = ' '; // leading space
+		comment[1] = 0;
+		time_to_iso8601(comment+1, eventTime, ISO8601_ExtendedFormat, ISO8601_DateAndTime, false, tv.tv_usec, 6);
+		if ( ! durable) { strcat(comment+20, " NONDURABLE"); }
+		commit_comment = comment;
+	}
+
 	if(! durable) {
-		JobQueue->CommitNondurableTransaction();
+		JobQueue->CommitNondurableTransaction(commit_comment);
 		ScheduleJobQueueLogFlush();
 	}
 	else {
-		JobQueue->CommitTransaction();
+		JobQueue->CommitTransaction(commit_comment);
 	}
 
 	// Now that we've commited for sure, up the TotalJobsCount
