@@ -2032,7 +2032,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
-		dprintf( D_SECURITY, "FILETRANSFER: incoming file_command is %i\n", static_cast<int>(xfer_command));
+		dprintf( D_FULLDEBUG, "FILETRANSFER: incoming file_command is %i\n", static_cast<int>(xfer_command));
 		if( xfer_command == TransferCommand::Finished ) {
 			break;
 		}
@@ -2334,9 +2334,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						error_buf.Value());
 				}
 			} else if (subcommand == TransferSubCommand::ReuseInfo) {
-				classad::ClassAd ad;
+					// We must consume the EOM in order to send the ClassAd later.
+				if (!s->end_of_message()) {
+					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+				}
+				ClassAd ad;
 				if (m_reuse_dir == nullptr) {
 					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
+					ad.InsertAttr("Result", 1);
 					rc = 0;
 				} else {
 					classad::Value value;
@@ -2347,6 +2352,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						!file_info.EvaluateAttrString("Tag", tag))
 					{
 						dprintf(D_FULLDEBUG, "The reuse info ClassAd is missing attributes.\n");
+						dPrintAd(D_FULLDEBUG, file_info);
 						rc = 0;
 					} else {
 						classad_shared_ptr<classad::ExprList> exprlist;
@@ -2359,7 +2365,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								continue;
 							}
 							classad_shared_ptr<classad::ClassAd> file_ad;
-							if (!value.IsSClassAdValue(file_ad)) {
+							if (!file_ad_value.IsSClassAdValue(file_ad)) {
 								dprintf(D_FULLDEBUG, "Failed to evaluate list entry to ClassAd.\n");
 								continue;
 							}
@@ -2394,6 +2400,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 									tag, size);
 								continue;
 							}
+							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", filename.c_str());
 							retrieved_files.push_back(filename);
 						}
 						classad::ExprList retrieved_list;
@@ -2403,6 +2410,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
 							0, [](uint64_t val, ReuseInfo &info) {return info.size() + val;});
+						dprintf(D_FULLDEBUG, "There are %lu bytes to retrieve.\n", to_retrieve);
 						if (to_retrieve) {
 							CondorError err;
 							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,
@@ -2413,16 +2421,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								retrieved_files.clear();
 							}
 						}
-						ad.Insert("ReuseList", &retrieved_list);
+						ad.Insert("ReuseList", retrieved_list.Copy());
 						rc = 0;
 					}
 				}
 				s->encode();
-				if (!putClassAd(s, ad)) {
+				if (!putClassAd(s, ad) || !s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 				s->decode();
+				continue;
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -3445,6 +3454,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		&& !domain.empty())
 	{
 		tag = tag + "@" + domain;
+		dprintf(D_FULLDEBUG, "DoUpload: Tag to use for data reuse: %s\n", tag.c_str());
 	} else {
 		tag = "";
 	}
@@ -3474,8 +3484,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		if (PeerDoesReuseInfo) {
 			std::string checksum_info;
-			if ((!tag.empty()) &&
-				(MATCH == file_strcmp(fileitem.srcName().c_str(), "condor_exec.")) &&
+			if ( ExecFile && !simple_init && !tag.empty() &&
+				(MATCH == file_strcmp(fileitem.srcName().c_str(), ExecFile)) &&
 				jobAd.EvaluateAttrString("ExecutableChecksum", checksum_info))
 			{
 				std::string checksum_type, checksum;
@@ -3495,6 +3505,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	std::unordered_set<std::string> skip_files;
 	if (!reuse_info.empty())
 	{
+		dprintf(D_FULLDEBUG, "DoUpload: Sending remote side hints about potential file reuse.\n");
+
 			// Indicate a ClassAd-based command.
 		if( !s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
@@ -3505,9 +3517,22 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
+
+			// Here, we must wait for the go-ahead from the transfer peer.
+		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv( -1 );
+		}
+			// Obtain the transfer token from the transfer queue.
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv( -1 );
+		}
+
 		ClassAd file_info;
 		auto sub = static_cast<int>(TransferSubCommand::ReuseInfo);
 		file_info.InsertAttr("SubCommand", sub);
+		file_info.InsertAttr("Tag", tag);
 		std::vector<ExprTree*> info_list;
 		for (auto &info : reuse_info) {
 			classad::ClassAd *ad = new classad::ClassAd();
@@ -3523,22 +3548,35 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv(-1);
 		}
 		ClassAd reuse_ad;
-		if (!getClassAd(s, reuse_ad) || !s->end_of_message()) {
+		s->decode();
+		if (!getClassAd(s, reuse_ad)) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv(-1);
 		}
+		if (!s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			return_and_resetpriv(-1);
+		}
+		s->encode();
 		classad::Value value;
 		classad_shared_ptr<classad::ExprList> exprlist;
 		if (reuse_ad.EvaluateAttr("ReuseList", value) && value.IsSListValue(exprlist))
 		{
+			dprintf(D_FULLDEBUG, "DoUpload: Remote side sent back a list of files that were reused.\n");
 			for (auto list_entry : (*exprlist)) {
 				classad::Value entry_val;
 				std::string fname;
 				if (!list_entry->Evaluate(entry_val) || !entry_val.IsStringValue(fname)) {
 					continue;
 				}
+				if (ExecFile && fname == "condor_exec.exe") {
+					fname = ExecFile;
+				}
+				dprintf(D_FULLDEBUG, "DoUpload: File %s was reused.\n", fname.c_str());
 				skip_files.insert(fname);
 			}
+		} else {
+			dprintf(D_FULLDEBUG, "DoUpload: Remote side indicated there were no reused files.\n");
 		}
 	}
 

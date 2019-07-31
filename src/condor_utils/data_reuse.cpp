@@ -1,5 +1,6 @@
 
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "data_reuse.h"
 
 #include "CondorError.h"
@@ -26,12 +27,29 @@ DataReuseDirectory::~DataReuseDirectory()
 DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 	m_owner(owner),
 	m_dirpath(dirpath),
-	m_log(dircat(m_dirpath.c_str(), "use.log", m_logname)),
+	m_log("condor", dircat(m_dirpath.c_str(), "use.log", m_logname), 0, 0, 0),
 	m_rlog(dircat(m_dirpath.c_str(), "use.log", m_logname))
 {
+	OpenSSL_add_all_digests();
+
 	if (m_owner) {
 		Cleanup();
 		CreatePaths();
+	}
+
+	m_allocated_space = param_integer("DATA_REUSE_BYTES", 0);
+	dprintf(D_FULLDEBUG, "Allocating %lu bytes for the data reuse directory\n", m_allocated_space);
+
+	CondorError err;
+	LogSentry sentry = LockLog(err);
+	if (!sentry.acquired()) {
+		dprintf(D_FULLDEBUG, "Failed to acquire lock on state directory: %s\n",
+			err.getFullText().c_str());
+		return;
+	}
+	if (!UpdateState(sentry, err)) {
+		dprintf(D_FULLDEBUG, "Failed to initialize state of reuse directory: %s\n",
+			err.getFullText().c_str());
 	}
 }
 
@@ -39,13 +57,14 @@ DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 void
 DataReuseDirectory::CreatePaths()
 {
+	dprintf(D_FULLDEBUG, "Creating a new data reuse directory in %s\n", m_dirpath.c_str());
 	if (!mkdir_and_parents_if_needed(m_dirpath.c_str(), 0700, 0700, PRIV_CONDOR)) {
 		m_valid = false;
 		return;
 	}
 	MyString subdir, subdir2;
 	auto name = dircat(m_dirpath.c_str(), "tmp", subdir);
-	if (mkdir_and_parents_if_needed(name, 0700, 0700, PRIV_CONDOR)) {
+	if (!mkdir_and_parents_if_needed(name, 0700, 0700, PRIV_CONDOR)) {
 		m_valid = false;
 		return;
 	}
@@ -139,7 +158,7 @@ DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, std::string &tag,
 
 	if ((m_reserved_space + size > m_allocated_space) && !ClearSpace(size, sentry, err))
 	{
-		err.push("DataReuse", 1, "Unable to allocate space");
+		err.pushf("DataReuse", 1, "Unable to allocate space; %lu bytes allocated, %lu bytes reserved, %lu additional bytes requested", m_allocated_space, m_reserved_space, size);
 		return false;
 	}
 
@@ -149,6 +168,7 @@ DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, std::string &tag,
 	event.setReservedSpace(size);
 	event.setTag(tag);
 	std::string uuid_result = event.generateUUID();
+	event.setUUID(uuid_result);
 	if (!m_log.writeEvent(&event)) {
 		err.push("DataReuse", 2, "Failed to write space reservation");
 		return false;
@@ -227,6 +247,7 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 	auto iter = m_space_reservations.begin();
 	while (iter != m_space_reservations.end()) {
 		if (iter->second->getExpirationTime() < now) {
+			dprintf(D_FULLDEBUG, "Expiring reservation %s\n.", iter->first.c_str());
 			iter = m_space_reservations.erase(iter);
 		} else {
 			++iter;
@@ -242,7 +263,7 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 }
 
 bool
-DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
+DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 {
 	switch (event.eventNumber) {
 	case ULOG_RESERVE_SPACE: {
@@ -260,6 +281,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		} else if (iter->second->getTag() != resEvent.getTag()) {
 			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
 				resEvent.getTag().c_str());
+			err.pushf("DataReuse", 13, "Duplicate space reservation with incorrect tag (%s)",
+				resEvent.getTag().c_str());
 			return false;
 		} else {
 				// Duplicate matching reservation is interpreted as a lease extension.
@@ -273,6 +296,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		if (iter == m_space_reservations.end()) {
 			dprintf(D_ALWAYS, "Release of space for reservation %s requested - but this"
 				" reservation is unknown!\n", relEvent.getUUID().c_str());
+			err.pushf("DataReuse", 14, "Release of space for reservation %s requested - but this"
+				" reservation is unknown!", relEvent.getUUID().c_str());
 			return false;
 		}
 		m_reserved_space -= iter->second->getReservedSpace();
@@ -286,16 +311,29 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		if (iter == m_space_reservations.end()) {
 			dprintf(D_FAILURE, "File completed for non-existent space reservation %s.\n",
 				comEvent.getUUID().c_str());
+			err.pushf("DataReuse", 11, "File completed for non-existent space reservation %s",
+				comEvent.getUUID().c_str());
 			return false;
 		}
 		if (iter->second->getReservedSpace() < comEvent.getSize()) {
 			dprintf(D_FAILURE, "File completed with size %lu, which is larger than the space"
 				" reservation size.\n", comEvent.getSize());
+			err.pushf("DataReuse", 12, "File completed with size %lu, which is larger than the space"
+				" reservation size.", comEvent.getSize());
 			return false;
 		}
 		auto event_time = std::chrono::system_clock::from_time_t(event.GetEventclock());
-		if (iter->second->getExpirationTime() > event_time) {
-			dprintf(D_FAILURE, "File completed after space reservation ended.\n");
+		if (iter->second->getExpirationTime() < event_time) {
+			dprintf(D_FAILURE, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
+				"space reservation %s expired at %lu.\n", comEvent.getChecksum().c_str(),
+				comEvent.getChecksumType().c_str(), iter->second->getTag().c_str(),
+				event.GetEventclock(), comEvent.getUUID().c_str(),
+				std::chrono::system_clock::to_time_t(iter->second->getExpirationTime()));
+			err.pushf("DataReuse", 16, "File (checksum=%s, type=%s, tag=%s) completed at time %lu after "
+				"space reservation %s expired at %lu.\n", comEvent.getChecksum().c_str(),
+				comEvent.getChecksumType().c_str(), iter->second->getTag().c_str(),
+				event.GetEventclock(), comEvent.getUUID().c_str(),
+				std::chrono::system_clock::to_time_t(iter->second->getExpirationTime()));
 			return false;
 		}
 		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());
@@ -323,6 +361,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		}
 		dprintf(D_ALWAYS, "File with checksum %s used - but file is unknown to our state.\n",
 			usedEvent.getChecksum().c_str());
+		err.pushf("DataReuse", 14, "File with checksum %s used - but file is unknown to our state.",
+			usedEvent.getChecksum().c_str());
 		return false;
 	}
 		break;
@@ -338,6 +378,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		if (iter == m_contents.end()) {
 			dprintf(D_FAILURE, "File with checksum %s removed - but file is unknown to our state.\n",
 				remEvent.getChecksum().c_str());
+			err.pushf("DataReuse", 15, "File with checksum %s removed - but file is unknown to our state",
+				remEvent.getChecksum().c_str());
 			return false;
 		}
 		m_contents.erase(iter);
@@ -346,10 +388,10 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & /*err*/)
 		break;
 	default:
 		dprintf(D_ALWAYS, "Unknown event in data reuse log.\n");
+		err.pushf("DataReuse", 16, "Unknown event in data reuse log");
 		return false;
 	}
-	dprintf(D_FAILURE, "Logic error - unhandled data reuse directory event.\n");
-	return false;
+	return true;
 }
 
 
@@ -417,7 +459,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	int dest_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		dest_fd = safe_open_wrapper_follow(dest_fname.c_str(), O_EXCL | O_CREAT | O_WRONLY);
+		dest_fd = safe_open_wrapper_follow(dest_fname.c_str(), O_TRUNC | O_CREAT | O_WRONLY);
 	}
 	if (dest_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
@@ -538,14 +580,20 @@ DataReuseDirectory::ReleaseSpace(const std::string &uuid, CondorError &err)
 
 	auto iter = m_space_reservations.find(uuid);
 	if (iter == m_space_reservations.end()) {
-		err.pushf("DataReuse", 7, "Failed to find space reservation (%s) to release.",
-			uuid.c_str());
+		err.pushf("DataReuse", 7, "Failed to find space reservation (%s) to release; "
+			"there are %lu active reservations.",
+			uuid.c_str(), m_space_reservations.size());
 		return false;
 	}
 
 	ReleaseSpaceEvent event;
 	event.setUUID(uuid);
 	m_space_reservations.erase(iter);
+	dprintf(D_FULLDEBUG, "Releasing space reservation %s\n", uuid.c_str());
+	if (!m_log.writeEvent(&event)) {
+		err.pushf("DataReuse", 10, "Failed to write out space reservation release.");
+		return false;
+	}
 
 	return true;
 }
@@ -572,7 +620,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 				entry->tag() == tag;
 		});
 	if (iter == m_contents.end()) {
-		err.pushf("DataReuse", 8, "Failed to find requested file in state database.");
+		err.pushf("DataReuse", 8, "Failed to find requested file (checksum=%s, checksum_type=%s, tag=%s) in state database.", checksum.c_str(), checksum_type.c_str(), tag.c_str());
 		return false;
 	}
 

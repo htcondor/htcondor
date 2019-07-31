@@ -42,7 +42,7 @@ public:
 private:
 	class LogSentry {
 	public:
-		LogSentry(DataReuseDirectory &parent);
+		LogSentry(DataReuseDirectory &parent, CondorError &err);
 		~LogSentry();
 		LogSentry(const LogSentry&) = delete;
 		LogSentry(LogSentry&&) = default;

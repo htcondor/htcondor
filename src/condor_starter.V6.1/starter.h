@@ -304,6 +304,8 @@ public:
 	int GetShutdownExitCode() { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
+
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
