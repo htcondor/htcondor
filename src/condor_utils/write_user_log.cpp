@@ -33,9 +33,11 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
+#include "condor_attributes.h"
+#include "CondorError.h"
+
 #include <string>
 #include <algorithm>
-#include "condor_attributes.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -1660,7 +1662,17 @@ WriteUserLog::getEnableFsync() {
 }
 
 FileLockBase *
-WriteUserLog::getLock() {
+WriteUserLog::getLock(CondorError &err) {
+	if (logs.empty()) {
+		err.pushf("WriteUserLog", 1, "User log has no configured logfiles.\n");
+		return nullptr;
+	}
+		// This interface returns a single file lock; for now, as we return a single lock, we
+		// touch nothing.
+	if (logs.size() != 1) {
+		err.pushf("WriteUserLog", 1, "User log has multiple configured logfiles; cannot lock.\n");
+		return nullptr;
+	}
 	for (auto log : logs) {
 		if (log->lock) {
 			return log->lock;

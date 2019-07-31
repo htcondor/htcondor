@@ -45,7 +45,7 @@ class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
-
+class CondorError;
 
 /** API for writing a log file.  Since an API for reading a log file
     was not originally needed, a ReadUserLog class did not exist,
@@ -307,7 +307,7 @@ class WriteUserLog
 		mask.push_back(e);
 	}
 
-	FileLockBase *getLock();
+	FileLockBase *getLock(CondorError &err);
 
   private:
 

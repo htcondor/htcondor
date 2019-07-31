@@ -70,11 +70,13 @@ DataReuseDirectory::Cleanup() {
 }
 
 
-DataReuseDirectory::LogSentry::LogSentry(DataReuseDirectory &parent)
+DataReuseDirectory::LogSentry::LogSentry(DataReuseDirectory &parent, CondorError &err)
 	: m_parent(parent)
 {
-	m_lock = m_parent.m_log.getLock();
-	if (m_lock == nullptr) {return;}
+	m_lock = m_parent.m_log.getLock(err);
+	if (m_lock == nullptr) {
+		return;
+	}
 
 	m_acquired = m_lock->obtain(WRITE_LOCK);
 }
@@ -91,7 +93,7 @@ DataReuseDirectory::LogSentry::~LogSentry()
 DataReuseDirectory::LogSentry &&
 DataReuseDirectory::LockLog(CondorError &err)
 {
-	LogSentry sentry(*this);
+	LogSentry sentry(*this, err);
 	if (!sentry.acquired()) {
 		err.push("DataReuse", 3, "Failed to acquire data reuse directory lockfile.");
 	}
