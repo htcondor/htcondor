@@ -276,9 +276,9 @@ GPUs
 :index:`monitoring GPUS`
 :index:`GPU monitoring`
 
-HTCondor supports monitoring GPU utilization for NVidia GPUs.  To enable this
-feature, add the line ``use feature: GPUsMonitor`` to your HTCondor
-configuration.
+HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
+is enabled by default if you set ``use feature : GPUs`` in your configuration
+file.
 
 Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
 This tool polls the (NVidia) GPU device(s) in the system and records their

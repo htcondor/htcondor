@@ -412,10 +412,12 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	if ( ! factory)
 		return false;
 
-	int paused = factory->IsPaused() ? 1 : 0;
+	const bool paused = factory->IsPaused();
 
-	dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
+	if (IsDebugVerbose(D_MATERIALIZE)) {
+		dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
 			factory->ID(), factory->Name(), want_pause, factory->IsPaused(), factory->PauseMode());
+	}
 
 	// make sure that the desired mode is a valid one.
 	// Also, we want to disallow setting the mode to  ClusterRemoved using this function.
@@ -423,11 +425,11 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	else if (want_pause > mmNoMoreItems) want_pause = mmNoMoreItems;
 
 	// If the factory is in the correct meta-mode (either paused or not),
-	// then we won't try and change the actual pause code - we just return true.
+	// then we won't try and change the actual pause code - we just return false (no state change).
 	// As a result of this test, a factory in mmInvalid or mmNoMoreItems state
 	// can't be changed to mmHold or visa versa.
 	if (paused == (want_pause != mmRunning)) {
-		return true;
+		return false;
 	}
 
 	dprintf(D_MATERIALIZE, "CheckJobFactoryPause %s job factory %d %s code=%d\n",
