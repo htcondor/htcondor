@@ -296,7 +296,7 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 		// we allow the admin to skip authorization; they presumably
 		// know what they are doing.  However, if we are acting on
 		// behalf of a user, then we assume that secrets must be encrypted!
-	if (!self->getOwner().empty() && !sock->set_crypto_mode(true)) {
+	if (!self || (!self->getOwner().empty() && !sock->set_crypto_mode(true))) {
 		send_submitter_secrets = false;
 	}
 
