@@ -28,7 +28,7 @@ namespace htcondor {
 	// The correct directory is automatically determined from the
 	// HTCondor configuration.
 int
-write_out_token(const std::string &token_name, const std::string &token);
+write_out_token(const std::string &token_name, const std::string &token, const std::string &identity);
 
 }
 

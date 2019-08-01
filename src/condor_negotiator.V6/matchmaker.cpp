@@ -879,7 +879,8 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			cidp.secSessionInfo(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			capability_pair.first.c_str(),
-			1200
+			1200,
+			nullptr
 		);
 	}
 }

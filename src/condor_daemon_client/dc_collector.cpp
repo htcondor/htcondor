@@ -292,6 +292,14 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 		send_submitter_secrets = true;
 	}
 
+		// If we are advertising to an admin-configured pool, then
+		// we allow the admin to skip authorization; they presumably
+		// know what they are doing.  However, if we are acting on
+		// behalf of a user, then we assume that secrets must be encrypted!
+	if (!self || (!self->getOwner().empty() && !sock->set_crypto_mode(true))) {
+		send_submitter_secrets = false;
+	}
+
 	int options = send_submitter_secrets ? 0: PUT_CLASSAD_NO_PRIVATE;
 
 	// This is a static function so that we can call it from a
@@ -527,6 +535,7 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 	}
 
 	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20, NULL, NULL, raw_protocol);
+
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send UDP update command to collector" );
@@ -605,7 +614,9 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		}
 		return true;
 	}
+
 	Sock *sock = startCommand(cmd, Sock::reli_sock, 20);
+
 	if(!sock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send TCP update command to collector" );

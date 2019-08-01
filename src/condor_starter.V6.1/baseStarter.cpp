@@ -645,7 +645,8 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			session_info.c_str(),
 			fqu.c_str(),
 			NULL,
-			0 );
+			0,
+			nullptr );
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen
