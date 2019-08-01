@@ -644,6 +644,16 @@ public:
 		 */
 	std::string getTrustDomain() const {return m_trust_domain;}
 
+		// Set the owner for this daemon; if possible, always
+		// authenticate with the remote daemon as this owner.
+	void setOwner(const std::string &owner) {m_owner = owner;}
+	const std::string &getOwner() const {return m_owner;}
+
+		// Set the authentication methods to use with this daemon object;
+		// overrides those built-in to the param table.
+	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
+	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
+
 protected:
 	// Data members
 	char* _name;
@@ -929,6 +939,12 @@ private:
 	ClassAd *m_daemon_ad_ptr;
 
 	std::string m_trust_domain;
+
+		// The virtual 'owner' of this collector object
+	std::string m_owner;
+
+		// Authentication method overrides
+	std::vector<std::string> m_methods;
 };
 
 /** This helper class is derived from the Daemon class; it allows
