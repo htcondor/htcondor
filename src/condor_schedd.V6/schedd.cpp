@@ -545,8 +545,10 @@ match_rec::~match_rec()
 void
 match_rec::setStatus( int stat )
 {
+	if ( stat != status ) {
+		entered_current_status = (int)time(0);
+	}
 	status = stat;
-	entered_current_status = (int)time(0);
 	if( status == M_CLAIMED ) {
 			// We have successfully claimed this startd, so we need to
 			// release it later.
@@ -11924,7 +11926,7 @@ Scheduler::child_exit(int pid, int status)
 		} else {
 			int exitstatus = WEXITSTATUS(status);
 			if ((srec->match->keep_while_idle > 0 || paired_match_wait) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
-				srec->match->status = M_CLAIMED;
+				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
@@ -14605,7 +14607,9 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		shadow->match = NULL;
 
 			// re-associate match with the original job cluster
+			// and set its status back to CLAIMED
 		SetMrecJobID(mrec,mrec->origcluster,-1);
+		mrec->setStatus( M_CLAIMED );
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
 		}
