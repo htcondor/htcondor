@@ -56,6 +56,37 @@ New Features:
   cloud instances created for **gce** grid jobs.
   :ticket:`6993`
 
+- The ``condor_schedd`` automatically creates a security session for
+  the negotiator if ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is enabled
+  (the default setting).  HTCondor pool administrators no longer need to
+  setup explicit authentication from the negotiator to the schedd; any
+  negotiator trusted by the collector is automatically trusted by the collector.
+  :ticket:`6956`
+
+- ``TOKEN`` authentication is enabled by default if the HTCondor administrator
+  does not specify a preferred list of authentication methods.  In this case,
+  ``TOKEN`` is only used if the user has at least one usable token available.
+  :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
+  used if there is a server certificate available. :ticket:`7074`
+
+- A number of ease-of-use changes were made for submitting jobs from Python.
+  The Python method ``Schedd::queue_with_itemdata`` now accepts iterable objects
+  and the keyword argument was renamed from ``from`` (which, unfortunately, is also
+  a Python keyword) to ``itemdata``.  :ticket:`7064`
+  Both this method and the ``Submit`` object can now accept a wider range of objects,
+  as long as they can be converted to strings. :ticket:`7065`
+  The ``Submit`` class's constructor now behaves in the same way as a Python dictionary
+  :ticket:`7067`
+
+- The ``Undefined`` and ``Error`` values in Python no longer cast silently to integers.
+  Previously, ``Undefined`` and ``Error`` evaluated to ``True`` when used in a
+  conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
+  in a ``RuntimeError`` exception.  :ticket:`7109`
+
+- The *condor_collector* daemon will automatically generate a pool password file at the
+  location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
+  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
@@ -69,6 +100,14 @@ Bugs Fixed:
 
 - Fixed a large memory leak when using SSL authentication.
   :ticket:`7145`
+
+-  The ``TOKEN`` authentication method no longer fails if the ``/etc/condor/passwords.d``
+   is missing.  :ticket:`7138`
+
+-  Hostname-based verification for SSL now works more reliably from command-line tools.
+   In some cases, the hostname was dropped internally in HTCondor, causing the SSL certificate
+   verification to fail because only an IP address was available.
+   :ticket:`7073`
 
 Version 8.9.2
 -------------
