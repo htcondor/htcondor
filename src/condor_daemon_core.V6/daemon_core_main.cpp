@@ -284,7 +284,7 @@ DC_Exit( int status, const char *shutdown_program )
 	}
 
 		// Free up the memory from the config hash table, too.
-	clear_config();
+	clear_global_config_table();
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();
