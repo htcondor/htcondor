@@ -178,6 +178,9 @@ Bugs Fixed:
    connection to fail due to the peer timing out.
    :ticket:`6968`
 
+-  The ``TOKEN`` authentication method no longer fails if the ``/etc/condor/passwords.d``
+   is missing.  :ticket:`7138`
+
 Version 8.9.1
 -------------
 
