@@ -690,10 +690,12 @@ NTSSPI may be used, then Kerberos will be tried first, and if there is a
 failure for any reason, then NTSSPI will be tried.
 
 An additional specialized method of authentication exists for
-communication between the *condor_schedd* and *condor_startd*. It is
+communication between the *condor_schedd* and *condor_startd*, as
+well as communication between the *condor_schedd* and the *condor_negotiator*.
+It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
-other methods of strong authentication between the submit and execute
+other methods of authentication between the submit and execute
 daemons. See the description of
 ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
@@ -1848,6 +1850,10 @@ be modified by configuration. :index:`unauthenticated`
    :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
    the *condor_schedd* and ``DAEMON`` access to the *condor_shadow*.
+#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+   :index:``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is true, then
+   ``negotiator-side@matchsession`` is automatically granted ``NEGOTIATOR``
+   access to the *condor_schedd*.
 
 Example of Authorization Security Configuration
 '''''''''''''''''''''''''''''''''''''''''''''''

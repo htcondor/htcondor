@@ -56,6 +56,13 @@ New Features:
   cloud instances created for **gce** grid jobs.
   :ticket:`6993`
 
+- The ``condor_schedd`` automatically creates a security session for
+  the negotiator if ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is enabled
+  (the default setting).  HTCondor pool administrators no longer need to
+  setup explicit authentication from the negotiator to the schedd; any
+  negotiator trusted by the collector is automatically trusted by the collector.
+  :ticket:`6956`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
