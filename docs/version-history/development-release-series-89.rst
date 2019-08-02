@@ -69,6 +69,10 @@ New Features:
   :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
   used if there is a server certificate available. :ticket:`7074`
 
+- The python method ``Schedd::queue_with_itemdata`` now accepts iterable objects
+  and the keyword argument was renamed from ``from`` (which, unfortunately, is also
+  a Python keyword) to ``itemdata``.  :ticket:`7064`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
