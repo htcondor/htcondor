@@ -3685,7 +3685,12 @@ type=string
 tags=annex
 
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-02ce5672c4c88146c
 type=string
 tags=annex
 
@@ -3700,7 +3705,12 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-007920684150d7cb7
 type=string
 tags=annex
 
@@ -3715,7 +3725,12 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a6fbc8bda794e1f4
 type=string
 tags=annex
 
@@ -3730,7 +3745,12 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a46b14d914d27167
 type=string
 tags=annex
 
