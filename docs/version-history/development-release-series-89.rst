@@ -66,6 +66,8 @@ New Features:
 - ``TOKEN`` authentication is enabled by default if the HTCondor administrator
   does not specify a preferred list of authentication methods.  In this case,
   ``TOKEN`` is only used if the user has at least one usable token available.
+  :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
+  used if there is a server certificate available. :ticket:`7074`
 
 Bugs Fixed:
 

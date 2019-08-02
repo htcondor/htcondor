@@ -970,7 +970,8 @@ the certificate file for the initiator and recipient of connections,
 respectively. Similarly, the configuration variables
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE` and
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
-specify the locations for keys.
+specify the locations for keys.  If no client certificate is used,
+the client with authenticate as user ``anonymous@ssl``.
 
 The configuration variables ``AUTH_SSL_SERVER_CAFILE``
 :index:`AUTH_SSL_SERVER_CAFILE` and ``AUTH_SSL_CLIENT_CAFILE``

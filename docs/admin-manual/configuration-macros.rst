@@ -9277,12 +9277,12 @@ macros are described in the :doc:`/admin-manual/security` section.
 ``AUTH_SSL_SERVER_CAFILE`` :index:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
-    with SSL.
+    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
 
 ``AUTH_SSL_CLIENT_CAFILE`` :index:`AUTH_SSL_CLIENT_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the client side of a communication authenticating
-    with SSL.
+    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
 
 ``AUTH_SSL_SERVER_CADIR`` :index:`AUTH_SSL_SERVER_CADIR`
     The path to a directory that may contain the certificates (each in
@@ -9300,15 +9300,19 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 ``AUTH_SSL_SERVER_CERTFILE`` :index:`AUTH_SSL_SERVER_CERTFILE`
     The path and file name of the file containing the public certificate
-    for the server side of a communication authenticating with SSL.
+    for the server side of a communication authenticating with SSL.  On
+    Linux, this defaults to ``/etc/pki/tls/certs/localhost.crt``.
 
 ``AUTH_SSL_CLIENT_CERTFILE`` :index:`AUTH_SSL_CLIENT_CERTFILE`
     The path and file name of the file containing the public certificate
-    for the client side of a communication authenticating with SSL.
+    for the client side of a communication authenticating with SSL.  If
+    no client certificate is provided, then the client may authenticate
+    as the user ``anonymous@ssl``.
 
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
     The path and file name of the file containing the private key for
-    the server side of a communication authenticating with SSL.
+    the server side of a communication authenticating with SSL. On
+    Linux, this defaults to ``/etc/pki/tls/private/localhost.key``.
 
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
