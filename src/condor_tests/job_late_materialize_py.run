@@ -275,6 +275,7 @@ items = [
 ]
 num_items = 6
 sub['hold'] = 'true'
+sub['max_idle'] = str(num_items)
 
 def all_materialized(event):
 	global num_items
