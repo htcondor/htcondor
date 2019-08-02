@@ -78,6 +78,11 @@ New Features:
   The ``Submit`` class's constructor now behaves in the same way as a Python dictionary
   :ticket:`7067`
 
+- The ``Undefined`` and ``Error`` values in Python no longer cast silently to integers.
+  Previously, ``Undefined`` and ``Error`` evaluated to ``True`` when used in a
+  conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
+  in a ``RuntimeError`` exception.  #7109
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
