@@ -102,12 +102,12 @@ public:
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction() { ClassAdLog<K,AD>::CommitTransaction(); }
+  void CommitTransaction(const char * comment=NULL) { ClassAdLog<K,AD>::CommitTransaction(comment); }
 
   /** Commit a transaction without forcing a sync to disk
     @return nothing
   */
-  void CommitNondurableTransaction() { ClassAdLog<K,AD>::CommitNondurableTransaction(); }
+  void CommitNondurableTransaction(const char * comment=NULL) { ClassAdLog<K,AD>::CommitNondurableTransaction(comment); }
 
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active

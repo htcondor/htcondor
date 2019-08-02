@@ -4285,6 +4285,25 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 {
 	JobQueueKey job_id;
 
+	// build a set of factories listed explicitly in this transaction
+	// we will process them after we handle the catStatus trigger, which may add to the set
+	std::set<int> factories;
+	if (triggers & catMaterializeState) {
+		for (auto it = jobids.begin(); it != jobids.end(); ++it) {
+			if (! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc >= 0) continue; // cluster ads only
+			JobQueueCluster * cad = GetClusterAd(job_id);
+			if (! cad) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
+
+			ASSERT(cad->IsCluster());
+
+			// remember the ids of factory clusters
+			if (cad->factory) {
+				factories.insert(cad->jid.cluster);
+			}
+		}
+	}
+
+	// this trigger happens when the JobStatus attribute of a job is set
 	if (triggers & catStatus) {
 		for (auto it = jobids.begin(); it != jobids.end(); ++it) {
 			if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc < 0) continue; // ignore the cluster ad and '0.0' ad
@@ -4313,45 +4332,58 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job->Status(), -1);
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job_status, 1);
 
-				if (job->Cluster()) {
-					job->Cluster()->JobStatusChanged(job->Status(), job_status);
-					// if there is a materialization policy for this cluster, force the MaterializeState trigger
+				JobQueueCluster* cad = job->Cluster();
+				if (cad) {
+					// track counts of jobs in various states in the JobQueueCluster class
+					cad->JobStatusChanged(job->Status(), job_status);
+
+					// if there is a factory on this cluster, add it to the set of factories to check
 					// we do this so that a change of state for a job (idle -> running) can trigger new materialization
-					if (HasMaterializePolicy(job->Cluster())) { triggers |= catMaterializeState; }
+					if (cad->factory) {
+						factories.insert(cad->jid.cluster);
+						triggers |= catMaterializeState;
+					}
 				}
 				job->SetStatus(job_status);
 			}
 		}
 	}
 
-	// note, catNewMaterialize trigger handling for new cluster
-	// is done elsewhere because it needs to happen later than where this function is called.
+	// check factory clusters to see if there was a state change that justifies new job materialization
 	if (scheduler.getAllowLateMaterialize()) {
 		if (triggers & catMaterializeState) {
-			for (auto it = jobids.begin(); it != jobids.end(); ++it) {
-				if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc >= 0) continue; // cluster ads only
-
-				JobQueueCluster * cad = GetClusterAd(job_id);
+			for (auto it = factories.begin(); it != factories.end(); ++it) {
+				JobQueueCluster * cad = GetClusterAd(*it);
 				if ( ! cad) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
 
 				ASSERT(cad->IsCluster());
 
-				// ignore non-factory jobs.
+				// ignore non-factory clusters
 				if ( ! cad->factory) continue;
 
-				// sync up the factory pause state with the commited value of the ATTR_JOB_MATERIALIZE_PAUSED attribute
-				int paused = 0;
+				// fetch the committed value of the factory pause state, it should be
+				// one of mmInvalid=-1, mmRunning=0, mmHold=1, mmNoMoreItems=2
+				int paused = mmRunning;
 				if ( ! cad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused)) {
-					paused = 0;
+					paused = mmRunning;
 				}
+
+				// sync up the factory pause state with the commited value of the ATTR_JOB_MATERIALIZE_PAUSED attribute
+				// if the pause state was changed to mmRunning then we want to schedule materialization for this cluster
 				if (CheckJobFactoryPause(cad->factory, paused)) {
-					if ( ! paused) {
-						// changed state to running, we need to trigger materialization
+					if (paused == mmRunning) {
+						// we expect to get here when the factory pause state changes to running.
 						ScheduleClusterForJobMaterializeNow(cad->jid.cluster);
 					}
+				} else if  ((paused == mmRunning) && HasMaterializePolicy(cad)) {
+					// we expect to get here when a job starts running and the factory is not paused/completed
+					ScheduleClusterForJobMaterializeNow(cad->jid.cluster);
 				}
 			}
 		}
+
+		// note, the catNewMaterialize trigger handling for *new* clusters can't be handled here
+		// we will deal with that one later.
 	}
 
 }
