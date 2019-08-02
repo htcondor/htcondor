@@ -3225,6 +3225,11 @@ default=0
 type=int
 tags=schedd
 
+[JOB_START_COUNT]
+default=1
+range=1,
+type=int
+
 [MAX_JOBS_RUNNING]
 default=MIN({$(DETECTED_MEMORY), 10000})
 win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
