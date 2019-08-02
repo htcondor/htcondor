@@ -425,8 +425,6 @@ inline bool expand_param (const char *str, std::string & expanded) {
 int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
 int write_config_file(const char* pathname, int options);
 
-extern "C" {
-
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -448,8 +446,8 @@ extern "C" {
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
 
-	void init_config (int options);
-}
+	void init_global_config_table(int options);
+	void clear_global_config_table(void);
 
 #endif // __cplusplus
 
@@ -671,7 +669,6 @@ BEGIN_C_DECLS
 		int cReferenced;
 	};
 	int  get_config_stats(struct _macro_stats *pstats);
-	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
