@@ -81,7 +81,7 @@ New Features:
 - The ``Undefined`` and ``Error`` values in Python no longer cast silently to integers.
   Previously, ``Undefined`` and ``Error`` evaluated to ``True`` when used in a
   conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
-  in a ``RuntimeError`` exception.  #7109
+  in a ``RuntimeError`` exception.  :ticket:`7109`
 
 - The *condor_collector* daemon will automatically generate a pool password file at the
   location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
