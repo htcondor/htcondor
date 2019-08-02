@@ -100,6 +100,11 @@ Bugs Fixed:
 -  The ``TOKEN`` authentication method no longer fails if the ``/etc/condor/passwords.d``
    is missing.  :ticket:`7138`
 
+-  Hostname-based verification for SSL now works more reliably from command-line tools.
+   In some cases, the hostname was dropped internally in HTCondor, causing the SSL certificate
+   verification to fail because only an IP address was available.
+   :ticket:`7073`
+
 Version 8.9.2
 -------------
 
