@@ -75,6 +75,8 @@ New Features:
   a Python keyword) to ``itemdata``.  :ticket:`7064`
   Both this method and the ``Submit`` object can now accept a wider range of objects,
   as long as they can be converted to strings. :ticket:`7065`
+  The ``Submit`` class's constructor now behaves in the same way as a Python dictionary
+  :ticket:`7067`
 
 Bugs Fixed:
 
