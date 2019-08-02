@@ -635,16 +635,14 @@ These are all of the events that can show up in a job log file:
   tables would become corrupted.
 
 | **Event Number:** 035
-| **Event Name:** Factory Submit
+| **Event Name:** Cluster Submit
 | **Event Description:** This event occurs when a user submits a cluster
-  using late materialization.
+  with multiple procs.
 
 | **Event Number:** 036
-| **Event Name:** Cluster Removed
-| **Event Description:** Only written for clusters using late
-  materialization. This event occurs after all the jobs in a cluster
-  submitted using late materialization have materialized and completed, or
-  when the cluster is removed (by *condor_rm*).
+| **Event Name:** Cluster Remove
+| **Event Description:** This event occurs after all the jobs in a multi-proc 
+  cluster have completed, or when the cluster is removed (by *condor_rm*).
 
 | **Event Number:** 037
 | **Event Name:** Factory Paused

@@ -658,8 +658,8 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );

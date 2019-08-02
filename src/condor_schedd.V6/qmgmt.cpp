@@ -422,11 +422,13 @@ ClusterCleanup(int cluster_id)
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,-1,key);
 
-	// If this cluster has a job factory, write a FactoryRemove log event
+	// If this cluster has a job factory, write a ClusterRemove log event
+	// TODO: ClusterRemove events should be logged for all clusters with more
+	// than one proc, regardless of whether a factory or not.
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if( clusterad ) {
 		if( clusterad->factory || clusterad->Lookup(ATTR_JOB_MATERIALIZE_DIGEST_FILE) ) {
-			scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
+			scheduler.WriteClusterRemoveToUserLog( clusterad, false );
 		}
 	}
 	else {
@@ -5259,9 +5261,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						}
 					}
 
-					// If this is a factory job, log the FactorySubmit event here
+					// If this is a factory job, log the ClusterSubmit event here
+					// TODO: ClusterSubmit events should be logged for all clusters with more
+					// than one proc, regardless of whether a factory or not.
 					if( clusterad->factory ) {
-						scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
+						scheduler.WriteClusterSubmitToUserLog( clusterad, doFsync );
 					}
 
 				}

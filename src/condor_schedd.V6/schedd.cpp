@@ -4787,7 +4787,7 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 }
 
 bool
-Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
 	std::string submitUserNotes, submitEventNotes;
 
@@ -4796,7 +4796,7 @@ Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 			// User didn't want log
 		return true;
 	}
-	FactorySubmitEvent event;
+	ClusterSubmitEvent event;
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	if ( cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
@@ -4820,14 +4820,14 @@ Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 }
 
 bool
-Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
 	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
-	FactoryRemoveEvent event;
+	ClusterRemoveEvent event;
 
 	std::string reason;
 	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
@@ -4836,10 +4836,10 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);
 	switch (code) {
-	case mmInvalid: event.completion = FactoryRemoveEvent::CompletionCode::Error; break;
-	case mmRunning: event.completion = FactoryRemoveEvent::CompletionCode::Incomplete; break;
-	case mmHold: event.completion = FactoryRemoveEvent::CompletionCode::Paused; break;
-	case mmNoMoreItems: event.completion = FactoryRemoveEvent::CompletionCode::Complete; break;
+	case mmInvalid: event.completion = ClusterRemoveEvent::CompletionCode::Error; break;
+	case mmRunning: event.completion = ClusterRemoveEvent::CompletionCode::Incomplete; break;
+	case mmHold: event.completion = ClusterRemoveEvent::CompletionCode::Paused; break;
+	case mmNoMoreItems: event.completion = ClusterRemoveEvent::CompletionCode::Complete; break;
 	}
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, event.next_proc_id);
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, event.next_row);

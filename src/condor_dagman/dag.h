@@ -278,17 +278,17 @@ class Dag {
 	*/
 	void ProcessReleasedEvent(Job *job, const ULogEvent *event);
 
-	/** Process a factory submit event.
+	/** Process a cluster submit event.
 	    @param The job corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessFactorySubmitEvent(Job *job);
+	void ProcessClusterSubmitEvent(Job *job);
 
-		/** Process a factory remove event.
+		/** Process a cluster remove event.
 	    @param The job corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessFactoryRemoveEvent(Job *job, bool recovery);
+	void ProcessClusterRemoveEvent(Job *job, bool recovery);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG

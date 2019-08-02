@@ -656,11 +656,11 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_CLUSTER_SUBMIT:
-				ProcessFactorySubmitEvent(job);
+				ProcessClusterSubmitEvent(job);
 				break;
 
 			case ULOG_CLUSTER_REMOVE:
-				ProcessFactoryRemoveEvent(job, recovery);
+				ProcessClusterRemoveEvent(job, recovery);
 				break;
 
 			case ULOG_CHECKPOINTED:
@@ -877,7 +877,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory  ) {
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster  ) {
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
@@ -892,7 +892,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		if ( job->DoRetry() ) {
 			// If this is a cluster job with multiple procs, do not restart it now.
 			// That should happen in ProcessClusterRemoveEvent().
-			if ( !job->is_factory ) {
+			if ( !job->is_cluster ) {
 				RestartNode( job, recovery );
 			}
 		} else {
@@ -913,10 +913,10 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		return;
 	}
 
-	// If this is *not* a factory job, and no more procs are outstanding, start
-	// shutting things down now.
-	// Factory jobs get shut down in ProcessFactoryRemoveEvent().
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory ) {
+	// If this is *not* a multi-proc cluster job, and no more procs are
+	// outstanding, start shutting things down now.
+	// Multi-proc cluster jobs get shut down in ProcessClusterRemoveEvent().
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster ) {
 			// All procs for this job are done.
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
@@ -1267,30 +1267,30 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessFactorySubmitEvent(Job *job) {
+Dag::ProcessClusterSubmitEvent(Job *job) {
 
 	if ( !job ) {
 		return;
 	}
-	job->is_factory = true;
+	job->is_cluster = true;
 }
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
+Dag::ProcessClusterRemoveEvent(Job *job, bool recovery) {
 
 	if ( !job ) {
 		return;
 	}
 
-	// Make sure the job is a factory, and has no more queued procs. 
+	// Make sure the job is a multi-proc cluster, and has no more queued procs. 
 	// Otherwise something is wrong.
-	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
+	if ( job->_queuedNodeJobProcs == 0 && job->is_cluster ) {
 		// All procs for this job are done.
 		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 			job->GetJobName() );
 		// If a post script is defined for this job, that will run after we
-		// receive the FactoryRemove event. In that case, run the post script
+		// receive the ClusterRemove event. In that case, run the post script
 		// now and don't call TerminateJob(); that will get called later by
 		// ProcessPostTermEvent().
 		if( job->_scriptPost != NULL ) {
@@ -1307,7 +1307,7 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 		}
 	}
 	else {
-		debug_printf(DEBUG_NORMAL, "ERROR: ProcessFactoryRemoveEvent() called"
+		debug_printf(DEBUG_NORMAL, "ERROR: ProcessClusterRemoveEvent() called"
 			" for job %s although %d procs still queued.\n", 
 			job->GetJobName(), job->_queuedNodeJobProcs);
 	}
@@ -1320,7 +1320,7 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 	}
 
 	// Cleanup the job and write succcess/failure to the log. 
-	// For non-factory jobs, this is done in DecrementProcCount
+	// For non-cluster jobs, this is done in DecrementProcCount
 	_jobstateLog.WriteJobSuccessOrFailure( job );
 	UpdateJobCounts( job, -1 );
 	job->Cleanup();
@@ -3922,7 +3922,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		// 4) it's a pre skip event, which is handled similarly to
 		// a submit event.
 		//
-		// 5) it's a factory submit event, which is handled similarly to
+		// 5) it's a cluster submit event, which is handled similarly to
 		// a submit event.
 	if( event->eventNumber == ULOG_SUBMIT ) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
@@ -4008,10 +4008,10 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 	}
 
 	if( event->eventNumber == ULOG_CLUSTER_SUBMIT ) {
-		const FactorySubmitEvent* factory_submit_event = (const FactorySubmitEvent*)event;
-		if ( factory_submit_event->submitEventLogNotes ) {
+		const ClusterSubmitEvent* cluster_submit_event = (const ClusterSubmitEvent*)event;
+		if ( cluster_submit_event->submitEventLogNotes ) {
 			char nodeName[1024] = "";
-			if ( sscanf( factory_submit_event->submitEventLogNotes,
+			if ( sscanf( cluster_submit_event->submitEventLogNotes,
 						 "DAG Node: %1023s", nodeName ) == 1 ) {
 				node = FindNodeByName( nodeName );
 				if( node ) {
@@ -4040,8 +4040,8 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 				}
 			} else {
 				debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
-							"in factory submit event notes: <%s>\n",
-							factory_submit_event->submitEventLogNotes );
+							"in cluster submit event notes: <%s>\n",
+							cluster_submit_event->submitEventLogNotes );
 			}
 		}
 		return node;
@@ -4428,7 +4428,7 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( !node->is_factory && node->_queuedNodeJobProcs == 0 ) {
+	if( !node->is_cluster && node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}

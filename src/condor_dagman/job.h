@@ -553,8 +553,8 @@ public:
 		// Indicates whether abort_dag_return_val was set.
 	bool have_abort_dag_return_val;
 
-		// Indicates if this is a factory job or not
-	bool is_factory;
+		// Indicates if this is a cluster job or not
+	bool is_cluster;
 
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
