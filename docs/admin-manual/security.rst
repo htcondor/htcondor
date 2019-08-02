@@ -1149,6 +1149,11 @@ access, if the pool password is known. Local daemons authenticated as
 condor@mydomain are also allowed access. This is done so local
 authentication can be done using another method such as FS.
 
+If there is no pool password available on Linux, the *condor_collector* will
+automatically generate one.  This is meant to ease the configuration of
+freshly-installed clusters; for ``POOL`` authentication, the HTCondor administrator
+only needs to copy this file to each host in the cluster.
+
 Example Security Configuration Using Pool Password
 """"""""""""""""""""""""""""""""""""""""""""""""""
 

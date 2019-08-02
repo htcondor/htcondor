@@ -83,6 +83,10 @@ New Features:
   conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
   in a ``RuntimeError`` exception.  #7109
 
+- The *condor_collector* daemon will automatically generate a pool password file at the
+  location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
+  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
