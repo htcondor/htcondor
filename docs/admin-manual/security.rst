@@ -654,6 +654,8 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
@@ -707,8 +709,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, KERBEROS, GSI.
+Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, TOKEN, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -1357,6 +1359,8 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE

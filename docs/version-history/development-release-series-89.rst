@@ -63,6 +63,10 @@ New Features:
   negotiator trusted by the collector is automatically trusted by the collector.
   :ticket:`6956`
 
+- ``TOKEN`` authentication is enabled by default if the HTCondor administrator
+  does not specify a preferred list of authentication methods.  In this case,
+  ``TOKEN`` is only used if the user has at least one usable token available.
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
