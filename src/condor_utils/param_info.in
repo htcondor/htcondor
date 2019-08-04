@@ -3630,7 +3630,7 @@ type=string
 tags=annex
 
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-098354a57b99f8284
+default = ami-0b0cba432f6183314
 type=string
 tags=annex
 
@@ -3645,7 +3645,7 @@ type=string
 tags=annex
 
 [eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-0ea8a09ffcba25387
+default = ami-04cf1a4bcdb6c2ddb
 type=string
 tags=annex
 
@@ -3660,7 +3660,7 @@ type=string
 tags=annex
 
 [eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-04d9855a808fcc4bd
+default = ami-05db8a05b808cc82a
 type=string
 tags=annex
 
@@ -3675,7 +3675,7 @@ type=string
 tags=annex
 
 [eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-08049d1871f14f2f9
+default = ami-000db792307d7ec4c
 type=string
 tags=annex
 
@@ -3690,7 +3690,7 @@ type=string
 tags=annex
 
 [eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-029bbf2574767da49
+default = ami-0628aa554d3b907a5
 type=string
 tags=annex
 
