@@ -980,7 +980,7 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
-populate %_sysconfdir/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
+populate %{buildroot}%{_libdir}/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
 populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
@@ -1327,7 +1327,7 @@ rm -rf %{buildroot}
 %_datadir/condor/htcondor.pp
 %endif
 %dir %_sysconfdir/condor/config.d/
-%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
+%_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
