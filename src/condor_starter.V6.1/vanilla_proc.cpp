@@ -1430,9 +1430,9 @@ int VanillaProc::outputOpenFlags() {
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	bool append = false;
-	JobAd->LookupBool( ATTR_APPEND_OUTPUT_AND_ERROR, append );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || append ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
 		return this->OsProc::outputOpenFlags();
@@ -1444,9 +1444,9 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	bool append = false;
-	JobAd->LookupBool( ATTR_APPEND_OUTPUT_AND_ERROR, append );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || append ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
 		return this->OsProc::streamingOpenFlags( isOutput );

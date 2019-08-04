@@ -213,7 +213,7 @@
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
 
 // ...
-#define SUBMIT_KEY_AppendOutputAndError "append_output_and_error"
+#define SUBMIT_KEY_DontAppend "erase_output_and_error_on_restart"
 
 //
 // CronTab Parameters
