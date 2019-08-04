@@ -1730,6 +1730,18 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For grid type **boinc** jobs, specifies a path and file name of the
     authorization file that grants permission for HTCondor to use the
     BOINC service. There is no default value when not specified.
+    :index:`cloud_label_names<single: cloud_label_names; submit commands>`
+ cloud_label_names = <name0,name1,name...>
+    For grid type **gce** jobs, specifies the case of tag names that
+    will be associated with the running instance. This is only necessary
+    if a tag name case matters. By default the list will be
+    automatically generated.
+    :index:`cloud_label_name<single: cloud_label_name; submit commands>`
+ cloud_label_<name> = <value>
+    For grid type **gce** jobs, specifies a label and value to be associated with
+    the running instance. The label name will be lower-cased; use
+    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
+    to change the case.
     :index:`cream_attributes<single: cream_attributes; submit commands>`
  cream_attributes = <name=value;...;name=value>
     Provides a list of attribute/value pairs to be set in a CREAM job
@@ -1833,7 +1845,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  ec2_spot_price = <bid>
     For grid type **ec2** jobs, specifies the spot instance bid, which
     is the most that the job submitter is willing to pay per hour to run
-    this job. :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
+    this job.
+    :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
  ec2_tag_names = <name0,name1,name...>
     For grid type **ec2** jobs, specifies the case of tag names that
     will be associated with the running instance. This is only necessary
@@ -1842,7 +1855,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     :index:`ec2_tag_name<single: ec2_tag_name; submit commands>`
  ec2_tag_<name> = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
-    the running instance. The tag name will be lower-cased, use
+    the running instance. The tag name will be lower-cased; use
     **ec2_tag_names** :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
     to change the case. :index:`WantNameTag<single: WantNameTag; submit commands>`
  WantNameTag = <True | False>

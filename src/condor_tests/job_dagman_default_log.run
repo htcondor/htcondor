@@ -27,6 +27,8 @@
 ## mode.
 
 use CondorTest;
+use CondorUtils;
+use Data::Dumper;
 
 $cmd = 'job_dagman_default_log.dag';
 $testdesc =  'Condor submit dag - default log test - scheduler U';
@@ -48,22 +50,49 @@ sub RUNNING{2};
 
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
-	if (-e $name) {
-		system("rm -f $name");
-	}
+	unlink $name if (-e $name);
 }
-if (-e $nodelog) {
-	system("rm -f $nodelog");
-}
+unlink $nodelog if (-e $nodelog);
+
+#
+#sub print_core_file_info {
+#	my $core = shift;
+#	if (-s $core) {
+#		print "\tfound core file: $core\n";
+#		if (CondorUtils::is_windows()) {
+#			system("type $core");
+#		} else {
+#			my $fileinfo = `file $core`;
+#			print "\t$fileinfo";
+#			my ($dagman) = $fileinfo =~ m/execfn:\s*'(.*)'/;
+#			if (defined $dagman) {
+#				system("echo bt | gdb --quiet $dagman $core");
+#			}
+#		}
+#	}
+#}
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper(\%info);
+	foreach $core (glob "core.*") { CondorUtils::print_core_file_info($core); }
+	die CondorUtils::TimeStr() . " Abnormal exit was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
+};
+
+$evicted = sub
+{
+	my %info = @_;
+	CondorTest::debug("Got Evicted with requeue:\n");
+	print Dumper(\%info);
+	foreach $core (glob "core.*") { CondorUtils::print_core_file_info($core); }
+	die CondorUtils::TimeStr() . "Evicted with requeue was NOT expected - aborting test\n";
 };
 
 $held = sub 
@@ -81,13 +110,13 @@ $released = sub
 $executed = sub
 {
 	my %info = @_;
-
 	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
 };
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, held, released, and successful completion\n",1);
 };
 
 $success = sub
@@ -189,6 +218,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterEvictedWithRequeue( $testname, $evicted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterRelease( $testname, $released );
 CondorTest::RegisterSubmit( $testname, $submitted );

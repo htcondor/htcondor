@@ -1,7 +1,0 @@
-% I have /no/ idea how the second and third lines below combine to have the effect they do.
-\def \nbsp {\HCode{&nbsp;}}
-\def\obeyspaces{\catcode`\ \active}
-{\obeyspaces\global\let =\nbsp}
-\renewcommand{\terminal}[1]{\HCode{<div style="background-color: \#EEE; border: 1px solid \#666;">}\HCode{<code>}#1\HCode{</code>}\HCode{</div>}}
-\renewcommand{\fileinal}[2]{\HCode{<div style="background-color: \#EFE;"><i><code>}#1\HCode{</code></i></div>}\HCode{<div style="background-color: \#DED; border: 1px solid \#666;"><code>}#2\HCode{</code></div>}}
-\renewcommand{\hphantom}[1]{\HCode{<span style="visibility: hidden;">}#1\HCode{</span>}}

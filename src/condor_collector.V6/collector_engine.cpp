@@ -406,20 +406,25 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 {
 
-	if( !m_collector_requirements ) {
+	if( !m_collector_requirements && (command != UPDATE_OWN_SUBMITTOR_AD)) {
 			// no need to do any of the following checks if the admin has
-			// not configured any COLLECTOR_REQUIREMENTS
+			// not configured any COLLECTOR_REQUIREMENTS and there aren't
+			// any mandatory checks.
 		return true;
 	}
 
 
 	char const *ipattr = NULL;
+	char const *check_owner = nullptr;
 	switch( command ) {
 	  case MERGE_STARTD_AD:
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
 		  break;
+	  case UPDATE_OWN_SUBMITTOR_AD:
+		check_owner = ATTR_NAME;
+		// fallthrough
 	  case UPDATE_SCHEDD_AD:
 	  case UPDATE_SUBMITTOR_AD:
 		  ipattr = ATTR_SCHEDD_IP_ADDR;
@@ -469,9 +474,34 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 			}
 		}
 	}
+		// Verify the owner matches the value in the specified attribute.
+	if (check_owner) {
+		const char *sock_owner = sock->getOwner();
+		if (!sock_owner || !*sock_owner || !strcmp(sock_owner, "unmapped")) {
+			return false;
+		}
+		std::string ad_owner;
+		if (!clientAd->EvaluateAttrString(check_owner, ad_owner)) {
+			return false;
+		}
+		auto at_sign = ad_owner.find("@");
+		if (at_sign != std::string::npos) {
+			ad_owner = ad_owner.substr(0, at_sign);
+		}
+		auto last_dot = ad_owner.find_last_of(".");
+		if (last_dot != std::string::npos) {
+			ad_owner = ad_owner.substr(last_dot+1);
+		}
+		if (strcmp(sock_owner, ad_owner.c_str())) {
+			return false;
+		}
+	}
 
 
 		// Now verify COLLECTOR_REQUIREMENTS
+	if( !m_collector_requirements ) {
+		return true;
+	}
 	bool collector_req_result = false;
 	if( !EvalBool(COLLECTOR_REQUIREMENTS,m_collector_requirements,clientAd,collector_req_result) ) {
 		dprintf(D_ALWAYS,"WARNING: %s did not evaluate to a boolean result.\n",COLLECTOR_REQUIREMENTS);
@@ -645,6 +675,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 							  clientAd, hk, hashString, insert, from );
 		break;
 
+	  case UPDATE_OWN_SUBMITTOR_AD: // fallthrough
 	  case UPDATE_SUBMITTOR_AD:
 		// use the same hashkey function as a schedd ad
 		if (!makeScheddAdHashKey (hk, clientAd))

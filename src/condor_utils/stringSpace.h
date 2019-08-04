@@ -59,19 +59,44 @@ public:
     /** Deallocate all strings in the StringSpace.  This means
     all pointers returned by strdup_dedup are invalid.
     */
+#if 1
+	void clear();
+#else
     void clear() { ss_map.clear(); }
+#endif
 
 
 private:
 
-    typedef struct ssentry {     
+#if 1 // set to 1 to use the stringspace string as the key
+	typedef struct ssentry {
+		unsigned int count; // reference count
+		char str[4];        // string buffer, 4 is the minimum size, but may be allocated larger
+	} ssentry;
+
+	struct sskey_hash {
+		inline size_t operator()(const char * const &s) const noexcept {
+			return std::hash<std::string>{}(s);
+		}
+	};
+	struct sskey_equal {
+		inline bool operator()(const char * const & s1, const char * const & s2) const noexcept {
+			return strcmp(s1, s2) == 0;
+		}
+	};
+
+	static ssentry* new_entry(const char * str);
+
+    std::unordered_map<const char *, ssentry*, sskey_hash, sskey_equal> ss_map;
+#else
+    typedef struct ssentry {
         char *pstr;
         unsigned int count;
         ssentry() : pstr(NULL), count(0) {}
         ~ssentry() { free(pstr); }
     } ssentry;
-
     std::unordered_map<std::string, ssentry> ss_map;
+#endif
 };
 
 

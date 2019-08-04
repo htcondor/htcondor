@@ -463,6 +463,8 @@ SubmitHash::SubmitHash()
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
 	, JobDisableFileChecks(false)
+	, SubmitOnHold(false)
+	, SubmitOnHoldCode(0)
 	, already_warned_requirements_disk(false)
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
@@ -2048,16 +2050,22 @@ int SubmitHash::SetJobStatus()
 		}
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SubmittedOnHold);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SubmittedOnHold;
 
 		AssignJobString(ATTR_HOLD_REASON, "submitted on hold at user's request");
 	} else 
 	if ( IsRemoteJob ) {
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SpoolingInput;
 
 		AssignJobString(ATTR_HOLD_REASON, "Spooling input data files");
 	} else {
 		AssignJobVal(ATTR_JOB_STATUS, IDLE);
+		SubmitOnHold = false;
+		SubmitOnHoldCode = 0;
 	}
 
 	AssignJobVal(ATTR_ENTERED_CURRENT_STATUS, submit_time);
@@ -5632,8 +5640,9 @@ int SubmitHash::SetRequestResources()
 			continue;
 		}
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
-		// resource name should be nonempty
-		if (! *rname) continue;
+		const size_t min_tag_len = 2;
+		// resource name should be nonempty at least 2 characters long and not start with _
+		if ((strlen(rname) < min_tag_len) || *rname == '_') continue;
 		// could get this from 'it', but this prevents unused-line warnings:
 		char * val = submit_param(key);
 		if (val[0] == '\"')
@@ -5973,17 +5982,22 @@ int SubmitHash::SetRequirements()
 
 	classad::References tags;
 	std::string request_pre("Request");
-	const int prefix_len = sizeof("Request") - 1;
+	const size_t prefix_len = sizeof("Request") - 1;
+	const size_t min_tag_len = 2;
 	const classad::ClassAd *parent = procAd->GetChainedParentAd();
 	if (parent) {
 		for (classad::ClassAd::const_iterator it = parent->begin(); it != parent->end(); ++it) {
-			if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+			if (it->first.length() >= (prefix_len + min_tag_len) &&
+			    starts_with_ignore_case(it->first, request_pre) &&
+			    it->first[prefix_len] != '_') { // don't allow tags to start with _
 				tags.insert(it->first);
 			}
 		}
 	}
 	for (classad::ClassAd::const_iterator it = procAd->begin(); it != procAd->end(); ++it) {
-		if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+		if (it->first.length() >= (prefix_len + min_tag_len) &&
+		    starts_with_ignore_case(it->first, request_pre) &&
+		    it->first[prefix_len] != '_') { // don't allow tags to start with _
 			tags.insert(it->first);
 		}
 	}

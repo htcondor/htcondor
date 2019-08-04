@@ -879,7 +879,8 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			cidp.secSessionInfo(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			capability_pair.first.c_str(),
-			1200
+			1200,
+			nullptr
 		);
 	}
 }
@@ -3180,8 +3181,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					"  Negotiation with %s skipped because of time limits:\n",
 					submitterName.c_str());
 				dprintf(D_ALWAYS,
-					"  %d seconds spent on this schedd, MAX_TIME_PER_SCHEDD is %d secs\n ",
-					totalTimeSchedd, MaxTimePerSchedd);
+					"  %d seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %d secs\n ",
+					totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
 				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {

@@ -1542,7 +1542,7 @@ sub Monitor
 
 		    next LINE;
 		}
-		# 035: Factory submitted
+		# 035: Cluster submitted
 		elsif( $line =~ 
 			/^035\s+\(0*(\d+)\.\-01.*<([^>]+)>/ )
 		{
@@ -1563,7 +1563,7 @@ sub Monitor
 			if defined $SubmitCallback;
 
 		}
-		# 036 (10794.-01.000) 02/20 15:20:43 Factory removed
+		# 036 (10794.-01.000) 02/20 15:20:43 Cluster removed
 		elsif( $line =~ /^036\s+\(0*(\d+)\.\-01\./ )
 		{
 		    $info{'cluster'} = $1;

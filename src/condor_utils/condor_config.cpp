@@ -114,7 +114,6 @@ static char* find_file(const char*, const char*, int config_options);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
-void clear_config();
 void reinsert_specials(const char* host);
 void process_config_source(const char*, int depth, const char*, const char*, int);
 void process_locals( const char*, const char*);
@@ -912,11 +911,11 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
-		init_config(config_options);
+		init_global_config_table(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
-		clear_config();
+		clear_global_config_table();
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
@@ -1060,7 +1059,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
 	if (!user_config_name.empty()) {
-		if (find_user_file(user_config_source, user_config_name.c_str(), true)) {
+		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
 			local_config_sources.append(user_config_source.c_str());
@@ -1485,13 +1484,13 @@ find_global(int config_options)
 // if basename is a fully qualified path, then it is used as-is. otherwise
 // it is prefixed with ~/.condor/ to create the effective file location
 bool
-find_user_file(MyString &file_location, const char * basename, bool check_access)
+find_user_file(MyString &file_location, const char * basename, bool check_access, bool daemon_ok)
 {
 	file_location.clear();
 	if ( ! basename || ! basename[0])
 		return false;
 
-	if (can_switch_ids())
+	if (!daemon_ok && can_switch_ids())
 		return false;
 	if ( fullpath(basename)) {
 		file_location = basename;
@@ -1913,7 +1912,7 @@ const char * set_live_param_value(const char * name, const char * live_value)
 
 
 void
-init_config(int config_options)
+init_global_config_table(int config_options)
 {
 	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
 	ConfigMacroSet.size = 0;
@@ -1930,7 +1929,7 @@ init_config(int config_options)
 	ConfigMacroSet.table = new MACRO_ITEM[512];
 	if (ConfigMacroSet.table) {
 		ConfigMacroSet.allocation_size = 512;
-		clear_config(); // to zero-init the table.
+		clear_global_config_table(); // to zero-init the table.
 	}
 	if (ConfigMacroSet.defaults) {
 		// Initialize the default table.
@@ -1953,7 +1952,7 @@ init_config(int config_options)
 }
 
 void
-clear_config()
+clear_global_config_table()
 {
 	if (ConfigMacroSet.table) {
 		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);

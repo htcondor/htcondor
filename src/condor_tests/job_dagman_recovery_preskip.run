@@ -31,6 +31,7 @@
 
 use CondorTest;
 use CondorUtils;
+use Data::Dumper;
 
 $cmd = 'job_dagman_recovery_preskip.dag';
 $testdesc =  'Condor submit dag - preskip recovery checking test - scheduler U';
@@ -64,17 +65,20 @@ if (-e $rescue_file) {
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute, hold, release, and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper($info);
+	die "Abnormal exit was NOT expected - aborting test\n";
 };
 
 $failure = sub 
 {
-	die "Did not expect to see failure.";
+	die "Job exit with failure was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
 };
 
 $held = sub 
@@ -98,7 +102,8 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, held, released, and successful completion\n",1);
 };
 
 $success = sub

@@ -216,10 +216,10 @@ instantiateEvent (ULogEventNumber event)
 		return new PreSkipEvent;
 
 	case ULOG_CLUSTER_SUBMIT:
-		return new FactorySubmitEvent;
+		return new ClusterSubmitEvent;
 
 	case ULOG_CLUSTER_REMOVE:
-		return new FactoryRemoveEvent;
+		return new ClusterRemoveEvent;
 
 	case ULOG_FACTORY_PAUSED:
 		return new FactoryPausedEvent;
@@ -621,10 +621,10 @@ ULogEvent::toClassAd(bool event_time_utc)
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
 	case ULOG_CLUSTER_SUBMIT:
-		SetMyTypeName(*myad, "FactorySubmitEvent");
+		SetMyTypeName(*myad, "ClusterSubmitEvent");
 		break;
 	case ULOG_CLUSTER_REMOVE:
-		SetMyTypeName(*myad, "FactoryRemoveEvent");
+		SetMyTypeName(*myad, "ClusterRemoveEvent");
 		break;
 	case ULOG_FACTORY_PAUSED:
 		SetMyTypeName(*myad, "FactoryPausedEvent");
@@ -6858,8 +6858,8 @@ void PreSkipEvent::setSkipNote(const char* s)
 	}
 }
 
-// ----- the FactorySubmitEvent class
-FactorySubmitEvent::FactorySubmitEvent(void)
+// ----- the ClusterSubmitEvent class
+ClusterSubmitEvent::ClusterSubmitEvent(void)
 {
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
@@ -6867,7 +6867,7 @@ FactorySubmitEvent::FactorySubmitEvent(void)
 	eventNumber = ULOG_CLUSTER_SUBMIT;
 }
 
-FactorySubmitEvent::~FactorySubmitEvent(void)
+ClusterSubmitEvent::~ClusterSubmitEvent(void)
 {
 	if( submitHost ) {
 		delete[] submitHost;
@@ -6881,7 +6881,7 @@ FactorySubmitEvent::~FactorySubmitEvent(void)
 }
 
 void
-FactorySubmitEvent::setSubmitHost(char const *addr)
+ClusterSubmitEvent::setSubmitHost(char const *addr)
 {
 	if( submitHost ) {
 		delete[] submitHost;
@@ -6896,9 +6896,9 @@ FactorySubmitEvent::setSubmitHost(char const *addr)
 }
 
 bool
-FactorySubmitEvent::formatBody( std::string &out )
+ClusterSubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Factory submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
 		return false;
@@ -6919,7 +6919,7 @@ FactorySubmitEvent::formatBody( std::string &out )
 }
 
 int
-FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] submitHost;
 	submitHost = NULL;
@@ -6927,7 +6927,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	submitEventLogNotes = NULL;
 #ifdef DONT_EVER_SEEK
 	MyString line;
-	if ( ! read_line_value("Factory submitted from host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Cluster submitted from host: ", line, file, got_sync_line)) {
 		return 0;
 	}
 	submitHost = line.detach_buffer();
@@ -6956,7 +6956,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	setSubmitHost(line.Value()); // allocate memory
-	if( sscanf( line.Value(), "Factory submitted from host: %s\n", submitHost ) != 1 ) {
+	if( sscanf( line.Value(), "Cluster submitted from host: %s\n", submitHost ) != 1 ) {
 		return 0;
 	}
 
@@ -7012,7 +7012,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactorySubmitEvent::toClassAd(bool event_time_utc)
+ClusterSubmitEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
@@ -7026,7 +7026,7 @@ FactorySubmitEvent::toClassAd(bool event_time_utc)
 
 
 void
-FactorySubmitEvent::initFromClassAd(ClassAd* ad)
+ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -7040,14 +7040,14 @@ FactorySubmitEvent::initFromClassAd(ClassAd* ad)
 	}
 }
 
-// ----- the FactoryRemoveEvent class
-FactoryRemoveEvent::FactoryRemoveEvent(void)
+// ----- the ClusterRemoveEvent class
+ClusterRemoveEvent::ClusterRemoveEvent(void)
 	: next_proc_id(0), next_row(0), completion(Incomplete), notes(NULL)
 {
 	eventNumber = ULOG_CLUSTER_REMOVE;
 }
 
-FactoryRemoveEvent::~FactoryRemoveEvent(void)
+ClusterRemoveEvent::~ClusterRemoveEvent(void)
 {
 	if (notes) { free(notes); } notes = NULL;
 }
@@ -7070,10 +7070,10 @@ static bool read_line_or_rewind(FILE *file, char *buf, int bufsiz) {
 }
 #endif
 
-#define CLUSTER_REMOVED_BANNER "Factory removed"
+#define CLUSTER_REMOVED_BANNER "Cluster removed"
 
 bool
-FactoryRemoveEvent::formatBody( std::string &out )
+ClusterRemoveEvent::formatBody( std::string &out )
 {
 	int retval = formatstr_cat (out, CLUSTER_REMOVED_BANNER "\n");
 	if (retval < 0)
@@ -7097,7 +7097,7 @@ FactoryRemoveEvent::formatBody( std::string &out )
 
 
 int
-FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	if( !file ) {
 		return 0;
@@ -7127,7 +7127,7 @@ FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 			return 1; // this field is optional
 		}
 #else
-		// got the "Factory Removed" line, now get the next line.
+		// got the "Cluster removed" line, now get the next line.
 		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
 			return 1; // this field is optional
 		}
@@ -7175,7 +7175,7 @@ FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactoryRemoveEvent::toClassAd(bool event_time_utc)
+ClusterRemoveEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
@@ -7198,7 +7198,7 @@ FactoryRemoveEvent::toClassAd(bool event_time_utc)
 
 
 void
-FactoryRemoveEvent::initFromClassAd(ClassAd* ad)
+ClusterRemoveEvent::initFromClassAd(ClassAd* ad)
 {
 	next_proc_id = next_row = 0;
 	completion = Incomplete;

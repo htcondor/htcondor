@@ -169,6 +169,7 @@ class Dag {
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
 
+#ifdef DEAD_CODE
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
@@ -176,6 +177,7 @@ class Dag {
         @return true: successful, false: failure
     */
     static bool AddDependency (Job * parent, Job * child);
+#endif
 
 	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
 	    are also limited by halt status and maxpre/maxpost.
@@ -276,17 +278,17 @@ class Dag {
 	*/
 	void ProcessReleasedEvent(Job *job, const ULogEvent *event);
 
-	/** Process a factory submit event.
+	/** Process a cluster submit event.
 	    @param The job corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessFactorySubmitEvent(Job *job);
+	void ProcessClusterSubmitEvent(Job *job);
 
-		/** Process a factory remove event.
+		/** Process a cluster remove event.
 	    @param The job corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessFactoryRemoveEvent(Job *job, bool recovery);
+	void ProcessClusterRemoveEvent(Job *job, bool recovery);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -540,8 +542,10 @@ class Dag {
 	bool RemoveNode( const char *name, MyString &whynot );
 #endif
 
+#ifdef DEAD_CODE
 	bool RemoveDependency( Job *parent, Job *child );
 	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
+#endif
 	
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle
@@ -582,11 +586,13 @@ class Dag {
 
 	void CheckAllJobs();
 
+#ifdef DEAD_CODE
 		/** Returns a delimited string listing the node names of all
 			of the given node's parents if the number of parents is less than or equal to max_parents
 			@return delimited string of parent node names
 		*/
 	const MyString ParentListString( Job *node, size_t max_parents=256, const char delim = ',' ) const;
+#endif
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
@@ -719,10 +725,12 @@ class Dag {
 	void AssumeOwnershipofNodes(const MyString &spliceName,
 				OwnedMaterials *om);
 
+#ifdef DEAD_CODE // we now do this at submit time.
 	// This must be called after the toplevel dag has been parsed and
 	// the splices lifted. It will resolve the use of $(JOB) in the value
 	// of the VARS attribute.
 	void ResolveVarsInterpolations(void);
+#endif
 
 	// When parsing a splice (which is itself a dag), there must always be a
 	// DIR concept associated with it. If DIR is left off, then it is ".",
@@ -776,6 +784,10 @@ class Dag {
 		
 		// Set priorities for the individual nodes within this DAG.
 	void SetNodePriorities();
+
+		// make a pass through the dag removing duplicate edges
+		// and setting the waiting edges. not all edge strategies need this
+	void AdjustEdges();
 
 	/** Determine whether the DAG is currently halted (waiting for
 		existing jobs to finish but not submitting any new ones).
@@ -934,7 +946,7 @@ class Dag {
 	void RestartNode( Job *node, bool recovery );
 
 	/* DFS number the jobs in the DAG in order to detect cycle*/
-	void DFSVisit (Job * job);
+	void DFSVisit (Job * job, int depth);
 
 		/** Check whether we got an exit value that should abort the DAG.
 			@param The job associated with either the PRE script, POST
@@ -1103,7 +1115,10 @@ private:
 		// Number of nodes currently in status Job::STATUS_POSTRUN.
 	int		_postRunNodeCount;
 	
-	int DFS_ORDER; 
+	int DFS_ORDER;
+	int _graph_width;
+	int _graph_height;
+	std::vector<int> _graph_widths;
 
 	// Information for producing dot files, which can be used to visualize
 	// DAG files. Dot is part of the graphviz package, which is available from

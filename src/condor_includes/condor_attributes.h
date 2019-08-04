@@ -201,6 +201,7 @@
 #define ATTR_CLOUD_LABEL_PREFIX "CloudLabel"
 #define ATTR_FILE_SEEK_COUNT  "FileSeekCount"
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
+#define ATTR_FLOCK_TO "FlockTo"
 #define ATTR_FLAVOR  "Flavor"
 #define ATTR_FORCE  "Force"
 #define ATTR_GAHP_PID "GahpPid"

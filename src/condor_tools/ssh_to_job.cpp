@@ -561,7 +561,8 @@ bool SSHToJob::execute_ssh()
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					starter_addr.Value(),
-					0 );
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}

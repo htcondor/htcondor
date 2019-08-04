@@ -53,6 +53,7 @@
 #include "nullfile.h"
 #include "condor_url.h"
 #include "classad_helpers.h"
+#include "iso_dates.h"
 #include <param_info.h>
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -165,7 +166,7 @@ int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 #endif
 void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
-int		MaterializeJobs(JobQueueCluster * clusterAd, int & retry_delay);
+int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
 static JobQueueType *JobQueue = 0;
@@ -344,13 +345,22 @@ void JobQueueCluster::JobStatusChanged(int old_status, int new_status)
 	}
 }
 
-void JobQueueCluster::PopulateInfoAd(ClassAd & iad, bool include_factory_info)
+void JobQueueCluster::PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info)
 {
-	iad.Assign("JobsPresent", num_attached);
-	iad.Assign("JobsIdle", num_idle);
+	int num_pending_held = 0, num_pending_idle = 0;
+	iad.Assign("JobsPresent", num_attached + num_pending);
+	if (num_pending) {
+		int code = -1;
+		if (this->factory && JobFactoryIsSubmitOnHold(this->factory, code)) {
+			num_pending_held = num_pending;
+		} else {
+			num_pending_idle = num_pending;
+		}
+	}
+	iad.Assign("JobsIdle", num_idle + num_pending_idle);
 	iad.Assign("JobsRunning", num_running);
-	iad.Assign("JobsHeld", num_held);
-	iad.Assign("ClusterSize", cluster_size);
+	iad.Assign("JobsHeld", num_held + num_pending_held);
+	iad.Assign("ClusterSize", cluster_size + num_pending);
 	if (this->factory && include_factory_info) {
 		PopulateFactoryInfoAd(this->factory, iad);
 	}
@@ -412,11 +422,13 @@ ClusterCleanup(int cluster_id)
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,-1,key);
 
-	// If this cluster has a job factory, write a FactoryRemove log event
+	// If this cluster has a job factory, write a ClusterRemove log event
+	// TODO: ClusterRemove events should be logged for all clusters with more
+	// than one proc, regardless of whether a factory or not.
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if( clusterad ) {
 		if( clusterad->factory || clusterad->Lookup(ATTR_JOB_MATERIALIZE_DIGEST_FILE) ) {
-			scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
+			scheduler.WriteClusterRemoveToUserLog( clusterad, false );
 		}
 	}
 	else {
@@ -480,11 +492,14 @@ inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
 #endif
 
 #ifdef USE_MATERIALIZE_POLICY
-bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
+// num_pending should be the number of jobs that have been materialized, but not yet committed
+// returns bool if materialization of a single job is allowed by policy, if false retry_delay
+// will be set to a suggest delay before trying again.  a retry_delay > 10 "wait for a state change before retrying"
+bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int num_pending, int & retry_delay)
 {
 	long long max_idle = -1;
 	if (cad->LookupInteger(ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle) && max_idle >= 0) {
-		if (cad->getNumNotRunning() < max_idle) {
+		if ((cad->getNumNotRunning() + num_pending) < max_idle) {
 			return true;
 		} else {
 			retry_delay = 20; // don't bother to retry by polling, wait for a job to change state instead.
@@ -496,7 +511,7 @@ bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
 	if (cad->Lookup(ATTR_JOB_MATERIALIZE_CONSTRAINT)) {
 
 		ClassAd iad;
-		cad->PopulateInfoAd(iad, false);
+		cad->PopulateInfoAd(iad, num_pending, submit_on_hold, false);
 
 		classad::ExprTree * expr = NULL;
 		ParseClassAdRvalExpr("JobsIdle < 4", expr);
@@ -574,13 +589,14 @@ JobMaterializeTimerCallback()
 						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
 						cad->ClusterSize());
 
+					TransactionWatcher txn;
 					int num_materialized = 0;
 					int cluster_size = cad->ClusterSize();
 					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						int rv = 0;
-						if (CheckMaterializePolicyExpression(cad, retry_delay)) {
-							rv = MaterializeNextFactoryJob(cad->factory, cad, retry_delay);
+						if (CheckMaterializePolicyExpression(cad, num_materialized, retry_delay)) {
+							rv = MaterializeNextFactoryJob(cad->factory, cad, txn, retry_delay);
 						}
 						if (rv == 1) {
 							num_materialized += 1;
@@ -596,6 +612,17 @@ JobMaterializeTimerCallback()
 					}
 
 					if (num_materialized > 0) {
+						// If we materialized any jobs, we may need to commit the transaction now.
+						if (txn.InTransaction()) {
+							CondorError errorStack;
+							SetAttributeFlags_t flags = scheduler.getNonDurableLateMaterialize() ? NONDURABLE : 0;
+							int rv = txn.CommitIfAny(flags, &errorStack);
+							if (rv < 0) {
+								dprintf(D_ALWAYS, "CommitTransaction() failed for cluster %d rval=%d (%s)\n",
+									cad->jid.cluster, rv, errorStack.empty() ? "no message" : errorStack.message());
+								num_materialized = 0;
+							}
+						}
 						total_new_jobs += num_materialized;
 					} else {
 						int next_row = 0;
@@ -694,9 +721,21 @@ DeferredClusterCleanupTimerCallback()
 			if (clusterad->factory) {
 				dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has job factory, invoking it.\n", cluster_id);
 				int retry_delay = 0;
-				int num_materialized = MaterializeJobs(clusterad, retry_delay);
+				TransactionWatcher txn;
+				int num_materialized = MaterializeJobs(clusterad, txn, retry_delay);
 				if (num_materialized > 0) {
+					if (txn.InTransaction()) {
+						CondorError errorStack;
+						SetAttributeFlags_t flags = scheduler.getNonDurableLateMaterialize() ? NONDURABLE : 0;
+						int rv = txn.CommitIfAny(flags, &errorStack);
+						if (rv < 0) {
+							dprintf(D_ALWAYS, "CommitTransaction() failed for cluster %d rval=%d (%s)\n",
+								cluster_id, rv, errorStack.empty() ? "no message" : errorStack.message());
+							num_materialized = 0;
+						}
+					}
 					total_new_jobs += num_materialized;
+					// PRAGMA_REMIND("TJ: should we do_cleanup here if the transaction failed to commit?");
 					do_cleanup = false;
 				} else {
 					// if no jobs materialized, we have to decide if the factory is done, or in a recoverable pause state
@@ -1896,7 +1935,7 @@ DestroyJobQueue( void )
 }
 
 
-int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
+int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & retry_delay)
 {
 	retry_delay = 0;
 	if ( ! clusterad->factory)
@@ -1921,11 +1960,11 @@ int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
 	int cluster_size = clusterad->ClusterSize();
 	while ((cluster_size + num_materialized) < effective_limit) {
 		int retry = 0;
-		if ( ! CheckMaterializePolicyExpression(clusterad, retry)) {
+		if ( ! CheckMaterializePolicyExpression(clusterad, num_materialized, retry)) {
 			retry_delay = retry;
 			break;
 		}
-		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry) == 1) {
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, txn, retry) == 1) {
 			num_materialized += 1;
 		} else {
 			retry_delay = MAX(retry_delay, retry);
@@ -2128,7 +2167,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			rval = OpenSpoolFactoryFile(cluster_id, filename, fd, "SetJobFactory", terrno);
 			if (0 == rval) {
 				size_t cbtext = strlen(digest_text);
-				size_t cbwrote = write(fd, digest_text, cbtext);
+				size_t cbwrote = write(fd, digest_text, (unsigned int)cbtext);
 				if (cbwrote != cbtext) {
 					terrno = errno;
 					dprintf(D_ALWAYS, "Failing remote SetJobFactory %d because write to '%s' failed, errno = %d (%s)\n",
@@ -4249,6 +4288,25 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 {
 	JobQueueKey job_id;
 
+	// build a set of factories listed explicitly in this transaction
+	// we will process them after we handle the catStatus trigger, which may add to the set
+	std::set<int> factories;
+	if (triggers & catMaterializeState) {
+		for (auto it = jobids.begin(); it != jobids.end(); ++it) {
+			if (! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc >= 0) continue; // cluster ads only
+			JobQueueCluster * cad = GetClusterAd(job_id);
+			if (! cad) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
+
+			ASSERT(cad->IsCluster());
+
+			// remember the ids of factory clusters
+			if (cad->factory) {
+				factories.insert(cad->jid.cluster);
+			}
+		}
+	}
+
+	// this trigger happens when the JobStatus attribute of a job is set
 	if (triggers & catStatus) {
 		for (auto it = jobids.begin(); it != jobids.end(); ++it) {
 			if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc < 0) continue; // ignore the cluster ad and '0.0' ad
@@ -4277,45 +4335,58 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job->Status(), -1);
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job_status, 1);
 
-				if (job->Cluster()) {
-					job->Cluster()->JobStatusChanged(job->Status(), job_status);
-					// if there is a materialization policy for this cluster, force the MaterializeState trigger
+				JobQueueCluster* cad = job->Cluster();
+				if (cad) {
+					// track counts of jobs in various states in the JobQueueCluster class
+					cad->JobStatusChanged(job->Status(), job_status);
+
+					// if there is a factory on this cluster, add it to the set of factories to check
 					// we do this so that a change of state for a job (idle -> running) can trigger new materialization
-					if (HasMaterializePolicy(job->Cluster())) { triggers |= catMaterializeState; }
+					if (cad->factory) {
+						factories.insert(cad->jid.cluster);
+						triggers |= catMaterializeState;
+					}
 				}
 				job->SetStatus(job_status);
 			}
 		}
 	}
 
-	// note, catNewMaterialize trigger handling for new cluster
-	// is done elsewhere because it needs to happen later than where this function is called.
+	// check factory clusters to see if there was a state change that justifies new job materialization
 	if (scheduler.getAllowLateMaterialize()) {
 		if (triggers & catMaterializeState) {
-			for (auto it = jobids.begin(); it != jobids.end(); ++it) {
-				if ( ! job_id.set(it->c_str()) || job_id.cluster <= 0 || job_id.proc >= 0) continue; // cluster ads only
-
-				JobQueueCluster * cad = GetClusterAd(job_id);
+			for (auto it = factories.begin(); it != factories.end(); ++it) {
+				JobQueueCluster * cad = GetClusterAd(*it);
 				if ( ! cad) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
 
 				ASSERT(cad->IsCluster());
 
-				// ignore non-factory jobs.
+				// ignore non-factory clusters
 				if ( ! cad->factory) continue;
 
-				// sync up the factory pause state with the commited value of the ATTR_JOB_MATERIALIZE_PAUSED attribute
-				int paused = 0;
+				// fetch the committed value of the factory pause state, it should be
+				// one of mmInvalid=-1, mmRunning=0, mmHold=1, mmNoMoreItems=2
+				int paused = mmRunning;
 				if ( ! cad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused)) {
-					paused = 0;
+					paused = mmRunning;
 				}
+
+				// sync up the factory pause state with the commited value of the ATTR_JOB_MATERIALIZE_PAUSED attribute
+				// if the pause state was changed to mmRunning then we want to schedule materialization for this cluster
 				if (CheckJobFactoryPause(cad->factory, paused)) {
-					if ( ! paused) {
-						// changed state to running, we need to trigger materialization
+					if (paused == mmRunning) {
+						// we expect to get here when the factory pause state changes to running.
 						ScheduleClusterForJobMaterializeNow(cad->jid.cluster);
 					}
+				} else if  ((paused == mmRunning) && HasMaterializePolicy(cad)) {
+					// we expect to get here when a job starts running and the factory is not paused/completed
+					ScheduleClusterForJobMaterializeNow(cad->jid.cluster);
 				}
 			}
 		}
+
+		// note, the catNewMaterialize trigger handling for *new* clusters can't be handled here
+		// we will deal with that one later.
 	}
 
 }
@@ -4555,7 +4626,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 
 
 
-const char * mesh = "Rr1aLvzki/#6`QeNoWl^\"(!x\'=OE3HBn [A)GtKu?TJ.mdS9%Fh;<\\+w~4yPDIq>2Ufs$Xc_@g0Y5Mb|{&*}]7,CpV-j:8Z";
+static const char * mesh = "Rr1aLvzki/#6`QeNoWl^\"(!x\'=OE3HBn [A)GtKu?TJ.mdS9%Fh;<\\+w~4yPDIq>2Ufs$Xc_@g0Y5Mb|{&*}]7,CpV-j:8Z";
 
 char * simple_encode (int key, const char * src) {
 
@@ -4580,25 +4651,64 @@ char * simple_decode (int key, const char * src) {
   unsigned int i= 0;
   unsigned int j =0;
   unsigned int c =0;
+  unsigned int cm = (unsigned int)strlen(mesh);
 
   for (; j<strlen(src); j++) {
 
 	//
-    for (i=0; i<strlen (mesh); i++) {
+    for (i=0; i<cm; i++) {
       if (mesh[i] == src[j]) {
 		c = i;
 		break;
 		}
     }
 
-    c=(c+strlen(mesh)-(key%strlen(mesh)))%strlen(mesh);
+    c = (c+cm-(key%cm))%cm;
     
-    snprintf(buff, 2, "%c", c+(int)' ');
+    snprintf(buff, 2, "%c", c+' ');
     result[j]=buff[0];
     
   }
   return result;
 }
+
+// start a transaction, or continue one if we already started it
+int TransactionWatcher::BeginOrContinue(int id) {
+	ASSERT(! completed);
+	if (started) {
+		lastid = id;
+		return 0;
+	} else {
+		ASSERT( ! JobQueue->InTransaction());
+	}
+	started = true;
+	firstid = lastid = id;
+	return BeginTransaction();
+}
+
+// commit if we started a transaction
+int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack)
+{
+	int rval = 0;
+	if (started && ! completed) {
+		rval = CommitTransactionAndLive(flags, errorStack);
+		completed = true;
+	}
+	return rval;
+}
+
+// cancel if we started a transaction
+int TransactionWatcher::AbortIfAny()
+{
+	int rval = 0;
+	if (started && ! completed) {
+		ASSERT(JobQueue->InTransaction());
+		rval = AbortTransaction();
+		completed = true;
+	}
+	return rval;
+}
+
 
 bool
 InTransaction()
@@ -5011,6 +5121,7 @@ CommitTransactionAndLive( SetAttributeFlags_t flags,
 }
 
 int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
+
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
@@ -5049,12 +5160,30 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		}
 	}
 
+	// if job queue timestamps are enabled, build a commit comment
+	// consisting of the time and an optional NONDURABLE flag
+	// comment buffer sized to hold a timestamp and the word NONDURABLE and some whitespace
+	char comment[ISO8601_DateAndTimeBufferMax + 31];
+	const char * commit_comment = NULL;
+	if (scheduler.getEnableJobQueueTimestamps()) {
+		struct timeval tv;
+		struct tm eventTime;
+		condor_gettimestamp(tv);
+		time_t now = tv.tv_sec;
+		localtime_r(&now, &eventTime);
+		comment[0] = ' '; // leading space
+		comment[1] = 0;
+		time_to_iso8601(comment+1, eventTime, ISO8601_ExtendedFormat, ISO8601_DateAndTime, false, tv.tv_usec, 6);
+		if ( ! durable) { strcat(comment+20, " NONDURABLE"); }
+		commit_comment = comment;
+	}
+
 	if(! durable) {
-		JobQueue->CommitNondurableTransaction();
+		JobQueue->CommitNondurableTransaction(commit_comment);
 		ScheduleJobQueueLogFlush();
 	}
 	else {
-		JobQueue->CommitTransaction();
+		JobQueue->CommitTransaction(commit_comment);
 	}
 
 	// Now that we've commited for sure, up the TotalJobsCount
@@ -5132,9 +5261,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						}
 					}
 
-					// If this is a factory job, log the FactorySubmit event here
+					// If this is a factory job, log the ClusterSubmit event here
+					// TODO: ClusterSubmit events should be logged for all clusters with more
+					// than one proc, regardless of whether a factory or not.
 					if( clusterad->factory ) {
-						scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
+						scheduler.WriteClusterSubmitToUserLog( clusterad, doFsync );
 					}
 
 				}

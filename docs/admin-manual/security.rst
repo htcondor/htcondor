@@ -654,6 +654,8 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
@@ -690,10 +692,12 @@ NTSSPI may be used, then Kerberos will be tried first, and if there is a
 failure for any reason, then NTSSPI will be tried.
 
 An additional specialized method of authentication exists for
-communication between the *condor_schedd* and *condor_startd*. It is
+communication between the *condor_schedd* and *condor_startd*, as
+well as communication between the *condor_schedd* and the *condor_negotiator*.
+It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
-other methods of strong authentication between the submit and execute
+other methods of authentication between the submit and execute
 daemons. See the description of
 ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
@@ -705,8 +709,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, KERBEROS, GSI.
+Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, TOKEN, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -966,7 +970,8 @@ the certificate file for the initiator and recipient of connections,
 respectively. Similarly, the configuration variables
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE` and
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
-specify the locations for keys.
+specify the locations for keys.  If no client certificate is used,
+the client with authenticate as user ``anonymous@ssl``.
 
 The configuration variables ``AUTH_SSL_SERVER_CAFILE``
 :index:`AUTH_SSL_SERVER_CAFILE` and ``AUTH_SSL_CLIENT_CAFILE``
@@ -1143,6 +1148,11 @@ This configuration allows remote DAEMON-level and NEGOTIATOR-level
 access, if the pool password is known. Local daemons authenticated as
 condor@mydomain are also allowed access. This is done so local
 authentication can be done using another method such as FS.
+
+If there is no pool password available on Linux, the *condor_collector* will
+automatically generate one.  This is meant to ease the configuration of
+freshly-installed clusters; for ``POOL`` authentication, the HTCondor administrator
+only needs to copy this file to each host in the cluster.
 
 Example Security Configuration Using Pool Password
 """"""""""""""""""""""""""""""""""""""""""""""""""
@@ -1355,6 +1365,8 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
@@ -1848,6 +1860,10 @@ be modified by configuration. :index:`unauthenticated`
    :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
    the *condor_schedd* and ``DAEMON`` access to the *condor_shadow*.
+#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+   :index:``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is true, then
+   ``negotiator-side@matchsession`` is automatically granted ``NEGOTIATOR``
+   access to the *condor_schedd*.
 
 Example of Authorization Security Configuration
 '''''''''''''''''''''''''''''''''''''''''''''''

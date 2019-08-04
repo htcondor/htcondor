@@ -642,7 +642,20 @@ void export_event_log() {
 		.value( "FILE_TRANSFER", ULOG_FILE_TRANSFER )
 	;
 
-	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType", "..." )
+	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType",
+            R"C0ND0R(
+            The event type for file transfer events; corresponds to
+            ``FileTransferEventType`` in the C++ source.
+
+            The values of the enumeration are:
+
+            .. attribute:: IN_QUEUED
+            .. attribute:: IN_STARTED
+            .. attribute:: IN_FINISHED
+            .. attribute:: OUT_QUEUED
+            .. attribute:: OUT_STARTED
+            .. attribute:: OUT_FINISHED
+            )C0ND0R")
 		.value( "IN_QUEUED", FileTransferEvent::IN_QUEUED )
 		.value( "IN_STARTED", FileTransferEvent::IN_STARTED )
 		.value( "IN_FINISHED", FileTransferEvent::IN_FINISHED )

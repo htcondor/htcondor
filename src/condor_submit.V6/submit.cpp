@@ -1164,13 +1164,13 @@ main( int argc, const char *argv[] )
     bool isStandardUni = false;
 	isStandardUni = submit_hash.getUniverse() == CONDOR_UNIVERSE_STANDARD;
 
-	if ( !DisableFileChecks || isStandardUni) {
+	if ( MySchedd && (!DisableFileChecks || isStandardUni)) {
 		TestFilePermissions( MySchedd->addr() );
 	}
 
 	// we don't want to spool jobs if we are simply writing the ClassAds to 
 	// a file, so we just skip this block entirely if we are doing this...
-	if ( !DumpClassAdToFile ) {
+	if ( MySchedd && !DumpClassAdToFile ) {
 		if ( dash_remote && JobAdsArray.size() > 0 ) {
 			bool result;
 			CondorError errstack;

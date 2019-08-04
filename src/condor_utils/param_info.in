@@ -3225,6 +3225,11 @@ default=0
 type=int
 tags=schedd
 
+[JOB_START_COUNT]
+default=1
+range=1,
+type=int
+
 [MAX_JOBS_RUNNING]
 default=MIN({$(DETECTED_MEMORY), 10000})
 win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
@@ -3297,6 +3302,11 @@ tags=schedd
 [FLOCK_NEGOTIATOR_HOSTS]
 default=$(FLOCK_TO)
 type=string
+tags=schedd
+
+[FLOCK_BY_DEFAULT]
+default=true
+type=bool
 tags=schedd
 
 [SHADOW_SIZE_ESTIMATE]
@@ -3685,7 +3695,12 @@ type=string
 tags=annex
 
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-02ce5672c4c88146c
 type=string
 tags=annex
 
@@ -3700,7 +3715,12 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-007920684150d7cb7
 type=string
 tags=annex
 
@@ -3715,7 +3735,12 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a6fbc8bda794e1f4
 type=string
 tags=annex
 
@@ -3730,7 +3755,12 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a46b14d914d27167
 type=string
 tags=annex
 
@@ -5044,8 +5074,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -6032,6 +6062,8 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+
+	use feature : GPUsMonitor
 @end
 
 [$FEATURE.Monitor]

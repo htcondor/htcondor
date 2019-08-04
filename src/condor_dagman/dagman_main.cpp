@@ -462,6 +462,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
 				_removeNodeJobs ? "True" : "False" );
 
+#ifdef MEMORY_HOG
+#else
+	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
+#endif
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);
@@ -1218,6 +1223,10 @@ void main_init (int argc, char ** const argv) {
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
+	// adjust the parent/child edges removing duplicates and setting up for processing
+	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
+	dagman.dag->AdjustEdges();
+
 		//
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
@@ -1272,8 +1281,10 @@ void main_init (int argc, char ** const argv) {
 
 	dagman.dag->CheckThrottleCats();
 
+#ifdef DEAD_CODE // we now do this at submit time.
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
+#endif
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
