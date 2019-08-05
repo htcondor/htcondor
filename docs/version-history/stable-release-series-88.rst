@@ -45,6 +45,10 @@ Bugs Fixed:
    command was used for an empty directory.
    :ticket:`7168`
 
+-  Fixed a bug that caused GPU utilization to not be reported in the job
+   ad when an encrypted execute directory is used.
+   :ticket:`7169`
+
 Version 8.8.4
 -------------
 
