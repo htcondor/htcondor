@@ -97,6 +97,13 @@ New Features:
   location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
   ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
 
+- Daemons will now print a warning in their log file when a client uses
+  an X.509 credential for authentication that contains VOMS extensions that
+  cannot be verified.
+  These warnings can be silenced by setting configuration parameter
+  ``USE_VOMS_ATTRIBUTES`` to ``False``.
+  :ticket:`5916`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
