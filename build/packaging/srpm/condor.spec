@@ -866,7 +866,6 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
-populate %{_libdir}/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
 populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
@@ -874,6 +873,7 @@ populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
 populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
+populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
 
 # Only trigger on 32-bit RHEL6
 if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
