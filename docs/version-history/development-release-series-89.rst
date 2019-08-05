@@ -13,6 +13,16 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- HTCondor users and daemons can request security tokens used for authentication.
+  This allows the HTCondor pool administrator to simply approve / deny token
+  requests instead of having to generate tokens and copy them between hosts.
+  The schedd and startd will automatically request tokens from any collector
+  they cannot authenticate with; fixing authorization can be done by simply
+  having the collector administrator approve the request.  Strong security
+  for new pools can be bootstrapped by installing an auto-approval rule
+  for host-based security while the pool is being installed.  :ticket:`7006`
+  :ticket:`7094` :ticket:`7080`
+
 - If you run a CCB server, please note that the default value for
   ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
   set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
