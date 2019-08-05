@@ -4951,6 +4951,10 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
+    // EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
+    // is ON_EXIT_OR_EVICT, which we may want to warn people about.
+    {SUBMIT_KEY_DontAppend, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods

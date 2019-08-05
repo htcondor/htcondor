@@ -49,6 +49,7 @@
 #define ATTR_ALL_REMOTE_HOSTS  "AllRemoteHosts"
 #define ATTR_ANNEX_NAME  "AnnexName"
 #define ATTR_APPEND_FILES  "AppendFiles"
+#define ATTR_DONT_APPEND "EraseOutputAndErrorOnRestart"
 #define ATTR_ARCH  "Arch"
 #define ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE  "AvailBandwidthToSubmitMachine"
 #define ATTR_AVAIL_BANDWIDTH_TO_LAST_CKPT_SERVER  "AvailBandwidthToLastCkptServer"

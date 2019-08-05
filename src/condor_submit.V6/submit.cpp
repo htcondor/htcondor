@@ -126,6 +126,7 @@ int 	dash_interactive = 0; /* true if job submitted with -interactive flag */
 int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
+bool	debug = false;
 SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	CmdFileIsStdin = false;
 bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
@@ -597,6 +598,7 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
+				debug = true;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;
 				bool needs_file_arg = true;
@@ -1299,6 +1301,9 @@ main( int argc, const char *argv[] )
 		sshargs[i++] = "-auto-retry";
 		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
+		if (debug) {
+			sshargs[i++] = "-debug";
+		}
 		if (PoolName) {
 			sshargs[i++] = "-pool";
 			sshargs[i++] = PoolName;
@@ -1428,10 +1433,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 			}
 
 			if (is_crlf_shebang(ename)) {
-				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+				fprintf( stderr, "\n%s: Executable file %s is a script with "
+					"CRLF (DOS/Windows) line endings.\n",
 					allow_crlf_script ? "WARNING" : "ERROR", ename );
 				if (!allow_crlf_script) {
-					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					fprintf( stderr, "This generally doesn't work, and you "
+						"should probably run 'dos2unix %s' -- or a similar "
+						"tool -- before you resubmit.\n", ename );
 					return 1; // abort
 				}
 			}
