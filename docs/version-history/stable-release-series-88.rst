@@ -49,6 +49,10 @@ Bugs Fixed:
    ad when an encrypted execute directory is used.
    :ticket:`7169`
 
+-  Integer values in ClassAds in HTCondor that are in hexidecimal or
+   octal format are now rejected. Previously, they were read incorrectly.
+   :ticket:`7127`
+
 Version 8.8.4
 -------------
 
