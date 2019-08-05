@@ -41,6 +41,10 @@ Bugs Fixed:
    when it crashes on linux.
    :ticket:`7163`
 
+-  Fixed a bug that caused *condor_chirp* to crash when the *getdir*
+   command was used for an empty directory.
+   :ticket:`7168`
+
 Version 8.8.4
 -------------
 
