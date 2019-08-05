@@ -1190,6 +1190,21 @@ type=int
 description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
+[MAX_ACCEPTS_PER_CYCLE]
+default=8
+range=0,
+type=int
+
+[MAX_UDP_MSGS_PER_CYCLE]
+default=1
+range=0,
+type=int
+
+[MAX_REAPS_PER_CYCLE]
+default=0
+range=0,
+type=int
+
 [PID_SNAPSHOT_INTERVAL]
 default=15
 type=int
