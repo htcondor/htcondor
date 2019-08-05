@@ -19,7 +19,13 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added configuration parameter ``MAX_UDP_MSGS_PER_CYCLE``, which
+   controls how many UDP messages a daemon will read per DaemonCore
+   event cycle. The default value of 1 maintains the behavior in previous
+   versions of HTCondor.
+   Setting a larger value can aid the ability of the *condor_schedd*
+   and *condor_collector* daemons to handle heavy loads.
+   :ticket:`7149`
 
 Bugs Fixed:
 
