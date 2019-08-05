@@ -121,6 +121,10 @@ Bugs Fixed:
    work as expected.
    :ticket:`7075`
 
+-  Fixed a bug in *condor_qedit* which was causing it to report an incorrect 
+   number of matching jobs.
+   :ticket:`7119`
+
 Version 8.8.3
 -------------
 
