@@ -33,6 +33,12 @@ Bugs Fixed:
    CPU when a network connection closes unexpectedly.
    :ticket:`7164`
 
+-  HTCondor will now always use TCP to release startds claimed by the
+   dedicated scheduler during shutdown.  This prevents some startds
+   from staying in the Claimed/Idle state after a schedd shutdown when
+   running parallel jobs.
+   :ticket:`7144`
+
 -  Fixed a bug that caused incorrect values to be reported for the time
    taken to upload a job's files.
    :ticket:`7147`
