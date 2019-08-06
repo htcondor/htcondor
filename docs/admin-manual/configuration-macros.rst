@@ -1827,6 +1827,16 @@ starter, none of which use DaemonCore).
     value for tuning purposes when there is a high number of jobs
     starting and exiting per second.
 
+``MAX_UDP_MSGS_PER_CYCLE`` :index:`MAX_UDP_MSGS_PER_CYCLE`
+    An integer value that defaults to 1. It is a rarely changed
+    performance tuning parameter to set the number of incoming UDP
+    messages a daemon will read per DaemonCore event cycle.
+    incoming, socket connect requests per DaemonCore event cycle.
+    A value of zero means no limit. It has the most noticeable
+    effect on the *condor_schedd* and *condor_collector* daemons,
+    which can receive a large number of UDP messages when under heavy
+    load.
+
 ``MAX_REAPS_PER_CYCLE`` :index:`MAX_REAPS_PER_CYCLE`
     An integer value that defaults to 0. It is a rarely changed
     performance tuning parameter that places a limit on the number of

@@ -14,12 +14,12 @@ Release Notes:
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
 - HTCondor users and daemons can request security tokens used for authentication.
-  This allows the HTCondor pool administrator to simply approve / deny token
+  This allows the HTCondor pool administrator to simply approve or deny token
   requests instead of having to generate tokens and copy them between hosts.
   The schedd and startd will automatically request tokens from any collector
-  they cannot authenticate with; fixing authorization can be done by simply
-  having the collector administrator approve the request.  Strong security
-  for new pools can be bootstrapped by installing an auto-approval rule
+  they cannot authenticate with; authorizing these daemons can be done by simply
+  having the collector administrator approve the request from the collector.
+  Strong security for new pools can be bootstrapped by installing an auto-approval rule
   for host-based security while the pool is being installed.  :ticket:`7006`
   :ticket:`7094` :ticket:`7080`
 
@@ -96,6 +96,13 @@ New Features:
 - The *condor_collector* daemon will automatically generate a pool password file at the
   location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
   ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
+
+- Daemons will now print a warning in their log file when a client uses
+  an X.509 credential for authentication that contains VOMS extensions that
+  cannot be verified.
+  These warnings can be silenced by setting configuration parameter
+  ``USE_VOMS_ATTRIBUTES`` to ``False``.
+  :ticket:`5916`
 
 Bugs Fixed:
 
