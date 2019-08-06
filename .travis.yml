@@ -69,10 +69,27 @@ services:
     - docker
 
 before_install:
-    - if [[ -z "$DOCKER_IMAGE" ]] && [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y --no-install-recommends chrpath cmake default-jdk gfortran globus-core help2man latex2html libboost-filesystem-dev libboost-program-options-dev libboost-python-dev libboost-regex-dev libboost-system-dev libboost-test-dev libboost-thread-dev libcgroup-dev libcurl4-openssl-dev libglobus-common-dev libglobus-ftp-client-dev libglobus-gass-server-ez-dev libglobus-gram-client-dev libglobus-gram-protocol-dev libglobus-gss-assist-dev libmunge-dev libpq-dev libvirt-dev libxml2-dev po-debconf texlive-font-utils transfig libc-ares-dev voms-dev libtool-bin; fi
+    - |
+      if [[ -z $DOCKER_IMAGE && $TRAVIS_OS_NAME != osx ]]; then
+        sudo apt-get install -y --no-install-recommends  \
+          chrpath cmake default-jdk gfortran globus-core help2man latex2html  \
+          libboost-filesystem-dev libboost-program-options-dev  \
+          libboost-python-dev libboost-regex-dev libboost-system-dev  \
+          libboost-test-dev libboost-thread-dev libcgroup-dev  \
+          libcurl4-openssl-dev libglobus-common-dev libglobus-ftp-client-dev  \
+          libglobus-gass-server-ez-dev libglobus-gram-client-dev  \
+          libglobus-gram-protocol-dev libglobus-gss-assist-dev libmunge-dev  \
+          libpq-dev libvirt-dev libxml2-dev po-debconf texlive-font-utils  \
+          transfig libc-ares-dev voms-dev libtool-bin
+      fi
     - sudo mkdir -p /etc/default && sudo touch /etc/default/docker
     - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
-    - if [[ ! -z "$DOCKER_IMAGE" ]]; then sudo service docker restart; sleep 5; sudo docker pull $DOCKER_IMAGE; fi
+    - |
+      if [[ ! -z $DOCKER_IMAGE ]]; then
+        sudo service docker restart
+        sleep 5
+        sudo docker pull $DOCKER_IMAGE
+      fi
 
 script:
     - if [[ -z "$DOCKER_IMAGE" ]] && [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cmake -DPROPER:BOOL=$PROPER -DCLIPPED:BOOL=$CLIPPED -DUW_BUILD:BOOL=$UW_BUILD -D_DEBUG:BOOL=TRUE -DCMAKE_SKIP_RPATH:BOOL=ON -DHAVE_EXT_GSOAP:BOOL=OFF -DWITH_GSOAP:BOOL=OFF -DHAVE_EXT_CURL:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_BOOST:BOOL=ON -DHAVE_EXT_GLOBUS:BOOL=ON -DWITH_GLOBUS:BOOL=ON -DHAVE_EXT_KRB5:BOOL=ON -DHAVE_EXT_LIBVIRT:BOOL=ON -DHAVE_EXT_LIBXML2:BOOL=ON -DHAVE_EXT_OPENSSL:BOOL=ON -DHAVE_EXT_PCRE:BOOL=ON -DHAVE_EXT_VOMS:BOOL=ON -DWITH_VOMS:BOOL=ON -DWITH_LIBCGROUP:BOOL=ON -DWANT_CONTRIB:BOOL=OFF -DWITH_BOSCO:BOOL=OFF -DWITH_PYTHON_BINDINGS:BOOL=OFF -DWITH_CAMPUSFACTORY:BOOL=OFF; fi
