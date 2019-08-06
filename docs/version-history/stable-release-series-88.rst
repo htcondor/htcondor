@@ -19,7 +19,13 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added configuration parameter ``MAX_UDP_MSGS_PER_CYCLE``, which
+   controls how many UDP messages a daemon will read per DaemonCore
+   event cycle. The default value of 1 maintains the behavior in previous
+   versions of HTCondor.
+   Setting a larger value can aid the ability of the *condor_schedd*
+   and *condor_collector* daemons to handle heavy loads.
+   :ticket:`7149`
 
 Bugs Fixed:
 
@@ -34,6 +40,18 @@ Bugs Fixed:
 -  Fixed a bug that caused the *condor_schedd* to not write a core file
    when it crashes on linux.
    :ticket:`7163`
+
+-  Fixed a bug that caused *condor_chirp* to crash when the *getdir*
+   command was used for an empty directory.
+   :ticket:`7168`
+
+-  Fixed a bug that caused GPU utilization to not be reported in the job
+   ad when an encrypted execute directory is used.
+   :ticket:`7169`
+
+-  Integer values in ClassAds in HTCondor that are in hexidecimal or
+   octal format are now rejected. Previously, they were read incorrectly.
+   :ticket:`7127`
 
 Version 8.8.4
 -------------
