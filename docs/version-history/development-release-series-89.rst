@@ -117,6 +117,11 @@ New Features:
   monitored just like any other Submit description object in the Python bindings.  
   :ticket:`6275`
 
+- When submitting jobs to a multi-cluster SLURM configuration under the
+  grid universe, the cluster to submit to can be specified using the
+  ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
+  :ticket:`7167`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
