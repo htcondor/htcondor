@@ -89,8 +89,10 @@ are no unprivileged users logged in to the submit hosts:
    This automatically approves any daemons starting on a specified network for
    a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
    for the next hour (3600 seconds), run the following command from the central manager:
+
    ::
-      condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
+
+        condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
 
 3. Within the auto-approval rule's lifetime, start the *condor_schedd* and *condor_startd*
    hosts inside the appropriate network.  The token requests for these daemons
@@ -1307,7 +1309,7 @@ for securely moving the token - e.g., there is no chance it will be leaked into
 an email archive.
 
 To use the token request workflow, the user needs a confidential channel to
-the server or an appropriate auto-approval rule needs to be in place.  The simplist
+the server or an appropriate auto-approval rule needs to be in place.  The simplest
 way to establish a confidential channel is using :ref:`admin-manual/security:ssl authentication`
 without a client certificate; configure the collector using a host certificate.
 
@@ -1325,12 +1327,12 @@ If the host trusts requests coming from a specific network (i.e., the same
 administrator manages the network and no unprivileged users are currently on
 the network), then the auto-approval mechanism may be used.  When in place, auto-approval
 allows any token authentication request on an approved network to be automatically
-approved by the HTCondor pool administrator - even when requests do not come over
+approved by HTCondor on behalf of the pool administrator - even when requests do not come over
 confidential connnections.
 
 If there are multiple tokens in files in the ``SEC_TOKEN_SYSTEM_DIRECTORY``, then
-the daemon will search for tokens in that directory based on lexigraphical order;
-the exception is the file ``$(SUBSYS)_auto_generated_token`` will be searched first for
+the daemon will search for tokens in that directory based on lexicographical order;
+the exception is that the file ``$(SUBSYS)_auto_generated_token`` will be searched first for
 daemons of type ``$(SUBSYS)``.  For example, if ``SEC_TOKEN_SYSTEM_DIRECTORY`` is set to
 ``/etc/condor/tokens.d``, then the *condor_schedd* will search at
 ``/etc/condor/tokens.d/SCHEDD_auto_generated_token`` by default.
