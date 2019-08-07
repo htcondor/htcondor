@@ -7358,7 +7358,7 @@ Scheduler::negotiate(int command, Stream* s)
 	// Get Owner name from negotiator
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
-	char *sig_attrs_from_cm = NULL;	
+	std::string sig_attrs_from_cm;
 	int consider_jobprio_min = INT_MIN;
 	int consider_jobprio_max = INT_MAX;
 	ClassAd negotiate_ad;
@@ -7375,7 +7375,7 @@ Scheduler::negotiate(int command, Stream* s)
 					 ATTR_OWNER );
 			return (!(KEEP_STREAM));
 		}
-		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sig_attrs_from_cm) ) {
+		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,sig_attrs_from_cm) ) {
 			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
 					 ATTR_AUTO_CLUSTER_ATTRS );
 			return (!(KEEP_STREAM));
@@ -7383,7 +7383,6 @@ Scheduler::negotiate(int command, Stream* s)
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
 			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
 					 ATTR_SUBMITTER_TAG );
-			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 			// jobprio_min and jobprio_max are optional
@@ -7397,14 +7396,13 @@ Scheduler::negotiate(int command, Stream* s)
 			dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
 			return (!(KEEP_STREAM));
 		}
-		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+		if (!s->code(sig_attrs_from_cm)) {	
 			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
 			return (!(KEEP_STREAM));
 		}
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
-		free(sig_attrs_from_cm);
 		return (!(KEEP_STREAM));
 	}
 
@@ -7451,7 +7449,6 @@ Scheduler::negotiate(int command, Stream* s)
 				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
 						"Aborting negotiation.\n", sock->peer_ip_str(),
 						submitter_tag.c_str());
-				free(sig_attrs_from_cm);
 				return (!(KEEP_STREAM));
 			}
 		}
@@ -7473,14 +7470,12 @@ Scheduler::negotiate(int command, Stream* s)
 		const char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
-			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		addrs = resolve_hostname(negotiator_hostname);
 		if (addrs.empty()) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
-			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
@@ -7511,7 +7506,6 @@ Scheduler::negotiate(int command, Stream* s)
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
 					"Aborting negotiation.\n", sock->peer_ip_str());
-			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -7538,10 +7532,6 @@ Scheduler::negotiate(int command, Stream* s)
 		// scheduler
 
 	if( ! strcmp(owner, dedicated_scheduler.name()) ) {
-			// Just let the DedicatedScheduler class do its thing. 
-		if (sig_attrs_from_cm) {
-			free(sig_attrs_from_cm);
-		}
 		return dedicated_scheduler.negotiate( command, sock, remote_pool );
 	}
 
@@ -7550,14 +7540,12 @@ Scheduler::negotiate(int command, Stream* s)
 
 		// Tell the autocluster code what significant attributes the
 		// negotiator told us about
-	if ( sig_attrs_from_cm ) {
-		if ( autocluster.config(MinimalSigAttrs, sig_attrs_from_cm) ) {
+	if (sig_attrs_from_cm.length() > 0) {
+		if ( autocluster.config(MinimalSigAttrs, sig_attrs_from_cm.c_str()) ) {
 			// clear out auto cluster id attributes
 			WalkJobQueue(clear_autocluster_id);
 			DirtyPrioRecArray(); // should rebuild PrioRecArray
 		}
-		free(sig_attrs_from_cm);
-		sig_attrs_from_cm = NULL;
 	}
 
 	BuildPrioRecArray();
