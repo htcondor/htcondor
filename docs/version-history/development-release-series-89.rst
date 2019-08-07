@@ -17,6 +17,12 @@ Release Notes:
    in the ``SEC_CREDENTIAL_DIRECTORY``.
    :ticket:`7046`
 
+Known Issues:
+
+-  This release introduces a large memory leak when SSL authentication fails.
+   This will be fixed in the next release.
+   :ticket:`7145`
+
 New Features:
 
 -  The default file transfer plugin for HTTP/HTTPS will timeout transfers
