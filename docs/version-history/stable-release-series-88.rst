@@ -59,6 +59,10 @@ Bugs Fixed:
    octal format are now rejected. Previously, they were read incorrectly.
    :ticket:`7127`
 
+-  Fixed a bug that prevented new jobs from materializing when jobs changed
+   to run state and a ``max_idle`` value was specifed.
+   :ticket:`7178`
+
 Version 8.8.4
 -------------
 
