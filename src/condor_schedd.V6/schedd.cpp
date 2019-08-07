@@ -7439,6 +7439,10 @@ Scheduler::negotiate(int command, Stream* s)
 				"This user is no longer flocking with this negotiator.\n");
 		jobs = 0;
 		skip_negotiation = true;
+	} else if (shadowsSpawnLimit() == 0) {
+		// shadowsSpawnLimit() prints reason for limit of 0
+		jobs = 0;
+		skip_negotiation = true;
 	}
 
 	ResourceRequestList *resource_requests = new ResourceRequestList;
