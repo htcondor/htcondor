@@ -988,6 +988,8 @@ populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
+# Drop in a symbolic link for backward compatability
+ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
 # Only trigger on 32-bit RHEL6
 if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
@@ -1328,6 +1330,7 @@ rm -rf %{buildroot}
 %endif
 %dir %_sysconfdir/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
+%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
