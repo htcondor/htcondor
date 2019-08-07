@@ -103,6 +103,7 @@ public:
 	int LookupBool(const char * attr, bool & val) { return ad.LookupBool(attr, val); }
 	int LookupInt(const char * attr, long long & val) { return ad.LookupInteger(attr, val); }
 	classad::Value::ValueType LookupType(const std::string attr);
+	classad::Value::ValueType LookupType(const std::string attr, classad::Value & val);
 
 protected:
 	ClassAd& ad;
@@ -200,7 +201,12 @@ bool DeltaClassAd::Assign(const char* attr, const char * val)
 classad::Value::ValueType DeltaClassAd::LookupType(const std::string attr)
 {
 	classad::Value val;
-	if ( ! ad.EvaluateAttr(attr, val))
+	return LookupType(attr, val);
+}
+
+classad::Value::ValueType DeltaClassAd::LookupType(const std::string attr, classad::Value & val)
+{
+	if (! ad.EvaluateAttr(attr, val))
 		return classad::Value::ValueType::ERROR_VALUE;
 	return val.GetType();
 }
@@ -5696,6 +5702,20 @@ int SubmitHash::SetRequirements()
 		answer = "";
 	}
 
+	// if a Requirements are forced. we will skip requirements generation
+	// and just use the value that SetForcedAttributes already stuffed into the ad
+	auto_free_ptr myreq(submit_param("MY." ATTR_REQUIREMENTS));
+	if ( ! myreq) { myreq.set(submit_param("+" ATTR_REQUIREMENTS)); }
+	if (myreq) {
+		// warn if both My.Requirements and requirements are specified since they conflict
+		if (orig) {
+			push_warning(stderr,
+				"Use of MY.Requirements or +Requirements  overrides requirements. "
+				"You should remove one of these statements from your submit file.\n");
+		}
+		return abort_code;
+	}
+
 	const char * factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
 	if (factory_req) {
 		if (factory_req[0]) {
@@ -5980,6 +6000,8 @@ int SubmitHash::SetRequirements()
 		}
 	}
 
+	// build a set of custom resource names from the attributes in the job with names that start with Request
+	//
 	classad::References tags;
 	std::string request_pre("Request");
 	const size_t prefix_len = sizeof("Request") - 1;
@@ -6011,11 +6033,23 @@ int SubmitHash::SetRequirements()
 		if (machine_refs.count(tag))
 			continue;
 
-		auto vtype = job->LookupType(*it);
-		if (vtype == classad::Value::ValueType::INTEGER_VALUE || vtype == classad::Value::ValueType::REAL_VALUE) {
-			formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+		classad::Value value;
+		auto vtype = job->LookupType(*it, value);
+		if (vtype == classad::Value::ValueType::INTEGER_VALUE ||
+			vtype == classad::Value::ValueType::REAL_VALUE ||
+			vtype == classad::Value::ValueType::UNDEFINED_VALUE) {
+			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
+			double val = 0.0;
+			if ( ! value.IsNumber(val) || val > 0) {
+				formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+			}
 		} else if (vtype == classad::Value::ValueType::STRING_VALUE) {
-			formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
+			// gt6938, don't add a requirements clause when a custom string resource request is the empty string
+			int sz = 0;
+			value.IsStringValue(sz);
+			if (sz > 0) {
+				formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
+			}
 		}
 	}
 
@@ -7738,22 +7772,20 @@ ClassAd* SubmitHash::make_job_ad (
 	SetAutoAttributes();
 	ReportCommonMistakes();
 
-		// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
-		// SetCronTab(), and SetPerFileEncryption()
-		//
-		// FIXME? (TJ): and after SetAutoAttributes().
-	SetRequirements();
-
-
-		// This must come after all things that modify the input file list
-	FixupTransferInputFiles();
-
 		// When we are NOT late materializing, set SUBMIT_ATTRS attributes that are +Attr or My.Attr second-to-last
 	if ( ! clusterAd) { SetForcedSubmitAttrs(); }
 
 		// SetForcedAttributes should be last so that it trumps values
 		// set by normal submit attributes
 	SetForcedAttributes();
+
+	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
+	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
+	// and after SetForcedAttributes()
+	SetRequirements();
+
+	// This must come after all things that modify the input file list
+	FixupTransferInputFiles();
 
 	// if we aborted in any of the steps above, then delete the job and return NULL.
 	if (abort_code) {

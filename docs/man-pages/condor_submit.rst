@@ -1722,9 +1722,13 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     virtual machine instance is to run on.
     :index:`batch_queue<single: batch_queue; submit commands>`
  batch_queue = <queuename>
-    Used for **pbs**, **lsf**, and **sge** grid universe jobs. Specifies
-    the name of the PBS/LSF/SGE job queue into which the job should be
-    submitted. If not specified, the default queue is used.
+    Used for **batch** grid universe jobs.
+    Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
+    job should be submitted. If not specified, the default queue is used.
+    For a multi-cluster SLURM configuration, which cluster to use can be
+    specified by supplying the name after an ``@`` symbol.
+    For example, to submit a job to the ``debug`` queue on cluster ``foo``,
+    you would use the value ``debug@foo``.
     :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
  boinc_authenticator_file = <pathname>
     For grid type **boinc** jobs, specifies a path and file name of the

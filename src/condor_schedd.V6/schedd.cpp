@@ -8279,10 +8279,9 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		free( startd_name );
 		startd_name = NULL;
 	}
-	if( claim_id ) {
-		free( claim_id );
-		claim_id = NULL;
-	}
+	free( claim_id );
+	claim_id = NULL;
+
 		// this should never be NULL, particularly after the checks
 		// above, but just to be extra safe, check here, too.
 	if( !mrec ) {
@@ -14913,9 +14912,11 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 		}
 	} else {
 		ret_value = -1;
-		ClaimIdParser idp( claim_id );
-		dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n",
-			idp.publicClaimId() );
+		if (claim_id) {
+			ClaimIdParser idp( claim_id );
+			dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n",
+				idp.publicClaimId() );
+		}
 	}
 
 	s->encode();

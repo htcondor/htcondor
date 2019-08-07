@@ -33,6 +33,12 @@ Bugs Fixed:
    CPU when a network connection closes unexpectedly.
    :ticket:`7164`
 
+-  HTCondor will now always use TCP to release startds claimed by the
+   dedicated scheduler during shutdown.  This prevents some startds
+   from staying in the Claimed/Idle state after a schedd shutdown when
+   running parallel jobs.
+   :ticket:`7144`
+
 -  Fixed a bug that caused incorrect values to be reported for the time
    taken to upload a job's files.
    :ticket:`7147`
@@ -52,6 +58,14 @@ Bugs Fixed:
 -  Integer values in ClassAds in HTCondor that are in hexidecimal or
    octal format are now rejected. Previously, they were read incorrectly.
    :ticket:`7127`
+
+-  Fixed a bug that prevented new jobs from materializing when jobs changed
+   to run state and a ``max_idle`` value was specifed.
+   :ticket:`7178`
+
+-  Fixed a bug in the *condor_dagman* parser which caused it to crash when
+   certain commands were missing tokens.
+   :ticket:`7196`
 
 Version 8.8.4
 -------------

@@ -104,6 +104,24 @@ New Features:
   ``USE_VOMS_ATTRIBUTES`` to ``False``.
   :ticket:`5916`
 
+- Added a Python binding for *condor_submit_dag*. A new method,
+  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
+  .dag file:
+  
+  ::
+
+    dag_args = { "maxidle": 10, "maxpost": 5 }
+    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
+
+  The resulting ``dag_submit`` object can be submitted to a schedd and
+  monitored just like any other Submit description object in the Python bindings.  
+  :ticket:`6275`
+
+- When submitting jobs to a multi-cluster SLURM configuration under the
+  grid universe, the cluster to submit to can be specified using the
+  ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
+  :ticket:`7167`
+
 Bugs Fixed:
 
 - Fixed a bug where schedd would not start if the history file
