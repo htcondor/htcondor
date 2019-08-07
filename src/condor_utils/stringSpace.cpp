@@ -89,8 +89,9 @@ free_dedup(const char *input)
 		ASSERT(it->second->count > 0);
 		ret_value = --(it->second->count);
 		if (it->second->count == 0) {
-			free(it->second);
+			auto temp = it->second;
 			ss_map.erase(it);
+			free(temp);
 		}
 	}
 #elif 1
