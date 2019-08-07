@@ -63,6 +63,10 @@ Bugs Fixed:
    to run state and a ``max_idle`` value was specifed.
    :ticket:`7178`
 
+-  Fixed a bug in the *condor_dagman* parser which caused it to crash when
+   certain commands were missing tokens.
+   :ticket:`7196`
+
 Version 8.8.4
 -------------
 
