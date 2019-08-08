@@ -6099,6 +6099,8 @@ default : @end
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+
+    STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
 
 [$FEATURE.PartitionableSlot]
