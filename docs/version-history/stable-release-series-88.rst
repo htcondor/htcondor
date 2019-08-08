@@ -39,6 +39,11 @@ Bugs Fixed:
    running parallel jobs.
    :ticket:`7144`
 
+-  Fixed a bug that would sometimes result in the *condor_schedd* on Windows
+   becoming slow to respond to commands after a period of time.  The slowness
+   would persist until the *condor_schedd* was restarted.
+   :ticket:`7143`
+
 -  Fixed a bug that caused incorrect values to be reported for the time
    taken to upload a job's files.
    :ticket:`7147`
@@ -72,6 +77,10 @@ Bugs Fixed:
    easy to trigger by attempting to queue more than one submit object in
    a single transaction using the python bindings.
    :ticket:`7036`
+
+-  Minor change to the python bindings to work around a bug in the 3rd party collectd
+   program on Linux that resulted in a crash trying to load the HTCondor python module.
+   :ticket:`7182`
 
 Version 8.8.4
 -------------
