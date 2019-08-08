@@ -333,6 +333,14 @@ ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
 #define FreeJobAd(ad) ad = NULL
 
+// Inside the sched SetAttribute call takes a 32 bit integer as the flags field
+// but only 8 bits are used by the wire protocol.  so anything bigger than 1<<7
+// is effectively a SetAttribute flag private to the schedd. we start here at 1<<16
+// to leave room to expand the public flags someday (maybe)
+typedef unsigned int SetAttributeFlags_t;
+const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
+const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
@@ -342,7 +350,6 @@ JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 // does the parts of NewProc that are common between external submit and schedd late materialization
 int NewProcInternal(int cluster_id, int proc_id);
 // call NewProcInternal, and then SetAttribute on all of the attributes in job that are not the same as ClusterAd
-typedef unsigned char SetAttributeFlags_t;
 int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags);
 #endif
 

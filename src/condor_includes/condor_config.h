@@ -382,7 +382,17 @@ public:
 	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
 	MACRO_SET & set;
 	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
-	HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(HASHITER)); } return *this; }
+	HASHITER & operator =( const HASHITER & rhs ) {
+		if( this != & rhs ) {
+			this->opts = rhs.opts;
+			this->ix = rhs.ix;
+			this->id = rhs.id;
+			this->is_def = rhs.is_def;
+			this->pdef = rhs.pdef;
+			this->set = rhs.set;
+		}
+		return * this;
+	}
 };
 enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
 inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
@@ -425,8 +435,6 @@ inline bool expand_param (const char *str, std::string & expanded) {
 int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
 int write_config_file(const char* pathname, int options);
 
-extern "C" {
-
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -448,8 +456,8 @@ extern "C" {
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
 
-	void init_config (int options);
-}
+	void init_global_config_table(int options);
+	void clear_global_config_table(void);
 
 #endif // __cplusplus
 
@@ -671,7 +679,6 @@ BEGIN_C_DECLS
 		int cReferenced;
 	};
 	int  get_config_stats(struct _macro_stats *pstats);
-	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );

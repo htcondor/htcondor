@@ -893,11 +893,14 @@ int DaemonCore::DoPumpWork() {
 	PumpWorkItem * work;
 	PumpWorkItem * last = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead);
 	if (last) {
+		int num = 1;
 		last->slist.Next = NULL;
 		while ((work = (PumpWorkItem*)InterlockedPopEntrySList(&PumpWorkHead))) {
 			work->slist.Next = &(last->slist);
 			last = work;
+			++num;
 		}
+		dprintf(D_DAEMONCORE, "Processing %d pump work item(s)\n", num);
 	}
 
 	// now process the items.
@@ -3011,6 +3014,12 @@ DaemonCore::reconfig(void) {
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
+
+	m_iMaxUdpMsgsPerCycle = param_integer("MAX_UDP_MSGS_PER_CYCLE", 1);
+	if( m_iMaxUdpMsgsPerCycle != 1 ) {
+		dprintf(D_FULLDEBUG,"Setting maximum UDP messages per cycle %d.\n", m_iMaxUdpMsgsPerCycle);
+	}
+
 	/*
 		Default value of MAX_REAPS_PER_CYCLE is 0 - a value of 0 means
 		call as many reapers as are waiting at the time we exit select.
@@ -3216,29 +3225,99 @@ DaemonCore::Wake_up_select()
 bool
 DaemonCore::Do_Wake_up_select()
 {
+#ifdef WIN32
+	if (GetCurrentThreadId() == dcmainThreadId) {
+		dprintf(D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
+		return false;
+	}
+#endif
+
 	// note, this code is called by threads other than the main thread,
 	// and (on windows) threads other than condor_threads.  it should be
 	// thread safe and it should not depend on the caller being a condor_thread.
 	// it should never be called by the master thread.
 	//
+#ifdef WIN32
 	bool fSuccess = true;  // return success if the pipe is not empty
-	if ( ! async_pipe_signal) {
+	
+	// set the async_pipe_signal flag before we write into the pipe
+	// to avoid a potential race condition. better to have the flag 
+	// say the pipe is signalled and have it not be than the reverse.
+	if ( ! InterlockedExchange(&async_pipe_signal, 1)) {
+		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
+	}
+#else
+	bool fSuccess = true;  // return success if the pipe is not empty
+	if (! async_pipe_signal) {
 		// set the async_pipe_signal flag before we write into the pipe
 		// to avoid a potential race condition. better to have the flag 
 		// say the pipe is signalled and have it not be than the reverse.
 		async_pipe_signal = true;
-#ifdef WIN32
-		if (GetCurrentThreadId() == dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
-			return false;
-		}
-		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
-#else
 		fSuccess = write(async_pipe[1],"!",1) > 0;
-#endif
 	}
+#endif
 	return fSuccess;
 }
+
+bool
+DaemonCore::AsyncInfo_Wake_up_select(
+	void * &dst,
+	int & dst_fd,
+	void* &src,
+	int & src_fd)
+{
+	dst = src = NULL;
+	dst_fd = src_fd = -1;
+#ifdef WIN32
+	if (GetCurrentThreadId() == dcmainThreadId) {
+		dprintf(D_ALWAYS, "DaemonCore::AsyncInfo_Wake_up_select called from main thread. this is unexpected.");
+		return false;
+	} else {
+		dst = &async_pipe[0];
+		dst_fd = async_pipe[0].get_file_desc();
+		//dst_sock = async_pipe[0].get_socket(); // get_socket() and get_file_desc() return the same value, just typecast differently.
+		src = &async_pipe[1];
+		src_fd = async_pipe[1].get_file_desc();
+		//src_sock = async_pipe[1].get_socket();
+	}
+#else
+#endif
+	return async_pipe_signal;
+}
+
+int
+DaemonCore::Async_test_Wake_up_select(
+	void * &dst,
+	int & dst_fd,
+	void* &src,
+	int & src_fd,
+	MyString & status)
+{
+	int hotness = AsyncInfo_Wake_up_select(dst, dst_fd, src, src_fd) ? 2 : 0;
+	status.clear();
+#ifdef WIN32
+	WSAPOLLFD wfd[2];
+	wfd[0].fd = dst_fd;
+	wfd[0].events = POLLIN;
+	wfd[1].fd = src_fd;
+	wfd[1].events = POLLOUT;
+	int hots = WSAPoll(wfd, 2, 0);
+	if (hots) {
+		if (wfd[0].revents & POLLRDNORM) {
+			hotness |= 1;
+		} else {
+			formatstr(status, "%d=0x%04x %d=0x%04x", wfd[0].fd, wfd[0].revents, wfd[1].fd, wfd[1].revents);
+		}
+	} else {
+		if (hots == SOCKET_ERROR) {
+			formatstr(status, "err %d", WSAGetLastError());
+		}
+	}
+#else
+#endif
+	return hotness;
+}
+
 
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
@@ -3532,7 +3611,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_ALWAYS, "PERF: entering select. timeout=%d\n", (int)timeout);
+			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%d\n", (int)timeout);
 		}
 
 		selector.execute();
@@ -3576,13 +3655,13 @@ void DaemonCore::Driver()
 		// Drain our async_pipe (which is really a socket)
 		// extra error checking because we had problems with the pipe getting stuck
 		// in the signalled state in 7.5.5. 
+		unsigned int pipe_was_signalled = InterlockedExchange(&async_pipe_signal, 0);
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
-            dc_stats.AsyncPipe += 1;
-			if ( ! async_pipe_signal) {
+			dc_stats.AsyncPipe += 1;
+			if ( ! pipe_was_signalled) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.\n");
 			}
-			async_pipe_signal = false;
 			while (int cb = async_pipe[0].bytes_available_to_read()) {
 				if (cb < 0) {
 					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d\n", 
@@ -3596,6 +3675,9 @@ void DaemonCore::Driver()
 					break;
 				}
 			}
+			// clear the flag again to make sure that Do_Wake_up_select knows the pipe is empty
+			// this could result in an extra wakeup, but prevents us missing a wakeup
+			InterlockedExchange(&async_pipe_signal, 0);
 		}
 #endif
 
@@ -3603,7 +3685,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_ALWAYS, "PERF: leaving select\n");
+			dprintf(D_PERF_TRACE, "PERF: leaving select\n");
 			selector.display();
 		}
 
@@ -3969,6 +4051,46 @@ void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
     unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
+
+	// Dispatch UDP commands directly
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+			default_to_HandleCommand &&
+			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
+
+		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
+
+		// We don't care about the return value for UDP command sockets
+		HandleReq(i);
+		msg_cnt--;
+
+		// Make sure we didn't leak our priv state
+		CheckPrivState();
+
+		while ( msg_cnt ) {
+			Selector selector;
+			selector.set_timeout( 0, 0 );
+			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+			selector.execute();
+
+			if ( !selector.has_ready() ) {
+				// No more data, we're done
+				break;
+			}
+
+			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
+			{
+				// Looks like we got a fragment, try reading some more
+				continue;
+			}
+			// We don't care about the return value for UDP command sockets
+			HandleReq(i);
+			msg_cnt--;
+
+			// Make sure we didn't leak our priv state
+			CheckPrivState();
+		}
+		return;
+	}
 
     // if it is an accepting socket it will try for the connect
     // up (n) elements

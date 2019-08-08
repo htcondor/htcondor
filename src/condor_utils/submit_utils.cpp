@@ -5289,10 +5289,15 @@ int SubmitHash::SetRequirements()
 		// resource name should be nonempty
 		if ( ! *rname) continue;
 		std::string clause;
-		if (stringReqRes.count(rname) > 0)
+		if (stringReqRes.count(rname) > 0) {
 			formatstr(clause, " && regexp(Request%s, TARGET.%s)", rname, rname);
-		else
-			formatstr(clause, " && (TARGET.%s >= Request%s)", rname, rname);
+		} else {
+			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
+			double val = 0;
+			if ( ! string_is_double_param(hash_iter_value(it), val) || val > 0) {
+				formatstr(clause, " && (TARGET.%s >= Request%s)", rname, rname);
+			}
+		}
 		answer += clause;
 	}
 	hash_iter_delete(&it);
