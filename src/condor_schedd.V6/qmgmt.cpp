@@ -3767,6 +3767,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		errno = ENOENT;
 		return -1;
 	*/
+	} else if (flags & SetAttribute_SubmitTransform) {
+		// submit transforms come from inside the schedd and have no restrictions
+		// on which cluster/proc may be edited (the transform itself guarantees that only
+		// jobs in the submit transaction will be edited)
 	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
 		// If we made it here, the user (i.e. not the schedd itself)
 		// is adding attributes to an ad that has not been committed yet

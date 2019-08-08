@@ -67,6 +67,12 @@ Bugs Fixed:
    certain commands were missing tokens.
    :ticket:`7196`
 
+-  Fixed a bug in the *condor_schedd* that caused submit transforms to always
+   reject submissions with more than one cluster id.   This bug was particularly
+   easy to trigger by attempting to queue more than one submit object in
+   a single transaction using the python bindings.
+   :ticket:`7036`
+
 Version 8.8.4
 -------------
 

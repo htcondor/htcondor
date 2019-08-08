@@ -42,7 +42,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
-//#include "condor_qmgr.h"  // only submit_protocol.cpp is allowed to access the schedd's Qmgt functions
 #include "sig_install.h"
 #include "access.h"
 #include "daemon.h"
@@ -74,6 +73,7 @@
 #include <submit_utils.h>
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
 #define USE_SUBMIT_UTILS 1
+#include "condor_qmgr.h"
 #include "submit_internal.h"
 
 #include "list.h"
