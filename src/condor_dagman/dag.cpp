@@ -208,6 +208,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagStatus = DAG_STATUS_OK;
 
 	_allNodesIt = NULL;
+	_graph_width = 0;
+	_graph_height = 0;
 
 	return;
 }
