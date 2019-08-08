@@ -50,27 +50,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 #define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
 #define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
 
-
-// this copied from condor_qmgr.h. TODO fix to refer rather than re-declare
-#ifndef _LIBQMGR_H
-typedef struct {
-	bool dummy;
-} Qmgr_connection;
-
-typedef unsigned char SetAttributeFlags_t;
-const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
-	// NoAck tells the remote version of SetAttribute to not send back a
-	// return code.  If the operation fails, the connection will be closed,
-	// so failure will be detected in CommitTransaction().  This is useful
-	// for improving performance when setting lots of attributes.
-const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
-const SetAttributeFlags_t SETDIRTY = (1<<2);
-const SetAttributeFlags_t SHOULDLOG = (1<<3);
-const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
-const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
-#endif
-
-
 class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);

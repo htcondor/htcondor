@@ -320,7 +320,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttributeByConstraint2 ) {
-			assert( syscall_sock->code( flags ) );
+			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
+			assert( syscall_sock->code( wflags ) );
+			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
 		assert( syscall_sock->end_of_message() );;
 
@@ -371,7 +373,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttribute2 ) {
-			assert( syscall_sock->code( flags ) );
+			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
+			assert( syscall_sock->code( wflags ) );
+			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
 		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
@@ -456,7 +460,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			terrno = EPERM;
 		} else {
 			errno = 0;
-			SetAttributeFlags_t flags = 0;
+			const SetAttributeFlags_t flags = 0;
 			rval = SetAttributeInt( cluster_id, -1, ATTR_JOB_MATERIALIZE_LIMIT, num, flags );
 			if (rval >= 0) {
 				rval = QmgmtHandleSetJobFactory(cluster_id, filename, text);
