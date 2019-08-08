@@ -2,15 +2,12 @@
 
 progdir=${0%/*}
 
-if [[ $TRAVIS_OS_NAME == osx ]]; then
-    CLIPPED=ON
-    LIBVIRT=OFF
-    LIBCGROUP=OFF
-else
-    GLOBUS=ON
-    VOMS=ON
+if [[ $TRAVIS_OS_NAME == linux ]]; then
     LIBVIRT=ON
     LIBCGROUP=ON
+else
+    LIBVIRT=OFF
+    LIBCGROUP=OFF
 fi
 if [[ -n $DOCKER_IMAGE ]]; then
     BUILD_TESTING=TRUE
