@@ -530,6 +530,9 @@ parse_subdag( Dag *dag,
 static const char* next_possibly_quoted_token( void )
 {
 	char *remainder = strtok( NULL, "" );
+	if ( !remainder ) {
+		return NULL;
+	}
 	while ( remainder[0] == ' ' || remainder[0] == '\t' )
 		remainder++;
 	if ( remainder[0] == '"' )
