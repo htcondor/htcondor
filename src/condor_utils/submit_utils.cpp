@@ -5293,6 +5293,10 @@ int SubmitHash::SetRequirements()
 			formatstr(clause, " && regexp(Request%s, TARGET.%s)", rname, rname);
 		} else {
 			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
+			// we know if we get here that the value is a valid expression, and we know that it isn't
+			// a string literal. If it evaluates to a number, then we can look at it's value, but if it doesn't
+			// evalutate to a number, then it must be an expression that has undefined refs, so we will
+			// assume it will evaluate at match time to a non-zero number.
 			double val = 0;
 			if ( ! string_is_double_param(hash_iter_value(it), val) || val > 0) {
 				formatstr(clause, " && (TARGET.%s >= Request%s)", rname, rname);
