@@ -73,6 +73,11 @@ if(NOT WIN_EXEC_NODE_ONLY)
                 slurm_status.sh
                 slurm_submit.sh
                 slurm_status.py
+                kubernetes_cancel.sh
+                kubernetes_hold.sh
+                kubernetes_resume.sh
+                kubernetes_status.sh
+                kubernetes_submit.sh
                 DESTINATION ${C_LIBEXEC}/glite/bin
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
