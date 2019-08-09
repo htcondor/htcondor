@@ -10,9 +10,6 @@ matrix:
           env: UW_BUILD=ON  PROPER=OFF CLIPPED=ON  VOMS=ON  GLOBUS=ON
         - os: osx
           env: UW_BUILD=OFF PROPER=ON  CLIPPED=ON  VOMS=OFF GLOBUS=OFF
-        - os: osx
-          env: UW_BUILD=ON  PROPER=OFF CLIPPED=ON  VOMS=OFF GLOBUS=OFF
-          osx_image: xcode6.4
         - os: linux
           env: UW_BUILD=OFF PROPER=ON  CLIPPED=OFF VOMS=ON  GLOBUS=ON
         - os: linux
