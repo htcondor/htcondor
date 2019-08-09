@@ -2985,6 +2985,9 @@ DaemonCore::reconfig(void) {
 	secman->reconfig();
 	secman->getIpVerify()->Init();
 
+        // invoke reconfig method on our class to handle timer events
+    t.reconfig();
+
 		// add a random offset to avoid pounding DNS
 	int dns_interval = param_integer("DNS_CACHE_REFRESH",
 									 8*60*60+(rand()%600), 0);
@@ -3462,6 +3465,10 @@ void DaemonCore::Driver()
         int num_timers_fired = 0;
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
+        if (num_timers_fired > 0) {
+            dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
+                num_timers_fired, runtime);
+        }
 		num_timers_fired += num_pumpwork_fired;
         dc_stats.TimersFired += num_timers_fired;
 
