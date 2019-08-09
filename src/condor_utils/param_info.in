@@ -3163,6 +3163,14 @@ tags=schedd,dedicated_scheduler
 default=true
 type=bool
 tags=schedd
+description=Set to false to have Schedd refuse late materialization submits
+
+[SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
+default=true
+type=bool
+tags=schedd
+customization=devel
+description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
