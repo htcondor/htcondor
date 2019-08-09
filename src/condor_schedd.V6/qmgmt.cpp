@@ -493,8 +493,8 @@ inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
 
 #ifdef USE_MATERIALIZE_POLICY
 // num_pending should be the number of jobs that have been materialized, but not yet committed
-// returns bool if materialization of a single job is allowed by policy, if false retry_delay
-// will be set to a suggest delay before trying again.  a retry_delay > 10 "wait for a state change before retrying"
+// returns true if materialization of a single job is allowed by policy, if false retry_delay
+// will be set to a suggested delay before trying again.  a retry_delay > 10 means "wait for a state change before retrying"
 bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int num_pending, int & retry_delay)
 {
 	long long max_idle = -1;
