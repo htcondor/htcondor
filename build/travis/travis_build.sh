@@ -18,7 +18,6 @@ fi
 cat > "$progdir/env.sh" <<__END__
 export CMAKE_OPTIONS=(
     -DPROPER:BOOL=$PROPER
-    -DCLIPPED:BOOL=$CLIPPED
     -DUW_BUILD:BOOL=$UW_BUILD
     -D_DEBUG:BOOL=TRUE
     -DCMAKE_SKIP_RPATH:BOOL=ON
