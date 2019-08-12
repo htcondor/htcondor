@@ -152,6 +152,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	, ident(id)
 	, paused(mmInvalid)
 	, cached_total_procs(-42)
+	, is_submit_on_hold(false)
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
