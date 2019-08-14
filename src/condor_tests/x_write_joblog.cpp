@@ -572,15 +572,13 @@ int writeFactoryResumedEvent(WriteUserLog &logFile)
 int
 main(int argc, const char * argv[])
 {
-	char * owner = my_username();
-	char * domain = my_domainname();
-
 	const char * logname = "local.log";
 	if (argc > 1) { logname = argv[1]; }
 
 	// The cluster and proc IDs are arbitrary but should be non-zero.  The
 	// subproc ID is always (and must be) zero.
-	WriteUserLog logFile(owner, domain, logname, 14, 55, 0, false);
+	WriteUserLog logFile;
+	logFile.initialize(logname, 14, 55, 0);
 
 	writeSubmitEvent(logFile);
 	writeExecuteEvent(logFile);

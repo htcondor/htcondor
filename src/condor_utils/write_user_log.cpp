@@ -89,99 +89,10 @@ static int should_use_keyring_sessions() {
 // ***************************
 //  WriteUserLog constructors
 // ***************************
-WriteUserLog::WriteUserLog( bool disable_event_log )
+WriteUserLog::WriteUserLog()
 {
 	log_file_cache = NULL;
 	Reset( );
-	m_global_disable = disable_event_log;
-}
-
-/* This constructor is just like the constructor below, except
- * that it doesn't take a domain, and it passes NULL for the domain and
- * the globaljobid. Hopefully it's not called anywhere by the condor code...
- * It's a convenience function, requested by our friends in LCG. */
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset( );
-	m_format_opts = format_opts;
-	
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, NULL, file, c, p, s);
-}
-/* This constructor is just like the constructor below, except
- * that it doesn't take a domain, and it passes NULL for the domain and
- * the globaljobid. Hopefully it's not called anywhere by the condor code...
- * It's a convenience function, requested by our friends in LCG. */
-WriteUserLog::WriteUserLog (const char *owner,
-							const std::vector<const char*>& file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset( );
-	m_format_opts = format_opts;
-	
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, NULL, file, c, p, s);
-}
-
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *domain,
-							const char *file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset();
-	m_format_opts = format_opts;
-
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, domain, file, c, p, s);
-}
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *domain,
-							const std::vector<const char *>& file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset();
-	m_format_opts = format_opts;
-
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, domain, file, c, p, s);
 }
 
 // Destructor

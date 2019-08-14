@@ -98,29 +98,8 @@ class WriteUserLog
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
 
-    ///
-    WriteUserLog( bool disable_event_log = false );
+    WriteUserLog();
     
-    /** Constructor
-        @param owner Username of the person whose job is being logged
-        @param file the path name of the log file to be written (copied)
-        @param clu  condorID cluster to put into each ULogEvent
-        @param proc condorID proc    to put into each ULogEvent
-        @param subp condorID subproc to put into each ULogEvent
-		@param xml  make this true to write XML logs, false to use the old form
-    */
-    WriteUserLog(const char *owner, const char *domain,
-				 const std::vector<const char*>& file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    WriteUserLog(const char *owner, const char *domain,
-				 const char* file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    
-    WriteUserLog(const char *owner, const char *file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    WriteUserLog(const char *owner, const std::vector<const char *>& file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    ///
     virtual ~WriteUserLog();
     
     /** Initialize the log file, if not done by constructor.
