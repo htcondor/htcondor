@@ -4,7 +4,7 @@ Command Reference Manual (man pages)
 .. toctree::
    :maxdepth: 1
    :glob:
-   
+
    bosco_cluster
    bosco_findplatform
    bosco_install
@@ -12,6 +12,7 @@ Command Reference Manual (man pages)
    bosco_start
    bosco_stop
    bosco_uninstall
+   classads
    condor_advertise
    condor_annex
    condor_check_userlogs
@@ -79,4 +80,4 @@ Command Reference Manual (man pages)
    condor_wait
    condor_who
    giddalloc
-   procdctl      
+   procdctl

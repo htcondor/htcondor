@@ -1,0 +1,178 @@
+*ClassAds*
+==========
+
+The ClassAd language consists of two parts: structured data (called
+"ClassAds"), and expressions.
+
+HTCondor uses ClassAds to describe various things, primarily machines and
+jobs; it uses expressions as constraints for querying ClassAds,
+and for defining what it means for two ClassAds to match each other.
+
+The ClassAd data language predates but is very similar to JSON.
+
+The ClassAd expression language looks like C, but is built from a
+considerably more limited set of operations and functions.
+
+Data Syntax
+-----------
+
+::
+
+    attribute_name  = "attribute-value"
+    pi              = 3.141
+    count           = 3
+    constraint      = MY.count < 10 && regexp( ".*example.*", attribute_name )
+    structured_attr = [ type = "complex"; real = 7.75; imaginary = -3; \
+                        colors = { "red", "green", { 0, 0, 255 } } ]
+
+A ClassAd is a list of attribute-value pairs, separated by newlines.
+Dictionaries are marked by square brackets and lists by braces (the
+opposite of JSON); dictionaries separate elements with semicolons,
+and lists separate elements with commas.
+
+Expression Syntax
+-----------------
+
+An expression consists of literals and attribute references composed with
+operators and functions.
+
+Attribute References
+''''''''''''''''''''
+
+::
+
+    MY.structured_attr
+    my.STRUCTURED_ATTR
+
+An attribute reference always includes an attribute name.  In HTCondor,
+when determining if two ClassAds match, an expression may specify which
+ad's value is used by prefixing it with ``MY.`` or ``TARGET.``.  Attribute
+references are case-insensitive.
+
+::
+
+    MY.structured_attr.colors
+    MY.structured_attr["colors"]
+
+An element of dictionary is referenced as if the dictionary were a
+ClassAd *or* by using the subcript operator (``[]``) with an expression
+that evaluates to a string.
+
+::
+
+    MY.structure_attr.colors[0]
+
+List elements are referenced by an expression that evaluates to an
+integer, where the first element in the list is numbered 0.
+
+If you apply the subscript operator to a list but the operand evaluates
+to a string, you'll get a list of the subscript operator applied with
+that string as an operand to each element of the list.
+
+::
+
+    undefined_reference = MY.undefined_attribute
+    explicitly_undefined = UNDEFINED
+    error_value = "three" * 7
+
+The ClassAd language does not distinguish between references to a missing
+attribute and references to an attribute set to ``UNDEFINED`` (the language
+literal); both result in ``UNDEFINED``.  It does, however, distinguish between
+``UNDEFINED`` and ``ERROR``, where the latter usually results from type errors,
+e.g., trying to multiply a number by a string.
+
+Operators and Functions
+'''''''''''''''''''''''
+
+The operators ``*``, ``/``, ``+`` and ``-`` operate arithmetically only on
+integers and reals.
+
+The comparison operators ``==``, ``!=``, ``<=``, ``<``, ``>=`` and ``>``
+operate on integers, reals and strings.  String comparison is
+case-insensitive.
+
+The logical operators ``&&`` and ``||`` operate on integers and reals;
+non-zero is true, and zero is false.
+
+The ternary operator ``x ? y : z`` operates on expressions.
+
+The default operator ``x ?: z`` returns ``x`` if ``x`` is defined
+and ``z`` otherwise.
+
+ClassAd operators and functions are usually strict with respect to
+``UNDEFINED`` and ``ERROR``, that is, an operatand which is ``UNDEFINED`` or
+``ERROR`` causes an ``UNDEFINED`` or ``ERROR`` result.  The ``IS`` and
+``ISNT`` operators are one important exception, most easily defined by
+example: while ``10 == UNDEFINED`` is ``UNDEFINED``, ``10 IS UNDEFINED``
+is false.  In HTCondor, these operators are primarily useful for dealing with
+attributes like ``JobStartDate``, which isn't defined (and is thus
+``UNDEFINED``) until after the job starts.  If you prefer, you may write
+``IS`` as ``=?=`` and ISNT as ``=!=``.
+
+The ``IS`` and ``ISNT`` operators are case-sensitive for strings.
+
+Functions are defined in the references below.
+
+Testing ClassAd Expressions
+---------------------------
+
+If your pool has machines in it, you can use ``condor_status`` to help
+debug a ClassAd expression.  For instance, if you can't remember which
+kind of regular expressions the ``regexp()`` function uses, you could
+check in the following way:
+
+::
+
+    condor_status -limit 1 -af 'regexp( "*tr*", "string" )'
+    condor_status -limit 1 -af 'regexp( ".*tr.*", "string" )'
+
+This will print out ``false`` and then ``true``; if you have no machines
+in your pool, it will print nothing.
+
+Examples
+--------
+
+String Manipulation
+'''''''''''''''''''
+
+In this example, an administrator has just added twelve new hosts
+to the pool -- ``compute-296`` to ``compute-307`` -- and wants to see if
+they've started running jobs yet.
+
+Note that constraint expression is singly-quoted to avoid interference
+from the shell.
+
+::
+
+    condor_status -const '296 <= int(substr( Machine, 8 )) && int(substr( Machine, 8 )) <= 307'
+
+You could also write this as follows:
+
+::
+
+    condor_status -const '296 <= int(split(Machine, "-")[1]) && int(split(Machine, "-")[1]) <= 307'
+
+Reserved Words
+--------------
+
+We've already mentioned ``UNDEFINED``, ``ERROR``, ``IS``, and ``ISNT``.
+The keywords ``TRUE`` and ``FALSE`` are the integers ``1`` and ``0``,
+respectively.  Finally, ``PARENT`` may be used in attribute references.
+
+Specification
+-------------
+
+For use in HTCondor, see https://htcondor.readthedocs.io/en/latest/misc-concepts/classad-mechanism.html.
+For a complete language specification, see https://research.cs.wisc.edu/htcondor/classad/refman/.
+
+Author
+------
+
+Center for High Throughput Computing, University of Wisconsin-Madison
+
+Copyright
+---------
+
+Copyright © 1990-2019 Center for High Throughput Computing, Computer
+Sciences Department, University of Wisconsin-Madison, Madison, WI. All
+Rights Reserved. Licensed under the Apache License, Version 2.0.
