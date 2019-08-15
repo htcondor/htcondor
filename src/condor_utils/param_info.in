@@ -1200,7 +1200,7 @@ description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
 [MAX_TIMER_EVENTS_PER_CYCLE]
-default=3
+default=0
 range=0,
 type=int
 
