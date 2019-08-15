@@ -1210,7 +1210,7 @@ range=0,
 type=int
 
 [MAX_UDP_MSGS_PER_CYCLE]
-default=1
+default=100
 range=0,
 type=int
 
