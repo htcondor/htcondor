@@ -25,7 +25,11 @@
 
 #if 1
 StringSpace::ssentry* StringSpace::new_entry(const char * str) {
-	size_t cch = 0; if (str) { cch = strlen(str); }
+	if (!str) {
+		return nullptr;
+	}
+	size_t cch = 0; 
+	cch = strlen(str);
 	ssentry* ptr = (ssentry*)malloc(sizeof(ssentry) + (cch & ~3));
 	ptr->count = 0;
 	strcpy(ptr->str, str);
