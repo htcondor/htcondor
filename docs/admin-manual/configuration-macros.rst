@@ -1792,11 +1792,17 @@ starter, none of which use DaemonCore).
     value for tuning purposes when there is a high number of jobs
     starting and exiting per second.
 
+``MAX_TIMER_EVENTS_PER_CYCLE`` :index:`MAX_TIMER_EVENTS_PER_CYCLE`
+    An integer value that defaults to 3. It is a rarely changed
+    performance tuning parameter to set the max number of internal
+    timer events will be dispatched per DaemonCore event cycle.
+    A value of zero means no limit, so that all timers that are due
+    at the start of the event cycle should be dispatched.
+
 ``MAX_UDP_MSGS_PER_CYCLE`` :index:`MAX_UDP_MSGS_PER_CYCLE`
     An integer value that defaults to 1. It is a rarely changed
     performance tuning parameter to set the number of incoming UDP
     messages a daemon will read per DaemonCore event cycle.
-    incoming, socket connect requests per DaemonCore event cycle.
     A value of zero means no limit. It has the most noticeable
     effect on the *condor_schedd* and *condor_collector* daemons,
     which can receive a large number of UDP messages when under heavy
