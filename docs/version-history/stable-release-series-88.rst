@@ -27,11 +27,23 @@ New Features:
    and *condor_collector* daemons to handle heavy loads.
    :ticket:`7149`
 
+-  Added configuration parameter ``MAX_TIMER_EVENTS_PER_CYCLE``, which
+   controls how many internal timer events a daemon will dispatch per
+   event cycle. The default value of 3 maintains the behavior in previous
+   versions of HTCondor.
+   Changing the value to zero (meaning no limit) could help
+   the schedd handle heavy loads.
+   :ticket:`7195`
+
 Bugs Fixed:
 
 -  HTCondor daemons will no longer sit in a tight loop consuming the
    CPU when a network connection closes unexpectedly.
    :ticket:`7164`
+
+-  Fix a bug where singularity jobs with SINGULARITY_TARGET_DIR set
+   would not have the job's environment properly set
+   :ticket:`7140`
 
 -  HTCondor will now always use TCP to release startds claimed by the
    dedicated scheduler during shutdown.  This prevents some startds
