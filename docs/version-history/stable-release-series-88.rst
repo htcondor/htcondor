@@ -27,6 +27,14 @@ New Features:
    and *condor_collector* daemons to handle heavy loads.
    :ticket:`7149`
 
+-  Added configuration parameter ``MAX_TIMER_EVENTS_PER_CYCLE``, which
+   controls how many internal timer events a daemon will dispatch per
+   event cycle. The default value of 3 maintains the behavior in previous
+   versions of HTCondor.
+   Changing the value to zero (meaning no limit) could help
+   the schedd handle heavy loads.
+   :ticket:`7195`
+
 Bugs Fixed:
 
 -  HTCondor daemons will no longer sit in a tight loop consuming the
