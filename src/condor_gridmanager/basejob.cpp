@@ -998,47 +998,16 @@ void BaseJob::NotifyResourceUp()
 	SetEvaluateState();
 }
 
-// Initialize a UserLog object for a given job and return a pointer to
-// the UserLog object created.  This object can then be used to write
-// events and must be deleted when you're done.  This returns NULL if
-// the user didn't want a UserLog, so you must check for NULL before
-// using the pointer you get back.
-WriteUserLog*
-InitializeUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	std::string userLogFile, dagmanNodeLog;
-	int use_classad = 0;
-	std::vector<const char*> logfiles;
-
-	if( getPathToUserLog(job_ad, userLogFile) ) {
-		logfiles.push_back(userLogFile.c_str());
-	}
-	if( getPathToUserLog(job_ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {                   
-		logfiles.push_back(dagmanNodeLog.c_str());
-	}
-	if(logfiles.empty()) {
-		return NULL;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupInteger( ATTR_ULOG_USE_XML, use_classad);
-
-	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(logfiles, cluster, proc, 0);
-	ULog->setUseCLASSAD(use_classad);
-	return ULog;
-}
-
 bool
 WriteExecuteEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	char hostname[128];
 
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1056,8 +1025,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 
 	ExecuteEvent event;
 	event.setExecuteHost( hostname );
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1074,8 +1042,10 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	char removeReason[256];
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1095,8 +1065,7 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	event.setReason( removeReason );
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1119,8 +1088,10 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 	}
 
 	int cluster, proc;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1191,8 +1162,7 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 		event.total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1208,8 +1178,10 @@ bool
 WriteEvictEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1234,8 +1206,7 @@ WriteEvictEventToUserLog( ClassAd *job_ad )
 
 	event.checkpointed = false;
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1252,8 +1223,10 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1269,8 +1242,7 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 
 	event.initFromClassAd(job_ad);
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1289,8 +1261,10 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1307,15 +1281,13 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
 	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
-		delete ulog;
 		return true;
 	}
 	Tokenize( contact );
 	GetNextToken( " ", false );
 	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1334,8 +1306,10 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1352,15 +1326,13 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
 	if ( contact.empty() ) {
 			// Not a Globus job, don't log the event
-		delete ulog;
 		return true;
 	}
 	Tokenize( contact );
 	GetNextToken( " ", false );
 	event.rmContact =  strnewp(GetNextToken( " ", false ));
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1379,8 +1351,10 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1408,8 +1382,7 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 
 	event.restartableJM = true;
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1428,8 +1401,10 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
 	int cluster, proc;
 	char buf[1024];
 
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1447,8 +1422,7 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
 			  failure_mesg ? failure_mesg : "");
 	event.reason =  strnewp(buf);
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1465,8 +1439,10 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1488,8 +1464,7 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 	}
 	event.resourceName =  strnewp( contact.c_str() );
 
-	int rc = ulog->writeEvent( &event, job_ad );
-	delete ulog;
+	int rc = ulog.writeEvent( &event, job_ad );
 
 	if ( !rc ) {
 		dprintf( D_ALWAYS,
@@ -1506,8 +1481,10 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1529,8 +1506,7 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 	}
 	event.resourceName =  strnewp( contact.c_str() );
 
-	int rc = ulog->writeEvent(&event,job_ad);
-	delete ulog;
+	int rc = ulog.writeEvent(&event,job_ad);
 
 	if (!rc) {
 		dprintf( D_ALWAYS,
@@ -1547,8 +1523,10 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string contact;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1568,8 +1546,7 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
 	event.jobId = strnewp( contact.c_str() );
 
-	int rc = ulog->writeEvent( &event,job_ad );
-	delete ulog;
+	int rc = ulog.writeEvent( &event,job_ad );
 
 	if ( !rc ) {
 		dprintf( D_ALWAYS,
@@ -1585,8 +1562,10 @@ bool
 WriteJobStatusUnknownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1600,8 +1579,7 @@ WriteJobStatusUnknownEventToUserLog( ClassAd *job_ad )
 
 	JobStatusUnknownEvent event;
 
-	int rc = ulog->writeEvent( &event, job_ad );
-	delete ulog;
+	int rc = ulog.writeEvent( &event, job_ad );
 
 	if ( !rc ) {
 		dprintf( D_ALWAYS,
@@ -1617,8 +1595,10 @@ bool
 WriteJobStatusKnownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	WriteUserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
+	WriteUserLog ulog;
+	// TODO Check return value of initialize()
+	ulog.initialize( *job_ad );
+	if ( ! ulog.willWrite() ) {
 		// User doesn't want a log
 		return true;
 	}
@@ -1632,8 +1612,7 @@ WriteJobStatusKnownEventToUserLog( ClassAd *job_ad )
 
 	JobStatusKnownEvent event;
 
-	int rc = ulog->writeEvent( &event, job_ad );
-	delete ulog;
+	int rc = ulog.writeEvent( &event, job_ad );
 
 	if ( !rc ) {
 		dprintf( D_ALWAYS,
