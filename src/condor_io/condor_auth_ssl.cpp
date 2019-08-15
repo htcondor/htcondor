@@ -1084,6 +1084,7 @@ Condor_Auth_SSL::server_verify_scitoken()
 			audiences.emplace_back(aud);
 			audience_ptr.push_back(audiences.back().c_str());
 		}
+		audience_ptr.push_back(nullptr);
 	}
 	if ((*scitoken_deserialize_ptr)(m_client_scitoken.c_str(), &token, nullptr, &err_msg)) {
 		dprintf(D_SECURITY, "Failed to deserialize scitoken: %s\n",
