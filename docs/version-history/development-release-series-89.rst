@@ -150,6 +150,10 @@ Bugs Fixed:
    verification to fail because only an IP address was available.
    :ticket:`7073`
 
+- Fixed a bug that could cause the *condor_schedd* to crash when handling
+  a query for the slot ads that it has claimed.
+  :ticket:`7210`
+
 Version 8.9.2
 -------------
 
