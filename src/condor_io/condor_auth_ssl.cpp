@@ -1786,11 +1786,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     {
         TemporaryPrivSentry sentry(PRIV_ROOT);
         if( certfile && (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
-            ouch( "Error loading certificate from file" );
+            ouch( "Error loading certificate from file\n" );
             goto setup_server_ctx_err;
         }
         if( keyfile && (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
-            ouch( "Error loading private key from file" );
+            ouch( "Error loading private key from file\n" );
             goto setup_server_ctx_err;
         }
     }
