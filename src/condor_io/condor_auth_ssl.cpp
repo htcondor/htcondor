@@ -157,7 +157,7 @@ static SSL_METHOD *(*SSL_method_ptr)() = NULL;
 static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
 #ifdef HAVE_EXT_SCITOKENS
-static int (*scitoken_deserialize_ptr)(const char *value, SciToken *token, const char **allowed_issuers, char **err_msg) = nullptr;
+static int (*scitoken_deserialize_ptr)(const char *value, SciToken *token, const char * const*allowed_issuers, char **err_msg) = nullptr;
 static int (*scitoken_get_claim_string_ptr)(const SciToken token, const char *key, char **value, char **err_msg) = nullptr;
 static void (*scitoken_destroy_ptr)(SciToken token) = nullptr;
 static Enforcer (*enforcer_create_ptr)(const char *issuer, const char **audience, char **err_msg) = nullptr;
@@ -281,7 +281,7 @@ bool Condor_Auth_SSL::Initialize()
 	dl_hdl = nullptr;
 	if (
 		!(dl_hdl = dlopen(LIBSCITOKENS_SO, RTLD_LAZY)) ||
-		!(scitoken_deserialize_ptr = (int (*)(const char *value, SciToken *token, const char **allowed_issuers, char **err_msg))dlsym(dl_hdl, "scitoken_deserialize")) ||
+		!(scitoken_deserialize_ptr = (int (*)(const char *value, SciToken *token, const char * const*allowed_issuers, char **err_msg))dlsym(dl_hdl, "scitoken_deserialize")) ||
 		!(scitoken_get_claim_string_ptr = (int (*)(const SciToken token, const char *key, char **value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string")) ||
 		!(scitoken_destroy_ptr = (void (*)(SciToken token))dlsym(dl_hdl, "scitoken_destroy")) ||
 		!(enforcer_create_ptr = (Enforcer (*)(const char *issuer, const char **audience, char **err_msg))dlsym(dl_hdl, "enforcer_create")) ||
