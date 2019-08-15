@@ -31,6 +31,12 @@ Release Notes:
   the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
   don't see one, you don't have to do anything.)
 
+- The Log file specifed by a job, and by the ``EVENT_LOG`` configuration variable
+  Will now have the year in the event time, Formerly only the day and month were
+  printed.  This change makes these logs unreadable by versions of Dagman and ``condor_wait``
+  that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
+  can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
+
 - Singularity jobs no longer mount the user's home directory by default.
   To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
 
@@ -143,6 +149,10 @@ Bugs Fixed:
    In some cases, the hostname was dropped internally in HTCondor, causing the SSL certificate
    verification to fail because only an IP address was available.
    :ticket:`7073`
+
+- Fixed a bug that could cause the *condor_schedd* to crash when handling
+  a query for the slot ads that it has claimed.
+  :ticket:`7210`
 
 Version 8.9.2
 -------------

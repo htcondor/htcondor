@@ -1953,7 +1953,9 @@ int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
 	int more = 1;
 	int num_ads = 0;
 
-	pcccDumpTable( D_TEST );
+	if( IsDebugLevel( D_TEST ) ) {
+		pcccDumpTable( D_TEST );
+	}
 
 	stream->encode();
 
@@ -1967,6 +1969,10 @@ int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
 	dprintf( D_TEST, "Dumping match records (with now jobs)...\n" );
 	for( ; !(i == matches->end()); i.advance() ) {
 		match_rec * match = (*i).second;
+
+		if( match->my_match_ad == NULL ) {
+			continue;
+		}
 
 		if( !stream->code( more ) || !putClassAd( stream, * match->my_match_ad ) ) {
 			dprintf( D_ALWAYS, "Error sending query result to client, aborting.\n" );
