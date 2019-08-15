@@ -148,42 +148,6 @@ WriteUserLog::~WriteUserLog()
 // ***********************************
 
 bool
-WriteUserLog::initialize( const char *owner, const char *domain,
-						  const char *file,
-						  int c, int p, int s )
-{
-	return initialize(owner,domain,std::vector<const char*>(1,file),
-		c,p,s);
-}
-bool
-WriteUserLog::initialize( const char *owner, const char *domain,
-						  const std::vector<const char *>& file,
-						  int c, int p, int s )
-{
-	priv_state		priv;
-
-	uninit_user_ids();
-	if (!  init_user_ids(owner, domain) ) {
-		dprintf(D_ALWAYS,
-				"WriteUserLog::initialize: init_user_ids() failed!\n");
-		return false;
-	}
-	m_init_user_ids = true;
-	m_set_user_priv = true;
-
-		// switch to user priv, saving the current user
-	priv = set_user_priv();
-
-		// initialize log file
-	bool res = initialize( file, c, p, s );
-
-		// get back to whatever UID and GID we started with
-	set_priv(priv);
-
-	return res;
-}
-
-bool
 WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 {
 	int cluster = -1;
@@ -337,11 +301,12 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 	return !logs.empty() && internalInitialize( c, p, s );
 }
 
-bool
-WriteUserLog::initialize( int c, int p, int s )
+void
+WriteUserLog::setJobId( int c, int p, int s )
 {
-	Configure(false);
-	return internalInitialize( c, p, s );
+	m_cluster = c;
+	m_proc = p;
+	m_subproc = s;
 }
 
 // Internal-only initializer, invoked by all of the others

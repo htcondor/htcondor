@@ -118,19 +118,6 @@ class WriteUserLog
     
     virtual ~WriteUserLog();
     
-    /** Initialize the log file, if not done by constructor.
-        @param file the path name of the log file to be written (copied)
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(const char *owner, const char *domain,
-			   const std::vector<const char *>& file,
-			   int c, int p, int s);
-    bool initialize(const char *owner, const char *domain,
-			   const char *file, int c, int p, int s);
-    
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
         @param c the condor ID cluster to put into each ULogEvent
@@ -139,23 +126,9 @@ class WriteUserLog
 		@return true on success
     */
     bool initialize(const char *file, int c, int p, int s);
+private:
     bool initialize(const std::vector<const char *>& file, int c, int p, int s);
-   
-#if !defined(WIN32)
-    /** Initialize the log file (PrivSep mode only)
-        @param uid the user's UID
-        @param gid the user's GID
-        @param vector of filenames of log files to be written
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(uid_t, gid_t, const std::vector<const char *>&, int, int, int);
-    bool initialize(uid_t u, gid_t g, const char *f, int c, int p, int s) {
-			return initialize(u,g,std::vector<const char*>(1,f),c,p,s);
-		}
-#endif
+public:
 
 	/* Initialize the log writer based on the given job ad.
 	 * Check for the user log, dagman log, and global event log.
@@ -166,15 +139,10 @@ class WriteUserLog
 	 */
 	bool initialize(const ClassAd &job_ad, bool init_user = false);
 
-    /** Initialize the condorID, which will fill in the condorID
-        for each ULogEvent passed to writeEvent().
-
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(int c, int p, int s);
+    /* Set the job id, which will used for each ULogEvent passed to
+     * writeEvent(). Does not do any other initialization.
+     */
+    void setJobId(int c, int p, int s);
 
 	/** Read in the configuration parameters
 		@param force Force a reconfigure; otherwise Configure() will
@@ -206,12 +174,6 @@ class WriteUserLog
 	// Returns whether any files are configured to be written to.
 	// I.e. will a call to writeEvent() try to write anything.
 	bool willWrite() const {
-		return ( !logs.empty() || (m_global_fd >= 0) );
-	};
-	/** Verify that the event log is initialized
-		@return true on success
-	 */
-	bool isInitialized( void ) const {
 		return ( !logs.empty() || (m_global_fd >= 0) );
 	};
 
