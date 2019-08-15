@@ -3465,12 +3465,12 @@ void DaemonCore::Driver()
         int num_timers_fired = 0;
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
-        if (num_timers_fired > 0) {
-            dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
-                num_timers_fired, runtime);
-        }
 		num_timers_fired += num_pumpwork_fired;
-        dc_stats.TimersFired += num_timers_fired;
+		dc_stats.TimersFired = num_timers_fired;
+		if (num_timers_fired > 0) {
+			dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
+				num_timers_fired, runtime);
+		}
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
