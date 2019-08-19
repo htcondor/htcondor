@@ -415,7 +415,7 @@ JobEvent::Py_Repr() {
 
 std::string
 JobEvent::Py_Str() {
-	int fo = 0;
+	int fo = USERLOG_FORMAT_DEFAULT;
 	auto_free_ptr fmt(param("DEFAULT_USERLOG_FORMAT_OPTIONS"));
 	if(fmt) { fo = ULogEvent::parse_opts(fmt, USERLOG_FORMAT_DEFAULT); }
 

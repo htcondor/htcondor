@@ -1063,6 +1063,7 @@ TestLogWriter::TestLogWriter( Worker & /*worker*/,
 	  m_options( options ),
 	  m_rotations( 0 )
 {
+	setEnableGlobalLog( true );
 	initialize( options.getLogFile(), options.getCluster(), options.getProc(),
 	            options.getSubProc() );
 	if ( options.getXml() ) {

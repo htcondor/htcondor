@@ -125,7 +125,7 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(const char *file, int c, int p, int s);
+    bool initialize(const char *file, int c, int p, int s, int format_opts = USERLOG_FORMAT_DEFAULT);
 private:
     bool initialize(const std::vector<const char *>& file, int c, int p, int s);
 public:

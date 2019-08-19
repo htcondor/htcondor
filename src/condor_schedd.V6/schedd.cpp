@@ -4343,18 +4343,6 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 	return DestroyProc( cluster, proc );
 }
 
-namespace {
-	void InitializeMask(WriteUserLog* ulog, int c, int p)
-	{
-		MyString msk;
-		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
-		Tokenize(msk.Value());
-		while(const char* mask = GetNextToken(",",true)) {
-			ulog->AddToMask(ULogEventNumber(atoi(mask)));
-		}
-	}
-}
 // Initialize a WriteUserLog object for a given job and return a pointer to
 // the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if

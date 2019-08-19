@@ -43,7 +43,6 @@ $dagman_args = "-verbose";
 	'^\d+ NodeA PRE_SCRIPT_SUCCESS - - - 1$',
 	'^\d+ NodeA SUBMIT \d+.\d+ - - 1$',
 	'^\d+ NodeA EXECUTE \d+.\d+ - - 1$', # not if NOOP node
-	'^\d+ NodeA IMAGE_SIZE \d+.\d+ - - 1$', # not if NOOP node
 	'^\d+ NodeA JOB_TERMINATED \d+.\d+ - - 1$',
 	'^\d+ NodeA JOB_SUCCESS 0 - - 1$',
 	'^\d+ NodeB PRE_SCRIPT_STARTED - - - 2$',
@@ -52,12 +51,10 @@ $dagman_args = "-verbose";
 	'^\d+ NodeB PRE_SCRIPT_SUCCESS - - - 2$',
 	'^\d+ NodeB SUBMIT \d+.\d+ - - 2$',
 	'^\d+ NodeB EXECUTE \d+.\d+ - - 2$', # not if NOOP node
-	'^\d+ NodeB IMAGE_SIZE \d+.\d+ - - 2$', # not if NOOP node
 	'^\d+ NodeB JOB_TERMINATED \d+.\d+ - - 2$',
 	'^\d+ NodeB JOB_SUCCESS 0 - - 2$',
 	'^\d+ NodeC SUBMIT \d+.\d+ - - 3$',
 	'^\d+ NodeC EXECUTE \d+.\d+ - - 3$', # not if NOOP node
-	'^\d+ NodeC IMAGE_SIZE \d+.\d+ - - 3$', # not if NOOP node
 	'^\d+ NodeC JOB_TERMINATED \d+.\d+ - - 3$',
 	'^\d+ NodeC JOB_SUCCESS 0 - - 3$',
 	'^\d+ NodeC POST_SCRIPT_STARTED \d+.\d+ - - 3$',

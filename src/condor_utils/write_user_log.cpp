@@ -157,6 +157,8 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 
 	TemporaryPrivSentry temp_priv;
 
+	m_global_disable = false;
+
 	if ( init_user ) {
 		std::string owner;
 		std::string domain;
@@ -219,9 +221,9 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 }
 
 bool
-WriteUserLog::initialize( const char *file, int c, int p, int s )
+WriteUserLog::initialize( const char *file, int c, int p, int s, int format_opts )
 {
-	m_global_disable = true;
+	m_format_opts = format_opts;
 	return initialize(std::vector<const char*>(1,file),c,p,s);
 }
 
@@ -298,7 +300,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
         freeLogs();
 		logs.clear();
 	}
-	return !logs.empty() && internalInitialize( c, p, s );
+	return internalInitialize( c, p, s );
 }
 
 void
@@ -472,7 +474,7 @@ WriteUserLog::Reset( void )
 
 	m_creator_name = NULL;
 
-	m_global_disable = false;
+	m_global_disable = true;
 	m_global_format_opts = 0;
 	m_global_count_events = false;
 	m_global_max_filesize = 1000000;
