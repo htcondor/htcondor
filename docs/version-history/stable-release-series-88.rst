@@ -111,6 +111,10 @@ Bugs Fixed:
    program on Linux that resulted in a crash trying to load the HTCondor python module.
    :ticket:`7182`
 
+-  Fixed a bug that could cause a daemon's log file to be created with the
+   wrong owner. This would prevent the daemon from operating properly.
+   :ticket:`7214`
+
 Version 8.8.4
 -------------
 
