@@ -31,5 +31,5 @@ from ._htcondor import _Param
 import re
 try:
     __version__ = re.match('^.*(\d+\.\d+\.\d+)', version()).group(1)
-except AttributeError, IndexError:
+except (AttributeError, IndexError):
     __version__ = version().split()[1]
