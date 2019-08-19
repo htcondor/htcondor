@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 
+import classad
+import json
 import os
-import sys
+import posixpath
+import requests
+import shutil
 import socket
+import sys
 import time
+
 try:
     from urllib.parse import urlparse # Python 3
 except ImportError:
     from urlparse import urlparse # Python 2
-import posixpath
-import json
-
-import requests
-import classad
 
 DEFAULT_TIMEOUT = 30
 GLUSTER_PLUGIN_VERSION = '1.0.0'
@@ -109,21 +110,20 @@ class GlusterPlugin:
     def __init__(self):
         self.gluster_root = "/mnt/gluster"
 
-    # Convert the gluster://path/to/file url to a direct path in the file
-    # system (ie. /mnt/gluster/path/to/file)
+    # Extract whatever information we want from the url provided.
+    # In the case of Gluster, convert the gluster://path/to/file url to a 
+    # path in the file system (ie. /path/to/file)
     def parse_url(self, url):
-        parsed_url = urlparse(url)
-        url_path = posixpath.split(parsed_url.path)
-        gluster_path = self.gluster_root + url_path[0] + url_path[1]
-        return gluster_path
+        url_path = url[(url.find("://") + 3):]
+        return url_path
 
     def download_file(self, url, local_file_path):
 
         start_time = time.time()
 
         # Download transfer logic goes here
-        gluster_file_path = self.gluster_root + "/" + url.replace("gluster://", "")
-        os.system("cp " + gluster_file_path + " " + local_file_path)
+        gluster_file_path = self.gluster_root + "/" + self.parse_url(url)
+        shutil.copy(gluster_file_path, local_file_path)
         file_size = os.stat(local_file_path).st_size
 
         end_time = time.time()
@@ -149,8 +149,8 @@ class GlusterPlugin:
         start_time = time.time()
 
         # Upload transfer logic goes here
-        gluster_file_path = self.gluster_root + "/" + url.replace("gluster://", "")
-        os.system("cp " + local_file_path + " " + gluster_file_path)
+        gluster_file_path = self.gluster_root + "/" + self.parse_url(url)
+        shutil.copy(local_file_path, gluster_file_path)
         file_size = os.stat(local_file_path).st_size
 
         end_time = time.time()
