@@ -353,8 +353,8 @@ void TimerManager::CancelAllTimers()
 int
 TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 {
-	int				result, timer_check_cntr;
-	time_t			now, time_sample;
+	int				result;
+	time_t			now;
 	int				num_fires = 0;	// num of handlers called in this timeout
 
     if (pNumFired) *pNumFired = 0;
@@ -379,7 +379,6 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 	}
 
 	time(&now);
-	timer_check_cntr = 0;
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
