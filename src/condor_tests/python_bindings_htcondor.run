@@ -617,8 +617,10 @@ def testTransaction():
     assertEqual(ads[0]['bar'], 5, "testTransaction-14")
     assertEqual(ads[0]['baz'], 3, "testTransaction-15")
 
+    # A removed job may persist in the queue for a short time, but its
+    # JobStatus will be 3 (REMOVED)
     schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
-    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+    ads = schedd.query("ClusterId == %d && JobStatus != 3" % cluster, ["JobStatus"])
     assertEqual(len(ads), 0, "testTransaction-16")
     CondorTest.StopPersonalCondor("testTransaction")
 
