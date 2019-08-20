@@ -286,7 +286,8 @@ HTCondorPeek::create_session()
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					m_starter_addr.Value(),
-					0 );
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}

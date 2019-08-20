@@ -2985,6 +2985,9 @@ DaemonCore::reconfig(void) {
 	secman->reconfig();
 	secman->getIpVerify()->Init();
 
+        // invoke reconfig method on our class to handle timer events
+    t.reconfig();
+
 		// add a random offset to avoid pounding DNS
 	int dns_interval = param_integer("DNS_CACHE_REFRESH",
 									 8*60*60+(rand()%600), 0);
@@ -3013,6 +3016,12 @@ DaemonCore::reconfig(void) {
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
+
+	m_iMaxUdpMsgsPerCycle = param_integer("MAX_UDP_MSGS_PER_CYCLE", 1);
+	if( m_iMaxUdpMsgsPerCycle != 1 ) {
+		dprintf(D_FULLDEBUG,"Setting maximum UDP messages per cycle %d.\n", m_iMaxUdpMsgsPerCycle);
+	}
+
 	/*
 		Default value of MAX_REAPS_PER_CYCLE is 0 - a value of 0 means
 		call as many reapers as are waiting at the time we exit select.
@@ -3457,7 +3466,11 @@ void DaemonCore::Driver()
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
 		num_timers_fired += num_pumpwork_fired;
-        dc_stats.TimersFired += num_timers_fired;
+		dc_stats.TimersFired = num_timers_fired;
+		if (num_timers_fired > 0) {
+			dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
+				num_timers_fired, runtime);
+		}
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -4040,6 +4053,46 @@ void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
     unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
+
+	// Dispatch UDP commands directly
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+			default_to_HandleCommand &&
+			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
+
+		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
+
+		// We don't care about the return value for UDP command sockets
+		HandleReq(i);
+		msg_cnt--;
+
+		// Make sure we didn't leak our priv state
+		CheckPrivState();
+
+		while ( msg_cnt ) {
+			Selector selector;
+			selector.set_timeout( 0, 0 );
+			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+			selector.execute();
+
+			if ( !selector.has_ready() ) {
+				// No more data, we're done
+				break;
+			}
+
+			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
+			{
+				// Looks like we got a fragment, try reading some more
+				continue;
+			}
+			// We don't care about the return value for UDP command sockets
+			HandleReq(i);
+			msg_cnt--;
+
+			// Make sure we didn't leak our priv state
+			CheckPrivState();
+		}
+		return;
+	}
 
     // if it is an accepting socket it will try for the connect
     // up (n) elements
@@ -7073,7 +7126,8 @@ int DaemonCore::Create_Process(
 			valid_coms.c_str(),
 			CONDOR_CHILD_FQU,
 			NULL,
-			0);
+			0,
+			nullptr);
 
 		if(!rc)
 		{
@@ -9001,7 +9055,8 @@ DaemonCore::Inherit( void )
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
 				saved_sinful_string.c_str(),
-				0);
+				0,
+				nullptr);
 			if(!rc)
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
@@ -9054,7 +9109,8 @@ DaemonCore::Inherit( void )
 				family_session_info.c_str(),
 				CONDOR_FAMILY_FQU,
 				NULL,
-				0);
+				0,
+				nullptr);
 
 		if(!rc) {
 			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");

@@ -1722,14 +1722,30 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     virtual machine instance is to run on.
     :index:`batch_queue<single: batch_queue; submit commands>`
  batch_queue = <queuename>
-    Used for **pbs**, **lsf**, and **sge** grid universe jobs. Specifies
-    the name of the PBS/LSF/SGE job queue into which the job should be
-    submitted. If not specified, the default queue is used.
+    Used for **batch** grid universe jobs.
+    Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
+    job should be submitted. If not specified, the default queue is used.
+    For a multi-cluster SLURM configuration, which cluster to use can be
+    specified by supplying the name after an ``@`` symbol.
+    For example, to submit a job to the ``debug`` queue on cluster ``foo``,
+    you would use the value ``debug@foo``.
     :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
  boinc_authenticator_file = <pathname>
     For grid type **boinc** jobs, specifies a path and file name of the
     authorization file that grants permission for HTCondor to use the
     BOINC service. There is no default value when not specified.
+    :index:`cloud_label_names<single: cloud_label_names; submit commands>`
+ cloud_label_names = <name0,name1,name...>
+    For grid type **gce** jobs, specifies the case of tag names that
+    will be associated with the running instance. This is only necessary
+    if a tag name case matters. By default the list will be
+    automatically generated.
+    :index:`cloud_label_name<single: cloud_label_name; submit commands>`
+ cloud_label_<name> = <value>
+    For grid type **gce** jobs, specifies a label and value to be associated with
+    the running instance. The label name will be lower-cased; use
+    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
+    to change the case.
     :index:`cream_attributes<single: cream_attributes; submit commands>`
  cream_attributes = <name=value;...;name=value>
     Provides a list of attribute/value pairs to be set in a CREAM job
@@ -1833,7 +1849,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  ec2_spot_price = <bid>
     For grid type **ec2** jobs, specifies the spot instance bid, which
     is the most that the job submitter is willing to pay per hour to run
-    this job. :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
+    this job.
+    :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
  ec2_tag_names = <name0,name1,name...>
     For grid type **ec2** jobs, specifies the case of tag names that
     will be associated with the running instance. This is only necessary
@@ -1842,7 +1859,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     :index:`ec2_tag_name<single: ec2_tag_name; submit commands>`
  ec2_tag_<name> = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
-    the running instance. The tag name will be lower-cased, use
+    the running instance. The tag name will be lower-cased; use
     **ec2_tag_names** :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
     to change the case. :index:`WantNameTag<single: WantNameTag; submit commands>`
  WantNameTag = <True | False>

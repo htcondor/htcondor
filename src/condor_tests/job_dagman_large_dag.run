@@ -24,6 +24,7 @@
 
 use CondorTest;
 use CondorUtils;
+use Data::Dumper;
 
 # Set up a directory to contain all of the files in this test.
 $dir = "job_dagman_large_dag_files";
@@ -32,16 +33,16 @@ if (!-e $dir) {
 }
 chdir $dir;
 unlink <*>;
-symlink("job_dagman_large_dag-node.pl", ".");
-symlink("dummy_condor_submit.pl", ".");
+#symlink("job_dagman_large_dag-node.pl", ".");
+#symlink("dummy_condor_submit.pl", ".");
 
 # Create the DAG file, submit files, etc., to be used in this test.
 # It would be nice to make the DAG even bigger, but that could take
 # an awfully long time...
-runcmd("../create_large_dag job_dagman_large_dag 100 5 0 100");
+runcmd("../create_large_dag.pl job_dagman_large_dag 100 5 0 100");
 # Only uncomment this to run manually (outside of the nightly tests).
 # This will time out if run as part of the nightly tests.
-#runcmd("../create_large_dag job_dagman_large_dag 1000 10 0 1000");
+#runcmd("../create_large_dag.pl job_dagman_large_dag 1000 10 0 1000");
 
 $cmd = 'job_dagman_large_dag.dag';
 $testdesc =  'Condor submit dag - large DAG test - scheduler U';
@@ -60,12 +61,15 @@ sub RUNNING{2};
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper($info);
+	die "Abnormal exit was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
 };
 
 $held = sub 
@@ -89,7 +93,8 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, held, released, and successful completion\n",1);
 };
 
 $success = sub

@@ -8,6 +8,23 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.6
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.6 not yet released.
+
+.. HTCondor version 8.8.6 released on Month Date, 2019.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.8.5
 -------------
 
@@ -19,11 +36,84 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added configuration parameter ``MAX_UDP_MSGS_PER_CYCLE``, which
+   controls how many UDP messages a daemon will read per DaemonCore
+   event cycle. The default value of 1 maintains the behavior in previous
+   versions of HTCondor.
+   Setting a larger value can aid the ability of the *condor_schedd*
+   and *condor_collector* daemons to handle heavy loads.
+   :ticket:`7149`
+
+-  Added configuration parameter ``MAX_TIMER_EVENTS_PER_CYCLE``, which
+   controls how many internal timer events a daemon will dispatch per
+   event cycle. The default value of 3 maintains the behavior in previous
+   versions of HTCondor.
+   Changing the value to zero (meaning no limit) could help
+   the schedd handle heavy loads.
+   :ticket:`7195`
 
 Bugs Fixed:
 
--  None.
+-  HTCondor daemons will no longer sit in a tight loop consuming the
+   CPU when a network connection closes unexpectedly.
+   :ticket:`7164`
+
+-  Fix a bug where singularity jobs with SINGULARITY_TARGET_DIR set
+   would not have the job's environment properly set
+   :ticket:`7140`
+
+-  HTCondor will now always use TCP to release startds claimed by the
+   dedicated scheduler during shutdown.  This prevents some startds
+   from staying in the Claimed/Idle state after a schedd shutdown when
+   running parallel jobs.
+   :ticket:`7144`
+
+-  Fixed a bug that would sometimes result in the *condor_schedd* on Windows
+   becoming slow to respond to commands after a period of time.  The slowness
+   would persist until the *condor_schedd* was restarted.
+   :ticket:`7143`
+
+-  Fixed a bug that caused incorrect values to be reported for the time
+   taken to upload a job's files.
+   :ticket:`7147`
+
+-  Fixed a bug that caused the *condor_schedd* to not write a core file
+   when it crashes on linux.
+   :ticket:`7163`
+
+-  Fixed a bug that caused *condor_chirp* to crash when the *getdir*
+   command was used for an empty directory.
+   :ticket:`7168`
+
+-  Fixed a bug that caused GPU utilization to not be reported in the job
+   ad when an encrypted execute directory is used.
+   :ticket:`7169`
+
+-  Integer values in ClassAds in HTCondor that are in hexidecimal or
+   octal format are now rejected. Previously, they were read incorrectly.
+   :ticket:`7127`
+
+-  Fixed a bug that prevented new jobs from materializing when jobs changed
+   to run state and a ``max_idle`` value was specifed.
+   :ticket:`7178`
+
+-  Fixed a bug in the *condor_dagman* parser which caused it to crash when
+   certain commands were missing tokens.
+   :ticket:`7196`
+
+-  Fixed a bug in the *condor_schedd* that caused submit transforms to always
+   reject submissions with more than one cluster id.   This bug was particularly
+   easy to trigger by attempting to queue more than one submit object in
+   a single transaction using the python bindings.
+   :ticket:`7036`
+
+-  Minor change to the python bindings to work around a bug in the 3rd party collectd
+   program on Linux that resulted in a crash trying to load the HTCondor python module.
+   :ticket:`7182`
+
+-  Fixed a bug that could cause a daemon's log file to be created with the
+   wrong owner. This would prevent the daemon from operating properly.
+   :ticket:`7214`
 
 Version 8.8.4
 -------------

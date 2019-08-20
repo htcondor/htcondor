@@ -1585,7 +1585,7 @@ class DaemonCore : public Service
 	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
-	   stats_entry_recent<int> TimersFired;    //  number of timer handlers called
+	   stats_entry_abs<int> TimersFired;    //  number of timer handlers called
 	   stats_entry_recent<int> SockMessages;   //  number of socket handlers called
 	   stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
 	   //stats_entry_recent<int64_t> SockBytes;      //  number of bytes passed though the socket (can we do this?)
@@ -1696,6 +1696,7 @@ class DaemonCore : public Service
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 	int m_MaxTimeSkip;
+	int m_iMaxUdpMsgsPerCycle;	// max number of udp messages read per loop
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()

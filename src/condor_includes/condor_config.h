@@ -380,7 +380,10 @@ extern "C" {
 	// this function allows tests to set the actual backend data for a param value and returns the old value.
 	// make sure that live_value stays in scope until you put the old value back
 	const char * set_live_param_value(const char * name, const char * live_value);
-	bool find_user_file(MyString & filename, const char * basename, bool check_access);
+		// Find a file associated with a user; by default, this fails if called in a context
+		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
+		// condor.
+	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 
@@ -445,8 +448,6 @@ inline bool expand_param (const char *str, std::string & expanded) {
 int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
 int write_config_file(const char* pathname, int options);
 
-extern "C" {
-
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -468,8 +469,8 @@ extern "C" {
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
 
-	void init_config (int options);
-}
+	void init_global_config_table(int options);
+	void clear_global_config_table(void);
 
 #endif // __cplusplus
 
@@ -691,7 +692,6 @@ BEGIN_C_DECLS
 		int cReferenced;
 	};
 	int  get_config_stats(struct _macro_stats *pstats);
-	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );

@@ -521,7 +521,7 @@ int writePreSkipEvent(WriteUserLog &logFile)
 
 int writeClusterSubmitEvent(WriteUserLog &logFile)
 {
-	FactorySubmitEvent evt;
+	ClusterSubmitEvent evt;
 	evt.setSubmitHost("<128.105.165.12:32779>");
 	evt.submitEventLogNotes = strdup("DAGMan info");
 	evt.submitEventUserNotes = strdup("User info");
@@ -534,10 +534,10 @@ int writeClusterSubmitEvent(WriteUserLog &logFile)
 
 int writeClusterRemoveEvent(WriteUserLog &logFile)
 {
-	FactoryRemoveEvent evt;
+	ClusterRemoveEvent evt;
 	evt.next_proc_id = 100;
 	evt.next_row = 10;
-	evt.completion = FactoryRemoveEvent::CompletionCode::Complete;
+	evt.completion = ClusterRemoveEvent::CompletionCode::Complete;
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad Cluster Remove Event write\n");
 		exit(1);

@@ -345,16 +345,21 @@ public:
 			}
 		}
 
-		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.c_str());
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s"
+			", identity %s.\n", trust_domain.c_str(),
+			data->m_identity == DCTokenRequester::default_identity ?
+				"(default)" : data->m_identity.c_str());
 		m_token_requests.emplace_back();
 		auto &back = m_token_requests.back();
-			// Note that the default identity is simply the empty string in
-			// the token request code.  Distinguishing token requests by identity
-			// will become useful with per-submitter flocking.
-		back.m_identity = DCTokenRequester::default_identity;
+		back.m_identity = data->m_identity;
 		back.m_trust_domain = trust_domain;
 		back.m_authz_name = data->m_authz_name;
 		back.m_daemon.reset(new DCCollector(data->m_addr.c_str()));
+		back.m_daemon->setOwner(data->m_identity);
+			// Unprivileged requests can only use SSL or TOKEN.
+		if (data->m_identity != DCTokenRequester::default_identity) {
+			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
+		}
 		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
 		back.m_callback_data = data;
 
@@ -417,7 +422,9 @@ private:
 	tryTokenRequest(PendingRequest &req) {
 		std::string subsys_name = get_mySubSystemName();
 
-		dprintf(D_SECURITY, "Trying token request to remote host.\n");
+		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
+			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
+			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
 			return false;
@@ -468,14 +475,23 @@ private:
 					// Flush the cached result of the token search.
 				Condor_Auth_Passwd::retry_token_search();
 					// Flush out the security sessions; will need to force a re-auth.
-				daemonCore->getSecMan()->reconfig();
-					// Reset the timeout timer, causing the schedd to advertise itself.
+				auto sec_man = daemonCore->getSecMan();
+				sec_man->reconfig();
+				if (!req.m_identity.empty()) {
+					std::string orig_tag = sec_man->getTag();
+					sec_man->setTag(req.m_identity);
+					sec_man->invalidateAllCache();
+					sec_man->setTag(orig_tag);
+				} else {
+					sec_man->invalidateAllCache();
+				}
+					// Invoke the daemon-provided callback to do daemon-specific cleanups.
 				(*req.m_callback_fn)(true, req.m_callback_data);
 			}
 			req.m_client_id = "";
 		}
 		if (!token.empty()) {
-			htcondor::write_out_token(subsys_name + "_auto_generated_token", token);
+			htcondor::write_out_token(subsys_name + "_auto_generated_token", token, req.m_identity);
 		}
 		return false;
 	}
@@ -788,7 +804,7 @@ DC_Exit( int status, const char *shutdown_program )
 	}
 
 		// Free up the memory from the config hash table, too.
-	clear_config();
+	clear_global_config_table();
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();
@@ -1256,11 +1272,33 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 	sigaction(signum, &sa, NULL);
 	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
 
+	// On linux, raise() calls tgkill() with values for tgid and tid that
+	// are cached in memory by glibc. If clone() was previously called with
+	// the CLONE_VM flag, glibc sets these cached values to -1. This will
+	// cause the tgkill() call in raise() to fail. raise() then returns
+	// failure with errno EINVAL.
+	// We use clonse() with CLONE_VM in Create_Process() in the schedd to
+	// make spawning of child processes more efficient.
+	// tgkill() isn't exposed by glibc, but we can call kill() on ourselves
+	// to re-raise the signal.
+	// There's a possibility that the signal will be delivered to another
+	// thread while this thread continues execution. For this case, add a
+	// short sleep to prevent _exit() from happening before the signal is.
+	// acted upon.
+#if defined(LINUX)
+	if ( kill(getpid(),signum) != 0) {
+#else
 	if ( raise(signum) != 0 ) {
+#endif
 		log_args[0] = (unsigned long)signum;
 		log_args[1] = (unsigned long)errno;
 		dprintf_async_safe("Error: raise(%0) failed: errno %1\n", log_args, 2);
 	}
+#if defined(LINUX)
+	else {
+		sleep(1);
+	}
+#endif
 
 	// If for whatever reason the second raise doesn't kill us properly, 
 	// we shall exit with a non-zero code so if anything depends on us,
@@ -1917,7 +1955,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 		std::string rule_text;
 		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
-			auto &token_request = *(iter->second);
+			auto token_request = *(iter->second);
 			CondorError err;
 			std::string token;
 			if (!Condor_Auth_Passwd::generate_token(

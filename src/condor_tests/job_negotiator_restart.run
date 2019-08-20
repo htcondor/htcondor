@@ -23,6 +23,7 @@
 
 use CondorTest;
 use CondorUtils;
+use Data::Dumper;
 
 $cmd = 'job_negotiator_restart.dag';
 $testdesc =  'Test negotiator state across HTCondor restart';
@@ -53,12 +54,15 @@ runcmd("rm -f job_negotiator_restart.dag.lock");
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute, evicted and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper($info);
+	die "Abnormal exit was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
 };
 
 $evicted = sub
@@ -81,7 +85,8 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, and successful completion\n",1);
 };
 
 $success = sub

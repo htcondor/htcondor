@@ -530,6 +530,9 @@ parse_subdag( Dag *dag,
 static const char* next_possibly_quoted_token( void )
 {
 	char *remainder = strtok( NULL, "" );
+	if ( !remainder ) {
+		return NULL;
+	}
 	while ( remainder[0] == ' ' || remainder[0] == '\t' )
 		remainder++;
 	if ( remainder[0] == '"' )
@@ -918,6 +921,7 @@ parse_script(
 	return true;
 }
 
+
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_parent
@@ -933,11 +937,12 @@ parse_parent(
 	int  lineNumber)
 {
 	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
-	
+	MyString failReason = "";
 	const char *jobName;
 	
 	// get the job objects for the parents
-	List<Job> parents;
+	std::forward_list<Job*> parents;
+	auto last_parent = parents.before_begin();
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (jobName, "CHILD") != 0) {
 		const char *jobNameOrig = jobName; // for error output
@@ -956,7 +961,7 @@ parse_parent(
 			// now add each final node as a parent
 			for (int i = 0; i < splice_final->length(); i++) {
 				Job *job = (*splice_final)[i];
-				parents.Append(job);
+				last_parent = parents.insert_after(last_parent, job);
 			}
 
 		} else {
@@ -971,19 +976,22 @@ parse_parent(
 						  filename, lineNumber, jobNameOrig );
 				return false;
 			}
-			parents.Append (job);
+			last_parent = parents.insert_after(last_parent, job);
 		}
 	}
 	
 	// There must be one or more parent job names before
 	// the CHILD token
-	if (parents.Number() < 1) {
+	if (parents.empty()) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "Missing Parent Job names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
+
+	parents.sort(SortJobsById());
+	parents.unique(EqualJobsById());
 	
 	if (jobName == NULL) {
 		debug_printf( DEBUG_QUIET, 
@@ -993,7 +1001,8 @@ parse_parent(
 		return false;
 	}
 	
-	List<Job> children;
+	std::forward_list<Job*> children;
+	auto last_child = children.before_begin();
 	
 	// get the job objects for the children
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
@@ -1020,7 +1029,7 @@ parse_parent(
 			for (int i = 0; i < splice_initial->length(); i++) {
 				Job *job = (*splice_initial)[i];
 
-				children.Append(job);
+				last_child = children.insert_after(last_child, job);
 			}
 
 		} else {
@@ -1035,34 +1044,34 @@ parse_parent(
 						  filename, lineNumber, jobNameOrig );
 				return false;
 			}
-			children.Append (job);
+			last_child = children.insert_after(last_child, job);
 		}
 	}
 	
-	if (children.Number() < 1) {
+	if (children.empty()) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Job names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
 	
+	children.sort(SortJobsById());
+	children.unique(EqualJobsById());
+
 	//
 	// Now add all the dependencies
 	//
 	
-	Job *parent;
-	Job *child;
 	static int numJoinNodes = 0;
 	bool useJoinNodes = param_boolean( "DAGMAN_USE_JOIN_NODES", false );
+	const char * parent_type = "parent";
 
-	parents.Rewind();
 
 	// If this statement has multiple parent nodes and multiple child nodes, we
 	// can optimize the dag structure by creating an intermediate "join node"
 	// connecting the two sets.
-	if (useJoinNodes && parents.Number() > 1 && children.Number() > 1) {
+	if (useJoinNodes && more_than_one(parents) && more_than_one(children)) {
 		// First create the join node and add it
-		MyString failReason = "";
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
 		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
@@ -1072,8 +1081,14 @@ parse_parent(
 				" add join node\n", failReason.Value(), lineNumber);
 		}
 		// Now connect all parents and children to the join node
-		while ((parent = parents.Next()) != NULL) {
+		for (auto it = parents.begin(); it != parents.end(); ++it) {
+			Job *parent = *it;
+#ifdef DEAD_CODE
 			if (!dag->AddDependency(parent, joinNode)) {
+#else
+			std::forward_list<Job*> lst = { joinNode };
+			if (!parent->AddChildren(lst, failReason)) {
+#endif
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
@@ -1082,35 +1097,38 @@ parse_parent(
 				return false;
 			}
 		}
+		// reset parent list to the join node and fall through to build the child edges
+		parents.clear();
+		parents.push_front(joinNode);
+		parent_type = "join";
+	}
+
+	for (auto it = parents.begin(); it != parents.end(); ++it) {
+		Job *parent = *it;
+#ifdef DEAD_CODE
 		children.Rewind();
 		while ((child = children.Next()) != NULL) {
-			if (!dag->AddDependency(joinNode, child)) {
+			if (!dag->AddDependency (parent, child)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-					" to add dependency between join"
-					" node \"%s\" and child node \"%s\"\n",
-					filename, lineNumber,
-					joinNode->GetJobName(), child->GetJobName() );
+						" to add dependency between %s"
+						" node \"%s\" and child node \"%s\"\n",
+							filename, lineNumber, parent_type,
+							parent->GetJobName(), child->GetJobName() );
 				return false;
 			}
+			debug_printf( DEBUG_DEBUG_3,
+						"Added Dependency PARENT: %s  CHILD: %s\n",
+						parent->GetJobName(), child->GetJobName() );
 		}
-	}
-	else {
-		while ((parent = parents.Next()) != NULL) {
-			children.Rewind();
-			while ((child = children.Next()) != NULL) {
-				if (!dag->AddDependency (parent, child)) {
-					debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-							" to add dependency between parent"
-							" node \"%s\" and child node \"%s\"\n",
-								filename, lineNumber,
-								parent->GetJobName(), child->GetJobName() );
-					return false;
-				}
-				debug_printf( DEBUG_DEBUG_3,
-							"Added Dependency PARENT: %s  CHILD: %s\n",
-							parent->GetJobName(), child->GetJobName() );
-			}
+#else
+		if ( ! parent->AddChildren(children, failReason)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed"
+				" to add dependencies between %s"
+				" node \"%s\" and child nodes : %s\n",
+				filename, lineNumber, parent_type,
+				parent->GetJobName(), failReason.c_str());
 		}
+#endif
 	}
 	return true;
 }
@@ -1431,7 +1449,44 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
+	MyString varName;
+	MyString varValue;
+
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+#if 0 
+	char *str = varsStr;
+
+	// build a temporary vector of vars in case we are doing ALL_NODES
+	std::vector<Job::NodeVar> vars;
+
+	int numPairs;
+	for (numPairs = 0; ; numPairs++) {  // for each name="value" pair
+		if (str == NULL) { // this happens when the above strtok returns NULL
+			break;
+		}
+
+		varName.clear();
+		varValue.clear();
+
+		if (!get_next_var(filename, lineNumber, str, varName, varValue)) {
+			return false;
+		}
+		if (varName.empty()) {
+			break;
+		}
+
+		const char * name = Job::dedup_str(varName.c_str());
+		const char * value = Job::dedup_str(varValue.c_str());
+		vars.push_back(Job::NodeVar(name, value));
+	}
+
+	if (numPairs == 0) {
+		debug_printf(DEBUG_QUIET,
+			"ERROR: %s (line %d): No valid name-value pairs\n",
+			filename, lineNumber);
+		return false;
+	}
+#endif
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
@@ -1452,18 +1507,18 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				break;
 			}
 
-				// Fix PR 854 (multiple macronames per VARS line don't work).
-			MyString varName( "" );
-			MyString varValue( "" );
+			varName.clear();
+			varValue.clear();
 
 			if ( !get_next_var( filename, lineNumber, str, varName,
 						varValue ) ) {
 				return false;
 			}
-			if ( varName == "" ) {
+			if ( varName.empty() ) {
 				break;
 			}
 
+#ifdef DEAD_CODE
 			// This will be inefficient for jobs with lots of variables
 			// As in O(N^2)
 			job->varsFromDag->Rewind();
@@ -1481,16 +1536,20 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 					job->varsFromDag->DeleteCurrent();
 				}
 			}
-			debug_printf(DEBUG_DEBUG_1,
-						"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
-						varName.Value(), varValue.Value());
 			Job::NodeVar *var = new Job::NodeVar();
 			var->_name = varName;
 			var->_value = varValue;
 			bool appendResult;
 			appendResult = job->varsFromDag->Append( var );
 			ASSERT( appendResult );
+#else
+			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber);
+#endif
+			debug_printf(DEBUG_DEBUG_1,
+				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
+				varName.Value(), varValue.Value());
 		}
+		job->ShrinkVars();
 
 		if ( numPairs == 0 ) {
 			debug_printf(DEBUG_QUIET,
@@ -2515,7 +2574,7 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 	// names are limited to alphanumerics and underscores (except
 	// that '+' is legal as the first character)
 	int varnamestate = 0; // 0 means not within a varname
-	while ( isalnum( *str ) || *str == '_' || *str == '+' ) {
+	while ( isalnum( *str ) || *str == '_' || *str == '+' || *str == '.') {
 		if ( *str == '+' ) {
 			if ( varnamestate != 0 ) {
 				debug_printf( DEBUG_QUIET,

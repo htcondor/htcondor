@@ -240,10 +240,10 @@ public:
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
-	void PopulateInfoAd(ClassAd & iad, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
+	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
 };
 
-
+class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
@@ -263,12 +263,13 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay);
 
 // returns true if there is no materialize policy expression, or if the expression evalues to true
 // returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set
 // a value of > 0 for retry_delay indicates that trying again later might give a different answer.
-bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int & retry_delay);
+// num_pending should be the number of jobs that have been materialized but not yet committed
+bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int num_pending, int & retry_delay);
 
 int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * job);
 bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster has a non-paused, non-complete factory
@@ -288,6 +289,7 @@ int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
 bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
+bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
@@ -334,6 +336,14 @@ ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
 #define FreeJobAd(ad) ad = NULL
 
+// Inside the sched SetAttribute call takes a 32 bit integer as the flags field
+// but only 8 bits are used by the wire protocol.  so anything bigger than 1<<7
+// is effectively a SetAttribute flag private to the schedd. we start here at 1<<16
+// to leave room to expand the public flags someday (maybe)
+typedef unsigned int SetAttributeFlags_t;
+const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
+const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
@@ -343,7 +353,6 @@ JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 // does the parts of NewProc that are common between external submit and schedd late materialization
 int NewProcInternal(int cluster_id, int proc_id);
 // call NewProcInternal, and then SetAttribute on all of the attributes in job that are not the same as ClusterAd
-typedef unsigned char SetAttributeFlags_t;
 int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags);
 #endif
 
@@ -452,6 +461,42 @@ public:
 protected:
 	HashTable<JOB_ID_KEY,JobQueueJob*> & table;
 	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
+};
+
+class TransactionWatcher {
+public:
+	TransactionWatcher() : firstid(-1), lastid(-1), started(false), completed(false) {}
+	~TransactionWatcher() { AbortIfAny(); }
+
+	// don't allow copy or assigment of this class
+	TransactionWatcher(const TransactionWatcher&) = delete;
+	TransactionWatcher& operator=(const TransactionWatcher) = delete;
+
+	bool InTransaction() { return started && ! completed; }
+
+	// start a transaction, or continue one if we already started it
+	int BeginOrContinue(int id);
+
+	// commit if we started a transaction
+	int CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack);
+
+	// cancel if we started a transaction
+	int AbortIfAny();
+
+	// return the range of ids passed to BeginOrContinue
+	// returns true if ids were set.
+	bool GetIdRange(int & first, int & last) {
+		if (! started) return false;
+		first = firstid;
+		last = lastid;
+		return true;
+	}
+
+private:
+	int firstid;
+	int lastid;
+	bool started;
+	bool completed;
 };
 
 // new for 8.3, use a non-string type as the key for the JobQueue

@@ -71,6 +71,39 @@ Integrity
     HTCondor via the File Transfer Mechanism described in
     the :doc:`/users-manual/submitting-a-job` section.
 
+Quick Configuration of Security
+-------------------------------
+
+While pool administrators with complex configurations or application developers may need to
+understand the full security model described in this chapter, HTCondor
+strives to make it easy to enable reasonable security settings for new pools.
+
+When installing a new pool, assuming you are on a trusted network and there
+are no unprivileged users logged in to the submit hosts:
+
+1. Start HTCondor on your central manager host (containing the *condor_collector* daemon) first.
+   For a fresh install, this will automatically generate a random key in
+   the file specified by ``SEC_PASSWORD_FILE`` (defaulting to ``/etc/condor/passwords.d/POOL``
+   on Linux).
+2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
+   This automatically approves any daemons starting on a specified network for
+   a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
+   for the next hour (3600 seconds), run the following command from the central manager:
+
+   ::
+
+        condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
+
+3. Within the auto-approval rule's lifetime, start the *condor_schedd* and *condor_startd*
+   hosts inside the appropriate network.  The token requests for these daemons
+   will be automatically approved and installed into ``/etc/condor/tokens.d/``;
+   this will authorize the daemon to advertise to the collector.  By default,
+   auto-generated tokens do not have an expiration.
+
+This quick-configuration requires no configuration changes beyond the default settings.  More
+complex cases, such as those where the network is not trusted, are covered in the
+:ref:`admin-manual/security:token authentication` section.
+
 HTCondor's Security Model
 -------------------------
 
@@ -654,6 +687,8 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
@@ -690,10 +725,12 @@ NTSSPI may be used, then Kerberos will be tried first, and if there is a
 failure for any reason, then NTSSPI will be tried.
 
 An additional specialized method of authentication exists for
-communication between the *condor_schedd* and *condor_startd*. It is
+communication between the *condor_schedd* and *condor_startd*, as
+well as communication between the *condor_schedd* and the *condor_negotiator*.
+It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
-other methods of strong authentication between the submit and execute
+other methods of authentication between the submit and execute
 daemons. See the description of
 ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` in
 :ref:`admin-manual/configuration-macros:configuration file entries relating to
@@ -705,8 +742,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, KERBEROS, GSI.
+Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, TOKEN, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -966,7 +1003,8 @@ the certificate file for the initiator and recipient of connections,
 respectively. Similarly, the configuration variables
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE` and
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
-specify the locations for keys.
+specify the locations for keys.  If no client certificate is used,
+the client with authenticate as user ``anonymous@ssl``.
 
 The configuration variables ``AUTH_SSL_SERVER_CAFILE``
 :index:`AUTH_SSL_SERVER_CAFILE` and ``AUTH_SSL_CLIENT_CAFILE``
@@ -1144,6 +1182,11 @@ access, if the pool password is known. Local daemons authenticated as
 condor@mydomain are also allowed access. This is done so local
 authentication can be done using another method such as FS.
 
+If there is no pool password available on Linux, the *condor_collector* will
+automatically generate one.  This is meant to ease the configuration of
+freshly-installed clusters; for ``POOL`` authentication, the HTCondor administrator
+only needs to copy this file to each host in the cluster.
+
 Example Security Configuration Using Pool Password
 """"""""""""""""""""""""""""""""""""""""""""""""""
 
@@ -1211,6 +1254,12 @@ then all derived tokens are immediately invalid.  Most simple installs will
 utilize a single password, kept in ``SEC_PASSWORD_FILE`` (identical to ``PASSWORD``
 authentication).
 
+The passwords in the ``SEC_PASSWORD_DIRECTORY`` or ``SEC_PASSWORD_FILE`` can still
+be created utilizing ``condor_store_cred`` (as specified in
+:ref:`admin-manual/security:password authentication`).  Alternately, the *condor_collector*
+process will automatically generate a password in ``SEC_PASSWORD_FILE`` on startup
+if that file is empty.
+
 To generate a token, the administrator may utilize the ``condor_token_create``
 command-line utility:
 
@@ -1247,19 +1296,63 @@ of what the server has configured for the ``condor`` user (the intersection of
 the identity's configured authorization and the token's authorizations, if specified,
 are used).  Further, the token will only be valid for 3600 seconds (one hour).
 
+In many cases, it is difficult or awkward for the administrator to securely
+provide the new token to the user; an email or text message from
+administrator to user is typically insufficiently secure to send the token (especially
+as old emails are often archived for many years).  In such a case, the user
+may instead anonymously *request* a token from the administrator.  The user
+will receive a request ID, which the administrator will need in order to approve
+the request.  The ID (typically, a 7 digit number) is easier to communicate
+over the phone (compared to the token, which is hundreds of characters long).
+Importantly, neither user nor administrator is responsible
+for securely moving the token - e.g., there is no chance it will be leaked into
+an email archive.
+
+To use the token request workflow, the user needs a confidential channel to
+the server or an appropriate auto-approval rule needs to be in place.  The simplest
+way to establish a confidential channel is using :ref:`admin-manual/security:ssl authentication`
+without a client certificate; configure the collector using a host certificate.
+
+Using the SSL authentication, the client can request a new authentication token:
+
+::
+    # condor_token_request
+    Token request enqueued.  Ask an administrator to please approve request 9235785.
+
+This will enqueue a request for a token corresponding to the superuser ``condor``;
+the HTCondor pool administrator will subsequently need to approve request ``9235785`` using the
+``condor_token_request_approve`` tool.
+
+If the host trusts requests coming from a specific network (i.e., the same
+administrator manages the network and no unprivileged users are currently on
+the network), then the auto-approval mechanism may be used.  When in place, auto-approval
+allows any token authentication request on an approved network to be automatically
+approved by HTCondor on behalf of the pool administrator - even when requests do not come over
+confidential connnections.
+
+If there are multiple tokens in files in the ``SEC_TOKEN_SYSTEM_DIRECTORY``, then
+the daemon will search for tokens in that directory based on lexicographical order;
+the exception is that the file ``$(SUBSYS)_auto_generated_token`` will be searched first for
+daemons of type ``$(SUBSYS)``.  For example, if ``SEC_TOKEN_SYSTEM_DIRECTORY`` is set to
+``/etc/condor/tokens.d``, then the *condor_schedd* will search at
+``/etc/condor/tokens.d/SCHEDD_auto_generated_token`` by default.
+
 Users may create their own tokens with ``condor_token_fetch``.  This command-line
 utility will contact the default ``condor_schedd`` and request a new
 token given the user's authenticated identity.  Unlike ``condor_token_create``,
 the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in ``SEC_PASSWORD_DIRECTORY``).
 
-To setup TOKEN authentication, create the pool password using ``condor_store_cred``
-and then enable it in the list of authentication methods:
+If no security authentication methods specified by the administrator - and the
+daemon or user has access to at least one token - then ``TOKEN`` authentication
+is automatically added to the list of valid authentication methods. Otherwise,
+to setup ``TOKEN`` authentication, enable it in the list of authentication methods:
 
 ::
 
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
+
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1355,6 +1448,8 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
+        TOKEN
+        SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
@@ -1848,6 +1943,10 @@ be modified by configuration. :index:`unauthenticated`
    :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
    the *condor_schedd* and ``DAEMON`` access to the *condor_shadow*.
+#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+   :index:``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is true, then
+   ``negotiator-side@matchsession`` is automatically granted ``NEGOTIATOR``
+   access to the *condor_schedd*.
 
 Example of Authorization Security Configuration
 '''''''''''''''''''''''''''''''''''''''''''''''

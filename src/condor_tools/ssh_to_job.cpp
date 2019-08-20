@@ -561,7 +561,8 @@ bool SSHToJob::execute_ssh()
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					starter_addr.Value(),
-					0 );
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}
@@ -662,7 +663,11 @@ bool SSHToJob::execute_ssh()
 		m_retry_sensible);
 
 	if( !start_sshd ) {
-		logError("%s\n",error_msg.Value());
+		// If we're going to retry, don't bother to scare/confuse the user
+		// with why unless they asked for it.
+		if( (!m_retry_sensible) || (!m_auto_retry) || m_debug ) {
+			logError("%s\n",error_msg.Value());
+		}
 		return false;
 	}
 

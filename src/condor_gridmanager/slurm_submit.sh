@@ -73,7 +73,12 @@ bls_set_up_local_and_extra_args
 # Write SLURM directives according to command line options
 # Map the queue option to slurm's partition option
 # handle queue/partition overriding
+cluster_name=`echo "$bls_opt_queue" | cut -s -f2 -d@`
+if [ "$cluster_name" != "" ] ; then
+  bls_opt_queue=`echo "$bls_opt_queue" | cut -f1 -d@`
+fi
 [ -z "$bls_opt_queue" ] || grep -q "^#SBATCH -p" $bls_tmp_file || echo "#SBATCH -p $bls_opt_queue" >> $bls_tmp_file
+[ -z "$cluster_name" ] || grep -q "^#SBATCH -M" $bls_tmp_file || echo "#SBATCH -M $cluster_name" >> $bls_tmp_file
 
 # Simple support for multi-cpu attributes
 if [[ $bls_opt_mpinodes -gt 1 ]] ; then
@@ -109,8 +114,11 @@ if [ "X$jobID" == "X" ]; then
 	exit 1
 fi
 
-# Compose the blahp jobID ("slurm/" + datenow + pbs jobid)
+# Compose the blahp jobID ("slurm/" + datenow + jobid [+ cluster])
 blahp_jobID="slurm/`basename $datenow`/$jobID"
+if [ "$cluster_name" != "" ] ; then
+	blahp_jobID="${blahp_jobID}@${cluster_name}"
+fi
 
 echo "BLAHP_JOBID_PREFIX$blahp_jobID"
   

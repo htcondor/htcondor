@@ -212,6 +212,9 @@
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
 
+// ...
+#define SUBMIT_KEY_DontAppend "erase_output_and_error_on_restart"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -617,6 +620,7 @@ public:
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
 	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
+	bool getSubmitOnHold(int & code) { code = SubmitOnHoldCode; return SubmitOnHold; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -665,6 +669,8 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
+	bool SubmitOnHold;
+	int  SubmitOnHoldCode;
 	bool already_warned_requirements_disk;
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;

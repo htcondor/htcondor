@@ -31,16 +31,30 @@
 #include <string>
 
 int
-htcondor::write_out_token(const std::string &token_name, const std::string &token)
+htcondor::write_out_token(const std::string &token_name, const std::string &token, const std::string &owner)
 {
 	if (token_name.empty()) {
 		printf("%s\n", token.c_str());
 		return 0;
 	}
+	TemporaryPrivSentry tps( !owner.empty() );
+	if (!owner.empty()) {
+		if (!init_user_ids(owner.c_str(), NULL)) {
+			dprintf(D_FAILURE, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
+			return 0;
+		}
+		set_user_priv();
+	}
+
 	std::string dirpath;
-	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
 		MyString file_location;
-		if (!find_user_file(file_location, "tokens.d", false)) {
+		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
+			if (!owner.empty()) {
+				dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token file for owner.\n",
+					owner.c_str());
+				return 0;
+			}
 			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
 		} else {
 			dirpath = file_location;
