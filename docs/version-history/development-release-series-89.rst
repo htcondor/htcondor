@@ -154,6 +154,11 @@ Bugs Fixed:
   a query for the slot ads that it has claimed.
   :ticket:`7210`
 
+- Eliminated needless work done by the *condor_schedd* when contacted by
+  the negotiator when ``CURB_MATCHMAKING`` or ``MAX_JOBS_RUNNING``
+  prevent the *condor_schedd* from accepting any new matches.
+  :ticket:`6749`
+
 Version 8.9.2
 -------------
 
