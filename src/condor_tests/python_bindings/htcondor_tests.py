@@ -684,8 +684,10 @@ class TestPythonBindings(WithDaemons):
         self.assertEqual(ads[0]['bar'], 5)
         self.assertEqual(ads[0]['baz'], 3)
 
+        # A removed job may persist in the queue for a short time, but its
+        # JobStatus will be 3 (REMOVED)
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
-        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+        ads = schedd.query("ClusterId == %d && JobStatus != 3" % cluster, ["JobStatus"])
         self.assertEqual(len(ads), 0)
 
 
