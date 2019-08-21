@@ -405,7 +405,6 @@ Resource::~Resource()
 	}
 
 	delete r_state; r_state = NULL;
-	delete r_classad; r_classad = NULL;
 	delete r_cur; r_cur = NULL;
 	if( r_pre ) {
 		delete r_pre; r_pre = NULL;
@@ -413,6 +412,7 @@ Resource::~Resource()
 	if( r_pre_pre ) {
 		delete r_pre_pre; r_pre_pre = NULL;
 	}
+	delete r_classad; r_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_reqexp; r_reqexp = NULL;
 	delete r_attr; r_attr = NULL;
