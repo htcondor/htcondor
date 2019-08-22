@@ -36,7 +36,7 @@ public:
             boost::python::str tokenfile_str(tokenfile_obj);
             tokenfile = boost::python::extract<std::string>(tokenfile_str);
         }
-        htcondor::write_out_token(tokenfile, m_value);
+        htcondor::write_out_token(tokenfile, m_value, "");
     }
 
 private:
