@@ -44,7 +44,6 @@
 #include "condor_netaddr.h"
 #include "net_string_list.h"
 #include "dc_collector.h"
-#include "condor_netdb.h"
 #include "token_utils.h"
 
 #include <chrono>
@@ -433,15 +432,7 @@ private:
 		std::string token;
 		if (req.m_client_id.empty()) {
 			req.m_request_id = "";
-			std::vector<char> hostname;
-			hostname.reserve(MAXHOSTNAMELEN);
-			if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
-				dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-				(*req.m_callback_fn)(false, req.m_callback_data);
-				return false;
-			}
-			req.m_client_id = subsys_name + "-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 100000);
+			req.m_client_id = htcondor::generate_client_id();
 
 			std::string request_id;
 			std::vector<std::string> authz_list;

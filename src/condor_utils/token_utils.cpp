@@ -21,9 +21,12 @@
 
 #include "token_utils.h"
 
+#include "subsystem_info.h"
+#include "condor_netdb.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "directory.h"
+#include "condor_random_num.h"
 
 #include <string>
 
@@ -78,4 +81,19 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 	_condor_full_write(fd, newline.c_str(), 1);
 	close(fd);
 	return 0;
+}
+
+
+std::string
+htcondor::generate_client_id()
+{
+	std::string subsys_name = get_mySubSystemName();
+
+	std::vector<char> hostname;
+	hostname.reserve(MAXHOSTNAMELEN);
+	hostname[0] = '\0';
+	condor_gethostname(&hostname[0], MAXHOSTNAMELEN);
+
+	return subsys_name + "-" + std::string(&hostname[0]) + "-" +
+		std::to_string(get_csrng_uint() % 100000);
 }

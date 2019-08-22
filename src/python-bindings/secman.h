@@ -21,6 +21,8 @@
 #define __SECMAN_H_
 
 class ConfigOverrides;
+class Token;
+
 struct SecManWrapper
 {
 public:
@@ -37,8 +39,10 @@ public:
     static const char * getThreadLocalTag();
     static const char * getThreadLocalPoolPassword();
     static const char * getThreadLocalGSICred();
+    static const char * getThreadLocalToken();
     static bool applyThreadLocalConfigOverrides(ConfigOverrides & old);
 
+    void setToken(const Token &);
     void setTag(const std::string &tag);
     void setPoolPassword(const std::string &pool_pass);
     void setGSICredential(const std::string &cred);
@@ -50,11 +54,13 @@ private:
     static bool m_key_allocated;
     std::string m_tag;
     std::string m_pool_pass;
+    std::string m_token;
     std::string m_cred;
     ConfigOverrides m_config_overrides;
     bool m_tag_set;
     bool m_pool_pass_set;
     bool m_cred_set;
+    bool m_token_set{false};
 };
 
 #endif  // __SECMAN_H_
