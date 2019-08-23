@@ -758,22 +758,21 @@ time given in the form ``<days> <hours>:<minutes>:<seconds>``.
 And, statistics about the bytes sent and received by the last run of the
 job and summed over all attempts at running the job are given.
 
-The job terminated event includes the type of termination (normal or by
-signal), then return value (or signal number), locate and remote usage
-for the last (most recent) run, the same summed over all runs, bytes sent and
-received by the job's last (most recent) run, the same summed over all runs,
-and a report on which partitionable resources were used, if any.  Resources
-include CPUs, disk, and memory; disk and memory are peak values.  Your
-administrator may have configured HTCondor to report on other resources,
-particularly GPUs and GPU memory usage.
+The job terminated event includes the following:
 
-Local and remote usage numbers are in CPU-seconds (where using 100% of 1 CPU
-for 1 second = 1 usage, but so does using 25% of 2 CPUs for 2 seconds).  In
-the partitionable resource usage report, memory and disk include their units
-(KB and MB, presently and respectively); CPU usage is reported by dividing
-the total CPU-second usage by the run duration, so that a job using 100% of
-1 CPU for its entire run reports a usage of 1. GPU usage and GPU memory
-usage have corresponding definitions, if reported, with the caveat that
+- the type of termination (normal or by signal)
+- the return value (or signal number)
+- local and remote usage for the last (most recent) run
+  (in CPU-seconds)
+- local and remote usage summed over all runs
+  (in CPU-seconds)
+- bytes sent and received by the job's last (most recent) run,
+- bytes sent and received summed over all runs,
+- a report on which partitionable resources were used, if any.  Resources
+  include CPUs, disk, and memory; all are lifetime peak values.
+
+Your administrator may have configured HTCondor to report on other resources,
+particularly GPUs (lifetime average) and GPU memory usage (lifetime peak).
 HTCondor currently assigns all the usage of a GPU to the job running in
 the slot to which the GPU is assigned; if the admin allows more than one job
 to run on the same GPU, or non-HTCondor jobs to use the GPU, GPU usage will be
@@ -786,8 +785,8 @@ attributes in the job:
 :index:`job ClassAd attribute<single: job ClassAd attribute; GPUsUsage>`
 
   ``GPUsUsage``
-    GPU usage over the lifetime of the job, reported as above (fraction of
-    the maximum possible utilization of one GPU).
+    GPU usage over the lifetime of the job, reported as a fraction of the
+    the maximum possible utilization of one GPU.
 
 :index:`GPUsMemoryUsage<single: GPUsMemoryUsage; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; GPUsMemoryUsage>`
