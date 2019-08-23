@@ -295,7 +295,7 @@ However, this approach does simplify monitoring for the owner/administrator
 of the GPUs, because usage is reported by the *condor_startd* in addition
 to the jobs themselves.
 
-You may need to query the startd directly to see these attributes.
+Currently, you need to query the startd directly to see these attributes.
 
 :index:`UptimeGPUsSeconds<single: UptimeGPUsSeconds; machine attribute>`
 
