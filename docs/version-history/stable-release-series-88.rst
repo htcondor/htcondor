@@ -98,6 +98,10 @@ Bugs Fixed:
    wrong owner. This would prevent the daemon from operating properly.
    :ticket:`7214`
 
+-  Fixed a bug in *condor_dagman* that caused it to fail when retrying a 
+   failed node with late materialization enabled.
+   :ticket:`6946`
+
 Version 8.8.4
 -------------
 
