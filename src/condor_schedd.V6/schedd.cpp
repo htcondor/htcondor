@@ -906,7 +906,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	std::string id;
 
 	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
-		m_scheduler_startup, m_negotiator_seq);
+	           m_scheduler_startup, (long unsigned)m_negotiator_seq);
 
 	// A keylength of 32 bytes = 256 bits.
 	const size_t keylen = 32;

@@ -854,7 +854,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 				auto iat = jwt.get_issued_at();
 				auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
 				if ((max_age != -1) && age > max_age) {
-					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", age, max_age);
+					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", (long)age, max_age);
 					return false;
 				}
 			}
@@ -862,7 +862,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 				auto expiry = jwt.get_expires_at();
 				auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
 				if (expired_for > 0) {
-					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", expired_for);
+					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", (long)expired_for);
 					free(ka);
 					free(kb);
 					free(seed_ka);
