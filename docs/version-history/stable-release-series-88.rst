@@ -23,7 +23,10 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug where, for ``gce`` grid universe jobs, if the credentials
+   file has credentials for more than one account, the wrong account's
+   credentials are used for some requests.
+   :ticket:`7218`
 
 Version 8.8.5
 -------------

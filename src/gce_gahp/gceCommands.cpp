@@ -690,7 +690,8 @@ bool GetAccessToken( const string &auth_file_in, const string &account_in,
 // err_msg and returns false. On success, stores targetId value in
 // instance_id (if non-NULL) and returns true.
 bool verifyRequest( const string &serviceUrl, const string &auth_file,
-					string &err_msg, string *instance_id = NULL )
+                    const string &account, string &err_msg,
+                    string *instance_id = NULL )
 {
 	string status;
 	bool in_err = false;
@@ -706,7 +707,7 @@ bool verifyRequest( const string &serviceUrl, const string &auth_file,
 		op_request.serviceURL = serviceUrl;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken, err_msg ) ) {
+		if ( !GetAccessToken( auth_file, account, op_request.accessToken, err_msg ) ) {
 			return false;
 		}
 
@@ -1375,7 +1376,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1506,7 +1507,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1806,7 +1807,8 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
+	string account = argv[4];
+	if ( !GetAccessToken( auth_file, account, insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1843,7 +1845,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) == false ) {
 		result_string = create_failure_result( requestID, err_msg.c_str() );
 		return true;
 	}
@@ -1876,7 +1878,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestBody += "}\n";
 
 
-	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
+	if ( !GetAccessToken( auth_file, account, group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1907,7 +1909,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[6];
 	opUrl += "/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) ) {
 		result_string = create_success_result( requestID, NULL );
 	} else {
 		result_string = create_failure_result( requestID, err_msg.c_str() );
@@ -1951,7 +1953,8 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, argv[4], group_request.accessToken,
+	string account = argv[4];
+	if ( !GetAccessToken( auth_file, account, group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1994,7 +1997,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 		opUrl += argv[6];
 		opUrl += "/operations/";
 		opUrl += op_name;
-		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+		if ( verifyRequest( opUrl, auth_file, account, err_msg ) == false ) {
 			result_string = create_failure_result( requestID, err_msg.c_str() );
 			return true;
 		}
@@ -2010,7 +2013,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	delete_request.serviceURL += "-template";
 	delete_request.requestMethod = "DELETE";
 
-	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, account, delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
@@ -2042,7 +2045,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) ) {
 		result_string = create_success_result( requestID, NULL );
 	} else {
 		result_string = create_failure_result( requestID, err_msg.c_str() );
