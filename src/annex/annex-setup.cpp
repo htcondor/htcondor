@@ -175,6 +175,8 @@ setup_usage() {
 		"\n"
 		"To do the one-time setup for an AWS account:\n"
 		"\tcondor_annex [options] -setup\n"
+		"... if you're on an EC2 instance (with a privileged IAM role):\n"
+		"\tcondor_annex [-aws-region <region>] -setup FROM INSTANCE [CloudFormation URL]\n"
 		"\n"
 		"To specify the files for the access (public) key and secret (private) keys\n"
 		"[or, for experts, the CloudFormation URL]:\n"
@@ -217,8 +219,14 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		if( fd == -1 ) {
 			fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
 				publicKeyFile.c_str(), strerror( errno ), errno );
-			setup_usage();
-			return 1;
+			if( pukf == NULL ) {
+				fprintf( stderr, "Trying FROM INSTANCE, instead.\n" );
+				publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+				privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+			} else {
+				setup_usage();
+				return 1;
+			}
 		}
 		close( fd );
 	}
@@ -228,8 +236,14 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		if( fd == -1 ) {
 			fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
 				privateKeyFile.c_str(), strerror( errno ), errno );
-			setup_usage();
-			return 1;
+			if( prkf == NULL ) {
+				fprintf( stderr, "Trying FROM INSTANCE, instead.\n" );
+				publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+				privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+			} else {
+				setup_usage();
+				return 1;
+			}
 		}
 		close( fd );
 	}
