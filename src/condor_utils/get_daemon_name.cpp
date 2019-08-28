@@ -80,7 +80,9 @@ get_daemon_name( const char* name )
 		//MyString hostname(tmpname);
 		MyString fqdn = get_fqdn_from_hostname(tmpname);
 		//daemon_name = get_full_hostname( tmpname );
-		daemon_name = strnewp(fqdn.Value());
+		if(! fqdn.empty()) {
+			daemon_name = strnewp(fqdn.Value());
+		}
 	}
 	free( tmpname );
 
