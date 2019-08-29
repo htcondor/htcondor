@@ -102,6 +102,10 @@ Bugs Fixed:
    failed node with late materialization enabled.
    :ticket:`6946`
 
+-  Fixed a bug in *condor_submit* where it would require a match to a machine with GPUs
+   when a job requested 0 GPUs.
+   :ticket:`6938`
+
 Version 8.8.4
 -------------
 
