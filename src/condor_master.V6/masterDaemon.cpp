@@ -624,7 +624,7 @@ int daemon::RealStart( )
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
-	bool wants_condor_priv = false;
+	const bool wants_condor_priv = false;
 	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
 	if ( daemon_is_collector || (daemon_is_shared_port && collector_uses_shared_port) ) {
