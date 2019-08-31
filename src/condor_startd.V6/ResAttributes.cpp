@@ -188,15 +188,16 @@ MachAttributes::init_user_settings()
 	}
 
 	m_user_specified.clearAll();
+
+#ifdef WIN32
 	char * pszParam = NULL;
-   #ifdef WIN32
 	pszParam = param("STARTD_PUBLISH_WINREG");
-   #endif
 	if (pszParam)
     {
 		m_user_specified.initializeFromString(pszParam);
 		free(pszParam);
 	}
+#endif
 
 	m_user_specified.rewind();
 	while(char * pszItem = m_user_specified.next())
