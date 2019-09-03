@@ -42,7 +42,7 @@ Bugs Fixed:
    :ticket:`7164`
 
 -  Fix a bug where singularity jobs with SINGULARITY_TARGET_DIR set
-   would not have the job's environment properly set
+   would not have the job's environment properly set.
    :ticket:`7140`
 
 -  HTCondor will now always use TCP to release startds claimed by the
@@ -61,7 +61,7 @@ Bugs Fixed:
    :ticket:`7147`
 
 -  Fixed a bug that caused the *condor_schedd* to not write a core file
-   when it crashes on linux.
+   when it crashes on Linux.
    :ticket:`7163`
 
 -  Fixed a bug that caused *condor_chirp* to crash when the *getdir*
@@ -72,12 +72,12 @@ Bugs Fixed:
    ad when an encrypted execute directory is used.
    :ticket:`7169`
 
--  Integer values in ClassAds in HTCondor that are in hexidecimal or
+-  Integer values in ClassAds in HTCondor that are in hexadecimal or
    octal format are now rejected. Previously, they were read incorrectly.
    :ticket:`7127`
 
 -  Fixed a bug that prevented new jobs from materializing when jobs changed
-   to run state and a ``max_idle`` value was specifed.
+   to run state and a ``max_idle`` value was specified.
    :ticket:`7178`
 
 -  Fixed a bug in the *condor_dagman* parser which caused it to crash when
@@ -85,26 +85,31 @@ Bugs Fixed:
    :ticket:`7196`
 
 -  Fixed a bug in the *condor_schedd* that caused submit transforms to always
-   reject submissions with more than one cluster id.   This bug was particularly
+   reject submissions with more than one cluster id.  This bug was particularly
    easy to trigger by attempting to queue more than one submit object in
-   a single transaction using the python bindings.
+   a single transaction using the Python bindings.
    :ticket:`7036`
 
--  Minor change to the python bindings to work around a bug in the 3rd party collectd
-   program on Linux that resulted in a crash trying to load the HTCondor python module.
+-  Minor change to the Python bindings to work around a bug in the third party
+   collectd program on Linux that resulted in a crash trying to load the
+   HTCondor Python module.
    :ticket:`7182`
 
 -  Fixed a bug that could cause a daemon's log file to be created with the
    wrong owner. This would prevent the daemon from operating properly.
    :ticket:`7214`
 
--  Fixed a bug in *condor_dagman* that caused it to fail when retrying a 
+-  Fixed a bug in *condor_dagman* that caused it to fail when retrying a
    failed node with late materialization enabled.
    :ticket:`6946`
 
 -  Fixed a bug in *condor_submit* where it would require a match to a machine with GPUs
    when a job requested 0 GPUs.
    :ticket:`6938`
+
+-  Fixed a bug in *condor_qedit* which was causing it to report an incorrect
+   number of matching jobs.
+   :ticket:`7119`
 
 Version 8.8.4
 -------------
@@ -129,7 +134,7 @@ New Features:
 
 -  Added an optimization into DAGMan for graphs that use many-PARENT-many-CHILD
    statements. A new configuration variable ``DAGMAN_USE_JOIN_NODES`` can be
-   used to automatically add an intermediate *join node* between the set of 
+   used to automatically add an intermediate *join node* between the set of
    parent nodes and set of child nodes. When these sets are large, join nodes
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
@@ -273,7 +278,7 @@ Bugs Fixed:
    replacement bindings (``JobEventLog``)
    :ticket:`7039`
 
--  Included the python binding libraries in the Debian and Ubuntu deb packages.
+-  Included the Python binding libraries in the Debian and Ubuntu deb packages.
    :ticket:`7048`
 
 -  Fixed a bug with *condor_ssh_to_job* did not remove subdirectories
@@ -281,7 +286,7 @@ Bugs Fixed:
    :ticket:`7010`
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
-   container with the condor_master as PID 1.  HTCondor could start 
+   container with the condor_master as PID 1.  HTCondor could start
    if the master was launched from a script.
    :ticket:`7017`
 
@@ -541,7 +546,7 @@ Bugs Fixed:
    keys. The bug was introduced in the 8.7.10 release. :ticket:`6827`
 
 -  Fixed a couple of bugs in the job event log reader code that were
-   made visible by the new JobEventLog python object. The remote error
+   made visible by the new JobEventLog Python object. The remote error
    and job terminated event did not read all of the available
    information from the job log correctly. :ticket:`6816`
    :ticket:`6836`
