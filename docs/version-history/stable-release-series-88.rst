@@ -35,6 +35,9 @@ New Features:
    the schedd handle heavy loads.
    :ticket:`7195`
 
+-  Updated *condor_gpu_discovery* to recognize Volta and Turing GPUs
+   :ticket:`7197`
+
 Bugs Fixed:
 
 -  HTCondor daemons will no longer sit in a tight loop consuming the
@@ -103,13 +106,36 @@ Bugs Fixed:
    failed node with late materialization enabled.
    :ticket:`6946`
 
--  Fixed a bug in *condor_submit* where it would require a match to a machine with GPUs
-   when a job requested 0 GPUs.
+-  Fixed a bug in *condor_submit* where it would require a match to a machine
+   with GPUs when a job requested 0 GPUs.
    :ticket:`6938`
 
 -  Fixed a bug in *condor_qedit* which was causing it to report an incorrect
    number of matching jobs.
    :ticket:`7119`
+
+-  HTCondor will no longer collect general usage information and forward it
+   back to the HTCondor team.
+   :ticket:`7219`
+
+-  Fixed a bug where the annex-ec2 service would be disabled on Enterprise
+   Linux systems when upgrading the HTCondor packages.
+   :ticket:`7161`
+
+-  Fixed an issue where *condor_ssh_to_job* would fail on Enterprise Linux
+   systems when the administrator changed or deleted HTCondor's default
+   configuration file.
+   :ticket:`7116`
+
+-  HTCondor will update its default configuration file by default on Enterprise
+   Linux systems. Previously, if the administrator modified the default
+   configuration file, the new file would appear as
+   ``/etc/condor/condor_config.rpmnew``.
+   :ticket:`7183`
+
+-  Fixed a packaging error that caused the Java universe to be non-functional
+   on Debian and Ubuntu systems.
+   :ticket:`7209`
 
 Version 8.8.4
 -------------
