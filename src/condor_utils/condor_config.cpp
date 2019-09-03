@@ -119,6 +119,7 @@ void process_config_source(const char*, int depth, const char*, const char*, int
 void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
+void do_smart_auto_use(int options);
 
 // External variables
 //extern int	ConfigLineNo;
@@ -591,8 +592,8 @@ void optimize_macros(MACRO_SET & set)
 		return;
 
 	// the metadata table has entries that give the index of the corresponding
-	// entry in the param table so that we can sort it. So we have to sort
-	// sort the metadata the metadata first, then the param table itself
+	// entry in the param table so that we can sort it. So we have to
+	// sort the metadata first, then the param table itself
 	// and finally then fixup the indexes in the metadata table.
 	//
 	MACRO_SORTER sorter(set);
@@ -1159,9 +1160,19 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	check_domain_attributes();
 
 		// once the config table is fully populated, we can optimize it.
-		// WARNING!! if you insert new params after this, the able *might*
+		// WARNING!! if you insert new params after this, the table *might*
 		// be de-optimized.
 	optimize_macros(ConfigMacroSet);
+
+
+		// now process knobs of the pattern AUTO_USE_<catgory>_<metaknob>
+	if ( ! (config_options & CONFIG_OPT_NO_SMART_AUTO_USE)) {
+		do_smart_auto_use(config_options);
+		// we may need to re-sort the macros
+		if (ConfigMacroSet.sorted < ConfigMacroSet.size) {
+			optimize_macros(ConfigMacroSet);
+		}
+	}
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
 
@@ -1277,6 +1288,75 @@ process_locals( const char* param_name, const char* host )
 		free(sources_value);
 	}
 }
+
+
+template <class T> bool re_match(const char * str, pcre * re, int options, T& tags)
+{
+	if ( ! re) return false;
+
+	const size_t ctags = sizeof(tags) / sizeof(tags[0]);
+	const int cvec = (int)(3 * (1 + ctags));
+	int ovec[cvec];
+
+	int rc = pcre_exec(re, NULL, str, (int)strlen(str), 0, options, ovec, cvec);
+
+	for (int ii = 1; ii < rc; ++ii) {
+		tags[ii-1].set(str + ovec[ii * 2], ovec[ii * 2 + 1] - ovec[ii * 2]);
+	}
+	return rc > 0;
+}
+
+void do_smart_auto_use(int /*options*/)
+{
+	int erroffset = 0; const char * errmsg = 0;
+	pcre * re = pcre_compile("AUTO_USE_([A-Za-z]+)_(.+)",
+		PCRE_CASELESS | PCRE_ANCHORED,
+		&errmsg, &erroffset, NULL);
+	ASSERT(re);
+
+	MyString tags[2];
+	MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+	MACRO_SOURCE src = {true, false, -1, -2, -1, -2};
+	std::string errstring;
+	std::string args;
+
+	HASHITER it = hash_iter_begin(ConfigMacroSet);
+	for (; !hash_iter_done(it); hash_iter_next(it)) {
+		const char *name = hash_iter_key(it);
+		if (re_match(name, re, PCRE_NOTEMPTY, tags)) {
+			// check trigger
+			auto_free_ptr trigger(param(name));
+			bool trigger_value = false;
+			if ( ! trigger) // an empty trigger does not fire
+				continue;
+			if ( ! Test_config_if_expression(trigger, trigger_value, errstring, ConfigMacroSet, ctx)) {
+				fprintf(stderr, "Configuration error while interpreting %s : %s\n", name, errstring.c_str());
+				continue;
+			}
+			if ( ! trigger_value)
+				continue;
+
+			int meta_id = param_default_get_source_meta_id(tags[0].c_str(), tags[1].c_str());
+			if (meta_id < 0) {
+				fprintf(stderr, "Configuration error while interpreting %s : no template named %s:%s\n",
+					name, tags[0].c_str(), tags[1].c_str());
+				continue;
+			}
+			// register the pseudo filename "AUTO_USE_<cat>_<tag>"
+			insert_source(name, ConfigMacroSet, src);
+			src.meta_id = (short int)meta_id;
+
+			MACRO_DEF_ITEM * mdi = param_meta_source_by_id(src.meta_id);
+			ASSERT(mdi && mdi->def && mdi->def->psz);
+
+			auto_free_ptr expanded(expand_meta_args(mdi->def->psz, args));
+			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
+		}
+	}
+	hash_iter_delete(&it);
+	pcre_free(re);
+}
+
 
 int compareFiles(const void *a, const void *b) {
 	 return strcmp(*(char *const*)a, *(char *const*)b);

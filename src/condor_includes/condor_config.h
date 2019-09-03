@@ -351,11 +351,13 @@ extern "C" {
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
 	#define CONFIG_OPT_COLON_IS_META_ONLY 0x10 // colon isn't valid for use in param assigments (only = is allowed)
+	#define CONFIG_OPT_NO_SMART_AUTO_USE  0x20 // ignore SMART_AUTO_USE_* knobs, default is to process them for CONFIG but not SUBMIT
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
 	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
+	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
 	bool config();
 	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
