@@ -133,6 +133,7 @@ bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting
 			}
 		} else if ( isdigit( *ptr ) ) {
 			if ( value.empty() ) {
+				value += *ptr;
 				in_value_int = true;
 			}
 		} else if ( *ptr == '{' || *ptr == '[' ) {
