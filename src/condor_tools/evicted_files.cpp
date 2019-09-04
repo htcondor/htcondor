@@ -3,10 +3,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
 
 #include "my_popen.h"
+#include "directory.h"
+#include "spooled_job_files.h"
 
 #include <vector>
 
@@ -34,18 +34,7 @@ void usage( const char * zero) {
 
 int main( int argc, char ** argv ) {
     if( argc < 2 ) { usage( argv[0] ); return -1; }
-
-    // This is the tool's view of SPOOL.  Even if this tool never works for
-    // remote submission, this should still, instead, be asking the schedd
-    // what it thinks the SPOOL directory is, since that's where the file(s),
-    // if any, will actually be.
     config();
-
-    std::string spool;
-    if(! param( spool, "SPOOL" )) {
-        fprintf( stderr, "SPOOL not defined, aborting.\n" );
-        return -2;
-    }
 
     enum struct Command {
         none = 0,
@@ -91,18 +80,12 @@ int main( int argc, char ** argv ) {
     bool single = jobIDs.size() == 1;
     for( const auto & jobID : jobIDs ) {
         std::string path;
-#if defined(WINDOWS)
-        formatstr( path, "%s\\%d\\%d\\cluster%d.proc%d.subproc0",
-            spool.c_str(), jobID.first, jobID.second,
-            jobID.first, jobID.second );
-#else
-        formatstr( path, "%s/%d/%d/cluster%d.proc%d.subproc0",
-            spool.c_str(), jobID.first, jobID.second,
-            jobID.first, jobID.second );
-#endif /* defined(WINDOWS) */
+        SpooledJobFiles::getJobSpoolPath( jobID.first, jobID.second, path );
+        // FIXME: Handles ALTERNATE_JOB_SPOOL.
+        // SpooledJobFiles::getJobSpoolPath( jobAd, path );
 
-        DIR * d = opendir( path.c_str() );
-        if( d == NULL ) {
+        Directory d( path.c_str() );
+        if(! d.Rewind()) {
             if(! single) { fprintf( stdout, "%d.%d ", jobID.first, jobID.second ); }
 
             if( errno == ENOENT ) {
@@ -117,27 +100,26 @@ int main( int argc, char ** argv ) {
 
         if(! single) { fprintf( stdout, "%d.%d ", jobID.first, jobID.second ); }
 
-        struct dirent * de = NULL;
         switch(c) {
             case Command::dir:
                 fprintf( stdout, "%s\n", path.c_str() );
                 break;
 
-            case Command::list:
-                fprintf( stdout, "\n" );
-                while( (de = readdir(d)) != NULL ) {
-                    if( strcmp( ".", de->d_name ) == 0 ) { continue; }
-                    if( strcmp( "..", de->d_name ) == 0 ) { continue; }
-                    fprintf( stdout, "\t%s\n", de->d_name );
+            case Command::list: {
+                if(! single) { fprintf( stdout, "\n" ); }
+                const char * de_name = NULL;
+                while( (de_name = d.Next()) != NULL ) {
+                    if( strcmp( ".", de_name ) == 0 ) { continue; }
+                    if( strcmp( "..", de_name ) == 0 ) { continue; }
+                    fprintf( stdout, "\t%s\n", de_name );
                 }
-                break;
+                } break;
 
             case Command::get: {
                 std::string dest;
                 formatstr( dest, "%d.%d", jobID.first, jobID.second );
-                DIR * destd = opendir( dest.c_str() );
-                if( destd != NULL ) {
-                    closedir( destd );
+                Directory destd( dest.c_str() );
+                if( destd.Rewind() ) {
                     fprintf( stdout, "Destination directory '%s' exists, not modifying.\n", dest.c_str() );
                     if( single ) { return -1; }
                     continue;
@@ -148,7 +130,7 @@ int main( int argc, char ** argv ) {
                 args.AppendArg( "xcopy" );
                 args.AppendArg( "/S" );
                 args.AppendArg( "/E" );
-                args.Appendarg( "/K" );
+                args.AppendArg( "/K" );
                 args.AppendArg( path.c_str() );
                 // It's important that dest have a trailing \.
                 std::string target;
@@ -180,8 +162,6 @@ int main( int argc, char ** argv ) {
                 // The compiler should know better.
                 break;
         }
-
-        closedir( d );
     }
 
     return 0;
