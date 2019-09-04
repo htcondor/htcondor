@@ -55,6 +55,10 @@ Release Notes:
   that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
   can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
 
+- Improved the handling of parallel universe Docker jobs and the ability to rm and hold
+  them.
+  :ticket:`7076`
+
 - Singularity jobs no longer mount the user's home directory by default.
   To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
 
