@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <dirent.h>
 
+#include "my_popen.h"
+
 #include <vector>
 
 typedef std::pair< int, int > JobID;
@@ -89,9 +91,15 @@ int main( int argc, char ** argv ) {
     bool single = jobIDs.size() == 1;
     for( const auto & jobID : jobIDs ) {
         std::string path;
+#if defined(WINDOWS)
+        formatstr( path, "%s\\%d\\%d\\cluster%d.proc%d.subproc0",
+            spool.c_str(), jobID.first, jobID.second,
+            jobID.first, jobID.second );
+#else
         formatstr( path, "%s/%d/%d/cluster%d.proc%d.subproc0",
             spool.c_str(), jobID.first, jobID.second,
             jobID.first, jobID.second );
+#endif /* defined(WINDOWS) */
 
         DIR * d = opendir( path.c_str() );
         if( d == NULL ) {
@@ -107,12 +115,12 @@ int main( int argc, char ** argv ) {
             continue;
         }
 
-        if(! single) { fprintf( stdout, "%d.%d", jobID.first, jobID.second ); }
+        if(! single) { fprintf( stdout, "%d.%d ", jobID.first, jobID.second ); }
 
         struct dirent * de = NULL;
         switch(c) {
             case Command::dir:
-                fprintf( stdout, " %s\n", path.c_str() );
+                fprintf( stdout, "%s\n", path.c_str() );
                 break;
 
             case Command::list:
@@ -130,19 +138,40 @@ int main( int argc, char ** argv ) {
                 DIR * destd = opendir( dest.c_str() );
                 if( destd != NULL ) {
                     closedir( destd );
-                    fprintf( stdout, " Destination directory '%s' exists, not modifying.\n", dest.c_str() );
+                    fprintf( stdout, "Destination directory '%s' exists, not modifying.\n", dest.c_str() );
                     if( single ) { return -1; }
                     continue;
                 }
 
-                std::string command;
+                ArgList args;
+#if defined(WINDOWS)
+                args.AppendArg( "xcopy" );
+                args.AppendArg( "/S" );
+                args.AppendArg( "/E" );
+                args.Appendarg( "/K" );
+                args.AppendArg( path.c_str() );
+                // It's important that dest have a trailing \.
+                std::string target;
+                formatstr( target, "%s\\", dest.c_str() );
+                args.AppendArg( target.c_str() );
+#else
+                args.AppendArg( "cp" );
+                args.AppendArg( "-a" );
                 // It's important that path and dest not have trailing /s.
-                formatstr( command, "cp -a %s %s\n", path.c_str(), dest.c_str() );
-                int r = system( command.c_str() );
+                args.AppendArg( path.c_str() );
+                args.AppendArg( dest.c_str() );
+#endif /* defined(WINDOWS) */
+
+                int r = -1;
+                FILE * f = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
+                if( f ) {
+                    r = my_pclose(f);
+                }
+
                 if( r == 0 ) {
-                    fprintf( stdout, " Copied to '%s'.\n", dest.c_str() );
+                    fprintf( stdout, "Copied to '%s'.\n", dest.c_str() );
                 } else {
-                    fprintf( stdout, " Copy failed: return value %d.\n", r );
+                    fprintf( stdout, "Copy failed: return value %d.\n", r );
                 }
                 if( single ) { return r; }
                 } break;
