@@ -13,6 +13,11 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- HTCondor's Docker Universe jobs now more reliably disable the setuid
+  capability from their jobs.  Docker Universe has also done this, but the
+  method used has recently changed, and the new way should work going forward.
+  :ticket:`7111`
+
 - HTCondor users and daemons can request security tokens used for authentication.
   This allows the HTCondor pool administrator to simply approve or deny token
   requests instead of having to generate tokens and copy them between hosts.
