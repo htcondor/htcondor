@@ -13,6 +13,24 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- Improved the speed of matchmaking in pools with partitionable slots
+  by simplifying the slot's WithinResourceLimits expression.  This new 
+  definition for this expression now ignores the job's 
+  _condor_RequestXXX attributes, which were never set.
+  In pools with simple start expressions, this can double the speed of
+  matchmaking.
+  :ticket:`7131`
+
+- Improved the speed of matchmaking in pools that don't support
+  standard universe by unconditionally removing standard universe related
+  expressions in the slot START expression.
+  :ticket:`7123`
+
+- HTCondor's Docker Universe jobs now more reliably disable the setuid
+  capability from their jobs.  Docker Universe has also done this, but the
+  method used has recently changed, and the new way should work going forward.
+  :ticket:`7111`
+
 - HTCondor users and daemons can request security tokens used for authentication.
   This allows the HTCondor pool administrator to simply approve or deny token
   requests instead of having to generate tokens and copy them between hosts.
@@ -36,6 +54,10 @@ Release Notes:
   printed.  This change makes these logs unreadable by versions of Dagman and ``condor_wait``
   that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
   can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
+
+- Improved the handling of parallel universe Docker jobs and the ability to rm and hold
+  them.
+  :ticket:`7076`
 
 - Singularity jobs no longer mount the user's home directory by default.
   To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.

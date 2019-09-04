@@ -433,6 +433,10 @@ void export_event_log() {
 	boost::python::class_<JobEventLog, boost::noncopyable>("JobEventLog",
             R"C0ND0R(
             Reads job event (user) logs.
+
+            A pickled :class:`JobEventLog` resumes iterating over events
+            where it left off if and only if, after being unpickled, the
+            job event log file is identical except for appended events.
             )C0ND0R",
         boost::python::init<const std::string &>(
 	        R"C0ND0R(
