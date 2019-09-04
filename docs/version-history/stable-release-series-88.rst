@@ -13,9 +13,7 @@ Version 8.8.5
 
 Release Notes:
 
--  HTCondor version 8.8.5 not yet released.
-
-.. HTCondor version 8.8.5 released on Month Date, 2019.
+-  HTCondor version 8.8.5 released on September 4, 2019.
 
 New Features:
 
@@ -32,40 +30,58 @@ New Features:
    event cycle. The default value of 3 maintains the behavior in previous
    versions of HTCondor.
    Changing the value to zero (meaning no limit) could help
-   the schedd handle heavy loads.
+   the *condor_schedd* handle heavy loads.
    :ticket:`7195`
 
--  Updated *condor_gpu_discovery* to recognize Volta and Turing GPUs
+-  Updated *condor_gpu_discovery* to recognize nVidia Volta and Turing GPUs
    :ticket:`7197`
 
+-  By default, HTCondor will no longer collect general usage information
+   and forward it back to the HTCondor team.
+   :ticket:`7219`
+
 Bugs Fixed:
-
--  HTCondor daemons will no longer sit in a tight loop consuming the
-   CPU when a network connection closes unexpectedly.
-   :ticket:`7164`
-
--  Fix a bug where singularity jobs with SINGULARITY_TARGET_DIR set
-   would not have the job's environment properly set.
-   :ticket:`7140`
-
--  HTCondor will now always use TCP to release startds claimed by the
-   dedicated scheduler during shutdown.  This prevents some startds
-   from staying in the Claimed/Idle state after a schedd shutdown when
-   running parallel jobs.
-   :ticket:`7144`
 
 -  Fixed a bug that would sometimes result in the *condor_schedd* on Windows
    becoming slow to respond to commands after a period of time.  The slowness
    would persist until the *condor_schedd* was restarted.
    :ticket:`7143`
 
+-  HTCondor daemons will no longer sit in a tight loop consuming the
+   CPU when a network connection closes unexpectedly on Windows systems.
+   :ticket:`7164`
+
+-  Fixed a packaging error that caused the Java universe to be non-functional
+   on Debian and Ubuntu systems.
+   :ticket:`7209`
+
+-  Fix a bug where singularity jobs with SINGULARITY_TARGET_DIR set
+   would not have the job's environment properly set.
+   :ticket:`7140`
+
 -  Fixed a bug that caused incorrect values to be reported for the time
    taken to upload a job's files.
    :ticket:`7147`
 
+-  HTCondor will now always use TCP to release slots claimed by the
+   dedicated scheduler during shutdown.  This prevents some slots
+   from staying in the Claimed/Idle state after a *condor_schedd* shutdown when
+   running parallel jobs.
+   :ticket:`7144`
+
 -  Fixed a bug that caused the *condor_schedd* to not write a core file
    when it crashes on Linux.
    :ticket:`7163`
+
+-  Fixed a bug in the *condor_schedd* that caused submit transforms to always
+   reject submissions with more than one cluster id.  This bug was particularly
+   easy to trigger by attempting to queue more than one submit object in
+   a single transaction using the Python bindings.
+   :ticket:`7036`
+
+-  Fixed a bug that prevented new jobs from materializing when jobs changed
+   to run state and a ``max_idle`` value was specified.
+   :ticket:`7178`
 
 -  Fixed a bug that caused *condor_chirp* to crash when the *getdir*
    command was used for an empty directory.
@@ -79,19 +95,13 @@ Bugs Fixed:
    octal format are now rejected. Previously, they were read incorrectly.
    :ticket:`7127`
 
--  Fixed a bug that prevented new jobs from materializing when jobs changed
-   to run state and a ``max_idle`` value was specified.
-   :ticket:`7178`
-
 -  Fixed a bug in the *condor_dagman* parser which caused it to crash when
    certain commands were missing tokens.
    :ticket:`7196`
 
--  Fixed a bug in the *condor_schedd* that caused submit transforms to always
-   reject submissions with more than one cluster id.  This bug was particularly
-   easy to trigger by attempting to queue more than one submit object in
-   a single transaction using the Python bindings.
-   :ticket:`7036`
+-  Fixed a bug in *condor_dagman* that caused it to fail when retrying a
+   failed node with late materialization enabled.
+   :ticket:`6946`
 
 -  Minor change to the Python bindings to work around a bug in the third party
    collectd program on Linux that resulted in a crash trying to load the
@@ -102,10 +112,6 @@ Bugs Fixed:
    wrong owner. This would prevent the daemon from operating properly.
    :ticket:`7214`
 
--  Fixed a bug in *condor_dagman* that caused it to fail when retrying a
-   failed node with late materialization enabled.
-   :ticket:`6946`
-
 -  Fixed a bug in *condor_submit* where it would require a match to a machine
    with GPUs when a job requested 0 GPUs.
    :ticket:`6938`
@@ -113,10 +119,6 @@ Bugs Fixed:
 -  Fixed a bug in *condor_qedit* which was causing it to report an incorrect
    number of matching jobs.
    :ticket:`7119`
-
--  HTCondor will no longer collect general usage information and forward it
-   back to the HTCondor team.
-   :ticket:`7219`
 
 -  Fixed a bug where the annex-ec2 service would be disabled on Enterprise
    Linux systems when upgrading the HTCondor packages.
@@ -132,10 +134,6 @@ Bugs Fixed:
    configuration file, the new file would appear as
    ``/etc/condor/condor_config.rpmnew``.
    :ticket:`7183`
-
--  Fixed a packaging error that caused the Java universe to be non-functional
-   on Debian and Ubuntu systems.
-   :ticket:`7209`
 
 Version 8.8.4
 -------------

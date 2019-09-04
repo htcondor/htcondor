@@ -1,3 +1,13 @@
+condor (8.8.5-1) stable; urgency=medium
+
+  * Fixed two performance problems on Windows
+  * Fixed Java universe on Debian and Ubuntu systems
+  * Added two knobs to improve performance on large scale pools
+  * Fixed a bug where requesting zero GPUs would require a machine with GPUs
+  * HTCondor can now recognize nVidia Volta and Turing GPUs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Sep 2019 13:22:29 -0500
+
 condor (8.8.4-1) stable; urgency=medium
 
   * Python 3 bindings - see version history for details (requires EPEL on EL7)
