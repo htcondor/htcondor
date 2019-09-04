@@ -21,6 +21,11 @@ Release Notes:
   matchmaking.
   :ticket:`7131`
 
+- Improved the speed of matchmaking in pools that don't support
+  standard universe by unconditionally removing standard universe related
+  expressions in the slot START expression.
+  :ticket:`7123`
+
 - HTCondor's Docker Universe jobs now more reliably disable the setuid
   capability from their jobs.  Docker Universe has also done this, but the
   method used has recently changed, and the new way should work going forward.
