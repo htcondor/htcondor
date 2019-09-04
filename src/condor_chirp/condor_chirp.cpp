@@ -246,8 +246,13 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	}
 	
 		// Get size of file, allocate buffer
+#if defined(WIN32)
+	struct _stat stat_buf;
+	if (_fstat(fileno(rfd), &stat_buf) == -1) {
+#else
 	struct stat stat_buf;
 	if (fstat(fileno(rfd), &stat_buf) == -1) {
+#endif
 		fprintf(stderr, "Can't fstat local file %s\n", local);
 		fclose(rfd);
 		DISCONNECT_AND_RETURN(client, -1);
