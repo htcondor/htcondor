@@ -13,6 +13,14 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- Improved the speed of matchmaking in pools with partitionable slots
+  by simplifying the slot's WithinResourceLimits expression.  This new 
+  definition for this expression now ignores the job's 
+  _condor_RequestXXX attributes, which were never set.
+  In pools with simple start expressions, this can double the speed of
+  matchmaking.
+  :ticket:`7131`
+
 - HTCondor's Docker Universe jobs now more reliably disable the setuid
   capability from their jobs.  Docker Universe has also done this, but the
   method used has recently changed, and the new way should work going forward.
