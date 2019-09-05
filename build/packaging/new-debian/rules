@@ -21,6 +21,7 @@ override_dh_auto_configure:
 		-DPROPER:BOOL=ON \
 		-DCLIPPED:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
+		-DNO_PHONE_HOME:BOOL=ON \
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="Debian-$(debver)"\
 		-DPACKAGEID:STRING="$(debver)"\
