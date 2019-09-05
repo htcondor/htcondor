@@ -67,6 +67,16 @@ If job 288.7 is running:
 
     condor_status -const 'JobId == "288.7"'
 
+Only Run on a Particular Machine
+''''''''''''''''''''''''''''''''
+
+If you want your job to run only on a particular machine named 'special',
+add the following to your submit file's ``requirements`` line:
+
+::
+
+    Machine == "special"
+
 String Manipulation
 '''''''''''''''''''
 
