@@ -77,7 +77,9 @@ get_daemon_name( const char* name )
 				 "regular hostname\n" );
 
 		std::string fqdn = get_fqdn_from_hostname(name);
-		daemon_name = strdup(fqdn.c_str());
+		if(! fqdn.empty()) {
+			daemon_name = strdup(fqdn.c_str());
+		}
 	}
 
 		// If there was an error, this will still be NULL.
