@@ -402,7 +402,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	size_t *core_size_ptr = NULL;
 #if !defined(WIN32)
 	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
-		if ( core_size_ad < 0 || (unsigned long long)core_size_ad > RLIM_INFINITY ) {
+		if ( core_size_ad < 0 ) {
 			core_size = RLIM_INFINITY;
 		} else {
 			core_size = (size_t)core_size_ad;
