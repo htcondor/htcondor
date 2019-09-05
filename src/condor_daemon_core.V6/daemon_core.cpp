@@ -3966,23 +3966,6 @@ void DaemonCore::Driver()
 
 						// ok, select says this socket table entry has new data.
 
-						// if this sock is a safe_sock, then call the method
-						// to enqueue this packet into the buffers.  if a complete
-						// message is not yet ready, then do not yet call a handler.
-						if ( (*sockTable)[i].iosock->type() == Stream::safe_sock )
-						{
-							SafeSock* ss = (SafeSock *)(*sockTable)[i].iosock;
-							// call handle_incoming_packet to consume the packet.
-							// it returns true if there is a complete message ready,
-							// otherwise it returns false.
-							if ( !(ss->handle_incoming_packet()) ) {
-								// there is not yet a complete message ready.
-								// so go back to the outer for loop - do not
-								// call the user handler yet.
-								continue;
-							}
-						}
-
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
@@ -4058,18 +4041,13 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
 
 		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
+		unsigned frag_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? ( m_iMaxUdpMsgsPerCycle * 20 ) : -1;
 
-		// We don't care about the return value for UDP command sockets
-		HandleReq(i);
-		msg_cnt--;
+		Selector selector;
+		selector.set_timeout( 0, 0 );
+		selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 
-		// Make sure we didn't leak our priv state
-		CheckPrivState();
-
-		while ( msg_cnt ) {
-			Selector selector;
-			selector.set_timeout( 0, 0 );
-			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+		while ( msg_cnt && frag_cnt ) {
 			selector.execute();
 
 			if ( !selector.has_ready() ) {
@@ -4080,6 +4058,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
 			{
 				// Looks like we got a fragment, try reading some more
+				frag_cnt--;
 				continue;
 			}
 			// We don't care about the return value for UDP command sockets
