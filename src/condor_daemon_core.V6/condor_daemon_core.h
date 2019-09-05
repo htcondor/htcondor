@@ -1506,6 +1506,8 @@ class DaemonCore : public Service
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
+	bool getStartTime(int & startTime);
+
 		/**
 		   Indicates if this daemon wants to be restarted by its
 		   parent or not.  Usually true, unless one of the

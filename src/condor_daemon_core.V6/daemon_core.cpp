@@ -11227,3 +11227,21 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 	}
 	return true;
 }
+
+#include "condor_daemon_client.h"
+#include "dc_collector.h"
+
+bool DaemonCore::getStartTime( int & startTime ) {
+	if(! m_collector_list) { return false; }
+	m_collector_list->rewind();
+
+	Daemon * d = NULL;
+	m_collector_list->next(d);
+	if(! d) { return false; }
+
+	DCCollector * dcc = dynamic_cast<DCCollector *>(d);
+	if(! dcc) { return false; }
+
+	startTime = dcc->getStartTime();
+	return true;
+}

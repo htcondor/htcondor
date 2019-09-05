@@ -105,6 +105,8 @@ public:
 
 	bool useTCPForUpdates() { return use_tcp; }
 
+	time_t getStartTime() { return startTime; }
+	time_t getReconfigTime() { return reconfigTime; }
 
 private:
 
