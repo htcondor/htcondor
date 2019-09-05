@@ -37,7 +37,6 @@ int main( int argc, char ** argv ) {
     config();
 
     enum struct Command {
-        none = 0,
         dir = 1,
         list = 2,
         get = 3
@@ -70,12 +69,6 @@ int main( int argc, char ** argv ) {
             return -1;
         }
     }
-
-    if( c == Command::none ) {
-        usage( argv[0] );
-        return -1;
-    }
-
 
     bool single = jobIDs.size() == 1;
     for( const auto & jobID : jobIDs ) {
@@ -157,10 +150,6 @@ int main( int argc, char ** argv ) {
                 }
                 if( single ) { return r; }
                 } break;
-
-            case Command::none:
-                // The compiler should know better.
-                break;
         }
     }
 
