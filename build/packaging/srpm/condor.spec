@@ -748,6 +748,7 @@ export CMAKE_PREFIX_PATH=/usr
 cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
+       -DNO_PHONE_HOME:BOOL=TRUE \
        -DUW_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if %bundle_uw_externals
@@ -794,6 +795,7 @@ cmake \
        -D_VERBOSE:BOOL=TRUE \
 %endif
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
+       -DNO_PHONE_HOME:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
@@ -846,9 +848,9 @@ cmake \
 
 %if %uw_build
 # build externals first to avoid dependency issues
-make externals
+make %{?_smp_mflags} externals
 %endif
-make
+make %{?_smp_mflags}
 
 %install
 # installation happens into a temporary location, this function is
@@ -1793,6 +1795,13 @@ fi
 %endif
 
 %changelog
+* Thu Sep 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
+- Fixed two performance problems on Windows
+- Fixed Java universe on Debian and Ubuntu systems
+- Added two knobs to improve performance on large scale pools
+- Fixed a bug where requesting zero GPUs would require a machine with GPUs
+- HTCondor can now recognize nVidia Volta and Turing GPUs
+
 * Tue Jul 09 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.4-1
 - Python 3 bindings - see version history for details (requires EPEL on EL7)
 - Can configure DAGMan to dramatically reduce memory usage on some DAGs
