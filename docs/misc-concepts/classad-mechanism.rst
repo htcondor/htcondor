@@ -144,7 +144,7 @@ testing expressions to see if any adjustment is required, before a
 future version of HTCondor potentially makes New ClassAds evaluation
 behavior the default or the only option.
 
-Old ClassAd Syntax
+ClassAd Syntax
 ------------------
 
 :index:`expression syntax of Old ClassAds<single: expression syntax of Old ClassAds; ClassAd>`
@@ -195,10 +195,10 @@ An attribute reference consists of the name of the attribute being
 referenced, and an optional scope resolution prefix. The prefixes that
 may be used are ``MY.`` and ``TARGET.``. The case used for these
 prefixes is not significant. The semantics of supplying a prefix are
-discussed in :ref:`misc-concepts/classad-mechanism:old classad evaluation
+discussed in :ref:`misc-concepts/classad-mechanism:classad evaluation
 semantics`.
 
-New ClassAd Operators
+Expression Operators
 '''''''''''''''''''''
 
 :index:`expression operators<single: expression operators; ClassAd>`
@@ -220,7 +220,7 @@ precedence is shown in the following example:
 The operator with the highest precedence is the unary minus operator.
 The only operators which are unfamiliar are the =?=, is, =!= and isnt
 operators, which are discussed in
-:ref:`misc-concepts/classad-mechanism:old classad evaluation semantics`.
+:ref:`misc-concepts/classad-mechanism:classad evaluation semantics`.
 
 Predefined Functions
 ''''''''''''''''''''
@@ -335,11 +335,39 @@ Optional parameters are given within square brackets.
     type ``Real``. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
+    given. :index:`isList()<single: isList(); ClassAd functions>`
+
+``Boolean isList(AnyType Expr)``
+    Returns ``True``, if the evaluation of ``Expr`` gives a value of
+    type ``List``. Returns ``False`` in all other cases.
+
+    This function returns ``ERROR`` if other than exactly 1 argument is
+    given. :index:`isClassad()<single: isClassad(); ClassAd functions>`
+
+``Boolean isClassAd(AnyType Expr)``
+    Returns ``True``, if the evaluation of ``Expr`` gives a value of
+    type ``ClassAd``. Returns ``False`` in all other cases.
+
+    This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`isBoolean()<single: isBoolean(); ClassAd functions>`
 
 ``Boolean isBoolean(AnyType Expr)``
     Returns ``True``, if the evaluation of ``Expr`` gives the integer
     value 0 or 1. Returns ``False`` in all other cases.
+
+    This function returns ``ERROR`` if other than exactly 1 argument is
+    given. :index:`isAbstime()<single: isAbstimen(); ClassAd functions>`
+
+``Boolean isAbstime(AnyType Expr)``
+    Returns ``True``, if the evaluation of ``Expr`` returns an abstime
+	type. Returns ``False`` in all other cases.
+
+    This function returns ``ERROR`` if other than exactly 1 argument is
+    given. :index:`isRelTime()<single: isRelTime(); ClassAd functions>`
+
+``Boolean isReltime(AnyType Expr)``
+    Returns ``True``, if the evaluation of ``Expr`` returns an relative time
+	type. Returns ``False`` in all other cases.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. :index:`int()<single: int(); ClassAd functions>`
@@ -808,7 +836,18 @@ characters other than these as options are ignored.
     matches the regular expression given by ``pattern``. Returns
     ``FALSE`` otherwise. If any argument is not a string, or if
     ``pattern`` does not describe a valid regular expression, returns
-    ``ERROR``. :index:`regexps()<single: regexps(); ClassAd functions>`
+    ``ERROR``. 
+:index:`regexpMember()<single: regexpMember(); ClassAd functions>`
+
+``Boolean regexpMember(String pattern, List targetStrings [ , String options ])``
+    Uses the description of a regular expression given by string ``pattern``
+    to scan through a List of string n ``targetStrings``. Returns ``TRUE`` when ``target``
+    matches a regular expression given by ``pattern``. If no strings match,
+	and at least one item in targetString evaluated to undefined, returns
+	undefined.  If any item in targetString before a match evaluated to neither
+	a string nor undefined, returns ``ERROR``. 
+
+:index:`regexps()<single: regexps(); ClassAd functions>`
 ``String regexps``
     ``(String pattern, String target, String substitute [ , String options ])``
     Uses the regular expression given by string ``pattern`` to scan
@@ -876,7 +915,7 @@ characters other than these as options are ignored.
     (see the :ref:`admin-manual/configuration-macros:htcondor-wide
     configuration file entries` section).
 
-Old ClassAd Evaluation Semantics
+ClassAd Evaluation Semantics
 --------------------------------
 
 The ClassAd mechanism's primary purpose is for matching entities that
@@ -937,7 +976,7 @@ ClassAd A that is being evaluated in a context with another ClassAd B:
    the process of being evaluated, there is a circular dependency in the
    evaluation. The value of the reference is ``ERROR``.
 
-Old ClassAd Operators
+ClassAd Operators
 '''''''''''''''''''''
 
 :index:`expression operators<single: expression operators; ClassAd>`
