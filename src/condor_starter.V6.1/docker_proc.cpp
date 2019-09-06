@@ -96,6 +96,9 @@ DockerProc::~DockerProc() {
 int DockerProc::StartJob() {
 	std::string imageID;
 
+	// Not really ready for ssh-to-job'ing until we start the container
+	Starter->SetJobEnvironmentReady(false);
+
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
 		return FALSE;
@@ -259,9 +262,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			return VanillaProc::JobReaper( pid, status );
 		}
 
+		// When we get here docker create has just succeeded
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
 		
+		// Now ssh-to-job can go
+		Starter->SetJobEnvironmentReady(true);
+
 		CondorError err;
 
 		//

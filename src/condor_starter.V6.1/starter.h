@@ -300,6 +300,7 @@ public:
 	int GetShutdownExitCode() { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
