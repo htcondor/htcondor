@@ -39,6 +39,7 @@ int vformatstr(std::string& s, const char* format, va_list pargs);
 // These return number of new chars appended.
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
 // Return the string form of the given integer value
 template <typename T> std::string IntToStr( T val );

@@ -39,7 +39,8 @@ bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value()
 bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
 
 
-int vformatstr(std::string& s, const char* format, va_list pargs) {
+static
+int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
 	int n;
@@ -59,7 +60,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     // In this case, fixed buffer was sufficient so we're done.
     // Return number of chars written.
     if (n < fixlen) {
-        s = fixbuf;
+		if (concat) {
+			s.append(fixbuf, n);
+		} else {
+			s.assign(fixbuf, n);
+		}
         return n;
     }
 
@@ -88,7 +93,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     if (nn >= n) EXCEPT("Insufficient buffer size (%d) for printing %d chars", n, nn);
 
     // safe to do string assignment
-    s = varbuf;
+	if (concat) {
+		s.append(varbuf, nn);
+	} else {
+		s.assign(varbuf, nn);
+	}
 
     // clean up our allocated buffer
     delete[] varbuf;
@@ -97,10 +106,18 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     return nn;
 }
 
+int vformatstr(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, false, format, pargs);
+}
+
+int vformatstr_cat(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, true, format, pargs);
+}
+
 int formatstr(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int r = vformatstr(s, format, args);
+    int r = vformatstr_impl(s, false, format, args);
     va_end(args);
     return r;
 }
@@ -110,7 +127,7 @@ int formatstr(MyString& s, const char* format, ...) {
     std::string t;
     va_start(args, format);
     // this gets me the sprintf-standard return value (# chars printed)
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s = t;
     return r;
@@ -118,11 +135,9 @@ int formatstr(MyString& s, const char* format, ...) {
 
 int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
-    std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(s, true, format, args);
     va_end(args);
-    s += t;
     return r;
 }
 
@@ -130,7 +145,7 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s += t.c_str();
     return r;
