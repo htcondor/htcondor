@@ -58,8 +58,8 @@ isChildOf(const char *subdir, pid_t parent) {
 
 	// Format of /proc/self/stat is
 	// pid program_name State ppid
-	sscanf(buf, "%d%*s%*s%d", &pid, &ppid);
-	if (ppid == parent) {
+	int matched = sscanf(buf, "%d%*s%*s%d", &pid, &ppid);
+	if ((ppid == parent) && (matched > 0)) {
 		return true;
 	}
 	return false;
