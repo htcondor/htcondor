@@ -881,19 +881,19 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 
 	if( !jic || !jobad ) {
-		return PeekRetry(s, "Rejecting request, because job not yet initialized.");
+		return PeekRetry(s, "Retrying request, because job not yet initialized.");
 	}
 
 	if( !m_job_environment_is_ready ) {
 		// This can happen if file transfer is still in progress.
-		return PeekRetry(s, "Rejecting request, because the job execution environment is not yet ready.");
+		return PeekRetry(s, "Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return PeekFailed(s, "Rejecting request, because the job is finished.");
 	}
  
 	if( !jic->userPrivInitialized() ) {
-		return PeekRetry(s, "Rejecting request, because job execution account not yet established.");
+		return PeekRetry(s, "Retrying request, because job execution account not yet established.");
 	}
 
 	ssize_t max_xfer = -1;
@@ -1257,12 +1257,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	if( !jic || !jobad ) {
-		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
+		return SSHDRetry(s,"Retrying request, because job not yet initialized.");
 	}
 	if( !m_job_environment_is_ready ) {
 			// This can happen if file transfer is still in progress.
 			// At this stage, the sandbox might not even be owned by the user.
-		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+		return SSHDRetry(s,"Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return SSHDFailed(s,"Rejecting request, because the job is finished.");
@@ -1281,7 +1281,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	input.LookupString(ATTR_NAME,slot_name);
 
 	if( !jic->userPrivInitialized() ) {
-		return SSHDRetry(s,"Rejecting request, because job execution account not yet established.");
+		return SSHDRetry(s,"Retrying request, because job execution account not yet established.");
 	}
 
 	MyString libexec;
