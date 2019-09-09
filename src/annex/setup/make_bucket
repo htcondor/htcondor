@@ -1,0 +1,6 @@
+#!/bin/bash
+region=$1
+aws s3 mb --region ${region} s3://condor-annex-${region} 2>&1 | grep -v BucketAlreadyOwnedByYou | grep -v 'make_bucket: condor-annex-'${region}
+aws --region ${region} s3api put-bucket-policy \
+    --bucket condor-annex-${region} \
+    --policy '{"Version": "2012-10-17","Statement": [{"Sid": "AllowPublicAccess","Effect": "Allow","Principal": {"AWS": "*"},"Action": "s3:GetObject","Resource": "arn:aws:s3:::condor-annex-'${region}'/*"}]}'
