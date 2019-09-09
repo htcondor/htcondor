@@ -378,13 +378,30 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
 		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
 		assert( syscall_sock->end_of_message() );;
+		if (attr_value) { 
+			dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
+		} else {
+			// This shouldn't happen...
+			dprintf(D_ALWAYS, "SetAttribute got NULL value for %s\n", attr_name.c_str());
+			if( flags & SetAttribute_NoAck ) {
+				return -1;
+			}
+			syscall_sock->encode();
+			rval = -1;
+			terrno = EINVAL; 
+			assert( syscall_sock->code(rval) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
+			return -1;
+		}
+
+
 
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
-		if (!attr_name.empty() && attr_value && strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
+		if (!attr_name.empty() && strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			errno = 0;
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
