@@ -13,6 +13,14 @@ Release Notes:
 
 .. HTCondor version 8.9.3 released on Month Date, 2019.
 
+- Changed the *condor_annex* default AMIs to run Docker jobs.  As a result,
+  they no longer default to encrypted execute directories.
+  :ticket:`6690`
+
+- The Python binding's ``JobEventLog`` can now be pickled and unpickled,
+  allowing users to preserve job-reading progress between process restarts.
+  :ticket:`6944`
+
 - Improved the speed of matchmaking in pools with partitionable slots
   by simplifying the slot's WithinResourceLimits expression.  This new 
   definition for this expression now ignores the job's 
