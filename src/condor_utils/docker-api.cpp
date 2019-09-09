@@ -247,7 +247,7 @@ int DockerAPI::createContainer(
 	}
 #endif
 	std::string networkType;
-	jobAd.LookupString(ATTR_JOB_DOCKER_NETWORK_TYPE, networkType);
+	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
 	}

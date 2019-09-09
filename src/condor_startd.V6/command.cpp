@@ -125,7 +125,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		tag->InsertAttr( "When", (long long)when.tv_sec );
 
 		classad::ClassAd toe;
-		toe.Insert( "ToE", tag );
+		toe.Insert(ATTR_JOB_TOE, tag );
 
 		std::string jobAdFileName;
 		formatstr( jobAdFileName, "%s/dir_%d/.job.ad", rip->r_cur->executeDir(), rip->r_cur->starterPID() );

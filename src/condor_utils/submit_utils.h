@@ -44,6 +44,7 @@
 #define SUBMIT_KEY_BatchName "batch_name"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
+#define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
@@ -213,7 +214,7 @@
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
 
 // ...
-#define SUBMIT_KEY_DontAppend "erase_output_and_error_on_restart"
+#define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
 
 //
 // CronTab Parameters
@@ -992,6 +993,9 @@ const char * init_submit_default_macros();
 #ifdef WIN32
 void publishWindowsOSVersionInfo(ClassAd & ad);
 #endif
+
+// used for utility debug code in condor_submit
+const struct SimpleSubmitKeyword * get_submit_keywords();
 
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp

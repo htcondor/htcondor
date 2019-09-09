@@ -2085,7 +2085,7 @@ int SubmitHash::SetPriority()
 {
 	RETURN_IF_ABORT();
 
-	int prioval = submit_param_int( SUBMIT_KEY_Priority, ATTR_PRIO, 0 );
+	int prioval = submit_param_int( SUBMIT_KEY_Priority, "prio", 0 );
 	RETURN_IF_ABORT();
 
 	AssignJobVal(ATTR_JOB_PRIO, prioval);
@@ -3621,8 +3621,8 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_WANT_CHECKPOINT, JobUniverse == CONDOR_UNIVERSE_STANDARD);
 	}
 
-	// The starter ignores ATTR_SUCCESS_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
-	if (job->Lookup(ATTR_SUCCESS_CHECKPOINT_EXIT_CODE)) {
+	// The starter ignores ATTR_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
+	if (job->Lookup(ATTR_CHECKPOINT_EXIT_CODE)) {
 		AssignJobVal(ATTR_WANT_FT_ON_CHECKPOINT, true);
 	}
 
@@ -4851,7 +4851,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JobAdInformationAttrs, ATTR_JOB_AD_INFORMATION_ATTRS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
-	{SUBMIT_KEY_DockerNetworkType, ATTR_JOB_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetJobMachineAttrs
@@ -4945,7 +4945,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_CoreSize, ATTR_CORE_SIZE, SimpleSubmitKeyword::f_as_int},
 	// formerly SetPrio
 	{SUBMIT_KEY_Priority, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int},
-	{ATTR_PRIO, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name},
+	{SUBMIT_KEY_Prio, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name},
 	// formerly SetWantRemoteIO
 	{SUBMIT_KEY_WantRemoteIO, ATTR_WANT_REMOTE_IO, SimpleSubmitKeyword::f_as_bool},
 	// formerly SetRunAsOwner
@@ -4955,11 +4955,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxTransferOutputMB, ATTR_MAX_TRANSFER_OUTPUT_MB, SimpleSubmitKeyword::f_as_expr},
 
 	// Self-checkpointing
-	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
+	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
     // EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
     // is ON_EXIT_OR_EVICT, which we may want to warn people about.
-    {SUBMIT_KEY_DontAppend, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
+    {SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -5150,6 +5150,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	{NULL, NULL, 0}, // end of table
 };
+
+// used for utility debug code in condor_submit
+const struct SimpleSubmitKeyword * get_submit_keywords() { return prunable_keywords; }
 
 // This struct is used to build a sorted table of SimpleSubmitKeywords when we first initialize this class
 // the sorted table of SimpleSubmitKeywords is in turn used to enable a quick check to see if an keyword

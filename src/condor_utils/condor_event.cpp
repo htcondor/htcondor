@@ -3178,7 +3178,7 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 			delete myad;
 			return NULL;
 		}
-		if(! myad->Insert( "ToE", tt )) {
+		if(! myad->Insert(ATTR_JOB_TOE, tt )) {
 			delete tt;
 			delete myad;
 			return NULL;
@@ -3203,7 +3203,7 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 		multi = NULL;
 	}
 
-	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup( "ToE" )) );
+	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }
 
 // ----- TerminatedEvent baseclass
@@ -3741,7 +3741,7 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 
 	if( toeTag ) {
 	    classad::ExprTree * tt = toeTag->Copy();
-		if(! myad->Insert("ToE", tt)) {
+		if(! myad->Insert(ATTR_JOB_TOE, tt)) {
 			delete myad;
 			return NULL;
 		}
@@ -3799,7 +3799,7 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 
 	if( toeTag ) { delete toeTag; }
 
-	ExprTree * fail = ad->Lookup( "ToE" );
+	ExprTree * fail = ad->Lookup(ATTR_JOB_TOE);
 	classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( fail );
 	if( ca ) { toeTag = new classad::ClassAd( * ca ); }
 }

@@ -1168,7 +1168,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// now process knobs of the pattern AUTO_USE_<catgory>_<metaknob>
 	if ( ! (config_options & CONFIG_OPT_NO_SMART_AUTO_USE)) {
 		do_smart_auto_use(config_options);
-		// we may need to re-sort the macros
+		// re-sort the macros if we added any
 		if (ConfigMacroSet.sorted < ConfigMacroSet.size) {
 			optimize_macros(ConfigMacroSet);
 		}
