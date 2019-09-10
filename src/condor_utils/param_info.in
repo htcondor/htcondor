@@ -3653,6 +3653,76 @@ default = m4.large
 type=string
 tags=annex
 
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-078d5c7afa60d8d1b
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0463306823b53e30
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-02c69d521a0809249
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0c07ed1dc0cea3608
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-024615f49be85226a
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0b9bff095bcf587b9
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-00ca51dc8295a9e4f
+type=string
+tags=annex
+
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
 default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
 type=string

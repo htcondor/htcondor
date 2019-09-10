@@ -1,0 +1,23 @@
+#!/bin/bash
+DESTINATION_REGION=$1
+SOURCE_REGION=us-east-1
+SOURCE_REGION_U=us_east_1
+SOURCE_AMI=`condor_config_val ${SOURCE_REGION_U}.ANNEX_DEFAULT_ODI_IMAGE_ID`
+if [ -z "${SOURCE_AMI}" ]; then
+    echo "No source AMI, aborting."
+    exit 1
+fi
+
+NAME=`aws ec2 describe-images --image-id ${SOURCE_AMI} | grep '"Name":' | sed -e's/.*://' | sed -e's/",$//' | sed -e's/"//'`
+DESCRIPTION=`aws ec2 describe-images --image-id ${SOURCE_AMI} | grep '"Description":' | sed -e's/.*://' | sed -e's/",$'// | sed -e's/"//'`
+
+IMAGE_ID=`aws ec2 copy-image --source-image-id ${SOURCE_AMI} \
+    --source-region ${SOURCE_REGION} \
+    --region ${DESTINATION_REGION} \
+    --name "${NAME}" \
+    --description "${DESCRIPTION}" | grep '"ImageId":' | sed -e's/.*://' | sed -e's/"$//' | sed -e's/"//'`
+
+echo "Run the following command until it succeeds:"
+echo aws ec2 --region ${DESTINATION_REGION} modify-image-attribute \
+    --image-id ${IMAGE_ID} \
+    --launch-permission '"Add=[{Group=all}]"'

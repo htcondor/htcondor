@@ -71,11 +71,14 @@ bucket : bucket-$(VERSION).json
 security-group : security-group-$(VERSION).json
 
 #
-# Bucket management.
+# Infastructure management.
 #
 
 buckets:
-	@for region in $(REGIONS); do echo $${region}; ./make_bucket $${region}; done
+	@for region in $(REGIONS); do echo $${region}; ./make-bucket $${region}; done
+
+amis:
+    @for region in $(REGIONS); do echo $${region}; ./copy-default-ami $${region}; done
 
 clean:
 	@rm -f $(FUNCTIONS) $(TEMPLATES)
