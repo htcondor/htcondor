@@ -557,6 +557,40 @@ Optional parameters are given within square brackets.
 
     This function returns ``ERROR`` if greater than 1 argument is given.
     
+    :index:`sum()<single: sum(); ClassAd functions>`
+
+``Number sum([ List l ])``
+    The elements of l are evaluated, producing a list l of values. If l
+    is composed only of numbers, the result is the sum of the values, 
+    as a Real if any value is Real, and as an Integer otherwise. If the 
+    list is empty, the result is 0. In other cases, the result is ``ERROR``.
+
+    This function returns ``ERROR`` if greater than 1 argument is given.
+    
+    :index:`avg()<single: avg(); ClassAd functions>`
+
+``Number avg([ List l ])``
+    The elements of l are evaluated, producing a list l of values. If l
+    is composed only of numbers, the result is the average of the values, 
+    as a Real. If the list is empty, the result is 0.  In other cases, 
+    the result is ERROR.
+    
+    :index:`min()<single: min(); ClassAd functions>`
+
+``Number min([ List l ])``
+    The elements of l are evaluated, producing a list l of values. If l
+    is composed only of numbers, the result is the minimum of the values, 
+    as a Real if any value is Real, and as an Integer otherwise. If the list 
+    is empty, the result is UNDEFINED. In other cases, the result is ERROR.
+    
+    :index:`max()<single: max(); ClassAd functions>`
+
+``Number max([ List l ])``
+    The elements of l are evaluated, producing a list l of values. If l
+    is composed only of numbers, the result is the maximum of the values, 
+    as a Real if any value is Real, and as an Integer otherwise. If the list 
+    is empty, the result is UNDEFINED. In other cases, the result is ERROR.
+    
     :index:`strcat()<single: strcat(); ClassAd functions>`
 
 ``String strcat(AnyType Expr1 [ , AnyType Expr2 ...])``
@@ -653,12 +687,11 @@ Optional parameters are given within square brackets.
     :index:`size()<single: size(); ClassAd functions>`
 
 ``Integer size(AnyType Expr)``
-    Returns the number of characters in the string, after calling
-    function ``string(Expr)``. If the argument evaluates to ``ERROR`` or
-    ``UNDEFINED``, ``ERROR`` is returned.
+    If Expr evaluates to a string, return the number of characters in the string.
+    If Expr evaluate to a list, return the number of elements in the list.
+    If Expr evaluate to a classad, return the number of entries in the ad.
+    Otherwise, ``ERROR`` is returned.
 
-    This function returns ``ERROR`` if other than exactly 1 argument is
-    given. 
     :index:`split()<single: split(); ClassAd functions>`
 
 ``List split(String s [ , String tokens ] )``
