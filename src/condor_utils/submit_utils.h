@@ -76,6 +76,7 @@
 #define SUBMIT_KEY_RequestCpus "request_cpus"
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
+#define SUBMIT_KEY_RequestGpus "request_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 
 #define SUBMIT_KEY_Universe "universe"
