@@ -706,23 +706,43 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		// Would really like a real JSON parser here...
 	pos = response.find("\"rss\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"rss\":%" SCNu64, &memUsage);
+		uint64_t tmp;
+		int count = sscanf(response.c_str()+pos, "\"rss\":%" SCNu64, &tmp);
+		if (count > 0) {
+			memUsage = tmp;
+		}
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"tx_bytes\":%" SCNu64, &netOut);
+		uint64_t tmp;
+		int count = sscanf(response.c_str()+pos, "\"tx_bytes\":%" SCNu64, &tmp);
+		if (count > 0) {
+			netOut = tmp;
+		}
 	}
 	pos = response.find("\"rx_bytes\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"rx_bytes\":%" SCNu64, &netIn);
+		uint64_t tmp;
+		int count = sscanf(response.c_str()+pos, "\"rx_bytes\":%" SCNu64, &tmp);
+		if (count > 0) {
+			netIn = tmp;
+		}
 	}
 	pos = response.find("\"usage_in_usermode\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"usage_in_usermode\":%" SCNu64, &userCpu);
+		uint64_t tmp;
+		int count = sscanf(response.c_str()+pos, "\"usage_in_usermode\":%" SCNu64, &tmp);
+		if (count > 0) {
+			userCpu = tmp;
+		}
 	}
 	pos = response.find("\"usage_in_kernelmode\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"usage_in_kernelmode\":%" SCNu64, &sysCpu);
+		uint64_t tmp;
+		int count = sscanf(response.c_str()+pos, "\"usage_in_kernelmode\":%" SCNu64, &tmp);
+		if (count > 0) {
+			sysCpu = tmp;
+		}
 	}
 	dprintf(D_FULLDEBUG, "docker stats reports max_usage is %" PRIu64 " rx_bytes is %" PRIu64 " tx_bytes is %" PRIu64 " usage_in_usermode is %" PRIu64 " usage_in-sysmode is %" PRIu64 "\n", memUsage, netIn, netOut, userCpu, sysCpu);
 
