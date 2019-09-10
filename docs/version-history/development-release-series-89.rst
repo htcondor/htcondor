@@ -85,6 +85,10 @@ New Features:
   the other mechanisms in future releases.
   :ticket:`6984`
 
+- Reduced DAGMan's memory footprint when running DAGs with nodes 
+  that use the same submit file and/or current working directory.
+  :ticket:`7121`
+
 - The Box.com multifile transfer plugin now supports uploads. The
   plugin will be used when a user lists a "box://path/to/file" URL as
   the output location of file when using ``transfer_output_remaps``.
