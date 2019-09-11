@@ -4974,11 +4974,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_Arguments2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_err | SimpleSubmitKeyword::f_special_args },
 	{SUBMIT_CMD_AllowArgumentsV1, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_args},
 	// invoke SetRequestResources
-	{ SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr },
-	{ SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr },
-	{ SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr },
-	{ "request_gpus", "RequestGPUs", SimpleSubmitKeyword::f_as_expr },
-		// invoke SetGridParams
+	{SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr},
+	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_GlobusResubmit, ATTR_GLOBUS_RESUBMIT_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GridShell, ATTR_USE_GRID_SHELL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_grid },
@@ -5052,10 +5052,10 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JavaVMArguments2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_java},
 	{SUBMIT_CMD_AllowArgumentsV1, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_java},
 	// invoke SetParallelParams, this sets different attributes for the same keyword depending on universe (sigh)
-	{ ATTR_WANT_PARALLEL_SCHEDULING, ATTR_WANT_PARALLEL_SCHEDULING, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_MachineCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_NodeCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_NodeCountAlt, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel },
+	{ATTR_WANT_PARALLEL_SCHEDULING, ATTR_WANT_PARALLEL_SCHEDULING, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_MachineCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_NodeCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_NodeCountAlt, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
 	// invoke SetEnvironment
 	{SUBMIT_KEY_Environment1, ATTR_JOB_ENVIRONMENT1, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_KEY_Environment2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
@@ -5068,27 +5068,30 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetNotification
 	{SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_notify},
 	// invoke SetRank
-	{SUBMIT_KEY_Rank, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_rank },
-	{SUBMIT_KEY_Preferences, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_rank },
+	{SUBMIT_KEY_Rank, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_rank},
+	{SUBMIT_KEY_Preferences, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_rank},
 	// invoke SetConcurrencyLimits
 	{SUBMIT_KEY_ConcurrencyLimits, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_concurr},
 	{SUBMIT_KEY_ConcurrencyLimitsExpr, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_concurr | SimpleSubmitKeyword::f_alt_err},
 	// invoke SetAccountingGroup
-	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
-	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
+	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
+	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
 	// invoke SetStdin
-	{SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin },
-	{SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin },
-	{SUBMIT_KEY_Input, SUBMIT_KEY_Stdin, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdin },
-	// invoke SetStdout
-	{SUBMIT_KEY_TransferOutput, ATTR_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout },
-	{SUBMIT_KEY_StreamOutput, ATTR_STREAM_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout },
-	{SUBMIT_KEY_Output, SUBMIT_KEY_Stdout, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdout },
+	{SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_Input, ATTR_JOB_INPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_Stdin, ATTR_JOB_INPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stdin},
+		// invoke SetStdout
+	{SUBMIT_KEY_TransferOutput, ATTR_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_StreamOutput, ATTR_STREAM_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_Output, ATTR_JOB_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_Stdout, ATTR_JOB_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stdout},
 	// invoke SetStderr
-	{SUBMIT_KEY_TransferError, ATTR_TRANSFER_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr },
-	{SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr },
-	{SUBMIT_KEY_Error, SUBMIT_KEY_Stderr, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stderr },
+	{SUBMIT_KEY_TransferError, ATTR_TRANSFER_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_Error, ATTR_JOB_ERROR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_Stderr, ATTR_JOB_ERROR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stderr},
 	// invoke SetPeriodicExpressions
 	{SUBMIT_KEY_PeriodicHoldCheck, ATTR_PERIODIC_HOLD_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
@@ -5140,13 +5143,13 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetImageSize
 	{SUBMIT_KEY_ImageSize, ATTR_IMAGE_SIZE, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_imagesize },
 	// invoke SetTransferFiles
-	{ SUBMIT_KEY_TransferInputFiles, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferInputFilesAlt, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputFiles, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputFilesAlt, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferInputFiles, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferInputFilesAlt, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputFiles, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputFilesAlt, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 
 	{NULL, NULL, 0}, // end of table
 };

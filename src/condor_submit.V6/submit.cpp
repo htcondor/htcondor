@@ -211,6 +211,8 @@ FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
 
 void usage();
+// this is in submit_help.cpp
+void help_info(FILE* out, int num_topics, const char ** topics);
 void init_params();
 void reschedule();
 int submit_jobs (
@@ -843,7 +845,10 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 8)) {
 				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
-				usage();
+				if (!(--argc) || !(*(++ptr))) {
+					usage();
+				}
+				help_info(stdout, argc, ptr);
 				exit( 0 );
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.

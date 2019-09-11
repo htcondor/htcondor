@@ -2002,11 +2002,15 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 			{
 				string buf;
 				arg.IsStringValue( buf );
-				if( strcasecmp( "false", buf.c_str( ) ) || buf == "" ) {
+				if (strcasecmp("false", buf.c_str()) == 0) { 
 					result.SetBooleanValue( false );
-				} else {
+					return( true );
+				} 
+				if (strcasecmp("true", buf.c_str()) == 0) { 
 					result.SetBooleanValue( true );
-				}
+					return( true );
+				} 
+				result.SetUndefinedValue();
 				return( true );
 			}
 
