@@ -28,6 +28,10 @@ Bugs Fixed:
    credentials are used for some requests.
    :ticket:`7218`
 
+-  Fixed a bug where the classad function bool() would return the wrong
+   value when passed a string.
+   :ticket:`7253`
+
 Version 8.8.5
 -------------
 
