@@ -740,7 +740,16 @@ Module Classes
 .. class:: JobEventLog
 
    An iterable object (and iterable context manager) corresponding to a
-   specific file on disk containing a user event log.
+   specific file on disk containing a user event log.  By default, it
+   waits for new events, but it may be used to poll for them, as follows: ::
+
+     import htcondor
+     jel = htcondor.JobEventLog("file.log")
+     # Read all currently-available events without blocking.
+     for event in jel.events(0):
+         print event
+     else:
+         print("We found the the end of file")
 
    .. method:: __init__( filename )
 
@@ -750,8 +759,10 @@ Module Classes
 
    .. method:: events( stop_after=None )
 
-   Return an iterator (self), which yields :class:`JobEvent` objects.  The iterator
-   may return any number of events, including zero, before stopping.
+   Return an iterator (self), which yields :class:`JobEvent` objects.  The
+   iterator may yield any number of events, including zero, before
+   throwing ``StopIteration``, which signals end-of-file.  You may iterate
+   again with the same ``JobEventLog`` to check for new events.
 
    :param stop_after: Stop waiting for new events after this many seconds.
       If ``None``, never stop waiting for new events.  If ``0``, do not wait
