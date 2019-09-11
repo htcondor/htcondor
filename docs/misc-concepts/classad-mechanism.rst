@@ -458,6 +458,46 @@ Optional parameters are given within square brackets.
 
     This function returns ``ERROR`` if other than exactly 1 argument is
     given. 
+    :index:`bool()<single: bool(); ClassAd functions>`
+
+``Bool bool(AnyType Expr)``
+    Returns the boolean that results from the evaluation of ``Expr``.
+    Converts a non-boolean value to a bool. A string expression
+    that evaluates to the string "true" yields true, and "false" returns
+
+    This function returns ``ERROR`` if other than exactly 1 argument is
+    given. 
+    :index:`absTime()<single: absTime(); ClassAd functions>`
+
+``AbsTime absTime(AnyType t [, int z])``
+    Creates an AbsTime value corresponding to time t an time-zone offset z. 
+    If t is a String, then z must be omitted, and t is parsed as a specification as follows.
+
+    The operand t is parsed as a specification of an instant in time (date and time). 
+    This function accepts the canonical native representation of AbsTime values, but
+    minor variations in format are allowed.
+    The default format is yyyy-mm-ddThh:mm:sszzzzz where zzzzz is a time zone in the 
+    format +hh:mm or -hh:mm
+
+    If t and z are both omitted, the result is an AbsTime value representing the time and
+    place where the function call is evaluated. Otherwise, t is converted to a Real by the function “real”,
+    and treated as a number of seconds from the epoch, Midnight January 1, 1970 UTC. If z is
+    specified, it is treated as a number of seconds east of Greenwich. Otherwise, the offset is calculated
+    from t according to the local rules for the place where the function is evaluated.
+
+    :index:`relTime()<single: relTime(); ClassAd functions>`
+
+``RelTime relTime(AnyType t)``
+     If the operand t is a String, it is parsed as a specification of a
+     time interval. This function accepts the canonical native representation of RelTime values, but minor
+     variations in format are allowed.
+
+     Otherwise, t is converted to a Real by the function real, and treated as a number of seconds.
+     The default string format is [-]days+hh:mm:ss.fff, where leading components and the fraction .fff
+     are omitted if they are zero. In the default syntax, days is a sequence of digits starting with a non-zero
+     digit, hh, mm, and ss are strings of exactly two digits (padded on the left with zeros if necessary) with
+     values less than 24, 60, and 60, respectively and fff is a string of exactly three digits.
+
     :index:`floor()<single: floor(); ClassAd functions>`
 
 ``Integer floor(AnyType Expr)``
