@@ -147,6 +147,16 @@ public:
 		// Notfication to our controller
 		// // // // // // // // // // // //
 
+		/**
+		   Write a periodic update ClassAd to a file, if requested.
+
+		   @param update_ad Update ad to use if you've already got the info
+		   @param insure_update Should we insure the update gets there?
+		   @return true if success, false if failure
+		*/
+	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL,
+								   bool insure_update = false);
+
 		/** Notify our controller that the job is about to spawn
 		 */
 	void notifyJobPreSpawn( void );

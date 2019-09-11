@@ -194,6 +194,31 @@ JICLocal::disconnect()
 	return;
 }
 
+bool
+JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
+{
+	dprintf( D_FULLDEBUG, "Entering JICLocal::peridocJobUpdate()\n" );
+
+	ClassAd local_ad;
+	ClassAd* ad;
+	if( update_ad ) {
+			// we already have the update info, so don't bother trying
+			// to publish another one.
+		ad = update_ad;
+	} else {
+		ad = &local_ad;
+		if( ! publishUpdateAd(ad) ) {
+			dprintf( D_FULLDEBUG, "JICLocal::periodicJobUpdate(): "
+			         "Didn't find any info to update!\n" );
+			return false;
+		}
+	}
+	bool r1, r2;
+	r1 = writeUpdateAdFile(ad);
+	r2 = JobInfoCommunicator::periodicJobUpdate(ad, insure_update);
+	return (r1 && r2);
+}
+
 void
 JICLocal::notifyJobPreSpawn( void )
 {
