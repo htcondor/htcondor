@@ -747,7 +747,7 @@ Module Classes
      jel = htcondor.JobEventLog("file.log")
      # Read all currently-available events without blocking.
      for event in jel.events(0):
-         print event
+         print(event)
      else:
          print("We found the the end of file")
 
