@@ -1795,7 +1795,19 @@ fi
 %endif
 
 %changelog
-* Thu Sep 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
+* Thu Sep 12 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.3-1
+- TOKEN and SSL authentication methods are now enabled by default
+- The job and global event logs use ISO 8601 formatted dates by default
+- Added Google Drive multifile transfer plugin
+- Added upload capability to Box multifile transfer plugin
+- Added Python bindings to submit a DAG
+- Python 'JobEventLog' can be pickled to facilitate intermittent readers
+- 2x matchmaking speed for partitionable slots with simple START expressions
+- Improved the performance of the condor_schedd under heavy load
+- Reduced the memory footprint of condor_dagman
+- Initial implementation to record the circumstances of a job's termination
+
+* Thu Sep 05 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
 - Fixed two performance problems on Windows
 - Fixed Java universe on Debian and Ubuntu systems
 - Added two knobs to improve performance on large scale pools
