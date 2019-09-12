@@ -18,7 +18,10 @@
 
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
-static int run_simple_docker_command(	const std::string &command,
+static int run_docker_command(const ArgList &args,
+					const std::string &container, int timeout,
+					CondorError &e, bool ignore_output=false);
+static int run_simple_docker_command(const std::string &command,
 					const std::string &container, int timeout,
 					CondorError &e, bool ignore_output=false);
 static int gc_image(const std::string &image);
@@ -598,13 +601,22 @@ DockerAPI::kill(const std::string &image, CondorError &err) {
 	return run_simple_docker_command("kill", image, default_timeout, err);
 }
 
+int
+DockerAPI::kill(const std::string &image, int signal, CondorError &err) {
+    ArgList args;
+    args.AppendArg( "kill" );
+    args.AppendArg( "--signal" );
+    args.AppendArg( signal );
+    return run_docker_command( args, image, default_timeout, err);
+}
 
-int 
+
+int
 DockerAPI::pause( const std::string & container, CondorError & err ) {
 	return run_simple_docker_command("pause", container, default_timeout, err);
 }
 
-int 
+int
 DockerAPI::unpause( const std::string & container, CondorError & err ) {
 	return run_simple_docker_command("unpause", container, default_timeout, err);
 }
@@ -1184,12 +1196,12 @@ bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
 }
 
 int
-run_simple_docker_command(const std::string &command, const std::string &container, int timeout, CondorError &, bool ignore_output)
+run_docker_command(const ArgList & a, const std::string &container, int timeout, CondorError &, bool ignore_output)
 {
   ArgList args;
   if ( ! add_docker_arg(args))
     return -1;
-  args.AppendArg( command );
+  args.AppendArgsFromArgList( a );
   args.AppendArg( container.c_str() );
 
   MyString displayString;
@@ -1223,7 +1235,9 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 	line.chomp(); line.trim();
 	if (!ignore_output && line != container.c_str()) {
 		// Didn't get back the result I expected, report the error and check to see if docker is hung.
-		dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str());
+		MyString argString;
+		args.GetArgsStringForDisplay(& argString);
+		dprintf( D_ALWAYS | D_FAILURE, "Docker invocation '%s' failed, printing first few lines of output.\n", argString.c_str());
 		for (int ii = 0; ii < 10; ++ii) {
 			if ( ! line.readLine(pgm.output(), false)) break;
 			dprintf( D_ALWAYS | D_FAILURE, "%s\n", line.c_str() );
@@ -1267,6 +1281,13 @@ run_simple_docker_command(const std::string &command, const std::string &contain
   my_pclose( dockerResults );
 #endif
   return 0;
+}
+
+int
+run_simple_docker_command(const std::string &command, const std::string &container, int timeout, CondorError & err, bool ignore_output)
+{
+    ArgList args; args.AppendArg(command);
+    return run_docker_command(args, container, timeout, err, ignore_output);
 }
 
 static int 
