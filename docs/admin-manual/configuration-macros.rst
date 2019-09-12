@@ -948,8 +948,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     second field is a regex that we will match against the input, and
     the third field will be the output if the regex matches, the 3 and 4
     argument form of the ClassAd userMap() function (see
-    :ref:`misc-concepts/classad-mechanism:old classad syntax`) expect
-    that the third field will be a comma separated list of values. for
+    :ref:`ClassAd Syntax`) expect
+    that the third field will be a comma separated list of values. For
     example:
 
     ::
@@ -3375,6 +3375,8 @@ section.
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
 
+.. _MachineMaxVacateTime:
+
 ``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
     An integer expression representing the number of seconds the machine
     is willing to wait for a job that has been soft-killed to gracefully
@@ -5245,11 +5247,23 @@ These macros control the *condor_schedd*.
     communicate with the central manager. The default value, if not
     specified, is 1200 (20 minutes).
 
+.. _GRACEFULLY_REMOVE_JOBS:
+
 ``GRACEFULLY_REMOVE_JOBS`` :index:`GRACEFULLY_REMOVE_JOBS`
-    A boolean value that causes jobs to be gracefully removed when the
-    default value of ``True``. A submit description file command
-    **want_graceful_removal** :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
-    overrides the value set for this configuration variable.
+    A boolean value defaulting to ``True``.  If ``True``, jobs will be
+    given a chance to shut down cleanly when removed.  In the vanilla
+    universe, this means that the job will be sent the signal set in
+    its ``SoftKillSig`` attribute, or ``SIGTERM`` if undefined; if the
+    job hasn't exited after its max vacate time, it will be hard-killed
+    (sent ``SIGKILL``).  Signals are different on Windows, and other
+    details differ between universes.
+
+    The submit command :ref:`want_graceful_removal<want_graceful_removal>`
+    :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
+    overrides this configuration variable.
+
+    See :ref:`MachineMaxVacateTime<MachineMaxVacateTime>` for details on
+    how HTCondor computes the job's max vacate time.
 
 ``SCHEDD_ROUND_ATTR_<xxxx>`` :index:`SCHEDD_ROUND_ATTR_<xxxx>`
     This is used to round off attributes in the job ClassAd so that

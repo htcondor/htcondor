@@ -144,8 +144,10 @@ testing expressions to see if any adjustment is required, before a
 future version of HTCondor potentially makes New ClassAds evaluation
 behavior the default or the only option.
 
+.. _ClassAd Syntax:
+
 ClassAd Syntax
-------------------
+--------------
 
 :index:`expression syntax of Old ClassAds<single: expression syntax of Old ClassAds; ClassAd>`
 
