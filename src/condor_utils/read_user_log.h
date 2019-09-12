@@ -394,7 +394,7 @@ class ReadUserLog
 		@param the initial file position
         @return true for success, false otherwise
 	*/
-	bool skipXMLHeader(char afterangle, long filepos);
+	bool skipXMLHeader(int afterangle, long filepos);
 
     /** Read the next event from the XML log file. The event pointer to
         set to point to a newly instatiated ULogEvent object.
