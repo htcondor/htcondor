@@ -1795,7 +1795,7 @@ fi
 %endif
 
 %changelog
-* Thu Sep 12 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.3-1
+* Tue Sep 17 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.3-1
 - TOKEN and SSL authentication methods are now enabled by default
 - The job and global event logs use ISO 8601 formatted dates by default
 - Added Google Drive multifile transfer plugin

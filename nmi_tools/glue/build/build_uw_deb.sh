@@ -60,7 +60,7 @@ cp -pr build/packaging/new-debian debian
 #dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
-dch --release --distribution $dist ignored
+#dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 
