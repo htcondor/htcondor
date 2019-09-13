@@ -1593,11 +1593,27 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
+
+		// Use LD_PRELOAD to force an implementation of getpwnam
+		// into the process that returns a valid shell
+#ifdef LINUX
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
+		std::string lib;
+		param(lib, "LIB");
+		std::string getpwnampath = lib + "/libgetpwnam.so";
+		if (access(getpwnampath.c_str(), F_OK) == 0) {
+			dprintf(D_ALWAYS, "Setting LD_PRELOAD=%s for sshd\n", getpwnampath.c_str());
+			setup_env.SetEnv("LD_PRELOAD", getpwnampath.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
+		}
+	}
 	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
 	}
+#endif
 
 
 

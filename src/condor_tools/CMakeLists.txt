@@ -139,3 +139,9 @@ endif()
 # GPU Support
 ############################################################
 condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+
+###########################################################
+# condor_ssh_to_job hackery
+##########################################################
+condor_shared_lib( libgetpwnam "getpwnam.c" )
+set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
