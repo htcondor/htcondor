@@ -11,7 +11,7 @@ condor (8.9.3-1) unstable; urgency=medium
   * Reduced the memory footprint of condor_dagman
   * Initial implementation to record the circumstances of a job's termination
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 17 Sep 2019 00:00:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Sep 2019 00:00:00 -0500
 
 condor (8.8.5-1) stable; urgency=medium
 
