@@ -698,6 +698,10 @@ ReadUserLog::skipXMLHeader(int afterangle, long filepos)
 			// we go so we can skip back two chars later
 			while( nextchar != EOF && nextchar != '<' ) {
 				filepos = ftell(m_fp);
+				if (filepos < 0) {
+					Error( LOG_ERROR_FILE_OTHER, __LINE__ );
+					return false;
+				}
 				nextchar = fgetc(m_fp);
 			}
 			if( nextchar == EOF ) {
