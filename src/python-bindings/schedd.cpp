@@ -649,7 +649,7 @@ struct SubmitStepFromPyIter {
 			while (PyDict_Next(obj, &pos, &k, &v)) {
 				std::string key = extract<std::string>(k);
 
-				boost::python::handle<> value_handle(v);
+				boost::python::handle<> value_handle(boost::python::borrowed(v));
 				boost::python::str value_str(value_handle);
 				boost::python::extract<std::string> item_extract(value_str);
 
@@ -674,7 +674,7 @@ struct SubmitStepFromPyIter {
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
 
-				boost::python::handle<> value_handle(v);
+				boost::python::handle<> value_handle(boost::python::borrowed(v));
 				boost::python::str value_str(value_handle);
 				boost::python::extract<std::string> item_extract(value_str);
 
@@ -684,7 +684,7 @@ struct SubmitStepFromPyIter {
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
-			boost::python::handle<> handle(obj);
+			boost::python::handle<> handle(boost::python::borrowed(obj));
 			boost::python::str obj_str(handle);
 			extract<std::string> item_extract(obj_str);
 			if ( ! item_extract.check()) {
