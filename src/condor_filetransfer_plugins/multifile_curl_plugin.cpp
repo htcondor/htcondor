@@ -347,7 +347,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
     // Check if the request completed partially. If so, set some
     // variables so we can attempt a resume on the next try.
-    if( ( rval == CURLE_PARTIAL_FILE ) && ServerSupportsResume( url ) ) {
+    if( ( rval == CURLE_PARTIAL_FILE ) && ServerSupportsResume( url ) && _this_file_stats->HttpCacheHitOrMiss != "HIT" ) {
         partial_bytes = ftell( file );
     }
 
