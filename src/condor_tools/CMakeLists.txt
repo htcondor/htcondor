@@ -143,5 +143,7 @@ condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE
 ###########################################################
 # condor_ssh_to_job hackery
 ##########################################################
+if ( LINUX )
 condor_shared_lib( libgetpwnam "getpwnam.c" )
 set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
+endif()
