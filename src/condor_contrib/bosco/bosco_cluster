@@ -44,6 +44,7 @@ commands:
  -r|--remove [host]         Remove the installed cluster (first in list)
  -s|--status [host]         Get status of installed cluster
  -t|--test [host]           Test the installed cluster (all clusters)
+ -o|--overwrite directory       Patch the bosco installation with a directory structure
  -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
@@ -744,6 +745,7 @@ fi
 eval set -- "$TEMP"
 
 platform_force=
+patch=
 
 # test and remove could have 0 or 1 parameter
 while true; do
@@ -759,6 +761,7 @@ while true; do
         -s|--status) get_status $2;  shift 2; exit 0 ;;
         -t|--test) test_cluster $2; exit 0 ;;
         -r|--remove) remove_cluster $2; exit 0;;
+        -o|--overwrite) patch=$2; shift 2;;
         
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -1010,6 +1013,12 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
     fi 
     rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
     rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
+fi
+
+# If patch is set, perform the patch
+if [ ! -z "${patch}" ]; then
+    echo "Patching bosco installation from directory: $patch"
+    rsync -aq $patch/ $local_install_dir
 fi
 
 # Do the actual rsync
