@@ -1177,6 +1177,7 @@ rm -rf %{buildroot}
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
+%_libdir/libgetpwnam.so
 %dir %_libexecdir/condor/
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
