@@ -310,6 +310,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	return 1;
 }
 
+
 CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 {
 	CollectorHashTable *table=0;
