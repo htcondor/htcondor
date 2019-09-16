@@ -1833,28 +1833,6 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 }
 
 
-static std::string
-get_token_signing_key(CondorError &err) {
-	std::string key_name = "POOL";
-	param(key_name, "SEC_TOKEN_ISSUER_KEY");
-	std::string final_key_name;
-	std::vector<std::string> creds;
-	if (!listNamedCredentials(creds, &err)) {
-		return "";
-	}
-	for (const auto &cred : creds) {
-		if (cred == key_name) {
-			final_key_name = key_name;
-			break;
-		}
-	}
-	if (final_key_name.empty()) {
-		err.push("DAEMON", 4, "Server does not have a signing key configured.");
-	}
-	return final_key_name;
-}
-
-
 static int
 handle_dc_start_token_request( Service*, int, Stream* stream)
 {
@@ -1946,7 +1924,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		time_t now = time(NULL);
 
 		CondorError err;
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
 			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
@@ -2288,7 +2266,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	}
 
 	CondorError err;
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if ((request_id != -1) && final_key_name.empty()) {
 		error_string = err.getFullText();
 		error_code = err.code();
@@ -2363,7 +2341,7 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 		dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
 			" with lifetime %ld.\n", netblock.c_str(), lifetime);
 
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			error_string = err.getFullText();
 			error_code = err.code();
@@ -2460,7 +2438,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 		requested_lifetime = -1;
 	}
 
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
