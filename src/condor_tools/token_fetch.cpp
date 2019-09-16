@@ -25,23 +25,26 @@
 #include "CondorError.h"
 #include "daemon.h"
 #include "dc_collector.h"
+#include "dc_schedd.h"
 #include "directory.h"
 #include "token_utils.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-remote] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
 		"Generates a token from a remote daemon and prints its contents to stdout.\n"
 		"\nToken options:\n"
 		"    -authz    <authz>                Whitelist one or more authorization\n"
 		"    -lifetime <val>                  Max token lifetime, in seconds\n"
 		"Specifying target options:\n"
 		"    -pool    <host>                 Query this collector\n"
+		"    -remote                         Have collector fetch token remotely\n"
 		"    -name    <name>                 Find a daemon with this name\n"
 		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
 		"\nOther options:\n"
 		"    -token    <NAME>                 Name of token file\n", argv0);
 	exit(1);
 }
+
 
 int
 generate_remote_token(const std::string &pool, const std::string &name, daemon_t dtype,
@@ -77,6 +80,38 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 	return htcondor::write_out_token(token_name, token, "");
 }
 
+
+int
+generate_remote_schedd_token(const std::string &pool, const std::string &name,
+	const std::vector<std::string> &authz_list, long lifetime, const std::string &token_name)
+{
+	DCCollector collector(pool.c_str());
+
+	std::string schedd_name = name;
+	if (name.empty())
+	{
+		DCSchedd schedd;
+		auto discovered_name = schedd.name();
+		if (discovered_name == nullptr) {
+			fprintf(stderr, "Unable to determine default schedd's name.\n");
+			return 2;
+		}
+		schedd_name = discovered_name;
+	}
+
+	CondorError err;
+	std::string token;
+	if (!collector.requestScheddToken(schedd_name, authz_list, lifetime, token, err))
+	{
+		fprintf(stderr, "Remote token fetch failed with the following error:\n\n%s\n",
+			err.getFullText().c_str());
+		exit(err.code());
+	}
+
+	return htcondor::write_out_token(token_name, token, "");
+}
+
+
 int main(int argc, char *argv[]) {
 
 	daemon_t dtype = DT_SCHEDD;
@@ -86,6 +121,7 @@ int main(int argc, char *argv[]) {
 	std::string token_name;
 	std::vector<std::string> authz_list;
 	long lifetime = -1;
+	bool remote_fetch = false;
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix(argv[i], "authz", 1)) {
 			i++;
@@ -139,6 +175,9 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
+		} else if (is_dash_arg_prefix(argv[i], "remote", 1)) {
+			i++;
+			remote_fetch = true;
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
@@ -154,5 +193,19 @@ int main(int argc, char *argv[]) {
 
 	config();
 
-	return generate_remote_token(pool, name, dtype, authz_list, lifetime, token_name);
+	if (remote_fetch && dtype != DT_SCHEDD)
+	{
+		fprintf(stderr, "%s: Remote fetch (-remote) is only valid with the schedd.\n",
+			argv[0]);
+		exit(1);
+	}
+
+	if (remote_fetch)
+	{
+		return generate_remote_schedd_token(pool, name, authz_list, lifetime, token_name);
+	}
+	else
+	{
+		return generate_remote_token(pool, name, dtype, authz_list, lifetime, token_name);
+	}
 }

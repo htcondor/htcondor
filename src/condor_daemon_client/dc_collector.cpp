@@ -27,6 +27,7 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 
+#include <sstream>
 #include <algorithm>
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
@@ -117,6 +118,109 @@ DCCollector::deepCopy( const DCCollector& copy )
 	startTime = copy.startTime;
 }
 
+
+bool
+DCCollector::requestScheddToken(const std::string &schedd_name,
+	const std::vector<std::string> &authz_bounding_set,
+	int lifetime, std::string &token, CondorError &err)
+{
+	classad::ClassAd request_ad;
+
+	if (!authz_bounding_set.empty())
+	{
+		std::stringstream ss;
+		for (auto & authz : authz_bounding_set) {
+			ss << "," << authz;
+		}
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
+			ss.str().substr(1)))
+		{
+			err.push("DCCollector", 1, "Failed to insert authorization bound.");
+			return false;
+		}
+	}
+
+	if ((lifetime >= 0) &&
+		!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime))
+	{
+		err.push("DCCollector", 1, "Failed to insert lifetime.");
+		return false;
+	}
+
+	if (!request_ad.InsertAttr(ATTR_NAME, schedd_name))
+	{
+		err.push("DCCollector", 1, "Failed to insert schedd name.");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout(5);
+	if (!connectSock(&rSock)) {
+		err.pushf("DCCollector", 2, "Failed to connect "
+			"to remote daemon at '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!startCommand(IMPERSONATION_TOKEN_REQUEST, &rSock, 20, &err))
+	{
+		err.pushf("DAEMON", 1, "failed to start "
+			"command for token request with remote collector at '%s'.",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to start "
+			"command for token request with remote collector at '%s'.",
+			_addr ? _addr : "(unknown)");
+		return false;
+	}
+
+	rSock.encode();
+	if (!putClassAd(&rSock, request_ad) || !rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to send request to "
+			"remote collector at '%s'",
+			_addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to send "
+			"request to remote collector at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	rSock.decode();
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad) || !rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to recieve "
+			"response from remote collector at '%s'",
+			_addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to recieve "
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		err.push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token) || token.empty()) {
+		err.pushf("DAEMON", 1, "BUG! DCCollector::requestScheddToken() "
+			"received a malformed ad, containing no resulting token and no "
+			"error message, from remote collector at '%s'",
+			_addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "BUG!  DCCollector::requestScheddToken() "
+			"received a malformed ad, containing no resulting token and no "
+			"error message, from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
 
 void
 DCCollector::reconfig( void )

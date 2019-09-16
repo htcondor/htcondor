@@ -831,7 +831,12 @@ private:
 	// Returns a capability that can be included in an ad sent to the collector.
 	bool SetupNegotiatorSession(unsigned duration, const std::string &remote_pool,
 		std::string &capability);
-	// Negotiator sessions have claim IDs, which includes a sequence number
+
+	// Setup a new security session for a trusted collector.
+	// As with SetupNegotiator session, it returns a capability for embedding in the schedd ad.
+	bool SetupCollectorSession(unsigned duration, std::string &capability);
+
+	// Negotiator & collector sessions have claim IDs, which includes a sequence number
 	uint64_t m_negotiator_seq{0};
 	time_t m_scheduler_startup{0};
 
@@ -1121,6 +1126,9 @@ private:
 
    int local_startd_reaper(int pid, int status);
    int launch_local_startd();
+
+		// Command handler for collector token requests.
+	int handle_collector_token_request(int, Stream *s);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
