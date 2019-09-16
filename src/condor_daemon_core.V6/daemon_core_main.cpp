@@ -4026,21 +4026,21 @@ int dc_main( int argc, char** argv )
 		// Request a token that can be used to authenticat / authorize a future
 		// session using the TOKEN protocol.
 		//
-	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
+	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
 								"handle_dc_session_token()", 0, ALLOW );
 
 		//
 		// Start a token request workflow.
 		//
-	daemonCore->Register_Command( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_start_token_request,
 								"handle_dc_start_token_request()", 0, ALLOW );
 
 		//
 		// Poll for token request completion.
 		//
-	daemonCore->Register_Command( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_finish_token_request,
 								"handle_dc_finish_token_request()", 0, ALLOW );
 
@@ -4050,7 +4050,7 @@ int dc_main( int argc, char** argv )
 		// In the handler, we further restrict the returned information based on
 		// the user authorization.
 		//
-	daemonCore->Register_Command( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_list_token_request,
 		"handle_dc_list_token_request", 0, ALLOW, D_COMMAND, true );
 
@@ -4061,14 +4061,14 @@ int dc_main( int argc, char** argv )
 		// the user authorization; non-ADMINISTRATORs can only approve their own
 		// requests..
 		//
-	daemonCore->Register_Command( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_approve_token_request,
 		"handle_dc_approve_token_request", 0, ALLOW, D_COMMAND, true );
 
 		//
 		// Install an auto-approval rule
 		//
-	daemonCore->Register_Command( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_auto_approve_token_request,
 		"handle_dc_auto_approve_token_request", 0, ADMINISTRATOR );
 
