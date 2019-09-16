@@ -1877,16 +1877,16 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			authz_list.emplace_back(authz);
 		}
 	}
+
 	int requested_lifetime;
-	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
-		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
-		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
-			requested_lifetime = max_lifetime;
-		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
-			requested_lifetime = max_lifetime;
-		}
-	} else {
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
 		requested_lifetime = -1;
+	}
+	int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+	if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+		requested_lifetime = max_lifetime;
+	} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+		requested_lifetime = max_lifetime;
 	}
 
 	classad::ClassAd result_ad;
