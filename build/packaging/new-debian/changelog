@@ -6,7 +6,7 @@ condor (8.8.5-1) stable; urgency=medium
   * Fixed a bug where requesting zero GPUs would require a machine with GPUs
   * HTCondor can now recognize nVidia Volta and Turing GPUs
 
- -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Sep 2019 13:22:29 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Sep 2019 13:22:29 -0500
 
 condor (8.8.4-1) stable; urgency=medium
 
