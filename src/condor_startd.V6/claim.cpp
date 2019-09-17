@@ -2435,7 +2435,8 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 			NULL,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
-			0 );
+			0,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "

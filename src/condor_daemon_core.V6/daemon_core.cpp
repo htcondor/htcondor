@@ -2985,6 +2985,9 @@ DaemonCore::reconfig(void) {
 	secman->reconfig();
 	secman->getIpVerify()->Init();
 
+        // invoke reconfig method on our class to handle timer events
+    t.reconfig();
+
 		// add a random offset to avoid pounding DNS
 	int dns_interval = param_integer("DNS_CACHE_REFRESH",
 									 8*60*60+(rand()%600), 0);
@@ -3463,7 +3466,11 @@ void DaemonCore::Driver()
 		timeout = t.Timeout(&num_timers_fired, &runtime);
 
 		num_timers_fired += num_pumpwork_fired;
-        dc_stats.TimersFired += num_timers_fired;
+		dc_stats.TimersFired = num_timers_fired;
+		if (num_timers_fired > 0) {
+			dprintf(D_DAEMONCORE, "Timers fired num=%d runtime=%f\n",
+				num_timers_fired, runtime);
+		}
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -3961,23 +3968,6 @@ void DaemonCore::Driver()
 
 						// ok, select says this socket table entry has new data.
 
-						// if this sock is a safe_sock, then call the method
-						// to enqueue this packet into the buffers.  if a complete
-						// message is not yet ready, then do not yet call a handler.
-						if ( (*sockTable)[i].iosock->type() == Stream::safe_sock )
-						{
-							SafeSock* ss = (SafeSock *)(*sockTable)[i].iosock;
-							// call handle_incoming_packet to consume the packet.
-							// it returns true if there is a complete message ready,
-							// otherwise it returns false.
-							if ( !(ss->handle_incoming_packet()) ) {
-								// there is not yet a complete message ready.
-								// so go back to the outer for loop - do not
-								// call the user handler yet.
-								continue;
-							}
-						}
-
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
@@ -4053,18 +4043,13 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
 
 		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
+		unsigned frag_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? ( m_iMaxUdpMsgsPerCycle * 20 ) : -1;
 
-		// We don't care about the return value for UDP command sockets
-		HandleReq(i);
-		msg_cnt--;
+		Selector selector;
+		selector.set_timeout( 0, 0 );
+		selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 
-		// Make sure we didn't leak our priv state
-		CheckPrivState();
-
-		while ( msg_cnt ) {
-			Selector selector;
-			selector.set_timeout( 0, 0 );
-			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+		while ( msg_cnt && frag_cnt ) {
 			selector.execute();
 
 			if ( !selector.has_ready() ) {
@@ -4075,6 +4060,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
 			{
 				// Looks like we got a fragment, try reading some more
+				frag_cnt--;
 				continue;
 			}
 			// We don't care about the return value for UDP command sockets
@@ -7119,7 +7105,8 @@ int DaemonCore::Create_Process(
 			valid_coms.c_str(),
 			CONDOR_CHILD_FQU,
 			NULL,
-			0);
+			0,
+			nullptr);
 
 		if(!rc)
 		{
@@ -9047,7 +9034,8 @@ DaemonCore::Inherit( void )
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
 				saved_sinful_string.c_str(),
-				0);
+				0,
+				nullptr);
 			if(!rc)
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
@@ -9100,7 +9088,8 @@ DaemonCore::Inherit( void )
 				family_session_info.c_str(),
 				CONDOR_FAMILY_FQU,
 				NULL,
-				0);
+				0,
+				nullptr);
 
 		if(!rc) {
 			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");
@@ -11215,5 +11204,23 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 	if(m_ssock.is_null()) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
+	return true;
+}
+
+#include "condor_daemon_client.h"
+#include "dc_collector.h"
+
+bool DaemonCore::getStartTime( int & startTime ) {
+	if(! m_collector_list) { return false; }
+	m_collector_list->rewind();
+
+	Daemon * d = NULL;
+	m_collector_list->next(d);
+	if(! d) { return false; }
+
+	DCCollector * dcc = dynamic_cast<DCCollector *>(d);
+	if(! dcc) { return false; }
+
+	startTime = dcc->getStartTime();
 	return true;
 }

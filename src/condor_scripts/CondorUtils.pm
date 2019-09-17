@@ -736,6 +736,26 @@ sub CreateDir
 	return($ret);
 }
 
+# print information about a core file
+# 
+sub print_core_file_info
+{
+	my $core = shift;
+	if (-s $core) {
+		print "\tfound core file: $core\n";
+		if (CondorUtils::is_windows()) {
+			system("type $core");
+		} else {
+			my $fileinfo = `file $core`;
+			print "\t$fileinfo";
+			my ($execfn) = $fileinfo =~ m/execfn:\s*'(.*)'/;
+			if (defined $execfn) {
+				system("echo bt | gdb --quiet $execfn $core");
+			}
+		}
+	}
+}
+
 # pretty print a time string, if no args are passed uses localtime() as the time.
 # the output is formatted as YYYY-MM-DD HH:MM:SS (which is sortable)
 # if the last argument is 'T', then only the time is printed.

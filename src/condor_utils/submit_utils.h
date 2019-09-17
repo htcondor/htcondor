@@ -44,6 +44,7 @@
 #define SUBMIT_KEY_BatchName "batch_name"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
+#define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
@@ -75,6 +76,7 @@
 #define SUBMIT_KEY_RequestCpus "request_cpus"
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
+#define SUBMIT_KEY_RequestGpus "request_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 
 #define SUBMIT_KEY_Universe "universe"
@@ -211,6 +213,9 @@
 
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+
+// ...
+#define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
 
 //
 // CronTab Parameters
@@ -617,6 +622,7 @@ public:
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
 	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
+	bool getSubmitOnHold(int & code) { code = SubmitOnHoldCode; return SubmitOnHold; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -665,6 +671,8 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
+	bool SubmitOnHold;
+	int  SubmitOnHoldCode;
 	bool already_warned_requirements_disk;
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
@@ -986,6 +994,9 @@ const char * init_submit_default_macros();
 #ifdef WIN32
 void publishWindowsOSVersionInfo(ClassAd & ad);
 #endif
+
+// used for utility debug code in condor_submit
+const struct SimpleSubmitKeyword * get_submit_keywords();
 
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp

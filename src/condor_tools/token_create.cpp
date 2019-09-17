@@ -118,5 +118,5 @@ int main(int argc, char *argv[]) {
 		exit(2);
 	}
 
-	return htcondor::write_out_token(token_name, token);
+	return htcondor::write_out_token(token_name, token, "");
 }

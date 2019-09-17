@@ -655,7 +655,8 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			session_info.c_str(),
 			fqu.c_str(),
 			NULL,
-			0 );
+			0,
+			nullptr );
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen
@@ -890,19 +891,19 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 
 	if( !jic || !jobad ) {
-		return PeekRetry(s, "Rejecting request, because job not yet initialized.");
+		return PeekRetry(s, "Retrying request, because job not yet initialized.");
 	}
 
 	if( !m_job_environment_is_ready ) {
 		// This can happen if file transfer is still in progress.
-		return PeekRetry(s, "Rejecting request, because the job execution environment is not yet ready.");
+		return PeekRetry(s, "Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return PeekFailed(s, "Rejecting request, because the job is finished.");
 	}
  
 	if( !jic->userPrivInitialized() ) {
-		return PeekRetry(s, "Rejecting request, because job execution account not yet established.");
+		return PeekRetry(s, "Retrying request, because job execution account not yet established.");
 	}
 
 	ssize_t max_xfer = -1;
@@ -1266,12 +1267,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	if( !jic || !jobad ) {
-		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
+		return SSHDRetry(s,"Retrying request, because job not yet initialized.");
 	}
 	if( !m_job_environment_is_ready ) {
 			// This can happen if file transfer is still in progress.
 			// At this stage, the sandbox might not even be owned by the user.
-		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+		return SSHDRetry(s,"Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return SSHDFailed(s,"Rejecting request, because the job is finished.");
@@ -1290,7 +1291,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	input.LookupString(ATTR_NAME,slot_name);
 
 	if( !jic->userPrivInitialized() ) {
-		return SSHDRetry(s,"Rejecting request, because job execution account not yet established.");
+		return SSHDRetry(s,"Retrying request, because job execution account not yet established.");
 	}
 
 	MyString libexec;
@@ -1602,11 +1603,27 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
+
+		// Use LD_PRELOAD to force an implementation of getpwnam
+		// into the process that returns a valid shell
+#ifdef LINUX
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
+		std::string lib;
+		param(lib, "LIB");
+		std::string getpwnampath = lib + "/libgetpwnam.so";
+		if (access(getpwnampath.c_str(), F_OK) == 0) {
+			dprintf(D_ALWAYS, "Setting LD_PRELOAD=%s for sshd\n", getpwnampath.c_str());
+			setup_env.SetEnv("LD_PRELOAD", getpwnampath.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
+		}
+	}
 	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
 	}
+#endif
 
 
 
@@ -2750,6 +2767,15 @@ CStarter::PeriodicCkpt( void )
 	return true;
 }
 
+void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
+	to.Clear();
+	from.Rewind();
+	UserProc * job = NULL;
+	while( (job = from.Next()) != NULL ) {
+		to.Append( job );
+	}
+}
+
 
 int
 CStarter::Reaper(int pid, int exit_status)
@@ -2837,16 +2863,36 @@ CStarter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
+	//
+	// The ToE tag code, via CStarter::publishUpdateAd() -- and in the
+	// future, maybe other features via and/or means in the future --
+	// calls Rewind() on m_job_list as well.  Rather than fixing only
+	// the ToE tag code and leaving this landmine, copy m_job_list
+	// before calling any of the JobReaper()s.  Because of this problem,
+	// we know that none of the other existing JobReaper() methods
+	// look at m_job_list or m_reaped_job_list, since they'd have the
+	// same problem, so it's safe to save updating those for the end.
+	//
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	// Is there a good reason to have neither assignment nor copy ctor?
+	List<UserProc> stable_job_list;
+	List<UserProc> stable_reaped_job_list;
+
+	copyProcList( m_job_list, stable_job_list );
+	copyProcList( m_reaped_job_list, stable_reaped_job_list );
+
+	stable_job_list.Rewind();
+	while ((job = stable_job_list.Next()) != NULL) {
 		all_jobs++;
 		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			m_job_list.DeleteCurrent();
-			m_reaped_job_list.Append(job);
+			stable_job_list.DeleteCurrent();
+			stable_reaped_job_list.Append(job);
 		}
 	}
+
+	copyProcList( stable_reaped_job_list, m_reaped_job_list );
+	copyProcList( stable_job_list, m_job_list );
 
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );

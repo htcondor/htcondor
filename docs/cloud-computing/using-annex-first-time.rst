@@ -4,8 +4,8 @@ Using *condor_annex* for the First Time
 This guide assumes that you already have an AWS account, as well as a
 log-in account on a Linux machine with a public address and a system
 administrator who's willing to open a port for you. All the terminal
-commands (shown in a box without a title) and file edits (shown in a box
-with an emphasized title) take place on the Linux machine. You can
+commands (shown in a box) and file edits (show in a box whose first line
+begins with a ``#`` and names a file) take place on the Linux machine. You can
 perform the web-based steps from wherever is convenient, although it
 will save you some copying if you run the browser on the Linux machine.
 
@@ -43,10 +43,10 @@ is located in your home directory on the Linux machine, so copy it there
 if necessary.
 
 Then do the following; note that in this box, like other terminal boxes,
-the commands you type are preceded by by '$' to distinguish them from
+the commands you type are preceded by by ``$`` to distinguish them from
 any expected output, so don't copy that part of each of the following
-lines. (Lines which end in a '\\' continue on the following line; be
-sure to copy both lines. Don't copy the '\\' itself.)
+lines. (Lines which end in a ``\`` continue on the following line; be
+sure to copy both lines. Don't copy the ``\`` itself.)
 
 ::
 
@@ -147,7 +147,7 @@ Restart HTCondor to force the changes to take effect:
     Sent "Restart" command to local master
 
 To verify that this change worked, repeat the steps under the
-:ref:cloud-computing/using-annex-first-time:install a personal htcondor
+:ref:`cloud-computing/using-annex-first-time:install a personal htcondor`
 section. Then proceed onto the next section.
 
 Configure a Pool Password

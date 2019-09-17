@@ -2002,11 +2002,15 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 			{
 				string buf;
 				arg.IsStringValue( buf );
-				if( strcasecmp( "false", buf.c_str( ) ) || buf == "" ) {
+				if (strcasecmp("false", buf.c_str()) == 0) { 
 					result.SetBooleanValue( false );
-				} else {
+					return( true );
+				} 
+				if (strcasecmp("true", buf.c_str()) == 0) { 
 					result.SetBooleanValue( true );
-				}
+					return( true );
+				} 
+				result.SetUndefinedValue();
 				return( true );
 			}
 
@@ -2796,6 +2800,7 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
     result.SetBooleanValue(false);
     
     ExprTree *target_expr;
+	bool couldBeUndefined = false;
     ExprList::const_iterator list_iter = target_list->begin();
     while (list_iter != target_list->end()) {
         Value target_value;
@@ -2806,9 +2811,18 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
                 result.SetErrorValue();
                 return true;
             }
+
+			// If the list element is not a string, result is error
+			// unless it is undefined, then total result is either
+			// true (if one matches) or undefined
             if (!target_value.IsStringValue(target)) {
-                result.SetErrorValue();
-                return true;
+				if (target_value.IsUndefinedValue()) {
+					couldBeUndefined = true;
+				} else {
+					// Some non-string, not-undefined value, error and give up
+                	result.SetErrorValue();
+                	return true;
+				}
             } else {
                 bool have_match;
                 bool success = regexp_helper(pattern, target, NULL, have_options, options_string, have_match_value);
@@ -2828,6 +2842,9 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
         }
         list_iter++;
     }
+	if (couldBeUndefined) {
+		result.SetUndefinedValue();
+	}
     return true;
 }
 

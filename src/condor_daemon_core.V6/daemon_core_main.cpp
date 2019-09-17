@@ -44,7 +44,6 @@
 #include "condor_netaddr.h"
 #include "net_string_list.h"
 #include "dc_collector.h"
-#include "condor_netdb.h"
 #include "token_utils.h"
 
 #include <chrono>
@@ -346,16 +345,21 @@ public:
 			}
 		}
 
-		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s.\n", trust_domain.c_str());
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s"
+			", identity %s.\n", trust_domain.c_str(),
+			data->m_identity == DCTokenRequester::default_identity ?
+				"(default)" : data->m_identity.c_str());
 		m_token_requests.emplace_back();
 		auto &back = m_token_requests.back();
-			// Note that the default identity is simply the empty string in
-			// the token request code.  Distinguishing token requests by identity
-			// will become useful with per-submitter flocking.
-		back.m_identity = DCTokenRequester::default_identity;
+		back.m_identity = data->m_identity;
 		back.m_trust_domain = trust_domain;
 		back.m_authz_name = data->m_authz_name;
 		back.m_daemon.reset(new DCCollector(data->m_addr.c_str()));
+		back.m_daemon->setOwner(data->m_identity);
+			// Unprivileged requests can only use SSL or TOKEN.
+		if (data->m_identity != DCTokenRequester::default_identity) {
+			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
+		}
 		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
 		back.m_callback_data = data;
 
@@ -418,7 +422,9 @@ private:
 	tryTokenRequest(PendingRequest &req) {
 		std::string subsys_name = get_mySubSystemName();
 
-		dprintf(D_SECURITY, "Trying token request to remote host.\n");
+		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
+			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
+			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
 			return false;
@@ -426,15 +432,7 @@ private:
 		std::string token;
 		if (req.m_client_id.empty()) {
 			req.m_request_id = "";
-			std::vector<char> hostname;
-			hostname.reserve(MAXHOSTNAMELEN);
-			if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
-				dprintf(D_ALWAYS, "Unable to determine hostname; cannot start token request.\n");
-				(*req.m_callback_fn)(false, req.m_callback_data);
-				return false;
-			}
-			req.m_client_id = subsys_name + "-" + std::string(&hostname[0]) + "-" +
-			std::to_string(get_csrng_uint() % 100000);
+			req.m_client_id = htcondor::generate_client_id();
 
 			std::string request_id;
 			std::vector<std::string> authz_list;
@@ -477,14 +475,23 @@ private:
 					// Flush the cached result of the token search.
 				Condor_Auth_Passwd::retry_token_search();
 					// Flush out the security sessions; will need to force a re-auth.
-				daemonCore->getSecMan()->reconfig();
-					// Reset the timeout timer, causing the schedd to advertise itself.
+				auto sec_man = daemonCore->getSecMan();
+				sec_man->reconfig();
+				if (!req.m_identity.empty()) {
+					std::string orig_tag = sec_man->getTag();
+					sec_man->setTag(req.m_identity);
+					sec_man->invalidateAllCache();
+					sec_man->setTag(orig_tag);
+				} else {
+					sec_man->invalidateAllCache();
+				}
+					// Invoke the daemon-provided callback to do daemon-specific cleanups.
 				(*req.m_callback_fn)(true, req.m_callback_data);
 			}
 			req.m_client_id = "";
 		}
 		if (!token.empty()) {
-			htcondor::write_out_token(subsys_name + "_auto_generated_token", token);
+			htcondor::write_out_token(subsys_name + "_auto_generated_token", token, req.m_identity);
 		}
 		return false;
 	}
@@ -797,7 +804,7 @@ DC_Exit( int status, const char *shutdown_program )
 	}
 
 		// Free up the memory from the config hash table, too.
-	clear_config();
+	clear_global_config_table();
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();

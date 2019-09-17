@@ -74,7 +74,7 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 		fprintf(stderr, "Failed to request a session token: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
-	return htcondor::write_out_token(token_name, token);
+	return htcondor::write_out_token(token_name, token, "");
 }
 
 int main(int argc, char *argv[]) {

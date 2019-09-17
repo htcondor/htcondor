@@ -126,6 +126,7 @@ protected:
 	SubmitForeachArgs fea;
 	char emptyItemString[4];
 	int cached_total_procs;
+	bool is_submit_on_hold;
 
 	// let these functions access internal factory data
 	friend bool LoadJobFactoryDigest(JobFactory* factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
@@ -134,6 +135,7 @@ protected:
 	friend int JobFactoryRowCount(JobFactory * factory);
 	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
+	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 
 	// we override this so that we can use an async foreach implementation.
 	int  load_q_foreach_items(
@@ -150,6 +152,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	, ident(id)
 	, paused(mmInvalid)
 	, cached_total_procs(-42)
+	, is_submit_on_hold(false)
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
@@ -379,6 +382,13 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
 	return true;
 }
 
+bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code) {
+	if ( ! factory) {
+		hold_code = 0;
+		return false;
+	}
+	return factory->getSubmitOnHold(hold_code);
+}
 
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 {
@@ -391,6 +401,10 @@ void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
 	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
 	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
+	int code = 0;
+	if (factory->getSubmitOnHold(code)) {
+		iad.Assign("JobFactorySubmitOnHoldCode", code);
+	}
 }
 
 // returns true if the factory changed state, false otherwise.
@@ -399,10 +413,12 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	if ( ! factory)
 		return false;
 
-	int paused = factory->IsPaused() ? 1 : 0;
+	const bool paused = factory->IsPaused();
 
-	dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
+	if (IsDebugVerbose(D_MATERIALIZE)) {
+		dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
 			factory->ID(), factory->Name(), want_pause, factory->IsPaused(), factory->PauseMode());
+	}
 
 	// make sure that the desired mode is a valid one.
 	// Also, we want to disallow setting the mode to  ClusterRemoved using this function.
@@ -410,11 +426,11 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	else if (want_pause > mmNoMoreItems) want_pause = mmNoMoreItems;
 
 	// If the factory is in the correct meta-mode (either paused or not),
-	// then we won't try and change the actual pause code - we just return true.
+	// then we won't try and change the actual pause code - we just return false (no state change).
 	// As a result of this test, a factory in mmInvalid or mmNoMoreItems state
 	// can't be changed to mmHold or visa versa.
 	if (paused == (want_pause != mmRunning)) {
-		return true;
+		return false;
 	}
 
 	dprintf(D_MATERIALIZE, "CheckJobFactoryPause %s job factory %d %s code=%d\n",
@@ -515,8 +531,8 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
 	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
-	bool check_empty = true;
-	bool fail_empty = false;
+	const bool check_empty = true;
+	const bool fail_empty = false;
 	std::string empty_var_names;
 	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
 	if (row_num < row) {
@@ -540,14 +556,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		}
 	}
 
-#if 1
 	txn.BeginOrContinue(jid.proc);
-#else
-	bool already_in_transaction = InTransaction();
-	if ( ! already_in_transaction) {
-		BeginTransaction();
-	}
-#endif
 
 	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id+1);
 	if ( ! no_items && (step+1 == step_size)) {
@@ -583,28 +592,11 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		factory->delete_job_ad();
 	}
 	if (rval < 0) {
-#if 1
 		txn.AbortIfAny();
-#else
-		if ( ! already_in_transaction) {
-			AbortTransaction();
-		}
-#endif
 		return rval; // failed instantiation
 	}
 
-#if 1
 	// our caller will commit the transaction (if any)
-#else
-	if( !already_in_transaction ) {
-		CondorError errorStack;
-		rval = CommitTransactionAndLive( 0, & errorStack );
-		if (rval < 0) {
-			dprintf(D_ALWAYS, "CommitTransaction() failed for job %d.%d rval=%d (%s)\n", jid.cluster, jid.proc, rval, errorStack.empty() ? "no message" : errorStack.message() );
-			return rval;
-		}
-	}
-#endif
 
 	return 1; // successful instantiation.
 }

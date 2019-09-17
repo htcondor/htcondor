@@ -27,6 +27,7 @@
 #include "docker-api.h"
 #include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
+#include "classad_helpers.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -95,6 +96,9 @@ DockerProc::~DockerProc() {
 
 int DockerProc::StartJob() {
 	std::string imageID;
+
+	// Not really ready for ssh-to-job'ing until we start the container
+	Starter->SetJobEnvironmentReady(false);
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
@@ -259,9 +263,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			return VanillaProc::JobReaper( pid, status );
 		}
 
+		// When we get here docker create has just succeeded
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
 		
+		// Now ssh-to-job can go
+		Starter->SetJobEnvironmentReady(true);
+
 		CondorError err;
 
 		//
@@ -638,7 +646,7 @@ bool DockerProc::Remove() {
 
 	CondorError err;
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	DockerAPI::kill( containerName, err);
+	DockerAPI::kill( containerName, rm_kill_sig, err );
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -657,12 +665,12 @@ bool DockerProc::Hold() {
 
 	CondorError err;
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	DockerAPI::kill( containerName, err );
+	DockerAPI::kill( containerName, hold_kill_sig, err );
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
 
-	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
+	// If hold_kill_sig is not SIGKILL, the process may linger.  Returning
 	// false indicates that shutdown is pending.
 	return false;
 }
@@ -683,9 +691,13 @@ bool DockerProc::ShutdownGraceful() {
 
 	CondorError err;
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	DockerAPI::kill( containerName, err );
+	if( findRmKillSig(JobAd) != -1 ) {
+		DockerAPI::kill( containerName, rm_kill_sig, err );
+	} else {
+		DockerAPI::kill( containerName, soft_kill_sig, err );
+	}
 
-	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
+	// If the signal was not SIGKILL, the process may linger.  Returning
 	// false indicates that shutdown is pending.
 	return false;
 }
@@ -708,7 +720,7 @@ bool DockerProc::ShutdownFast() {
 
 	CondorError err;
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	DockerAPI::kill( containerName, err );
+	DockerAPI::kill( containerName, SIGKILL, err );
 
 	// Based on the other comments, you'd expect this to return true.
 	// It could, but it's simpler to just to let the usual routines

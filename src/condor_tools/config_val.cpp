@@ -92,7 +92,7 @@ my_exit( int status )
 	fflush( stderr );
 
 	if ( ! status ) {
-		clear_config();
+		clear_global_config_table();
 		// this is here to validate that we can still param() with an empty param table.
 		char *dummy = param("DUMMY"); if (dummy) free(dummy);
 	}

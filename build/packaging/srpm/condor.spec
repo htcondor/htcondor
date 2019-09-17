@@ -748,6 +748,7 @@ export CMAKE_PREFIX_PATH=/usr
 cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
+       -DNO_PHONE_HOME:BOOL=TRUE \
        -DUW_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if %bundle_uw_externals
@@ -794,6 +795,7 @@ cmake \
        -D_VERBOSE:BOOL=TRUE \
 %endif
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
+       -DNO_PHONE_HOME:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
@@ -846,9 +848,9 @@ cmake \
 
 %if %uw_build
 # build externals first to avoid dependency issues
-make externals
+make %{?_smp_mflags} externals
 %endif
-make
+make %{?_smp_mflags}
 
 %install
 # installation happens into a temporary location, this function is
@@ -866,7 +868,6 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
-populate %_sysconfdir/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
 populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
@@ -874,6 +875,9 @@ populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
 populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
+populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
+# Drop in a symbolic link for backward compatability
+ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
 # Only trigger on 32-bit RHEL6
 if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
@@ -1142,7 +1146,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt NOTICE.txt examples
 %dir %_sysconfdir/condor/
-%config(noreplace) %_sysconfdir/condor/condor_config
+%config %_sysconfdir/condor/condor_config
 %if %systemd
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/condor.service
@@ -1167,11 +1171,13 @@ rm -rf %{buildroot}
 %_datadir/condor/htcondor.pp
 %endif
 %dir %_sysconfdir/condor/config.d/
+%_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
+%_libdir/libgetpwnam.so
 %dir %_libexecdir/condor/
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
@@ -1226,6 +1232,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/gdrive_plugin.py
 %_libexecdir/condor/gdrive_plugin.pyc
 %_libexecdir/condor/gdrive_plugin.pyo
+%_libexecdir/condor/onedrive_plugin.py
+%_libexecdir/condor/onedrive_plugin.pyc
+%_libexecdir/condor/onedrive_plugin.pyo
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
@@ -1357,6 +1366,7 @@ rm -rf %{buildroot}
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
 %_bindir/condor_annex
+%_bindir/condor_evicted_files
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1790,6 +1800,13 @@ fi
 %endif
 
 %changelog
+* Thu Sep 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
+- Fixed two performance problems on Windows
+- Fixed Java universe on Debian and Ubuntu systems
+- Added two knobs to improve performance on large scale pools
+- Fixed a bug where requesting zero GPUs would require a machine with GPUs
+- HTCondor can now recognize nVidia Volta and Turing GPUs
+
 * Tue Jul 09 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.4-1
 - Python 3 bindings - see version history for details (requires EPEL on EL7)
 - Can configure DAGMan to dramatically reduce memory usage on some DAGs

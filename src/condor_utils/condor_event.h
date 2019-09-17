@@ -2087,21 +2087,21 @@ class PreSkipEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Submit Log Event object.  Below is an example
-    Factory Submit Log entry from Condor v8. <p>
+/** Framework for a Cluster Submit Log Event object.  Below is an example
+    Cluster Submit Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
+000 (172.000.000) 10/20 16:56:54 Cluster submitted from host: <128.105.165.12:32779>
 ...
 </PRE>
 */
-class FactorySubmitEvent : public ULogEvent
+class ClusterSubmitEvent : public ULogEvent
 {
   public:
     ///
-    FactorySubmitEvent(void);
+    ClusterSubmitEvent(void);
     ///
-    ~FactorySubmitEvent(void);
+    ~ClusterSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -2138,21 +2138,21 @@ class FactorySubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Remove Log Event object.  Below is an example
-    Factory Remove Log entry from Condor v8. <p>
+/** Framework for a Cluster Remove Log Event object.  Below is an example
+    Cluster Remove Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory removed
+000 (172.000.000) 10/20 16:56:54 Cluster removed
 ...
 </PRE>
 */
-class FactoryRemoveEvent : public ULogEvent
+class ClusterRemoveEvent : public ULogEvent
 {
   public:
     ///
-    FactoryRemoveEvent(void);
+    ClusterRemoveEvent(void);
     ///
-    ~FactoryRemoveEvent(void);
+    ~ClusterRemoveEvent(void);
 
 /** Read the body of the next Submit event.
     @param file the non-NULL readable log file

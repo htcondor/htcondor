@@ -27,7 +27,6 @@
 #include "chirp_protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "MyString.h"
 
 // the documentation for the chirp tool is that it returns 1 on failure, so that is what we will do.
 // when the chirp_client API calls abort().
@@ -93,22 +92,24 @@ chirp_client_connect_starter()
     char *default_filename;
     char host[CONDOR_HOSTNAME_MAX];
     char cookie[CHIRP_LINE_MAX];
-	MyString path;
+	std::string path;
     int port;
     int result;
 	const char *dir;
 
 	if ((default_filename = getenv("_CONDOR_CHIRP_CONFIG"))) {
-		path.formatstr( "%s", default_filename );
+		path = default_filename;
 	} else {
 		if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
 			dir = ".";
 		}
-		path.formatstr( "%s%c%s",dir,DIR_DELIM_CHAR,".chirp.config");
+		path = dir;
+		path += DIR_DELIM_CHAR;
+		path += ".chirp.config";
 	}
-    file = safe_fopen_wrapper_follow(path.Value(),"r");
+    file = safe_fopen_wrapper_follow(path.c_str(),"r");
     if(!file) {
-		fprintf(stderr, "Can't open %s file\n",path.Value());
+		fprintf(stderr, "Can't open %s file\n",path.c_str());
 		return 0;
 	}
 
@@ -245,8 +246,13 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	}
 	
 		// Get size of file, allocate buffer
+#if defined(WIN32)
+	struct _stat stat_buf;
+	if (_fstat(fileno(rfd), &stat_buf) == -1) {
+#else
 	struct stat stat_buf;
 	if (fstat(fileno(rfd), &stat_buf) == -1) {
+#endif
 		fprintf(stderr, "Can't fstat local file %s\n", local);
 		fclose(rfd);
 		DISCONNECT_AND_RETURN(client, -1);
@@ -725,7 +731,7 @@ int chirp_getdir(int argc, char **argv) {
 	struct chirp_client *client = 0;
 	CONNECT_STARTER(client);
 	
-	char *buffer;
+	char *buffer = NULL;
 	int status = -1;
 		
 		// Use getlongdir if '-l' specified

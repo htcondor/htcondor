@@ -118,6 +118,13 @@ ModuleLock::acquire()
         SecMan::setPoolPassword(p);
     }
 
+    p = SecManWrapper::getThreadLocalToken();
+    m_restore_orig_token = p;
+    if (m_restore_orig_token) {
+        m_token_orig = SecMan::getToken();
+        SecMan::setToken(p);
+    }
+
     p = SecManWrapper::getThreadLocalGSICred();
     m_restore_orig_proxy = p!=NULL;
     if (m_restore_orig_proxy) {
@@ -160,6 +167,12 @@ ModuleLock::release()
     }
     m_restore_orig_password = false;
     m_password_orig = "";
+
+    if (m_restore_orig_token) {
+        SecMan::setToken(m_token_orig);
+    }
+    m_restore_orig_token = false;
+    m_token_orig = "";
 
     if (m_restore_orig_tag) {
         SecMan::setTag(m_tag_orig);

@@ -8,6 +8,7 @@
 #include "condor_ipverify.h"
 #include "sock.h"
 #include "condor_secman.h"
+#include "token_utils.h"
 
 #include "classad_wrapper.h"
 #include "module_lock.h"
@@ -22,6 +23,172 @@
 #include "old_boost.h"
 
 using namespace boost::python;
+
+class Token {
+public:
+    Token(const std::string &value) : m_value(value) {}
+
+    const std::string &get() const {return m_value;}
+
+    void write(boost::python::object tokenfile_obj) const {
+        std::string tokenfile = "python_generated_tokens";
+        if (tokenfile_obj.ptr() != Py_None) {
+            boost::python::str tokenfile_str(tokenfile_obj);
+            tokenfile = boost::python::extract<std::string>(tokenfile_str);
+        }
+        htcondor::write_out_token(tokenfile, m_value, "");
+    }
+
+private:
+    const std::string m_value;
+};
+
+
+struct TokenPickle : boost::python::pickle_suite
+{
+    static boost::python::tuple
+    getinitargs(const Token& token)
+    {
+        return boost::python::make_tuple(token.get());
+    }
+};
+
+
+class TokenRequest {
+public:
+    TokenRequest(boost::python::object identity,
+        boost::python::object bounding_set,
+        int lifetime)
+        : m_lifetime(lifetime)
+    {
+        boost::python::str identity_str(identity);
+        m_identity = boost::python::extract<std::string>(identity_str);
+
+        if (bounding_set.ptr() != Py_None) {
+            boost::python::object iter = bounding_set.attr("__iter__")();
+            while (true) {
+                PyObject *pyobj = PyIter_Next(iter.ptr());
+                if (!pyobj) break;
+                if (PyErr_Occurred()) {
+                    boost::python::throw_error_already_set();
+                }
+                boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+                boost::python::str obj_str(obj);
+
+                m_bounding_set.push_back(boost::python::extract<std::string>(obj_str));
+            }
+        }
+    }
+
+    std::string request_id() const {
+        if (m_reqid.empty()) {
+            THROW_EX(RuntimeError, "Request ID requested prior to submitting request!");
+        }
+        return m_reqid;
+    }
+
+    void submit(boost::python::object ad_obj) {
+        if (m_daemon) {
+            THROW_EX(RuntimeError, "Token request already submitted.");
+        }
+
+        if (ad_obj.ptr() == Py_None) {
+            m_daemon = new Daemon(DT_COLLECTOR, nullptr);
+        } else {
+            ClassAdWrapper &ad = boost::python::extract<ClassAdWrapper&>(ad_obj);
+            std::string ad_type_str;
+            if (!ad.EvaluateAttrString(ATTR_MY_TYPE, ad_type_str))
+            {
+                THROW_EX(ValueError, "Daemon type not available in location ClassAd.");
+            }
+            int ad_type = AdTypeFromString(ad_type_str.c_str());
+            if (ad_type == NO_AD)
+            {
+                THROW_EX(ValueError, "Unknown ad type.");
+            }
+            daemon_t d_type;
+            switch (ad_type) {
+                case MASTER_AD: d_type = DT_MASTER; break;
+                case STARTD_AD: d_type = DT_STARTD; break;
+                case SCHEDD_AD: d_type = DT_SCHEDD; break;
+                case NEGOTIATOR_AD: d_type = DT_NEGOTIATOR; break;
+                case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
+                default:
+                    d_type = DT_NONE;
+                    THROW_EX(ValueError, "Unknown daemon type.");
+            }
+
+            ClassAd ad_copy; ad_copy.CopyFrom(ad);
+            m_daemon = new Daemon(&ad_copy, d_type, nullptr);
+        }
+
+        m_client_id = htcondor::generate_client_id();
+
+        CondorError err;
+        if (!m_daemon->startTokenRequest(m_identity, m_bounding_set, m_lifetime,
+            m_client_id, m_token, m_reqid, &err))
+        {
+            m_client_id = "";
+            THROW_EX(RuntimeError, err.getFullText().c_str());
+        }
+    }
+
+    bool done() {
+        if (!m_token.empty()) {
+            return true;
+        }
+        CondorError err;
+        if (!m_daemon->finishTokenRequest(m_client_id, m_reqid, m_token, &err)) {
+            THROW_EX(RuntimeError, err.getFullText().c_str());
+        }
+        return !m_token.empty();
+    }
+
+    Token result(time_t timeout)
+    {
+        if (m_client_id.empty()) {
+            THROW_EX(RuntimeError, "Request has not been submitted to a remote daemon");
+        }
+        bool infinite_loop = timeout == 0;
+        bool last_iteration = false;
+        while (true) {
+            if (done()) {
+                return Token(m_token);
+            }
+            Py_BEGIN_ALLOW_THREADS;
+            int sleep_count = 5;
+            if (!infinite_loop) {
+                timeout -= sleep_count;
+                if (timeout < 0) {
+                    sleep_count += timeout;
+                }
+                if (timeout <= 0) {
+                    last_iteration = true;
+                }
+            }
+            sleep(5);
+            Py_END_ALLOW_THREADS;
+            if (PyErr_CheckSignals()) {
+                boost::python::throw_error_already_set();
+            }
+            if (last_iteration) {
+                if (done()) {
+                    return Token(m_token);                                                                                              } else {
+                    THROW_EX(RuntimeError, "Timed out waiting for token approval");
+                }
+            }
+        }
+    }
+
+private:
+    Daemon *m_daemon{nullptr};
+    std::string m_reqid;
+    std::string m_identity;
+    std::vector<std::string> m_bounding_set;
+    std::string m_token;
+    std::string m_client_id;
+    int m_lifetime{-1};
+};
 
 MODULE_LOCK_TLS_KEY SecManWrapper::m_key;
 bool SecManWrapper::m_key_allocated = false;
@@ -177,6 +344,8 @@ SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, 
 	//PRAGMA_REMIND("should m_cred_set, etc be cleared here?")
     m_tag = "";
     m_pool_pass = "";
+    m_token = "";
+    m_token_set = false;
     m_cred = "";
     m_config_overrides.reset();
     return (obj1.ptr() == Py_None);
@@ -218,6 +387,14 @@ bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
         return false;
 }
 
+const char *
+SecManWrapper::getThreadLocalToken()
+{
+    if (!m_key_allocated) return NULL;
+        SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+        return (man && man->m_token_set) ? man->m_token.c_str() : NULL;
+}
+
 void
 SecManWrapper::setTag(const std::string &tag)
 {
@@ -232,6 +409,12 @@ SecManWrapper::setPoolPassword(const std::string &pool_pass)
         m_pool_pass_set = true;
 }
 
+void
+SecManWrapper::setToken(const Token &token)
+{
+        m_token = token.get();
+        m_token_set = true;
+}
 
 void
 SecManWrapper::setGSICredential(const std::string &cred)
@@ -252,6 +435,68 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ping_overloads, SecManWrapper::ping, 1, 2
 void
 export_secman()
 {
+    class_<Token>("Token",
+            R"C0ND0R(
+            A class representing a generated HTCondor authentication token.
+
+            :param contents: The contents of the token.
+            :type contents: str
+            )C0ND0R",
+            boost::python::init<std::string>((boost::python::arg("self"), boost::python::arg("contents"))))
+    .def("write", &Token::write,
+            R"C0ND0R(
+            Write the contents of the token into the appropriate token directory on disk.
+
+            :param tokenfile: Filename inside the user token directory where the token will be written.
+            :type ad: str
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("tokenfile")=boost::python::object()))
+    .def_pickle(TokenPickle());
+
+    class_<TokenRequest>("TokenRequest",
+            R"C0ND0R(
+            A class representing a request for a HTCondor authentication token.
+
+            :param identity: Requested identity from the remote daemon (the empty string implies condor user).
+            :type identity: str
+            :param bounding_set: A list of authorizations that the token is restricted to
+            :type List[str]
+            :param lifetime: Requested lifetime, in seconds, the token will be valid for
+            :type lifetime: int
+            )C0ND0R",
+            boost::python::init<boost::python::object, boost::python::object, int>(
+                (boost::python::arg("self"),
+                 boost::python::arg("identity")=boost::python::str(),
+                 boost::python::arg("bounding_set")=boost::python::object(),
+                 boost::python::arg("lifetime")=-1)))
+        .add_property("request_id", &TokenRequest::request_id)
+        .def("submit", &TokenRequest::submit,
+            R"C0ND0R(
+            Submit the token request to a remote daemon.
+
+            :param ad: ClassAd describing the location of the remote daemon.
+            :type ad: :class:`~classad.ClassAd`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad") = boost::python::object()))
+        .def("done", &TokenRequest::done,
+            R"C0ND0R(
+            Check to see if the token request has completed.
+
+            :return: True if the request is complete; false otherwise.  May throw an exception.
+            :rtype: bool
+            )C0ND0R",
+            (boost::python::arg("self")))
+        .def("result", &TokenRequest::result,
+            R"C0ND0R(
+            Return the result of the token request.  Will block until the token request is approved
+            or the timeout is hit (a timeoute of 0, the default, indicates this method may block
+            indefinitely).
+
+            :return: The token resulting from this request.
+            :rtype: :class:`Token`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("timeout")=0));
+
     class_<SecManWrapper>("SecMan",
             R"C0ND0R(
             A class that represents the internal HTCondor security state.
@@ -322,6 +567,14 @@ export_secman()
             :param str filename: File name of the GSI credential.
             )C0ND0R",
             boost::python::args("self", "filename"))
+        .def("setToken", &SecManWrapper::setToken,
+            R"C0ND0R(
+            Set the token used for auth.
+
+            :param token: The object representing the token contents
+            :type token: :class:`Token`
+            )C0ND0R",
+            boost::python::args("self", "token"))
         .def("setConfig", &SecManWrapper::setConfig,
             R"C0ND0R(
             Set a temporary configuration variable; this will be kept for all security

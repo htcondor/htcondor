@@ -21,8 +21,9 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "job_transforms.h"
-#include "condor_qmgr.h"
 #include "condor_attributes.h"
+#include "qmgmt.h"
+#include "condor_qmgr.h"
 
 JobTransforms::JobTransforms()
 {
@@ -270,7 +271,7 @@ JobTransforms::set_dirty_attributes(ClassAd *ad, int cluster, int proc)
 		}
 		dprintf(D_FULLDEBUG, "(%d.%d) job_transforms: Setting %s = %s\n",
 				cluster, proc, it->c_str(), rhstr);
-		if( SetAttribute(cluster, proc, it->c_str(), rhstr) == -1 ) {
+		if( SetAttribute(cluster, proc, it->c_str(), rhstr, SetAttribute_SubmitTransform) == -1 ) {
 			dprintf(D_ALWAYS,"(%d.%d) job_transforms: Failed to set %s = %s\n",
 				cluster, proc, it->c_str(), rhstr);
 			return -2;

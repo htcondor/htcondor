@@ -299,7 +299,7 @@ void BoincJob::Reconfig()
 
 void BoincJob::doEvaluateState()
 {
-	bool connect_failure = false;
+	const bool connect_failure = false;
 	int old_gm_state;
 	std::string old_remote_state;
 	bool reevaluate_state = true;

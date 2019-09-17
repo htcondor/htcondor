@@ -1741,6 +1741,15 @@ Parse_macros(
 				goto cleanup;
 			}
 		} else if (is_include) {
+			// if the caller disables the include keyword (late materialization), then just fail here
+			if (options & CONFIG_OPT_NO_INCLUDE_FILE) {
+				macro_set.push_error(stderr, retval, source_type,
+					"Error \"%s\", Line %d, include statement is not allowed in this context\n",
+					source_file, FileSource.line);
+				retval = -1;
+				goto cleanup;
+			}
+
 			MACRO_SOURCE InnerSource;
 			FILE* fp = NULL;
 			bool is_into    = 0 != (is_include & CONFIG_INCLUDE_OPTION_INTO);

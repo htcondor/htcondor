@@ -35,7 +35,7 @@ symlink("job_dagman_large_dag-node.pl", ".");
 symlink("dummy_condor_submit.pl", ".");
 
 # Create the DAG file, submit files, etc., to be used in this test.
-system("../create_large_dag job_dagman_really_large_dag 100000 10 0 10000");
+system("../create_large_dag.pl job_dagman_really_large_dag 100000 10 0 10000");
 
 $cmd = 'job_dagman_really_large_dag.dag';
 $testdesc =  'Condor submit dag - large DAG test - scheduler U';

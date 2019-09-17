@@ -17,6 +17,7 @@
  ############################################################### 
 
 # condor_exe(condor_userlog_tail "userlog_tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_update_machine_ad "update_machine_ad.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -138,3 +139,11 @@ endif()
 # GPU Support
 ############################################################
 condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+
+###########################################################
+# condor_ssh_to_job hackery
+##########################################################
+if ( LINUX )
+condor_shared_lib( libgetpwnam "getpwnam.c" )
+set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
+endif()

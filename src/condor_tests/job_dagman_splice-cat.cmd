@@ -1,6 +1,6 @@
 executable           	= /bin/echo
 arguments		= job_dagman_splice-cat.cmd $(cluster) OK
-universe             	= scheduler
+universe             	= local
 log			= job_dagman_splice-cat.log
 notification         	= NEVER
 getenv               	= true

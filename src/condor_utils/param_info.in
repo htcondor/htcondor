@@ -1199,6 +1199,26 @@ type=int
 description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
+[MAX_TIMER_EVENTS_PER_CYCLE]
+default=0
+range=0,
+type=int
+
+[MAX_ACCEPTS_PER_CYCLE]
+default=8
+range=0,
+type=int
+
+[MAX_UDP_MSGS_PER_CYCLE]
+default=100
+range=0,
+type=int
+
+[MAX_REAPS_PER_CYCLE]
+default=0
+range=0,
+type=int
+
 [PID_SNAPSHOT_INTERVAL]
 default=15
 type=int
@@ -1921,8 +1941,9 @@ default=6
 type=int
 tags=startd,startd_main
 
+# ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -2387,6 +2408,11 @@ tags=sshd_wrapper
 default=
 type=string
 tags=sshd_wrapper
+
+[CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
+default=true
+type=bool
+tags=condor_ssh_to_job
 
 [ENABLE_USERLOG_LOCKING]
 default=false
@@ -3143,6 +3169,14 @@ tags=schedd,dedicated_scheduler
 default=true
 type=bool
 tags=schedd
+description=Set to false to have Schedd refuse late materialization submits
+
+[SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
+default=true
+type=bool
+tags=schedd
+customization=devel
+description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
@@ -3225,6 +3259,11 @@ default=0
 type=int
 tags=schedd
 
+[JOB_START_COUNT]
+default=1
+range=1,
+type=int
+
 [MAX_JOBS_RUNNING]
 default=MIN({$(DETECTED_MEMORY), 10000})
 win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
@@ -3297,6 +3336,11 @@ tags=schedd
 [FLOCK_NEGOTIATOR_HOSTS]
 default=$(FLOCK_TO)
 type=string
+tags=schedd
+
+[FLOCK_BY_DEFAULT]
+default=true
+type=bool
 tags=schedd
 
 [SHADOW_SIZE_ESTIMATE]
@@ -3614,13 +3658,83 @@ default = m4.large
 type=string
 tags=annex
 
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-078d5c7afa60d8d1b
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0463306823b53e30
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-02c69d521a0809249
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0c07ed1dc0cea3608
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-024615f49be85226a
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0b9bff095bcf587b9
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-00ca51dc8295a9e4f
+type=string
+tags=annex
+
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
 default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
 type=string
 tags=annex
 
 [eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-098354a57b99f8284
+default = ami-0b0cba432f6183314
 type=string
 tags=annex
 
@@ -3635,7 +3749,7 @@ type=string
 tags=annex
 
 [eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-0ea8a09ffcba25387
+default = ami-04cf1a4bcdb6c2ddb
 type=string
 tags=annex
 
@@ -3650,7 +3764,7 @@ type=string
 tags=annex
 
 [eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-04d9855a808fcc4bd
+default = ami-05db8a05b808cc82a
 type=string
 tags=annex
 
@@ -3665,7 +3779,7 @@ type=string
 tags=annex
 
 [eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-08049d1871f14f2f9
+default = ami-000db792307d7ec4c
 type=string
 tags=annex
 
@@ -3680,12 +3794,17 @@ type=string
 tags=annex
 
 [eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
-default = ami-029bbf2574767da49
+default = ami-0628aa554d3b907a5
 type=string
 tags=annex
 
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-02ce5672c4c88146c
 type=string
 tags=annex
 
@@ -3700,7 +3819,12 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-007920684150d7cb7
 type=string
 tags=annex
 
@@ -3715,7 +3839,12 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a6fbc8bda794e1f4
 type=string
 tags=annex
 
@@ -3730,7 +3859,12 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4)
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a46b14d914d27167
 type=string
 tags=annex
 
@@ -5044,8 +5178,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -6032,6 +6166,8 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+
+	use feature : GPUsMonitor
 @end
 
 [$FEATURE.Monitor]
@@ -6052,6 +6188,8 @@ default : @end
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+
+    STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
 
 [$FEATURE.PartitionableSlot]

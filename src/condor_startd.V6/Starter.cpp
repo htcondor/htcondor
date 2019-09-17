@@ -113,6 +113,7 @@ Starter::initRunData( void )
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
 	s_was_reaped = false;
+	s_created_execute_dir = false;
 	s_is_vm_universe = false;
 #if HAVE_BOINC
 	s_is_boinc = false;
@@ -588,7 +589,7 @@ Starter::finalizeExecuteDir(Claim * claim)
 {
 		// If setExecuteDir() has already been called (e.g. BOINC), then
 		// do nothing.  Otherwise, choose the execute dir now.
-	if( !executeDir() ) {
+	if( s_execute_dir.empty() ) {
 		ASSERT( claim && claim->rip() );
 		setExecuteDir( claim->rip()->executeDir() );
 	}
@@ -597,13 +598,7 @@ Starter::finalizeExecuteDir(Claim * claim)
 char const *
 Starter::executeDir()
 {
-	return s_execute_dir.Length() ? s_execute_dir.Value() : NULL;
-}
-
-char const *
-Starter::encryptedExecuteDir()
-{
-	return s_encrypted_execute_dir.Length() ? s_encrypted_execute_dir.Value() : NULL;
+	return !s_execute_dir.empty() ? s_execute_dir.c_str() : NULL;
 }
 
 // Spawn the starter process that this starter object is managing.
@@ -737,15 +732,10 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	}
 
 		// Now, delete any files lying around.
+		// If we created the parent execute directory (say for filesystem
+		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
-	if ( encryptedExecuteDir() ) {
-		// Remove $EXECUTE/encryptedX/dir_pid/*
-		cleanup_execute_dir( s_pid, encryptedExecuteDir(), true );
-		s_encrypted_execute_dir = "";
-	} else {
-		// Remove $EXECUTE/dir_pid/*
-		cleanup_execute_dir( s_pid, executeDir() );
-	}
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 
 #if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
@@ -1002,13 +992,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// The starter figures out its execute directory by paraming
-		// for EXECUTE, which we override in the environment here.
-		// This way, all the logic about choosing a directory to use
-		// is in only one place.
-	ASSERT( executeDir() );
-	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
-
 		// Handle encrypted execute directory
 	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
 	FilesystemRemap* fs_remap = NULL;
@@ -1027,25 +1010,32 @@ int Starter::execDCStarter(
 		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
 		static int unsigned long privdirnum = 0;
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		s_encrypted_execute_dir.formatstr("%s%cencrypted%lu",executeDir(),
+		formatstr_cat(s_execute_dir,"%cencrypted%lu",
 				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(encryptedExecuteDir(), 0755) < 0 ) {
+		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "Failed to create encrypted dir %s: %s\n",
-			         encryptedExecuteDir(),
+			         s_execute_dir.c_str(),
 			         strerror(errno) );
 			return 0;
 		}
+		s_created_execute_dir = true;
 		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", encryptedExecuteDir() );
+		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
 		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(encryptedExecuteDir()) ) {
+		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
 			// FilesystemRemap object dprintfs out an error message for us
 			return 0;
 		}
-		new_env.SetEnv( "_CONDOR_EXECUTE", encryptedExecuteDir() );
 #endif
 	}
+
+		// The starter figures out its execute directory by paraming
+		// for EXECUTE, which we override in the environment here.
+		// This way, all the logic about choosing a directory to use
+		// is in only one place.
+	ASSERT( executeDir() );
+	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
 	env = &new_env;
 

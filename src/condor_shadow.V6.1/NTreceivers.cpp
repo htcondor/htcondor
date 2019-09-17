@@ -1372,7 +1372,7 @@ case CONDOR_getlongdir:
 
 		errno = 0;
 		rval = -1;
-		MyString msg, check;
+		std::string msg, check;
 		const char *next;
 		Directory directory(path);
 		struct stat stat_buf;
@@ -1380,26 +1380,30 @@ case CONDOR_getlongdir:
 		memset( line, 0, sizeof(line) );
 		
 		// Get directory's contents
-		while((next = directory.Next())) {
-			dprintf(D_ALWAYS, "next: %s\n", next);
-			msg.formatstr_cat("%s\n", next);
-			check.formatstr("%s%c%s", path, DIR_DELIM_CHAR, next);
-			rval = stat(check.Value(), &stat_buf);
-			terrno = (condor_errno_t)errno;
-			if(rval == -1) {
-				break;
+		if(directory.Rewind()) {
+			rval = 0;
+			while((next = directory.Next())) {
+				dprintf(D_ALWAYS, "next: %s\n", next);
+				msg += next;
+				msg += "\n";
+				formatstr(check, "%s%c%s", path, DIR_DELIM_CHAR, next);
+				rval = stat(check.c_str(), &stat_buf);
+				terrno = (condor_errno_t)errno;
+				if(rval == -1) {
+					break;
+				}
+				if(stat_string(line, &stat_buf) < 0) {
+					rval = -1;
+					break;
+				}
+				msg += line;
 			}
-			if(stat_string(line, &stat_buf) < 0) {
-				rval = -1;
-				break;
+			if(rval >= 0) {
+				msg += "\n";	// Needed to signify end of data
+				rval = msg.length();
 			}
-			msg.formatstr_cat("%s", line);
 		}
 		terrno = (condor_errno_t)errno;
-		if(msg.Length() > 0) {
-			msg.formatstr_cat("\n");	// Needed to signify end of data
-			rval = msg.Length();
-		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
@@ -1410,7 +1414,7 @@ case CONDOR_getlongdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->put(msg.Value()) );
+			result = ( syscall_sock->put(msg) );
 			ASSERT( result );
 		}
 		free((char*)path);
@@ -1428,22 +1432,25 @@ case CONDOR_getdir:
 
 		errno = 0;
 		rval = -1;
-		MyString msg;
+		std::string msg;
 		const char *next;
 		Directory directory(path);
 
 		// Get directory's contents
-		while((next = directory.Next())) {
-			msg.formatstr_cat("%s", next);
-			msg.formatstr_cat("\n");
+		if(directory.Rewind()) {
+			while((next = directory.Next())) {
+				msg += next;
+				msg += "\n";
+			}
+			msg += "\n";	// Needed to signify end of data
+			rval = (int)msg.length();
 		}
 		terrno = (condor_errno_t)errno;
-		if(msg.Length() > 0) {
-			msg.formatstr_cat("\n");	// Needed to signify end of data
-			rval = msg.Length();
-		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
+		// NOTE: Older starters treated rval==0 as an error.
+		//   Any successful reply should have a value greater than 0
+		//   (at least 1 for the terminating "\n").
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
 		ASSERT( result );
@@ -1452,7 +1459,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->put(msg.Value()) );
+			result = ( syscall_sock->put(msg) );
 			ASSERT( result );
 		}
 		free((char*)path);

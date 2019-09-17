@@ -3496,6 +3496,9 @@ DedicatedScheduler::publishRequestAd( void )
 
 	ad.Assign( ATTR_FLOCKED_JOBS, 0 );
 
+	dprintf(D_ALWAYS, "Adding submitter %s to the submitter map for default pool.\n", name());
+	scheduler.SubmitterMap.AddSubmitter("", name(), time(NULL));
+
 		// Now, we can actually send this off to the CM.
 	daemonCore->sendUpdates( UPDATE_SUBMITTOR_AD, &ad, NULL, true );
 }

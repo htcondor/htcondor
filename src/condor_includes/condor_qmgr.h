@@ -41,7 +41,17 @@ typedef struct _Qmgr_connection {
 } Qmgr_connection;
 
 
-typedef unsigned char SetAttributeFlags_t;
+// the wire protocol for SetAttribute and friends puts a byte of flags on the wire
+// so we can't change the size of the flags field for external callers of SetAttribute
+// but we can change it for the schedd itself.
+//. This has the nice property of guaranteeing that external users
+// cannot pass schedd private flags to SetAttribute.
+// see qmgmt.h for the private schedd flags
+typedef unsigned char SetAttributePublicFlags_t; // SetAttribute flags on the wire are this type
+const SetAttributePublicFlags_t SetAttribute_PublicFlagsMask = 0xFF;
+
+// set attribute flags passed to functions are this type (before 8.8.5 this was unsigned char)
+typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
 	// NoAck tells the remote version of SetAttribute to not send back a
 	// return code.  If the operation fails, the connection will be closed,
@@ -52,7 +62,7 @@ const SetAttributeFlags_t SETDIRTY = (1<<2);
 const SetAttributeFlags_t SHOULDLOG = (1<<3);
 const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
 const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
-const SetAttributeFlags_t SetAttribute_LateMaterialization = (1<<6); // change is part of late materialization
+const SetAttributeFlags_t SetAttribute_unused = (1<<6); // free for future *external* use
 const SetAttributeFlags_t SetAttribute_PostSubmitClusterChange = (1<<7); // special semantics for changing the cluster ad, but not as part of a submit.
 
 #define SHADOW_QMGMT_TIMEOUT 300
@@ -176,6 +186,7 @@ int SetAttributeExprByConstraint(const char *constraint, const char *attr,
 	@return -1 on failure; 0 on success
 */
 int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
+
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success

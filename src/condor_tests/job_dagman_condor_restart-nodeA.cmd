@@ -1,5 +1,5 @@
 executable = job_dagman_condor_restart-nodeA.pl
-universe = scheduler
+universe = local
 getenv = true
 output = job_dagman_condor_restart-nodeA.out
 error = job_dagman_condor_restart-nodeA.err

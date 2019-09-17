@@ -228,7 +228,8 @@ void DaemonCore::Stats::Init(bool enable)
    DC_STATS_ADD_RECENT(Pool, SocketRuntime,   IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, PipeRuntime,     IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, Signals,       IF_BASICPUB);
-   DC_STATS_ADD_RECENT(Pool, TimersFired,   IF_BASICPUB);
+   STATS_POOL_ADD_VAL(Pool, "DC", TimersFired, IF_BASICPUB);
+   STATS_POOL_PUB_PEAK(Pool, "DC", TimersFired, IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, SockMessages,  IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, PipeMessages,  IF_BASICPUB);
    //DC_STATS_ADD_RECENT(Pool, SockBytes,     IF_BASICPUB);
@@ -282,7 +283,6 @@ void DaemonCore::Stats::Init(bool enable)
    DC_STATS_PUB_DEBUG(Pool, SocketRuntime,   IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, PipeRuntime,     IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, Signals,       IF_BASICPUB);
-   DC_STATS_PUB_DEBUG(Pool, TimersFired,   IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, SockMessages,  IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, PipeMessages,  IF_BASICPUB);
    //DC_STATS_PUB_DEBUG(Pool, SockBytes,     IF_BASICPUB);

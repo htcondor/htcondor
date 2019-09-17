@@ -405,7 +405,6 @@ Resource::~Resource()
 	}
 
 	delete r_state; r_state = NULL;
-	delete r_classad; r_classad = NULL;
 	delete r_cur; r_cur = NULL;
 	if( r_pre ) {
 		delete r_pre; r_pre = NULL;
@@ -413,6 +412,7 @@ Resource::~Resource()
 	if( r_pre_pre ) {
 		delete r_pre_pre; r_pre_pre = NULL;
 	}
+	delete r_classad; r_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_reqexp; r_reqexp = NULL;
 	delete r_attr; r_attr = NULL;
@@ -1328,8 +1328,31 @@ Resource::do_update( void )
 		// resource and wasn't something from somewhere else (for instance,
 		// some other startd cron job).
 		//
-		if( name.find( "Uptime" ) == 0
-		 || name.find( "StartOfJobUptime" ) == 0
+		if( name.find( "Uptime" ) == 0 ) {
+			// The PEAK metrics have already inserted their Usage values,
+			// so we only need to compute the SUM metrics' averages here.
+			std::string resourceName;
+			if( StartdCronJobParams::attributeIsPeakMetric( name ) ) { continue; }
+			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
+			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
+			deleteList.push_back( name );
+
+			classad::Value v;
+			double uptimeValue;
+			ExprTree * expr = i->second;
+			expr->Evaluate( v );
+			if(! v.IsNumber( uptimeValue )) {
+				dprintf( D_ALWAYS, "Metric %s is not a number, ignoring.\n", name.c_str() );
+				continue;
+			}
+
+			int birth;
+			if(! daemonCore->getStartTime(birth)) { continue; }
+			int duration = time(NULL) - birth;
+			double average = uptimeValue / duration;
+			std::string computedName = "Uptime" + resourceName + "AverageUsage";
+			public_ad.Assign( computedName, average );
+		} else if( name.find( "StartOfJobUptime" ) == 0
 		 || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
 		 || name.find( "FirstUpdate" ) == 0 ) {
 			deleteList.push_back( name );

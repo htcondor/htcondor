@@ -1722,9 +1722,13 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     virtual machine instance is to run on.
     :index:`batch_queue<single: batch_queue; submit commands>`
  batch_queue = <queuename>
-    Used for **pbs**, **lsf**, and **sge** grid universe jobs. Specifies
-    the name of the PBS/LSF/SGE job queue into which the job should be
-    submitted. If not specified, the default queue is used.
+    Used for **batch** grid universe jobs.
+    Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
+    job should be submitted. If not specified, the default queue is used.
+    For a multi-cluster SLURM configuration, which cluster to use can be
+    specified by supplying the name after an ``@`` symbol.
+    For example, to submit a job to the ``debug`` queue on cluster ``foo``,
+    you would use the value ``debug@foo``.
     :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
  boinc_authenticator_file = <pathname>
     For grid type **boinc** jobs, specifies a path and file name of the
@@ -2563,11 +2567,16 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     ``Error`` result, the value recorded in the job ad will be
     ``Undefined`` or ``Error``, respectively.
     :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
+
+.. _want_graceful_removal:
+
  want_graceful_removal = <boolean expression>
-    When ``True``, this causes a graceful shutdown of the job when the
-    job is removed or put on hold, giving it time to clean up or save
-    state. Otherwise, the job is abruptly killed. The default is
-    ``false``. :index:`kill_sig<single: kill_sig; submit commands>`
+    If ``true``, this job will be given a chance to shut down cleanly when
+    removed.  The job will be given as much time as the administrator
+    of the execute resource allows, which my be none.  The default is
+    ``false``.  For details, see the configuration setting
+    :ref:`GRACEFULLY_REMOVE_JOBS<GRACEFULLY_REMOVE_JOBS>`.
+    :index:`kill_sig<single: kill_sig; submit commands>`
  kill_sig = <signal-number>
     When HTCondor needs to kick a job off of a machine, it will send the
     job the signal specified by

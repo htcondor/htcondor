@@ -1113,7 +1113,7 @@ GahpServer::CreateSecuritySession()
 
 	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
-										CONDOR_CHILD_FQU, NULL, 0 ) ) {
+										CONDOR_CHILD_FQU, NULL, 0, nullptr ) ) {
 		free( session_id );
 		free( session_key );
 		return false;
@@ -1766,8 +1766,12 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			// as well, but this should be one of the first lines in
 			// stderr and shouldn't be split across multiple reads.
 			if ( m_ssh_forward_port == 0 ) {
-				sscanf( prev_line, "Allocated port %d for remote forward to",
-						&m_ssh_forward_port );
+				int forward_port = 0;
+				int matches = sscanf( prev_line, "Allocated port %d for remote forward to",
+						&forward_port );
+				if (matches > 0) {
+					m_ssh_forward_port = forward_port;
+				}
 			}
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";

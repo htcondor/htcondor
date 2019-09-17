@@ -1029,7 +1029,8 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				m_claim_session.secSessionInfo(),
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				dc_startd->addr(),
-				0 /*don't expire*/ );
+				0 /*don't expire*/,
+				nullptr );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_claim_session.publicClaimId());
@@ -1068,7 +1069,8 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				NULL,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				NULL,
-				0 /*don't expire*/ );
+				0 /*don't expire*/,
+				nullptr );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_filetrans_session.publicClaimId());
@@ -1476,12 +1478,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup( "ToE" ));
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup(ATTR_JOB_TOE));
 	if( toeTag ) {
-		CopyAttribute( "ToE", *jobAd, *update_ad );
+		CopyAttribute(ATTR_JOB_TOE, *jobAd, *update_ad );
 
 		// Required to actually update the schedd's copy.  (sigh)
-		shadow->watchJobAttr( "ToE" );
+		shadow->watchJobAttr(ATTR_JOB_TOE);
 	}
 
     // these are headed for job ads in the scheduler, so rename them

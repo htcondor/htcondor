@@ -114,12 +114,12 @@ static char* find_file(const char*, const char*, int config_options);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
-void clear_config();
 void reinsert_specials(const char* host);
 void process_config_source(const char*, int depth, const char*, const char*, int);
 void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
+void do_smart_auto_use(int options);
 
 // External variables
 //extern int	ConfigLineNo;
@@ -592,8 +592,8 @@ void optimize_macros(MACRO_SET & set)
 		return;
 
 	// the metadata table has entries that give the index of the corresponding
-	// entry in the param table so that we can sort it. So we have to sort
-	// sort the metadata the metadata first, then the param table itself
+	// entry in the param table so that we can sort it. So we have to
+	// sort the metadata first, then the param table itself
 	// and finally then fixup the indexes in the metadata table.
 	//
 	MACRO_SORTER sorter(set);
@@ -912,11 +912,11 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
-		init_config(config_options);
+		init_global_config_table(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
-		clear_config();
+		clear_global_config_table();
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
@@ -1060,7 +1060,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
 	if (!user_config_name.empty()) {
-		if (find_user_file(user_config_source, user_config_name.c_str(), true)) {
+		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
 			local_config_sources.append(user_config_source.c_str());
@@ -1160,9 +1160,19 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	check_domain_attributes();
 
 		// once the config table is fully populated, we can optimize it.
-		// WARNING!! if you insert new params after this, the able *might*
+		// WARNING!! if you insert new params after this, the table *might*
 		// be de-optimized.
 	optimize_macros(ConfigMacroSet);
+
+
+		// now process knobs of the pattern AUTO_USE_<catgory>_<metaknob>
+	if ( ! (config_options & CONFIG_OPT_NO_SMART_AUTO_USE)) {
+		do_smart_auto_use(config_options);
+		// re-sort the macros if we added any
+		if (ConfigMacroSet.sorted < ConfigMacroSet.size) {
+			optimize_macros(ConfigMacroSet);
+		}
+	}
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
 
@@ -1278,6 +1288,75 @@ process_locals( const char* param_name, const char* host )
 		free(sources_value);
 	}
 }
+
+
+template <class T> bool re_match(const char * str, pcre * re, int options, T& tags)
+{
+	if ( ! re) return false;
+
+	const size_t ctags = sizeof(tags) / sizeof(tags[0]);
+	const int cvec = (int)(3 * (1 + ctags));
+	int ovec[cvec];
+
+	int rc = pcre_exec(re, NULL, str, (int)strlen(str), 0, options, ovec, cvec);
+
+	for (int ii = 1; ii < rc; ++ii) {
+		tags[ii-1].set(str + ovec[ii * 2], ovec[ii * 2 + 1] - ovec[ii * 2]);
+	}
+	return rc > 0;
+}
+
+void do_smart_auto_use(int /*options*/)
+{
+	int erroffset = 0; const char * errmsg = 0;
+	pcre * re = pcre_compile("AUTO_USE_([A-Za-z]+)_(.+)",
+		PCRE_CASELESS | PCRE_ANCHORED,
+		&errmsg, &erroffset, NULL);
+	ASSERT(re);
+
+	MyString tags[2];
+	MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+	MACRO_SOURCE src = {true, false, -1, -2, -1, -2};
+	std::string errstring;
+	std::string args;
+
+	HASHITER it = hash_iter_begin(ConfigMacroSet);
+	for (; !hash_iter_done(it); hash_iter_next(it)) {
+		const char *name = hash_iter_key(it);
+		if (re_match(name, re, PCRE_NOTEMPTY, tags)) {
+			// check trigger
+			auto_free_ptr trigger(param(name));
+			bool trigger_value = false;
+			if ( ! trigger) // an empty trigger does not fire
+				continue;
+			if ( ! Test_config_if_expression(trigger, trigger_value, errstring, ConfigMacroSet, ctx)) {
+				fprintf(stderr, "Configuration error while interpreting %s : %s\n", name, errstring.c_str());
+				continue;
+			}
+			if ( ! trigger_value)
+				continue;
+
+			int meta_id = param_default_get_source_meta_id(tags[0].c_str(), tags[1].c_str());
+			if (meta_id < 0) {
+				fprintf(stderr, "Configuration error while interpreting %s : no template named %s:%s\n",
+					name, tags[0].c_str(), tags[1].c_str());
+				continue;
+			}
+			// register the pseudo filename "AUTO_USE_<cat>_<tag>"
+			insert_source(name, ConfigMacroSet, src);
+			src.meta_id = (short int)meta_id;
+
+			MACRO_DEF_ITEM * mdi = param_meta_source_by_id(src.meta_id);
+			ASSERT(mdi && mdi->def && mdi->def->psz);
+
+			auto_free_ptr expanded(expand_meta_args(mdi->def->psz, args));
+			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
+		}
+	}
+	hash_iter_delete(&it);
+	pcre_free(re);
+}
+
 
 int compareFiles(const void *a, const void *b) {
 	 return strcmp(*(char *const*)a, *(char *const*)b);
@@ -1485,13 +1564,13 @@ find_global(int config_options)
 // if basename is a fully qualified path, then it is used as-is. otherwise
 // it is prefixed with ~/.condor/ to create the effective file location
 bool
-find_user_file(MyString &file_location, const char * basename, bool check_access)
+find_user_file(MyString &file_location, const char * basename, bool check_access, bool daemon_ok)
 {
 	file_location.clear();
 	if ( ! basename || ! basename[0])
 		return false;
 
-	if (can_switch_ids())
+	if (!daemon_ok && can_switch_ids())
 		return false;
 	if ( fullpath(basename)) {
 		file_location = basename;
@@ -1913,7 +1992,7 @@ const char * set_live_param_value(const char * name, const char * live_value)
 
 
 void
-init_config(int config_options)
+init_global_config_table(int config_options)
 {
 	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
 	ConfigMacroSet.size = 0;
@@ -1930,7 +2009,7 @@ init_config(int config_options)
 	ConfigMacroSet.table = new MACRO_ITEM[512];
 	if (ConfigMacroSet.table) {
 		ConfigMacroSet.allocation_size = 512;
-		clear_config(); // to zero-init the table.
+		clear_global_config_table(); // to zero-init the table.
 	}
 	if (ConfigMacroSet.defaults) {
 		// Initialize the default table.
@@ -1953,7 +2032,7 @@ init_config(int config_options)
 }
 
 void
-clear_config()
+clear_global_config_table()
 {
 	if (ConfigMacroSet.table) {
 		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);

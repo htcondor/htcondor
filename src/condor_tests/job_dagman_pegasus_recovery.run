@@ -31,6 +31,7 @@
 
 use CondorTest;
 use CondorUtils;
+use Data::Dumper;
 
 $cmd = 'job_dagman_pegasus_recovery.dag.condor.sub';
 $testdesc =  'Condor submit dag - retry-recovery test - scheduler U';
@@ -67,12 +68,15 @@ runcmd("touch job_dagman_pegasus_recovery-nodeB.works");
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper($info);
+	die "Abnormal exit was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
 };
 
 $held = sub 
@@ -96,7 +100,8 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, held, released, and successful completion\n",1);
 };
 
 $success = sub
@@ -170,8 +175,14 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 sub GenerateSubFile {
 	$template_file = "job_dagman_pegasus_recovery.dag.condor.sub_template";
 	$submit_file = "job_dagman_pegasus_recovery.dag.condor.sub";
-	$dagman_path = `which condor_dagman`;
-	chomp($dagman_path);
+	$dagman_path;
+	if (CondorUtils::is_windows()) {
+		$dagman_path = `where condor_dagman`;
+		CondorUtils::fullchomp($dagman_path);
+	} else {
+		$dagman_path = `which condor_dagman`;
+		chomp($dagman_path);
+	}
 
 	open(TEMPL, "<$template_file") or die "Can't open template file $template_file\n";
 	@template = <TEMPL>;

@@ -244,6 +244,10 @@ Daemon::deepCopy( const Daemon &copy )
 	if(copy.m_daemon_ad_ptr) {
 		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
 	}
+
+	m_owner = copy.m_owner;
+	m_methods = copy.m_methods;
+
 		/*
 		  there's nothing to copy for _sec_man... it'll already be
 		  instantiated at this point, and the SecMan object is really
@@ -624,6 +628,8 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
 
 	return startCommand_internal( req, timeout, &_sec_man );
 }
@@ -644,6 +650,8 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
 
 	auto rc = startCommand_internal(req, timeout, &_sec_man);
 
@@ -737,6 +745,8 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
 
 	return startCommand_internal(req, timeout, &_sec_man);
 }
@@ -756,6 +766,8 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
 
 	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {

@@ -270,4 +270,39 @@ all invalidated ClassAds to become absent instead of invalidated, set
 ``True``. Invalidated ClassAds will instead be treated as if they
 expired, including when evaluating ``ABSENT_REQUIREMENTS``.
 
+GPUs
+----
 
+:index:`monitoring GPUS`
+:index:`GPU monitoring`
+
+HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
+is enabled by default if you set ``use feature : GPUs`` in your configuration
+file.
+
+Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
+This tool polls the (NVidia) GPU device(s) in the system and records their
+utilization and memory usage values.  At regular intervals, the tool reports
+these values to the *condor_startd*, assigning them to each device's usage
+to the slot(s) to which those devices have been assigned.
+
+Please note that ``condor_gpu_utilization`` can not presently assign GPU
+utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
+device, or a GPU device being used by from outside HTCondor, will result
+in GPU usage and utilization being misreported accordingly.
+
+However, this approach does simplify monitoring for the owner/administrator
+of the GPUs, because usage is reported by the *condor_startd* in addition
+to the jobs themselves.
+
+Currently, you need to query the startd directly to see these attributes.
+
+:index:`UptimeGPUsSeconds<single: UptimeGPUsSeconds; machine attribute>`
+
+  ``UptimeGPUsSeconds``
+    The number of GPU-seconds accumulated over this startd's uptime.
+
+:index:`UptimeGPUsMemoryPeakUsages<single: UptimeGPUsMemoryPeakUsage; machine attribute>`
+
+  ``UptimeGPUsMemoryPeakUsage``
+    The largest amount of GPU memory used during this startd's uptime.

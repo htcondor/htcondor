@@ -32,6 +32,7 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -176,6 +177,13 @@ struct LiveJobCounters {
   {}
 };
 
+struct SubmitterFlockCounters {
+  int JobsRunning{0};
+  int WeightedJobsRunning{0};
+  int JobsIdle{0};
+  int WeightedJobsIdle{0};
+};
+
 // counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
@@ -184,8 +192,6 @@ struct SubmitterCounters {
   int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
-  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
-  int WeightedJobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int SchedulerJobsRunning; // Scheduler Universe (i.e dags)
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
@@ -201,8 +207,6 @@ struct SubmitterCounters {
 	, WeightedJobsIdle(0)
 	, JobsHeld(0)
 	, JobsFlocked(0)
-	, JobsFlockedHere(0)
-	, WeightedJobsFlockedHere(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
@@ -219,6 +223,8 @@ struct SubmitterData {
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   SubmitterCounters num;
+  std::unordered_map<std::string, SubmitterFlockCounters> flock; // Per-pool flock information
+  std::unordered_set<std::string> owners; // Number of unique owners observed using this submitter.
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
@@ -312,7 +318,6 @@ class match_rec: public ClaimIdParser
 	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
-	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
@@ -341,7 +346,12 @@ class match_rec: public ClaimIdParser
 		return m_description.c_str();
 	}
 
+	const std::string & getPool() const {return m_pool;}
+
 	PROC_ID m_now_job;
+
+private:
+	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
 class UserIdentity {
@@ -407,6 +417,51 @@ typedef enum {
 	NO_SHADOW_MPI,
 	NO_SHADOW_VM,
 } NoShadowFailure_t;
+
+
+namespace std
+{
+	template<> struct hash<std::pair<std::string, std::string>>
+	{
+		typedef std::pair<std::string, std::string> argument_type;
+		typedef std::size_t result_type;
+		result_type operator()(argument_type const& input) const noexcept
+		{
+			result_type const h1 ( std::hash<std::string>{}(input.first) );
+			result_type const h2 ( std::hash<std::string>{}(input.second) );
+			return h1 ^ (h2 << 1);
+		}
+	};
+}
+
+class PoolSubmitterMap
+{
+public:
+	void AddSubmitter(const std::string &pool, const std::string &submitter, time_t now) {
+		m_map[std::make_pair(pool, submitter)] = now + 1200;
+	}
+
+	bool IsSubmitterValid(const std::string &pool, const std::string &submitter, time_t now) const {
+		auto iter = m_map.find({pool, submitter});
+		if (iter == m_map.end()) {
+			return false;
+		}
+		return iter->second > now;
+	}
+
+	void Cleanup(time_t now) {
+		for (auto it = m_map.begin(); it != m_map.end();) {
+			if (it->second <= now) {
+				it = m_map.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+private:
+	std::unordered_map<std::pair<std::string, std::string>, time_t> m_map;
+};
 
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
@@ -557,7 +612,7 @@ class Scheduler : public Service
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
 	// support for START_VANILLA_UNIVERSE
 	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
-	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
@@ -603,8 +658,8 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
@@ -662,6 +717,7 @@ class Scheduler : public Service
 	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() { return NonDurableLateMaterialize; }
+	bool			getEnableJobQueueTimestamps() { return EnableJobQueueTimestamps; }
 	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
@@ -769,9 +825,12 @@ class Scheduler : public Service
 
 private:
 
+	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
+
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
-	bool SetupNegotiatorSession(unsigned duration, std::string &capability);
+	bool SetupNegotiatorSession(unsigned duration, const std::string &remote_pool,
+		std::string &capability);
 	// Negotiator sessions have claim IDs, which includes a sequence number
 	uint64_t m_negotiator_seq{0};
 	time_t m_scheduler_startup{0};
@@ -818,6 +877,7 @@ private:
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
+	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
@@ -926,7 +986,7 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
@@ -1027,7 +1087,11 @@ private:
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
-	std::unordered_set<Daemon*>	m_flock_collectors_init;
+	std::unordered_set<std::string> FlockPools; // Names of all "default" flocked collectors.
+	std::unordered_map<std::string, std::unique_ptr<DCCollector>> FlockExtra; // User-provided flock targets.
+
+	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
+
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
@@ -1089,6 +1153,7 @@ private:
 
 	bool m_matchPasswordEnabled;
 
+	bool m_include_default_flock_param{true};
 	DCTokenRequester m_token_requester;
 
 	friend class DedicatedScheduler;

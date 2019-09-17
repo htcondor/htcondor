@@ -102,7 +102,7 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 		}
 	}
 
-	return htcondor::write_out_token(token_name, token);
+	return htcondor::write_out_token(token_name, token, "");
 }
 
 int main(int argc, char *argv[]) {

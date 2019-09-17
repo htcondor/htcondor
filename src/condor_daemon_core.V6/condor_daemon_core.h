@@ -1506,6 +1506,8 @@ class DaemonCore : public Service
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
+	bool getStartTime(int & startTime);
+
 		/**
 		   Indicates if this daemon wants to be restarted by its
 		   parent or not.  Usually true, unless one of the
@@ -1585,7 +1587,7 @@ class DaemonCore : public Service
 	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
-	   stats_entry_recent<int> TimersFired;    //  number of timer handlers called
+	   stats_entry_abs<int> TimersFired;    //  number of timer handlers called
 	   stats_entry_recent<int> SockMessages;   //  number of socket handlers called
 	   stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
 	   //stats_entry_recent<int64_t> SockBytes;      //  number of bytes passed though the socket (can we do this?)

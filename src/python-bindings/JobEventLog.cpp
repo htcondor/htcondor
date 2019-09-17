@@ -433,11 +433,24 @@ void export_event_log() {
 	boost::python::class_<JobEventLog, boost::noncopyable>("JobEventLog",
             R"C0ND0R(
             Reads job event (user) logs.
+
+            By default, it waits for new events, but it may be used to
+            poll for them, as follows: ::
+
+                import htcondor
+                jel = htcondor.JobEventLog("file.log")
+                # Read all currently-available events without blocking.
+                for event in jel.events(0):
+                    print(event)
+                else:
+                    print("We found the the end of file")
+
+            A pickled :class:`JobEventLog` resumes iterating over events
+            where it left off if and only if, after being unpickled, the
+            job event log file is identical except for appended events.
             )C0ND0R",
         boost::python::init<const std::string &>(
 	        R"C0ND0R(
-	        Create an instance of the JobEventLog class.
-
 	        :param str filename: A file containing a job event (user) log.
             )C0ND0R",
             boost::python::args("self", "filename")))
@@ -447,7 +460,7 @@ void export_event_log() {
             )C0ND0R")
 		.def("events", &JobEventLog::events,
             R"C0ND0R(
-            Return an iterator over :class:`JobEvent` from the filename given in the constructor.
+            Return an iterator over :class:`JobEvent` objects from the filename given in the constructor.
 
             :param int stop_after: After how many seconds should the iterator
                 stop waiting for new events?  If ``None``, wait forever.
@@ -479,7 +492,7 @@ void export_event_log() {
 
             The rest of the information in the :class:`JobEvent` can be accessed by key.
             :class:`JobEvent` behaves like a read-only Python :class:`dict`, with
-            ``get``, ``keys``, ``items``, and ``values`` methods, and support ``len``
+            ``get``, ``keys``, ``items``, and ``values`` methods, and supports ``len``
             and ``in`` (``if "attribute" in job_event``, for example).
 
             .. attention:: Although the attribute ``type`` is a :class:`JobEventType` type,
@@ -652,7 +665,20 @@ void export_event_log() {
 		.value( "FILE_REMOVED", ULOG_FILE_REMOVED )
 	;
 
-	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType", "..." )
+	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType",
+            R"C0ND0R(
+            The event type for file transfer events; corresponds to
+            ``FileTransferEventType`` in the C++ source.
+
+            The values of the enumeration are:
+
+            .. attribute:: IN_QUEUED
+            .. attribute:: IN_STARTED
+            .. attribute:: IN_FINISHED
+            .. attribute:: OUT_QUEUED
+            .. attribute:: OUT_STARTED
+            .. attribute:: OUT_FINISHED
+            )C0ND0R")
 		.value( "IN_QUEUED", FileTransferEvent::IN_QUEUED )
 		.value( "IN_STARTED", FileTransferEvent::IN_STARTED )
 		.value( "IN_FINISHED", FileTransferEvent::IN_FINISHED )

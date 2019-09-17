@@ -1969,7 +1969,8 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	job->SetDestJobAd(ad);
 #if HAVE_JOB_HOOKS
-	keyword = m_hook_mgr->getHookKeyword(job->src_ad);
+	
+	keyword = m_hook_mgr ? m_hook_mgr->getHookKeyword(job->src_ad) : "";
 	if(0 < keyword.length()) {
 		copy_attr_param = keyword;
 		copy_attr_param += "_ATTRS_TO_COPY";

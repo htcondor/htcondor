@@ -238,7 +238,7 @@ initShadow( ClassAd* ad )
 			 CondorUniverseName(universe), cluster, proc );
 
 	bool wantPS = false;
-	ad->LookupBool("WantParallelScheduling", wantPS);
+	ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
 	if (wantPS) {
 		universe = CONDOR_UNIVERSE_PARALLEL;
 	}

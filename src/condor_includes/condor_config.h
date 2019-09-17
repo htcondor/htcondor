@@ -351,11 +351,13 @@ extern "C" {
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
 	#define CONFIG_OPT_COLON_IS_META_ONLY 0x10 // colon isn't valid for use in param assigments (only = is allowed)
+	#define CONFIG_OPT_NO_SMART_AUTO_USE  0x20 // ignore SMART_AUTO_USE_* knobs, default is to process them for CONFIG but not SUBMIT
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
 	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
+	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
 	bool config();
 	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
@@ -380,7 +382,10 @@ extern "C" {
 	// this function allows tests to set the actual backend data for a param value and returns the old value.
 	// make sure that live_value stays in scope until you put the old value back
 	const char * set_live_param_value(const char * name, const char * live_value);
-	bool find_user_file(MyString & filename, const char * basename, bool check_access);
+		// Find a file associated with a user; by default, this fails if called in a context
+		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
+		// condor.
+	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 
@@ -445,8 +450,6 @@ inline bool expand_param (const char *str, std::string & expanded) {
 int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
 int write_config_file(const char* pathname, int options);
 
-extern "C" {
-
 	/** Find next $$(MACRO) or $$([expression]) in value
 		search begins at pos and continues to terminating null
 
@@ -468,8 +471,8 @@ extern "C" {
 	*/
 	int next_dollardollar_macro(char * value, int pos, char** left, char** name, char** right);
 
-	void init_config (int options);
-}
+	void init_global_config_table(int options);
+	void clear_global_config_table(void);
 
 #endif // __cplusplus
 
@@ -691,7 +694,6 @@ BEGIN_C_DECLS
 		int cReferenced;
 	};
 	int  get_config_stats(struct _macro_stats *pstats);
-	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );

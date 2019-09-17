@@ -103,6 +103,7 @@ public:
 	int LookupBool(const char * attr, bool & val) { return ad.LookupBool(attr, val); }
 	int LookupInt(const char * attr, long long & val) { return ad.LookupInteger(attr, val); }
 	classad::Value::ValueType LookupType(const std::string attr);
+	classad::Value::ValueType LookupType(const std::string attr, classad::Value & val);
 
 protected:
 	ClassAd& ad;
@@ -200,7 +201,12 @@ bool DeltaClassAd::Assign(const char* attr, const char * val)
 classad::Value::ValueType DeltaClassAd::LookupType(const std::string attr)
 {
 	classad::Value val;
-	if ( ! ad.EvaluateAttr(attr, val))
+	return LookupType(attr, val);
+}
+
+classad::Value::ValueType DeltaClassAd::LookupType(const std::string attr, classad::Value & val)
+{
+	if (! ad.EvaluateAttr(attr, val))
 		return classad::Value::ValueType::ERROR_VALUE;
 	return val.GetType();
 }
@@ -463,6 +469,8 @@ SubmitHash::SubmitHash()
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
 	, JobDisableFileChecks(false)
+	, SubmitOnHold(false)
+	, SubmitOnHoldCode(0)
 	, already_warned_requirements_disk(false)
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
@@ -2048,16 +2056,22 @@ int SubmitHash::SetJobStatus()
 		}
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SubmittedOnHold);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SubmittedOnHold;
 
 		AssignJobString(ATTR_HOLD_REASON, "submitted on hold at user's request");
 	} else 
 	if ( IsRemoteJob ) {
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
 		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		SubmitOnHold = true;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE_SpoolingInput;
 
 		AssignJobString(ATTR_HOLD_REASON, "Spooling input data files");
 	} else {
 		AssignJobVal(ATTR_JOB_STATUS, IDLE);
+		SubmitOnHold = false;
+		SubmitOnHoldCode = 0;
 	}
 
 	AssignJobVal(ATTR_ENTERED_CURRENT_STATUS, submit_time);
@@ -2071,7 +2085,7 @@ int SubmitHash::SetPriority()
 {
 	RETURN_IF_ABORT();
 
-	int prioval = submit_param_int( SUBMIT_KEY_Priority, ATTR_PRIO, 0 );
+	int prioval = submit_param_int( SUBMIT_KEY_Priority, "prio", 0 );
 	RETURN_IF_ABORT();
 
 	AssignJobVal(ATTR_JOB_PRIO, prioval);
@@ -3607,8 +3621,8 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_WANT_CHECKPOINT, JobUniverse == CONDOR_UNIVERSE_STANDARD);
 	}
 
-	// The starter ignores ATTR_SUCCESS_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
-	if (job->Lookup(ATTR_SUCCESS_CHECKPOINT_EXIT_CODE)) {
+	// The starter ignores ATTR_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
+	if (job->Lookup(ATTR_CHECKPOINT_EXIT_CODE)) {
 		AssignJobVal(ATTR_WANT_FT_ON_CHECKPOINT, true);
 	}
 
@@ -4837,7 +4851,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JobAdInformationAttrs, ATTR_JOB_AD_INFORMATION_ATTRS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
-	{SUBMIT_KEY_DockerNetworkType, ATTR_JOB_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetJobMachineAttrs
@@ -4931,7 +4945,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_CoreSize, ATTR_CORE_SIZE, SimpleSubmitKeyword::f_as_int},
 	// formerly SetPrio
 	{SUBMIT_KEY_Priority, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int},
-	{ATTR_PRIO, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name},
+	{SUBMIT_KEY_Prio, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name},
 	// formerly SetWantRemoteIO
 	{SUBMIT_KEY_WantRemoteIO, ATTR_WANT_REMOTE_IO, SimpleSubmitKeyword::f_as_bool},
 	// formerly SetRunAsOwner
@@ -4941,7 +4955,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxTransferOutputMB, ATTR_MAX_TRANSFER_OUTPUT_MB, SimpleSubmitKeyword::f_as_expr},
 
 	// Self-checkpointing
-	{SUBMIT_KEY_CheckpointExitCode, ATTR_SUCCESS_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
+	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
+
+    // EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
+    // is ON_EXIT_OR_EVICT, which we may want to warn people about.
+    {SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -4956,11 +4974,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_Arguments2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_err | SimpleSubmitKeyword::f_special_args },
 	{SUBMIT_CMD_AllowArgumentsV1, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_args},
 	// invoke SetRequestResources
-	{ SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr },
-	{ SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr },
-	{ SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr },
-	{ "request_gpus", "RequestGPUs", SimpleSubmitKeyword::f_as_expr },
-		// invoke SetGridParams
+	{SUBMIT_KEY_RequestCpus, ATTR_REQUEST_CPUS, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestDisk, ATTR_REQUEST_DISK, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestMemory, ATTR_REQUEST_MEMORY, SimpleSubmitKeyword::f_as_expr},
+	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr},
+	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_GlobusResubmit, ATTR_GLOBUS_RESUBMIT_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GridShell, ATTR_USE_GRID_SHELL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_grid },
@@ -5034,10 +5052,10 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JavaVMArguments2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_java},
 	{SUBMIT_CMD_AllowArgumentsV1, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_java},
 	// invoke SetParallelParams, this sets different attributes for the same keyword depending on universe (sigh)
-	{ ATTR_WANT_PARALLEL_SCHEDULING, ATTR_WANT_PARALLEL_SCHEDULING, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_MachineCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_NodeCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel },
-	{ SUBMIT_KEY_NodeCountAlt, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel },
+	{ATTR_WANT_PARALLEL_SCHEDULING, ATTR_WANT_PARALLEL_SCHEDULING, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_MachineCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_NodeCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
+	{SUBMIT_KEY_NodeCountAlt, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
 	// invoke SetEnvironment
 	{SUBMIT_KEY_Environment1, ATTR_JOB_ENVIRONMENT1, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_KEY_Environment2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
@@ -5050,27 +5068,30 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetNotification
 	{SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_notify},
 	// invoke SetRank
-	{SUBMIT_KEY_Rank, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_rank },
-	{SUBMIT_KEY_Preferences, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_rank },
+	{SUBMIT_KEY_Rank, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_rank},
+	{SUBMIT_KEY_Preferences, ATTR_RANK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_rank},
 	// invoke SetConcurrencyLimits
 	{SUBMIT_KEY_ConcurrencyLimits, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_concurr},
 	{SUBMIT_KEY_ConcurrencyLimitsExpr, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_concurr | SimpleSubmitKeyword::f_alt_err},
 	// invoke SetAccountingGroup
-	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
-	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
+	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
+	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
 	// invoke SetStdin
-	{SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin },
-	{SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin },
-	{SUBMIT_KEY_Input, SUBMIT_KEY_Stdin, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdin },
-	// invoke SetStdout
-	{SUBMIT_KEY_TransferOutput, ATTR_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout },
-	{SUBMIT_KEY_StreamOutput, ATTR_STREAM_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout },
-	{SUBMIT_KEY_Output, SUBMIT_KEY_Stdout, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdout },
+	{SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_Input, ATTR_JOB_INPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdin},
+	{SUBMIT_KEY_Stdin, ATTR_JOB_INPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stdin},
+		// invoke SetStdout
+	{SUBMIT_KEY_TransferOutput, ATTR_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_StreamOutput, ATTR_STREAM_OUTPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_Output, ATTR_JOB_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stdout},
+	{SUBMIT_KEY_Stdout, ATTR_JOB_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stdout},
 	// invoke SetStderr
-	{SUBMIT_KEY_TransferError, ATTR_TRANSFER_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr },
-	{SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr },
-	{SUBMIT_KEY_Error, SUBMIT_KEY_Stderr, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stderr },
+	{SUBMIT_KEY_TransferError, ATTR_TRANSFER_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_Error, ATTR_JOB_ERROR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_stderr},
+	{SUBMIT_KEY_Stderr, ATTR_JOB_ERROR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_stderr},
 	// invoke SetPeriodicExpressions
 	{SUBMIT_KEY_PeriodicHoldCheck, ATTR_PERIODIC_HOLD_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
 	{SUBMIT_KEY_PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_periodic },
@@ -5122,16 +5143,19 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetImageSize
 	{SUBMIT_KEY_ImageSize, ATTR_IMAGE_SIZE, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_imagesize },
 	// invoke SetTransferFiles
-	{ SUBMIT_KEY_TransferInputFiles, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferInputFilesAlt, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputFiles, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputFilesAlt, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
-	{ SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferInputFiles, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferInputFilesAlt, ATTR_TRANSFER_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputFiles, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputFilesAlt, ATTR_TRANSFER_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 
 	{NULL, NULL, 0}, // end of table
 };
+
+// used for utility debug code in condor_submit
+const struct SimpleSubmitKeyword * get_submit_keywords() { return prunable_keywords; }
 
 // This struct is used to build a sorted table of SimpleSubmitKeywords when we first initialize this class
 // the sorted table of SimpleSubmitKeywords is in turn used to enable a quick check to see if an keyword
@@ -5628,8 +5652,9 @@ int SubmitHash::SetRequestResources()
 			continue;
 		}
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
-		// resource name should be nonempty
-		if (! *rname) continue;
+		const size_t min_tag_len = 2;
+		// resource name should be nonempty at least 2 characters long and not start with _
+		if ((strlen(rname) < min_tag_len) || *rname == '_') continue;
 		// could get this from 'it', but this prevents unused-line warnings:
 		char * val = submit_param(key);
 		if (val[0] == '\"')
@@ -5681,6 +5706,20 @@ int SubmitHash::SetRequirements()
 			return abort_code;
 		}
 		answer = "";
+	}
+
+	// if a Requirements are forced. we will skip requirements generation
+	// and just use the value that SetForcedAttributes already stuffed into the ad
+	auto_free_ptr myreq(submit_param("MY." ATTR_REQUIREMENTS));
+	if ( ! myreq) { myreq.set(submit_param("+" ATTR_REQUIREMENTS)); }
+	if (myreq) {
+		// warn if both My.Requirements and requirements are specified since they conflict
+		if (orig) {
+			push_warning(stderr,
+				"Use of MY.Requirements or +Requirements  overrides requirements. "
+				"You should remove one of these statements from your submit file.\n");
+		}
+		return abort_code;
 	}
 
 	const char * factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
@@ -5967,19 +6006,26 @@ int SubmitHash::SetRequirements()
 		}
 	}
 
+	// build a set of custom resource names from the attributes in the job with names that start with Request
+	//
 	classad::References tags;
 	std::string request_pre("Request");
-	const int prefix_len = sizeof("Request") - 1;
+	const size_t prefix_len = sizeof("Request") - 1;
+	const size_t min_tag_len = 2;
 	const classad::ClassAd *parent = procAd->GetChainedParentAd();
 	if (parent) {
 		for (classad::ClassAd::const_iterator it = parent->begin(); it != parent->end(); ++it) {
-			if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+			if (it->first.length() >= (prefix_len + min_tag_len) &&
+			    starts_with_ignore_case(it->first, request_pre) &&
+			    it->first[prefix_len] != '_') { // don't allow tags to start with _
 				tags.insert(it->first);
 			}
 		}
 	}
 	for (classad::ClassAd::const_iterator it = procAd->begin(); it != procAd->end(); ++it) {
-		if (it->first.length() > prefix_len && starts_with_ignore_case(it->first, request_pre)) {
+		if (it->first.length() >= (prefix_len + min_tag_len) &&
+		    starts_with_ignore_case(it->first, request_pre) &&
+		    it->first[prefix_len] != '_') { // don't allow tags to start with _
 			tags.insert(it->first);
 		}
 	}
@@ -5993,11 +6039,23 @@ int SubmitHash::SetRequirements()
 		if (machine_refs.count(tag))
 			continue;
 
-		auto vtype = job->LookupType(*it);
-		if (vtype == classad::Value::ValueType::INTEGER_VALUE || vtype == classad::Value::ValueType::REAL_VALUE) {
-			formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+		classad::Value value;
+		auto vtype = job->LookupType(*it, value);
+		if (vtype == classad::Value::ValueType::INTEGER_VALUE ||
+			vtype == classad::Value::ValueType::REAL_VALUE ||
+			vtype == classad::Value::ValueType::UNDEFINED_VALUE) {
+			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
+			double val = 0.0;
+			if ( ! value.IsNumber(val) || val > 0) {
+				formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+			}
 		} else if (vtype == classad::Value::ValueType::STRING_VALUE) {
-			formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
+			// gt6938, don't add a requirements clause when a custom string resource request is the empty string
+			int sz = 0;
+			value.IsStringValue(sz);
+			if (sz > 0) {
+				formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
+			}
 		}
 	}
 
@@ -7720,22 +7778,20 @@ ClassAd* SubmitHash::make_job_ad (
 	SetAutoAttributes();
 	ReportCommonMistakes();
 
-		// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
-		// SetCronTab(), and SetPerFileEncryption()
-		//
-		// FIXME? (TJ): and after SetAutoAttributes().
-	SetRequirements();
-
-
-		// This must come after all things that modify the input file list
-	FixupTransferInputFiles();
-
 		// When we are NOT late materializing, set SUBMIT_ATTRS attributes that are +Attr or My.Attr second-to-last
 	if ( ! clusterAd) { SetForcedSubmitAttrs(); }
 
 		// SetForcedAttributes should be last so that it trumps values
 		// set by normal submit attributes
 	SetForcedAttributes();
+
+	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
+	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
+	// and after SetForcedAttributes()
+	SetRequirements();
+
+	// This must come after all things that modify the input file list
+	FixupTransferInputFiles();
 
 	// if we aborted in any of the steps above, then delete the job and return NULL.
 	if (abort_code) {

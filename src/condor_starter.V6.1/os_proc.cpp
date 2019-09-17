@@ -402,7 +402,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	size_t *core_size_ptr = NULL;
 #if !defined(WIN32)
 	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
-		if ( core_size_ad < 0 || (unsigned long long)core_size_ad > RLIM_INFINITY ) {
+		if ( core_size_ad < 0 ) {
 			core_size = RLIM_INFINITY;
 		} else {
 			core_size = (size_t)core_size_ad;
@@ -710,7 +710,7 @@ OsProc::JobReaper( int pid, int status )
 			tag->InsertAttr( "When", (long long)exitTime.tv_sec );
 
 			classad::ClassAd toe;
-			toe.Insert( "ToE", tag );
+			toe.Insert( ATTR_JOB_TOE, tag );
 
 			std::string jobAdFileName;
 			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
@@ -733,17 +733,17 @@ OsProc::JobReaper( int pid, int status )
 				classad::ClassAd jobAd;
 				if( InsertFromFile( f, jobAd, isEof, error ) ) {
 					classad::ClassAd * tag =
-						dynamic_cast<classad::ClassAd *>(jobAd.Lookup( "ToE" ));
+						dynamic_cast<classad::ClassAd *>(jobAd.Lookup(ATTR_JOB_TOE));
 					if( tag ) {
 						// Store for the post-script's environment.
 						tag->EvaluateAttrInt( "HowCode", this->howCode );
 
 						// Don't let jobAd delete tag; toe will delete when it
 						// goes out of scope.
-						jobAd.Remove( "ToE" );
+						jobAd.Remove(ATTR_JOB_TOE);
 
 						classad::ClassAd toe;
-						toe.Insert( "ToE", tag );
+						toe.Insert(ATTR_JOB_TOE, tag );
 
 						// Update the schedd's copy of the job ad.
 						ClassAd updateAd( toe );

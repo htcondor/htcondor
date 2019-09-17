@@ -635,16 +635,14 @@ These are all of the events that can show up in a job log file:
   tables would become corrupted.
 
 | **Event Number:** 035
-| **Event Name:** Factory Submit
+| **Event Name:** Cluster Submit
 | **Event Description:** This event occurs when a user submits a cluster
-  using late materialization.
+  with multiple procs.
 
 | **Event Number:** 036
-| **Event Name:** Cluster Removed
-| **Event Description:** Only written for clusters using late
-  materialization. This event occurs after all the jobs in a cluster
-  submitted using late materialization have materialized and completed, or
-  when the cluster is removed (by *condor_rm*).
+| **Event Name:** Cluster Remove
+| **Event Description:** This event occurs after all the jobs in a multi-proc 
+  cluster have completed, or when the cluster is removed (by *condor_rm*).
 
 | **Event Number:** 037
 | **Event Name:** Factory Paused
@@ -715,7 +713,8 @@ queue. That is, the job will no longer appear in the output of
 *condor_q*, and the job will be inserted into the job history file.
 Examine the job history file with the *condor_history* command. If
 there is a log file specified in the submit description file for the
-job, then the job exit status will be recorded there as well.
+job, then the job exit status will be recorded there as well, along with
+other information described below.
 :index:`notification<single: notification; submit commands>`
 
 By default, HTCondor does not send an email message when the job
@@ -759,4 +758,38 @@ time given in the form ``<days> <hours>:<minutes>:<seconds>``.
 And, statistics about the bytes sent and received by the last run of the
 job and summed over all attempts at running the job are given.
 
+The job terminated event includes the following:
 
+- the type of termination (normal or by signal)
+- the return value (or signal number)
+- local and remote usage for the last (most recent) run
+  (in CPU-seconds)
+- local and remote usage summed over all runs
+  (in CPU-seconds)
+- bytes sent and received by the job's last (most recent) run,
+- bytes sent and received summed over all runs,
+- a report on which partitionable resources were used, if any.  Resources
+  include CPUs, disk, and memory; all are lifetime peak values.
+
+Your administrator may have configured HTCondor to report on other resources,
+particularly GPUs (lifetime average) and GPU memory usage (lifetime peak).
+HTCondor currently assigns all the usage of a GPU to the job running in
+the slot to which the GPU is assigned; if the admin allows more than one job
+to run on the same GPU, or non-HTCondor jobs to use the GPU, GPU usage will be
+misreported accordingly.
+
+When configured to report GPU usage, HTCondor sets the following two
+attributes in the job:
+
+:index:`GPUsUsage<single: GPUsUsage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; GPUsUsage>`
+
+  ``GPUsUsage``
+    GPU usage over the lifetime of the job, reported as a fraction of the
+    the maximum possible utilization of one GPU.
+
+:index:`GPUsMemoryUsage<single: GPUsMemoryUsage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; GPUsMemoryUsage>`
+
+  ``GPUsMemoryUsage``
+    Peak memory usage over the lifetime of the job, in megabytes.

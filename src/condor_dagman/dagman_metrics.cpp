@@ -122,7 +122,11 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	dag->_jobs.Rewind();
 	while ( (node = dag->_jobs.Next()) ) {
 		_graphNumVertices++;
+#ifdef DEAD_CODE
 		_graphNumEdges += node->NumChildren();
+#else
+		_graphNumEdges += node->CountChildren();
+#endif
 		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
@@ -373,11 +377,22 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 void
 DagmanMetrics::GatherGraphMetrics( Dag* dag )
 {
+#ifdef DEAD_CODE
 	// Gather metrics about the size, shape of the graph.
 	_graphWidth = GetGraphWidth( dag );
 	_graphHeight = GetGraphHeight( dag );
+#else
+	// if we haven't alrady run the DFS cycle detection do that now
+	// it has the side effect of determining the width and height of the graph
+	if ( ! dag->_graph_width) {
+		dag->isCycle();
+	}
+	_graphWidth = dag->_graph_width;
+	_graphHeight = dag->_graph_height;
+#endif
 }
 
+#ifdef DEAD_CODE
 //---------------------------------------------------------------------------
 int
 DagmanMetrics::GetGraphHeight( Dag* dag )
@@ -419,15 +434,15 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 	}
 
 	// Base case: if this is a leaf node, return 1
-	if( node->NumChildren() == 0 ) {
+	if (node->NoChildren()) {
 		return 1;
 	}
 
 	// Recursive case: call this function recursively on all child nodes, then
 	// return the greatest height found among all children.
+	int maxHeight = 0;
 	set<JobID_t>& childNodes = node->GetQueueRef( Job::Q_CHILDREN );
 	set<JobID_t>::const_iterator it;
-	int maxHeight = 0;
 	for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
 		Job* child = dag->FindNodeByNodeID( *it );
 		int thisChildHeight = 1 + GetGraphHeightRecursive( child, dag, visited );
@@ -514,6 +529,8 @@ DagmanMetrics::GetGraphWidth( Dag* dag )
 
 	return maxWidth;
 }
+
+#endif // DEAD_CODE
 
 //---------------------------------------------------------------------------
 MyString

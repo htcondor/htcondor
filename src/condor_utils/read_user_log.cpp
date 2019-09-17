@@ -641,7 +641,7 @@ ReadUserLog::determineLogType( FileLockBase *lock )
 	} else if (YourString("<") == intro) {
 		m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
 
-		char afterangle = fgetc(m_fp);
+		int afterangle = fgetc(m_fp);
 
 		// If we're at the start of the file, skip the header
 		if ( filepos == 0 ) {
@@ -675,7 +675,7 @@ ReadUserLog::determineLogType( FileLockBase *lock )
 }
 
 bool
-ReadUserLog::skipXMLHeader(char afterangle, long filepos)
+ReadUserLog::skipXMLHeader(int afterangle, long filepos)
 {
 	// now figure out if there is a header, and if so, advance _fp past
 	// it - this is really ugly
@@ -698,6 +698,10 @@ ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 			// we go so we can skip back two chars later
 			while( nextchar != EOF && nextchar != '<' ) {
 				filepos = ftell(m_fp);
+				if (filepos < 0) {
+					Error( LOG_ERROR_FILE_OTHER, __LINE__ );
+					return false;
+				}
 				nextchar = fgetc(m_fp);
 			}
 			if( nextchar == EOF ) {

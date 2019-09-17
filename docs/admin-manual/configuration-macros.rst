@@ -948,8 +948,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     second field is a regex that we will match against the input, and
     the third field will be the output if the regex matches, the 3 and 4
     argument form of the ClassAd userMap() function (see
-    :ref:`misc-concepts/classad-mechanism:old classad syntax`) expect
-    that the third field will be a comma separated list of values. for
+    :ref:`ClassAd Syntax`) expect
+    that the third field will be a comma separated list of values. For
     example:
 
     ::
@@ -1826,6 +1826,22 @@ starter, none of which use DaemonCore).
     effect on the *condor_schedd*, and would be given a higher integer
     value for tuning purposes when there is a high number of jobs
     starting and exiting per second.
+
+``MAX_TIMER_EVENTS_PER_CYCLE`` :index:`MAX_TIMER_EVENTS_PER_CYCLE`
+    An integer value that defaults to 3. It is a rarely changed
+    performance tuning parameter to set the max number of internal
+    timer events will be dispatched per DaemonCore event cycle.
+    A value of zero means no limit, so that all timers that are due
+    at the start of the event cycle should be dispatched.
+
+``MAX_UDP_MSGS_PER_CYCLE`` :index:`MAX_UDP_MSGS_PER_CYCLE`
+    An integer value that defaults to 1. It is a rarely changed
+    performance tuning parameter to set the number of incoming UDP
+    messages a daemon will read per DaemonCore event cycle.
+    A value of zero means no limit. It has the most noticeable
+    effect on the *condor_schedd* and *condor_collector* daemons,
+    which can receive a large number of UDP messages when under heavy
+    load.
 
 ``MAX_REAPS_PER_CYCLE`` :index:`MAX_REAPS_PER_CYCLE`
     An integer value that defaults to 0. It is a rarely changed
@@ -3358,6 +3374,8 @@ section.
     causes the initial update to occur at a random number of seconds
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
+
+.. _MachineMaxVacateTime:
 
 ``MachineMaxVacateTime`` :index:`MachineMaxVacateTime`
     An integer expression representing the number of seconds the machine
@@ -5229,11 +5247,23 @@ These macros control the *condor_schedd*.
     communicate with the central manager. The default value, if not
     specified, is 1200 (20 minutes).
 
+.. _GRACEFULLY_REMOVE_JOBS:
+
 ``GRACEFULLY_REMOVE_JOBS`` :index:`GRACEFULLY_REMOVE_JOBS`
-    A boolean value that causes jobs to be gracefully removed when the
-    default value of ``True``. A submit description file command
-    **want_graceful_removal** :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
-    overrides the value set for this configuration variable.
+    A boolean value defaulting to ``True``.  If ``True``, jobs will be
+    given a chance to shut down cleanly when removed.  In the vanilla
+    universe, this means that the job will be sent the signal set in
+    its ``SoftKillSig`` attribute, or ``SIGTERM`` if undefined; if the
+    job hasn't exited after its max vacate time, it will be hard-killed
+    (sent ``SIGKILL``).  Signals are different on Windows, and other
+    details differ between universes.
+
+    The submit command :ref:`want_graceful_removal<want_graceful_removal>`
+    :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
+    overrides this configuration variable.
+
+    See :ref:`MachineMaxVacateTime<MachineMaxVacateTime>` for details on
+    how HTCondor computes the job's max vacate time.
 
 ``SCHEDD_ROUND_ATTR_<xxxx>`` :index:`SCHEDD_ROUND_ATTR_<xxxx>`
     This is used to round off attributes in the job ClassAd so that
@@ -9277,12 +9307,12 @@ macros are described in the :doc:`/admin-manual/security` section.
 ``AUTH_SSL_SERVER_CAFILE`` :index:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
-    with SSL.
+    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
 
 ``AUTH_SSL_CLIENT_CAFILE`` :index:`AUTH_SSL_CLIENT_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the client side of a communication authenticating
-    with SSL.
+    with SSL.  On Linux, this defaults to ``/etc/pki/tls/certs/ca-bundle.crt``.
 
 ``AUTH_SSL_SERVER_CADIR`` :index:`AUTH_SSL_SERVER_CADIR`
     The path to a directory that may contain the certificates (each in
@@ -9300,15 +9330,19 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 ``AUTH_SSL_SERVER_CERTFILE`` :index:`AUTH_SSL_SERVER_CERTFILE`
     The path and file name of the file containing the public certificate
-    for the server side of a communication authenticating with SSL.
+    for the server side of a communication authenticating with SSL.  On
+    Linux, this defaults to ``/etc/pki/tls/certs/localhost.crt``.
 
 ``AUTH_SSL_CLIENT_CERTFILE`` :index:`AUTH_SSL_CLIENT_CERTFILE`
     The path and file name of the file containing the public certificate
-    for the client side of a communication authenticating with SSL.
+    for the client side of a communication authenticating with SSL.  If
+    no client certificate is provided, then the client may authenticate
+    as the user ``anonymous@ssl``.
 
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
     The path and file name of the file containing the private key for
-    the server side of a communication authenticating with SSL.
+    the server side of a communication authenticating with SSL. On
+    Linux, this defaults to ``/etc/pki/tls/private/localhost.key``.
 
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
@@ -9335,8 +9369,8 @@ macros are described in the :doc:`/admin-manual/security` section.
 ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`
     This is a special authentication mechanism designed to minimize
     overhead in the *condor_schedd* when communicating with the execute
-    machine. Essentially, matchmaking results in a secret being shared
-    between the *condor_schedd* and *condor_startd*, and this is used
+    machine. When this is enabled, the *condor_negotiator* sends the *condor_schedd*
+    a secret key generated by the *condor_startd*.  This key is used
     to establish a strong security session between the execute and
     submit daemons without going through the usual security negotiation
     protocol. This is especially important when operating at large scale
@@ -9354,20 +9388,28 @@ macros are described in the :doc:`/admin-manual/security` section.
     the configuration of these values in the *condor_schedd*,
     *condor_shadow*, and *condor_starter* are ignored.
 
-    Important: For strong security, at least one of the two, integrity
-    or encryption, should be enabled in the startd configuration. Also,
+    Important: for this mechanism to be secure, integrity
+    and encryption, should be enabled in the startd configuration. Also,
     some form of strong mutual authentication (e.g. GSI) should be
-    enabled between all daemons and the central manager or the shared
+    enabled between all daemons and the central manager.  Otherwise, the shared
     secret which is exchanged in matchmaking cannot be safely encrypted
     when transmitted over the network.
 
     The *condor_schedd* and *condor_shadow* will be authenticated as
-    submit-side@matchsession when they talk to the *condor_startd* and
+    ``submit-side@matchsession`` when they talk to the *condor_startd* and
     *condor_starter*. The *condor_startd* and *condor_starter* will
-    be authenticated as execute-side@matchsession when they talk to the
+    be authenticated as ``execute-side@matchsession`` when they talk to the
     *condor_schedd* and *condor_shadow*. These identities is
     automatically added to the DAEMON, READ, and CLIENT authorization
     levels in these daemons when needed.
+
+    This same mechanism is also used to allow the *condor_negotiator* to authenticate
+    with the *condor_schedd*.  The submitter ads contain a unique security key;
+    any entity that can obtain the key from the collector (by default, anyone
+    with ``NEGOTIATOR`` permission) is authorized to perform negotiation with
+    the *condor_schedd*.  This implies, when ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
+    is enabled, the HTCondor administrator does not need to explicitly setup
+    authentication from the negotiator to the submit host.
 
 ``SEC_USE_FAMILY_SESSION`` :index:`SEC_USE_FAMILY_SESSION`
     The "family" session is a special security session that's shared

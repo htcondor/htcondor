@@ -34,7 +34,7 @@ my_exit( int status )
 	fflush( stderr );
 
 	if ( ! status ) {
-		clear_config();
+		clear_global_config_table();
 	}
 
 	exit( status );
@@ -63,7 +63,7 @@ int main(int argc, const char ** argv)
 {
 	bool do_test = true;
 
-	init_config(0); // initialize the config defaults
+	init_global_config_table(0); // initialize the config defaults
 
 	int ix = 1;
 	while (ix < argc) {

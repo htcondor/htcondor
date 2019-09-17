@@ -2123,8 +2123,10 @@ safe_async_log_open()
 			uid_t condor_uid = 0;
 			gid_t condor_gid = 0;
 			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
-				did_seteuid = (setegid(condor_gid) == 0)
-				           || (seteuid(condor_uid) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(condor_gid)) {}
+				if(seteuid(condor_uid)) {}
+				did_seteuid = true;
 			}
 			else if( orig_euid != getuid() || orig_egid != getgid() ) {
 				// To keep things simple, we do not bother trying to
@@ -2133,8 +2135,10 @@ safe_async_log_open()
 				// probably either the same as our effective id
 				// (no-op) or root.
 
-				did_seteuid = (setegid(getgid()) == 0)
-				           || (seteuid(getuid()) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(getgid())) {}
+				if(seteuid(getuid())) {}
+				did_seteuid = true;
 					// Do not open with O_CREAT in this case, so
 					// we don't leave behind a file owned by root,
 					// which could cause the daemon to fail to
@@ -2150,11 +2154,9 @@ safe_async_log_open()
 
 #if !defined(WIN32)
 		if( did_seteuid ) {
-			if (0 != setegid(orig_egid) ||
-			    0 != seteuid(orig_euid)) {
-				// what can we do about this???
-				create_log = false; // do something harmless and pointless so that fedora shuts up.
-			}
+			// The if statements are to quiet a compiler warning.
+			if(setegid(orig_egid)) {}
+			if(seteuid(orig_euid)) {}
 		}
 #endif
 

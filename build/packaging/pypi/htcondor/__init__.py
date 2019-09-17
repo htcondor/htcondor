@@ -26,3 +26,10 @@ Neither the environment variable CONDOR_CONFIG, /etc/condor/,
 
 from ._htcondor import *
 from ._htcondor import _Param
+
+# get the version using regexp ideally, and fall back to basic string parsing
+import re as _re
+try:
+    __version__ = _re.match('^.*(\d+\.\d+\.\d+)', version()).group(1)
+except (AttributeError, IndexError):
+    __version__ = version().split()[1]

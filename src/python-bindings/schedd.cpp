@@ -2991,7 +2991,10 @@ public:
 		JOB_ID_KEY jid;
 		int step=0, item_index=0, rval;
 
-		if (!PyIter_Check(from.ptr())) {
+			// Convert any non-iterator object to something iterable. In the default
+			// keyword argument case (from = None), skip this conversion; this has
+			// special handling logic in the SubmitStepFromPyIter class.
+		if ((from.ptr() != Py_None) && !PyIter_Check(from.ptr())) {
 			// if we have been passed an iterable, turn it into an iterator.
 			PyObject *py_iter = PyObject_GetIter(from.ptr());
 			if (!py_iter) {

@@ -88,9 +88,9 @@ condor_status command with a direct query, such as
     :index:`TimersFired<single: TimersFired; ClassAd statistics attribute>`
 
 ``TimersFired``:
-    This attribute is the number of internal timers which have fired, in
-    this daemon since start time. The corresponding attribute
-    RecentTimersFired in the number of timers fired in the last 20
-    minutes.
+    This attribute is the number of internal timers which have fired in
+    this daemon during the most recent pass of the event loop. The corresponding attribute
+    TimersFiredPeak is the maximum number of timers fired in one pass of the
+    event loop since daemon start time.
 
 

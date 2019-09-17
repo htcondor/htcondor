@@ -1053,7 +1053,7 @@ int PrettyPrinter::ppSetNegotiatorNormalCols (int)
 // be necessary, but it's convenient.
 const char * const annexInstance_PrintFormat = "SELECT\n"
 	// ATTR_ANNEX_NAME " AS 'Annex missing Instance' WIDTH -27\n"
-	"EC2InstanceID AS 'Instance ID' WIDTH 18\n"
+	"EC2InstanceID AS 'Instance ID' WIDTH 19\n"
 	ATTR_ANNEX_NAME " AS 'not in Annex'\n"
 	ATTR_GRID_JOB_STATUS " AS 'Status'\n"
 	ATTR_EC2_STATUS_REASON_CODE " AS 'Reason (if known)' PRINTF %s OR -\n"
