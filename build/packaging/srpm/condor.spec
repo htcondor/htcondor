@@ -1800,7 +1800,7 @@ fi
 %endif
 
 %changelog
-* Thu Sep 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
+* Thu Sep 05 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
 - Fixed two performance problems on Windows
 - Fixed Java universe on Debian and Ubuntu systems
 - Added two knobs to improve performance on large scale pools
