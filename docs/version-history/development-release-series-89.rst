@@ -73,8 +73,8 @@ New Features:
   :ticket:`6944`
 
 - A number of ease-of-use changes were made for submitting jobs from Python.
-  The Python method ``Schedd::queue_with_itemdata`` now accepts iterable objects
-  and the keyword argument was renamed from ``from`` (which, unfortunately, is also
+  In the Python method ``Schedd::queue_with_itemdata``,
+  the keyword argument was renamed from ``from`` (which, unfortunately, is also
   a Python keyword) to ``itemdata``.  :ticket:`7064`
   Both this method and the ``Submit`` object can now accept a wider range of objects,
   as long as they can be converted to strings. :ticket:`7065`
