@@ -648,12 +648,7 @@ struct SubmitStepFromPyIter {
 			Py_ssize_t pos = 0;
 			while (PyDict_Next(obj, &pos, &k, &v)) {
 				std::string key = extract<std::string>(k);
-
-				boost::python::handle<> value_handle(v);
-				boost::python::str value_str(value_handle);
-				boost::python::extract<std::string> item_extract(value_str);
-
-				m_livevars[key] = item_extract();
+				m_livevars[key] = extract<std::string>(v);
 				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
 			}
 		} else if (PyList_Check(obj)) {
@@ -673,20 +668,13 @@ struct SubmitStepFromPyIter {
 			const char * key = m_fea.vars.first();
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
-
-				boost::python::handle<> value_handle(v);
-				boost::python::str value_str(value_handle);
-				boost::python::extract<std::string> item_extract(value_str);
-
-				m_livevars[key] = item_extract();
+				m_livevars[key] = extract<std::string>(v);
 				key = m_fea.vars.next();
 				if ( ! key) break;
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
-			boost::python::handle<> handle(obj);
-			boost::python::str obj_str(handle);
-			extract<std::string> item_extract(obj_str);
+			extract<std::string> item_extract(obj);
 			if ( ! item_extract.check()) {
 				m_errmsg = "'from' data must be an iterator of strings or of dicts";
 				return -1;
@@ -2990,20 +2978,6 @@ public:
 
 		JOB_ID_KEY jid;
 		int step=0, item_index=0, rval;
-
-			// Convert any non-iterator object to something iterable. In the default
-			// keyword argument case (from = None), skip this conversion; this has
-			// special handling logic in the SubmitStepFromPyIter class.
-		if ((from.ptr() != Py_None) && !PyIter_Check(from.ptr())) {
-			// if we have been passed an iterable, turn it into an iterator.
-			PyObject *py_iter = PyObject_GetIter(from.ptr());
-			if (!py_iter) {
-				boost::python::throw_error_already_set();
-			}
-			boost::python::handle<> handle(py_iter);
-			from = boost::python::object(handle);
-		}
-
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
 		if (factory_submit) {
@@ -3752,8 +3726,7 @@ void export_schedd()
             :type input: dict or str
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
-        .def(init<std::string>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
-	.def(init<>((boost::python::arg("self"))))
+        .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand,
             R"C0ND0R(
@@ -3781,38 +3754,30 @@ void export_schedd()
             :rtype: int
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn")=boost::python::object(), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
             Submit the current object to a remote queue.
 
-            If the `data` parameter is provided, then a job per item in the list will
-            be created.  If the parameter is a list of dictionaries, the keys in the dictionary
-            will be treated as keys in the :class:`Submit` object macros.  For example, if the
-            submit command `transfer_input_files = $(filename)` is present and the data provided
-            is `[{'filename': 'input.txt'}]`, then the resulting job will have
-            `transfer_input_files = input.txt`.
-
-            :param txn: An active transaction object (see :meth:`Schedd.transaction`).  If `None`,
-                then the default current transaction is used.
+            :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
             :param int count: A queue count for each item from the iterator, defaults to 1.
-            :param itemdata: an iterable (list) of strings or dictionaries containing the itemdata
+            :param from: an iterator of strings or dictionaries containing the itemdata
                 for each job as in ``queue in`` or ``queue from``.
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids Cluster ID of the submitted job(s).
             :rtype: :class:`SubmitResult`
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn")=boost::python::object(), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
             )
         .def("jobs", &Submit::iterjobs,
             R"C0ND0R(
             Turn the current object into a sequence of simulated job ClassAds
 
-            :param int count: the queue count for each item in the data list, defaults to 1
-            :param itemdata: a iterable (list) of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
+            :param int count: the queue count for each item in the from list, defaults to 1
+            :param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'
             :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
             :param int procid: the initial value for ProcId when making job ads, defaults to 0
             :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
@@ -3829,7 +3794,7 @@ void export_schedd()
             The first ClassAd will be the cluster ad plus a ProcId attribute
 
             :param int count: the queue count for each item in the from list, defaults to 1
-            :param itemdata: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
+            :param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'
             :param int clusterid: the value to use for ClusterId when making job ads, defaults to 1
             :param int procid: the initial value for ProcId when making job ads, defaults to 0
             :param str qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.
