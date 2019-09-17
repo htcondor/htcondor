@@ -23,11 +23,13 @@ ON_RTD = os.environ.get('READTHEDOCS') == 'True'
 if ON_RTD:
     print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
     text = (Path(__file__).parent.parent / 'CMakeLists.txt').read_text()
-    match = re.search(r"set\(VERSION \"(\d+\.\d+\.\d+)\"\)", text)
+    match = re.search(r"^\s*set ?\( ?VERSION \"(\d+\.\d+\.\d+)-?\d*\" ?\)", text, re.MULTILINE)
     if match is not None:
-        version = "8.9.2b1" #match.group(1)
+        version = match.group(1)
+        pre = version + 'a0'
+        post = version + '.post999'
         print("DETECTED VERSION {}".format(version))
-        cmd = '{} -m pip install htcondor=={}'.format(sys.executable, version)
+        cmd = "{} -m pip install 'htcondor>={},<{}'".format(sys.executable, pre, post)
         print("EXECUTING COMMAND: {}".format(cmd))
         os.system(cmd)
         print("INSTALLED HTCONDOR PACKAGE")
