@@ -17,20 +17,20 @@
  #
  ###############################################################
 
-if (UNIX)
-	option(WITH_SCITOKENS "Compiling with support for SciTokens" OFF)
-endif(UNIX)
+if (UNIX AND NOT DARWIN)
+    option(WITH_SCITOKENS "Compiling with support for SciTokens" OFF)
+endif(UNIX AND NOT DARWIN)
 
 if (WITH_SCITOKENS)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( SCITOKENS scitokens-0.3.0 "lib;include" "done" )
+		condor_pre_external( SCITOKENS scitokens-0.3.3 "lib;include" "done" )
 
 		ExternalProject_Add(scitokens
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${SCITOKENS_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.3.0.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.3.3.tar.gz
 					#--Configure step ----------
 				    CONFIGURE_COMMAND cmake -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${MUNGE_INSTALL_LOC}
 				    #--Build Step ----------
