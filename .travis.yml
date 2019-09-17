@@ -78,7 +78,7 @@ before_install:
           libglobus-gass-server-ez-dev libglobus-gram-client-dev  \
           libglobus-gram-protocol-dev libglobus-gss-assist-dev libmunge-dev  \
           libpq-dev libvirt-dev libxml2-dev po-debconf texlive-font-utils  \
-          transfig libc-ares-dev voms-dev libtool-bin
+          transfig libc-ares-dev voms-dev libtool-bin uuid-dev
       fi
     - sudo mkdir -p /etc/default && sudo touch /etc/default/docker
     - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
