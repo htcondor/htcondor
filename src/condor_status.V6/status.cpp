@@ -1792,10 +1792,6 @@ firstPass (int argc, char *argv[])
 			i += 1;
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
-			if (targetFile == NULL) {
-				fprintf(stderr, "Cannot open file %s: errno: %d\n", target, errno);
-				exit(1);
-			}
 			int iseof, iserror, empty;
 			mainPP.targetAd = new ClassAd;
 			InsertFromFile(targetFile, *mainPP.targetAd, "\n\n", iseof, iserror, empty);
