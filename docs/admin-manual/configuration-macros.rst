@@ -8312,12 +8312,12 @@ General
     ``max_materialize`` and more than one ``QUEUE`` statement.
 
 ``DAGMAN_USE_JOIN_NODES`` :index:`DAGMAN_USE_JOIN_NODES`
-    A boolean value that defaults to ``False``. When ``True``, causes
+    A boolean value that defaults to ``True``. When ``True``, causes
     *condor_dagman* to break up many-PARENT-many-CHILD relationships with an
     intermediate *join node*. When these sets are large, this significantly
     optimizes the graph structure by reducing the number of dependencies, 
     resulting in a significant improvement to the *condor_dagman* memory 
-    footprint, parse time and submit speed.
+    footprint, parse time, and submit speed.
 
 Throttling
 ''''''''''
