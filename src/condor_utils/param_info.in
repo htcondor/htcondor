@@ -727,20 +727,6 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_PEGASUS_REPORT_METRICS]
-default=$(LIBEXEC)/condor_dagman_metrics_reporter
-win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
-type=path
-customization=expert
-tags=dagman,dagman_main
-restart=never
-
-[DAGMAN_PEGASUS_REPORT_TIMEOUT]
-default=100
-type=int
-tags=dagman,dagman_main
-restart=never
-
 [DAGMAN_REMOVE_NODE_JOBS]
 default=true
 type=bool

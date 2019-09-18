@@ -89,7 +89,6 @@ int CollectorDaemon::startdNumAds;
 
 ClassAd* CollectorDaemon::ad = NULL;
 CollectorList* CollectorDaemon::collectorsToUpdate = NULL;
-DCCollector* CollectorDaemon::worldCollector = NULL;
 int CollectorDaemon::UpdateTimerId;
 
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
@@ -136,21 +135,7 @@ void CollectorDaemon::Init()
 	viewCollectorTypes = NULL;
 	UpdateTimerId=-1;
 	collectorsToUpdate = NULL;
-	worldCollector = NULL;
 	Config();
-
-	/* TODO: Eval notes and refactor when time permits.
-	 * 
-	 * per-review <tstclair> this is a really unintuive and I would consider unclean.
-	 * Maybe if we care about cron like events we should develop a clean mechanism
-	 * which doesn't indirectly hook into daemon-core timers. */
-
-    // setup routine to report to condor developers
-    // schedule reports to developers
-	schedule_event( -1, 1,  0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 8,  0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 15, 0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 23, 0, 0, 0, reportToDevelopers );
 
 	// install command handlers for queries
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
@@ -1557,82 +1542,6 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
     return iRet;
 }
 
-void CollectorDaemon::reportToDevelopers (void)
-{
-	char	buffer[128];
-	FILE	*mailer;
-	TrackTotals	totals( PP_STARTD_NORMAL );
-
-    // compute machine information
-    machinesTotal = 0;
-    machinesUnclaimed = 0;
-    machinesClaimed = 0;
-    machinesOwner = 0;
-    startdNumAds = 0;
-	ustatsAccum.Reset( );
-
-    if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
-            dprintf (D_ALWAYS, "Error counting machines in devel report \n");
-    }
-
-	// If we don't have any machines reporting to us, bail out early
-	if (machinesTotal == 0) return;
-
-	// Accumulate our monthly maxes
-	ustatsMonthly.setMax( ustatsAccum );
-
-	sprintf( buffer, "Collector (%s):  Monthly report",
-			 get_local_fqdn().Value() );
-	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
-		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
-		return;
-	}
-
-	fprintf( mailer , "This Collector has the following IDs:\n");
-	fprintf( mailer , "    %s\n", CondorVersion() );
-	fprintf( mailer , "    %s\n\n", CondorPlatform() );
-
-	normalTotals = &totals;
-
-	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
-		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
-	}
-
-	normalTotals = NULL;
-
-	// output totals summary to the mailer
-	totals.displayTotals( mailer, 20 );
-
-	// now output information about submitted jobs
-	submittorRunningJobs = 0;
-	submittorIdleJobs = 0;
-	submittorNumAds = 0;
-	if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
-		dprintf( D_ALWAYS, "Error making monthly report (submittor scan)\n" );
-	}
-	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
-	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
-
-	// If we've got any, find the maxes
-	if ( ustatsMonthly.getCount( ) ) {
-		fprintf( mailer , "\n%20s\t%20s\n" , "Universe", "Max Running Jobs" );
-		int		univ;
-		for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
-			const char	*name = ustatsMonthly.getName( univ );
-			if ( name ) {
-				fprintf( mailer, "%20s\t%20d\n",
-						 name, ustatsMonthly.getValue(univ) );
-			}
-		}
-		fprintf( mailer, "%20s\t%20d\n",
-				 "All", ustatsMonthly.getCount( ) );
-	}
-	ustatsMonthly.Reset( );
-	
-	email_close( mailer );
-	return;
-}
-	
 void CollectorDaemon::Config()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Config()\n");
@@ -1738,33 +1647,6 @@ void CollectorDaemon::Config()
 		}
 	}
 
-	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
-	if (tmp == NULL) {
-#ifdef NO_PHONE_HOME
-		tmp = strdup("NONE");
-#else
-		tmp = strdup("condor.cs.wisc.edu");
-#endif
-	}
-	if (strcasecmp(tmp,"NONE") == 0 ) {
-		free(tmp);
-		tmp = NULL;
-	}
-
-	if( worldCollector ) {
-		// FIXME: WTF does this mean w/r/t using TCP for collectorsToUpdate?
-		// we should just delete it.  since we never use TCP
-		// for these updates, we don't really loose anything
-		// by destroying the object and recreating it...
-		delete worldCollector;
-		worldCollector = NULL;
-	}
-	if ( tmp ) {
-		worldCollector = new DCCollector( tmp, DCCollector::UDP );
-	}
-
-	free( tmp );
-	
 	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
 	if( UpdateTimerId < 0 ) {
 		UpdateTimerId = daemonCore->
@@ -1940,7 +1822,6 @@ void CollectorDaemon::Exit()
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
-	delete worldCollector;
 	delete m_ccb_server;
 	return;
 }
@@ -1963,7 +1844,6 @@ void CollectorDaemon::Shutdown()
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
-	delete worldCollector;
 	delete m_ccb_server;
 	return;
 }
@@ -2037,20 +1917,6 @@ void CollectorDaemon::sendCollectorAd()
 	if ( num_updated != collectorsToUpdate->number() ) {
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
-
-	// update the world ad, but only if there are some machines. You oftentimes
-	// see people run a collector on each macnine in their pool. Duh.
-	if ( worldCollector && machinesTotal > 0) {
-		char update_addr_default [] = "(null)";
-		const char *update_addr = worldCollector->addr();
-		if (!update_addr) update_addr = update_addr_default;
-		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, collectorsToUpdate->getAdSeq(), NULL, false) ) {
-			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-					 "(%s): %s\n", update_addr,
-					 worldCollector->error() );
-		}
-	}
-
 
 }
 

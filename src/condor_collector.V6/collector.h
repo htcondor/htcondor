@@ -116,8 +116,6 @@ public:
 	static int reportSubmittorScanFunc(ClassAd*);
 	static int reportMiniStartdScanFunc(ClassAd *cad);
 
-	static void reportToDevelopers();
-
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();
 	
@@ -202,7 +200,6 @@ protected:
 
 	static ClassAd *ad;
 	static CollectorList* collectorsToUpdate;
-	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static int stashSocket( ReliSock* sock );

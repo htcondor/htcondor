@@ -148,9 +148,6 @@ private:
 	static MyString _dagmanId;
 	static MyString _parentDagmanId;
 
-		// Actually send metrics iff this is true.
-	bool _sendMetrics;
-
 		// The name of the primary DAG file.
 	char *_primaryDagFile;
 

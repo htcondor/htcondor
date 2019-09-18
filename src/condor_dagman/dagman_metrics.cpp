@@ -61,7 +61,6 @@ DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 //---------------------------------------------------------------------------
 DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 			const char *primaryDagFile, int rescueDagNum ) :
-	_sendMetrics( false ),
 	_simpleNodes( 0 ),
 	_subdagNodes( 0 ),
 	_simpleNodesSuccessful( 0 ),
@@ -79,36 +78,10 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_rescueDagNum = rescueDagNum;
 
 		//
-		// Figure out whether to actually report the metrics.  We only
-		// send metrics if it's enabled with the PEGASUS_METRICS
-		// environment variable.  But that can be overridden by the
-		// CONDOR_DEVELOPERS config macro.
-		//
-	const char *tmp = getenv( "PEGASUS_METRICS" );
-	if ( tmp && ( ( strcasecmp( tmp, "true" ) == 0 ) ||
-				( strcasecmp( tmp, "1" ) == 0 ) ) ) {
-		_sendMetrics = true;
-	}
-
-	tmp = param( "CONDOR_DEVELOPERS" );
-	if ( tmp && strcmp( tmp, "NONE" ) == 0 ) {
-		_sendMetrics = false;
-	}
-
-		//
 		// Set the metrics file name.
 		//
 	_metricsFile = primaryDagFile;
 	_metricsFile += ".metrics";
-
-		//
-		// If we're actually sending metrics, Pegasus should have
-		// created a braindump.txt file that includes a bunch of
-		// Pegasus information.
-		//
-	if ( _sendMetrics ) {
-		ParseBraindumpFile();
-	}
 
 		//
 		// Get DAG node counts. Also gather some simple graph metrics here 
@@ -149,7 +122,7 @@ DagmanMetrics::ProcStarted( const struct tm &eventTime )
 {
 		// Avoid possible mktime() craziness unless we really need the
 		// metrics -- see gittrac #2898.
-	if ( _sendMetrics ) {
+	if ( false ) {
 		double et = GetTime( eventTime );
 			// We decrement by et - _startTime instead of just et here to
 			// reduce numerical error.
@@ -163,7 +136,7 @@ DagmanMetrics::ProcFinished( const struct tm &eventTime )
 {
 		// Avoid possible mktime() craziness unless we really need the
 		// metrics -- see gittrac #2898.
-	if ( _sendMetrics ) {
+	if ( false ) {
 		double et = GetTime( eventTime );
 			// We increment by et - _startTime instead of just et here to
 			// reduce numerical error.
@@ -196,92 +169,6 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 {
 	if ( !WriteMetricsFile( exitCode, status ) ) {
 		return false;
-	}
-
-	bool disabled = false;
-
-#if defined(WIN32)
-	disabled = true;
-#endif
-
-	if ( disabled ) {
-		debug_printf( DEBUG_NORMAL,
-					"Metrics reporting is not available on this platform.\n" );
-
-	} else if ( _sendMetrics ) {
-		MyString reporterPath;
-		const char* exe = param( "DAGMAN_PEGASUS_REPORT_METRICS" );	
-		if(exe) {
-			reporterPath = exe;
-		} else {
-			const char *libexec = param( "LIBEXEC" );
-			if ( !libexec ) {
-				debug_printf( DEBUG_QUIET,
-							"LIBEXEC not defined; can't find condor_dagman_metrics_reporter\n" );
-				return false;
-			}
-			reporterPath = libexec;
-			reporterPath += "/";
-			reporterPath += "condor_dagman_metrics_reporter";
-		}
-
-		MyString duration = IntToStr( param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 ) );
-
-		MyString metricsOutputFile( _primaryDagFile );
-		metricsOutputFile += ".metrics.out";
-
-		debug_printf( DEBUG_NORMAL,
-					"Reporting metrics to Pegasus metrics server(s); output is in %s.\n",
-					metricsOutputFile.Value() );
-
-		ArgList args;
-		args.AppendArg(reporterPath.Value());	
-		args.AppendArg("-f");
-		args.AppendArg(_metricsFile.Value());
-			// If the DAG was condor_rm'ed, we want the reporter to sleep.
-		if ( status == Dag::DAG_STATUS_RM ) {
-			args.AppendArg("-s");
-		}
-		args.AppendArg( "-t" );
-		args.AppendArg( duration.Value() );
-			// Dump the args to the dagman.out file
-		MyString cmd; // for debug output
-		args.GetArgsStringForDisplay( &cmd );
-		debug_printf( DEBUG_NORMAL, "Running command <%s>\n", cmd.Value() );
-
-		int stdFds[3];
-		stdFds[0] = -1; // stdin
-		stdFds[1] = safe_open_wrapper_follow( metricsOutputFile.Value(),
-					O_WRONLY | O_CREAT | O_TRUNC | O_APPEND ); // stdout
-		stdFds[2] = stdFds[1]; // stderr goes to the same file as stdout
-
-		int pid = daemonCore->Create_Process(
-					reporterPath.Value(),
-					args,
-					PRIV_UNKNOWN,
-					1, // reaper
-					false, // no command port
-					false, // no command port
-					NULL, // just inherit env of parent
-					NULL, // no cwd
-					NULL, // no FamilyInfo
-					NULL, // no sock_inherit_list
-					stdFds );
-
-		if ( pid == 0 ) {
-			debug_printf( DEBUG_QUIET,
-						"Error: failed to start condor_dagman_metrics_reporter (%d, %s)\n",
-						errno, strerror( errno ) );
-		}
-
-		if ( close( stdFds[1] ) != 0 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: closing stdout for metrics "
-						"reporter; errno %d (%s)\n", errno,
-						strerror( errno ) );
-		}
-
-	} else {
-		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
 	}
 
 	return true;

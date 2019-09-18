@@ -23,7 +23,6 @@ Command Reference Manual (man pages)
    condor_continue
    condor_convert_history
    condor_dagman
-   condor_dagman_metrics_reporter
    condor_drain
    condor_fetchlog
    condor_findhost
