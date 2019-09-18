@@ -2,20 +2,17 @@ from setuptools import setup
 from setuptools.dist import Distribution
 import os
 
-import classad
-
 package_name = "htcondor"
-packages = ["htcondor", "classad", "htcondor_basic"]
-version = classad.version()
-ver_append = ""
-long_description = open("README.rst", "r").read()
+packages = "${PACKAGES}".split(';')
+version = "${PACKAGE_VERSION}"
+long_description = open("${CMAKE_CURRENT_SOURCE_DIR}/README.rst", "r").read()
 
 package_data = {}
 if os.name == "posix":
-    package_data["htcondor"] = ["*.so", "condor_libs/*.so*"]
+    package_data["htcondor"] = ["*.so"]
     package_data["classad"] = ["*.so"]
 else:
-    package_data["htcondor"] = ["*.pyd", "*.dll", "condor_libs/*.dll*"]
+    package_data["htcondor"] = ["*.pyd", "*.dll"]
     package_data["classad"] = ["*.pyd", "*.dll"]
 
 
