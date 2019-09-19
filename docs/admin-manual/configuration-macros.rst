@@ -6492,6 +6492,11 @@ These macros affect the *condor_collector*.
     are consistent. To validate this information, the attribute to check
     is ``TARGET.MyAddress``.
 
+    Please note that _all_ ClassAd updates are filtered.  Unless your
+    requirements are the same for all daemons, including the collector
+    itself, you'll want to use the ``MyType`` attribute to limit your
+    filter(s).
+
 ``CLIENT_TIMEOUT`` :index:`CLIENT_TIMEOUT`
     Network timeout that the *condor_collector* uses when talking to
     any daemons or tools that are sending it a ClassAd update. It is

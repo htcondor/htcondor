@@ -1064,6 +1064,12 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 				command);
 		}
 
+		if (insert == -4)
+		{
+			// Rejected by COLLECTOR_REQUIREMENTS in validateClassad(),
+			// which already does all the necessary logging.
+		}
+
 		return FALSE;
 
 	}
