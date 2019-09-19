@@ -35,17 +35,21 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <stdlib.h>
 
 static struct passwd fakeEntry; 
-static dirbuf[512];
+char notThePassword = '\0';
 
 struct passwd *getpwnam(const char *name) {
-	fakeEntry.pw_name = name;
-	fakeEntry.pw_passwd = "password";
+	fakeEntry.pw_name = const_cast<char *>(name);
+
+	// sshd zeros out the password field, so it must be writeable
+	notThePassword = '\0';
+	fakeEntry.pw_passwd = &notThePassword;
 	fakeEntry.pw_uid = getuid();
 	fakeEntry.pw_gid = getgid();
-	fakeEntry.pw_gecos = "HTCondor ssh_to_job";
-	fakeEntry.pw_dir = getcwd(dirbuf, 511);
-	fakeEntry.pw_shell = "/bin/bash";
+	fakeEntry.pw_gecos = const_cast<char *>("HTCondor ssh_to_job");
+	fakeEntry.pw_dir = getenv("_CONDOR_SCRATCH_DIR");
+	fakeEntry.pw_shell = getenv("_CONDOR_SHELL");
 	return &fakeEntry;
 }
