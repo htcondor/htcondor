@@ -568,11 +568,6 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	return true;
 }
 
-bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool *no_ulog )
-{
-	return true;
-}
-
 bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
 {
 	return true;

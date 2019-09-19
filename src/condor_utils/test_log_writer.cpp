@@ -1057,35 +1057,18 @@ Workers::waitForWorkers( int max_seconds )
 // **************************
 //  Rotating user log class
 // **************************
-static const char *getUserName( void )
-{
-	static char	buf[128];
-	buf[0] = '\0';
-# if defined(UNIX)
-	struct passwd	*pw = getpwuid( getuid() );
-	if ( NULL == pw ) {
-		return "owner";
-	}
-	strncpy(buf, pw->pw_name, sizeof(buf) );
-# else
-	DWORD		size = sizeof(buf);
-	GetUserName( buf, &size );
-# endif
-	buf[sizeof(buf)-1] = '\0';
-	return buf;
-}
 TestLogWriter::TestLogWriter( Worker & /*worker*/,
 							  const WorkerOptions &options )
-	: WriteUserLog( getUserName(),
-					my_domainname(),
-					options.getLogFile(),
-					options.getCluster(),
-					options.getProc(),
-					options.getSubProc(),
-					options.getXml() ),
+	: WriteUserLog(),
 	  m_options( options ),
 	  m_rotations( 0 )
 {
+	setEnableGlobalLog( true );
+	initialize( options.getLogFile(), options.getCluster(), options.getProc(),
+	            options.getSubProc() );
+	if ( options.getXml() ) {
+		setUseCLASSAD( 1 );
+	}
 	if ( options.getName() ) {
 		setCreatorName( options.getName() );
 	}

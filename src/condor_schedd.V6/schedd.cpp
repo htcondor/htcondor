@@ -4349,18 +4349,6 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 	return DestroyProc( cluster, proc );
 }
 
-namespace {
-	void InitializeMask(WriteUserLog* ulog, int c, int p)
-	{
-		MyString msk;
-		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
-		Tokenize(msk.Value());
-		while(const char* mask = GetNextToken(",",true)) {
-			ulog->AddToMask(ULogEventNumber(atoi(mask)));
-		}
-	}
-}
 // Initialize a WriteUserLog object for a given job and return a pointer to
 // the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
@@ -4369,40 +4357,9 @@ namespace {
 WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
-	std::string logfilename;
-	std::string dagmanNodeLog;
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-	std::vector<const char*> logfiles;
-	if( getPathToUserLog(ad, logfilename) ) {
-		logfiles.push_back(logfilename.c_str());
-	}
-	if( getPathToUserLog(ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {			
-		logfiles.push_back(dagmanNodeLog.c_str());
-	}
-	if( logfiles.empty() ) {
-			// if there is no userlog file defined, then our work is
-			// done...  
-		return NULL;
-	}
-	MyString owner;
-	MyString domain;
-	MyString iwd;
-	int use_classad = 0;
-
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
-
-	for(std::vector<const char*>::iterator p = logfiles.begin();
-			p != logfiles.end(); ++p) {
-		dprintf( D_FULLDEBUG, "Writing record to user logfile=%s owner=%s\n",
-			*p, owner.Value() );
-	}
 
 	WriteUserLog* ULog=new WriteUserLog();
-	if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_ULOG_USE_XML, &use_classad) < 0) {
-		use_classad = 0;
-	}
-	ULog->setUseCLASSAD(use_classad);
 	ULog->setCreatorName( Name );
 
     if (m_userlog_file_cache_max > 0) {
@@ -4415,35 +4372,18 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
         ULog->setLogFileCache(&m_userlog_file_cache);
     }
 
-	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
-			job_id.cluster, job_id.proc, 0)) {
-		if(logfiles.size() > 1) {
-			InitializeMask(ULog,job_id.cluster, job_id.proc);
-		}
-		return ULog;
-	} else {
-			// If the user log is in the spool directory, try writing to
-			// it as user condor. The spool directory spends some of its
-			// time owned by condor.
-		std::string SpoolDir;
-		SpooledJobFiles::getJobSpoolPath(ad, SpoolDir);
-		SpoolDir += DIR_DELIM_CHAR;
-		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
-					SpoolDir.length() ) && ULog->initialize( logfiles,
-					job_id.cluster, job_id.proc, 0 ) ) {
-			if(logfiles.size() > 1) {
-				InitializeMask(ULog,job_id.cluster,job_id.proc);
-			}
-			return ULog;
-		}
-		for(std::vector<const char*>::iterator p = logfiles.begin();
-				p != logfiles.end(); ++p) {
-			dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: "
-				"%s\n", *p);
-		}
+	if ( ! ULog->initialize(*ad, true) ) {
+		dprintf ( D_ALWAYS, "WARNING: Failed to initialize user log file for writing!\n");
 		delete ULog;
 		return NULL;
 	}
+	// TODO Callers can't distinguish between error and no log files to write to.
+	if ( ! ULog->willWrite() ) {
+		delete ULog;
+		return NULL;
+	}
+
+	return ULog;
 }
 
 bool

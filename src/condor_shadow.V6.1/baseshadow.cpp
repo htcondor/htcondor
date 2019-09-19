@@ -808,51 +808,21 @@ BaseShadow::emailRemoveEvent( const char* reason )
 
 void BaseShadow::initUserLog()
 {
-	std::string logfilename,dagmanLogFile;
-
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
 	ASSERT( job_updater );
 
-	std::vector<const char*> logfiles;
-	if ( getPathToUserLog(jobAd, logfilename) ) {
-		logfiles.push_back(logfilename.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.c_str());
-	}
-	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		logfiles.push_back(dagmanLogFile.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.c_str());
-	}
-	if( !logfiles.empty()) {
-		if( !uLog.initialize (logfiles, cluster, proc, 0)) {
-			MyString hold_reason;
-			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
-				logfilename.c_str(), logfiles.size() == 1 ? "" : " or ",
-				dagmanLogFile.c_str());
-			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),
-					CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-				// holdJobAndExit() should not return, but just in case it does
-				// EXCEPT
-			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
-		}
-		int use_classad = 0;
-		if ( ! jobAd->LookupInteger(ATTR_ULOG_USE_XML, use_classad)) { use_classad = 0; }
-		uLog.setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
-		if(logfiles.size() > 1) {
-			std::string msk;
-			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk);
-			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.c_str());
-			while(const char* mask = GetNextToken(",",true)) {
-				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
-				uLog.AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
-	} else {
-		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
-		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
+	if( !uLog.initialize(*jobAd) ) {
+		// TODO Should we keep inclusion of filename in hold message?
+		std::string hold_reason;
+		formatstr(hold_reason,"Failed to initialize user log");
+		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
+		holdJobAndExit(hold_reason.c_str(),
+				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJobAndExit() should not return, but just in case it does
+			// EXCEPT
+		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
 	}
 }
 
