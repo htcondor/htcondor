@@ -178,7 +178,7 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 		fprintf(fp, "\n");
 	}
 	if (o.items.number() > 0) {
-		if (log_all_communication) {
+		if (log_all_communication && fp) {
 			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
 		}
 		if (!echo_itemdata_filepath.empty()) {
