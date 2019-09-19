@@ -1734,7 +1734,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 {
 	if (IS_AUTO_SHARE(cap->c_num_cpus)) {
 		ASSERT( a_num_cpus_auto_count > 0 );
-		double new_value = a_num_cpus / a_num_cpus_auto_count;
+		double new_value = (double) a_num_cpus / (double) a_num_cpus_auto_count;
 		if (cap->c_allow_fractional_cpus) {
 			if ( new_value <= 0.0)
 				return false;
