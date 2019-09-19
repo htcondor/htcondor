@@ -185,7 +185,6 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(&job_ad, user_log_file) ) {
 		logfiles.push_back(user_log_file.c_str());
-		dprintf(D_FULLDEBUG, "Writing to user job log %s\n", user_log_file.c_str());
 	}
 	if ( getPathToUserLog(&job_ad, dagman_log_file, ATTR_DAGMAN_WORKFLOW_LOG) ) {
 		if ( logfiles.empty() ) {
@@ -194,7 +193,6 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 			logfiles.push_back(UNIX_NULL_FILE);
 		}
 		logfiles.push_back(dagman_log_file.c_str());
-		dprintf(D_FULLDEBUG, "Writing to dagman job log %s\n", dagman_log_file.c_str());
 	}
 	if( !initialize (logfiles, cluster, proc, 0)) {
 		return false;
@@ -207,15 +205,10 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 			std::string msk;
 			job_ad.LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
 			Tokenize(msk);
-			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.c_str());
 			while(const char* mask = GetNextToken(",",true)) {
-				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
 				AddToMask(ULogEventNumber(atoi(mask)));
 			}
 		}
-	} else {
-		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
-		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 	return true;
 }
