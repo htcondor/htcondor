@@ -26,6 +26,17 @@ specified job or jobs.  COMMAND may be one of *dir*, *list*, or *get*:
 - *get*:  Copy the contents of the directory to a subdirectory named after
   each job's ID.
 
+General Remarks
+---------------
+
+The tool presently has a number of limitations:
+
+- It must be run the same machine as the job's schedd.
+- The schedd must NOT have ALTERNATE_JOB_SPOOL set
+- You can't name the destination directory for the *get* command.
+- The tool can't distinguish between an invalid job ID and a job for which
+  HTCondor never held any files.
+
 Exit Status
 -----------
 
