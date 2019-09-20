@@ -24,6 +24,7 @@ Command Reference Manual (man pages)
    condor_convert_history
    condor_dagman
    condor_drain
+   condor_evicted_files
    condor_fetchlog
    condor_findhost
    condor_gather_info
