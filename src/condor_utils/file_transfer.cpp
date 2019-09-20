@@ -4881,6 +4881,11 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	plugin_name = plugin_path.substr( plugin_path.find_last_of("/\\") + 1 );
 	input_filename = iwd + "/." + plugin_name + ".in";
 	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
+	if (input_file == nullptr) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+					"Could not open %s for writing, aborting\n", input_filename.c_str());
+		return 1;
+	}
 	fputs( transfer_files_string.c_str(), input_file );
 	fclose( input_file );
 
