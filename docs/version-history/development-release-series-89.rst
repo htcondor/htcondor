@@ -15,7 +15,12 @@ Release Notes:
 
 New Features:
 
--  None.
+- Added a new tool, :ref:`condor_evicted_files`,
+  to help users find files that HTCondor is holding on to for them (as
+  a result of a job being evicted when ``when_to_transfer_files = TRUE``,
+  or checkpointing when ``CheckpointExitCode`` is set).
+  :ticket:`7038`
+
 
 Bugs Fixed:
 
