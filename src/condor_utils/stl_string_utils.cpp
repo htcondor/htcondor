@@ -278,6 +278,20 @@ void title_case( std::string &str )
 	}
 }
 
+bool ends_with(const std::string& str, const std::string& post) {
+	size_t postSize = post.size();
+	if( postSize == 0 ) { return false; }
+
+	size_t strSize = str.size();
+	if( strSize < postSize ) { return false; }
+
+	size_t offset = strSize - postSize;
+	for( size_t i = 0; i < postSize; ++i ) {
+		if( str[offset + i] != post[i] ) { return false; }
+	}
+	return true;
+}
+
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre)
 {

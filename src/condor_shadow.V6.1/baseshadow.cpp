@@ -890,13 +890,39 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 				}
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
-			attr = res + "Usage"; // usage value
+
+			attr = res + "Usage"; // (implicitly) peak usage value
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr.c_str(), plit);
 				}
 			}
+
+			attr = res + "AverageUsage"; // average usage
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
+			}
+
+			attr = res + "MemoryUsage"; // special case for GPUs.
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
+			}
+
+			attr = res + "MemoryAverageUsage"; // just in case.
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
+			}
+
 			attr = "Assigned"; attr += res;
 			CopyAttribute( attr, *puAd, *jobAd );
 		}

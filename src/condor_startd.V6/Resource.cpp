@@ -2516,7 +2516,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					std::string usageName;
 					std::string uptimeName = name.substr( 10 );
 					if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
-					usageName += "Usage";
+					usageName += "AverageUsage";
 
 					std::string lastUpdateName = "LastUpdate" + uptimeName;
 					std::string firstUpdateName = "FirstUpdate" + uptimeName;
