@@ -1315,8 +1315,10 @@ Resource::do_update( void )
 #endif
 #endif
 
-		// Modifying the ClassAds we're sending in ResMgr::send_update()
-		// would be evil, so do the collector filtering here.
+	// Modifying the ClassAds we're sending in ResMgr::send_update()
+	// would be evil, so do the collector filtering here.  Also,
+	// ClassAd iterators are broken, so delay attribute deletion until
+	// after the loop.
 	std::vector< std::string > deleteList;
 	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
 		const std::string & name = i->first;
@@ -1329,10 +1331,19 @@ Resource::do_update( void )
 		// some other startd cron job).
 		//
 		if( name.find( "Uptime" ) == 0 ) {
-			// The PEAK metrics have already inserted their Usage values,
-			// so we only need to compute the SUM metrics' averages here.
 			std::string resourceName;
-			if( StartdCronJobParams::attributeIsPeakMetric( name ) ) { continue; }
+			if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
+				// Convert Uptime<Resource>PeakUsage to
+				// Device<Resource>PeakUsage to match the
+				// Device<Resource>AverageUsage computed below.
+				std::string computedName = name;
+				computedName.replace( 0, 6, "Device" );
+				// There's no rename primitive, so we have to copy from the
+				// original and then delete it.
+				CopyAttribute( computedName, public_ad, name, public_ad );
+				deleteList.push_back( name );
+				continue;
+			}
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
 			deleteList.push_back( name );
@@ -1350,7 +1361,12 @@ Resource::do_update( void )
 			if(! daemonCore->getStartTime(birth)) { continue; }
 			int duration = time(NULL) - birth;
 			double average = uptimeValue / duration;
-			std::string computedName = "Uptime" + resourceName + "AverageUsage";
+			// Since we don't have a whole-machine ad, we won't bother to
+			// include the device name in this attribute name; people will
+			// have to check the AssignedGPUs attribute.  This will suck
+			// for partitionable slots, but what can you do?  Advertise each
+			// GPU in every slot?
+			std::string computedName = "Device" + resourceName + "AverageUsage";
 			public_ad.Assign( computedName, average );
 		} else if( name.find( "StartOfJobUptime" ) == 0
 		 || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
