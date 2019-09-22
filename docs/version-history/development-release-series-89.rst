@@ -21,6 +21,12 @@ New Features:
   or checkpointing when ``CheckpointExitCode`` is set).
   :ticket:`7038`
 
+- GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
+  ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
+  are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
+  ``GPUsAverageUsage`` because all other usage values are peaks.  We also
+  now report GPU memory usage in the job termination event.
+  :ticket:`7201`
 
 Bugs Fixed:
 
