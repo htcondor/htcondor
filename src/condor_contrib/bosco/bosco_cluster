@@ -737,7 +737,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:hp: --longoptions add:,platform:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:hp:o: --longoptions add:,platform:,list,status:,test:,remove:,help,override:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
