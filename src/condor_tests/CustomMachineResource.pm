@@ -216,7 +216,7 @@ my $usage = sub {
 			my( $resource, $colon, $usage, $requested, $allocated ) =
 				split( " ", $line );
 
-			if( $resource =~ m/${callbackResourceName}s/i ) {
+			if( $resource =~ m/^${callbackResourceName}s$/i ) {
 				TLOG( "Job ${ID} used $usage $resource...\n" );
 				$eventLogUsage{ $ID } = $usage;
 			}
@@ -636,6 +636,7 @@ sub TestResourceMemoryUsage {
 		output		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).out',
 		error		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).err',
 		log			=> 'cmr-monitor-memory-ad.log',
+		getenv      => 'true',
 
 		"request_${resourceName}s"	=> '1',
 		LeaveJobInQueue				=> 'true',
