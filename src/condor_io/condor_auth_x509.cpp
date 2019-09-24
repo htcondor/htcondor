@@ -1082,12 +1082,21 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 	int reply = 0;
 
 	mySock_->decode();
-	mySock_->code(reply);
+	if (!mySock_->code(reply)) {
+		errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED, 
+			"Failed to auth because we could not communicate with remote side\n");
+	
+		return Fail;
+	}
 	mySock_->end_of_message();
 
 	if (reply) {
 		mySock_->encode();
-		mySock_->code(m_status);
+		if (!mySock_->code(m_status)) {
+			errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED, 
+			"Failed to auth because we could not read reply from remote side\n");
+			return Fail;
+		}
 		mySock_->end_of_message();
 	}
 	else {
