@@ -176,7 +176,6 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 		} else if (is_dash_arg_prefix(argv[i], "remote", 1)) {
-			i++;
 			remote_fetch = true;
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
