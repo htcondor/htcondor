@@ -1039,13 +1039,19 @@ main( int argc, const char *argv[] )
 		fp = stdin;
 		submit_hash.insert_source("<stdin>", FileMacroSource);
 	} else {
+		const char * submit_filename = cmd_file;
+	#ifdef WIN32
+		if ( ! cmd_file && NoCmdFileNeeded) { cmd_file = "NUL"; submit_filename = "null"; }
+	#else
+		if ( ! cmd_file && NoCmdFileNeeded) { cmd_file = "/dev/null"; submit_filename = "null"; }
+	#endif
 		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s) (%s)\n",
 						cmd_file, strerror(errno));
 			exit(1);
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
-		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
+		submit_hash.insert_submit_filename(submit_filename, FileMacroSource);
 	}
 
 	// in case things go awry ...
