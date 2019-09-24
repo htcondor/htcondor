@@ -18,6 +18,6 @@ if [[ $DOCKER_IMAGE = centos:centos7 ]]; then
 fi
 time cmake ${CMAKE_OPTIONS[@]}
 time make -j2 externals
-time make -j2
+time make -j2 install && time ctest -j8 -L travis
 
 # vim:et:sw=4:sts=4:ts=8

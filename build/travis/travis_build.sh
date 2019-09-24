@@ -116,7 +116,7 @@ if [[ -z $DOCKER_IMAGE ]]; then
         quiet_make boost
         time make -j2 externals
     fi
-    time make -j2
+    time make -j2 install && time ctest -j8 -L travis
 else
     touch bld_external_rhel bld_external
     sudo docker run --rm=true -w "`pwd`" -v "`pwd`:`pwd`" $DOCKER_IMAGE /bin/bash -x "$progdir/build_inside_docker.sh"
