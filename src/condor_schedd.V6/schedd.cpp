@@ -1602,7 +1602,7 @@ Scheduler::count_jobs()
 		// collector.
 	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
 	std::string capability;
-	if (SetupCollectorSession(duration, capability)) {
+	if (param_boolean("SEC_ENABLE_IMPERSONATION_TOKENS", false) && SetupCollectorSession(duration, capability)) {
 		cad->InsertAttr(ATTR_CAPABILITY, capability);
 	}
 
@@ -15026,6 +15026,17 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 
 	auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 
+	std::set<std::string> config_bounding_set;
+	std::string config_bounding_set_str;
+	if (param(config_bounding_set_str, "SEC_IMPERSONATION_TOKEN_LIMITS")) {
+		StringList config_bounding_set_list(config_bounding_set_str.c_str());
+		config_bounding_set_list.rewind();
+		const char *authz;
+		while ( (authz = config_bounding_set_list.next()) ) {
+			config_bounding_set.insert(authz);
+		}
+	}
+
 	std::vector<std::string> bounding_set;
 	std::string bounding_set_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, bounding_set_str)) {
@@ -15033,7 +15044,20 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 		authz_str_list.rewind();
 		const char *authz;
 		while ( (authz = authz_str_list.next()) ) {
-			bounding_set.emplace_back(authz);
+			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
+				bounding_set.emplace_back(authz);
+			}
+		}
+			// If all potential bounds were removed by the set intersection,
+			// throw an error instead of generating an "all powerful" token.
+		if (!config_bounding_set.empty() && bounding_set.empty()) {
+			error_code = 2;
+			error_string = "All requested authorizations were eliminated by the"
+				" SEC_IMPERSONATION_TOKEN_LIMITS setting";
+		}
+	} else if (!config_bounding_set.empty()) {
+		for (const auto &authz : config_bounding_set) {
+			bounding_set.push_back(authz);
 		}
 	}
 
