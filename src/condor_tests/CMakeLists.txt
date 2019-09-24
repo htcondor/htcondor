@@ -338,7 +338,7 @@ if (BUILD_TESTING)
 	##### generic lib tests
 	condor_pl_test(lib_unit_tests "Run condor_utils Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(classad_unit_test "Run classads Unit Tests" "core;quick;full;quicknolink")
-	#condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "core;quick;full;quicknolink")
+	condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "core;quick;full;quicknolink")
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "core;quick;full;quicknolink")
 	#need to copy the underlying exe into condor_tests directory before these tests can be run
 	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "core;quick;full;quicknolink")
