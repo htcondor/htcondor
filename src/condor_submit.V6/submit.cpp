@@ -2455,7 +2455,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 				tmp->ChainToAd(JobAdsArray[JobAdsArrayLastClusterIndex]);
 			}
 			JobAdsArray[ JobAdsArrayLen++ ] = tmp;
-			return true;
 		}
 
 		submit_hash.delete_job_ad();
