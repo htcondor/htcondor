@@ -595,7 +595,7 @@ public:
 		 *
 		 * Returns true on success or false on failure.
 		 */
-	bool startTokenRequest( const std::string identity,
+	bool startTokenRequest( const std::string &identity,
 		const std::vector<std::string> &authz_bounding_set, int lifetime,
 		const std::string &client_id, std::string &token, std::string &request_id,
 		CondorError *err=NULL ) noexcept;

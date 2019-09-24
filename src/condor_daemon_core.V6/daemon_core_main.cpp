@@ -1833,28 +1833,6 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 }
 
 
-static std::string
-get_token_signing_key(CondorError &err) {
-	std::string key_name = "POOL";
-	param(key_name, "SEC_TOKEN_ISSUER_KEY");
-	std::string final_key_name;
-	std::vector<std::string> creds;
-	if (!listNamedCredentials(creds, &err)) {
-		return "";
-	}
-	for (const auto &cred : creds) {
-		if (cred == key_name) {
-			final_key_name = key_name;
-			break;
-		}
-	}
-	if (final_key_name.empty()) {
-		err.push("DAEMON", 4, "Server does not have a signing key configured.");
-	}
-	return final_key_name;
-}
-
-
 static int
 handle_dc_start_token_request( Service*, int, Stream* stream)
 {
@@ -1899,16 +1877,16 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			authz_list.emplace_back(authz);
 		}
 	}
+
 	int requested_lifetime;
-	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
-		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
-		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
-			requested_lifetime = max_lifetime;
-		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
-			requested_lifetime = max_lifetime;
-		}
-	} else {
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
 		requested_lifetime = -1;
+	}
+	int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+	if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+		requested_lifetime = max_lifetime;
+	} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+		requested_lifetime = max_lifetime;
 	}
 
 	classad::ClassAd result_ad;
@@ -1946,7 +1924,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		time_t now = time(NULL);
 
 		CondorError err;
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
 			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
@@ -2288,7 +2266,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	}
 
 	CondorError err;
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if ((request_id != -1) && final_key_name.empty()) {
 		error_string = err.getFullText();
 		error_code = err.code();
@@ -2363,7 +2341,7 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 		dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
 			" with lifetime %ld.\n", netblock.c_str(), lifetime);
 
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			error_string = err.getFullText();
 			error_code = err.code();
@@ -2460,7 +2438,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 		requested_lifetime = -1;
 	}
 
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
@@ -4048,21 +4026,21 @@ int dc_main( int argc, char** argv )
 		// Request a token that can be used to authenticat / authorize a future
 		// session using the TOKEN protocol.
 		//
-	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
+	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
 								"handle_dc_session_token()", 0, ALLOW );
 
 		//
 		// Start a token request workflow.
 		//
-	daemonCore->Register_Command( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_start_token_request,
 								"handle_dc_start_token_request()", 0, ALLOW );
 
 		//
 		// Poll for token request completion.
 		//
-	daemonCore->Register_Command( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_finish_token_request,
 								"handle_dc_finish_token_request()", 0, ALLOW );
 
@@ -4072,7 +4050,7 @@ int dc_main( int argc, char** argv )
 		// In the handler, we further restrict the returned information based on
 		// the user authorization.
 		//
-	daemonCore->Register_Command( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_list_token_request,
 		"handle_dc_list_token_request", 0, ALLOW, D_COMMAND, true );
 
@@ -4083,14 +4061,14 @@ int dc_main( int argc, char** argv )
 		// the user authorization; non-ADMINISTRATORs can only approve their own
 		// requests..
 		//
-	daemonCore->Register_Command( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_approve_token_request,
 		"handle_dc_approve_token_request", 0, ALLOW, D_COMMAND, true );
 
 		//
 		// Install an auto-approval rule
 		//
-	daemonCore->Register_Command( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_auto_approve_token_request,
 		"handle_dc_auto_approve_token_request", 0, ADMINISTRATOR );
 

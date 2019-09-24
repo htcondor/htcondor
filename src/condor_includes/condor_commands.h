@@ -183,6 +183,9 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
 #define COALESCE_SLOTS (SCHED_VERS+122) // Given a resource request (job ad) and k claim IDs, invalidate them, merge them into one slot, and return that slot's new claim ID and machine ad.  The resource request is used to compute left-overs.
 
+// Given a token request from a trusted collector, generate an identity token.
+#define COLLECTOR_TOKEN_REQUEST (SCHED_VERS+123)
+
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
 #define DRAIN_QUICK 10
@@ -337,6 +340,9 @@ const int QUERY_ACCOUNTING_ADS = 78;
 const int INVALIDATE_ACCOUNTING_ADS = 79;
 
 const int UPDATE_OWN_SUBMITTOR_AD = 80;
+
+// Request a collector to retrieve an identity token from a schedd.
+const int IMPERSONATION_TOKEN_REQUEST = 81;
 
 /* these comments are used to control command_table_generator.pl
 NAMETABLE_DIRECTIVE:END_SECTION:collector
