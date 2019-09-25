@@ -616,6 +616,8 @@ public:
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
+	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
+
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse()  { return JobUniverse; }
