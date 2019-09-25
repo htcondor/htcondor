@@ -3887,7 +3887,7 @@ void export_schedd()
                 ``{'maxidle': 10}``.
             :return: :class:`Submit` description for a ``.dag`` file
             )C0ND0R",
-            (boost::python::arg("dag_filename"), boost::python::arg("opts"))
+            (boost::python::arg("dag_filename"), boost::python::arg("opts")=boost::python::dict())
             )
         .staticmethod("from_dag")
         ;
