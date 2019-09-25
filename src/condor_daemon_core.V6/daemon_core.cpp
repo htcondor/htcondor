@@ -464,6 +464,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_ccb_listeners = NULL;
 	m_shared_port_endpoint = NULL;
 	nRegisteredSocks = 0;
+	m_iMaxUdpMsgsPerCycle = 1;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
