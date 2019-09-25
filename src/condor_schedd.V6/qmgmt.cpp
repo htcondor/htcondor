@@ -465,6 +465,7 @@ int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 {
 	//reply.Assign("CondorVersion", );
 	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
+	reply.Assign("LateMaterializeVersion", 2);
 	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
 	dPrintAd(D_ALWAYS, reply, false);
 	return 0;

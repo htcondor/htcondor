@@ -2667,7 +2667,13 @@ public:
 			const ClassAd *capabilities = txn->capabilites();
 			bool allows_late = false;
 			if (capabilities && capabilities->LookupBool("LateMaterialize", allows_late) && allows_late) {
-				factory_submit = true;
+				int late_ver = 0;
+				// we require materialize version 2 or later (digest is pruned, requirments generated from job ad)
+				if (capabilities->LookupInteger("LateMaterializeVersion", late_ver) && late_ver >= 2) {
+					factory_submit = true;
+				} else {
+					factory_submit = false;
+				}
 			} else {
 				factory_submit = false; // sorry, no can do.
 			}

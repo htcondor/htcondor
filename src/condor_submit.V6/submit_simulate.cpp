@@ -124,7 +124,8 @@ int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
 
 int SimScheddQ::get_Capabilities(ClassAd & caps) {
 	caps.Assign("LateMaterialize", true);
-	return GetScheddCapabilites(0, caps);
+	caps.Assign("LateMaterializeVersion", 2);
+	return true;
 }
 
 // hack for 8.7.8 testing

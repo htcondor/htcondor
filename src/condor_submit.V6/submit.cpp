@@ -1932,8 +1932,13 @@ int submit_jobs (
 			if (want_factory && ! MyQ->allows_late_materialize()) {
 				// if factory was required, not just preferred. then we fail the submit
 				if (need_factory) {
-					if (MyQ->has_late_materialize()) {
-						fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+					int late_ver = 0;
+					if (MyQ->has_late_materialize(late_ver)) {
+						if (late_ver < 2) {
+							fprintf(stderr, "\nERROR: This SCHEDD allows only an older Late materialization protocol\n");
+						} else {
+							fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+						}
 					} else {
 						fprintf(stderr, "\nERROR: The SCHEDD is too old to support late materialization\n");
 					}
