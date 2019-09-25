@@ -125,6 +125,10 @@ public:
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock(int cmd, ClassAd* theAd);	
 
+		// Take an incoming session and forward a token request to the schedd.
+	static int schedd_token_request(Service *, int, Stream *stream);
+
+
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
 

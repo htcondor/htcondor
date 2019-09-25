@@ -2599,7 +2599,7 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 
 
 bool
-Daemon::startTokenRequest( const std::string identity,
+Daemon::startTokenRequest( const std::string &identity,
 	const std::vector<std::string> &authz_bounding_set, int lifetime,
 	const std::string &client_id, std::string &token, std::string &request_id,
 	CondorError *err ) noexcept

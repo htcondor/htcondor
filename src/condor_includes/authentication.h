@@ -233,6 +233,11 @@ extern char const *SUBMIT_SIDE_MATCHSESSION_FQU;
  * generated capabilities. */
 extern char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU;
 
+/* This is the hard-coded name of the collector as seen by the schedd
+ * when using non-negotiated security sessions.
+ */
+extern char const *COLLECTOR_SIDE_MATCHSESSION_FQU;
+
 extern char const *CONDOR_CHILD_FQU;
 extern char const *CONDOR_PARENT_FQU;
 extern char const *CONDOR_FAMILY_FQU;

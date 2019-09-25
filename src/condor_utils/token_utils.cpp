@@ -21,6 +21,7 @@
 
 #include "token_utils.h"
 
+#include "store_cred.h"
 #include "subsystem_info.h"
 #include "condor_netdb.h"
 #include "condor_config.h"
@@ -96,4 +97,26 @@ htcondor::generate_client_id()
 
 	return subsys_name + "-" + std::string(&hostname[0]) + "-" +
 		std::to_string(get_csrng_uint() % 100000);
+}
+
+
+std::string
+htcondor::get_token_signing_key(CondorError &err) {
+	std::string key_name = "POOL";
+	param(key_name, "SEC_TOKEN_ISSUER_KEY");
+	std::string final_key_name;
+	std::vector<std::string> creds;
+	if (!listNamedCredentials(creds, &err)) {
+		return "";
+	}
+	for (const auto &cred : creds) {
+		if (cred == key_name) {
+			final_key_name = key_name;
+			break;
+		}
+	}
+	if (final_key_name.empty()) {
+		err.push("TOKEN_UTILS", 4, "Server does not have a signing key configured.");
+	}
+	return final_key_name;
 }

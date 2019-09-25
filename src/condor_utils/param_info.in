@@ -946,6 +946,18 @@ default=true
 type=bool
 tags=shadow,remoteresource
 
+[SEC_ENABLE_IMPERSONATION_TOKENS]
+default=false
+type=bool
+tags=schedd
+usage=Set to true to allow the pool collector(s) to create impersonation tokens.
+
+[SEC_IMPERSONATION_TOKEN_LIMITS]
+default=
+type=string
+usage=Restrict what authorizations can be enabled with impersonation toekns.
+tags=schedd
+
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool
