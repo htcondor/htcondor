@@ -2542,7 +2542,10 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		*info_ad_str = '\0';
 		info_ad_str++;
 		classad::ClassAdParser parser;
-		parser.ParseClassAd(info_ad_str, info_ad, false);
+		if (!parser.ParseClassAd(info_ad_str, info_ad, false)) {
+			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
+			return FALSE;
+		}
 		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
 	}
 
