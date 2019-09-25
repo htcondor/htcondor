@@ -81,7 +81,6 @@ if(WINDOWS)
 				target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
 				set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
 				set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
-				set_target_properties(classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/classad" )
 				target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
 
 				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
@@ -95,10 +94,11 @@ if(WINDOWS)
 				add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
 				target_link_libraries( htcondor pyclassad condor_utils ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( htcondor PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
-				set_target_properties(classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/htcondor" )
 				target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
 
 				install ( TARGETS pyclassad DESTINATION ${C_LIB} )
+				install ( TARGETS htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 			endif(DEFINED PYTHON_VERSION_STRING) # python27 was found
 
 			if (DEFINED PYTHON3_VERSION_STRING) # python36 was found
@@ -148,7 +148,6 @@ if(WINDOWS)
 				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-				set_target_properties(py3classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/classad" )
 				target_include_directories( py3classad_module PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
@@ -164,10 +163,11 @@ if(WINDOWS)
 				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-				set_target_properties( py3htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/htcondor" )
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
+				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
 
@@ -248,7 +248,6 @@ else()
     target_link_libraries( classad_module pyclassad -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
     set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
     set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
-    set_target_properties(classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/classad" )
     if ( NOT CMAKE_SKIP_RPATH )
       set_target_properties(classad_module PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
     endif()
@@ -280,16 +279,18 @@ else()
     target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
     set_target_properties( htcondor PROPERTIES PREFIX "" )
     set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
-    set_target_properties( htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/python/htcondor" )
     if ( NOT CMAKE_SKIP_RPATH )
       set_target_properties(htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
     endif()
 
+    install ( TARGETS htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+    install ( TARGETS classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
+
     if ( DARWIN )
-      set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
-      install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
-      add_custom_command( TARGET htcondor POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ARGS ${CMAKE_BINARY_DIR}/bindings/python/htcondor/htcondor.so )
-      add_custom_command( TARGET classad_module POST_BUILD COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ARGS ${CMAKE_BINARY_DIR}/bindings/python/classad/classad.so )
+        set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad/classad.so)" )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor/htcondor.so)" )
     endif()
 
     # more targets are built if we plan on building wheels
