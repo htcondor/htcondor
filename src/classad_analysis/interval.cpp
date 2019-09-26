@@ -451,8 +451,8 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 	}
 	case classad::Value::BOOLEAN_VALUE: {
 		bool b1, b2;
-		v1.IsBooleanValue( b1 );
-		v2.IsBooleanValue( b2 );
+		(void) v1.IsBooleanValue( b1 );
+		(void) v2.IsBooleanValue( b2 );
 		if( b1 == b2 ) {
 			return true;
 		}
@@ -462,8 +462,8 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 	}
 	case classad::Value::STRING_VALUE: {
 		string s1, s2;
-		v1.IsStringValue( s1 );
-		v2.IsStringValue( s2 );
+		(void) v1.IsStringValue( s1 );
+		(void) v2.IsStringValue( s2 );
 		if( s1.compare( s2 ) == 0 ) {
 			return true;
 		}
