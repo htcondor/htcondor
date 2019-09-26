@@ -839,7 +839,8 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	auto *verinfo = sock->get_peer_version();
 	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
 		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
-		if (USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser())) {
+			// Given failure here is non-fatal, do not log at D_ALWAYS.
+		if (USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser()), D_SECURITY|D_FULLDEBUG) {
 			filter_private_ads = false;
 		}
 	}
