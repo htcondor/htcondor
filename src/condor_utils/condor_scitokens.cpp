@@ -1,4 +1,23 @@
 
+#include "condor_common.h"
+
+#include <dlfcn.h>
+
+#include "condor_debug.h"
+#include "condor_config.h"
+
+#include "condor_scitokens.h"
+
+#ifdef HAVE_EXT_SCITOKENS
+#include <scitokens/scitokens.h>
+#else
+typedef void * SciToken;
+typedef void * Enforcer;
+typedef struct Acl_s {
+	const char *authz;
+	const char *resource;
+} Acl;
+#endif
 
 namespace {
 
@@ -17,14 +36,14 @@ static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value
 bool g_init_success = false; 
 
 bool
-init_scitokens(CondorErr &err)
+init_scitokens(CondorError &err)
 {
 	if (g_init_success) {
 		return true;
 	}
 
 	dlerror();
-	dl_hdl = nullptr;
+	void *dl_hdl = nullptr;
 	if (
 		!(dl_hdl = dlopen(LIBSCITOKENS_SO, RTLD_LAZY)) ||
 		!(scitoken_deserialize_ptr = (int (*)(const char *value, SciToken *token, const char * const*allowed_issuers, char **err_msg))dlsym(dl_hdl, "scitoken_deserialize")) ||
@@ -44,19 +63,19 @@ init_scitokens(CondorErr &err)
 		}
 		g_init_success = false;
 	}
+	return (g_init_success = true);
 }
 
 } // end anonymous namespace
 
-
 bool
-validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-	long long &expiry, std::vector<std::string> &bounding_set, CondorErr &err)
+htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
+	long long &expiry, std::vector<std::string> &bounding_set, CondorError &err)
 {
 	if (!init_scitokens(err)) {
 		return false;
 	}
-#if defined(HAVE_EXT_SCITOKENS)
+
 	SciToken token = nullptr;
 	char *err_msg = nullptr;
 	char *iss = nullptr;
@@ -88,7 +107,7 @@ validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::str
 		free(err_msg);
 		(*scitoken_destroy_ptr)(token);
 		token = nullptr;
-	} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &issuer, &err_msg)) {
+	} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &iss, &err_msg)) {
 		err.pushf("SCITOKENS", 2, "Unable to retrieve token issuer: %s",
 			err_msg ? err_msg : "(unknown failure)");
 		free(err_msg);
@@ -101,9 +120,9 @@ validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::str
 		free(err_msg);
 		(*scitoken_destroy_ptr)(token);
 		token = nullptr;
-		free(issuer);
+		free(iss);
 		return false;
-	} else if (!(enf = (*enforcer_create_ptr)(issuer, &audience_ptr[0], &err_msg))) {
+	} else if (!(enf = (*enforcer_create_ptr)(iss, &audience_ptr[0], &err_msg))) {
 		err.pushf("SCITOKENS", 2, "Failed to create SciTokens enforcer: %s",
 			err_msg ? err_msg : "(unknown failure)");
 		free(err_msg);
@@ -139,10 +158,10 @@ validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::str
 		}
 
 		issuer = iss;
-		subject = subj
+		subject = sub;
 		bounding_set = std::move(authz);
 		expiry = expiry_value;
-		dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer);
+		dprintf(D_SECURITY, "SciToken is mapped to issuer '%s'\n", issuer.c_str());
 		(*scitoken_destroy_ptr)(token);
 		free(iss);
 		free(sub);
@@ -150,11 +169,4 @@ validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::str
 		return true;
 	}
 	return false;
-#else
-	return false;
-#endif  
-
 }
-
-#endif // HAVE_EXT_SCITOKENS
-

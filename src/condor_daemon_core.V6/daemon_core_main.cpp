@@ -2445,11 +2445,11 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 		std::string key_name;
 		auto map_file = Authentication::getGlobalMapFile();
 		std::string identity;
-		if (!validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, err))
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, err))
 		{
 			error_code = err.code();
 			error_string = err.getFullText();
-		} else if ((key_name = get_signing_key(err)).empty()) {
+		} else if ((key_name = htcondor::get_token_signing_key(err)).empty()) {
 			error_code = err.code();
 			error_string = err.getFullText();
 		} else if (!map_file || map_file->GetCanonicalization("SCITOKEN", identity + "," + subject, identity)) {

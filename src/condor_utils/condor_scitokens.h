@@ -8,8 +8,12 @@
 
 #include "CondorError.h"
 
+namespace htcondor {
+
 bool
 validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
 	long long &expiry, std::vector<std::string> &bounding_set, CondorError &err);
+
+}
 
 #endif // __CONDOR_SCITOKENS_H_
