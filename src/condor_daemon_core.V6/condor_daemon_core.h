@@ -358,7 +358,7 @@ class DaemonCore : public Service
         @param sin  Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu);
+    int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level=D_ALWAYS);
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 

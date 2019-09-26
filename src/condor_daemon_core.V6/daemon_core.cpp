@@ -3166,7 +3166,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
@@ -3188,7 +3188,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
-		dprintf( D_ALWAYS,
+		dprintf( log_level,
 				 "PERMISSION %s to %s from host %s for %s, "
 				 "access level %s: reason: %s\n",
 				 result_desc,
