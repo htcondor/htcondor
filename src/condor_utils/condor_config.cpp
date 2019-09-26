@@ -103,14 +103,12 @@
 extern "C" {
 	
 // Function prototypes
-bool real_config(const char* host, int wantsQuiet, int config_options);
+bool real_config(const char* host, int wantsQuiet, int config_options, const char * root_config);
 //int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
-static char* find_global(int options);
-static char* find_file(const char*, const char*, int config_options);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
@@ -124,6 +122,9 @@ void check_params();
 // External variables
 //extern int	ConfigLineNo;
 }  /* End extern "C" */
+
+static const char* find_global(int options, MyString & config_file);
+static const char* find_file(const char*, const char*, int config_options, MyString & config_file);
 
 // pull from config.cpp
 extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
@@ -763,7 +764,7 @@ bool config_ex(int config_options)
 	//dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
-	bool result = real_config(NULL, wantsQuiet, config_options);
+	bool result = real_config(NULL, wantsQuiet, config_options, NULL);
 	if (!result) { return result; }
 	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
 	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
@@ -771,10 +772,10 @@ bool config_ex(int config_options)
 
 
 bool
-config_host(const char* host, int config_options)
+config_host(const char* host, int config_options, const char * root_config)
 {
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
-	return real_config(host, wantsQuiet, config_options);
+	return real_config(host, wantsQuiet, config_options, root_config);
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -899,9 +900,10 @@ condor_auth_config(int is_daemon)
 }
 
 bool
-real_config(const char* host, int wantsQuiet, int config_options)
+real_config(const char* host, int wantsQuiet, int config_options, const char * root_config)
 {
-	char* config_source = NULL;
+	const char* config_source = root_config;
+	MyString config_file_tmp; // used as a temp buffer by find_global
 	char* tmp = NULL;
 	int scm;
 
@@ -958,15 +960,23 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	fill_attributes();
 
 		// Try to find the global config source
-
-	char* env = getenv( EnvGetName(ENV_CONFIG) );
-	if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
+	if (config_options & CONFIG_OPT_USE_THIS_ROOT_CONFIG) {
+		if (config_source && strcasecmp(config_source, "ONLY_ENV") == MATCH) {
 			// special case, no config source desired
-		have_config_source = false;
+			have_config_source = false;
+		}
+	} else {
+		char* env = getenv( EnvGetName(ENV_CONFIG) );
+		if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
+				// special case, no config source desired
+			have_config_source = false;
+		} else {
+			config_source = NULL; // scan the usual places for the root config
+		}
 	}
 
-	if( have_config_source && 
-		! (config_source = find_global(config_options)) &&
+	if( have_config_source && ! config_source &&
+		! (config_source = find_global(config_options, config_file_tmp)) &&
 		! continue_if_no_config)
 	{
 		if( wantsQuiet ) {
@@ -1009,7 +1019,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	if( config_source ) {
 		process_config_source( config_source, 0, "global config source", NULL, true );
 		global_config_source = config_source;
-		free( config_source );
 		config_source = NULL;
 	}
 
@@ -1076,7 +1085,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	magic_prefix += "_";
 	magic_prefix += myDistro->Get();
 	magic_prefix += "_";
-	int prefix_len = magic_prefix.size();
+	int prefix_len = (int)magic_prefix.size();
 
 	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
@@ -1123,10 +1132,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	reinsert_specials( host );
 
 	process_dynamic_configs();
-
-	if (config_source) {
-		free( config_source );
-	}
 
 	CondorError errorStack;
 	if(! init_network_interfaces( & errorStack )) {
@@ -1475,12 +1480,12 @@ get_tilde()
 }
 
 
-char*
-find_global(int config_options)
+const char*
+find_global(int config_options, MyString & config_file)
 {
 	MyString	file;
 	file.formatstr( "%s_config", myDistro->Get() );
-	return find_file( EnvGetName(ENV_CONFIG), file.Value(), config_options );
+	return find_file( EnvGetName(ENV_CONFIG), file.Value(), config_options, config_file);
 }
 
 // Find user-specific location of a file
@@ -1532,27 +1537,28 @@ find_user_file(MyString &file_location, const char * basename, bool check_access
 	return true;
 }
 
-// Find location of specified file
-char*
-find_file(const char *env_name, const char *file_name, int config_options)
+// Find location of specified file, filename is written into buffer config_file
+// and also returned as the return value of this function. if file not found
+// then NULL is returned or the process is exited depending on the config_options
+const char*
+find_file(const char *env_name, const char *file_name, int config_options, MyString & config_file)
 {
-	char* config_source = NULL;
+	const char * config_source = NULL;
 	char* env = NULL;
 	int fd = 0;
 
 		// If we were given an environment variable name, try that first.
 	if( env_name && (env = getenv( env_name )) ) {
-		config_source = strdup( env );
+		config_file = env;
+		config_source = config_file.c_str();
 		StatInfo si( config_source );
 		switch( si.Error() ) {
 		case SIGood:
 			if( si.IsDirectory() ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
-						 "Please specify a file.\n", env_name,
-						 config_source );
-				free( config_source );
-				config_source = NULL;
+						 "Please specify a file.\n", env_name, env );
+				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
 			}
@@ -1567,19 +1573,19 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" does not exist.\n",
 						 env_name, config_source );
-				free( config_source );
+				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
 				break;
 			}
 			// Otherwise, we're happy
-			return config_source;
+			return config_file.c_str();
 
 		case SIFailure:
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n",
-					 env_name, config_source, si.Errno() );
-			free( config_source );
+					 env_name, config_file.c_str(), si.Errno() );
+			config_file.clear(); config_source = NULL;
 			if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 			exit( 1 );
 			break;
@@ -1610,10 +1616,10 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				// Only use this file if the path isn't empty and
 				// if we can read it properly.
 			if (!locations[ctr].IsEmpty()) {
-				config_source = strdup(locations[ctr].Value());
+				config_file = locations[ctr];
+				config_source = config_file.c_str();
 				if ((fd = safe_open_wrapper_follow(config_source, O_RDONLY)) < 0) {
-					free(config_source);
-					config_source = NULL;
+					config_file.clear(); config_source = NULL;
 				} else {
 					close(fd);
 					dprintf(D_FULLDEBUG, "Reading condor configuration "
@@ -1648,7 +1654,8 @@ find_file(const char *env_name, const char *file_name, int config_options)
 			// confirm it is a string value with something there
 			if ( valType == REG_SZ && the_path[0] ) {
 				// got it!  whoohooo!
-				config_source = strdup(the_path);
+				config_file = the_path;
+				config_source = config_file.c_str();
 
 				if ( strncmp(config_source, "\\\\", 2 ) == 0 ) {
 					// UNC Path, so run a 'net use' on it first.
@@ -1695,8 +1702,7 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				if( !(is_piped_command(config_source) &&
 					  is_valid_command(config_source)) &&
 					(fd = safe_open_wrapper_follow( config_source, O_RDONLY)) < 0 ) {
-
-					free( config_source );
+					config_file.clear();
 					config_source = NULL;
 				} else {
 					if (fd != 0) {
