@@ -3219,7 +3219,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
 		should_invoke_output_plugins = m_final_transfer_flag;
 	} else {
-		InitDownloadFilenameRemaps(&jobAd);
+		if (!InitDownloadFilenameRemaps(&jobAd)) {
+			return -1;
+		}
 		should_invoke_output_plugins = !tmp;
 	}
 
