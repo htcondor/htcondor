@@ -2090,7 +2090,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("list request", ADMINISTRATOR,
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("list request", ADMINISTRATOR,
 		static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
@@ -2207,7 +2208,8 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
 	// See comment in handle_dc_list_token_request().
