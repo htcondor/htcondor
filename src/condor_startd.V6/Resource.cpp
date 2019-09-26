@@ -1886,7 +1886,7 @@ Resource::retirementExpired()
 		ClassAd * jobAd = r_cur->ad();
 		if( machineAd != NULL && jobAd != NULL ) {
 			// Assumes EvalBool() doesn't modify its output argument on failure.
-			EvalBool( ATTR_START, machineAd, jobAd, jobMatches );
+			(void) EvalBool( ATTR_START, machineAd, jobAd, jobMatches );
 		}
 
 		if( jobMatches || wasAcceptedWhileDraining() ) {
