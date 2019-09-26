@@ -543,7 +543,7 @@ main( int argc, const char* argv[] )
 
 #ifdef WIN32
 	// enable this if you need to debug crashes.
-	#if 0
+	#if 1
 	const bool wait_for_win32_debugger = false;
 	#else
 	g_ExceptionHandler.TurnOff();
