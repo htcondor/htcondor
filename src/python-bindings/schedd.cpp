@@ -3881,13 +3881,13 @@ void export_schedd()
             :class:`Submit` object with the same information that can be
             submitted via the normal bindings submit machinery.
 
-            :param str dag_filename: The path to the DAG description file.
-            :param dict opts: Additional arguments to ``condor_submit_dag``,
+            :param str filename: The path to the DAG description file.
+            :param dict options: Additional arguments to ``condor_submit_dag``,
                 such as ``maxidle`` or ``maxpost``, as key-value pairs, like
                 ``{'maxidle': 10}``.
             :return: :class:`Submit` description for a ``.dag`` file
             )C0ND0R",
-            (boost::python::arg("dag_filename"), boost::python::arg("opts")=boost::python::dict())
+            (boost::python::arg("filename"), boost::python::arg("options")=boost::python::dict())
             )
         .staticmethod("from_dag")
         ;
