@@ -2850,7 +2850,7 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 
 MyString SecMan::getDefaultCryptoMethods() {
 #ifdef HAVE_EXT_OPENSSL
-	return "3DES,BLOWFISH";
+	return "BLOWFISH,3DES";
 #else
 	return "";
 #endif
