@@ -269,10 +269,13 @@ static	bool		current_run = false;
 static 	bool		dash_globus = false;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
+static	bool		dash_idle = false;
 static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
+static  const char * capture_raw_results = NULL;
+static  FILE*        capture_raw_fp = NULL;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
@@ -773,6 +776,7 @@ enum {
 	QDO_NotSet=0,
 	QDO_JobNormal,
 	QDO_JobRuntime,
+	QDO_JobIdle,
 	QDO_JobGoodput,
 	QDO_JobGlobusInfo,
 	QDO_JobGridInfo,
@@ -1439,7 +1443,16 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "dry-run", &pcolon, 3)) {
 			dash_dry_run = true;
-			if (pcolon && pcolon[1]) { dry_run_file = ++pcolon; }
+			if (pcolon && pcolon[1]) {
+				dry_run_file = ++pcolon;
+			}
+		}
+		else
+		if (is_dash_arg_colon_prefix(dash_arg, "capture-raw-results", &pcolon, 7)) {
+			capture_raw_results = "-";
+			if (pcolon && pcolon[1]) {
+				capture_raw_results = ++pcolon;
+			}
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "verbose", 4)) {
@@ -1455,8 +1468,8 @@ processCommandLineArguments (int argc, const char *argv[])
 			Q.addAND( expr.c_str() );
 			dash_run = true;
 			querying_partial_clusters = true;
-			if (show_held) {
-				fprintf( stderr, "-run and -hold/held are incompatible\n" );
+			if (show_held || dash_idle) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -1466,8 +1479,19 @@ processCommandLineArguments (int argc, const char *argv[])
 			Q.add (CQ_STATUS, HELD);
 			show_held = true;
 			querying_partial_clusters = true;
-			if (dash_run) {
-				fprintf( stderr, "-run and -hold/held are incompatible\n" );
+			if (dash_run || dash_idle) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
+		}
+		else
+		if (is_dash_arg_prefix(dash_arg, "idle", 3)) {
+			Q.add (CQ_STATUS, IDLE);
+			dash_idle = true;
+			querying_partial_clusters = true;
+			if (dash_run || show_held) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -1715,8 +1739,9 @@ processCommandLineArguments (int argc, const char *argv[])
 			if (mode == QDO_NotSet ||
 				mode == QDO_JobNormal ||
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
+			//	mode == QDO_JobIdle || // TODO: need a custom format for -batch -idle
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory && ! dash_run) {
+				if ( ! dash_factory && ! dash_run && ! dash_idle) {
 					dash_batch = dash_batch_is_default;
 				}
 			}
@@ -2601,6 +2626,7 @@ usage (const char *myName, int other)
 		"\t-batch\t\t\t Display DAGs or batches of similar jobs as a single line\n"
 		"\t-nobatch\t\t Display one line per job, rather than one line per batch\n"
 //FUTURE		"\t-transfer\t\t Display information for jobs that are doing file transfer\n"
+		"\t-idle\t\t\t Get information about idle jobs\n"
 		"\t-run\t\t\t Get information about running jobs\n"
 		"\t-totals\t\t\t Display only job totals\n"
 		"\t-stream-results \t Produce output as jobs are fetched\n"
@@ -2798,6 +2824,7 @@ SUMMARY STANDARD
 
 extern const char * const jobDefault_PrintFormat;
 extern const char * const jobRuntime_PrintFormat;
+extern const char * const jobIdle_PrintFormat;
 extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGlobus_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
@@ -2842,6 +2869,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 				mode = QDO_DAG;
 			} else if (dash_run) {
 				mode = QDO_JobRuntime;
+			} else if (dash_idle) {
+				mode = QDO_JobIdle;
 			} else if (dash_factory) {
 				mode = QDO_Factory;
 			}
@@ -2850,12 +2879,13 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	}
 
 	static const struct {
-		int mode;
+		const int mode;
 		const char * tag;
 		const char * fmt;
 	} info[] = {
-		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
+		{ QDO_JobNormal,      "",         jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
+		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },
 		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
 		{ QDO_JobGlobusInfo,  "GLOBUS",   jobGlobus_PrintFormat },
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
@@ -3190,12 +3220,56 @@ void cleanup_cache_optimizer()
 	cache_optimizer.ix = 0;
 }
 
+// write an ad to the given fp in standard long classad form
+static bool dump_long_to_fp(void * pv, ClassAd *job)
+{
+	std::string line;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	for (auto itr = job->begin(); itr != job->end(); ++itr) {
+		line = itr->first.c_str();
+		line += "=";
+		unp.Unparse(line, itr->second);
+		line += "\n";
+		fputs(line.c_str(), (FILE*)pv);
+	}
+	fputs("\n", (FILE*)pv);
+
+	return true;
+}
+
+
 static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 {
 	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
 	count_job(app.sumy, job);
 
 	ASSERT( ! g_stream_results);
+	if (capture_raw_results) {
+		if ( ! capture_raw_fp) {
+			if (MATCH == strcmp(capture_raw_results, "-")) {
+				capture_raw_fp = stdout;
+			} else if (MATCH == strcmp(capture_raw_results, "-2")) {
+				capture_raw_fp = stderr;
+			} else {
+				const char * mode = "wb";
+				const char * filename = capture_raw_results;
+				if (*filename == '+') {
+					++filename;
+					mode = "ab";
+				}
+				capture_raw_fp = safe_fopen_wrapper(filename, mode);
+			}
+			// if we just opened the file, print a banner
+			if (capture_raw_fp) {
+				fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
+			}
+		}
+		if (capture_raw_fp) {
+			dump_long_to_fp(capture_raw_fp, job);
+		}
+	}
 
 	union _jobid jobid;
 
@@ -3377,6 +3451,7 @@ streaming_print_job(void * pv, ClassAd *job)
 	if ( ! result_text.empty()) { fputs(result_text.c_str(), stdout); }
 	return true;
 }
+
 
 /*
 static long long make_parentage_sort_key(long long id, std::string & key, ROD_MAP_BY_ID & results)
@@ -4287,6 +4362,12 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return false;
 	}
 
+	// if we opened a raw capture file, we can close it now.
+	if (capture_raw_results && *capture_raw_results != '-' && capture_raw_fp) {
+		fclose(capture_raw_fp);
+		capture_raw_fp = NULL;
+	}
+
 	// Modern schedds will return as summary ad. otherwise we create one from our own totals
 	// in either case, we (sometimes) want to skip printing of the summary ad when there are no jobs
 	// so set a flag now we are refer to later.
@@ -4676,6 +4757,17 @@ const char * const jobRuntime_PrintFormat = "SELECT\n"
 "   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
 "   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
 "   Owner         AS 'HOST(S)'       WIDTH 0   PRINTAS REMOTE_HOST OR ??\n"
+"SUMMARY NONE\n";
+
+const char * const jobIdle_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
+"   JobUniverse   AS 'UNIVERSE '  PRINTAS JOB_UNIVERSE\n"
+"   RequestCpus   AS CPUS         PRINTF '%4d'\n"
+"   RequestMemory AS MEMORY       PRINTF '%6d'\n"
+"   NumShadowStarts?:0 AS STARTS  PRINTF '%6d'\n"
+"   LastRemoteHost AS LAST_HOST WIDTH 0\n"
 "SUMMARY NONE\n";
 
 const char * const jobGoodput_PrintFormat = "SELECT\n"
