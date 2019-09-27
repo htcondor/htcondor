@@ -6945,7 +6945,7 @@ int SubmitHash::SetTransferFiles()
 	job->LookupBool(ATTR_TRANSFER_INPUT, transfer_stdin);
 	if (transfer_stdin) {
 		std::string stdin_fname;
-		job->LookupString(ATTR_JOB_INPUT, stdin_fname);
+		(void) job->LookupString(ATTR_JOB_INPUT, stdin_fname);
 		if (!stdin_fname.empty()) {
 			if (pInputFilesSizeKb) {
 				*pInputFilesSizeKb += calc_image_size_kb(stdin_fname.c_str());
