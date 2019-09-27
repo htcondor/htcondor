@@ -753,7 +753,7 @@ Claim::loadRequestInfo()
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
 	std::string limits;
-	EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
+	(void) EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
 	if (!limits.empty()) {
 		c_client->setConcurrencyLimits(limits.c_str());
 	}
