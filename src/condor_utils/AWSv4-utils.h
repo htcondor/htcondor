@@ -1,7 +1,18 @@
 #ifndef AWSV4_UTILS_H
 #define AWSV4_UTILS_H
 
-class CondorError;
+/*
+ * This header requires the following headers.
+ *
+#include <string>
+#include <map>
+
+#include <openssl/hmac.h>
+
+#include "classad.h"
+#include "CondorError.h"
+ *
+ */
 
 namespace htcondor {
 //

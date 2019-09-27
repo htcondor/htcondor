@@ -1,12 +1,12 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "CondorError.h"
 
 #include <string>
 #include <map>
 #include <openssl/hmac.h>
 #include "classad/classad.h"
+#include "CondorError.h"
 #include "AWSv4-utils.h"
 
 #include "stl_string_utils.h"
@@ -211,29 +211,6 @@ AWSv4Impl::createSignature( const std::string & secretAccessKey,
 	return true;
 }
 
-//
-// This will work for all buckets created in any region "launched" before
-// March 29, 2019, because s3.amazonaws.com will reply with a code 307
-// redirect to the correct region.  This will fail for all other buckets.
-//
-// It would also be nice to support direct specification of bucket regions
-// for speed reasons.
-//
-// It is wildly unclear how to do this in the s3:// URL schema, which mostly
-// seems to exist in the 'aws' CLI rather than in the wild.  Without having
-// thought about it too hard, though, it seems like cramming the region into
-// the s3:// URL is probably better than anything else.
-//
-// For Amazon proper, we could allow either endpoints or regions; the mapping
-// between the two is consistent.  It's not clear what we'd want for other
-// S3 implementations -- or, for that matter, if this code will work for them
-// at all.
-//
-// Maybe s3://bucket@region/key ?  (I don't know if '@' is legal in bucket
-// names.  It's certainly a bad idea.)  For disambiguation, I guess we
-// could do regionalS3://endpoint/bucket/key, instead.
-//
-
 bool
 generate_presigned_url( const std::string & accessKeyID,
   const std::string & secretAccessKey,
@@ -262,30 +239,29 @@ generate_presigned_url( const std::string & accessKeyID,
     size_t protocolLength = 5; // std::string("s3://").size()
     size_t middle = s3url.find( "/", protocolLength );
     if( middle == std::string::npos ) {
-        err.push( "AWS SigV4", 2, "An S3 URL be of the form s3://<bucket>/<object>, "
-            "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../ for non-AWS endpoints." );
+        err.push( "AWS SigV4", 2, "An S3 URL must be of the form s3://<bucket>/<object>, "
+            "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
         return false;
     }
-        // Pick a default region.
+    // Pick a default region.
     std::string region = input_region;
     if (region.empty()) {
         region = "us-east-1";
     }
-
     auto bucket_or_hostname = s3url.substr( protocolLength, middle - protocolLength );
-        // Strip out the port number for now in order to simplify logic below.
+    // Strip out the port number for now in order to simplify logic below.
     auto port_idx = bucket_or_hostname.find(":");
     std::string port_number;
     if (port_idx != std::string::npos) {
         port_number = bucket_or_hostname.substr(port_idx + 1);
         bucket_or_hostname = bucket_or_hostname.substr(0, port_idx);
     }
-        // URLs of the form s3://<bucket>/<key>
+    // URLs of the form s3://<bucket>/<key>
     std::string host = bucket_or_hostname;
     if (bucket_or_hostname.find(".") == std::string::npos) {
         bucket = bucket_or_hostname;
         host = bucket + ".s3-" + region + ".amazonaws.com";
-        // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
+    // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
     } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
         auto last_idx = bucket_and_region.rfind(".");
@@ -302,6 +278,10 @@ generate_presigned_url( const std::string & accessKeyID,
             return false;
         }
         region = region_with_prefix.substr(4);
+    } else {
+        // All other URLs were s3://<something-without-dots>/<something>
+        // where the first part is now in 'host' and the second part
+        // will be in 'key' at the end of this stanza.
     }
     if (!port_number.empty()) {
         host = host + ":" + port_number;
@@ -373,11 +353,11 @@ generate_presigned_url( const std::string & accessKeyID,
     formatstr( stringToSign, "AWS4-HMAC-SHA256\n%s\n%s\n%s",
         dateAndTime, credentialScope.c_str(), canonicalRequestHash.c_str() );
 
-	std::string signature;
-	if(! AWSv4Impl::createSignature( secretAccessKey, date, region, service, stringToSign, signature )) {
-		dprintf( D_ALWAYS, "Failed to create signature, failing.\n" );
-		return false;
-	}
+    std::string signature;
+    if(! AWSv4Impl::createSignature( secretAccessKey, date, region, service, stringToSign, signature )) {
+        err.push( "AWS SigV4", 6, "Failed to create signature, failing." );
+        return false;
+    }
 
     formatstr( presignedURL,
         "https://%s/%s?%s&X-Amz-Signature=%s",
