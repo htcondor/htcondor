@@ -185,7 +185,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 			bool dynamic_slot = false;
-			daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
+			(void) daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
 			if( dynamic_slot ) {
 				return false;
 			}
