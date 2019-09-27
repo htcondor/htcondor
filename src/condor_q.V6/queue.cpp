@@ -2853,7 +2853,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		int mode;
 		const char * tag;
 		const char * fmt;
-	} info[] = {
+	} const info[] = {
 		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
@@ -4834,6 +4834,7 @@ static int set_print_mask_from_stream(
 		if (propt.aggregate) {
 			if (propt.aggregate == PR_COUNT_UNIQUE) {
 				dash_autocluster = CondorQ::fetch_GroupBy;
+				initStringListFromAttrs(attrs, true, propt.attrs, true);
 			} else if (propt.aggregate == PR_FROM_AUTOCLUSTER) {
 				dash_autocluster = CondorQ::fetch_DefaultAutoCluster;
 			}
