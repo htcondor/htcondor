@@ -88,31 +88,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n",
-            fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
-
-    char * rawBuffer = (char *)malloc( fileSize + 1 );
-    assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-    close( fd );
-    if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-            fileName.c_str(), fileSize, totalRead );
-        free( rawBuffer );
-        return false;
-    }
-    contents.assign( rawBuffer, fileSize );
-    free( rawBuffer );
-
-    return true;
+	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -380,60 +356,19 @@ void convertMessageDigestToLowercaseHex(
 		const unsigned char * messageDigest,
 		unsigned int mdLength,
 		std::string & hexEncoded ) {
-	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
-	ASSERT( buffer );
-	char * ptr = buffer;
-	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
-	}
-	hexEncoded.assign( buffer, mdLength * 2 );
-	free(buffer);
+	AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest,
+		mdLength, hexEncoded );
 }
 
 
 bool doSha256(	const std::string & payload,
 				unsigned char * messageDigest,
 				unsigned int * mdLength ) {
-	EVP_MD_CTX * mdctx = EVP_MD_CTX_create();
-	if( mdctx == NULL ) { return false; }
-
-	if(! EVP_DigestInit_ex( mdctx, EVP_sha256(), NULL )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestUpdate( mdctx, payload.c_str(), payload.length() )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestFinal_ex( mdctx, messageDigest, mdLength )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	EVP_MD_CTX_destroy( mdctx );
-	return true;
+	return AWSv4Impl::doSha256( payload, messageDigest, mdLength );
 }
 
 std::string pathEncode( const std::string & original ) {
-	std::string segment;
-	std::string encoded;
-	const char * o = original.c_str();
-
-	size_t next = 0;
-	size_t offset = 0;
-	size_t length = strlen( o );
-	while( offset < length ) {
-		next = strcspn( o + offset, "/" );
-		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
-
-		segment = std::string( o + offset, next );
-		encoded += amazonURLEncode( segment );
-
-		offset += next;
-	}
-	return encoded;
+    return AWSv4Impl::pathEncode( original );
 }
 
 bool AmazonMetadataQuery::SendRequest( const std::string & uri ) {
