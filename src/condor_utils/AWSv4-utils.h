@@ -1,22 +1,20 @@
 #ifndef AWSV4_UTILS_H
 #define AWSV4_UTILS_H
 
-/*
-#include <string>
-#include <map>
+class CondorError;
 
-#include <openssl/hmac.h>
-
-#include "classad.h"
-*/
-
+namespace htcondor {
 //
 // The jobAd must have ATTR_EC2_ACCESS_KEY_ID ATTR_EC2_SECRET_ACCESS_KEY set.
+// Optionally, ATTR_AWS_REGION may be provided.
 //
 bool
 generate_presigned_url( const classad::ClassAd & jobAd,
 	const std::string & s3url,
-	std::string & presignedURL );
+	const std::string & verb,
+	std::string & presignedURL,
+	CondorError & err );
+}
 
 // Functions used internally by generate_presigned_url() and the Amazon GAHP.
 

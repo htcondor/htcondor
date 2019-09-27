@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "CondorError.h"
 
 #include <string>
 #include <map>
@@ -237,9 +238,14 @@ bool
 generate_presigned_url( const std::string & accessKeyID,
   const std::string & secretAccessKey,
   const std::string & s3url,
-  std::string & presignedURL ) {
+  const std::string & input_region,
+  const std::string & verb,
+  std::string & presignedURL,
+  CondorError & err ) {
 
     time_t now; time( & now );
+        // Allow for modest clock skews.
+    now -= 5;
     struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
     char dateAndTime[] = "YYYYMMDDThhmmssZ";
     strftime( dateAndTime, sizeof(dateAndTime), "%Y%m%dT%H%M%SZ",
@@ -250,16 +256,56 @@ generate_presigned_url( const std::string & accessKeyID,
     // Extract the S3 bucket and key from the S3 URL.
     std::string bucket, key;
     if(! starts_with( s3url, "s3://" )) {
-        dprintf( D_ALWAYS, "An S3 URL must begin with s3://.\n" );
+        err.push( "AWS SigV4", 1, "An S3 URL must begin with s3://." );
         return false;
     }
     size_t protocolLength = 5; // std::string("s3://").size()
     size_t middle = s3url.find( "/", protocolLength );
     if( middle == std::string::npos ) {
-        dprintf( D_ALWAYS, "An S3 URL be of the form s3://<bucket>/<key>.\n" );
+        err.push( "AWS SigV4", 2, "An S3 URL be of the form s3://<bucket>/<object>, "
+            "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../ for non-AWS endpoints." );
         return false;
     }
-    bucket = s3url.substr( protocolLength, middle - protocolLength );
+        // Pick a default region.
+    std::string region = input_region;
+    if (region.empty()) {
+        region = "us-east-1";
+    }
+
+    auto bucket_or_hostname = s3url.substr( protocolLength, middle - protocolLength );
+        // Strip out the port number for now in order to simplify logic below.
+    auto port_idx = bucket_or_hostname.find(":");
+    std::string port_number;
+    if (port_idx != std::string::npos) {
+        port_number = bucket_or_hostname.substr(port_idx + 1);
+        bucket_or_hostname = bucket_or_hostname.substr(0, port_idx);
+    }
+        // URLs of the form s3://<bucket>/<key>
+    std::string host = bucket_or_hostname;
+    if (bucket_or_hostname.find(".") == std::string::npos) {
+        bucket = bucket_or_hostname;
+        host = bucket + ".s3-" + region + ".amazonaws.com";
+        // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
+    } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
+        auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
+        auto last_idx = bucket_and_region.rfind(".");
+        if (last_idx == std::string::npos) {
+            err.push( "AWS SigV4", 3, "Invalid format for domain-based buckets.  Must be of the"
+                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
+            return false;
+        }
+        bucket = bucket_and_region.substr(0, last_idx);
+        auto region_with_prefix = bucket_and_region.substr(last_idx);
+        if (region_with_prefix.substr(0, 4) != ".s3-") {
+            err.push( "AWS SigV4", 4, "Invalid format for domain-based buckets.  Must be of the"
+                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
+            return false;
+        }
+        region = region_with_prefix.substr(4);
+    }
+    if (!port_number.empty()) {
+        host = host + ":" + port_number;
+    }
     key = s3url.substr( middle + 1 );
 
     //
@@ -280,7 +326,6 @@ generate_presigned_url( const std::string & accessKeyID,
     std::string canonicalQueryString;
 
     std::string credentialScope;
-    std::string region = "us-east-1";
     std::string service = "s3";
     formatstr( credentialScope, "%s/%s/%s/aws4_request",
         date, region.c_str(), service.c_str() );
@@ -303,12 +348,9 @@ generate_presigned_url( const std::string & accessKeyID,
 
     // Part 3: The canonical headers.  This MUST include "Host".
     std::string canonicalHeaders;
-    std::string host = bucket + ".s3.amazonaws.com";
     formatstr( canonicalHeaders, "host:%s\n", host.c_str() );
 
-    // FIXME: This will probably need to be PUT for S3 uploads.
-    std::string httpVerb = "GET";
-    std::string canonicalRequest = httpVerb + "\n"
+    std::string canonicalRequest = verb + "\n"
                                  + canonicalURI + "\n"
                                  + canonicalQueryString + "\n"
                                  + canonicalHeaders + "\n"
@@ -322,7 +364,7 @@ generate_presigned_url( const std::string & accessKeyID,
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     std::string canonicalRequestHash;
     if(! AWSv4Impl::doSha256( canonicalRequest, messageDigest, & mdLength )) {
-        dprintf( D_ALWAYS, "Unable to hash canonical request, failing.\n" );
+        err.push( "AWS SigV4", 5, "Unable to hash canonical request, failing." );
         return false;
     }
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
@@ -346,9 +388,11 @@ generate_presigned_url( const std::string & accessKeyID,
 }
 
 bool
-generate_presigned_url( const classad::ClassAd & jobAd,
+htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
   const std::string & s3url,
-  std::string & presignedURL ) {
+  const std::string & verb,
+  std::string & presignedURL,
+  CondorError & err ) {
 	std::string accessKeyIDFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_ACCESS_KEY_ID, accessKeyIDFile );
 	if( accessKeyIDFile.empty() ) {
@@ -377,6 +421,9 @@ generate_presigned_url( const classad::ClassAd & jobAd,
 	}
 	trim( secretAccessKey );
 
+	std::string region;
+	jobAd.EvaluateAttrString( ATTR_AWS_REGION, region );
+
 	return generate_presigned_url( accessKeyID, secretAccessKey,
-		s3url, presignedURL );
+		s3url, region, verb, presignedURL, err );
 }
