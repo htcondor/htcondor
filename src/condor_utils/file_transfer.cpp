@@ -44,11 +44,13 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
+#include "AWSv4-utils.h"
+#include "condor_random_num.h"
+
 #include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <unordered_map>
-#include "condor_random_num.h"
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -2360,12 +2362,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							if (url_value.find("/..") != std::string::npos) {
 								has_good_prefix = false;
 							}
-								// TODO: real signing.
 							if (has_good_prefix) {
 								dprintf(D_FULLDEBUG, "DoDownload: URL will be signed: %s.\n", url_value.c_str());
-								signed_urls.push_back("https://" + url_value.substr(5));
+								std::string signed_url;
+								CondorError err;
+								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
+									dprintf(D_ALWAYS, "DoDownload: Failure when signing URL: %s", err.getFullText().c_str());
+									signed_urls.push_back("");
+								} else {
+									signed_urls.push_back(signed_url);
+								}
 							} else {
 								dprintf(D_FULLDEBUG, "DoDownload: URL has invalid prefix: %s.\n", url_value.c_str());
+								signed_urls.push_back("");
 							}
 						}
 						else
@@ -3419,8 +3428,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
 			std::string new_src_url = "https://" + src_url.substr(5);
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
-				// TODO: actually sign the URL using the job ad.
-			fileitem.setSrcName(new_src_url);
+			std::string signed_url;
+			CondorError err;
+			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
+				fileitem.setSrcName(signed_url);
+			} else {
+				dprintf(D_ALWAYS, "DoUpload: Failed to sign URL - %s\n", err.getFullText().c_str());
+			}
 		}
 	}
 
@@ -3553,7 +3567,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.formatstr_cat( "%s", condor_basename(filename.c_str()) );
+				// If we signed the URL, we added a bunch of garbage to the query string.
+				// Strip that out at this point.
+			auto idx = filename.find("?");
+			std::string tmp_filename = filename.substr(0, idx);
+
+			dprintf(D_FULLDEBUG, "DoUpload: Will transfer to filename %s.\n", tmp_filename.c_str());
+			dest_filename.formatstr_cat( "%s", condor_basename(tmp_filename.c_str()) );
 		}
 
 		// check for read permission on this file, if we are supposed to check.
