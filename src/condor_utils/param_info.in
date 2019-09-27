@@ -4899,6 +4899,11 @@ default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
 
+[SIGN_S3_URLS]
+default=true
+type=bool
+description=Enable to allow submit side to sign S3 URLs for file transfer.
+
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false
 type=bool
