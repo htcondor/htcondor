@@ -2854,7 +2854,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		int mode;
 		const char * tag;
 		const char * fmt;
-	} const info[] = {
+	} info[] = {
 		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
