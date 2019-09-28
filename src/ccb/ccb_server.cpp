@@ -117,17 +117,21 @@ CCBServer::RegisterHandlers()
 	}
 	m_registered_handlers = true;
 
-		// NOTE: CCB_REGISTER is honored for a number of command levels
-		// (DAEMON, ADVERTISE_*); however, the DC interface doesn't allow
-		// a multi-level command.  Hence, we use ALLOW here and then apply
-		// the permissions inside the handler itself.
+		// Note that we allow several different permission levels to
+		// register; however, the DAEMON permission level is the primary
+		// in terms of determining policy.
+	std::vector<DCpermission> alternate_perms{ADVERTISE_STARTD_PERM, ADVERTISE_SCHEDD_PERM, ADVERTISE_MASTER_PERM};
 	int rc = daemonCore->Register_CommandWithPayload(
 		CCB_REGISTER,
 		"CCB_REGISTER",
 		(CommandHandlercpp)&CCBServer::HandleRegistration,
 		"CCBServer::HandleRegistration",
 		this,
-		ALLOW);
+		DAEMON,
+		D_COMMAND,
+		false,
+		STANDARD_COMMAND_PAYLOAD_TIMEOUT,
+		&alternate_perms);
 	ASSERT( rc >= 0 );
 
 	rc = daemonCore->Register_CommandWithPayload(
@@ -417,20 +421,6 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 {
 	ReliSock *sock = (ReliSock *)stream;
 	ASSERT( cmd == CCB_REGISTER );
-
-	auto fqu = sock->getFullyQualifiedUser();
-	auto addr = sock->peer_addr();
-        if (
-		(USER_AUTH_SUCCESS != daemonCore->Verify("register daemon", DAEMON, addr, fqu, D_SECURITY|D_FULLDEBUG)) &&
-		(USER_AUTH_SUCCESS != daemonCore->Verify("register daemon", ADVERTISE_STARTD_PERM, addr, fqu, D_SECURITY|D_FULLDEBUG)) &&
-		(USER_AUTH_SUCCESS != daemonCore->Verify("register daemon", ADVERTISE_SCHEDD_PERM, addr, fqu, D_SECURITY|D_FULLDEBUG)) &&
-		(USER_AUTH_SUCCESS != daemonCore->Verify("register daemon", ADVERTISE_MASTER_PERM, addr, fqu, D_SECURITY|D_FULLDEBUG)) &&
-			// Repeat this failure in order to get the same level of logging as a normal
-			// permission denied.
-		(USER_AUTH_SUCCESS != daemonCore->Verify("register daemon", DAEMON, addr, fqu, D_ALWAYS))
-	) {
-		return false;
-	}
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
