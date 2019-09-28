@@ -633,43 +633,47 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
 							 perm, dprintf_flag, FALSE, force_authentication,
-							 wait_for_payload) );
+							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication, int wait_for_payload)
+				bool force_authentication, int wait_for_payload,
+				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication, wait_for_payload) );
+							 force_authentication, wait_for_payload,
+							 alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
 							 perm, dprintf_flag, FALSE, force_authentication,
-							 wait_for_payload) );
+							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication, int wait_for_payload)
+				bool force_authentication, int wait_for_payload,
+				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication, wait_for_payload) );
+							 force_authentication, wait_for_payload,
+							 alternate_perm) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -1015,7 +1019,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				int dprintf_flag, int is_cpp, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	int i = -1;
 
@@ -1059,6 +1063,10 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
 	comTable[i].wait_for_payload = wait_for_payload;
+	if (alternate_perm) {
+		comTable[i].alternate_perm = new std::vector<DCpermission>();
+		*(comTable[i].alternate_perm) = *alternate_perm;
+	}
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -1101,6 +1109,9 @@ int DaemonCore::Cancel_Command( int command )
 					comTable[nCommand - 1].handler == NULL &&
 					comTable[nCommand - 1].handlercpp == NULL ) {
 				nCommand--;
+			}
+			if (comTable[i].alternate_perm) {
+				delete comTable[i].alternate_perm;
 			}
 			return TRUE;
 		}
@@ -2764,8 +2775,17 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 		// iterate through a list of this perm and all perms implied by it
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
 		for (i = 0; i < nCommand; i++) {
+			bool alternate_perm_match = false;
+			if (comTable[i].alternate_perm) {
+				for (auto alt_perm : *(comTable[i].alternate_perm)) {
+					if (alt_perm == perm) {
+						alternate_perm_match = true;
+						break;
+					}
+				}
+			}
 			if( (comTable[i].handler || comTable[i].handlercpp) &&
-				(comTable[i].perm == perm) &&
+				((comTable[i].perm == perm) || alternate_perm_match) &&
 				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.length() ? "," : "";

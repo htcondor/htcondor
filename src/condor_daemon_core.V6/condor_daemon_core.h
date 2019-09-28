@@ -391,7 +391,8 @@ class DaemonCore : public Service
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
-						  int             wait_for_payload = 0);
+                          int             wait_for_payload = 0,
+                          std::vector<DCpermission> *alternate_perms = nullptr);
     
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -415,7 +416,8 @@ class DaemonCore : public Service
                           DCpermission       perm             = ALLOW,
                           int                dprintf_flag     = D_COMMAND,
                           bool               force_authentication = false,
-						  int                wait_for_payload = 0);
+                          int                wait_for_payload = 0,
+                          std::vector<DCpermission> * alternate_perms = nullptr);
 
     int Register_UnregisteredCommandHandler (
 		CommandHandlercpp handlercpp,
@@ -442,7 +444,9 @@ class DaemonCore : public Service
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
-						  int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+                          int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
+                          std::vector<DCpermission> *alternate_perms = nullptr);
+
     int Register_CommandWithPayload (
                           int                command,
                           const char *       com_descript,
@@ -452,7 +456,8 @@ class DaemonCore : public Service
                           DCpermission       perm             = ALLOW,
                           int                dprintf_flag     = D_COMMAND,
                           bool               force_authentication = false,
-						  int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+                          int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
+                          std::vector<DCpermission> * alternate_perms = nullptr);
 
 
     /** Not_Yet_Documented
@@ -1731,7 +1736,8 @@ class DaemonCore : public Service
                          int dprintf_flag,
                          int is_cpp,
                          bool force_authentication,
-						 int wait_for_payload);
+                         int wait_for_payload,
+                         std::vector<DCpermission> *alternate_perm);
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1812,7 +1818,10 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
         int             dprintf_flag;
-		int             wait_for_payload;
+	int             wait_for_payload;
+		// If there are alternate permission levels where the
+		// command is permitted, they will be listed here.
+	std::vector<DCpermission> *alternate_perm{nullptr};
 
 		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), dprintf_flag(0), wait_for_payload(0) {}
     };
