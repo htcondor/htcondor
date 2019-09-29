@@ -10536,7 +10536,9 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 		MyString command_desc;
 		command_desc.formatstr("remote config %s",name);
 
-		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
+		std::string perm_name = PermString(static_cast<DCpermission>(i));
+
+		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -10546,7 +10548,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 				dprintf( D_ALWAYS, "CheckConfigSecurity: "
 						 "found %s at access level %s\n", name,
-						 PermString((DCpermission)i) );
+						 perm_name.c_str()) );
 #endif
 
 				return true;
