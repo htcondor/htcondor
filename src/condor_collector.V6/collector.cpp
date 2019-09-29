@@ -417,15 +417,17 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_ACCOUNTING_AD,"UPDATE_ACCOUNTING_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+	std::vector<DCpermission> allow_perms{ALLOW};
 		// Users may advertise their own submitter ads.  If they do, there are additional
 		// restrictions to their contents (such as the user must be authenticated, not
 		// unmapped, and must match the Owner attribute).
 	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
+		(CommandHandler)receive_update,"receive_update", nullptr , DAEMON, D_COMMAND, false,
+		0, &allow_perms);
 		//
 	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
-		(CommandHandler)schedd_token_request, "schedd_token_request", nullptr, ALLOW,
-		D_COMMAND, true);
+		(CommandHandler)schedd_token_request, "schedd_token_request", nullptr, DAEMON,
+		D_COMMAND, true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
 
