@@ -2423,6 +2423,7 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 	}
 
 	classad::ClassAd result_ad;
+	std::string result_token;
 	int error_code = 0;
 	std::string error_string;
 
@@ -2433,7 +2434,6 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 	}
 
 #if defined(HAVE_EXT_SCITOKENS)
-	std::string result_token;
 	if (!error_code) {
 		std::string subject;
 		std::string issuer;

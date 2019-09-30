@@ -1,7 +1,9 @@
 
 #include "condor_common.h"
 
+#ifndef WIN32
 #include <dlfcn.h>
+#endif
 
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -42,6 +44,7 @@ init_scitokens(CondorError &err)
 		return true;
 	}
 
+#ifndef WIN32
 	dlerror();
 	void *dl_hdl = nullptr;
 	if (
@@ -64,6 +67,10 @@ init_scitokens(CondorError &err)
 		g_init_success = false;
 	}
 	return (g_init_success = true);
+#else
+	err.pushf("SCITOKENS", 1, "SciTokens library not supported on Windwos.");
+	return (g_init_success = false);
+#endif
 }
 
 } // end anonymous namespace
