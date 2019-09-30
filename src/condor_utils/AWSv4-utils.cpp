@@ -243,11 +243,7 @@ generate_presigned_url( const std::string & accessKeyID,
             "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
         return false;
     }
-    // Pick a default region.
     std::string region = input_region;
-    if (region.empty()) {
-        region = "us-east-1";
-    }
     auto bucket_or_hostname = s3url.substr( protocolLength, middle - protocolLength );
     // Strip out the port number for now in order to simplify logic below.
     auto port_idx = bucket_or_hostname.find(":");
@@ -260,7 +256,11 @@ generate_presigned_url( const std::string & accessKeyID,
     std::string host = bucket_or_hostname;
     if (bucket_or_hostname.find(".") == std::string::npos) {
         bucket = bucket_or_hostname;
-        host = bucket + ".s3-" + region + ".amazonaws.com";
+        if(! region.empty()) {
+            host = bucket + ".s3-" + region + ".amazonaws.com";
+        } else {
+            host = bucket + ".s3.amazonaws.com";
+        }
     // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
     } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
@@ -287,6 +287,10 @@ generate_presigned_url( const std::string & accessKeyID,
         host = host + ":" + port_number;
     }
     key = s3url.substr( middle + 1 );
+    // Pick a default region.
+    if (region.empty()) {
+        region = "us-east-1";
+    }
 
     //
     // Construct the canonical request.
