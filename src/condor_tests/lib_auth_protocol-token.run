@@ -95,6 +95,7 @@ def main():
 		# other than condor_pool@*/* and administrator@domain/*.  Get ZKM
 		# to review/test these settings for that purpose.
 		"ALLOW_ADMINISTRATOR" : "condor_pool@*/*, administrator@domain/*",
+		"ALLOW_OWNER" : "condor_pool@*/*, administrator@domain/*",
 		"ALLOW_CONFIG" : "condor_pool@*/*, administrator@domain/*",
 		"DENY_ALL" : "*",
 	}
