@@ -11,6 +11,7 @@
 
 #include "stl_string_utils.h"
 #include "stat_wrapper.h"
+#include "utc_time.h"
 
 std::string
 AWSv4Impl::pathEncode( const std::string & original ) {
