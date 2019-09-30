@@ -3116,7 +3116,8 @@ int SubmitHash::SetGridParams()
 	//
 	// EC2 grid-type submit attributes
 	//
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID )) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3142,7 +3143,8 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY)) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3170,11 +3172,11 @@ int SubmitHash::SetGridParams()
 
 	if ( gridType == "ec2" ) {
 		if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' parameter\n" );
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' or '" SUBMIT_KEY_AWSAccessKeyIdFile "' parameter\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 		if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' parameter\n");
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' or '" SUBMIT_KEY_AWSSecretAccessKeyFile "' parameter\n");
 			ABORT_AND_RETURN( 1 );
 		}
 	}
