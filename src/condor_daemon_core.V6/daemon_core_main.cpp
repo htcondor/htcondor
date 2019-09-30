@@ -4201,7 +4201,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
 		(CommandHandler)handle_dc_exchange_scitoken,
-		"handle_dc_exchange_scitoken", 0, ALLOW, D_COMMAND, true );
+		"handle_dc_exchange_scitoken", 0, WRITE, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
