@@ -32,10 +32,8 @@ using namespace std;
 #include "compat_classad.h"
 
 // local helper functions, options are one or more of PUT_CLASSAD_* flags
-int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
-	const classad::References *encrypted_attrs);
-int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
-	const classad::References &whitelist, const classad::References *encrypted_attrs);
+int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options);
+int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options, const classad::References &whitelist);
 int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out);
 
 
@@ -539,10 +537,10 @@ int mergeProjectionFromQueryAd(classad::ClassAd & queryAd, const char * attr_pro
 int putClassAd ( Stream *sock, const classad::ClassAd& ad )
 {
 	int options = 0;
-	return _putClassAd(sock, ad, options, nullptr);
+	return _putClassAd(sock, ad, options);
 }
 
-int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist /*=nullptr*/, const classad::References * encrypted_attrs /*=nullptr*/)
+int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist /*=NULL*/)
 {
 	int retval = 0;
 	classad::References expanded_whitelist; // in case we need to expand the whitelist
@@ -572,9 +570,9 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 	{
 		BlockingModeGuard guard(rsock, true);
 		if (whitelist) {
-			retval = _putClassAd(sock, ad, options, *whitelist, encrypted_attrs);
+			retval = _putClassAd(sock, ad, options, *whitelist);
 		} else {
-			retval = _putClassAd(sock, ad, options, encrypted_attrs);
+			retval = _putClassAd(sock, ad, options);
 		}
 		bool backlog = rsock->clear_backlog_flag();
 		if (retval && backlog) { retval = 2; }
@@ -582,9 +580,9 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 	else // normal blocking mode put
 	{
 		if (whitelist) {
-			retval = _putClassAd(sock, ad, options, *whitelist, encrypted_attrs);
+			retval = _putClassAd(sock, ad, options, *whitelist);
 		} else {
-			retval = _putClassAd(sock, ad, options, encrypted_attrs);
+			retval = _putClassAd(sock, ad, options);
 		}
 	}
 	return retval;
@@ -623,8 +621,7 @@ static int _putClassAdTrailingInfo(Stream *sock, const classad::ClassAd& /* ad *
 	return true;
 }
 
-int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
-	const classad::References *encrypted_attrs)
+int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options)
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
@@ -672,8 +669,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!(compat_classad::ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
+				!compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				if(excludeTypes)
 				{
@@ -727,9 +723,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && (compat_classad::ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
-			{
+			if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)){
 				continue;
 			}
 
@@ -746,8 +740,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			unp.Unparse( buf, expr );
 
 			if( ! crypto_is_noop && private_count &&
-				(compat_classad::ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
+				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				sock->put(SECRET_MARKER);
 
@@ -762,7 +755,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
 }
 
-int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const classad::References &whitelist, const classad::References *encrypted_attrs)
+int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const classad::References &whitelist)
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
@@ -772,10 +765,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
-		if ( ! ad.Lookup(*attr) || (exclude_private && (
-			compat_classad::ClassAdAttributeIsPrivate(*attr) ||
-			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
-		))) {
+		if ( ! ad.Lookup(*attr) || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(*attr))) {
 			blacklist.insert(*attr);
 		}
 	}
@@ -815,9 +805,8 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		unp.Unparse( buf, expr );
 
 		if ( ! crypto_is_noop &&
-			(compat_classad::ClassAdAttributeIsPrivate(*attr) ||
-			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
-		) {
+			compat_classad::ClassAdAttributeIsPrivate(*attr))
+		{
 			if (!sock->put(SECRET_MARKER)) {
 				return false;
 			}
