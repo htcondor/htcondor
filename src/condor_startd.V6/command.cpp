@@ -1746,8 +1746,9 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 
 #define ABORT \
-delete( req_classad );	\
-free( shadow_addr );	\
+if( req_classad ) 	 					\
+	delete( req_classad );				\
+free( shadow_addr );					\
 return FALSE
 
 int
