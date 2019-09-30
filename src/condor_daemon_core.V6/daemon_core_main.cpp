@@ -2431,10 +2431,6 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 	}
 
 #if defined(HAVE_EXT_SCITOKENS)
-		// bool
-		// validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-		//         long long &expiry, std::vector<std::string> &bounding_set, CondorErr &err);
-		//
 	std::string result_token;
 	if (!error_code) {
 		std::string subject;
@@ -2452,11 +2448,11 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 		} else if ((key_name = htcondor::get_token_signing_key(err)).empty()) {
 			error_code = err.code();
 			error_string = err.getFullText();
-		} else if (!map_file || map_file->GetCanonicalization("SCITOKEN", identity + "," + subject, identity)) {
+		} else if (!map_file || map_file->GetCanonicalization("SCITOKENS", issuer + "," + subject, identity)) {
 			error_code = 5;
 			error_string = "Failed to map SciToken to a local identity.";
 		} else {
-			long lifetime = time(NULL) - expiry;
+			long lifetime = expiry - time(NULL);
 			int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
 			if ((max_lifetime > 0) && (lifetime > max_lifetime)) {
 				lifetime = max_lifetime;
@@ -2468,6 +2464,27 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 			{
 				error_code = err.code();
 				error_string = err.getFullText();
+			} else {
+				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+				std::stringstream ss;
+				std::string bounding_set_str;
+				if (!bounding_set.empty()) {
+					bool wrote_first = false;
+					for (const auto &entry : bounding_set) {
+						ss << (wrote_first ? "," : "") << entry;
+						wrote_first = true;
+					}
+					bounding_set_str = ss.str();
+				} else {
+					bounding_set_str = "(none)";
+				}
+
+				dprintf(D_ALWAYS, "For peer %s (identity %s), exchanging SciToken "
+					"from issuer %s, subject %s for a local token with identity %s,"
+					" bounding set %s, and lifetime %ld.\n", peer_location,
+					peer_identity, issuer.c_str(), subject.c_str(),
+					identity.c_str(), bounding_set_str.c_str(), lifetime);
 			}
 		}
 	}
