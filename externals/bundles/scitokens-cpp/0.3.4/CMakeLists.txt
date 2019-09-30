@@ -45,7 +45,7 @@ if (WITH_SCITOKENS)
 			set( SCITOKENS_SO "libSciTokens.0.dylib" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.dylib")
 		else(APPLE)
-			set( SCITOKENS_SO "libSciTokens.0.dylib" )
+			set( SCITOKENS_SO "libSciTokens.so.0" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.so")
 		endif()
 
