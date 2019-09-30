@@ -170,6 +170,9 @@ class Authentication {
 		// server but may succeed with a token request workflow.
 	bool shouldTryTokenRequest() const { return m_should_try_token_request; }
 
+		// Return the current global map file
+	static MapFile* getGlobalMapFile() { return global_map_file; }
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!

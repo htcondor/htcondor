@@ -635,6 +635,11 @@ public:
 		CondorError *err=nullptr ) noexcept;
 
 		/**
+		 * Exchange a SciToken for a HTCondor token.
+		 */
+	bool exchangeSciToken( const std::string &scitoken, std::string &token, CondorError &err ) noexcept;
+
+		/**
 		 * When authentication fails - but TOKEN is a valid method - this is set to true.
 		 */
 	bool shouldTryTokenRequest() const {return m_should_try_token_request;};

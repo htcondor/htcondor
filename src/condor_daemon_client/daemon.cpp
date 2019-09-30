@@ -2501,6 +2501,7 @@ Daemon::getInstanceID( std::string & instanceID ) {
 	return true;
 }
 
+
 bool
 Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
 	std::string &token, CondorError *err)
@@ -2589,6 +2590,97 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 			"containing no resulting token and no error message, from remote daemon "
 			"at '%s'\n", _addr ? _addr : "(unknown)" );
 		if (err) err->pushf("DAEMON", 1, "BUG!  Daemon::getSessionToken() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, CondorError &err) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::exchangeSciToken() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (!ad.InsertAttr(ATTR_SEC_TOKEN, scitoken)) {
+		err.pushf("DAEMON", 1, "Failed to create SciToken exchange request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create SciToken exchange request ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		err.pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+			return false;
+	}
+
+	if (!startCommand( DC_EXCHANGE_SCITOKEN, &rSock, 20, &err)) {
+		err.pushf("DAEMON", 1, "Failed to start command for SciToken exchange "
+			"with remote daemon at '%s'.\n", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to start command for "
+			"SciToken exchange with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		err.pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() Failed to send ClassAd to remote"
+			" daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to send end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		err.pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to recieve response from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to read end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf( D_FULLDEBUG, "Daemon::exchangeSciToken() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		err.push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::exchangeToken() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		err.pushf("DAEMON", 1, "BUG!  Daemon::exchangeSciToken() received a "
 			"malformed ad containing no resulting token and no error message, from "
 			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
 		return false;

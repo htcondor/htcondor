@@ -45,6 +45,7 @@
 #include "net_string_list.h"
 #include "dc_collector.h"
 #include "token_utils.h"
+#include "condor_scitokens.h"
 
 #include <chrono>
 #include <sstream>
@@ -56,6 +57,7 @@
 
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "authentication.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -63,6 +65,10 @@
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
+#endif
+
+#if defined(HAVE_EXT_SCITOKENS)
+#include <scitokens/scitokens.h>
 #endif
 
 // Externs to Globals
@@ -2406,6 +2412,111 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 
 
 static int
+handle_dc_exchange_scitoken( Service*, int, Stream *stream)
+{
+	classad::ClassAd request_ad;
+	if (!getClassAd(stream, request_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to read input from client\n");
+		return false;
+	}
+
+	classad::ClassAd result_ad;
+	std::string result_token;
+	int error_code = 0;
+	std::string error_string;
+
+	std::string scitoken;
+	if (!request_ad.EvaluateAttrString(ATTR_SEC_TOKEN, scitoken) || scitoken.empty()) {
+		error_code = 1;
+		error_string = "SciToken not provided by the client";
+	}
+
+#if defined(HAVE_EXT_SCITOKENS)
+	if (!error_code) {
+		std::string subject;
+		std::string issuer;
+		long long expiry;
+		std::vector<std::string> bounding_set;
+		CondorError err;
+		std::string key_name;
+		auto map_file = Authentication::getGlobalMapFile();
+		std::string identity;
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, err))
+		{
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if ((key_name = htcondor::get_token_signing_key(err)).empty()) {
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if (!map_file || map_file->GetCanonicalization("SCITOKENS", issuer + "," + subject, identity)) {
+			error_code = 5;
+			error_string = "Failed to map SciToken to a local identity.";
+		} else {
+			long lifetime = expiry - time(NULL);
+			int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+			if ((max_lifetime > 0) && (lifetime > max_lifetime)) {
+				lifetime = max_lifetime;
+			}
+			if (lifetime < 0) {lifetime = 0;}
+
+			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
+				lifetime, result_token, &err))
+			{
+				error_code = err.code();
+				error_string = err.getFullText();
+			} else {
+				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+				std::stringstream ss;
+				std::string bounding_set_str;
+				if (!bounding_set.empty()) {
+					bool wrote_first = false;
+					for (const auto &entry : bounding_set) {
+						ss << (wrote_first ? "," : "") << entry;
+						wrote_first = true;
+					}
+					bounding_set_str = ss.str();
+				} else {
+					bounding_set_str = "(none)";
+				}
+
+				dprintf(D_ALWAYS, "For peer %s (identity %s), exchanging SciToken "
+					"from issuer %s, subject %s for a local token with identity %s,"
+					" bounding set %s, and lifetime %ld.\n", peer_location,
+					peer_identity, issuer.c_str(), subject.c_str(),
+					identity.c_str(), bounding_set_str.c_str(), lifetime);
+			}
+		}
+	}
+#else
+	error_code = 2;
+	error_string = "Server not built with SciTokens support";
+#endif
+
+	if (error_code)
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	}
+	else
+	{
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, result_token);
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
 handle_dc_session_token( Service*, int, Stream* stream)
 {
 	classad::ClassAd ad;
@@ -4084,6 +4195,13 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_auto_approve_token_request,
 		"handle_dc_auto_approve_token_request", 0, ADMINISTRATOR );
+
+		//
+		// Exchange a SciToken for an equivalent HTCondor token.
+		//
+	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
+		(CommandHandler)handle_dc_exchange_scitoken,
+		"handle_dc_exchange_scitoken", 0, WRITE, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
