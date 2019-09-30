@@ -2090,7 +2090,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("list request", ADMINISTRATOR,
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("list request", ADMINISTRATOR,
 		static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
@@ -2207,7 +2208,8 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
 	// See comment in handle_dc_list_token_request().
@@ -3892,6 +3894,9 @@ int dc_main( int argc, char** argv )
         daemonCore->monitor_data.EnableMonitoring();
     }
 
+	std::vector<DCpermission> allow_perms{ALLOW};
+
+
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
 								  (CommandHandler)handle_reconfig,
@@ -3914,11 +3919,13 @@ int dc_main( int argc, char** argv )
 		// as "ALLOW" and the handler will do further checks.
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  "handle_config()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  "handle_config()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  (CommandHandler)handle_off_fast,
@@ -4031,21 +4038,24 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
-								"handle_dc_session_token()", 0, ALLOW );
+								"handle_dc_session_token()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Start a token request workflow.
 		//
 	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_start_token_request,
-								"handle_dc_start_token_request()", 0, ALLOW );
+								"handle_dc_start_token_request()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Poll for token request completion.
 		//
 	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_finish_token_request,
-								"handle_dc_finish_token_request()", 0, ALLOW );
+								"handle_dc_finish_token_request()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// List the outstanding token requests.
@@ -4055,7 +4065,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_list_token_request,
-		"handle_dc_list_token_request", 0, ALLOW, D_COMMAND, true );
+		"handle_dc_list_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Approve a token request.
@@ -4066,7 +4076,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", 0, ALLOW, D_COMMAND, true );
+		"handle_dc_approve_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Install an auto-approval rule
