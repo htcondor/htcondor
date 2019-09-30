@@ -44,10 +44,13 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
+#include "AWSv4-utils.h"
+#include "condor_random_num.h"
+
 #include <fstream>
 #include <algorithm>
 #include <numeric>
-#include "condor_random_num.h"
+#include <unordered_map>
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -65,6 +68,12 @@ const char * const StderrRemapName = "_condor_stderr";
 // 999 subcommands (999 is followed by a filename and then a ClassAd):
 // 7 - ClassAd contains information about a URL upload performed by
 //     the upload side.
+// 8 - ClassAd contains information about a list of files which will be
+//     sent later that may be eligible for reuse.  This is command requires
+//     a response indicating if the download side already has one of the
+//     files available.
+// 9 - ClassAd contains a list of URLs that need to be signed for the uploader
+//     to proceed.
 enum class TransferCommand {
 	Unknown = -1,
 	Finished = 0,
@@ -79,7 +88,9 @@ enum class TransferCommand {
 
 enum class TransferSubCommand {
 	Unknown = -1,
-	UploadUrl = 7
+	UploadUrl = 7,
+	ReuseInfo = 8,
+	SignUrls = 9
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -120,6 +131,7 @@ public:
 	const std::string &srcName() const { return m_src_name; }
 	const std::string &destDir() const { return m_dest_dir; }
 	const std::string &destUrl() const { return m_dest_url; }
+	const std::string &srcScheme() const { return m_src_scheme; }
 	filesize_t fileSize() const { return m_file_size; }
 	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
@@ -1908,6 +1920,30 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	downloadStartTime = condor_gettimestamp_double();
 
+		// When we are signing URLs, we want to make sure that the requested
+		// prefix is valid.
+	std::vector<std::string> output_url_prefixes;
+	if (OutputDestination)
+	{
+		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", OutputDestination);
+		output_url_prefixes.emplace_back(OutputDestination);
+	}
+	std::string remaps;
+	if (jobAd.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remaps)) {
+		StringList remaps_list(remaps.c_str(), ";");
+		remaps_list.rewind();
+		const char *list_item;
+		while ( (list_item = remaps_list.next()) ) {
+			std::string list_item_str(list_item);
+			auto idx = list_item_str.find("=");
+			if (idx != std::string::npos) {
+				std::string url = list_item_str.substr(idx + 1);
+				trim(url);
+				dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", url.c_str());
+				output_url_prefixes.emplace_back(url);
+			}
+		}
+	}
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -1956,6 +1992,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
 	}
 
+	bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true) && PeerDoesS3Urls;
+
 		/*
 		  If we want to change priv states, do it now.
 		  Even if we don't transfer any files, we write a commit
@@ -1986,20 +2024,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			break;
 		}
 
-		switch (xfer_command) {
-		case TransferCommand::EnableEncryption: {
+		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && xfer_command == TransferCommand::DownloadUrl)) {
 			bool cryp_ret = s->set_crypto_mode(true);
-			if(!cryp_ret) {
+			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
-			break;
-		}
-		case TransferCommand::DisableEncryption: {
+		} else if (xfer_command == TransferCommand::DisableEncryption) {
 			s->set_crypto_mode(false);
-			break;
-		}
-		default: {
+		} else {
 			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
 			if(!cryp_ret) {
 				dprintf(D_ALWAYS,"DoDownload: failed to change crypto to %i on incoming file, "
@@ -2007,7 +2040,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 		}
-		};
 
 		if( !s->code(filename) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
@@ -2278,6 +2310,89 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						"after encountering the following error: %s\n",
 						error_buf.Value());
 				}
+			} else if (subcommand == TransferSubCommand::SignUrls) {
+				dprintf(D_FULLDEBUG, "DoDownload: Received request to sign URLs.\n");
+					// We must consume the EOM in order to send the ClassAd later.
+				if (!s->end_of_message()) {
+					dprintf(D_FULLDEBUG, "DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+				ClassAd result_ad;
+				classad::Value value;
+				if (!file_info.EvaluateAttr("SignList", value) ||
+					(value.GetType() != classad::Value::SLIST_VALUE &&
+					value.GetType() != classad::Value::LIST_VALUE))
+				{
+					dprintf(D_FULLDEBUG, "DoDownload: The signing URL list info in ClassAd is missing.\n");
+					dPrintAd(D_FULLDEBUG, file_info);
+					rc = 0;
+				} else {
+					classad_shared_ptr<classad::ExprList> exprlist;
+					value.IsSListValue(exprlist);
+					std::vector<std::string> signed_urls;
+					for (auto list_entry : (*exprlist)) {
+						std::string url_value;
+						classad::Value value;
+						if (!list_entry->Evaluate(value)) {
+							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry.\n");
+							signed_urls.push_back("");
+						}
+						else if (!value.IsStringValue(url_value))
+						{
+							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry to string.\n");
+							signed_urls.push_back("");
+						}
+						else if (sign_s3_urls && url_value.substr(0, 5) == "s3://")
+						{
+							bool has_good_prefix = false;
+							for (const auto &prefix : output_url_prefixes) {
+								if (url_value.substr(0, prefix.size()) == prefix) {
+									has_good_prefix = true;
+									break;
+								}
+							}
+								// We don't deal with normalization correctly -- avoid
+								// any URL that has ".." in it.
+							if (url_value.find("/..") != std::string::npos) {
+								has_good_prefix = false;
+							}
+							if (has_good_prefix) {
+								dprintf(D_FULLDEBUG, "DoDownload: URL will be signed: %s.\n", url_value.c_str());
+								std::string signed_url;
+								CondorError err;
+								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
+									dprintf(D_ALWAYS, "DoDownload: Failure when signing URL: %s", err.getFullText().c_str());
+									signed_urls.push_back("");
+								} else {
+									signed_urls.push_back(signed_url);
+								}
+							} else {
+								dprintf(D_FULLDEBUG, "DoDownload: URL has invalid prefix: %s.\n", url_value.c_str());
+								signed_urls.push_back("");
+							}
+						}
+						else
+						{
+							signed_urls.push_back(url_value);
+						}
+					}
+					classad::ExprList url_list;
+					for (const auto &url : signed_urls) {
+						auto expr = classad::Literal::MakeString(url);
+						url_list.push_back(expr);
+					}
+					result_ad.Insert("SignList", url_list.Copy());
+					rc = 0;
+				}
+				s->encode();
+					// Send resulting list of signed URLs, encrypted if possible.
+				classad::References encrypted_attrs{"SignList"};
+				if (!putClassAd(s, result_ad, 0, &encrypted_attrs) || !s->end_of_message()) {
+					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+				s->decode();
+				continue;
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -3219,7 +3334,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
 		should_invoke_output_plugins = m_final_transfer_flag;
 	} else {
-		InitDownloadFilenameRemaps(&jobAd);
+		if (!InitDownloadFilenameRemaps(&jobAd)) {
+			return -1;
+		}
 		should_invoke_output_plugins = !tmp;
 	}
 
@@ -3280,6 +3397,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	// Right now, this is limited to calculating output URLs (must be done after prior
 	// expansion of the transfer list); in the future, it might be a good place
 	// to augment the file transfer items with checksum information.
+	bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true) && PeerDoesS3Urls;
+		// We must pre-compute the list of URLs we need signed; the downloader-side
+		// (typically the shadow...) to try and sign these.
+	std::vector<std::string> s3_urls_to_sign;
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
@@ -3296,13 +3417,109 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					local_output_url = remap_filename.Value();
 				}
 			}
+			if (sign_s3_urls && local_output_url.substr(0, 5) == "s3://") {
+				s3_urls_to_sign.push_back(local_output_url);
+			}
 			fileitem.setDestUrl(local_output_url);
+		}
+		const std::string &src_url = fileitem.srcName();
+		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
+			std::string new_src_url = "https://" + src_url.substr(5);
+			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
+			std::string signed_url;
+			CondorError err;
+			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
+				fileitem.setSrcName(signed_url);
+			} else {
+				dprintf(D_ALWAYS, "DoUpload: Failed to sign URL - %s\n", err.getFullText().c_str());
+			}
+		}
+	}
+
+	std::unordered_map<std::string, std::string> s3_url_map;
+	if (!s3_urls_to_sign.empty()) {
+		dprintf(D_FULLDEBUG, "DoUpload: Requesting %lu URLs to sign.\n", s3_urls_to_sign.size());
+
+			// Indicate a ClassAd-based command.
+		if (!s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+			// Fake an empty filename.
+		if (!s->put("") || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+
+			// Here, we must wait for the go-ahead from the transfer peer.
+		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+			// Obtain the transfer token from the transfer queue.
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+
+		ClassAd file_info;
+		auto sub = static_cast<int>(TransferSubCommand::SignUrls);
+		file_info.InsertAttr("SubCommand", sub);
+		std::vector<ExprTree*> info_list;
+		for (auto &info : s3_urls_to_sign) {
+			info_list.push_back(classad::Literal::MakeString(info));
+		}
+		file_info.Insert("SignList", classad::ExprList::MakeExprList(info_list));
+
+		if (!putClassAd(s, file_info) || !s->end_of_message()) {
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+		ClassAd signed_ad;
+		s->decode();
+		if (!getClassAd(s, signed_ad) ||
+			!s->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
+			return_and_resetpriv(-1);
+		}
+		s->encode();
+		classad::Value value;
+		classad_shared_ptr<classad::ExprList> exprlist;
+		if (signed_ad.EvaluateAttr("SignList", value) && value.IsSListValue(exprlist))
+		{
+			dprintf(D_FULLDEBUG, "DoUpload: Remote side sent back a list of %d URLs that were signed.\n", exprlist->size());
+			size_t idx = 0;
+			for (auto list_entry : (*exprlist)) {
+				if (idx == s3_urls_to_sign.size()) {
+					dprintf(D_FULLDEBUG, "DoUpload: WARNING - remote side sent too few results\n");
+					break;
+				}
+				classad::Value entry_val;
+				std::string signed_url;
+				if (!list_entry->Evaluate(entry_val) || !entry_val.IsStringValue(signed_url)) {
+					idx++;
+					dprintf(D_FULLDEBUG, "DoUpload: WARNING - not a valid string entry\n");
+					continue;
+				}
+
+				if (!signed_url.empty()) {
+					s3_url_map.insert({s3_urls_to_sign[idx], signed_url});
+				}
+				idx++;
+			}
 		}
 	}
 
 	std::sort(filelist.begin(), filelist.end());
-	for(const auto &fileitem : filelist )
+	for (auto &fileitem : filelist)
 	{
+			// If there's a signed URL to work with, we should use that instead.
+		auto iter = s3_url_map.find(fileitem.destUrl());
+		if (iter != s3_url_map.end()) {
+			fileitem.setDestUrl(iter->second);
+		}
+
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
 
@@ -3348,7 +3565,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.formatstr_cat( "%s", condor_basename(filename.c_str()) );
+				// If we signed the URL, we added a bunch of garbage to the query string.
+				// Strip that out at this point.
+			auto idx = filename.find("?");
+			std::string tmp_filename = filename.substr(0, idx);
+
+			dprintf(D_FULLDEBUG, "DoUpload: Will transfer to filename %s.\n", tmp_filename.c_str());
+			dest_filename.formatstr_cat( "%s", condor_basename(tmp_filename.c_str()) );
 		}
 
 		// check for read permission on this file, if we are supposed to check.
@@ -3504,14 +3727,24 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 
-		// now enable the crypto decision we made:
-		if (file_command == TransferCommand::EnableEncryption) {
-			s->set_crypto_mode(true);
+		// now enable the crypto decision we made; if we are sending a URL down the pipe
+		// (potentially embedding an authorization itself), ensure we encrypt.
+		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
+			bool cryp_ret = s->set_crypto_mode(true);
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
 		} else if (file_command == TransferCommand::DisableEncryption) {
 			s->set_crypto_mode(false);
 		}
 		else {
-			s->set_crypto_mode(socket_default_crypto);
+			bool cryp_ret = s->set_crypto_mode(true);
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
 		}
 
 		// for command 999, this string must equal the Attribute "Filename" in
@@ -3664,7 +3897,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 					// it's all assembled, so send the ad using stream s.
 					// don't end the message, it's done below.
-					if(!putClassAd(s, file_info)) {
+					// Always encrypt the URL as it might contain an authorization.
+					const classad::References encrypted_attrs{"OutputDestination"};
+					if(!putClassAd(s, file_info, 0, &encrypted_attrs)) {
 						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
@@ -4511,6 +4746,8 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	else {
 		PeerDoesXferInfo = false;
 	}
+
+	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 }
 
 

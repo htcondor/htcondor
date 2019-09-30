@@ -3116,7 +3116,8 @@ int SubmitHash::SetGridParams()
 	//
 	// EC2 grid-type submit attributes
 	//
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID )) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3142,7 +3143,8 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY)) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3170,11 +3172,11 @@ int SubmitHash::SetGridParams()
 
 	if ( gridType == "ec2" ) {
 		if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' parameter\n" );
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' or '" SUBMIT_KEY_AWSAccessKeyIdFile "' parameter\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 		if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' parameter\n");
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' or '" SUBMIT_KEY_AWSSecretAccessKeyFile "' parameter\n");
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -4994,9 +4996,14 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
-    // EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
-    // is ON_EXIT_OR_EVICT, which we may want to warn people about.
-    {SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
+	// Presigned S3 URLs
+	{SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},
+
+	// EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
+	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
+	{SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -6207,9 +6214,14 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true);
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					std::string method = *it;
+					if (sign_s3_urls && (method == "s3")) {
+						method = "https";
+					}
 					answer += " && stringListIMember(\"";
-					answer += *it;
+					answer += method;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 				}
 			}
@@ -6940,7 +6952,7 @@ int SubmitHash::SetTransferFiles()
 	job->LookupBool(ATTR_TRANSFER_INPUT, transfer_stdin);
 	if (transfer_stdin) {
 		std::string stdin_fname;
-		job->LookupString(ATTR_JOB_INPUT, stdin_fname);
+		(void) job->LookupString(ATTR_JOB_INPUT, stdin_fname);
 		if (!stdin_fname.empty()) {
 			if (pInputFilesSizeKb) {
 				*pInputFilesSizeKb += calc_image_size_kb(stdin_fname.c_str());

@@ -8,5 +8,5 @@ universe = scheduler
 type = loading
 
 vms	= 10
-encryption = 3DES,BLOWFISH
+encryption = BLOWFISH,3DES
 #authentication = GSI

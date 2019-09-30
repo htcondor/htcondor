@@ -3877,8 +3877,24 @@ void export_schedd()
             )C0ND0R")
         .def("from_dag", &Submit::from_dag,
             R"C0ND0R(
-            :return: Submit description for a .dag file
-            )C0ND0R")
+            Constructs a new :class:`Submit` that could be used to submit the
+            DAG described by the file at ``dag_filename``.
+
+            This static method essentially does the first half of the work
+            that ``condor_submit_dag`` does: it produces the submit description
+            for the DAGMan job that will execute the DAG. However, in addition
+            to writing this submit description to disk, it also produces a
+            :class:`Submit` object with the same information that can be
+            submitted via the normal bindings submit machinery.
+
+            :param str filename: The path to the DAG description file.
+            :param dict options: Additional arguments to ``condor_submit_dag``,
+                such as ``maxidle`` or ``maxpost``, as key-value pairs, like
+                ``{'maxidle': 10}``.
+            :return: :class:`Submit` description for a ``.dag`` file
+            )C0ND0R",
+            (boost::python::arg("filename"), boost::python::arg("options")=boost::python::dict())
+            )
         .staticmethod("from_dag")
         ;
     register_ptr_to_python< boost::shared_ptr<Submit> >();

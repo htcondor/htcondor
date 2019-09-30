@@ -1555,7 +1555,7 @@ Resource::hold_job( bool soft )
 	std::string hold_reason;
 	int hold_subcode = 0;
 
-	EvalString("WANT_HOLD_REASON", r_classad, r_cur->ad(), hold_reason);
+	(void) EvalString("WANT_HOLD_REASON", r_classad, r_cur->ad(), hold_reason);
 	if( hold_reason.empty() ) {
 		ExprTree *want_hold_expr;
 		std::string want_hold_str;
