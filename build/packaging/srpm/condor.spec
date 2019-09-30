@@ -1353,6 +1353,7 @@ rm -rf %{buildroot}
 %_bindir/condor_token_request_auto_approve
 %_bindir/condor_token_request_list
 %_bindir/condor_token_list
+%_bindir/condor_scitoken_exchange
 %_bindir/condor_drain
 %_bindir/condor_ping
 %_bindir/condor_tail
