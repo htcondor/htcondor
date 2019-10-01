@@ -108,7 +108,7 @@ quiet_make () {
 set -eu
 
 if [[ -z $DOCKER_IMAGE ]]; then
-    time cmake "${CMAKE_OPTIONS[@]}"
+    time cmake "${CMAKE_OPTIONS[@]}" "-DCMAKE_INSTALL_PREFIX=${PWD}/release_dir"
     if [[ $PROPER == OFF ]]; then
         if [[ $GLOBUS == ON ]]; then
             quiet_make globus

@@ -16,7 +16,7 @@ yum -y install ${RPM_DEPENDENCIES[@]}
 if [[ $DOCKER_IMAGE = centos:centos7 ]]; then
     yum -y install python36-devel boost169-devel boost169-static
 fi
-time cmake ${CMAKE_OPTIONS[@]}
+time cmake ${CMAKE_OPTIONS[@]} "-DCMAKE_INSTALL_PREFIX=$PWD/release_dir"
 time make -j2 externals
 time make -j2 install && time ctest -j8 -L travis
 
