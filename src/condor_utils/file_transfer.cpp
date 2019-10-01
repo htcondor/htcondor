@@ -2024,20 +2024,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			break;
 		}
 
-		switch (xfer_command) {
-		case TransferCommand::EnableEncryption: {
+		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && xfer_command == TransferCommand::DownloadUrl)) {
 			bool cryp_ret = s->set_crypto_mode(true);
-			if(!cryp_ret) {
+			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
-			break;
-		}
-		case TransferCommand::DisableEncryption: {
+		} else if (xfer_command == TransferCommand::DisableEncryption) {
 			s->set_crypto_mode(false);
-			break;
-		}
-		default: {
+		} else {
 			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
 			if(!cryp_ret) {
 				dprintf(D_ALWAYS,"DoDownload: failed to change crypto to %i on incoming file, "
@@ -2045,7 +2040,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 		}
-		};
 
 		if( !s->code(filename) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
@@ -2391,7 +2385,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					rc = 0;
 				}
 				s->encode();
-				if (!putClassAd(s, result_ad) || !s->end_of_message()) {
+					// Send resulting list of signed URLs, encrypted if possible.
+				classad::References encrypted_attrs{"SignList"};
+				if (!putClassAd(s, result_ad, 0, &encrypted_attrs) || !s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3731,14 +3727,24 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 
-		// now enable the crypto decision we made:
-		if (file_command == TransferCommand::EnableEncryption) {
-			s->set_crypto_mode(true);
+		// now enable the crypto decision we made; if we are sending a URL down the pipe
+		// (potentially embedding an authorization itself), ensure we encrypt.
+		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
+			bool cryp_ret = s->set_crypto_mode(true);
+			if (!cryp_ret) {
+				dprintf(D_ALWAYS,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
 		} else if (file_command == TransferCommand::DisableEncryption) {
 			s->set_crypto_mode(false);
 		}
 		else {
-			s->set_crypto_mode(socket_default_crypto);
+			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
+			if (!cryp_ret) {
+				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
 		}
 
 		// for command 999, this string must equal the Attribute "Filename" in
@@ -3891,7 +3897,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 					// it's all assembled, so send the ad using stream s.
 					// don't end the message, it's done below.
-					if(!putClassAd(s, file_info)) {
+					// Always encrypt the URL as it might contain an authorization.
+					const classad::References encrypted_attrs{"OutputDestination"};
+					if(!putClassAd(s, file_info, 0, &encrypted_attrs)) {
 						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
