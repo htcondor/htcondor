@@ -135,6 +135,8 @@ StartdCronJobMgr::CreateJob( CronJobParams *job_params )
 		for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
 			StringList tn( pair, ":" );
 			char * metricType = tn.first();
+			if (!metricType) continue;
+
 			char * attributeName = tn.next();
 			if(! params->addMetric( metricType, attributeName )) {
 				dprintf( 	D_ALWAYS, "Unknown metric type '%s' for attribute "
