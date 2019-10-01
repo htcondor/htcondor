@@ -1280,7 +1280,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 		contexts.Rewind( );
 		for( int col = 0; col < numContexts; col++ ) {
-			contexts.Next( context );
+			(void) contexts.Next( context );
 			classad::Value c_val;
 			if( tooComplex[row] ){
 				BoolValue result;
@@ -1948,7 +1948,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	abvList.Rewind( );
 	allHyperRectangles.Rewind( );
 	while( allHyperRectangles.Next( hrs ) ) {
-		abvList.Next( currentABV );
+		(void) abvList.Next( currentABV );
 		for( int i = 0; i < hrs->getsize( ); i++ ) {
 			currHR = ( *hrs )[i];
 			currHR->GetIndexSet( hasContext );
