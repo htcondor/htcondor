@@ -123,6 +123,7 @@ endif ( WINDOWS )
 # this way clean @ root cleans externals while clean @src cleans just the src.
 add_subdirectory (src)
 add_subdirectory (build/packaging)
+add_subdirectory (bindings/python)
 
 ##########################################################################
 # the following are existing doc targets
