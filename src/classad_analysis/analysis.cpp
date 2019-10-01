@@ -2275,10 +2275,10 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			}
 			else {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Init( i1, i2, true );
+					vr->Init2( i1, i2, true );
 				}
 				else {
-					vr->Init( i1, i2, undef );
+					vr->Init2( i1, i2, undef );
 				}
 			}
 			delete i1;
