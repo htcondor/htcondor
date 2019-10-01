@@ -595,7 +595,7 @@ public:
 		 *
 		 * Returns true on success or false on failure.
 		 */
-	bool startTokenRequest( const std::string identity,
+	bool startTokenRequest( const std::string &identity,
 		const std::vector<std::string> &authz_bounding_set, int lifetime,
 		const std::string &client_id, std::string &token, std::string &request_id,
 		CondorError *err=NULL ) noexcept;
@@ -633,6 +633,11 @@ public:
 		 */
 	bool autoApproveTokens( const std::string &netblock, time_t lifetime,
 		CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * Exchange a SciToken for a HTCondor token.
+		 */
+	bool exchangeSciToken( const std::string &scitoken, std::string &token, CondorError &err ) noexcept;
 
 		/**
 		 * When authentication fails - but TOKEN is a valid method - this is set to true.

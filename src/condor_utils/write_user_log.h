@@ -47,6 +47,22 @@ class ReadUserLogHeader;
 class WriteUserLogState;
 
 
+/*
+	This function tells the caller if a UserLog object should be
+	constructed or not, and if so, says where the user wants the user
+	log file to go. The difference between this function and simply
+	doing a LookupString() on ATTR_ULOG_FILE is that A) the result is
+	combined with IWD if necessary to form an absolute path, and B) if
+	EVENT_LOG is defined in the condor_config file, then the result
+	will be /dev/null even if ATTR_ULOG_FILE is not defined (since we
+	still want a UserLog object in this case so the global event log
+	is updated). Return function is true if ATTR_ULOG_FILE is found or
+	if EVENT_LOG is defined, else false.
+*/
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
+                      const char* ulog_path_attr = NULL);
+
+
 /** API for writing a log file.  Since an API for reading a log file
     was not originally needed, a ReadUserLog class did not exist,
     so it was not forseen to call this class WriteUserLog. <p>
@@ -98,43 +114,9 @@ class WriteUserLog
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
 
-    ///
-    WriteUserLog( bool disable_event_log = false );
+    WriteUserLog();
     
-    /** Constructor
-        @param owner Username of the person whose job is being logged
-        @param file the path name of the log file to be written (copied)
-        @param clu  condorID cluster to put into each ULogEvent
-        @param proc condorID proc    to put into each ULogEvent
-        @param subp condorID subproc to put into each ULogEvent
-		@param xml  make this true to write XML logs, false to use the old form
-    */
-    WriteUserLog(const char *owner, const char *domain,
-				 const std::vector<const char*>& file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    WriteUserLog(const char *owner, const char *domain,
-				 const char* file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    
-    WriteUserLog(const char *owner, const char *file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    WriteUserLog(const char *owner, const std::vector<const char *>& file,
-				 int clu, int proc, int subp, int format_opts = USERLOG_FORMAT_DEFAULT);
-    ///
     virtual ~WriteUserLog();
-    
-    /** Initialize the log file, if not done by constructor.
-        @param file the path name of the log file to be written (copied)
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(const char *owner, const char *domain,
-			   const std::vector<const char *>& file,
-			   int c, int p, int s);
-    bool initialize(const char *owner, const char *domain,
-			   const char *file, int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
@@ -143,34 +125,24 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(const char *file, int c, int p, int s);
+    bool initialize(const char *file, int c, int p, int s, int format_opts = USERLOG_FORMAT_DEFAULT);
+private:
     bool initialize(const std::vector<const char *>& file, int c, int p, int s);
-   
-#if !defined(WIN32)
-    /** Initialize the log file (PrivSep mode only)
-        @param uid the user's UID
-        @param gid the user's GID
-        @param vector of filenames of log files to be written
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(uid_t, gid_t, const std::vector<const char *>&, int, int, int);
-    bool initialize(uid_t u, gid_t g, const char *f, int c, int p, int s) {
-			return initialize(u,g,std::vector<const char*>(1,f),c,p,s);
-		}
-#endif
+public:
 
-    /** Initialize the condorID, which will fill in the condorID
-        for each ULogEvent passed to writeEvent().
+	/* Initialize the log writer based on the given job ad.
+	 * Check for the user log, dagman log, and global event log.
+	 * Switch to user/condor priv for file I/O.
+	 * If init_user=true, call init_user_ids() (uninit_user_ids() will
+	 * then be called in the destructor).
+	 * Return true on success (even if no files will be written to).
+	 */
+	bool initialize(const ClassAd &job_ad, bool init_user = false);
 
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(int c, int p, int s);
+    /* Set the job id, which will used for each ULogEvent passed to
+     * writeEvent(). Does not do any other initialization.
+     */
+    void setJobId(int c, int p, int s);
 
 	/** Read in the configuration parameters
 		@param force Force a reconfigure; otherwise Configure() will
@@ -199,11 +171,9 @@ class WriteUserLog
     void setLogFileCache(log_file_cache_map_t* cache) { log_file_cache = cache; }
     void freeLogs();
 
-
-	/** Verify that the event log is initialized
-		@return true on success
-	 */
-	bool isInitialized( void ) const {
+	// Returns whether any files are configured to be written to.
+	// I.e. will a call to writeEvent() try to write anything.
+	bool willWrite() const {
 		return ( !logs.empty() || (m_global_fd >= 0) );
 	};
 
@@ -397,6 +367,7 @@ class WriteUserLog
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
 	/** called init_user_ids()?      */  bool       m_init_user_ids;
+	/** switch to user priv?         */  bool       m_set_user_priv;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;
 };

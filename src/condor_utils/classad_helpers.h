@@ -64,22 +64,6 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
 // The caller is responible for calling 'delete' on the returned ClassAd.
 ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 
-/*
-	This function tells the caller if a UserLog object should be
-	constructed or not, and if so, says where the user wants the user
-	log file to go. The difference between this function and simply
-	doing a LookupString() on ATTR_ULOG_FILE is that A) the result is
-	combined with IWD if necessary to form an absolute path, and B) if
-	EVENT_LOG is defined in the condor_config file, then the result
-	will be /dev/null even if ATTR_ULOG_FILE is not defined (since we
-	still want a UserLog object in this case so the global event log
-	is updated). Return function is true if ATTR_ULOG_FILE is found or
-	if EVENT_LOG is defined, else false.
-*/
-bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
-					   const char* ulog_path_attr = ATTR_ULOG_FILE);
-
-
 // tokenize the input string, and insert tokens into the attrs set
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL);
 inline bool add_attrs_from_string_tokens(classad::References & attrs, const std::string & str, const char * delims=NULL) {

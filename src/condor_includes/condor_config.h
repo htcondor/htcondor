@@ -356,12 +356,13 @@ extern "C" {
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
 	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
+	#define CONFIG_OPT_USE_THIS_ROOT_CONFIG 0x800 // use the root config file specified in the last argument of real_config
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
 	bool config();
 	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
-	bool config_host(const char* host, int config_options);
+	bool config_host(const char* host, int config_options, const char * root_config); // used by condor_config_val
 	bool validate_config(bool abort_if_invalid, int opt);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);

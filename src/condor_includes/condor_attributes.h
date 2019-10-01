@@ -987,6 +987,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_PARAM_PREFIX  "EC2Param"
 #define ATTR_EC2_IAM_PROFILE_ARN  "EC2IamProfileArn"
 #define ATTR_EC2_IAM_PROFILE_NAME  "EC2IamProfileName"
+#define ATTR_AWS_REGION "AWSRegion"
 
 //************* End of changes for EC2 Jobs *****************//
 

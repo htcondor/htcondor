@@ -938,6 +938,47 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	return retval;
 }
 
+	// Largely, this is the same as the negotiator session logic.
+bool
+Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
+{
+	if (!m_matchPasswordEnabled) {return false;}
+		// We reuse the negotiator sequence -- this way we don't have
+		// overlaps in the session names.
+	m_negotiator_seq++;
+
+	std::string id;
+	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+	           m_scheduler_startup, static_cast<long unsigned>(m_negotiator_seq));
+
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+		Condor_Crypt_Base::randomHexKey(keylen),
+		free
+	};
+	if (!keybuf.get()) {
+		return false;
+	}
+
+	auto session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"523\"]";
+	classad::ClassAd policy_ad;
+	policy_ad.InsertAttr("ScheddSession", true);
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		ALLOW,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		COLLECTOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration,
+		&policy_ad
+	);
+	if (retval) {
+		capability = id + "#" + session_info + keybuf.get();
+	}
+	return retval;
+}
+
 
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
@@ -1556,11 +1597,22 @@ Scheduler::count_jobs()
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
+		// This is called at most every 5 seconds, meaning this can cause
+		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
+		// collector.
+	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+	std::string capability;
+	if (param_boolean("SEC_ENABLE_IMPERSONATION_TOKENS", false) && SetupCollectorSession(duration, capability)) {
+		cad->InsertAttr(ATTR_CAPABILITY, capability);
+	}
+
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true,
 		&m_token_requester, DCTokenRequester::default_identity, "ADVERTISE_SCHEDD");
 	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
+
+	cad->Delete(ATTR_CAPABILITY);
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1602,11 +1654,6 @@ Scheduler::count_jobs()
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
-		// This is called at most every 5 seconds, meaning this can cause
-		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
-		// collector.
-	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
-	std::string capability;
 	if (SetupNegotiatorSession(duration, HOME_POOL_SUBMITTER_TAG, capability)) {
 		pAd.InsertAttr(ATTR_CAPABILITY, capability);
 	}
@@ -4349,18 +4396,6 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 	return DestroyProc( cluster, proc );
 }
 
-namespace {
-	void InitializeMask(WriteUserLog* ulog, int c, int p)
-	{
-		MyString msk;
-		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
-		dprintf( D_FULLDEBUG, "DAGMan workflow Mask is \"%s\"\n",msk.Value());
-		Tokenize(msk.Value());
-		while(const char* mask = GetNextToken(",",true)) {
-			ulog->AddToMask(ULogEventNumber(atoi(mask)));
-		}
-	}
-}
 // Initialize a WriteUserLog object for a given job and return a pointer to
 // the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
@@ -4369,40 +4404,9 @@ namespace {
 WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
-	std::string logfilename;
-	std::string dagmanNodeLog;
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-	std::vector<const char*> logfiles;
-	if( getPathToUserLog(ad, logfilename) ) {
-		logfiles.push_back(logfilename.c_str());
-	}
-	if( getPathToUserLog(ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {			
-		logfiles.push_back(dagmanNodeLog.c_str());
-	}
-	if( logfiles.empty() ) {
-			// if there is no userlog file defined, then our work is
-			// done...  
-		return NULL;
-	}
-	MyString owner;
-	MyString domain;
-	MyString iwd;
-	int use_classad = 0;
-
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
-
-	for(std::vector<const char*>::iterator p = logfiles.begin();
-			p != logfiles.end(); ++p) {
-		dprintf( D_FULLDEBUG, "Writing record to user logfile=%s owner=%s\n",
-			*p, owner.Value() );
-	}
 
 	WriteUserLog* ULog=new WriteUserLog();
-	if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_ULOG_USE_XML, &use_classad) < 0) {
-		use_classad = 0;
-	}
-	ULog->setUseCLASSAD(use_classad);
 	ULog->setCreatorName( Name );
 
     if (m_userlog_file_cache_max > 0) {
@@ -4415,35 +4419,18 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
         ULog->setLogFileCache(&m_userlog_file_cache);
     }
 
-	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
-			job_id.cluster, job_id.proc, 0)) {
-		if(logfiles.size() > 1) {
-			InitializeMask(ULog,job_id.cluster, job_id.proc);
-		}
-		return ULog;
-	} else {
-			// If the user log is in the spool directory, try writing to
-			// it as user condor. The spool directory spends some of its
-			// time owned by condor.
-		std::string SpoolDir;
-		SpooledJobFiles::getJobSpoolPath(ad, SpoolDir);
-		SpoolDir += DIR_DELIM_CHAR;
-		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
-					SpoolDir.length() ) && ULog->initialize( logfiles,
-					job_id.cluster, job_id.proc, 0 ) ) {
-			if(logfiles.size() > 1) {
-				InitializeMask(ULog,job_id.cluster,job_id.proc);
-			}
-			return ULog;
-		}
-		for(std::vector<const char*>::iterator p = logfiles.begin();
-				p != logfiles.end(); ++p) {
-			dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: "
-				"%s\n", *p);
-		}
+	if ( ! ULog->initialize(*ad, true) ) {
+		dprintf ( D_ALWAYS, "WARNING: Failed to initialize user log file for writing!\n");
 		delete ULog;
 		return NULL;
 	}
+	// TODO Callers can't distinguish between error and no log files to write to.
+	if ( ! ULog->willWrite() ) {
+		delete ULog;
+		return NULL;
+	}
+
+	return ULog;
 }
 
 bool
@@ -13994,6 +13981,15 @@ Scheduler::Register()
 			"reassign_slot_handler", this, WRITE);
 
 
+		//
+		// Handles requests from a collector to issue tokens on behalf of its users.
+		// Only pre-created sessions are allowed to use this command; this is enforced
+		// in the command handler itself.
+		//
+	daemonCore->Register_CommandWithPayload( COLLECTOR_TOKEN_REQUEST, "DC_COLLECTOR_TOKEN_REQUEST",
+			(CommandHandlercpp)&Scheduler::handle_collector_token_request,
+			"handle_collector_token_request()", this, ALLOW, D_COMMAND, true );
+
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
 		"reaper",
@@ -14925,6 +14921,144 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	if (claim_id) free(claim_id);
 	return TRUE;
+}
+
+
+	// For scheduler-created sessions, this will allow the collector to requests tokens.
+int
+Scheduler::handle_collector_token_request(int, Stream *stream)
+{
+		// Check: is this my session?
+	const auto &sess_id = static_cast<ReliSock*>(stream)->getSessionID();
+	classad::ClassAd policy_ad;
+	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	bool is_my_session = false;
+	if (!policy_ad.EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
+		dprintf(D_ALWAYS, "Ignoring a collector token request from an unknown session.\n");
+		return false;
+	}
+
+		// Check: is this the collector session?
+	if (strcmp(static_cast<Sock*>(stream)->getFullyQualifiedUser(),
+		COLLECTOR_SIDE_MATCHSESSION_FQU))
+	{
+		dprintf(D_ALWAYS, "Ignoring a collector token request from non-collector (%s).\n",
+			static_cast<Sock*>(stream)->getFullyQualifiedUser());
+		return false;
+	}
+
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_collector_token_request: failed to read input from collector\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	std::string requested_identity;
+	if (!ad.EvaluateAttrString(ATTR_SEC_USER, requested_identity)) {
+		error_code = 1;
+		error_string = "No identity requested.";
+	}
+
+	auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+
+	std::set<std::string> config_bounding_set;
+	std::string config_bounding_set_str;
+	if (param(config_bounding_set_str, "SEC_IMPERSONATION_TOKEN_LIMITS")) {
+		StringList config_bounding_set_list(config_bounding_set_str.c_str());
+		config_bounding_set_list.rewind();
+		const char *authz;
+		while ( (authz = config_bounding_set_list.next()) ) {
+			config_bounding_set.insert(authz);
+		}
+	}
+
+	std::vector<std::string> bounding_set;
+	std::string bounding_set_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, bounding_set_str)) {
+		StringList authz_str_list(bounding_set_str.c_str());
+		authz_str_list.rewind();
+		const char *authz;
+		while ( (authz = authz_str_list.next()) ) {
+			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
+				bounding_set.emplace_back(authz);
+			}
+		}
+			// If all potential bounds were removed by the set intersection,
+			// throw an error instead of generating an "all powerful" token.
+		if (!config_bounding_set.empty() && bounding_set.empty()) {
+			error_code = 2;
+			error_string = "All requested authorizations were eliminated by the"
+				" SEC_IMPERSONATION_TOKEN_LIMITS setting";
+		}
+	} else if (!config_bounding_set.empty()) {
+		for (const auto &authz : config_bounding_set) {
+			bounding_set.push_back(authz);
+		}
+	}
+
+	int requested_lifetime = -1;
+	int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		requested_lifetime = -1;
+	}
+	if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+		requested_lifetime = max_lifetime;
+	} else if ((max_lifetime > 0) && (requested_lifetime < 0)) {
+		requested_lifetime = max_lifetime;
+	}
+
+	classad::ClassAd result_ad;
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	} else {
+		CondorError err;
+		std::string final_key_name = htcondor::get_token_signing_key(err);
+		std::string token;
+		if (final_key_name.empty()) {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+		} else if (!Condor_Auth_Passwd::generate_token(
+			requested_identity,
+			final_key_name,
+			bounding_set,
+			requested_lifetime,
+			token,
+			&err))
+		{
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+		} else if (token.empty()) { // Should never happen if we got here...
+			error_code = 2;
+			error_string = "Internal state error.";
+		} else {
+			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+			dprintf(D_ALWAYS, "Collector %s token request for ID %s, bounding set %s,"
+				" and lifetime %d issued.\n", peer_location, requested_identity.c_str(),
+				bounding_set_str.empty() ? "(none)" : bounding_set_str.c_str(),
+				requested_lifetime);
+		}
+	}
+
+	if (!stream->get_encryption()) {
+		result_ad.Clear();
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_collector_token_request: failed to send response ad to collector.\n");
+		return false;
+	}
+	return true;
 }
 
 void

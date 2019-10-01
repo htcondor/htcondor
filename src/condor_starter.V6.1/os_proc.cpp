@@ -1205,7 +1205,9 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 
 	Env env;
 	MyString env_errors;
-	Starter->GetJobEnv(JobAd,&env,&env_errors);
+	if (!Starter->GetJobEnv(JobAd,&env,&env_errors)) {
+		dprintf(D_ALWAYS, "Warning -- cannot put environment into singularity job: %s\n", env_errors.c_str());
+	}
 
 	std::string target_dir;
         bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();

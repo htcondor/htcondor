@@ -67,6 +67,25 @@ TLOG "exitcode = $exitcode\n";
 $success = $exitcode == 0;
 CondorTest::RegisterResult($success, "test_name", $testname);
 
+#
+# now test with the lazy cache enabled
+#
+$args = '-cache -lazy';
+TLOG "Running $cmd $args\n";
+
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
+}
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+$exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+$success = $exitcode == 0;
+CondorTest::RegisterResult($success, "test_name", $testname);
+
 
 CondorTest::EndTest();
 

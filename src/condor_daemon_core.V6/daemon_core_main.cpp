@@ -45,6 +45,7 @@
 #include "net_string_list.h"
 #include "dc_collector.h"
 #include "token_utils.h"
+#include "condor_scitokens.h"
 
 #include <chrono>
 #include <sstream>
@@ -56,6 +57,7 @@
 
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "authentication.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -63,6 +65,10 @@
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
+#endif
+
+#if defined(HAVE_EXT_SCITOKENS)
+#include <scitokens/scitokens.h>
 #endif
 
 // Externs to Globals
@@ -1833,28 +1839,6 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 }
 
 
-static std::string
-get_token_signing_key(CondorError &err) {
-	std::string key_name = "POOL";
-	param(key_name, "SEC_TOKEN_ISSUER_KEY");
-	std::string final_key_name;
-	std::vector<std::string> creds;
-	if (!listNamedCredentials(creds, &err)) {
-		return "";
-	}
-	for (const auto &cred : creds) {
-		if (cred == key_name) {
-			final_key_name = key_name;
-			break;
-		}
-	}
-	if (final_key_name.empty()) {
-		err.push("DAEMON", 4, "Server does not have a signing key configured.");
-	}
-	return final_key_name;
-}
-
-
 static int
 handle_dc_start_token_request( Service*, int, Stream* stream)
 {
@@ -1899,16 +1883,16 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 			authz_list.emplace_back(authz);
 		}
 	}
+
 	int requested_lifetime;
-	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
-		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
-		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
-			requested_lifetime = max_lifetime;
-		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
-			requested_lifetime = max_lifetime;
-		}
-	} else {
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
 		requested_lifetime = -1;
+	}
+	int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+	if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+		requested_lifetime = max_lifetime;
+	} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+		requested_lifetime = max_lifetime;
 	}
 
 	classad::ClassAd result_ad;
@@ -1946,7 +1930,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		time_t now = time(NULL);
 
 		CondorError err;
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
 			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
@@ -2112,7 +2096,8 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("list request", ADMINISTRATOR,
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("list request", ADMINISTRATOR,
 		static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
@@ -2229,7 +2214,8 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	int error_code = 0;
 	std::string error_string;
 
-	bool has_admin = daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
+	bool has_admin = !static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser());
 
 	// See comment in handle_dc_list_token_request().
@@ -2288,7 +2274,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 	}
 
 	CondorError err;
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if ((request_id != -1) && final_key_name.empty()) {
 		error_string = err.getFullText();
 		error_code = err.code();
@@ -2363,7 +2349,7 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 		dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
 			" with lifetime %ld.\n", netblock.c_str(), lifetime);
 
-		std::string final_key_name = get_token_signing_key(err);
+		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			error_string = err.getFullText();
 			error_code = err.code();
@@ -2426,6 +2412,111 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 
 
 static int
+handle_dc_exchange_scitoken( Service*, int, Stream *stream)
+{
+	classad::ClassAd request_ad;
+	if (!getClassAd(stream, request_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to read input from client\n");
+		return false;
+	}
+
+	classad::ClassAd result_ad;
+	std::string result_token;
+	int error_code = 0;
+	std::string error_string;
+
+	std::string scitoken;
+	if (!request_ad.EvaluateAttrString(ATTR_SEC_TOKEN, scitoken) || scitoken.empty()) {
+		error_code = 1;
+		error_string = "SciToken not provided by the client";
+	}
+
+#if defined(HAVE_EXT_SCITOKENS)
+	if (!error_code) {
+		std::string subject;
+		std::string issuer;
+		long long expiry;
+		std::vector<std::string> bounding_set;
+		CondorError err;
+		std::string key_name;
+		auto map_file = Authentication::getGlobalMapFile();
+		std::string identity;
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, err))
+		{
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if ((key_name = htcondor::get_token_signing_key(err)).empty()) {
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if (!map_file || map_file->GetCanonicalization("SCITOKENS", issuer + "," + subject, identity)) {
+			error_code = 5;
+			error_string = "Failed to map SciToken to a local identity.";
+		} else {
+			long lifetime = expiry - time(NULL);
+			int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+			if ((max_lifetime > 0) && (lifetime > max_lifetime)) {
+				lifetime = max_lifetime;
+			}
+			if (lifetime < 0) {lifetime = 0;}
+
+			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
+				lifetime, result_token, &err))
+			{
+				error_code = err.code();
+				error_string = err.getFullText();
+			} else {
+				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+				std::stringstream ss;
+				std::string bounding_set_str;
+				if (!bounding_set.empty()) {
+					bool wrote_first = false;
+					for (const auto &entry : bounding_set) {
+						ss << (wrote_first ? "," : "") << entry;
+						wrote_first = true;
+					}
+					bounding_set_str = ss.str();
+				} else {
+					bounding_set_str = "(none)";
+				}
+
+				dprintf(D_ALWAYS, "For peer %s (identity %s), exchanging SciToken "
+					"from issuer %s, subject %s for a local token with identity %s,"
+					" bounding set %s, and lifetime %ld.\n", peer_location,
+					peer_identity, issuer.c_str(), subject.c_str(),
+					identity.c_str(), bounding_set_str.c_str(), lifetime);
+			}
+		}
+	}
+#else
+	error_code = 2;
+	error_string = "Server not built with SciTokens support";
+#endif
+
+	if (error_code)
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	}
+	else
+	{
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, result_token);
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
 handle_dc_session_token( Service*, int, Stream* stream)
 {
 	classad::ClassAd ad;
@@ -2460,7 +2551,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 		requested_lifetime = -1;
 	}
 
-	std::string final_key_name = get_token_signing_key(err);
+	std::string final_key_name = htcondor::get_token_signing_key(err);
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
@@ -2564,7 +2655,10 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		*info_ad_str = '\0';
 		info_ad_str++;
 		classad::ClassAdParser parser;
-		parser.ParseClassAd(info_ad_str, info_ad, false);
+		if (!parser.ParseClassAd(info_ad_str, info_ad, false)) {
+			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
+			return FALSE;
+		}
 		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
 	}
 
@@ -3911,6 +4005,9 @@ int dc_main( int argc, char** argv )
         daemonCore->monitor_data.EnableMonitoring();
     }
 
+	std::vector<DCpermission> allow_perms{ALLOW};
+
+
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
 								  (CommandHandler)handle_reconfig,
@@ -3933,11 +4030,13 @@ int dc_main( int argc, char** argv )
 		// as "ALLOW" and the handler will do further checks.
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  "handle_config()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  "handle_config()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  (CommandHandler)handle_off_fast,
@@ -4048,23 +4147,26 @@ int dc_main( int argc, char** argv )
 		// Request a token that can be used to authenticat / authorize a future
 		// session using the TOKEN protocol.
 		//
-	daemonCore->Register_Command( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
+	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								(CommandHandler)handle_dc_session_token,
-								"handle_dc_session_token()", 0, ALLOW );
+								"handle_dc_session_token()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Start a token request workflow.
 		//
-	daemonCore->Register_Command( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_start_token_request,
-								"handle_dc_start_token_request()", 0, ALLOW );
+								"handle_dc_start_token_request()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Poll for token request completion.
 		//
-	daemonCore->Register_Command( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								(CommandHandler)handle_dc_finish_token_request,
-								"handle_dc_finish_token_request()", 0, ALLOW );
+								"handle_dc_finish_token_request()", nullptr, DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// List the outstanding token requests.
@@ -4072,9 +4174,9 @@ int dc_main( int argc, char** argv )
 		// In the handler, we further restrict the returned information based on
 		// the user authorization.
 		//
-	daemonCore->Register_Command( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_list_token_request,
-		"handle_dc_list_token_request", 0, ALLOW, D_COMMAND, true );
+		"handle_dc_list_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Approve a token request.
@@ -4083,16 +4185,23 @@ int dc_main( int argc, char** argv )
 		// the user authorization; non-ADMINISTRATORs can only approve their own
 		// requests..
 		//
-	daemonCore->Register_Command( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", 0, ALLOW, D_COMMAND, true );
+		"handle_dc_approve_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Install an auto-approval rule
 		//
-	daemonCore->Register_Command( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
+	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
 		(CommandHandler)handle_dc_auto_approve_token_request,
 		"handle_dc_auto_approve_token_request", 0, ADMINISTRATOR );
+
+		//
+		// Exchange a SciToken for an equivalent HTCondor token.
+		//
+	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
+		(CommandHandler)handle_dc_exchange_scitoken,
+		"handle_dc_exchange_scitoken", 0, WRITE, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

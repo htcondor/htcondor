@@ -604,7 +604,7 @@ static int calc_column_width(Formatter *fmt, classad::Value * pval)
 	switch (pval->GetType()) {
 	case classad::Value::REAL_VALUE: {
 		double realValue  = 0;
-		pval->IsRealValue(realValue);
+		(void) pval->IsRealValue(realValue);
 		if (fmt_type == PFT_FLOAT || fmt_type == PFT_INT || fmt_type == PFT_TIME || fmt_type == PFT_DATE) {
 			format_value<double>(tmp, realValue, fmt_type, *fmt);
 			return (int)tmp.length();

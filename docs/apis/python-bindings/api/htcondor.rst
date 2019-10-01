@@ -85,6 +85,7 @@ Submitting Jobs
    .. automethod:: itemdata
    .. automethod:: getQArgs
    .. automethod:: setQArgs
+   .. automethod:: from_dag
 
 .. autoclass:: QueueItemsIterator
 

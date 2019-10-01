@@ -62,6 +62,18 @@ class MapFile
 	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
 
 	int
+	GetCanonicalization(const std::string method, const std::string principal,
+						std::string &canonicalization)
+	{
+		MyString internal_canon;
+		auto retval = GetCanonicalization(method, principal, internal_canon);
+		if (!retval) {
+			canonicalization = internal_canon;
+		}
+		return retval;
+	}
+
+	int
 	GetCanonicalization(const MyString method,
 						const MyString principal,
 						MyString & canonicalization);

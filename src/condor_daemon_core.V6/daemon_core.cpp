@@ -464,6 +464,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_ccb_listeners = NULL;
 	m_shared_port_endpoint = NULL;
 	nRegisteredSocks = 0;
+	m_iMaxUdpMsgsPerCycle = 1;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -632,43 +633,47 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
 							 perm, dprintf_flag, FALSE, force_authentication,
-							 wait_for_payload) );
+							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication, int wait_for_payload)
+				bool force_authentication, int wait_for_payload,
+				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication, wait_for_payload) );
+							 force_authentication, wait_for_payload,
+							 alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
 							 perm, dprintf_flag, FALSE, force_authentication,
-							 wait_for_payload) );
+							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication, int wait_for_payload)
+				bool force_authentication, int wait_for_payload,
+				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication, wait_for_payload) );
+							 force_authentication, wait_for_payload,
+							 alternate_perm) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -1014,7 +1019,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				int dprintf_flag, int is_cpp, bool force_authentication,
-				int wait_for_payload)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	int i = -1;
 
@@ -1058,6 +1063,10 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
 	comTable[i].wait_for_payload = wait_for_payload;
+	if (alternate_perm) {
+		comTable[i].alternate_perm = new std::vector<DCpermission>();
+		*(comTable[i].alternate_perm) = *alternate_perm;
+	}
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -1100,6 +1109,9 @@ int DaemonCore::Cancel_Command( int command )
 					comTable[nCommand - 1].handler == NULL &&
 					comTable[nCommand - 1].handlercpp == NULL ) {
 				nCommand--;
+			}
+			if (comTable[i].alternate_perm) {
+				delete comTable[i].alternate_perm;
 			}
 			return TRUE;
 		}
@@ -2763,8 +2775,17 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 		// iterate through a list of this perm and all perms implied by it
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
 		for (i = 0; i < nCommand; i++) {
+			bool alternate_perm_match = false;
+			if (comTable[i].alternate_perm) {
+				for (auto alt_perm : *(comTable[i].alternate_perm)) {
+					if (alt_perm == perm) {
+						alternate_perm_match = true;
+						break;
+					}
+				}
+			}
 			if( (comTable[i].handler || comTable[i].handlercpp) &&
-				(comTable[i].perm == perm) &&
+				((comTable[i].perm == perm) || alternate_perm_match) &&
 				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.length() ? "," : "";
@@ -3165,7 +3186,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
@@ -3187,7 +3208,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
-		dprintf( D_ALWAYS,
+		dprintf( log_level,
 				 "PERMISSION %s to %s from host %s for %s, "
 				 "access level %s: reason: %s\n",
 				 result_desc,
@@ -10515,7 +10536,9 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 		MyString command_desc;
 		command_desc.formatstr("remote config %s",name);
 
-		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
+		std::string perm_name = PermString(static_cast<DCpermission>(i));
+
+		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -10525,7 +10548,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 				dprintf( D_ALWAYS, "CheckConfigSecurity: "
 						 "found %s at access level %s\n", name,
-						 PermString((DCpermission)i) );
+						 perm_name.c_str()) );
 #endif
 
 				return true;

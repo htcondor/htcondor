@@ -648,6 +648,7 @@ struct SubmitStepFromPyIter {
 			Py_ssize_t pos = 0;
 			while (PyDict_Next(obj, &pos, &k, &v)) {
 				std::string key = extract<std::string>(k);
+				if (key[0] == '+') { key.replace(0, 1, "MY."); }
 				m_livevars[key] = extract<std::string>(v);
 				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
 			}
@@ -2383,7 +2384,7 @@ public:
     std::string
     expand(const std::string attr) const
     {
-        char *val_char(const_cast<Submit*>(this)->m_hash.submit_param(attr.c_str()));
+        char *val_char(const_cast<Submit*>(this)->m_hash.submit_param(plus_to_my(attr)));
         std::string value(val_char);
         free(val_char);
         return value;
@@ -2393,10 +2394,11 @@ public:
     std::string
     getItem(const std::string attr) const
     {
-        const char *val = const_cast<Submit*>(this)->m_hash.lookup(attr.c_str());
+        const char *key = plus_to_my(attr);
+        const char *val = const_cast<Submit*>(this)->m_hash.lookup(key);
         if (val == NULL)
         {
-            THROW_EX(KeyError, attr.c_str())
+            THROW_EX(KeyError, key);
         }
         return std::string(val);
     }
@@ -2405,7 +2407,7 @@ public:
     std::string
     get(const std::string attr, const std::string value) const
     {
-        const char *val = const_cast<Submit*>(this)->m_hash.lookup(attr.c_str());
+        const char *val = const_cast<Submit*>(this)->m_hash.lookup(plus_to_my(attr));
         if (val == NULL)
         {
             return value;
@@ -2418,10 +2420,11 @@ public:
     setDefault(const std::string attr, boost::python::object value_obj)
     {
         std::string default_value = convertToSubmitValue(value_obj);
-        const char *val = m_hash.lookup(attr.c_str());
+        const char * key = plus_to_my(attr);
+        const char *val = m_hash.lookup(key);
         if (val == NULL)
         {
-            m_hash.set_submit_param(attr.c_str(), default_value.c_str());
+            m_hash.set_submit_param(key, default_value.c_str());
             return default_value;
         }
         return std::string(val);
@@ -2432,16 +2435,17 @@ public:
     setItem(const std::string attr, boost::python::object obj)
     {
         std::string value = convertToSubmitValue(obj);
-        m_hash.set_submit_param(attr.c_str(), value.c_str());
+        m_hash.set_submit_param(plus_to_my(attr), value.c_str());
     }
 
 
     void
     deleteItem(const std::string attr)
     {
-        const char *val = m_hash.lookup(attr.c_str());
-        if (val == NULL) {THROW_EX(KeyError, attr.c_str());}
-        m_hash.set_submit_param(attr.c_str(), NULL);
+        const char *key = plus_to_my(attr);
+        const char *val = m_hash.lookup(key);
+        if (val == NULL) {THROW_EX(KeyError, key);}
+        m_hash.set_submit_param(key, NULL);
     }
 
 
@@ -2617,7 +2621,7 @@ public:
             boost::python::object value(tup[0]);
             std::string value_str = convertToSubmitValue(tup[1]);
 
-            m_hash.set_submit_param(attr.c_str(), value_str.c_str());
+            m_hash.set_submit_param(plus_to_my(attr), value_str.c_str());
         }
     }
 
@@ -2667,7 +2671,13 @@ public:
 			const ClassAd *capabilities = txn->capabilites();
 			bool allows_late = false;
 			if (capabilities && capabilities->LookupBool("LateMaterialize", allows_late) && allows_late) {
-				factory_submit = true;
+				int late_ver = 0;
+				// we require materialize version 2 or later (digest is pruned, requirments generated from job ad)
+				if (capabilities->LookupInteger("LateMaterializeVersion", late_ver) && late_ver >= 2) {
+					factory_submit = true;
+				} else {
+					factory_submit = false;
+				}
 			} else {
 				factory_submit = false; // sorry, no can do.
 			}
@@ -3244,9 +3254,21 @@ private:
         return attr;
     }
 
+	const char * plus_to_my(const std::string & attr) const {
+		if ( ! attr.empty() && attr[0] == '+') {
+			m_attr_fixup_buf.reserve(attr.size() + 2);
+			m_attr_fixup_buf = "MY";
+			m_attr_fixup_buf += attr;
+			m_attr_fixup_buf[2] = '.';
+			return m_attr_fixup_buf.c_str();
+		}
+		return attr.c_str();
+	}
+
     SubmitHash m_hash;
     std::string m_qargs;
     std::string m_remainder; // holds remainder of input after queue statement.
+    mutable std::string m_attr_fixup_buf;
     MACRO_SOURCE m_src_pystring; // needed for MacroStreamMemoryFile to point to
     MacroStreamMemoryFile m_ms_inline; // extra lines after queue statement, used if we are doing inline foreach data
     bool m_queue_may_append_to_cluster; // when true, the queue() method can add jobs to the existing cluster
@@ -3871,8 +3893,24 @@ void export_schedd()
             )C0ND0R")
         .def("from_dag", &Submit::from_dag,
             R"C0ND0R(
-            :return: Submit description for a .dag file
-            )C0ND0R")
+            Constructs a new :class:`Submit` that could be used to submit the
+            DAG described by the file at ``dag_filename``.
+
+            This static method essentially does the first half of the work
+            that ``condor_submit_dag`` does: it produces the submit description
+            for the DAGMan job that will execute the DAG. However, in addition
+            to writing this submit description to disk, it also produces a
+            :class:`Submit` object with the same information that can be
+            submitted via the normal bindings submit machinery.
+
+            :param str filename: The path to the DAG description file.
+            :param dict options: Additional arguments to ``condor_submit_dag``,
+                such as ``maxidle`` or ``maxpost``, as key-value pairs, like
+                ``{'maxidle': 10}``.
+            :return: :class:`Submit` description for a ``.dag`` file
+            )C0ND0R",
+            (boost::python::arg("filename"), boost::python::arg("options")=boost::python::dict())
+            )
         .staticmethod("from_dag")
         ;
     register_ptr_to_python< boost::shared_ptr<Submit> >();

@@ -69,7 +69,7 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 	if (merge_from->Lookup(ATTR_SLOT_MERGE_CONSTRAINT)) {
 		bool matches = false;
 		if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
-		EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_from, merge_into, matches);
+		(void) EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_from, merge_into, matches);
 		return matches;
 	}
 

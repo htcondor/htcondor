@@ -1387,16 +1387,66 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						break;
 					}
 				}
+					// If there was no match, iterate through the alternates table.
+				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
+					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
+						auto perm_cstr = PermString(perm);
+						const char *authz_name;
+						authz_limits.rewind();
+						while ( (authz_name = authz_limits.next()) ) {
+							dprintf(D_ALWAYS, "Checking token limit %s\n", perm_cstr);
+							if (!strcmp(perm_cstr, authz_name)) {
+								found_limit = true;
+								break;
+							}
+						}
+						if (found_limit) {break;}
+					}
+				}
 				if (!found_limit && strcmp(perm_cstr, "ALLOW")) {
 					can_attempt = false;
 				}
 			}
 			if (can_attempt) {
-				m_perm = daemonCore->Verify(
-							  command_desc.c_str(),
-							  m_comTable[m_cmd_index].perm,
-							  m_sock->peer_addr(),
-							  m_user.c_str() );
+					// A bit redundant to have the outer conditional,
+					// but this gets the log verbosity right and has
+					// zero cost in the "normal" case with no alternate
+					// permissions.
+				if (m_comTable[m_cmd_index].alternate_perm) {
+					m_perm = daemonCore->Verify(
+						command_desc.c_str(),
+						m_comTable[m_cmd_index].perm,
+						m_sock->peer_addr(),
+						m_user.c_str(),
+						D_FULLDEBUG|D_SECURITY);
+						// Not allowed in the primary permission?  Try the alternates.
+					if (m_perm == USER_AUTH_FAILURE) {
+						for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
+							m_perm = daemonCore->Verify(
+								command_desc.c_str(),
+								perm,
+								m_sock->peer_addr(),
+								m_user.c_str(),
+								D_FULLDEBUG|D_SECURITY);
+							if (m_perm != USER_AUTH_FAILURE) {break;}
+						}
+							// Try it once again on the primary perm just to log
+							// things appropriately loudly.
+						if (m_perm == USER_AUTH_FAILURE) {
+							daemonCore->Verify(
+								command_desc.c_str(),
+								m_comTable[m_cmd_index].perm,
+								m_sock->peer_addr(),
+								m_user.c_str());
+						}
+					}
+				} else {
+					m_perm = daemonCore->Verify(
+						command_desc.c_str(),
+						m_comTable[m_cmd_index].perm,
+						m_sock->peer_addr(),
+						m_user.c_str() );
+				}
 			} else {
 				dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s was successful but resulted in a limited authorization which did not include this command (%d %s), so aborting.\n",
 					m_sock->peer_description(),

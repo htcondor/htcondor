@@ -6531,6 +6531,11 @@ These macros affect the *condor_collector*.
     are consistent. To validate this information, the attribute to check
     is ``TARGET.MyAddress``.
 
+    Please note that _all_ ClassAd updates are filtered.  Unless your
+    requirements are the same for all daemons, including the collector
+    itself, you'll want to use the ``MyType`` attribute to limit your
+    filter(s).
+
 ``CLIENT_TIMEOUT`` :index:`CLIENT_TIMEOUT`
     Network timeout that the *condor_collector* uses when talking to
     any daemons or tools that are sending it a ClassAd update. It is
@@ -6539,24 +6544,6 @@ These macros affect the *condor_collector*.
 ``QUERY_TIMEOUT`` :index:`QUERY_TIMEOUT`
     Network timeout when talking to anyone doing a query. It is defined
     in seconds and defaults to 60.
-
-``CONDOR_DEVELOPERS`` :index:`CONDOR_DEVELOPERS`
-    By default, HTCondor will send e-mail once per week to this address
-    with the output of the *condor_status* command, which lists how
-    many machines are in the pool and how many are running jobs. The
-    default value of
-    `condor-admin@cs.wisc.edu <mailto:condor-admin@cs.wisc.edu>`_ will
-    send this report to the Center for High Throughput Computing at the
-    University of Wisconsin-Madison. The Center for High Throughput
-    Computing uses these weekly status messages in order to have some
-    idea as to how many HTCondor pools exist in the world. We appreciate
-    getting the reports, as this is one way we can convince funding
-    agencies that HTCondor is being used in the real world. If you do
-    not wish this information to be sent to the Center for High
-    Throughput Computing, explicitly set the value to ``NONE`` to
-    disable this feature, or replace the address with a desired
-    location. If undefined (commented out) in the configuration file,
-    HTCondor follows its default behavior.
 
 ``COLLECTOR_NAME`` :index:`COLLECTOR_NAME`
     This macro is used to specify a short description of your pool. It
@@ -6567,27 +6554,12 @@ These macros affect the *condor_collector*.
     uniquely identify (and locate) a specific set of HTCondor daemons,
     if there are more than one running on the same machine. The
     ``COLLECTOR_NAME`` setting is just used as a human-readable string
-    to describe the pool, which is included in the updates sent to the
-    ``CONDOR_DEVELOPERS_COLLECTOR``.
-
-``CONDOR_DEVELOPERS_COLLECTOR`` :index:`CONDOR_DEVELOPERS_COLLECTOR`
-    By default, every pool sends periodic updates to a central
-    *condor_collector* at UW-Madison with basic information about the
-    status of the pool. Updates include only the number of total
-    machines, the number of jobs submitted, the number of machines
-    running jobs, the host name of the central manager, and the
-    ``$(COLLECTOR_NAME)``. These updates help the Center for High
-    Throughput Computing see how HTCondor is being used around the
-    world. By default, they will be sent to ``condor.cs.wisc.edu``. To
-    discontinue sending updates, explicitly set this macro to ``NONE``.
-    If undefined or commented out in the configuration file, HTCondor
-    follows its default behavior.
+    to describe the pool.
 
 ``COLLECTOR_UPDATE_INTERVAL`` :index:`COLLECTOR_UPDATE_INTERVAL`
     This variable is defined in seconds and defaults to 900 (every 15
     minutes). It controls the frequency of the periodic updates sent to
-    a central *condor_collector* at UW-Madison as defined by
-    ``CONDOR_DEVELOPERS_COLLECTOR``.
+    a central *condor_collector*.
 
 ``COLLECTOR_SOCKET_BUFSIZE`` :index:`COLLECTOR_SOCKET_BUFSIZE`
     This specifies the buffer size, in bytes, reserved for
@@ -8345,12 +8317,12 @@ General
     ``max_materialize`` and more than one ``QUEUE`` statement.
 
 ``DAGMAN_USE_JOIN_NODES`` :index:`DAGMAN_USE_JOIN_NODES`
-    A boolean value that defaults to ``False``. When ``True``, causes
+    A boolean value that defaults to ``True``. When ``True``, causes
     *condor_dagman* to break up many-PARENT-many-CHILD relationships with an
     intermediate *join node*. When these sets are large, this significantly
     optimizes the graph structure by reducing the number of dependencies, 
     resulting in a significant improvement to the *condor_dagman* memory 
-    footprint, parse time and submit speed.
+    footprint, parse time, and submit speed.
 
 Throttling
 ''''''''''
@@ -8906,23 +8878,6 @@ HTCondor attributes
     ::
 
           ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
-
-Metrics
-'''''''
-
-:index:`DAGMan configuration: metrics`
-
-``DAGMAN_PEGASUS_REPORT_METRICS`` :index:`DAGMAN_PEGASUS_REPORT_METRICS`
-    The path to the *condor_dagman_metrics_reporter* executable,
-    which is optionally used to anonymously report workflow metrics for
-    Pegasus workflows. Defaults to
-    ``$(LIBEXEC)/condor_dagman_metrics_reporter``. **Note: users should
-    rarely change this setting.**
-
-``DAGMAN_PEGASUS_REPORT_TIMEOUT`` :index:`DAGMAN_PEGASUS_REPORT_TIMEOUT`
-    An integer value specifying the maximum number of seconds that the
-    *condor_dagman_metrics_reporter* will spend attempting to report
-    metrics to the Pegasus metrics server. Defaults to 100.
 
 Configuration File Entries Relating to Security
 -----------------------------------------------

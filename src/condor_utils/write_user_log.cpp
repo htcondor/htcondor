@@ -36,6 +36,7 @@
 #include <string>
 #include <algorithm>
 #include "condor_attributes.h"
+#include "basename.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -85,103 +86,50 @@ static int should_use_keyring_sessions() {
 #endif
 }
 
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
+                      const char* ulog_path_attr)
+{
+	bool ret_val = true;
+	char *global_log = NULL;
+
+	if ( ulog_path_attr == NULL ) {
+		ulog_path_attr = ATTR_ULOG_FILE;
+	}
+	if ( job_ad == NULL ||
+	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
+	{
+		// failed to find attribute, check config file
+		global_log = param("EVENT_LOG");
+		if ( global_log ) {
+			// canonicalize to UNIX_NULL_FILE even on Win32
+			result = UNIX_NULL_FILE;
+		} else {
+			ret_val = false;
+		}
+	}
+
+	if ( global_log ) free(global_log);
+
+	if( ret_val && !fullpath(result.c_str()) ) {
+		std::string iwd;
+		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
+			iwd += "/";
+			iwd += result;
+			result = iwd;
+		}
+	}
+
+	return ret_val;
+}
+
 
 // ***************************
 //  WriteUserLog constructors
 // ***************************
-WriteUserLog::WriteUserLog( bool disable_event_log )
+WriteUserLog::WriteUserLog()
 {
 	log_file_cache = NULL;
 	Reset( );
-	m_global_disable = disable_event_log;
-}
-
-/* This constructor is just like the constructor below, except
- * that it doesn't take a domain, and it passes NULL for the domain and
- * the globaljobid. Hopefully it's not called anywhere by the condor code...
- * It's a convenience function, requested by our friends in LCG. */
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset( );
-	m_format_opts = format_opts;
-	
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, NULL, file, c, p, s);
-}
-/* This constructor is just like the constructor below, except
- * that it doesn't take a domain, and it passes NULL for the domain and
- * the globaljobid. Hopefully it's not called anywhere by the condor code...
- * It's a convenience function, requested by our friends in LCG. */
-WriteUserLog::WriteUserLog (const char *owner,
-							const std::vector<const char*>& file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset( );
-	m_format_opts = format_opts;
-	
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, NULL, file, c, p, s);
-}
-
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *domain,
-							const char *file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset();
-	m_format_opts = format_opts;
-
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, domain, file, c, p, s);
-}
-WriteUserLog::WriteUserLog (const char *owner,
-							const char *domain,
-							const std::vector<const char *>& file,
-							int c,
-							int p,
-							int s,
-							int format_opts)
-{
-	log_file_cache = NULL;
-	Reset();
-	m_format_opts = format_opts;
-
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
-	initialize (owner, domain, file, c, p, s);
 }
 
 // Destructor
@@ -200,43 +148,75 @@ WriteUserLog::~WriteUserLog()
 // ***********************************
 
 bool
-WriteUserLog::initialize( const char *owner, const char *domain,
-						  const char *file,
-						  int c, int p, int s )
+WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 {
-	return initialize(owner,domain,std::vector<const char*>(1,file),
-		c,p,s);
-}
-bool
-WriteUserLog::initialize( const char *owner, const char *domain,
-						  const std::vector<const char *>& file,
-						  int c, int p, int s )
-{
-	priv_state		priv;
+	int cluster = -1;
+	int proc = -1;
+	std::string user_log_file;
+	std::string dagman_log_file;
 
-	uninit_user_ids();
-	if (!  init_user_ids(owner, domain) ) {
-		dprintf(D_ALWAYS,
+	TemporaryPrivSentry temp_priv;
+
+	m_global_disable = false;
+
+	if ( init_user ) {
+		std::string owner;
+		std::string domain;
+
+		job_ad.LookupString(ATTR_OWNER, owner);
+		job_ad.LookupString(ATTR_NT_DOMAIN, domain);
+
+		uninit_user_ids();
+		if ( ! init_user_ids(owner.c_str(), domain.c_str()) ) {
+			dprintf(D_ALWAYS,
 				"WriteUserLog::initialize: init_user_ids() failed!\n");
+			return false;
+		}
+		m_init_user_ids = true;
+	}
+	m_set_user_priv = true;
+
+	// switch to user priv
+	set_user_priv();
+
+	job_ad.LookupInteger(ATTR_CLUSTER_ID, cluster);
+	job_ad.LookupInteger(ATTR_PROC_ID, proc);
+
+	std::vector<const char*> logfiles;
+	if ( getPathToUserLog(&job_ad, user_log_file) ) {
+		logfiles.push_back(user_log_file.c_str());
+	}
+	if ( getPathToUserLog(&job_ad, dagman_log_file, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		if ( logfiles.empty() ) {
+			// The rest of this class doesn't like the dagman file to be
+			// the first entry in the vector of log files.
+			logfiles.push_back(UNIX_NULL_FILE);
+		}
+		logfiles.push_back(dagman_log_file.c_str());
+	}
+	if( !initialize (logfiles, cluster, proc, 0)) {
 		return false;
 	}
-	m_init_user_ids = true;
-
-		// switch to user priv, saving the current user
-	priv = set_user_priv();
-
-		// initialize log file
-	bool res = initialize( file, c, p, s );
-
-		// get back to whatever UID and GID we started with
-	set_priv(priv);
-
-	return res;
+	if( !logfiles.empty()) {
+		int use_classad = 0;
+		job_ad.LookupInteger(ATTR_ULOG_USE_XML, use_classad);
+		setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
+		if(logfiles.size() > 1) {
+			std::string msk;
+			job_ad.LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
+			Tokenize(msk);
+			while(const char* mask = GetNextToken(",",true)) {
+				AddToMask(ULogEventNumber(atoi(mask)));
+			}
+		}
+	}
+	return true;
 }
 
 bool
-WriteUserLog::initialize( const char *file, int c, int p, int s )
+WriteUserLog::initialize( const char *file, int c, int p, int s, int format_opts )
 {
+	m_format_opts = format_opts;
 	return initialize(std::vector<const char*>(1,file),c,p,s);
 }
 
@@ -293,7 +273,9 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
+						// TODO Shouldn't set m_init_user_ids here
 						m_init_user_ids = true;
+						m_set_user_priv = true;
 						log->set_user_priv_flag(true);
 					}
 				}
@@ -311,14 +293,15 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
         freeLogs();
 		logs.clear();
 	}
-	return !logs.empty() && internalInitialize( c, p, s );
+	return internalInitialize( c, p, s );
 }
 
-bool
-WriteUserLog::initialize( int c, int p, int s )
+void
+WriteUserLog::setJobId( int c, int p, int s )
 {
-	Configure(false);
-	return internalInitialize( c, p, s );
+	m_cluster = c;
+	m_proc = p;
+	m_subproc = s;
 }
 
 // Internal-only initializer, invoked by all of the others
@@ -455,6 +438,7 @@ WriteUserLog::Reset( void )
 	m_initialized = false;
 	m_configured = false;
 	m_init_user_ids = false;
+	m_set_user_priv = false;
 
 	m_cluster = -1;
 	m_proc = -1;
@@ -483,7 +467,7 @@ WriteUserLog::Reset( void )
 
 	m_creator_name = NULL;
 
-	m_global_disable = false;
+	m_global_disable = true;
 	m_global_format_opts = 0;
 	m_global_count_events = false;
 	m_global_max_filesize = 1000000;
@@ -1249,20 +1233,18 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	int success;
 	int fd;
 	FileLockBase* lock;
-	priv_state priv;
+	TemporaryPrivSentry temp_priv;
 
 	if (is_global_event) {
 		fd = m_global_fd;
 		lock = m_global_lock;
 		format_opts = m_global_format_opts;
-		priv = set_condor_priv();
+		set_condor_priv();
 	} else {
 		fd = log.fd;
 		lock = log.lock;
-		if ( m_init_user_ids ) {
-			priv = set_user_priv();
-		} else {
-			priv = set_condor_priv();
+		if ( m_set_user_priv ) {
+			set_user_priv();
 		}
 	}
 
@@ -1346,7 +1328,6 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 				 "UserLog::doWriteEvent(): unlocking file took %ld seconds\n",
 				 (after-before) );
 	}
-	set_priv( priv );
 	return success;
 }
 

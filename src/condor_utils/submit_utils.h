@@ -273,6 +273,9 @@
 #define SUBMIT_KEY_WantNameTag "WantNameTag"
 #define SUBMIT_KEY_EC2AccessKeyId "ec2_access_key_id"
 #define SUBMIT_KEY_EC2SecretAccessKey "ec2_secret_access_key"
+#define SUBMIT_KEY_AWSAccessKeyIdFile "aws_access_key_id_file"
+#define SUBMIT_KEY_AWSSecretAccessKeyFile "aws_secret_access_key_file"
+#define SUBMIT_KEY_AWSRegion "aws_region"
 #define SUBMIT_KEY_EC2AmiID "ec2_ami_id"
 #define SUBMIT_KEY_EC2UserData "ec2_user_data"
 #define SUBMIT_KEY_EC2UserDataFile "ec2_user_data_file"
@@ -616,6 +619,8 @@ public:
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
+	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
+
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse()  { return JobUniverse; }

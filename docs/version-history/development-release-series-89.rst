@@ -4,6 +4,34 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.4
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.4 not yet released.
+
+.. HTCondor version 8.9.4 released on Month Date, 2019.
+
+New Features:
+
+- Added a new tool, :ref:`condor_evicted_files`,
+  to help users find files that HTCondor is holding on to for them (as
+  a result of a job being evicted when ``when_to_transfer_files = TRUE``,
+  or checkpointing when ``CheckpointExitCode`` is set).
+  :ticket:`7038`
+
+- GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
+  ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
+  are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
+  ``GPUsAverageUsage`` because all other usage values are peaks.  We also
+  now report GPU memory usage in the job termination event.
+  :ticket:`7201`
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.9.3
 -------------
 

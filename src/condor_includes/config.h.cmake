@@ -185,9 +185,6 @@
 // configurable options.
 /////////////////////////////////////////
 
-/* Define if we want to build a Collector that doesn't phone home */
-#cmakedefine NO_PHONE_HOME 1
-
 /* Define if we save sigstate*/
 #cmakedefine DOES_SAVE_SIGSTATE 1
 

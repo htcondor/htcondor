@@ -1056,7 +1056,10 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 
             // Find previous delimiter + summary
             fseek(fd, prevOffset, SEEK_SET);
-            buf.readLine(fd);
+            if (!buf.readLine(fd)) {
+				fprintf(stderr, "Cannot read history file\n");
+				exit(1);
+			}
 
             void * pvner = realloc (owner, buf.Length() * sizeof(char));
             ASSERT( pvner != NULL );

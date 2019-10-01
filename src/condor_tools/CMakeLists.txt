@@ -40,6 +40,7 @@ condor_exe(condor_token_request "token_request.cpp" "${C_BIN}" "${CONDOR_TOOL_LI
 condor_exe(condor_token_request_approve "token_request_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_token_request_list "token_request_list.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
@@ -144,6 +145,6 @@ condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE
 # condor_ssh_to_job hackery
 ##########################################################
 if ( LINUX )
-condor_shared_lib( libgetpwnam "getpwnam.c" )
+condor_shared_lib( libgetpwnam "getpwnam.cpp" )
 set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
 endif()

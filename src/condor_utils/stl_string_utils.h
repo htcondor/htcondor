@@ -82,6 +82,8 @@ void title_case(std::string &str); // capitalize each word
 bool starts_with(const std::string& str, const std::string& pre);
 bool starts_with_ignore_case(const std::string& str, const std::string& pre);
 
+bool ends_with(const std::string& str, const std::string& post);
+
 // case insensitive sort functions for use with std::sort
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b);
 bool sort_decending_ignore_case(std::string const & a, std::string const & b);

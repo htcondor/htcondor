@@ -383,6 +383,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesGoAhead{false};
 	bool PeerUnderstandsMkdir{false};
 	bool PeerDoesXferInfo{false};
+	bool PeerDoesS3Urls{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};

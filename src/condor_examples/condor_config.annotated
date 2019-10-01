@@ -1137,25 +1137,6 @@ PREEN_ARGS			= -m -r
 #MASTER_RECOVER_FACTOR		= 300
 
 
-##--------------------------------------------------------------------
-##  condor_collector
-##--------------------------------------------------------------------
-## Address to which Condor will send a weekly e-mail with basic
-## non-specific information about your pool. See
-## http://htcondor.org/privacy.html for more information.
-## To disable this behavior, uncomment the below line to
-## explicitly set CONDOR_DEVELOPERS to NONE.
-#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
-#CONDOR_DEVELOPERS = NONE
-
-## Global Collector to periodically advertise basic
-## non-specific information about your pool. See
-## http://htcondor.org/privacy.html for more information.
-## To disable this behavior, uncomment the below line to
-## explicitly set CONDOR_DEVELOPERS_COLLECTOR to NONE.
-#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
-#CONDOR_DEVELOPERS_COLLECTOR = NONE
-
 ##  When the collector starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the collector.  This

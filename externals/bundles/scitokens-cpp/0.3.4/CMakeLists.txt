@@ -17,22 +17,22 @@
  #
  ###############################################################
 
-if (UNIX)
-	option(WITH_SCITOKENS "Compiling with support for SciTokens" OFF)
-endif(UNIX)
+if (UNIX AND NOT DARWIN)
+    option(WITH_SCITOKENS "Compiling with support for SciTokens" ON)
+endif(UNIX AND NOT DARWIN)
 
 if (WITH_SCITOKENS)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( SCITOKENS scitokens-0.3.0 "lib;include" "done" )
+		condor_pre_external( SCITOKENS scitokens-0.3.4 "lib;include" "done" )
 
 		ExternalProject_Add(scitokens
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${SCITOKENS_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.3.0.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.3.4.tar.gz
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cmake -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${MUNGE_INSTALL_LOC}
+				    CONFIGURE_COMMAND cmake -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${SCITOKENS_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
@@ -45,7 +45,7 @@ if (WITH_SCITOKENS)
 			set( SCITOKENS_SO "libSciTokens.0.dylib" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.dylib")
 		else(APPLE)
-			set( SCITOKENS_SO "libSciTokens.0.dylib" )
+			set( SCITOKENS_SO "libSciTokens.so.0" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.so")
 		endif()
 

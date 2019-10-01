@@ -81,7 +81,6 @@ my @minimal_build_configure_args =
 	(
 	 '-DPROPER:BOOL'			 => 'OFF',
 	 '-D_VERBOSE:BOOL'			  => 'ON',
-	 '-DNO_PHONE_HOME:BOOL'		 => 'ON',
 	 '-DCLIPPED:BOOL'			  => 'ON',
 	 '-DWITH_BLAHP:BOOL'		 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
@@ -127,7 +126,6 @@ my @default_build_configure_args =
 	(
 	 '-DPROPER:BOOL'	 => 'OFF',
 	 '-D_VERBOSE:BOOL'	 => 'ON',
-	 '-DNO_PHONE_HOME:BOOL'	 => 'ON',
 	 #'-DSCRATCH_EXTERNALS:BOOL' => 'ON',
 	);
 

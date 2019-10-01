@@ -370,39 +370,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	return job_ad;
 }
 
-bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
-					   const char* ulog_path_attr = ATTR_ULOG_FILE)
-{
-	bool ret_val = true;
-	char *global_log = NULL;
-
-	if ( job_ad == NULL || 
-	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
-	{
-		// failed to find attribute, check config file
-		global_log = param("EVENT_LOG");
-		if ( global_log ) {
-			// canonicalize to UNIX_NULL_FILE even on Win32
-			result = UNIX_NULL_FILE;
-		} else {
-			ret_val = false;
-		}
-	}
-
-	if ( global_log ) free(global_log);
-
-	if( ret_val && !fullpath(result.c_str()) ) {
-		std::string iwd;
-		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
-			iwd += "/";
-			iwd += result;
-			result = iwd;
-		}
-	}
-
-	return ret_val;
-}
-
 // tokenize the input string, and insert tokens into the attrs set
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL)
 {

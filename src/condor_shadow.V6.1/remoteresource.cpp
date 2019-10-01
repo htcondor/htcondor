@@ -1554,6 +1554,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
+		} else if( (offset = it->first.rfind( "AverageUsage" )) != std::string::npos
+			&& offset == it->first.length() - 12 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();

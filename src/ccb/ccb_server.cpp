@@ -117,13 +117,21 @@ CCBServer::RegisterHandlers()
 	}
 	m_registered_handlers = true;
 
+		// Note that we allow several different permission levels to
+		// register; however, the DAEMON permission level is the primary
+		// in terms of determining policy.
+	std::vector<DCpermission> alternate_perms{ADVERTISE_STARTD_PERM, ADVERTISE_SCHEDD_PERM, ADVERTISE_MASTER_PERM};
 	int rc = daemonCore->Register_CommandWithPayload(
 		CCB_REGISTER,
 		"CCB_REGISTER",
 		(CommandHandlercpp)&CCBServer::HandleRegistration,
 		"CCBServer::HandleRegistration",
 		this,
-		DAEMON);
+		DAEMON,
+		D_COMMAND,
+		false,
+		STANDARD_COMMAND_PAYLOAD_TIMEOUT,
+		&alternate_perms);
 	ASSERT( rc >= 0 );
 
 	rc = daemonCore->Register_CommandWithPayload(

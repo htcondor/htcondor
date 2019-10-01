@@ -779,8 +779,9 @@ VirshType::Status()
 	    virDomainFree(dom);
 	    return true;
 	  }
-	virDomainFree(dom);
-	return false;
+	/* UNREACHABLE */
+	//virDomainFree(dom);
+	//return false;
 }
 
 /*

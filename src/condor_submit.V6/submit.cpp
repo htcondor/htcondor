@@ -1044,13 +1044,19 @@ main( int argc, const char *argv[] )
 		fp = stdin;
 		submit_hash.insert_source("<stdin>", FileMacroSource);
 	} else {
+		const char * submit_filename = cmd_file;
+	#ifdef WIN32
+		if ( ! cmd_file && NoCmdFileNeeded) { cmd_file = "NUL"; submit_filename = "null"; }
+	#else
+		if ( ! cmd_file && NoCmdFileNeeded) { cmd_file = "/dev/null"; submit_filename = "null"; }
+	#endif
 		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s) (%s)\n",
 						cmd_file, strerror(errno));
 			exit(1);
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
-		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
+		submit_hash.insert_submit_filename(submit_filename, FileMacroSource);
 	}
 
 	// in case things go awry ...
@@ -1926,8 +1932,13 @@ int submit_jobs (
 			if (want_factory && ! MyQ->allows_late_materialize()) {
 				// if factory was required, not just preferred. then we fail the submit
 				if (need_factory) {
-					if (MyQ->has_late_materialize()) {
-						fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+					int late_ver = 0;
+					if (MyQ->has_late_materialize(late_ver)) {
+						if (late_ver < 2) {
+							fprintf(stderr, "\nERROR: This SCHEDD allows only an older Late materialization protocol\n");
+						} else {
+							fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+						}
 					} else {
 						fprintf(stderr, "\nERROR: The SCHEDD is too old to support late materialization\n");
 					}
@@ -2469,7 +2480,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 				tmp->ChainToAd(JobAdsArray[JobAdsArrayLastClusterIndex]);
 			}
 			JobAdsArray.push_back(tmp);
-			return true;
 		}
 
 		submit_hash.delete_job_ad();

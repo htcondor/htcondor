@@ -1181,19 +1181,6 @@ PREEN_ARGS			= -m -r
 #MASTER_RECOVER_FACTOR		= 300
 
 
-##--------------------------------------------------------------------
-##  condor_collector
-##--------------------------------------------------------------------
-## Address to which Condor will send a weekly e-mail with output of
-## condor_status.
-##  Default is condor-admin@cs.wisc.edu
-CONDOR_DEVELOPERS = NONE
-
-## Global Collector to periodically advertise basic information about
-## your pool.
-##  Default is condor.cs.wisc.edu
-CONDOR_DEVELOPERS_COLLECTOR = NONE
-
 ##  When the collector starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the collector.  This

@@ -23,6 +23,12 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug where ``COLLECTOR_REQUIREMENTS`` wrote too much to the log
+   to be useful.  It now only writes warnings about rejected ads when
+   the collector's debug level includes ``D_MACHINE``, and only includes
+   the rejected ads themselves in the output at the ``D_MACHINE:2`` level.
+   :ticket:`7264`
+
 -  Fixed a bug where, for ``gce`` grid universe jobs, if the credentials
    file has credentials for more than one account, the wrong account's
    credentials are used for some requests.
