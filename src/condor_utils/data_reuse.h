@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#ifndef __DATA_REUSE_H_
+#define __DATA_REUSE_H_
+
 #include "read_user_log.h"
 #include "write_user_log.h"
 #include "MyString.h"
@@ -155,3 +158,5 @@ private:
 };
 
 }
+
+#endif  // __DATA_REUSE_H_
