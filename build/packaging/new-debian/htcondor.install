@@ -7,7 +7,5 @@ debian/tmp/usr/lib/condor/condor_ssh* usr/lib/condor/
 debian/tmp/usr/lib/condor/libexec usr/lib/condor/
 debian/tmp/usr/sbin/* usr/sbin/
 debian/tmp/usr/src/* usr/src/condor/
-debian/tmp/usr/lib/python/* usr/lib/python2.7/dist-packages/
-debian/tmp/usr/lib/python3/* usr/lib/python3/dist-packages/
 src/condor_examples/condor.service /lib/systemd/system/
 src/condor_examples/condor-tmpfiles.conf usr/lib/tmpfiles.d/
