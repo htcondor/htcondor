@@ -12,7 +12,7 @@ fi
 if [[ -n $DOCKER_IMAGE ]]; then
     BUILD_TESTING=TRUE
 else
-    BUILD_TESTING=FALSE
+    BUILD_TESTING=TRUE
 fi
 
 cat > "$progdir/env.sh" <<__END__
@@ -117,7 +117,7 @@ if [[ -z $DOCKER_IMAGE ]]; then
         quiet_make boost
         time make -j2 externals
     fi
-    time make -j2 install && time ctest -j8 -L travis
+    time make -j2 install && (time ctest -j8 -L travis || cat Testing/Temporary/LastTest.log)
 else
     touch bld_external_rhel bld_external
     sudo docker run --rm=true -w "`pwd`" -v "`pwd`:`pwd`" $DOCKER_IMAGE /bin/bash -x "$progdir/build_inside_docker.sh"
