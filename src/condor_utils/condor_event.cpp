@@ -7659,19 +7659,19 @@ ReserveSpaceEvent::initFromClassAd( ClassAd *ad )
 	ULogEvent::initFromClassAd( ad );
 
 	time_t expiry_time;
-	if (ad->EvaluateAttrInt("ExpirationTime", expiry_time)) {
+	if (ad->EvaluateAttrInt(ATTR_EXPIRATION_TIME, expiry_time)) {
 		m_expiry = std::chrono::system_clock::from_time_t(expiry_time);
 	}
 	long long reserved_space;
-	if (ad->EvaluateAttrInt("ReservedSpace", reserved_space)) {
+	if (ad->EvaluateAttrInt(ATTR_RESERVED_SPACE, reserved_space)) {
 		m_reserved_space = reserved_space;
 	}
 	std::string uuid;
-	if (ad->EvaluateAttrString("UUID", uuid)) {
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
 		m_uuid = uuid;
 	}
 	std::string tag;
-	if (ad->EvaluateAttrString("Tag", tag)) {
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
 		m_tag = tag;
 	}
 }
@@ -7683,19 +7683,19 @@ ReserveSpaceEvent::toClassAd(bool event_time_utc) {
 	if (!ad.get()) {return nullptr;}
 
 	time_t expiry_time = std::chrono::system_clock::to_time_t(m_expiry);
-	if (!ad->InsertAttr("ExpirationTime", expiry_time)) {
+	if (!ad->InsertAttr(ATTR_EXPIRATION_TIME, expiry_time)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("ReservedSpace", static_cast<long long>(m_reserved_space))) {
+	if (!ad->InsertAttr(ATTR_RESERVED_SPACE, static_cast<long long>(m_reserved_space))) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("UUID", m_uuid)) {
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("Tag", m_tag)) {
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
 		return nullptr;
 	}
 	return ad.release();
@@ -7830,7 +7830,7 @@ ReleaseSpaceEvent::initFromClassAd( ClassAd *ad )
 	ULogEvent::initFromClassAd( ad );
 
 	std::string uuid;
-	if (ad->EvaluateAttrString("UUID", uuid)) {
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
 		m_uuid = uuid;
 	}
 }
@@ -7841,7 +7841,7 @@ ReleaseSpaceEvent::toClassAd(bool event_time_utc) {
 	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
 	if (!ad.get()) {return nullptr;}
 
-	if (!ad->InsertAttr("UUID", m_uuid)) {
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
 		return nullptr;
 	}
 
@@ -7886,21 +7886,21 @@ FileCompleteEvent::initFromClassAd( ClassAd *ad )
 	ULogEvent::initFromClassAd( ad );
 
 	long long size;
-	if (ad->EvaluateAttrInt("Size", size)) {
+	if (ad->EvaluateAttrInt(ATTR_SIZE, size)) {
 		m_size = size;
 	}
 
 	std::string checksum;
-	if (ad->EvaluateAttrString("Checksum", checksum)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
 		m_checksum = checksum;
 	}
 	std::string checksum_type;
-	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
 		m_checksum_type = checksum_type;
 	}
 
 	std::string uuid;
-	if (ad->EvaluateAttrString("UUID", uuid)) {
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
 		m_uuid = uuid;
 	}
 }
@@ -7911,19 +7911,19 @@ FileCompleteEvent::toClassAd(bool event_time_utc) {
 	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
 	if (!ad.get()) {return nullptr;}
 
-	if (!ad->InsertAttr("Size", static_cast<long long>(m_size))) {
+	if (!ad->InsertAttr(ATTR_SIZE, static_cast<long long>(m_size))) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("Checksum", m_checksum)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("UUID", m_uuid)) {
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
 		return nullptr;
 	}
 
@@ -8028,16 +8028,16 @@ FileUsedEvent::initFromClassAd( ClassAd *ad )
 	ULogEvent::initFromClassAd( ad );
 
 	std::string checksum;
-	if (ad->EvaluateAttrString("Checksum", checksum)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
 		m_checksum = checksum;
 	}
 	std::string checksum_type;
-	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
 		m_checksum_type = checksum_type;
 	}
 
 	std::string tag;
-	if (ad->EvaluateAttrString("Tag", tag)) {
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
 		m_tag = tag;
 	}
 }
@@ -8048,15 +8048,15 @@ FileUsedEvent::toClassAd(bool event_time_utc) {
 	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
 	if (!ad.get()) {return nullptr;}
 
-	if (!ad->InsertAttr("Checksum", m_checksum)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("Tag", m_tag)) {
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
 		return nullptr;
 	}
 
@@ -8135,21 +8135,21 @@ FileRemovedEvent::initFromClassAd( ClassAd *ad )
 	ULogEvent::initFromClassAd( ad );
 
 	long long size;
-	if (ad->EvaluateAttrInt("Size", size)) {
+	if (ad->EvaluateAttrInt(ATTR_SIZE, size)) {
 		m_size = size;
 	}
 
 	std::string checksum;
-	if (ad->EvaluateAttrString("Checksum", checksum)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
 		m_checksum = checksum;
 	}
 	std::string checksum_type;
-	if (ad->EvaluateAttrString("ChecksumType", checksum_type)) {
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
 		m_checksum_type = checksum_type;
 	}
 
 	std::string tag;
-	if (ad->EvaluateAttrString("Tag", tag)) {
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
 		m_tag = tag;
 	}
 }
@@ -8160,19 +8160,19 @@ FileRemovedEvent::toClassAd(bool event_time_utc) {
 	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
 	if (!ad.get()) {return nullptr;}
 
-	if (!ad->InsertAttr("Size", static_cast<long long>(m_size))) {
+	if (!ad->InsertAttr(ATTR_SIZE, static_cast<long long>(m_size))) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("Checksum", m_checksum)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("ChecksumType", m_checksum_type)) {
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
 		return nullptr;
 	}
 
-	if (!ad->InsertAttr("Tag", m_tag)) {
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
 		return nullptr;
 	}
 
