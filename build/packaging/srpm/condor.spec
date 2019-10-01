@@ -874,18 +874,17 @@ populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
-# Drop in a symbolic link for backward compatability
-ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
-
-# Move python bindings out of /usr/share/condor
+# And the Python bindings
 %if %python
-mv %{buildroot}%{_datadir}/condor/python %{buildroot}%{python_sitearch}
+populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %if 0%{?rhel} >= 7
 %ifarch x86_64
-mv %{buildroot}%{_datadir}/condor/python3 %{buildroot}%{python3_other_sitearch}
+populate %{python3_other_sitearch}/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
 %endif
 %endif
+# Drop in a symbolic link for backward compatability
+ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
 # Only trigger on 32-bit RHEL6
 if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
