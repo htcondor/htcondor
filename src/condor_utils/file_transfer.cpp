@@ -3731,7 +3731,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// (potentially embedding an authorization itself), ensure we encrypt.
 		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
 			bool cryp_ret = s->set_crypto_mode(true);
-			if(!cryp_ret) {
+			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -3740,8 +3740,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			s->set_crypto_mode(false);
 		}
 		else {
-			bool cryp_ret = s->set_crypto_mode(true);
-			if(!cryp_ret) {
+			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
+			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
