@@ -429,7 +429,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	int source_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_USER);
-		source_fd = safe_open_wrapper_follow(source.c_str(), O_RDONLY);
+		source_fd = safe_open_wrapper(source.c_str(), O_RDONLY);
 	}
 	if (source_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file source (%s): %s",
@@ -478,7 +478,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	int dest_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		dest_fd = safe_open_wrapper_follow(dest_fname.c_str(), O_TRUNC | O_CREAT | O_WRONLY);
+		dest_fd = safe_open_wrapper(dest_fname.c_str(), O_TRUNC | O_CREAT | O_WRONLY);
 	}
 	if (dest_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
@@ -648,7 +648,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	int source_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		source_fd = safe_open_wrapper_follow(source.c_str(), O_RDONLY);
+		source_fd = safe_open_wrapper(source.c_str(), O_RDONLY);
 	}
 	if (source_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file source (%s): %s",
@@ -659,7 +659,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	int dest_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_USER);
-		dest_fd = safe_open_wrapper_follow(destination.c_str(), O_EXCL | O_CREAT | O_WRONLY);
+		dest_fd = safe_open_wrapper(destination.c_str(), O_EXCL | O_CREAT | O_WRONLY);
 	}
 	if (dest_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
