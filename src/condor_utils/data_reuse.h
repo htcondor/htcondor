@@ -44,10 +44,10 @@ public:
 
 	const std::string &GetDirectory() const {return m_dirpath;}
 
-	bool ReserveSpace(uint64_t size, uint32_t lifetime, std::string &tag,
+	bool ReserveSpace(uint64_t size, uint32_t lifetime, const std::string &tag,
 		std::string &id, CondorError &err);
 
-	bool Renew(uint32_t lifetime, std::string &tag, const std::string &uuid,
+	bool Renew(uint32_t lifetime, const std::string &tag, const std::string &uuid,
 		CondorError &err);
 
 	bool ReleaseSpace(const std::string &uuid, CondorError &err);

@@ -163,7 +163,7 @@ DataReuseDirectory::FileEntry::fname() const
 
 
 bool
-DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, std::string &tag,
+DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, const std::string &tag,
 	std::string &id, CondorError &err)
 {
 	LogSentry sentry = LockLog(err);
@@ -547,7 +547,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 
 
 bool
-DataReuseDirectory::Renew(uint32_t lifetime, std::string &tag, const std::string &uuid,
+DataReuseDirectory::Renew(uint32_t lifetime, const std::string &tag, const std::string &uuid,
 	CondorError &err)
 {
 	LogSentry sentry = LockLog(err);
