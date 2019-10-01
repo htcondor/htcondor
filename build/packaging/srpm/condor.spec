@@ -287,6 +287,7 @@ BuildRequires: gridsite-devel
 %if 0%{?rhel} >= 7
 %ifarch x86_64
 BuildRequires: python36-devel
+BuildRequires: python3-other-rpm-macros
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
 %endif
