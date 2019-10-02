@@ -77,8 +77,10 @@ def main():
     servererror_url = "http://127.0.0.1:" + str(httpd._port) + "/servererror"
     partial_url = "http://127.0.0.1:" + str(httpd._port) + "/partial"
 
-    # Stand up a PersonalCondor
-    personal = CondorTest.StartPersonalCondor("cmd_curl_plugin")
+    # Stand up a PersonalCondor.  Explicitly set FILETRANSFER_PLUGINS as the ctest
+    # driver disables the built-in values for expediency sake.
+    personal = CondorTest.StartPersonalCondor("cmd_curl_plugin",
+        {"FILETRANSFER_PLUGINS": "$(LIBEXEC)/curl_plugin"})
     if personal == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)

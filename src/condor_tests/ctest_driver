@@ -9,6 +9,7 @@ import argparse
 base_config_template = """
 RELEASE_DIR={prefix_path}
 # This is overwritten by CondorPersonal.pm
+DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 LOCAL_CONFIG_FILE=/
 CONDOR_HOST=$(FULL_HOSTNAME)
 COLLECTOR_HOST=$(FULL_HOSTNAME):0
