@@ -5308,6 +5308,10 @@ MyString FileTransfer::GetSupportedMethods() {
 			}
 			method_list += method;
 		}
+		if( I_support_S3 ) {
+			// method_list must contain at least "https".
+			method_list += ",s3";
+		}
 	}
 	return method_list;
 }
@@ -5383,7 +5387,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
 		SetPluginMappings( e, p );
-		
+
 		// Now verify that the plugin supports at least one transfer method.
 		MyString methods = GetSupportedMethods();
 		if (!methods.IsEmpty()) {
@@ -5392,6 +5396,15 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText().c_str());
 			e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", p);
+		}
+	}
+
+	// If we have an https plug-in, this version of HTCondor also supports S3.
+	MyString method, junk;
+	plugin_table->startIterations();
+	while( plugin_table->iterate( method, junk ) ) {
+		if( method == "https" ) {
+			I_support_S3 = true;
 		}
 	}
 

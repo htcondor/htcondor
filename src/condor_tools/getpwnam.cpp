@@ -50,6 +50,7 @@ struct passwd *getpwnam(const char *name) {
 	fakeEntry.pw_gid = getgid();
 	fakeEntry.pw_gecos = const_cast<char *>("HTCondor ssh_to_job");
 	fakeEntry.pw_dir = getenv("_CONDOR_SCRATCH_DIR");
-	fakeEntry.pw_shell = getenv("_CONDOR_SHELL");
+	char *shell = getenv("_CONDOR_SHELL");
+	fakeEntry.pw_shell = shell ? shell : const_cast<char *>("/bin/bash");
 	return &fakeEntry;
 }

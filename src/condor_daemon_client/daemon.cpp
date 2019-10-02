@@ -1187,23 +1187,21 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		} else {
 				// We were given a hostname, not an address.
 			MyString fqdn;
-			if(host) {
-				dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
-						 "finding IP address\n", host );
-				if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
-					// With a hostname, this is a fatal Daemon error.
-					formatstr( buf, "unknown host %s", host );
-					newError( CA_LOCATE_FAILED, buf.c_str() );
-					if (host) free( host );
+			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+					 "finding IP address\n", host );
+			if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
+				// With a hostname, this is a fatal Daemon error.
+				formatstr( buf, "unknown host %s", host );
+				newError( CA_LOCATE_FAILED, buf.c_str() );
+				free( host );
 
-						// We assume this is a transient DNS failure.  Therefore,
-						// set _tried_locate = false, so that we keep trying in
-						// future calls to locate().
-					_tried_locate = false;
+					// We assume this is a transient DNS failure.  Therefore,
+					// set _tried_locate = false, so that we keep trying in
+					// future calls to locate().
+				_tried_locate = false;
 
-					return false;
-				}
-			} else return false;
+				return false;
+			}
 			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
 			if (fqdn.Length() > 0)

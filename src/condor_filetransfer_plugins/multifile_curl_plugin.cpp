@@ -351,6 +351,21 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
         partial_bytes = ftell( file );
     }
 
+    // Sometimes we get an HTTP redirection code (301 or 302) but without a
+    // Location header. By default libcurl treats these as successful transfers.
+    // We want to treat them as errors.
+    // This needs to happen before FinishCurlTransfer() so that the transfer
+    // is flagged correctly as failed.
+    char* redirect_url;
+    long return_code;
+    curl_easy_getinfo( _handle, CURLINFO_REDIRECT_URL, &redirect_url );
+    curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
+    if( ( return_code == 301 || return_code == 302 ) && !redirect_url ) {
+        // Hack: set rval to a non-zero CURL error code
+        rval = CURLE_REMOTE_FILE_NOT_FOUND;
+        strcpy(_error_buffer, "The URL you requested could not be found.");
+    }
+
     FinishCurlTransfer( rval, file );
 
         // Error handling and cleanup

@@ -673,7 +673,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    uid_t euid = geteuid();
 	    gid_t egid = getegid();
 	    if ( seteuid( 0 ) ) { }
-	    setgroups( 1, &egid );
+	    (void) setgroups( 1, &egid );
 	    if ( setgid( egid ) ) { }
 	    if ( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 	    

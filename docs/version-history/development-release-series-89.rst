@@ -28,6 +28,23 @@ New Features:
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
+- The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
+  which creates a Submit description from a DAG file, now supports keyword
+  arguments (in addition to positional arguments), and the ``options`` argument
+  is now optional:
+
+  .. code-block::python
+
+    dag_args = { "maxidle": 10, "maxpost": 5 }
+
+    # with keyword arguments for filename and options
+    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
+
+    # or like this, with no options
+    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
+
+  :ticket:`7278`
+
 Bugs Fixed:
 
 -  None.

@@ -3313,19 +3313,29 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Cpus, to encourage jobs to stay within the number
 		// of requested cpu cores.  But trust the user, if it has
 		// already been set in the job.
+		// In addition, besides just OMP_NUM_THREADS, set an environment
+		// variable for each var name listed in STARTER_NUM_THREADS_ENV_VARS.
 
 	ClassAd * mach = jic->machClassAd();
-	MyString jobNumThreads;
-
-	proc_env->GetEnv("OMP_NUM_THREADS", jobNumThreads);
-	if (mach && (jobNumThreads.Length() == 0)) {
-		int cpus = 0;
-		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
-			if (cpus > 0) {
-				proc_env->SetEnv("OMP_NUM_THREADS", IntToStr( cpus ));
+	int cpus = 0;
+	if (mach) {
+		mach->LookupInteger(ATTR_CPUS, cpus);
+	}
+	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
+	if (cpus > 0 && cpu_vars_param) {
+		MyString jobNumThreads;
+		StringList cpu_vars_list(cpu_vars_param);
+		cpu_vars_list.remove("");
+		cpu_vars_list.rewind();
+		char *var = NULL;
+		while ((var = cpu_vars_list.next())) {
+			proc_env->GetEnv(var, jobNumThreads);
+			if (jobNumThreads.Length() == 0) {
+				proc_env->SetEnv(var, IntToStr(cpus));
 			}
 		}
 	}
+	free(cpu_vars_param);
 
 		// If using a job wrapper, set environment to location of
 		// wrapper failure file.

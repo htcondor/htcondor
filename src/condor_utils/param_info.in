@@ -2660,6 +2660,11 @@ default=
 type=string
 tags=starter
 
+[STARTER_NUM_THREADS_ENV_VARS]
+default=OMP_NUM_THREADS NUMEXPR_NUM_THREADS MKL_NUM_THREADS CUBACORES JULIA_NUM_THREADS
+type=string
+tags=starter
+
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10

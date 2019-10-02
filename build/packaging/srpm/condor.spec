@@ -287,7 +287,6 @@ BuildRequires: gridsite-devel
 %if 0%{?rhel} >= 7
 %ifarch x86_64
 BuildRequires: python36-devel
-BuildRequires: python3-other-rpm-macros
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
 %endif
@@ -880,7 +879,7 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_ssh
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %if 0%{?rhel} >= 7
 %ifarch x86_64
-populate %{python3_other_sitearch}/ %{buildroot}%{_datadir}/condor/python3/*
+populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
 %endif
 %endif
@@ -1569,9 +1568,9 @@ rm -rf %{buildroot}
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
-%{python3_other_sitearch}/classad/
-%{python3_other_sitearch}/htcondor/
-%{python3_other_sitearch}/htcondor-*.egg-info/
+/usr/lib64/python3.6/site-packages/classad/
+/usr/lib64/python3.6/site-packages/htcondor/
+/usr/lib64/python3.6/site-packages/htcondor-*.egg-info/
 %endif
 %endif
 %endif
