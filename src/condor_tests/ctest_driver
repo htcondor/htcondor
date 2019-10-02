@@ -117,7 +117,7 @@ def main():
 
         if not has_condor and ('CONDOR_IDS' not in os.environ):
             pw_info = pwd.getpwnam("nobody")
-            os.environ['CONDOR_IDS'] = '%d:%d' % (pw_info.pw_uid, pw_info.pw_gid)
+            os.environ['CONDOR_IDS'] = '%d.%d' % (pw_info.pw_uid, pw_info.pw_gid)
 
     os.execv("/usr/bin/perl", ["run_test.pl", os.path.join("..", "run_test.pl"), args.test])
 
