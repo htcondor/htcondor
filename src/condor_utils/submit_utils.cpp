@@ -254,6 +254,11 @@ static condor_params::string_value UnliveProcessMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveStepMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveRowMacroDef = { ZeroString, 0 };
 
+static condor_params::string_value UnliveSubmitTimeMacroDef = { UnsetString, 0 };
+static condor_params::string_value UnliveYearMacroDef = { UnsetString, 0 };
+static condor_params::string_value UnliveMonthMacroDef = { UnsetString, 0 };
+static condor_params::string_value UnliveDayMacroDef = { UnsetString, 0 };
+
 static char rc[] = "$(Request_CPUs)";
 static condor_params::string_value VMVCPUSMacroDef = { rc, 0 };
 static char rm[] = "$(Request_Memory)";
@@ -300,9 +305,11 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "ARCH",      &ArchMacroDef },
 	{ "Cluster",   &UnliveClusterMacroDef },
 	{ "ClusterId", &UnliveClusterMacroDef },
+	{ "Day",       &UnliveDayMacroDef },
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
+	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
 	{ "OPSYSANDVER",     &OpsysAndVerMacroDef },
@@ -316,8 +323,10 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &UnliveStepMacroDef },
 	{ "SUBMIT_FILE", &UnliveSubmitFileMacroDef },
+	{ "SUBMIT_TIME", &UnliveSubmitTimeMacroDef },
 	{ "VM_MEMORY", &VMMemoryMacroDef },
 	{ "VM_VCPUS",  &VMVCPUSMacroDef },
+	{ "Year",       &UnliveYearMacroDef },
 };
 
 
@@ -358,9 +367,13 @@ condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const
 {
 	condor_params::string_value * NewDef = reinterpret_cast<condor_params::string_value*>(set.apool.consume(sizeof(condor_params::string_value), sizeof(void*)));
 	NewDef->flags = Def.flags;
-	NewDef->psz = set.apool.consume(cch, sizeof(void*));
-	memset(NewDef->psz, 0, cch);
-	if (Def.psz) strcpy(NewDef->psz, Def.psz);
+	if (cch > 0) {
+		NewDef->psz = set.apool.consume(cch, sizeof(void*));
+		memset(NewDef->psz, 0, cch);
+		if (Def.psz) strcpy(NewDef->psz, Def.psz);
+	} else {
+		NewDef->psz = NULL;
+	}
 
 	// change the defaults table pointers
 	condor_params::key_value_pair *pdi = const_cast<condor_params::key_value_pair *>(set.defaults->table);
@@ -419,6 +432,30 @@ void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & so
 		}
 	}
 }
+
+void SubmitHash::setup_submit_time_defaults(time_t stime)
+{
+	condor_params::string_value * sv;
+
+	// allocate space for yyyy-mm-dd string for the $(SUBMIT_TIME) $(YEAR) $(MONTH) and $(DAY) default macros
+	char * times = SubmitMacroSet.apool.consume(24, 4);
+	strftime(times, 12, "%Y_%m_%d", localtime(&stime));
+	times[4] = times[7] = 0;
+
+	// set Year, Month, and Day macro values
+	sv = allocate_live_default_string(SubmitMacroSet, UnliveYearMacroDef, 0);
+	sv->psz = times;
+	sv = allocate_live_default_string(SubmitMacroSet, UnliveMonthMacroDef, 0);
+	sv->psz = &times[5];
+	sv = allocate_live_default_string(SubmitMacroSet, UnliveDayMacroDef, 0);
+	sv->psz = &times[8];
+
+	// set SUBMIT_TIME macro value
+	sprintf(&times[12], "%lu", (unsigned long)stime);
+	sv = allocate_live_default_string(SubmitMacroSet, UnliveSubmitTimeMacroDef, 0);
+	sv->psz = &times[12];
+}
+
 
 /* order dependencies
 ComputeRootDir >> ComputeIWD
@@ -3079,7 +3116,8 @@ int SubmitHash::SetGridParams()
 	//
 	// EC2 grid-type submit attributes
 	//
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID )) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3105,7 +3143,8 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY ))
+			|| (tmp = submit_param( SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY)) ) {
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
@@ -3133,11 +3172,11 @@ int SubmitHash::SetGridParams()
 
 	if ( gridType == "ec2" ) {
 		if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' parameter\n" );
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' or '" SUBMIT_KEY_AWSAccessKeyIdFile "' parameter\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 		if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
-			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' parameter\n");
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' or '" SUBMIT_KEY_AWSSecretAccessKeyFile "' parameter\n");
 			ABORT_AND_RETURN( 1 );
 		}
 	}
@@ -4957,9 +4996,14 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
-    // EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
-    // is ON_EXIT_OR_EVICT, which we may want to warn people about.
-    {SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
+	// Presigned S3 URLs
+	{SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},
+
+	// EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
+	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
+	{SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -6170,9 +6214,14 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true);
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					std::string method = *it;
+					if (sign_s3_urls && (method == "s3")) {
+						method = "https";
+					}
 					answer += " && stringListIMember(\"";
-					answer += *it;
+					answer += method;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 				}
 			}
@@ -6903,7 +6952,7 @@ int SubmitHash::SetTransferFiles()
 	job->LookupBool(ATTR_TRANSFER_INPUT, transfer_stdin);
 	if (transfer_stdin) {
 		std::string stdin_fname;
-		job->LookupString(ATTR_JOB_INPUT, stdin_fname);
+		(void) job->LookupString(ATTR_JOB_INPUT, stdin_fname);
 		if (!stdin_fname.empty()) {
 			if (pInputFilesSizeKb) {
 				*pInputFilesSizeKb += calc_image_size_kb(stdin_fname.c_str());
@@ -7521,6 +7570,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 	} else {
 		submit_time = time(NULL);
 	}
+
+	setup_submit_time_defaults(submit_time);
 
 	// all jobs should end up with the same qdate, so we only query time once.
 	baseJob.Assign(ATTR_Q_DATE, submit_time);

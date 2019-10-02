@@ -123,6 +123,8 @@ this case, it's just to make the output prettier.
         -const 'SlotType =!= "Dynamic" &&
             StringListMember( "gdrive", HasFileTransferPluginMethods )'
 
+.. _`Expression Syntax`:
+
 Expression Syntax
 -----------------
 

@@ -68,6 +68,7 @@ class QmgmtPeer {
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
 		int isAuthenticated() const;
+		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
 
 	protected:
 

@@ -30,6 +30,7 @@
 #include "vm_univ_utils.h"
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
+#include "AWSv4-utils.h"
 
 #include "condor_base64.h"
 #include <sstream>
@@ -56,46 +57,9 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }
 
-//
-// This function should not be called for anything in query_parameters,
-// except for by AmazonQuery::SendRequest().
-//
 std::string amazonURLEncode( const std::string & input )
 {
-    /*
-     * See http://docs.amazonwebservices.com/AWSEC2/2010-11-15/DeveloperGuide/using-query-api.html
-     *
-     *
-     * Since the GAHP protocol is defined to be ASCII, we're going to ignore
-     * UTF-8, and hope it goes away.
-     *
-     */
-    std::string output;
-    for( unsigned i = 0; i < input.length(); ++i ) {
-        // "Do not URL encode ... A-Z, a-z, 0-9, hyphen ( - ),
-        // underscore ( _ ), period ( . ), and tilde ( ~ ).  Percent
-        // encode all other characters with %XY, where X and Y are hex
-        // characters 0-9 and uppercase A-F.  Percent encode extended
-        // UTF-8 characters in the form %XY%ZA..."
-        if( ('A' <= input[i] && input[i] <= 'Z')
-         || ('a' <= input[i] && input[i] <= 'z')
-         || ('0' <= input[i] && input[i] <= '9')
-         || input[i] == '-'
-         || input[i] == '_'
-         || input[i] == '.'
-         || input[i] == '~' ) {
-            char uglyHack[] = "X";
-            uglyHack[0] = input[i];
-            output.append( uglyHack );
-        } else {
-            char percentEncode[4];
-            int written = snprintf( percentEncode, 4, "%%%.2hhX", input[i] );
-            ASSERT( written == 3 );
-            output.append( percentEncode );
-        }
-    }
-
-    return output;
+    return AWSv4Impl::amazonURLEncode( input );
 }
 
 //
@@ -124,31 +88,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n",
-            fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
-
-    char * rawBuffer = (char *)malloc( fileSize + 1 );
-    assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-    close( fd );
-    if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-            fileName.c_str(), fileSize, totalRead );
-        free( rawBuffer );
-        return false;
-    }
-    contents.assign( rawBuffer, fileSize );
-    free( rawBuffer );
-
-    return true;
+	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -393,27 +333,7 @@ bool AmazonRequest::SendRequest() {
 }
 
 std::string AmazonRequest::canonicalizeQueryString() {
-    std::string canonicalQueryString;
-    for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
-        // Step 1A: The map sorts the query parameters for us.  Strictly
-        // speaking, we should encode into a different AttributeValueMap
-        // and then compose the string out of that, in case amazonURLEncode()
-        // changes the sort order, but we don't specify parameters like that.
-
-        // Step 1B: Encode the parameter names and values.
-        std::string name = amazonURLEncode( i->first );
-        std::string value = amazonURLEncode( i->second );
-
-        // Step 1C: Separate parameter names from values with '='.
-        canonicalQueryString += name + '=' + value;
-
-        // Step 1D: Separate name-value pairs with '&';
-        canonicalQueryString += '&';
-    }
-
-    // We'll always have a superflous trailing ampersand.
-    canonicalQueryString.erase( canonicalQueryString.end() - 1 );
-    return canonicalQueryString;
+    return AWSv4Impl::canonicalizeQueryString( query_parameters );
 }
 
 bool parseURL(	const std::string & url,
@@ -436,60 +356,19 @@ void convertMessageDigestToLowercaseHex(
 		const unsigned char * messageDigest,
 		unsigned int mdLength,
 		std::string & hexEncoded ) {
-	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
-	ASSERT( buffer );
-	char * ptr = buffer;
-	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
-	}
-	hexEncoded.assign( buffer, mdLength * 2 );
-	free(buffer);
+	AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest,
+		mdLength, hexEncoded );
 }
 
 
 bool doSha256(	const std::string & payload,
 				unsigned char * messageDigest,
 				unsigned int * mdLength ) {
-	EVP_MD_CTX * mdctx = EVP_MD_CTX_create();
-	if( mdctx == NULL ) { return false; }
-
-	if(! EVP_DigestInit_ex( mdctx, EVP_sha256(), NULL )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestUpdate( mdctx, payload.c_str(), payload.length() )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestFinal_ex( mdctx, messageDigest, mdLength )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	EVP_MD_CTX_destroy( mdctx );
-	return true;
+	return AWSv4Impl::doSha256( payload, messageDigest, mdLength );
 }
 
 std::string pathEncode( const std::string & original ) {
-	std::string segment;
-	std::string encoded;
-	const char * o = original.c_str();
-
-	size_t next = 0;
-	size_t offset = 0;
-	size_t length = strlen( o );
-	while( offset < length ) {
-		next = strcspn( o + offset, "/" );
-		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
-
-		segment = std::string( o + offset, next );
-		encoded += amazonURLEncode( segment );
-
-		offset += next;
-	}
-	return encoded;
+    return AWSv4Impl::pathEncode( original );
 }
 
 bool AmazonMetadataQuery::SendRequest( const std::string & uri ) {

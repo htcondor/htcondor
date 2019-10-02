@@ -310,6 +310,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	return 1;
 }
 
+
 CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 {
 	CollectorHashTable *table=0;
@@ -508,17 +509,15 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 		collector_req_result = false;
 	}
 	if( !collector_req_result ) {
-		static int details_shown=0;
-		bool show_details = (details_shown<10) || IsFulldebug(D_FULLDEBUG);
-		dprintf(D_ALWAYS,"%s VIOLATION: requirements do not match ad from %s.%s\n",
+		if( IsDebugLevel(D_MACHINE) ) { // Is this still an optimization?
+			dprintf( D_MACHINE,
+				"%s VIOLATION: requirements do not match ad from %s.\n",
 				COLLECTOR_REQUIREMENTS,
-				sock ? sock->get_sinful_peer() : "(null)",
-				show_details ? " Contents of the ClassAd:" : " (turn on D_FULLDEBUG to see details)");
-		if( show_details ) {
-			details_shown += 1;
-			dPrintAd(D_ALWAYS, *clientAd);
+				sock ? sock->get_sinful_peer() : "(null)" );
+			}
+		if( IsDebugVerbose( D_MACHINE ) ) { // Is this still an optimization?
+			dPrintAd( D_MACHINE | D_VERBOSE, * clientAd );
 		}
-
 		return false;
 	}
 
@@ -545,6 +544,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	}
 
 	if( !ValidateClassAd(command,clientAd,sock) ) {
+	    insert = -4;
 		return NULL;
 	}
 

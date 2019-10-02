@@ -1,3 +1,18 @@
+condor (8.9.3-1) unstable; urgency=medium
+
+  * TOKEN and SSL authentication methods are now enabled by default
+  * The job and global event logs use ISO 8601 formatted dates by default
+  * Added Google Drive multifile transfer plugin
+  * Added upload capability to Box multifile transfer plugin
+  * Added Python bindings to submit a DAG
+  * Python 'JobEventLog' can be pickled to facilitate intermittent readers
+  * 2x matchmaking speed for partitionable slots with simple START expressions
+  * Improved the performance of the condor_schedd under heavy load
+  * Reduced the memory footprint of condor_dagman
+  * Initial implementation to record the circumstances of a job's termination
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Sep 2019 00:00:00 -0500
+
 condor (8.8.5-1) stable; urgency=medium
 
   * Fixed two performance problems on Windows
@@ -6,7 +21,7 @@ condor (8.8.5-1) stable; urgency=medium
   * Fixed a bug where requesting zero GPUs would require a machine with GPUs
   * HTCondor can now recognize nVidia Volta and Turing GPUs
 
- -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Sep 2019 13:22:29 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Sep 2019 13:22:29 -0500
 
 condor (8.8.4-1) stable; urgency=medium
 

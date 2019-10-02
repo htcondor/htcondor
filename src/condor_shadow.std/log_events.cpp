@@ -96,29 +96,8 @@ check_execute_event( void )
 extern "C" void 
 initializeUserLog ()
 {
-	std::string logfilename,dagmanLogName;
-	int use_classad = 0;
-	std::vector<const char*> logfiles;
-	if ( getPathToUserLog(JobAd, logfilename) ) {
-		logfiles.push_back(logfilename.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.c_str());
-	}
-	if ( getPathToUserLog(JobAd, dagmanLogName, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		logfiles.push_back(dagmanLogName.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG,
-			dagmanLogName.c_str());
-	}
-	if(!logfiles.empty()) {
-		if ( !ULog.initialize (Proc->owner, NULL, logfiles,
-				Proc->id.cluster, Proc->id.proc, 0)) {
+	if ( !ULog.Initialize (*JobAd, true) ) {
 			EXCEPT("Failed to initialize user log!");
-		} else {
-			if ( ! JobAd->LookupInteger(ATTR_ULOG_USE_XML, use_classad)) { use_classad = 0; }
-			ULog.setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
-		}
-	} else {
-		dprintf(D_FULLDEBUG, "no %s found and no %s found\n", ATTR_ULOG_FILE,
-			ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 

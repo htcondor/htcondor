@@ -2012,6 +2012,12 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 						formatstr( metricName, "%sUsage", resourceName );
 						m_job_update_attrs.append( metricName.c_str() );
 
+						// We could use metricType to determine if we need
+						// this attribute or the preceeding one, but for now
+						// don't bother.
+						formatstr( metricName, "%sAverageUsage", resourceName );
+						m_job_update_attrs.append( metricName.c_str() );
+
 						formatstr( metricName, "Recent%sUsage", resourceName );
 						m_job_update_attrs.append( metricName.c_str() );
 					}

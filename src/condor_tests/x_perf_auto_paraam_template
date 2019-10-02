@@ -9,5 +9,5 @@ type = jobs
 
 condortemplate = x_condor_config_template
 vms	= 10
-encryption = 3DES,BLOWFISH
+encryption = BLOWFISH,3DES
 #authentication = GSI

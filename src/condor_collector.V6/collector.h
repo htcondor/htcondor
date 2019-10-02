@@ -116,8 +116,6 @@ public:
 	static int reportSubmittorScanFunc(ClassAd*);
 	static int reportMiniStartdScanFunc(ClassAd *cad);
 
-	static void reportToDevelopers();
-
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();
 	
@@ -126,6 +124,10 @@ public:
 
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock(int cmd, ClassAd* theAd);	
+
+		// Take an incoming session and forward a token request to the schedd.
+	static int schedd_token_request(Service *, int, Stream *stream);
+
 
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
@@ -202,7 +204,6 @@ protected:
 
 	static ClassAd *ad;
 	static CollectorList* collectorsToUpdate;
-	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static int stashSocket( ReliSock* sock );

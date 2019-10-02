@@ -394,6 +394,7 @@ class FileTransfer final: public Service {
 	bool PeerUnderstandsMkdir{false};
 	bool PeerDoesXferInfo{false};
 	bool PeerDoesReuseInfo{false};
+	bool PeerDoesS3Urls{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};

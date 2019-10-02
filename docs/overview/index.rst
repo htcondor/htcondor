@@ -11,6 +11,5 @@ Overview
    availability
    contributions-and-acknowledgments
    contact-information
-   privacy-notice
 
       

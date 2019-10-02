@@ -216,7 +216,7 @@ my $usage = sub {
 			my( $resource, $colon, $usage, $requested, $allocated ) =
 				split( " ", $line );
 
-			if( $resource =~ m/${callbackResourceName}s/i ) {
+			if( $resource =~ m/^${callbackResourceName}s$/i ) {
 				TLOG( "Job ${ID} used $usage $resource...\n" );
 				$eventLogUsage{ $ID } = $usage;
 			}
@@ -364,13 +364,17 @@ sub TestResourceUsage {
 				$totalIncrement += $increment;
 			}
 
-			my $jobAds = parseHistoryFile( $jobID, "${resourceName}sUsage" );
+			my $jobAds = parseHistoryFile( $jobID, "${resourceName}sUsage",
+			    "${resourceName}sAverageUsage" );
 			if( scalar( @{$jobAds} ) != 1 ) {
 				die( "Did not get exactly one (" . scalar( @{$jobAds} ) . ") job ad for job ID '${jobID}', aborting.\n" );
 			}
 
 			foreach my $ad (@{$jobAds}) {
 				my $value = $ad->{ "${resourceName}sUsage" };
+				if( $value eq "undefined" ) {
+				    $value = $ad->{ "${resourceName}sAverageUsage" };
+				}
 
 				# The event log's report is rounded for readability.
 				my $elValue = sprintf( "%.2f", $value );
@@ -403,6 +407,7 @@ sub TestResourceUsage {
 		output		=> 'cmr-monitor-basic-ad.$(Cluster).$(Process).out',
 		error		=> 'cmr-monitor-basic-ad.$(Cluster).$(Process).err',
 		log			=> 'cmr-monitor-basic-ad.log',
+		getenv      => 'true',
 
 		"request_${resourceName}s"	=> '1',
 		LeaveJobInQueue				=> 'true',
@@ -429,7 +434,8 @@ sub TestResourceUsage {
 
 			while( my $line = <$fh> ) {
 				++$lineCount;
-				my( $RESOURCE, $value ) = split( ' ', $line );
+				my( $RESOURCE, $value, $altValue ) = split( ' ', $line );
+				if( $value eq "undefined" ) { $value = $altValue; }
 
 				my $totalIncrement = 0;
 				foreach my $resource (split( /[, ]+/, $RESOURCE )) {
@@ -630,6 +636,7 @@ sub TestResourceMemoryUsage {
 		output		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).out',
 		error		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).err',
 		log			=> 'cmr-monitor-memory-ad.log',
+		getenv      => 'true',
 
 		"request_${resourceName}s"	=> '1',
 		LeaveJobInQueue				=> 'true',

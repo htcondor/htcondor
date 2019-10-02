@@ -4,14 +4,115 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.4
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.4 not yet released.
+
+.. HTCondor version 8.9.4 released on Month Date, 2019.
+
+New Features:
+
+- Added a new tool, :ref:`condor_evicted_files`,
+  to help users find files that HTCondor is holding on to for them (as
+  a result of a job being evicted when ``when_to_transfer_files = TRUE``,
+  or checkpointing when ``CheckpointExitCode`` is set).
+  :ticket:`7038`
+
+- GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
+  ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
+  are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
+  ``GPUsAverageUsage`` because all other usage values are peaks.  We also
+  now report GPU memory usage in the job termination event.
+  :ticket:`7201`
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.9.3
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.3 not yet released.
+- HTCondor version 8.9.3 released on September 12, 2019.
 
-.. HTCondor version 8.9.3 released on Month Date, 2019.
+- If you run a CCB server, please note that the default value for
+  ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
+  set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
+  after you upgrade.  To avoid this problem,
+  set ``CCB_RECONNECT_FILE`` to its default path before upgrading.  (Look in
+  the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
+  don't see one, you don't have to do anything.)
+  :ticket:`7135`
+
+- The Log file specified by a job, and by the ``EVENT_LOG`` configuration variable
+  will now have the year in the event time. Formerly, only the day and month were
+  printed.  This change makes these logs unreadable by versions of DAGMan and ``condor_wait``
+  that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
+  can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
+  :ticket:`6940`
+
+- The format of the terminated and aborted events has changed.  This will
+  only affect you if you're not using one the readers provided by HTCondor.
+  :ticket:`6984`
+
+New Features:
+
+- ``TOKEN`` authentication is enabled by default if the HTCondor administrator
+  does not specify a preferred list of authentication methods.  In this case,
+  ``TOKEN`` is only used if the user has at least one usable token available.
+  :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
+  used if there is a server certificate available. :ticket:`7074`
+
+- The *condor_collector* daemon will automatically generate a pool password file at the
+  location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
+  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
+
+- Added a new multifile transfer plugin for downloading and uploading
+  files from/to Google Drive user accounts. This supports URLs like
+  "gdrive://path/to/file" and using the plugin requires the admin
+  configure the *condor_credd* to allow users to obtain Google Drive
+  tokens and requires the user request Google Drive tokens in their
+  submit file. :ticket:`7136`
+
+- The Box.com multifile transfer plugin now supports uploads. The
+  plugin will be used when a user lists a "box://path/to/file" URL as
+  the output location of file when using ``transfer_output_remaps``.
+  :ticket:`7085`
+
+- Added a Python binding for *condor_submit_dag*. A new method,
+  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
+  .dag file:
+  
+  ::
+
+    dag_args = { "maxidle": 10, "maxpost": 5 }
+    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
+
+  The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
+  monitored just like any other Submit description object in the Python bindings.  
+  :ticket:`6275`
+
+- The Python binding's ``JobEventLog`` can now be pickled and unpickled,
+  allowing users to preserve job-reading progress between process restarts.
+  :ticket:`6944`
+
+- A number of ease-of-use changes were made for submitting jobs from Python.
+  In the Python method ``Schedd::queue_with_itemdata``,
+  the keyword argument was renamed from ``from`` (which, unfortunately, is also
+  a Python keyword) to ``itemdata``.  :ticket:`7064`
+  Both this method and the ``Submit`` object can now accept a wider range of objects,
+  as long as they can be converted to strings. :ticket:`7065`
+  The ``Submit`` class's constructor now behaves in the same way as a Python dictionary
+  :ticket:`7067`
+
+- The ``Undefined`` and ``Error`` values in Python no longer cast silently to integers.
+  Previously, ``Undefined`` and ``Error`` evaluated to ``True`` when used in a
+  conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
+  in a ``RuntimeError`` exception.  :ticket:`7109`
 
 - Improved the speed of matchmaking in pools with partitionable slots
   by simplifying the slot's WithinResourceLimits expression.  This new 
@@ -26,46 +127,9 @@ Release Notes:
   expressions in the slot START expression.
   :ticket:`7123`
 
-- HTCondor's Docker Universe jobs now more reliably disable the setuid
-  capability from their jobs.  Docker Universe has also done this, but the
-  method used has recently changed, and the new way should work going forward.
-  :ticket:`7111`
-
-- HTCondor users and daemons can request security tokens used for authentication.
-  This allows the HTCondor pool administrator to simply approve or deny token
-  requests instead of having to generate tokens and copy them between hosts.
-  The schedd and startd will automatically request tokens from any collector
-  they cannot authenticate with; authorizing these daemons can be done by simply
-  having the collector administrator approve the request from the collector.
-  Strong security for new pools can be bootstrapped by installing an auto-approval rule
-  for host-based security while the pool is being installed.  :ticket:`7006`
-  :ticket:`7094` :ticket:`7080`
-
-- If you run a CCB server, please note that the default value for
-  ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
-  set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
-  after you upgrade.  To avoid this problem,
-  set ``CCB_RECONNECT_FILE`` to its default path before upgrading.  (Look in
-  the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
-  don't see one, you don't have to do anything.)
-
-- The Log file specifed by a job, and by the ``EVENT_LOG`` configuration variable
-  Will now have the year in the event time, Formerly only the day and month were
-  printed.  This change makes these logs unreadable by versions of Dagman and ``condor_wait``
-  that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
-  can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
-
-- Improved the handling of parallel universe Docker jobs and the ability to rm and hold
-  them.
-  :ticket:`7076`
-
-- Singularity jobs no longer mount the user's home directory by default.
-  To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
-
-- The format of the terminated and aborted events has changed.  This will
-  only affect you if you're not using one the readers provided by HTCondor.
-
-New Features:
+- Reduced DAGMan's memory footprint when running DAGs with nodes 
+  that use the same submit file and/or current working directory.
+  :ticket:`7121`
 
 - The terminated and abort events now include "Tickets of Execution", which
   specify when the job terminated, who requested the termination, and the
@@ -77,53 +141,17 @@ New Features:
   the other mechanisms in future releases.
   :ticket:`6984`
 
-- The Box.com multifile transfer plugin now supports uploads. The
-  plugin will be used when a user lists a "box://path/to/file" URL as
-  the output location of file when using ``transfer_output_remaps``.
-  :ticket:`7085`
-
-- Added a new multifile transfer plugin for downloading and uploading
-  files from/to Google Drive user accounts. This supports URLs like
-  "gdrive://path/to/file" and using the plugin requires the admin
-  configure the *condor_credd* to allow users to obtain Google Drive
-  tokens and requires the user request Google Drive tokens in their
-  submit file. :ticket:`7136`
-
 - Added new submit parameters ``cloud_label_names`` and
   ``cloud_label_<name>``, which allowing the setting of labels on the
   cloud instances created for **gce** grid jobs.
   :ticket:`6993`
 
-- The ``condor_schedd`` automatically creates a security session for
+- The *condor_schedd* automatically creates a security session for
   the negotiator if ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is enabled
   (the default setting).  HTCondor pool administrators no longer need to
-  setup explicit authentication from the negotiator to the schedd; any
+  setup explicit authentication from the negotiator to the *condor_schedd*; any
   negotiator trusted by the collector is automatically trusted by the collector.
   :ticket:`6956`
-
-- ``TOKEN`` authentication is enabled by default if the HTCondor administrator
-  does not specify a preferred list of authentication methods.  In this case,
-  ``TOKEN`` is only used if the user has at least one usable token available.
-  :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
-  used if there is a server certificate available. :ticket:`7074`
-
-- A number of ease-of-use changes were made for submitting jobs from Python.
-  The Python method ``Schedd::queue_with_itemdata`` now accepts iterable objects
-  and the keyword argument was renamed from ``from`` (which, unfortunately, is also
-  a Python keyword) to ``itemdata``.  :ticket:`7064`
-  Both this method and the ``Submit`` object can now accept a wider range of objects,
-  as long as they can be converted to strings. :ticket:`7065`
-  The ``Submit`` class's constructor now behaves in the same way as a Python dictionary
-  :ticket:`7067`
-
-- The ``Undefined`` and ``Error`` values in Python no longer cast silently to integers.
-  Previously, ``Undefined`` and ``Error`` evaluated to ``True`` when used in a
-  conditional; now, ``Undefined`` evaluates to ``False`` and evaluating ``Error`` results
-  in a ``RuntimeError`` exception.  :ticket:`7109`
-
-- The *condor_collector* daemon will automatically generate a pool password file at the
-  location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
-  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
 
 - Daemons will now print a warning in their log file when a client uses
   an X.509 credential for authentication that contains VOMS extensions that
@@ -132,27 +160,14 @@ New Features:
   ``USE_VOMS_ATTRIBUTES`` to ``False``.
   :ticket:`5916`
 
-- Added a Python binding for *condor_submit_dag*. A new method,
-  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
-  .dag file:
-  
-  ::
-
-    dag_args = { "maxidle": 10, "maxpost": 5 }
-    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
-
-  The resulting ``dag_submit`` object can be submitted to a schedd and
-  monitored just like any other Submit description object in the Python bindings.  
-  :ticket:`6275`
-
-- When submitting jobs to a multi-cluster SLURM configuration under the
+- When submitting jobs to a multi-cluster Slurm configuration under the
   grid universe, the cluster to submit to can be specified using the
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
 
 Bugs Fixed:
 
-- Fixed a bug where schedd would not start if the history file
+- Fixed a bug where *condor_schedd* would not start if the history file
   size, named by MAX_HISTORY_SIZE was more than 2 Gigabytes.
   :ticket:`7023`
 
@@ -180,6 +195,33 @@ Bugs Fixed:
   the negotiator when ``CURB_MATCHMAKING`` or ``MAX_JOBS_RUNNING``
   prevent the *condor_schedd* from accepting any new matches.
   :ticket:`6749`
+
+- HTCondor's Docker Universe jobs now more reliably disable the setuid
+  capability from their jobs.  Docker Universe has also done this, but the
+  method used has recently changed, and the new way should work going forward.
+  :ticket:`7111`
+
+- HTCondor users and daemons can request security tokens used for authentication.
+  This allows the HTCondor pool administrator to simply approve or deny token
+  requests instead of having to generate tokens and copy them between hosts.
+  The *condor_schedd* and *condor_startd* will automatically request tokens from any collector
+  they cannot authenticate with; authorizing these daemons can be done by simply
+  having the collector administrator approve the request from the collector.
+  Strong security for new pools can be bootstrapped by installing an auto-approval rule
+  for host-based security while the pool is being installed.  :ticket:`7006`
+  :ticket:`7094` :ticket:`7080`
+
+- Changed the *condor_annex* default AMIs to run Docker jobs.  As a result,
+  they no longer default to encrypted execute directories.
+  :ticket:`6690`
+
+- Improved the handling of parallel universe Docker jobs and the ability to rm and hold
+  them.
+  :ticket:`7076`
+
+- Singularity jobs no longer mount the user's home directory by default.
+  To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
+  :ticket:`6676`
 
 Version 8.9.2
 -------------

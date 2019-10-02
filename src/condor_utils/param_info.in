@@ -727,20 +727,6 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_PEGASUS_REPORT_METRICS]
-default=$(LIBEXEC)/condor_dagman_metrics_reporter
-win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
-type=path
-customization=expert
-tags=dagman,dagman_main
-restart=never
-
-[DAGMAN_PEGASUS_REPORT_TIMEOUT]
-default=100
-type=int
-tags=dagman,dagman_main
-restart=never
-
 [DAGMAN_REMOVE_NODE_JOBS]
 default=true
 type=bool
@@ -802,7 +788,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_USE_JOIN_NODES]
-default=false
+default=true
 type=bool
 customization=normal
 tags=dagman,dagman_main
@@ -959,6 +945,18 @@ tags=shadow,remoteresource
 default=true
 type=bool
 tags=shadow,remoteresource
+
+[SEC_ENABLE_IMPERSONATION_TOKENS]
+default=false
+type=bool
+tags=schedd
+usage=Set to true to allow the pool collector(s) to create impersonation tokens.
+
+[SEC_IMPERSONATION_TOKEN_LIMITS]
+default=
+type=string
+usage=Restrict what authorizations can be enabled with impersonation toekns.
+tags=schedd
 
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
@@ -2410,7 +2408,7 @@ type=string
 tags=sshd_wrapper
 
 [CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
-default=true
+default=false
 type=bool
 tags=condor_ssh_to_job
 
@@ -4900,6 +4898,11 @@ description=Whether to invoke file transfer plugins as user or as root
 default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
+
+[SIGN_S3_URLS]
+default=true
+type=bool
+description=Enable to allow submit side to sign S3 URLs for file transfer.
 
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false

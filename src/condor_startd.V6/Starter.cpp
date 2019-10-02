@@ -295,9 +295,7 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		}
 	}
 
-	if (ignored_attr_list) {
-		delete ignored_attr_list;
-	}
+	delete ignored_attr_list;
 }
 
 

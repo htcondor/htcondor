@@ -30,7 +30,7 @@ LATEX_ARGS =	-file-line-error-style -halt-on-error
 # Convert the list of each ${manpage}.tex sourced to build the manual
 # into the list of ${manpage}.html generate by latex2html.  This is
 # rather a hack, but I don't care enough about the man pages to fix it.
-MANPAGES = $(shell grep '^\\input' man-pages/man.tex | grep -v condor_dagman_metrics_reporter.tex | grep -v tool_common.tex | awk -F/ '{print $$2}' | awk -F. '{printf "%s.html ",$$1}')
+MANPAGES = $(shell grep '^\\input' man-pages/man.tex | grep -v tool_common.tex | awk -F/ '{print $$2}' | awk -F. '{printf "%s.html ",$$1}')
 
 all : ref.pdf
 
@@ -48,7 +48,6 @@ just-man-pages : makeman just-man-pages.tex $(MANUAL_SOURCES)
 	@cd just-man-pages; for html in $(MANPAGES); do \
 		../makeman/makeman -v -i $${html} -s 1; \
 	done
-	@cd just-man-pages; mv condor_dagman_metrics_repor.html condor_dagman_metrics_reporter.html; ../makeman/makeman -v -i condor_dagman_metrics_reporter.html -s 1
 	@rm -fr man
 	@mkdir man
 	@mkdir man/man1

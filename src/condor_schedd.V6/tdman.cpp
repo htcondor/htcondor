@@ -270,7 +270,10 @@ TransferDaemon::push_transfer_requests(void)
 		//	ATTR_TREQ_INVALID_REQUEST (set to false)
 		//	ATTR_TREQ_CAPABILITY
 		//
-		getClassAd(m_treq_sock, respad);
+		if (!getClassAd(m_treq_sock, respad)) {
+			dprintf(D_ALWAYS, "Transferd could not get response ad from client\n");
+			return false;
+		}
 		m_treq_sock->end_of_message();
 
 		/////////////////////////////////////////////////

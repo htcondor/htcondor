@@ -95,57 +95,30 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 	}
 
 		//
-		// Sleep to ensure uniqueness of the ProcessId object.
+		// Confirm the ProcessId object's uniqueness.
 		//
 	if ( result == 0 && abortDuplicates ) {
-#if 1
-		const int maxSleepTime = 600; // seconds; arbitrarily chosen
-		int sleepTime = param_integer("DAGMAN_LOCK_FILE_SLEEP_TIME", 3);
-#else
-		const int maxSleepTime = 60; // seconds; arbitrarily chosen
-		int sleepTime = procId->computeWaitTime();
-#endif
-
-		if ( sleepTime > maxSleepTime ) {
-			debug_printf( DEBUG_QUIET, "Warning: ProcessId computed sleep "
-						"time (%d) exceeds maximum (%d); skipping sleep/"
-						"confirm step\n", sleepTime, maxSleepTime );
+		int status;
+		if ( ProcAPI::confirmProcessId( *procId, status ) !=
+					PROCAPI_SUCCESS ) {
+			debug_printf( DEBUG_QUIET, "Warning: ProcAPI::"
+						"confirmProcessId() failed; %d\n", status );
 			check_warning_strictness( DAG_STRICT_3 );
 		} else {
-			debug_printf( DEBUG_NORMAL, "Sleeping for %d seconds to "
-						"ensure ProcessId uniqueness\n", sleepTime );
-
-#if defined(WIN32)
-			sleep( sleepTime );
-#else
-			while( (sleepTime = sleep( sleepTime ) ) != 0 ) { }
-#endif
-
-				//
-				// Confirm the ProcessId object's uniqueness.
-				//
-			int status;
-			if ( ProcAPI::confirmProcessId( *procId, status ) !=
-						PROCAPI_SUCCESS ) {
-				debug_printf( DEBUG_QUIET, "Warning: ProcAPI::"
-							"confirmProcessId() failed; %d\n", status );
+			if ( !procId->isConfirmed() ) {
+				debug_printf( DEBUG_QUIET, "Warning: ProcessId not "
+							"confirmed unique\n" );
 				check_warning_strictness( DAG_STRICT_3 );
 			} else {
-				if ( !procId->isConfirmed() ) {
-					debug_printf( DEBUG_QUIET, "Warning: ProcessId not "
-								"confirmed unique\n" );
-					check_warning_strictness( DAG_STRICT_3 );
-				} else {
 
-						//
-						// Write out the confirmation.
-						//
-					if ( procId->writeConfirmationOnly( fp ) !=
-								ProcessId::SUCCESS ) {
-						debug_printf( DEBUG_QUIET, "ERROR: ProcessId::"
-									"writeConfirmationOnly() failed\n");
-						result = -1;
-					}
+					//
+					// Write out the confirmation.
+					//
+				if ( procId->writeConfirmationOnly( fp ) !=
+							ProcessId::SUCCESS ) {
+					debug_printf( DEBUG_QUIET, "ERROR: ProcessId::"
+								"writeConfirmationOnly() failed\n");
+					result = -1;
 				}
 			}
 		}

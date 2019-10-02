@@ -44,7 +44,10 @@ void
 displayJobShort(ClassAd* ad)
 {
     int cluster, proc, date, status, prio, image_size, memory_usage, CompDate;
-    float utime;
+	// Initialization here not strictly necessary, but some compilers (gcc)
+	// are unable to determine that the member will always be initialized in
+	// LookupFloat below.
+    float utime = 0;
     char *owner, *cmd, *args;
 
     owner = NULL;

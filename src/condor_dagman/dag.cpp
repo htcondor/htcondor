@@ -1907,11 +1907,6 @@ Dag::PostScriptReaper( Job *job, int status )
 	event.subproc = job->GetNoop() ? job->GetSubProc() : 0;
 
 	WriteUserLog ulog;
-		// Disabling the global log (EventLog) fixes the main problem
-		// in gittrac #934 (if you can't write to the global log the
-		// write to the user log also fails, and DAGMan hangs
-		// waiting for the event that wasn't written).
-	ulog.setEnableGlobalLog( false );
 	ulog.setUseCLASSAD( 0 );
 
 	debug_printf( DEBUG_QUIET,

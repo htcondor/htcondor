@@ -748,7 +748,6 @@ export CMAKE_PREFIX_PATH=/usr
 cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DNO_PHONE_HOME:BOOL=TRUE \
        -DUW_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if %bundle_uw_externals
@@ -795,7 +794,6 @@ cmake \
        -D_VERBOSE:BOOL=TRUE \
 %endif
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DNO_PHONE_HOME:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
@@ -1242,7 +1240,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
-%_libexecdir/condor/condor_dagman_metrics_reporter
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
@@ -1254,7 +1251,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_config_val.1.gz
 %_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
-%_mandir/man1/condor_dagman_metrics_reporter.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
 %_mandir/man1/condor_gpu_discovery.1.gz
@@ -1357,6 +1353,7 @@ rm -rf %{buildroot}
 %_bindir/condor_token_request_auto_approve
 %_bindir/condor_token_request_list
 %_bindir/condor_token_list
+%_bindir/condor_scitoken_exchange
 %_bindir/condor_drain
 %_bindir/condor_ping
 %_bindir/condor_tail
@@ -1800,7 +1797,19 @@ fi
 %endif
 
 %changelog
-* Thu Sep 04 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
+* Tue Sep 17 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.3-1
+- TOKEN and SSL authentication methods are now enabled by default
+- The job and global event logs use ISO 8601 formatted dates by default
+- Added Google Drive multifile transfer plugin
+- Added upload capability to Box multifile transfer plugin
+- Added Python bindings to submit a DAG
+- Python 'JobEventLog' can be pickled to facilitate intermittent readers
+- 2x matchmaking speed for partitionable slots with simple START expressions
+- Improved the performance of the condor_schedd under heavy load
+- Reduced the memory footprint of condor_dagman
+- Initial implementation to record the circumstances of a job's termination
+
+* Thu Sep 05 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
 - Fixed two performance problems on Windows
 - Fixed Java universe on Debian and Ubuntu systems
 - Added two knobs to improve performance on large scale pools

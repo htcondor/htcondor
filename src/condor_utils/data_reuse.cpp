@@ -46,9 +46,10 @@ DataReuseDirectory::~DataReuseDirectory()
 DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 	m_owner(owner),
 	m_dirpath(dirpath),
-	m_log("condor", dircat(m_dirpath.c_str(), "use.log", m_logname), 0, 0, 0),
 	m_rlog(dircat(m_dirpath.c_str(), "use.log", m_logname))
 {
+	m_log.initialize(dircat(m_dirpath.c_str(), "use.log", m_logname), 0, 0, 0),
+
 	OpenSSL_add_all_digests();
 
 	if (m_owner) {

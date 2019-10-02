@@ -602,8 +602,10 @@ int daemon::RealStart( )
 	}
 
 	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		MSC_SUPPRESS_WARNING_FIXME(6031)
-		remove( m_after_startup_wait_for_file.Value() );
+		if (0 != remove( m_after_startup_wait_for_file.Value())) {
+			dprintf(D_ALWAYS, "Cannot remove wait-for-startup file %s\n", m_after_startup_wait_for_file.c_str());
+			// Now what?  restart?  exit?
+		}
 	}
 
 	if( m_reload_shared_port_addr_after_startup ) {

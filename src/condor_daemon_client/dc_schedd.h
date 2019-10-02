@@ -46,6 +46,10 @@ typedef enum {
 	AR_TOTALS = 2	// want totals for each possible result
 } action_result_type_t;
 
+// Callback after an impersonation token command
+//
+typedef void ImpersonationTokenCallbackType(bool success, const std::string &token, const CondorError &err,
+	void *misc_data);
 
 /** This is the Schedd-specific class derived from Daemon.  It
 	implements some of the schedd's daemonCore command interface.  
@@ -364,6 +368,15 @@ public:
 		// If no new job found, returns true with *new_job_ad=NULL
 	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg );
 
+
+		/*
+		 * Retrieve a token with someone else's identity from a remote schedd,
+		 * based on an existing session.
+		 */
+	bool requestImpersonationTokenAsync(const std::string &identity,
+		const std::vector<std::string> &authz_bounding_set, int lifetime,
+		ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -393,6 +406,11 @@ private:
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
 						CondorError * errstack );
+
+	void requestImpersonationTokenContinued(bool success, Sock *sock, CondorError *errstack,
+		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
+
+	int requestImpersonationTokenFinish(Stream *stream);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

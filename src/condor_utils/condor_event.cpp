@@ -741,178 +741,141 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 }
 
 
-// class is used to build up Usage/Request/Allocated table for each 
+// class is used to build up Usage/Request/Allocated table for each
 // Partitionable resource before we print out the table.
-class  SlotResTermSumy {
-public:
-	std::string use;
-	std::string req;
-	std::string alloc;
-	std::string assigned;
+class SlotResTermSumy {
+	public:
+		std::string use;
+		std::string req;
+		std::string alloc;
+		std::string assigned;
 };
 
-// return true if the input consts solely of digits
-static bool is_bare_integer(const char * str) {
-	if ( ! str) return false;
-	// skip all leading digits
-	while (isdigit(*str)) ++str;
-	// return true if the next char is \0, false otherwise
-	return !*str;
+typedef std::map<std::string, SlotResTermSumy, classad::CaseIgnLTStr > UsageMap;
+
+static bool is_bare_integer( const std::string & s ) {
+	if( s.empty() ) { return false; }
+
+	const char * str = s.c_str();
+	while (isdigit(*str)) { ++str; }
+	return *str == '\0';
 }
 
-// function to format the usage ClassAd for the userlog
-// The usage ClassAd should contain attrbutes that match the pattern
-// "<RES>", "Request<RES>", or "<RES>Usage", where <RES> can be
-// Cpus, Disk, Memory, or others as defined for use by the ProvisionedResources
-// attribute.
+//
+// The usage ClassAd contains attributes that match the pattern "<RES>",
+// "Request<RES>", "<RES>Usage", "<RES>AverageUsage",
+// where <RES> can be CPUs, Disk, Memory, or another resource as defined by
+// the ProvisionedResources attribute.  Note that this function does NOT use
+// the contents of that attribute.
 //
 static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 {
-	if ( ! pusageAd)
-		return;
+	if (! pusageAd) { return; }
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 
-	std::map<std::string, SlotResTermSumy*> useMap;
-	int has_fractional_mask = 0;
+	UsageMap useMap;
+	bool reqHFP = false, assignedHFP = false, allocHFP = false, useHFP = false;
+	for( auto iter = pusageAd->begin(); iter != pusageAd->end(); ++iter ) {
+		// Compute the string value.
+		std::string value;
+		classad::Value cVal;
+		double rVal, iVal;
 
-	for (classad::ClassAd::iterator iter = pusageAd->begin();
-		 iter != pusageAd->end();
-		 iter++) {
-		int ixu = (int)iter->first.size() - 5; // size "Usage" == 5
-		std::string key = "";
-		int efld = -1;
-		if (0 == iter->first.find("Request")) {
-			key = iter->first.substr(7); // size "Request" == 7
-			efld = 1;
-		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
-			efld = 0;
-			key = iter->first.substr(0,ixu);
-		} else if( iter->first.find( "Assigned" ) == 0 ) {
-			key = iter->first.substr( 8 ); // size "Assigned" == 8
-			efld = 3;
-		} else /*if (useMap[iter->first])*/ { // Allocated
-			efld = 2;
-			key = iter->first;
-		}
-
-		if (key.size() != 0) {
-			title_case(key); // capitalize it to make it consistent for map lookup.
-			SlotResTermSumy * psumy = useMap[key];
-			if ( ! psumy) {
-				psumy = new SlotResTermSumy();
-				ASSERT(psumy);
-				useMap[key] = psumy;
-				//formatstr_cat(out, "\tadded %x for key %s\n", psumy, key.c_str());
+		bool hasFractionalPart = false;
+		if( ExprTreeIsLiteral(iter->second, cVal) && cVal.IsRealValue(rVal) ) {
+			// show fractional values only if there actually *are* fractional
+			// values; format doubles with %.2f
+			if( modf( rVal, &iVal ) > 0.0 ) {
+				formatstr( value, "%.2f", rVal );
+				hasFractionalPart = true;
 			} else {
-				//formatstr_cat(out, "\tfound %x for key %s\n", psumy, key.c_str());
-			}
-			std::string val = "";
-			classad::Value cval;
-			double rval, tval;
-			if (ExprTreeIsLiteral(iter->second, cval) && cval.IsRealValue(rval)) {
-				if (modf(rval,&tval) > 0.0) {
-					// show fractional values only if there actually *are* fractional values
-					// format doubles with %.2f
-					formatstr(val, "%.2f", rval);
-					has_fractional_mask |= 1<<efld;
-				} else {
-				#if 1 
-					formatstr(val, "%lld", (long long)tval);
-				#else // for testing
-					formatstr(val, "%.2f", rval);
-					has_fractional_mask |= 1<<efld;
-				#endif
-				}
-			} else {
-				unp.Unparse(val, iter->second);
-			}
-
-
-			//formatstr_cat(out, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
-
-			switch (efld)
-			{
-				case 0: // Usage
-					psumy->use = val;
-					break;
-				case 1: // Request
-					psumy->req = val;
-					break;
-				case 2:	// Allocated
-					psumy->alloc = val;
-					break;
-				case 3: // Assigned
-					psumy->assigned = val;
-					break;
+				formatstr( value, "%lld", (long long)iVal);
 			}
 		} else {
-			std::string val = "";
-			unp.Unparse(val, iter->second);
-			formatstr_cat(out, "\t%s = %s\n", iter->first.c_str(), val.c_str());
+			unp.Unparse( value, iter->second );
+		}
+
+		// Determine the attribute name.
+		std::string resourceName;
+		std::string attributeName = iter->first;
+		if( starts_with( attributeName, "Request" ) ) {
+			resourceName = attributeName.substr(7);
+			useMap[resourceName].req = value;
+			reqHFP |= hasFractionalPart;
+		} else if( starts_with( attributeName, "Assigned" ) ) {
+			resourceName = attributeName.substr(8);
+			useMap[resourceName].assigned = value;
+			assignedHFP = hasFractionalPart;
+		} else if( ends_with( attributeName, "AverageUsage" ) ) {
+			resourceName = attributeName.substr( 0, attributeName.size() - 12 );
+			useMap[resourceName].use = value;
+			useHFP |= hasFractionalPart;
+		} else if( ends_with( attributeName, "Usage" ) ) {
+			resourceName = attributeName.substr( 0, attributeName.size() - 5 );
+			useMap[resourceName].use = value;
+			useHFP |= hasFractionalPart;
+		} else {
+			resourceName = attributeName;
+			useMap[resourceName].alloc = value;
+			allocHFP |= hasFractionalPart;
+		}
+
+		if( resourceName.empty() ) {
+			formatstr_cat( out, "\t%s = %s\n", iter->first.c_str(), value.c_str() );
 		}
 	}
-	if (useMap.empty())
-		return;
+	if( useMap.empty() ) { return; }
 
+	//
+	// Compute column widths (and fix up 'alloc' entries, I guess).
+	// Pad integer values to align with the floating point dots.
+	//
 	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0, cchAssigned = 0;
-	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
-		 it != useMap.end();
-		 ++it) {
-		SlotResTermSumy * psumy = it->second;
-		if ( ! psumy->alloc.size()) {
-			classad::ExprTree * tree = pusageAd->Lookup(it->first);
-			if (tree) {
-				unp.Unparse(psumy->alloc, tree);
-			}
-		}
-		// pad out non-fractional values for usage, request and allocation
-		// so that they align with the fractional values.  note that this code will break
-		// if the use/req/or alloc strings are something other than numbers
-		// since we are working with classads, that's possible, but not normal...
-		// if it starts to happen, we would probably have to change the values from strings to classad::value's
-		// and rework the formatting code.
-		if (has_fractional_mask & (1<<0)) { // is there fractional usage reported?
-			if (is_bare_integer(psumy->use.c_str())) { // and the value is an integer?
-				psumy->use += "   "; // pad to align to %.2f
-			}
-		}
-		if (has_fractional_mask & (1<<1)) { // is there fractional request reported?
-			if (is_bare_integer(psumy->req.c_str())) { // and the value is an integer?
-				psumy->req += "   "; // pad to align to %.2f
-			}
-		}
-		if (has_fractional_mask & (1<<2)) { // is there fractional allocation reported?
-			if (is_bare_integer(psumy->alloc.c_str())) { // and the value is an integer?
-				psumy->alloc += "   "; // pad to align to %.2f
-			}
+	for( auto & i : useMap ) {
+		SlotResTermSumy & psumy = i.second;
+		if( psumy.alloc.empty() ) {
+			classad::ExprTree * tree = pusageAd->Lookup(i.first);
+			if( tree ) { unp.Unparse( psumy.alloc, tree ); }
 		}
 
-		//formatstr_cat(out, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
-		cchRes = MAX(cchRes, (int)it->first.size());
-		cchUse = MAX(cchUse, (int)psumy->use.size());
-		cchReq = MAX(cchReq, (int)psumy->req.size());
-		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
-		cchAssigned = MAX(cchAssigned, (int)psumy->assigned.size());
+		if( useHFP && is_bare_integer(psumy.use) ) { psumy.use += "   "; }
+		if( reqHFP && is_bare_integer(psumy.req) ) { psumy.req += "   "; }
+		if( allocHFP && is_bare_integer(psumy.alloc) ) { psumy.alloc += "   "; }
+		if( assignedHFP && is_bare_integer(psumy.assigned) ) { psumy.assigned += "   "; }
+
+		cchRes = MAX(cchRes, (int)i.first.size());
+		cchUse = MAX(cchUse, (int)psumy.use.size());
+		cchReq = MAX(cchReq, (int)psumy.req.size());
+		cchAlloc = MAX(cchAlloc, (int)psumy.alloc.size());
+		cchAssigned = MAX(cchAssigned, (int)psumy.assigned.size());
 	}
 
-	MyString fmt;
-	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n", cchUse, cchReq, MAX(cchAlloc,9));
-	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "");
-	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
-	//fputs(fmt.Value(), file);
-	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
-		 it != useMap.end();
-		 ++it) {
-		SlotResTermSumy * psumy = it->second;
-		std::string lbl = it->first.c_str(); 
-		if (lbl.compare("Memory") == 0) lbl += " (MB)";
-		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
-		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str(), psumy->assigned.c_str());
-		delete psumy;
+	// Print table header.
+	MyString fString;
+	fString.formatstr( "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
+		cchUse, cchReq, MAX(cchAlloc, 9) );
+	formatstr_cat( out, fString.Value(), "Usage", "Request",
+		 cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "" );
+
+	// Print table.
+	fString.formatstr( "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
+		cchRes + 8, cchUse, cchReq, MAX(cchAlloc, 9) );
+	for( const auto & i : useMap ) {
+		if( i.first.empty() ) { continue; }
+
+		std::string label = i.first;
+		if( label == "Memory" ) { label += " (MB)"; }
+		else if( label == "Disk" ) { label += " (KB)"; }
+		// It would be nice if this weren't a special case, but we don't
+		// have a way of representing a single resource with multiple metrics.
+		else if( label == "Gpus" ) { label += " (Average)"; }
+		else if( label == "GpusMemory" ) { label += " (MB)"; }
+		const SlotResTermSumy & psumy = i.second;
+		formatstr_cat( out, fString.Value(), label.c_str(), psumy.use.c_str(),
+			psumy.req.c_str(), psumy.alloc.c_str(), psumy.assigned.c_str() );
 	}
-	//formatstr_cat(out, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
 }
 
 #ifdef DONT_EVER_SEEK

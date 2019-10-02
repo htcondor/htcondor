@@ -170,6 +170,9 @@ class Authentication {
 		// server but may succeed with a token request workflow.
 	bool shouldTryTokenRequest() const { return m_should_try_token_request; }
 
+		// Return the current global map file
+	static MapFile* getGlobalMapFile() { return global_map_file; }
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -232,6 +235,11 @@ extern char const *SUBMIT_SIDE_MATCHSESSION_FQU;
  * when using non-negotiated security sessions based on the schedd's
  * generated capabilities. */
 extern char const *NEGOTIATOR_SIDE_MATCHSESSION_FQU;
+
+/* This is the hard-coded name of the collector as seen by the schedd
+ * when using non-negotiated security sessions.
+ */
+extern char const *COLLECTOR_SIDE_MATCHSESSION_FQU;
 
 extern char const *CONDOR_CHILD_FQU;
 extern char const *CONDOR_PARENT_FQU;

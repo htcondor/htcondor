@@ -28,6 +28,8 @@
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
 
+#include <unordered_set>
+
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
 
@@ -382,6 +384,8 @@ public:
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName() const;
 
+	bool isAuthorizationInBoundingSet(const std::string &);
+
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed() const;
 
@@ -564,6 +568,7 @@ protected:
 	bool            _tried_authentication;
 	bool            _should_try_token_request{false};
 	std::string	_trust_domain;
+	std::unordered_set<std::string> m_authz_bound;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
 

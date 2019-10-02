@@ -1063,7 +1063,7 @@ parse_parent(
 	//
 	
 	static int numJoinNodes = 0;
-	bool useJoinNodes = param_boolean( "DAGMAN_USE_JOIN_NODES", false );
+	bool useJoinNodes = param_boolean( "DAGMAN_USE_JOIN_NODES", true );
 	const char * parent_type = "parent";
 
 

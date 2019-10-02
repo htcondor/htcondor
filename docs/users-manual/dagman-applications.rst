@@ -3745,16 +3745,8 @@ Workflow Metrics
 
 :index:`workflow metrics<single: workflow metrics; DAGMan>`
 
-*condor_dagman* may report workflow metrics to one or more HTTP
-servers. This capability is currently only used for workflows run under
-*Pegasus*. The reporting is disabled by setting the
-``CONDOR_DEVELOPERS`` :index:`CONDOR_DEVELOPERS` configuration
-variable to ``NONE``, or by setting the ``PEGASUS_METRICS`` environment
-variable to any value other than ``True`` (case-insensitive) or 1. The
-``dagman.out`` file will indicate whether or not metrics were reported.
-
-For every DAG, a metrics file is created independent of the reporting of
-those metrics. This metrics file is named ``<dag_file_name>.metrics``,
+For every DAG, a metrics file is created.
+This metrics file is named ``<dag_file_name>.metrics``,
 where ``<dag_file_name>`` is the name of the DAG input file. In a
 workflow with nested DAGs, each nested DAG will create its own metrics
 file.
@@ -3858,17 +3850,6 @@ directory.
 
 Note that the ``total_job_time`` value is always zero, because the
 calculation of that value has not yet been implemented.
-
-If a DAG succeeds, but the metrics reporting fails, the DAG is still
-considered successful.
-
-The metrics are reported only at the end of a DAG run. This includes
-reporting the metrics if the *condor_dagman* job is removed, or if the
-DAG drains from the queue because of being halted by a halt file.
-
-The metrics are reported by the *condor_dagman_metrics_reporter*
-executable as described in the :doc:`/man-pages/condor_dagman_metrics_reporter`
-manual page.
 
 DAGMan and Accounting Groups
 ----------------------------
