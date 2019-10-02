@@ -273,8 +273,8 @@ if (BUILD_TESTING)
 		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 
 		# Tests that require the python bindings.
-		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_echostring.pl")
+		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/cmd_curl_plugin_multifile_success.py")
 		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")

@@ -4474,7 +4474,10 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		}
 		else {
 			// no more files to send
-			s->snd_int(0,TRUE);
+			s->snd_int(static_cast<int>(TransferCommand::Finished), TRUE);
+
+			// go back to the state we were in before file transfer
+			s->set_crypto_mode(socket_default_crypto);
 
 			MyString error_desc_to_send;
 			if(!upload_success) {
@@ -4489,6 +4492,9 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
 			                error_desc_to_send.Value());
 		}
+	} else {
+		// go back to the state we were in before file transfer
+		s->set_crypto_mode(socket_default_crypto);
 	}
 
 	// Now find out whether there was an error on the receiver's
@@ -4534,9 +4540,6 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 			dprintf(D_ALWAYS,"DoUpload: (Condor error code %d, subcode %d) %s\n",hold_code,hold_subcode,error_desc);
 		}
 	}
-
-	// go back to the state we were in before file transfer
-	s->set_crypto_mode(socket_default_crypto);
 
 	// Record error information so it can be copied back through
 	// the transfer status pipe and/or observed by the caller
