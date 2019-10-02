@@ -3328,7 +3328,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		cpu_vars_list.remove("");
 		cpu_vars_list.rewind();
 		char *var = NULL;
-		while (var = cpu_vars_list.next()) {
+		while ((var = cpu_vars_list.next())) {
 			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.Length() == 0) {
 				proc_env->SetEnv(var, IntToStr(cpus));
