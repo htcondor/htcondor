@@ -6214,14 +6214,9 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
-				bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true);
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
-					std::string method = *it;
-					if (sign_s3_urls && (method == "s3")) {
-						method = "https";
-					}
 					answer += " && stringListIMember(\"";
-					answer += method;
+					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 				}
 			}

@@ -425,6 +425,7 @@ class FileTransfer final: public Service {
 	std::map<MyString, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
+	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
