@@ -104,6 +104,20 @@ def main():
 
     os.environ['CONDOR_CONFIG'] = 'base_config'
 
+    # If we are running as root, the condor_master will refuse to run unless the `condor` user
+    # exists or CONDOR_IDS is set.
+    if os.geteuid() == 0:
+        has_condor = False
+        try:
+            condor_user = pwd.getpwnam("condor")
+            has_condor = True
+        except KeyError:
+            pass
+
+        if not has_condor and ('CONDOR_IDS' not in os.environ):
+            pw_info = pwd.getpwnam("nobody")
+            os.environ['CONDOR_IDS'] = '%d:%d' % (pw_info.pw_uid, pw_info.pw_gid)
+
     os.execv("/usr/bin/perl", ["run_test.pl", os.path.join("..", "run_test.pl"), args.test])
 
 if __name__ == "__main__":
