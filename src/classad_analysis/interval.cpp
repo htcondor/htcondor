@@ -1717,7 +1717,7 @@ Union( ValueRange *vr, int index )
 			// coalesce consecutive intervals with the same indeces
 		if( miiList.Number( ) > 1 ) {
 			MultiIndexedInterval *mii_next = NULL;
-			miiList.Next( mii_curr );
+			(void) miiList.Next( mii_curr );
 			while( miiList.Next( mii_next ) ) {
 				if( mii_curr->iSet.Equals( mii_next->iSet ) ) {
 						// coalesce mii_next into mii_curr
