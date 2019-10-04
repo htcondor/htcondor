@@ -2029,13 +2029,13 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 
 	std::string token;
 	auto iter = (request_id >= 0) ? g_request_map.find(request_id) : g_request_map.end();
-	if ((request_id >= 0) && (iter == g_request_map.end())) {
+	if (iter == g_request_map.end()) {
 		error_code = 3;
 		error_string = "Request ID is not known.";
 	} else if (iter->second->getClientId() != client_id) {
 		error_code = 3;
 		error_string = "Client ID is incorrect.";
-	} else if (iter != g_request_map.end()) {
+	} else {
 		const auto &req = *(iter->second);
 		switch (req.getState()) {
 		case TokenRequest::State::Pending:
