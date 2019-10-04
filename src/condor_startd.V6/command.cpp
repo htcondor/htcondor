@@ -1181,13 +1181,6 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 // Protocol helper functions
 //////////////////////////////////////////////////////////////////////
 
-#define ABORT \
-delete req_classad;						\
-if (client_addr) free(client_addr);		\
-return_code = abort_claim(rip);		\
-if( new_dynamic_slot ) rip->change_state( delete_state );	\
-return return_code;
-
 int
 abort_claim( Resource* rip )
 {
@@ -1241,6 +1234,12 @@ abort_claim( Resource* rip )
 	return FALSE;
 }
 
+#define ABORT \
+delete req_classad;						\
+return_code = abort_claim(rip);		\
+if( new_dynamic_slot ) rip->change_state( delete_state );	\
+return return_code;
+
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
@@ -1250,7 +1249,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	int cmd;
 	float rank = 0;
 	float oldrank = 0;
-	char *client_addr = NULL;
+	std::string client_addr;
 	int interval;
 	ClaimIdParser idp(id);
 
@@ -1286,7 +1285,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// want to make an attempt to be backwards-compatibile.
 	if ( stream->code(client_addr) ) {
 		// We got the schedd addr, we must be talking to a post 6.1.11 schedd
-		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
+		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr.c_str() );
 		if( !stream->code(interval) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
 			ABORT;
@@ -1295,9 +1294,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
-		claim->client()->setaddr( client_addr );
-		free( client_addr );
-		client_addr = NULL;
+		claim->client()->setaddr( client_addr.c_str() );
 			// The schedd is asking us to preempt these claims to make
 			// the pslot it is really claiming bigger.  New in 8.1.6
 		int num_preempting = 0;
@@ -1783,8 +1780,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 
 #define ABORT \
-if( req_classad ) 	 					\
-	delete( req_classad );				\
+delete( req_classad );				\
 free( shadow_addr );					\
 return FALSE
 
