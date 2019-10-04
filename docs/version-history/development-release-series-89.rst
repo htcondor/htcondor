@@ -47,7 +47,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug where condor_ssh_to_job to a Docker Universe job landed
+   outside the container if the container had not completely started.
+   :ticket:`7246`
 
 Version 8.9.3
 -------------
