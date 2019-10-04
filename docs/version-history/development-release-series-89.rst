@@ -193,6 +193,13 @@ New Features:
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
 
+- HTCondor now sets numerous environment variables 
+  to tell the job (or libraries being used by the job) how many CPU cores
+  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
+  to allow the administrator to customize this set of environment 
+  variables.
+  :ticket:`7296`
+
 Bugs Fixed:
 
 - Fixed a bug where *condor_schedd* would not start if the history file
