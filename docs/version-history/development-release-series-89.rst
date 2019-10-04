@@ -28,6 +28,15 @@ New Features:
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
+- Added new config parameter for execute machines, 
+  CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
+  condor LD_PRELOADs into unprivileged sshd it startd a special version of
+  the linux getpwnam library call, which forces the user's shell to 
+  /bin/bash and the home directory to the scratch directory.  This allows
+  condor_ssh_to_job to work on sites that don't create login shells for
+  slots users, or who want to run as nobody.
+  :ticket:`7260`
+
 - The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
   which creates a Submit description from a DAG file, now supports keyword
   arguments (in addition to positional arguments), and the ``options`` argument
