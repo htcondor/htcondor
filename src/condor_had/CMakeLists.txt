@@ -16,18 +16,15 @@
  # 
  ############################################################### 
 
-if (NOT WIN_EXEC_NODE_ONLY)
+condor_selective_glob("StateMachine.*;HAD.*;Utils.*" HADSrcs)
 
-	condor_selective_glob("StateMachine.*;HAD.*;Utils.*" HADSrcs)
+condor_exe(condor_had "${HADSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" ON)
 
-	condor_exe(condor_had "${HADSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" ON)
+condor_selective_glob("AbstractReplicatorStateMachine.*;ReplicatorStateMachine.*;HAD_Version.*;Utils.*;Replication.*;FilesOperations.*" RepSrcs)
 
-	condor_selective_glob("AbstractReplicatorStateMachine.*;ReplicatorStateMachine.*;HAD_Version.*;Utils.*;Replication.*;FilesOperations.*" RepSrcs)
+condor_exe(condor_replication "${RepSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
 
-	condor_exe(condor_replication "${RepSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
+condor_selective_glob("BaseReplicaTransferer.*;UploadReplicaTransferer.*;DownloadReplicaTransferer.*;Utils.*;Transferer.*;FilesOperations.*" TransferSrcs)
 
-	condor_selective_glob("BaseReplicaTransferer.*;UploadReplicaTransferer.*;DownloadReplicaTransferer.*;Utils.*;Transferer.*;FilesOperations.*" TransferSrcs)
+condor_exe(condor_transferer "${TransferSrcs}" ${C_LIBEXEC} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
 
-	condor_exe(condor_transferer "${TransferSrcs}" ${C_LIBEXEC} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
-
-endif(NOT WIN_EXEC_NODE_ONLY)

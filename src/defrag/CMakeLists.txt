@@ -16,10 +16,6 @@
  # 
  ############################################################### 
 
-if (NOT WIN_EXEC_NODE_ONLY)
 
-	condor_selective_glob( "defrag*" DEFRAG )
-
-	condor_exe( condor_defrag "${DEFRAG}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
-
-endif()
+condor_selective_glob( "defrag*" DEFRAG )
+condor_exe( condor_defrag "${DEFRAG}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )

@@ -317,8 +317,6 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	file( WRITE ${WINVER} "#define CONDOR_VERSION \"${PACKAGE_VERSION}\"\n")
 	#file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
-	option(WIN_EXEC_NODE_ONLY "Minimal Package Win exec node only" OFF)
-
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
