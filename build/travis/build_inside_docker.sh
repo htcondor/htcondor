@@ -8,10 +8,10 @@ set -eu
 
 # Create the `build` group and user.
 if ! id -g build > /dev/null 2>&1; then
-    addgroup -g ${BUILD_GID:-99}
+    groupadd -g ${BUILD_GID:-99} build
 fi
 if ! id -u build > /dev/null 2>&1; then
-    adduser build -u ${BUILD_UID:-99} -g ${BUILD_GID:-99}
+    useradd -u ${BUILD_UID:-99} -g ${BUILD_GID:-99} build
 fi
 
 mv bld_external bld_external_ubuntu
