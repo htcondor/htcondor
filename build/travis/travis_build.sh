@@ -120,7 +120,7 @@ if [[ -z $DOCKER_IMAGE ]]; then
     time make -j2 install && (time ctest -j8 -L travis || cat Testing/Temporary/LastTest.log)
 else
     touch bld_external_rhel bld_external
-    sudo docker run --rm=true -w "`pwd`" -v "`pwd`:`pwd`" $DOCKER_IMAGE /bin/bash -x "$progdir/build_inside_docker.sh"
+    sudo docker run --user `id -u`:`id -g` --rm=true -w "`pwd`" -v "`pwd`:`pwd`" $DOCKER_IMAGE /bin/bash -x "$progdir/build_inside_docker.sh"
 fi
 
 # vim:et:sw=4:sts=4:ts=8
