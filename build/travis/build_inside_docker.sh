@@ -35,7 +35,7 @@ set -eu
 time cmake ${CMAKE_OPTIONS[@]} "-DCMAKE_INSTALL_PREFIX=$PWD/release_dir"
 time make -j2 externals
 time make -j2 install
-ctest -j8 -L travis || (cat Testing/Temporary/LastTest.log && exit 1)
+ctest -j4 --timeout 240 -L travis || (cat Testing/Temporary/LastTest.log && exit 1)
 __END__
 chmod +x "$progdir/cmake_driver_script.sh"
 

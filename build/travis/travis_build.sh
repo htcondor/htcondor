@@ -93,7 +93,7 @@ export DOCKER_IMAGE=$DOCKER_IMAGE
 export BUILD_UID=$(id -u)
 export BUILD_GID=$(id -g)
 __END__
-trap 'rm -f "$progdir/env.sh"' ERR EXIT
+trap 'rm -f "$progdir/env.sh" && rm -f "$progdir/cmake_driver_script.sh"' ERR EXIT
 source "$progdir/env.sh"
 
 
