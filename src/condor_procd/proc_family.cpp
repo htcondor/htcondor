@@ -422,9 +422,9 @@ ProcFamily::count_tasks_cgroup()
 	if (*handle) {
 		cgroup_get_task_end(handle);
 	}
-	if (handle) {
-		free(handle);
-	}
+
+	free(handle);
+
 	if (err) {
 		return -err;
 	}
