@@ -40,6 +40,6 @@ __END__
 chmod +x "$progdir/cmake_driver_script.sh"
 
 # Drop privileges and do the actual build
-exec runuser -u build ./cmake_driver_script.sh
+exec runuser -u build "$progdir/cmake_driver_script.sh"
 
 # vim:et:sw=4:sts=4:ts=8
