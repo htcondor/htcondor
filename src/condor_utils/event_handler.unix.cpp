@@ -159,6 +159,7 @@ EventHandler::de_install()
 
 	for( i=0; i<N_POSIX_SIGS; i++ ) {
 		signo = next_sig();
+		if (signo < 0) continue;
 		if( sigismember(&mask,signo) ) {
 			if( sigaction(signo,&o_action[i],0) < 0 ) {
 				perror( "sigaction" );
