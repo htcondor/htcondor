@@ -30,6 +30,10 @@ Release Notes:
 
 .. HTCondor version 8.9.4 released on Month Date, 2019.
 
+- The format of the aborted event has changed.  This will
+  only affect you if you're not using one the readers provided by HTCondor.
+  :ticket:`7191`
+
 New Features:
 
 - Added a new tool, :ref:`condor_evicted_files`,
@@ -45,10 +49,10 @@ New Features:
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
-- Added new config parameter for execute machines, 
+- Added new config parameter for execute machines,
   CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
   condor LD_PRELOADs into unprivileged sshd it startd a special version of
-  the linux getpwnam library call, which forces the user's shell to 
+  the linux getpwnam library call, which forces the user's shell to
   /bin/bash and the home directory to the scratch directory.  This allows
   condor_ssh_to_job to work on sites that don't create login shells for
   slots users, or who want to run as nobody.
