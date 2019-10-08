@@ -36,6 +36,10 @@ Release Notes:
 
 New Features:
 
+- HTCondor now supports secure download and upload to and from S3.  See
+  the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
+  :ticket:`7289`
+
 - Added ``erase_output_and_err​or_on_restart`` as a new submit command.  It
   defaults to true; if set to false, and ``when_to_transfer_output`` is
   ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
