@@ -22,4 +22,3 @@ x86_64_Fedora27
 # We might as well build on CentOS and SL
 x86_64_CentOS7
 x86_CentOS7
-x86_64_SL7
