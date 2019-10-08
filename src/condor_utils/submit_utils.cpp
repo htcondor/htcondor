@@ -8856,7 +8856,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 		// ignore keys that are in the 'omit' set. They should never be copied into the digest.
 		if (omit_knobs.find(key) != omit_knobs.end()) continue;
 
-		if (key && key[0] == '$') continue; // dont dump meta params.
+		if (key[0] == '$') continue; // dont dump meta params.
 
 		bool has_pending_expansions = false; // assume that we will not have unexpanded $() macros for the value
 
