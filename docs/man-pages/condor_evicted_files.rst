@@ -4,8 +4,8 @@
 ======================
 
 Inspect the file(s) that HTCondor is holding on to as a result of a job
-being evicted when ``when_to_transfer_files = TRUE``, or checkpointing
-when ``CheckpointExitCode`` is set.
+being evicted when ``when_to_transfer_output = ON_EXIT_OR_EVICT``,
+or checkpointing when ``CheckpointExitCode`` is set.
 
 :index:`condor_evicted_files<single: condor_evicted_files; HTCondor commands>`
 :index:`condor_evicted_files command`

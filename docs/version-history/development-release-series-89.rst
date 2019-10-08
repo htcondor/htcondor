@@ -36,10 +36,19 @@ Release Notes:
 
 New Features:
 
+- Added ``erase_output_and_err​or_on_restart`` as a new submit command.  It
+  defaults to true; if set to false, and ``when_to_transfer_output`` is
+  ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
+  when the job restarts, instead of erasing them (and starting the logs
+  over).  This may make the output and error logs more useful when the
+  job self-checkpoints.
+  :ticket:`7189`
+
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
-  a result of a job being evicted when ``when_to_transfer_files = TRUE``,
-  or checkpointing when ``CheckpointExitCode`` is set).
+  a result of a job being evicted when
+  ``when_to_transfer_output = ON_EXIT_OR_EVICT``, or checkpointing when
+  ``CheckpointExitCode`` is set).
   :ticket:`7038`
 
 - GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
