@@ -115,6 +115,7 @@ EventHandler::install()
 
 	for( i=0; i<N_POSIX_SIGS; i++ ) {
 		signo = next_sig();
+		if (signo < 0) continue;
 		if( sigismember(&mask,signo) ) {
 			// explicit type cast to eliminate type check warning  -- Rajesh
 			// we should move this to be a #define symbol...
