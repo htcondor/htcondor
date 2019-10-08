@@ -255,6 +255,8 @@ second-to-last step.
 If you'd like step-by-step instructions for creating a HTCondor-in-the-Cloud,
 see :ref:`condor_in_the_cloud`.
 
+You can skip to :ref:`configure_condor_annex` once you've completed these steps.
+
 .. _obtain_an_access_key:
 
 Obtaining an Access Key
