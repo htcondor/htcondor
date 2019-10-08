@@ -77,9 +77,15 @@ New Features:
 
 Bugs Fixed:
 
--  Fixed a bug where condor_ssh_to_job to a Docker Universe job landed
+-  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
    outside the container if the container had not completely started.
    :ticket:`7246`
+
+- Fixed a bug where Docker universe jobs were always hard-killed (sent
+  SIGKILL).  The appropriate signals are now being sent for hold, remove,
+  and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
+  to shut down cleanly.
+  :ticket:`7247`
 
 Version 8.9.3
 -------------
