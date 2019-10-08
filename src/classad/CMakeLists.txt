@@ -16,13 +16,8 @@
  # 
  ############################################################### 
  
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/classad/classad_stl.h.in ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp)
-# only update config.h if it is necessary b/c it causes massive rebuilding.
-exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h )
- 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${BOOST_INCLUDE})
 
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
@@ -49,8 +44,6 @@ if (HAVE_LIBDL)
 	set (DL_FOUND -ldl)
 endif (HAVE_LIBDL)
 
-dprint("classad_BOOST_INCLUDE=${BOOST_INCLUDE}")
-
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
 		-DCLASSAD_VERSION_MAJOR=${CMAKE_MATCH_1}
@@ -59,9 +52,7 @@ if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 endif()
 
 file( GLOB Headers classad/*.h )
-set( Headers "${Headers};${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h" )
 
-##
 #####################################################################
 
 #####################################################################
@@ -139,13 +130,6 @@ if (NOT PROPER)
   # have a dependency here so we build pcre before classads
   if ( DARWIN AND PCRE_REF)
 	add_dependencies( classad ${PCRE_REF} )
-  endif()
-
-  if (BOOST_REF)
-	  add_dependencies( classads ${BOOST_REF} )
-	  if ( LINUX OR DARWIN )
-		  add_dependencies( classad ${BOOST_REF} )
-	  endif()
   endif()
 
   if (NOT WINDOWS)

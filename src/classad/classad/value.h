@@ -23,7 +23,7 @@
 
 #include "classad/common.h"
 #include "classad/util.h"
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 
 namespace classad {
 

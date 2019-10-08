@@ -21,7 +21,7 @@
 #ifndef __CLASSAD_EXPR_TREE_H__
 #define __CLASSAD_EXPR_TREE_H__
 
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include "classad/common.h"
 #include "classad/value.h"
 

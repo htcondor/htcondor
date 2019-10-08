@@ -18,41 +18,21 @@
  ***************************************************************/
 
 
-#ifndef __CLASSAD_CLASSAD_STL_H__
-#define __CLASSAD_CLASSAD_STL_H__
+#ifndef __CLASSAD_CLASSAD_CONTAINERS_H__
+#define __CLASSAD_CLASSAD_CONTAINERS_H__
 
 #include <map>
 #include <list>
 
-#cmakedefine PREFER_CPP11
-#cmakedefine PREFER_TR1
-
-#ifdef PREFER_CPP11
-	#include <memory>
-	#include <unordered_map>
+#include <memory>
+#include <unordered_map>
 	
-	#define classad_unordered std::unordered_map
-	#define classad_weak_ptr std::weak_ptr
-	#define classad_shared_ptr std::shared_ptr
-
-#elif defined(PREFER_TR1)
-	#include <tr1/memory>
-	#include <tr1/unordered_map>
-
-	#define classad_unordered std::tr1::unordered_map
-	#define classad_weak_ptr std::tr1::weak_ptr
-	#define classad_shared_ptr std::tr1::shared_ptr 
-#else
-	#include <boost/shared_ptr.hpp>
-	#include <boost/weak_ptr.hpp>
-	#include <boost/unordered_map.hpp>
-
-	#define classad_unordered boost::unordered_map
-	#define classad_weak_ptr boost::weak_ptr
-	#define classad_shared_ptr boost::shared_ptr
-#endif
+// Should these be typedefs?
+#define classad_unordered std::unordered_map
+#define classad_weak_ptr std::weak_ptr
+#define classad_shared_ptr std::shared_ptr
 
 #define classad_map   std::map 
 #define classad_slist std::list
 
-#endif /* __CLASSAD_CLASSAD_STL_H__ */
+#endif /* __CLASSAD_CLASSAD_CONTAINERS_H__ */
