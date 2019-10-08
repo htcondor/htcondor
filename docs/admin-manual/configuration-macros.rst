@@ -981,6 +981,15 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration macro first appeared in version 8.4.11. To restore the
     previous behavior, set this value to ``False``.)
 
+``SIGN_S3_URLS`` :index:`SIGN_S3_URLS`
+    A boolean value that, when ``True``, tells HTCondor to convert ``s3://``
+    URLs into pre-signed ``https://`` URLs.  This allows execute nodes to
+    download from or upload to secure S3 buckets without access to the user's
+    API tokens, which remain on the submit node at all times.  This value
+    defaults to TRUE but can be disabled if the administrator has already
+    provided an ``s3://`` plug-in.  This value must be set on both the submit
+    node and on the execute node.
+
 Daemon Logging Configuration File Entries
 -----------------------------------------
 

@@ -1108,6 +1108,32 @@ FILE TRANSFER COMMANDS
     For vanilla and vm universe jobs only, a file may be specified by
     giving a URL, instead of a file name. The implementation for URL
     transfers requires both configuration and available plug-in.
+
+    If you have a plugin which handles ``https://`` URLs (and HTCondor
+    ships with one enabled), HTCondor supports pre-signing S3 URLs.  This
+    allows you to specify S3 URLs for this command, for
+    ``transfer_output_remaps``, and for ``output_destination``.  By
+    pre-signing the URLs on the submit node, HTCondor avoids transferring
+    your S3 credentials to the execute node.  You must specify
+    ``aws_access_key_id_file`` and ``aws_secret_access_key_file``; you may
+    specify ``aws_region``, if necessary; see below.  To use the S3 service
+    provided by AWS, use S3 URLs of the following forms:
+
+    ::
+
+        # For older buckets that aren't region-specific.
+        s3://<bucket>/<key>
+        # For newer, region-specific buckets.
+        s3://<bucket>.s3-<region>.amazonaws.com/<key>
+
+    To use other S3 services, where ``<host>`` must contain a ``.``:
+
+    ::
+
+        s3://<host>/<key>
+        # If necessary
+        aws_region = <region>
+
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
  transfer_output_files = < file1,file2,file... >
@@ -1206,6 +1232,20 @@ FILE TRANSFER COMMANDS
     output files transferred back to the submit machine are
     automatically sent back out again as input files if the job
     restarts.
+
+ aws_access_key_id_file
+    Required if you specify an S3 URL, this command specifies the file containing
+    the access key ID (and only the access key ID) used to pre-sign the
+    S3 URLs.  Required.
+
+ aws_secret_access_key_file
+    Required if you specify an S3 URL, this command specifies the file containing
+    the secret access key (and only the secret access key) used to
+    pre-sign the S3 URLs.
+
+ aws_region
+    Optional if you specify an S3 URL (and ignored otherwise), this command
+    specifies the region to use if one is not specified in the URL.
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 

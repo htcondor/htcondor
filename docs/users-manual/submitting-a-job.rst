@@ -1636,6 +1636,8 @@ dealing with the transfer of files.
     #. If the write of the file on the submit machine fails, for example
        because the system is out of disk space.
 
+.. _file_transfer_using_a_url:
+
 File Transfer Using a URL
 '''''''''''''''''''''''''
 
@@ -1716,6 +1718,39 @@ following in the submit file:
 ::
 
     transfer_input_files = cred+https://download.com/bar
+
+**Transferring files to and from S3**
+
+Securely downloading a file from, or uploading a file to, Amazon's Simple
+Storage Service (S3) requires a two-part credential, the "access key ID"
+and the "secret key ID".  To reduce the risk of transferring these tokens
+from the submit node to the execute node, HTCondor can instead use them
+on the submit node to construct pre-signed ``https`` URLs that temporarily allow
+the bearer access to the file specified in the URL.  Those URLs are then
+encrypted for transfer to the execute node, which downloads the files using
+its ``https`` plug-in.  To make use of this feature, specify a file containing
+your access key ID (and nothing else), a file containing your secret access
+key (and nothing else), and one or more S3 URLs in one of three forms:
+
+::
+
+    aws_access_key_id_file = /home/example/secrets/accessKeyID
+    aws_secret_access_key_file = /home/example/secrets/secretAccessKey
+    # For old, non-region-specific buckets.
+    transfer_input_files = s3://<bucket-name>/<key-name>,
+    # or, for new, region-specific buckets:
+    transfer_input_files = https://<bucket-name>.s3-<region>.amazonaws.com/<key>
+    # or, for non-AWS services with an S3 API; <host> must contain a dot:
+    transfer_input_files = https://<host>/<key>
+    # Optionally, specify a region for S3 URLs which don't include one:
+    aws_region = <region>
+
+You may also specify an S3 URL (where instead of a ``key``, you're specifying
+a ``prefix``) for the ``output_destination`` command.  The ``aws_region``
+command may also be used to specify a region for S3 URLs which don't
+include one (even for non-AWS services).
+
+You may also use S3 URLs in ``transfer_output_remaps``.
 
 Requirements and Rank for File Transfer
 '''''''''''''''''''''''''''''''''''''''
