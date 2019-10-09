@@ -2391,7 +2391,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						classad_shared_ptr<classad::ExprList> exprlist;
 						value.IsSListValue(exprlist);
 						std::vector<std::string> retrieved_files;
-						for (auto list_entry : (*exprlist)) {
+						for (auto &list_entry : (*exprlist)) {
 							classad::Value file_ad_value;
 							if (!list_entry->Evaluate(file_ad_value)) {
 								dprintf(D_FULLDEBUG, "Failed to evaluate list entry.\n");
@@ -2436,10 +2436,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", filename.c_str());
 							retrieved_files.push_back(filename);
 						}
-						classad::ExprList retrieved_list;
-						for (auto file : retrieved_files) {
+						std::unique_ptr<classad::ExprList> retrieved_list(new classad::ExprList());
+						for (const auto &file : retrieved_files) {
 							classad::ExprTree *expr = classad::Literal::MakeString(file);
-							retrieved_list.push_back(expr);
+							retrieved_list->push_back(expr);
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
 							0, [](uint64_t val, ReuseInfo &info) {return info.size() + val;});
@@ -2452,9 +2452,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								dprintf(D_FULLDEBUG, "Failed to reserve space for data reuse:"
 									" %s\n", err.getFullText().c_str());
 								retrieved_files.clear();
+								reuse_info.clear();
 							}
 						}
-						ad.Insert("ReuseList", retrieved_list.Copy());
+						ad.Insert("ReuseList", retrieved_list.release());
 						rc = 0;
 					}
 				}
