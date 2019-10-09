@@ -1293,7 +1293,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 				}
 			}
 			else {
-				context->EvaluateAttr( attr, c_val );
+				(void) context->EvaluateAttr( attr, c_val );
 			}
 			vt.SetValue( col, row, c_val );
 		}
