@@ -47,9 +47,10 @@ DataReuseDirectory::~DataReuseDirectory()
 DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 	m_owner(owner),
 	m_dirpath(dirpath),
-	m_rlog(dircat(m_dirpath.c_str(), "use.log", m_logname))
+	m_state_name(dircat(m_dirpath.c_str(), "use.log", m_logname))
 {
-	m_log.initialize(dircat(m_dirpath.c_str(), "use.log", m_logname), 0, 0, 0),
+	m_log.initialize(m_state_name.c_str(), 0, 0, 0),
+	m_rlog.initialize(m_state_name.c_str(), false, false, false);
 
 	OpenSSL_add_all_digests();
 
@@ -250,6 +251,18 @@ bool
 DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 {
 	if (!sentry.acquired()) {return false;}
+
+	struct stat stat_buf;
+	{
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		if (-1 == stat(m_state_name.c_str(), &stat_buf)) {
+			err.pushf("DataReuse", 18, "Failed to stat the state file: %s.", strerror(errno));
+			return false;
+		}
+	}
+	if (0 == stat_buf.st_size) {
+		return true;
+	}
 
 	bool all_done = false;
 	do {
@@ -502,10 +515,9 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
         dest_tmp_fname.reserve(dest_fname_template.size() + 1);
         strcpy(&dest_tmp_fname[0], dest_fname_template.c_str());
 	int dest_fd = -1;
-	{
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-                dest_fd = condor_mkstemp(&dest_tmp_fname[0]);
-	}
+	TemporaryPrivSentry priv_sentry(PRIV_CONDOR);
+	dest_fd = condor_mkstemp(&dest_tmp_fname[0]);
+
 	if (dest_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
 			dest_fname.c_str(), strerror(errno));
@@ -560,7 +572,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	}
 	auto retval = rename(&dest_tmp_fname[0], dest_fname.c_str());
 	if (-1 == retval) {
-		err.pushf("DataReuse", errno, "Failed to rename reusable file to final filename.");
+		err.pushf("DataReuse", errno, "Failed to rename temp reuse file %s to final filename %s: %s.", &dest_tmp_fname[0], dest_fname.c_str(), strerror(errno));
 		unlink(&dest_tmp_fname[0]);
 		return false;
 	}

@@ -153,6 +153,7 @@ private:
 	std::string m_dirpath;
 	MyString m_logname;
 
+	std::string m_state_name; // Pathname of the state file.
 	WriteUserLog m_log;
 	ReadUserLog m_rlog;
 
