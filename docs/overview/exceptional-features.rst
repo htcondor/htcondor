@@ -12,35 +12,32 @@ Exceptional Features
     HTCondor can be configured to use strong authentication and
     encryption between the services on remote machines used to manage
     jobs.
- No Changes Necessary to User's Source Code.
+ No Changes Necessary to User's Source Code
     No special programming is required to use HTCondor. HTCondor is able
-    to run non-interactive programs. The checkpoint and migration of
-    programs by HTCondor is transparent and automatic, as is the use of
-    remote system calls. If these facilities are desired, the user only
-    re-links the program. The code is neither recompiled nor changed.
- Pools of Machines can be joined Together.
+    to run non-interactive programs.
+ Pools of Machines can be Joined Together
     Flocking is a feature of HTCondor that allows jobs submitted within
     a first pool of HTCondor machines to execute on a second pool. The
     mechanism is flexible, following requests from the job submission,
     while allowing the second pool, or a subset of machines within the
     second pool to set policies over the conditions under which jobs are
     executed.
- Jobs can be Ordered.
+ Jobs Can Be Ordered
     The ordering of job execution required by dependencies among jobs in
     a set is easily handled. The set of jobs is specified using a
     directed acyclic graph, where each job is a node in the graph. Jobs
     are submitted to HTCondor following the dependencies given by the
     graph.
- HTCondor can use foreign resources, from a Grid, or a Cloud or a Supercomputer allocation
+ HTCondor Can Use Foreign Resources, from a Grid, or a Cloud, or a Supercomputer Allocation
     The technique of glidein allows jobs submitted to HTCondor to be
     executed on grid machines in various locations worldwide.
- Sensitive to the Desires of Machine Owners.
+ Sensitive to the Desires of Machine Owners
     The owner of a machine has complete priority over the use of the
     machine. An owner is generally happy to let others compute on the
     machine while it is idle, but wants it back promptly upon returning.
     The owner does not want to take special action to regain control.
     HTCondor handles this automatically.
- Flexible policy mechanisms.
+ Flexible Policy Mechanisms
     The ClassAd mechanism :index:`ClassAd`\ in HTCondor provides
     an extremely flexible, expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
