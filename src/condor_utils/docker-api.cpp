@@ -16,6 +16,7 @@
 #include <sys/un.h>
 #endif
 
+
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
 static int run_docker_command(const ArgList &args,
@@ -218,6 +219,14 @@ int DockerAPI::createContainer(
 		return -9;
 	}
 
+#ifdef ALLOW_DOCKER_RUN_AS_ROOT
+	if (param_boolean("DOCKER_RUN_AS_ROOT", false)) {
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		uid = gid = 0;
+		// The scratch directory is 700, so we'll at least need 0755 to run
+		chmod(".", 0755);
+	}
+#endif
 	runArgs.AppendArg("--user");
 	std::string uidgidarg;
 	formatstr(uidgidarg, "%d:%d", uid, gid);
