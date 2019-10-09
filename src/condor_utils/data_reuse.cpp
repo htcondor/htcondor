@@ -576,7 +576,6 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 		return false;
 	}
 
-	m_contents.push_back(std::move(new_entry));
 	return true;
 }
 
