@@ -3566,11 +3566,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	}
 
 	std::vector<ReuseInfo> reuse_info;
-	std::string tag, domain;
-	if (jobAd.EvaluateAttrString(ATTR_OWNER, tag) && param(domain, "UID_DOMAIN") \
-		&& !domain.empty())
+	std::string tag;
+	if (jobAd.EvaluateAttrString(ATTR_USER, tag))
 	{
-		tag = tag + "@" + domain;
 		dprintf(D_FULLDEBUG, "DoUpload: Tag to use for data reuse: %s\n", tag.c_str());
 	} else {
 		tag = "";
