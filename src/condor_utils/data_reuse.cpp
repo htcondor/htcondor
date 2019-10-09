@@ -26,6 +26,7 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "directory_util.h"
+#include "condor_mkstemp.h"
 
 #include <stdio.h>
 
@@ -476,10 +477,14 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 
 	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size));
 	std::string dest_fname = new_entry->fname();
+        auto dest_fname_template = dest_fname + ".XXXXXX";
+        std::vector<char> dest_tmp_fname;
+        dest_tmp_fname.reserve(dest_fname_template.size() + 1);
+        strcpy(&dest_tmp_fname[0], dest_fname_template.c_str());
 	int dest_fd = -1;
 	{
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		dest_fd = safe_open_wrapper(dest_fname.c_str(), O_TRUNC | O_CREAT | O_WRONLY);
+                dest_fd = condor_mkstemp(&dest_tmp_fname[0]);
 	}
 	if (dest_fd == -1) {
 		err.pushf("DataReuse", errno, "Unable to open cache file destination (%s): %s",
@@ -510,6 +515,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 		err.pushf("DataReuse", errno, "Failure when copying the file to cache directory: %s",
 			strerror(errno));
 		close(dest_fd);
+		unlink(&dest_tmp_fname[0]);
 		close(source_fd);
 		EVP_MD_CTX_destroy(mdctx);
 		return false;
@@ -529,6 +535,13 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	}
 	if (strcmp(&computed_checksum[0], checksum.c_str())) {
 		err.pushf("DataReuse", 11, "Source file checksum does not match expected one.");
+		unlink(&dest_tmp_fname[0]);
+		return false;
+	}
+	auto retval = rename(&dest_tmp_fname[0], dest_fname.c_str());
+	if (-1 == retval) {
+		err.pushf("DataReuse", errno, "Failed to rename reusable file to final filename.");
+		unlink(&dest_tmp_fname[0]);
 		return false;
 	}
 
@@ -539,6 +552,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	event.setChecksum(checksum);
 	if (!m_log.writeEvent(&event)) {
 		err.pushf("DataReuse", 3, "Failed to write out file complete event.");
+		unlink(dest_fname.c_str());
 		return false;
 	}
 
