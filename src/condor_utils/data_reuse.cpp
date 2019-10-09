@@ -142,25 +142,35 @@ DataReuseDirectory::LockLog(CondorError &err)
 
 
 std::string
-DataReuseDirectory::FileEntry::fname() const
+DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
+	const std::string &checksum_type,
+	const std::string &checksum,
+	const std::string &tag)
 {
 	MyString hash_dir;
-	dircat(m_parent.m_dirpath.c_str(), m_checksum_type.c_str(), hash_dir);
+	dircat(dirpath.c_str(), checksum_type.c_str(), hash_dir);
 
 	char hash_substring[3];
 	hash_substring[2] = '\0';
-	hash_substring[0] = m_checksum[0];
-	hash_substring[1] = m_checksum[1];
+	hash_substring[0] = checksum[0];
+	hash_substring[1] = checksum[1];
 
 	MyString file_dir;
 	dircat(hash_dir.c_str(), hash_substring, file_dir);
 
 	MyString fname;
-	std::string hash_name(m_checksum.c_str() + 2, m_checksum.size()-2);
-	hash_name += "." + m_tag;
+	std::string hash_name(checksum.c_str() + 2, checksum.size()-2);
+	hash_name += "." + tag;
 	dircat(file_dir.c_str(), hash_name.c_str(), fname);
 
 	return std::string(fname.c_str());
+}
+
+
+std::string
+DataReuseDirectory::FileEntry::fname() const
+{
+	return fname(m_parent.m_dirpath, m_checksum_type, m_checksum, m_tag);
 }
 
 
@@ -336,11 +346,14 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getUUID().c_str());
 			return false;
 		}
+		std::string fname = FileEntry::fname(m_dirpath, comEvent.getChecksumType(),
+			comEvent.getChecksum(), iter->second->getTag());
 		if (iter->second->getReservedSpace() < comEvent.getSize()) {
 			dprintf(D_FAILURE, "File completed with size %lu, which is larger than the space"
 				" reservation size.\n", comEvent.getSize());
 			err.pushf("DataReuse", 12, "File completed with size %lu, which is larger than the space"
 				" reservation size.", comEvent.getSize());
+			unlink(fname.c_str());
 			return false;
 		}
 		auto event_time = std::chrono::system_clock::from_time_t(event.GetEventclock());
@@ -355,6 +368,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getChecksumType().c_str(), iter->second->getTag().c_str(),
 				event.GetEventclock(), comEvent.getUUID().c_str(),
 				std::chrono::system_clock::to_time_t(iter->second->getExpirationTime()));
+			unlink(fname.c_str());
 			return false;
 		}
 		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());

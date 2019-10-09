@@ -94,6 +94,7 @@ private:
 		const std::string &checksum() const {return m_checksum;}
 		const std::string &checksum_type() const {return m_checksum_type;}
 		const std::string &tag() const {return m_tag;}
+		static std::string fname(const std::string &dirpath, const std::string &checksum_type, const std::string &checksum, const std::string &tag);
 		std::string fname() const;
 		time_t last_use() const {return m_last_use;}
 		void update_last_use(time_t current) {m_last_use = current > m_last_use ? current : m_last_use;}
