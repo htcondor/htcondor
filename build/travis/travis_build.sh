@@ -90,6 +90,8 @@ export RPM_DEPENDENCIES=(
 
 export DOCKER_IMAGE=$DOCKER_IMAGE
 
+export CONDOR_SRC=${PWD}
+
 export BUILD_UID=$(id -u)
 export BUILD_GID=$(id -g)
 __END__
