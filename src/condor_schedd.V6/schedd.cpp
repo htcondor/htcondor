@@ -1062,7 +1062,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
+		dprintf (dprint_level, "Changed attribute: %s = %g\n", ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 	if (want_dprintf)
