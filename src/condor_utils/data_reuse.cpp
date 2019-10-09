@@ -435,6 +435,12 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	const std::string &checksum_type, const std::string &uuid,
 	CondorError &err)
 {
+	if (!IsChecksumTypeSupported(checksum_type)) {
+		err.pushf("DataReuse", 17, "Checksum type %s is not supported.",
+			checksum_type.c_str());
+		return false;
+	}
+
 	auto md = EVP_get_digestbyname(checksum_type.c_str());
 	if (!md) {
 		err.pushf("DataReuse", 9, "Failed to find impelmentation of checksum type %s.",
@@ -651,6 +657,13 @@ bool
 DataReuseDirectory::RetrieveFile(const std::string &destination, const std::string &checksum,
 	const std::string &checksum_type, const std::string &tag, CondorError &err)
 {
+	if (!IsChecksumTypeSupported(checksum_type)) {
+		err.pushf("DataReuse", 17, "Checksum type %s is not supported.",
+			checksum_type.c_str());
+		return false;
+	}
+
+
 	LogSentry sentry = LockLog(err);
 	if (!sentry.acquired()) {
 		return false;

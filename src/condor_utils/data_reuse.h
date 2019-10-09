@@ -60,6 +60,8 @@ public:
 		const std::string &checksum_type, const std::string &tag,
 		CondorError &err);
 
+	static bool IsChecksumTypeSupported(const std::string &type) {return type == "sha256";}
+
 private:
 	class LogSentry {
 	public:
