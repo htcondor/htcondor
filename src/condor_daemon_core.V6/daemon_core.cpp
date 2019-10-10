@@ -5667,7 +5667,7 @@ REGISTER_FAMILY_DONE:
 		runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
 
-	runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+	(void) dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
 
 	return success;
 }
