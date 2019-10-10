@@ -117,9 +117,7 @@ EventHandler::install()
 		signo = next_sig();
 		if (signo < 0) continue;
 		if( sigismember(&mask,signo) ) {
-			// explicit type cast to eliminate type check warning  -- Rajesh
-			// we should move this to be a #define symbol...
-#if (defined(LINUX) && !defined(GLIBC20) && !defined(GLIBC21)) || defined(CONDOR_FREEBSD) || defined(Darwin) || defined(Solaris)
+#if defined(LINUX) || defined(CONDOR_FREEBSD) || defined(Darwin) || defined(Solaris)
 			// bad craziness with the type cast --psilord
 			action.sa_handler = func;
 #else
