@@ -1177,7 +1177,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	}
 
 	int JobsRunningHere = Counters.JobsRunning;
-	int WeightedJobsRunningHere = Counters.WeightedJobsRunning;
+	double WeightedJobsRunningHere = Counters.WeightedJobsRunning;
 	int JobsRunningElsewhere = Counters.JobsFlocked;
 
 	if (flock_level > 0) {
@@ -1201,6 +1201,8 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	pAd.Assign(ATTR_RUNNING_JOBS, JobsRunningHere);
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
+
+	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, Counters.WeightedJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
 
@@ -1407,7 +1409,7 @@ Scheduler::count_jobs()
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
-			int job_weight = calcSlotWeight(rec);
+			double job_weight = calcSlotWeight(rec);
 			
 			SubDat->num.WeightedJobsRunning += job_weight;
 			SubDat->num.JobsRunning++;
@@ -2857,7 +2859,7 @@ clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 
 	// This function, given a job, calculates the "weight", or cost
 	// of the slot for accounting purposes.  Usually the # of cpus
-int 
+double 
 Scheduler::calcSlotWeight(match_rec *mrec) {
 	if (!mrec) {
 		// shouldn't ever happen, but be defensive
@@ -2867,21 +2869,21 @@ Scheduler::calcSlotWeight(match_rec *mrec) {
 
 		// machine may be null	
 	ClassAd *machine = mrec->my_match_ad;
-	int job_weight = 1;
+	double job_weight = 1;
 	if (m_use_slot_weights && machine) {
 			// if the schedd slot weight expression is set and parses,
 			// evaluate it here
-		double weight = 1;
+		double weight = 1.0;
 		if ( ! machine->LookupFloat(ATTR_SLOT_WEIGHT, weight)) {
-			weight = 1;
+			weight = 1.0;
 		}
 		// PRAGMA_REMIND("TJ: fix slot weight code to use double, not int")
-		job_weight = (int)(weight + 0.0001);
+		job_weight = weight;
 	} else {
 			// slot weight isn't set, fall back to assuming cpus
 		if (machine) {
-			if(0 == machine->LookupInteger(ATTR_CPUS, job_weight)) {
-				job_weight = 1; // or fall back to one if CPUS isn't in the startds
+			if(0 == machine->LookupFloat(ATTR_CPUS, job_weight)) {
+				job_weight = 1.0; // or fall back to one if CPUS isn't in the startds
 			}
 		} else if (scheduler.m_use_slot_weights) {
 			// machine == NULL, this happens on schedd restart and reconnect
@@ -2908,7 +2910,8 @@ Scheduler::calcSlotWeight(match_rec *mrec) {
 // when there is no SCHEDD_SLOT_WIEGHT expression, try and guess the job weight
 // by building a fake STARTD ad and evaluating the startd's SLOT_WEIGHT expression
 //
-int Scheduler::guessJobSlotWeight(JobQueueJob * job)
+double
+Scheduler::guessJobSlotWeight(JobQueueJob * job)
 {
 	static bool failed_to_init_slot_weight_map_ad = false;
 	if ( ! this->slotWeightGuessAd) {
@@ -2960,8 +2963,8 @@ int Scheduler::guessJobSlotWeight(JobQueueJob * job)
 	ad->Assign(ATTR_MEMORY, req_mem);
 	ad->Assign(ATTR_DISK, req_disk);
 
-	int job_weight = req_cpus;
-	if ( ! ad->LookupInteger(ATTR_SLOT_WEIGHT, job_weight)) {
+	double job_weight = req_cpus;
+	if ( ! ad->LookupFloat(ATTR_SLOT_WEIGHT, job_weight)) {
 		job_weight = req_cpus;
 	}
 	return job_weight;
@@ -3254,7 +3257,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		int job_idle_weight;
 		if (scheduler.m_use_slot_weights && (max_hosts > cur_hosts)) {
 				// if we're biasing idle jobs by SCHEDD_SLOT_WEIGHT, eval that here
-			int job_weight = request_cpus;
+			double job_weight = request_cpus;
 			if (scheduler.slotWeightOfJob) {
 				classad::Value value;
 				int rval = EvalExprTree(scheduler.slotWeightOfJob, job, NULL, value);
