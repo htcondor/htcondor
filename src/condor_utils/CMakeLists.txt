@@ -193,7 +193,8 @@ if (WANT_FULL_DEPLOYMENT)
     endif()
 endif(WANT_FULL_DEPLOYMENT)
 
-add_definitions(-DENABLE_STATE_DUMP)
+set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
+
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
