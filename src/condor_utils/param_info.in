@@ -84,11 +84,6 @@ type=int
 default=86400
 type=int
 
-[PREEN_MAX_SCHEDD_CONNECTION_TIME]
-default=20
-type=int
-tags=preen
-
 [PREEN_COREFILE_MAX_SIZE]
 default=50000000
 type=int
