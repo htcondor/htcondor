@@ -23,6 +23,14 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug where some tools (including *condor_submit*) would use the
+   local daemon instead of failing if given a bogus hostname.
+   :ticket:`7221`
+
+-  Fixed a bug where submitting more than one job in a single cluster
+   with the -spool option only actually submitted one job in the cluster.
+   :ticket:`7282`
+
 -  Fixed a bug where ``COLLECTOR_REQUIREMENTS`` wrote too much to the log
    to be useful.  It now only writes warnings about rejected ads when
    the collector's debug level includes ``D_MACHINE``, and only includes
