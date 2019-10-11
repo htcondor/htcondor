@@ -6214,10 +6214,30 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
 					answer += " && stringListIMember(\"";
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
+
+					if( presignS3URLs && (strcasecmp( it->c_str(), "s3" ) == 0) ) {
+						bool present = true;
+						if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
+							present = false;
+							push_error(stderr, "s3:// URLs require "
+								SUBMIT_KEY_AWSAccessKeyIdFile
+								" to be set.\n" );
+						}
+						if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
+							present = false;
+							push_error(stderr, "s3:// URLS require "
+								SUBMIT_KEY_AWSSecretAccessKeyFile
+								" to be set.\n" );
+						}
+						if(! present) {
+							ABORT_AND_RETURN(1);
+						}
+					}
 				}
 			}
 

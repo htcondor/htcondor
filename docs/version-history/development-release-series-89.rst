@@ -40,7 +40,7 @@ New Features:
   the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
   :ticket:`7289`
 
-- Added ``erase_output_and_err​or_on_restart`` as a new submit command.  It
+- Added ``erase_output_and_error_on_restart`` as a new submit command.  It
   defaults to true; if set to false, and ``when_to_transfer_output`` is
   ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
   when the job restarts, instead of erasing them (and starting the logs
@@ -232,6 +232,13 @@ New Features:
   grid universe, the cluster to submit to can be specified using the
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
+
+- HTCondor now sets numerous environment variables 
+  to tell the job (or libraries being used by the job) how many CPU cores
+  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
+  to allow the administrator to customize this set of environment 
+  variables.
+  :ticket:`7296`
 
 Bugs Fixed:
 
