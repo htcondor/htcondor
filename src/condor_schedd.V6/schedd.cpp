@@ -6054,8 +6054,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
-				// Don't hold held jobs
-			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
+				// Don't hold held jobs (but do match cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
