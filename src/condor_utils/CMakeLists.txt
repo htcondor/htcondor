@@ -126,6 +126,10 @@ if (DLOPEN_GSI_LIBS)
 else()
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} ${SCITOKENS_FOUND} )
 endif()
+if (LIBUUID_FOUND)
+	target_link_libraries(condor_utils ${LIBUUID_FOUND})
+endif()
+
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
@@ -136,7 +140,7 @@ add_dependencies(condor_utils utils_genparams syscall_numbers )
 ##################################################
 # condorapi & tests
 
-condor_selective_glob("ToE.cpp;my_username.*;condor_event.*;misc_utils.*;user_log_header.*;write_user_log*;get_last_error_string.*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf.cpp;dprintf_c*;dprintf_setup.cpp;sig_install.*;basename.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;condor_xml_classads.*;directory*;filename_tools_cpp.*;filename_tools.*;stat_info.*;consumption_policy.*;env.*;condor_arglist.*;setenv.*;condor_ver_info.*;HashTable.*;condor_version.*;${SAFE_OPEN_SRC}" ApiSrcs)
+condor_selective_glob("ToE.cpp;my_username.*;condor_event.*;misc_utils.*;user_log_header.*;write_user_log*;CondorError*;get_last_error_string.*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf.cpp;dprintf_c*;dprintf_setup.cpp;sig_install.*;basename.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;condor_xml_classads.*;directory*;filename_tools_cpp.*;filename_tools.*;stat_info.*;consumption_policy.*;env.*;condor_arglist.*;setenv.*;condor_ver_info.*;HashTable.*;condor_version.*;${SAFE_OPEN_SRC}" ApiSrcs)
 if(WINDOWS)
     condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
@@ -165,6 +169,9 @@ endif()
 
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+if (LIBUUID_FOUND)
+target_link_libraries(condorapi ${LIBUUID_FOUND})
+endif()
 
 if (LINUX OR DARWIN)
 	condor_shared_lib( condorapi_shared "${ApiSrcs}" )

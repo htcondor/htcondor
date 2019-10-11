@@ -47,7 +47,9 @@ SET(_SRCS ${ARGN})
 # ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
 ADD_PRECOMPILED_HEADER()
 
+
 add_library(${_CNDR_TARGET} STATIC ${_SRCS})
+set_target_properties(${_CNDR_TARGET} PROPERTIES COMPILE_DEFINITIONS "CONDOR_STATIC_LIBRARY")
 
 if (CONDOR_EXTERNALS)
 	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )

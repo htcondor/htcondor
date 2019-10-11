@@ -1149,6 +1149,15 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_REPORT_INTERVAL "ReportInterval"
 
+// Attributes related to the data reuse directory code.
+#define ATTR_EXPIRATION_TIME "ExpirationTime"
+#define ATTR_RESERVED_SPACE "ReservedSpace"
+#define ATTR_UUID "UUID"
+#define ATTR_TAG "Tag"
+#define ATTR_SIZE "Size"
+#define ATTR_CHECKSUM "Checksum"
+#define ATTR_CHECKSUM_TYPE "ChecksumType"
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {

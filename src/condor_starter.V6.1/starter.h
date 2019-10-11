@@ -32,6 +32,10 @@
 #include "glexec_privsep_helper.linux.h"
 #endif
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
 	represent a running job.
@@ -300,6 +304,8 @@ public:
 	int GetShutdownExitCode() { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
+
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 protected:
 	List<UserProc> m_job_list;
@@ -404,6 +410,9 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
+
+		// Manage the data reuse directory.
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 #endif

@@ -45,7 +45,7 @@ class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
-
+class CondorError;
 
 /*
 	This function tells the caller if a UserLog object should be
@@ -276,6 +276,8 @@ public:
 	void AddToMask(ULogEventNumber e) {
 		mask.push_back(e);
 	}
+
+	FileLockBase *getLock(CondorError &err);
 
   private:
 

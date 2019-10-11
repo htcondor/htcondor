@@ -54,6 +54,7 @@
 #include <Regex.h>
 #include "starter_util.h"
 #include "condor_random_num.h"
+#include "data_reuse.h"
 
 extern void main_shutdown_fast();
 
@@ -320,6 +321,15 @@ CStarter::Config()
 			ASSERT(m_privsep_helper != NULL);
 #endif
 		}
+	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
+		}
+	} else {
+		m_reuse_dir.reset();
 	}
 
 		// Tell our JobInfoCommunicator to reconfig, too.

@@ -2400,6 +2400,10 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		filetrans = new FileTransfer();
+		auto reuse_dir = Starter->getDataReuseDirectory();
+		if (reuse_dir) {
+			filetrans->setDataReuseDirectory(*reuse_dir);
+		}
 
 		const char *cred_path = getCredPath();
 		if (cred_path) {

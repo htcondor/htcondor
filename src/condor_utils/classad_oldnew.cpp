@@ -70,6 +70,7 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
+		dprintf(D_FULLDEBUG, "FAILED to get number of expressions.\n");
  		return false;
 	}
 
@@ -82,6 +83,7 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
 		if( !sock->get_string_ptr( strptr ) || !strptr ) {
+			dprintf(D_FULLDEBUG, "FAILED to get expression string.\n");
 			return( false );
 		}
 

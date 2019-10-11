@@ -76,6 +76,8 @@ typedef enum {
 typedef int uid_t;
 typedef int gid_t;
 HANDLE priv_state_get_handle();
+#else
+#include <sys/types.h>
 #endif
 
 const char *get_user_loginname(void); 

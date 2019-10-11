@@ -31,6 +31,7 @@
 #include "condor_auth_passwd.h"
 #include "condor_netdb.h"
 #include "token_utils.h"
+#include "data_reuse.h"
 
 #include "slot_builder.h"
 
@@ -506,6 +507,15 @@ ResMgr::init_resources( void )
 	m_hook_mgr = new StartdHookMgr;
 	m_hook_mgr->initialize();
 #endif
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
 }
 
 
@@ -662,6 +672,16 @@ ResMgr::reconfig_resources( void )
 					  "State change: resource no longer needed by configuration\n" );
 		rip->set_destination_state( delete_state );
 	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
+
 
 		// Finally, call our helper, so that if all the slots we need to
 		// get rid of are gone by now, we'll allocate the new ones.

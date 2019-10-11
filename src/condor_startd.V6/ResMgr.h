@@ -63,6 +63,10 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
 // Statistics to publish global to the startd
 class StartdStats {
 public:
@@ -420,6 +424,7 @@ private:
 	int max_job_retirement_time_override;
 
 	DCTokenRequester m_token_requester;
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 
