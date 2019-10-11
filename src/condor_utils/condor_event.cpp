@@ -661,14 +661,19 @@ ULogEvent::toClassAd(bool event_time_utc)
 		break;
 	case ULOG_RESERVE_SPACE:
 		SetMyTypeName(*myad, "ReserveSpaceEvent");
+		break;
 	case ULOG_RELEASE_SPACE:
 		SetMyTypeName(*myad, "ReleaseSpaceEvent");
+		break;
 	case ULOG_FILE_COMPLETE:
 		SetMyTypeName(*myad, "FileCompleteEvent");
+		break;
 	case ULOG_FILE_USED:
 		SetMyTypeName(*myad, "FileUsedEvent");
+		break;
 	case ULOG_FILE_REMOVED:
 		SetMyTypeName(*myad, "FileRemovedEvent");
+		break;
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
 		break;
