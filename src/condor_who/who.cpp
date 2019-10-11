@@ -620,7 +620,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 			if (line) data = line;
 
 			if (data.find("====") == 0 || data.find("----") == 0) {
-				subhead = line;
+				subhead = line ? line : "";
 				data.clear();
 
 				// first line after headings is not data, but underline

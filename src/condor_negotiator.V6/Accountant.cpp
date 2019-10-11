@@ -1527,7 +1527,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const string& Custome
 ClassAd* Accountant::GetClassAd(const string& Key)
 {
   ClassAd* ad=NULL;
-  AcctLog->table.lookup(Key,ad);
+  (void) AcctLog->table.lookup(Key,ad);
   return ad;
 }
 
