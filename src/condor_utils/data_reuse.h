@@ -137,7 +137,7 @@ private:
 	bool UpdateState(LogSentry &sentry, CondorError &err);
 	bool HandleEvent(ULogEvent &event, CondorError &err);
 
-	LogSentry &&LockLog(CondorError &err);
+	LogSentry LockLog(CondorError &err);
 	bool UnlockLog(LogSentry sentry, CondorError &err);
 
 	void CreatePaths();
