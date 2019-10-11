@@ -18,51 +18,36 @@ Here are all the steps needed to run a job using HTCondor.
     any needed files that contain the proper keystrokes needed for
     program input. Make certain the program will run correctly with the
     files.
- The HTCondor Universe.
-    HTCondor has several runtime environments (called a universe) from
-    which to choose. Of the universes, two are likely choices when
-    learning to submit a job to HTCondor: the standard universe and the
-    vanilla universe. The standard universe allows a job running under
-    HTCondor to handle system calls by returning them to the machine
-    where the job was submitted. The standard universe also provides the
-    mechanisms necessary to take a checkpoint and migrate a partially
-    completed job, should the machine on which the job is executing
-    become unavailable. To use the standard universe, it is necessary to
-    relink the program with the HTCondor library using the
-    *condor_compile* command.
-
-    The vanilla universe provides a way to run jobs that cannot be
-    relinked. There is no way to take a checkpoint or migrate a job
-    executed under the vanilla universe. For access to input and output
-    files, jobs must either use a shared file system, or use HTCondor's
-    File Transfer mechanism.
-
-    Choose a universe under which to run the HTCondor program, and
-    re-link the program if necessary.
 
  Submit description file.
     Controlling the details of a job submission is a submit description
     file. The file contains information about the job such as what
-    executable to run, the files to use in place of ``stdin`` and
-    ``stdout``, and the platform type required to run the program. The
-    number of times to run a program may be included; it is simple to
-    run the same program multiple times with multiple data sets.
+    executable to run, how much memory and cpu cores are needed to run
+	the job, and many other details about the job.
 
     Write a submit description file to go with the job, using the
-    examples provided in the :doc:`/users-manual/submitting-a-job` section for guidance.
+    examples provided in the :doc:`/users-manual/submitting-a-job` 
+    section for guidance.
+
+    There are many possible options that can be set in a submit
+    file, but most submit files only use a few.  The complete list
+    of submit file options can be found in :doc:`/man-pages/condor_submit`.
 
  Submit the Job.
     Submit the program to HTCondor with the *condor_submit* command.
     :index:`condor_submit<single: condor_submit; HTCondor commands>`
+    HTCondor will assign the job a unique Cluster and Proc identifier
+    as integers separated by a dot.  You use this Cluster and Proc
+    id to manage the job later.
 
 Once submitted, HTCondor does the rest toward running the job. Monitor
 the job's progress with the *condor_q*
 :index:`condor_q<single: condor_q; HTCondor commands>` and *condor_status*
-commands. :index:`condor_status<single: condor_status; HTCondor commands>` You may
-modify the order in which HTCondor will run your jobs with
-*condor_prio*. If desired, HTCondor can even inform you in a log file
-every time your job is checkpointed and/or migrated to a different
-machine.
+commands. :index:`condor_status<single: condor_status; HTCondor commands>` 
+If desired, HTCondor can even inform you in a log file
+about changes to the state of your job -- when it starts executing, when
+it uses more resources, when it completes, or when it is preempted 
+from a machine.
 
 When your program completes, HTCondor will tell you (by e-mail, if
 preferred) the exit status of your program and various statistics about

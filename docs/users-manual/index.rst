@@ -7,14 +7,14 @@ Users' Manual
 
    welcome-to-htcondor
    introduction-users-manual
-   matchmaking-with-classads
    running-a-job-steps
    submitting-a-job
    managing-a-job
    priorities-and-preemption
+   dagman-applications
+   matchmaking-with-classads
    java-applications
    parallel-applications
-   dagman-applications
    virtual-machine-applications
    docker-universe-applications
    self-checkpointing-applications
