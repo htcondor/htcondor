@@ -16749,7 +16749,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		// See if we can get the cached scheduler object 
 		//
 	CronTab *cronTab = NULL;
-	this->cronTabs->lookup( id, cronTab );
+	(void) this->cronTabs->lookup( id, cronTab );
 	if ( ! cronTab ) {
 			//
 			// There wasn't a cached object, so we'll need to create
