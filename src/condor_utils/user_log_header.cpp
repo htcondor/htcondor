@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "read_user_log.h"
 #include "write_user_log.h"
+#include "write_user_log_datareuse.h"
 #include <time.h>
 #include "MyString.h"
 #include "condor_config.h"
@@ -247,6 +248,20 @@ int
 WriteUserLogHeader::Write( WriteUserLog &writer, int fd )
 {
 	GenericEvent	event;
+
+	if ( 0 == m_ctime ) {
+		m_ctime = time( NULL );
+	}
+	if ( !GenerateEvent( event ) ) {
+		return ULOG_UNK_ERROR;
+	}
+	return writer.writeGlobalEvent( event, fd, true );
+}
+
+int
+WriteUserLogHeader::Write( WriteUserLogDataReuse &writer, int fd )
+{
+	GenericEvent    event;
 
 	if ( 0 == m_ctime ) {
 		m_ctime = time( NULL );

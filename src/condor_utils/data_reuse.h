@@ -20,8 +20,8 @@
 #ifndef __DATA_REUSE_H_
 #define __DATA_REUSE_H_
 
-#include "read_user_log.h"
-#include "write_user_log.h"
+#include "read_user_log_datareuse.h"
+#include "write_user_log_datareuse.h"
 #include "MyString.h"
 
 #include <memory>
@@ -154,8 +154,8 @@ private:
 	MyString m_logname;
 
 	std::string m_state_name; // Pathname of the state file.
-	WriteUserLog m_log;
-	ReadUserLog m_rlog;
+	WriteUserLogDataReuse m_log;
+	ReadUserLogDataReuse m_rlog;
 
 	std::unordered_map<std::string, std::unique_ptr<SpaceReservationInfo>> m_space_reservations;
 	std::vector<std::unique_ptr<FileEntry>> m_contents;
