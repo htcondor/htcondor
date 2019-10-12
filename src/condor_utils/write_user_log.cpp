@@ -33,9 +33,6 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
-#include "condor_attributes.h"
-#include "CondorError.h"
-
 #include <string>
 #include <algorithm>
 #include "condor_attributes.h"
@@ -1250,13 +1247,12 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 			set_user_priv();
 		}
 	}
-	bool was_locked = lock->isLocked();
 
 		// We're seeing sporadic test suite failures where a daemon
 		// takes more than 10 seconds to write to the user log.
 		// This will help narrow down where the delay is coming from.
 	time_t before = time(NULL);
-	if (!was_locked) {lock->obtain(WRITE_LOCK);}
+	lock->obtain (WRITE_LOCK);
 	time_t after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
@@ -1325,7 +1321,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		}
 	}
 	before = time(NULL);
-	if (!was_locked) {lock->release();}
+	lock->release ();
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
@@ -1641,24 +1637,4 @@ WriteUserLog::setEnableFsync(bool enabled) {
 bool
 WriteUserLog::getEnableFsync() {
 	return m_enable_fsync;
-}
-
-FileLockBase *
-WriteUserLog::getLock(CondorError &err) {
-	if (logs.empty()) {
-		err.pushf("WriteUserLog", 1, "User log has no configured logfiles.\n");
-		return nullptr;
-	}
-		// This interface returns a single file lock; for now, as we return a single lock, we
-		// touch nothing.
-	if (logs.size() != 1) {
-		err.pushf("WriteUserLog", 1, "User log has multiple configured logfiles; cannot lock.\n");
-		return nullptr;
-	}
-	for (auto log : logs) {
-		if (log->lock) {
-			return log->lock;
-		}
-	}
-	return nullptr;
 }

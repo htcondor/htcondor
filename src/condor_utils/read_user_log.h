@@ -172,14 +172,6 @@ class ReadUserLog
     */
     ULogEventOutcome readEvent (ULogEvent * & event);
 
-	/** Read the next event from the log file.  The event pointer to
-		set to point to a newly instatiated ULogEvent object.
-		@param event pointer to be set to new object
-		@return the outcome of attempting to read the log
-	*/
-	ULogEventOutcome readEventWithLock (ULogEvent * & event, FileLockBase &lock);
-
-
     /** Synchronize the log file if the last event read was an error.  This
         safe guard function should be called if there is some error reading an
         event, but there are events after it in the file.  Will skip over the
@@ -195,8 +187,8 @@ class ReadUserLog
 
 	/** Lock / unlock the file
 	 */
-	void Lock(void)   { Lock(nullptr, true);   };
-	void Unlock(void) { Unlock(nullptr, true); };
+	void Lock(void)   { Lock(true);   };
+	void Unlock(void) { Unlock(true); };
 
 	/** Enable / disable locking
 	 */
@@ -368,8 +360,8 @@ class ReadUserLog
 	/** Internal lock/unlock methods
 		@param Verify that initialization has been done
 	 */
-	void Lock( FileLockBase *, bool verify_init );
-	void Unlock( FileLockBase *, bool verify_init );
+	void Lock( bool verify_init );
+	void Unlock( bool verify_init );
 
 	/** Set all members to their cleared values.
 	*/
@@ -381,21 +373,21 @@ class ReadUserLog
 		@param store the state after the read?
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventWithLock (ULogEvent * & event, bool store_state, FileLockBase *lock );
+    ULogEventOutcome readEvent (ULogEvent * & event, bool store_state );
 
     /** Raw read of the next event from the log file.
         @param event pointer to be set to new object
 		@param should the caller try the read again (after reopen) (returned)?
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome rawReadEvent (ULogEvent * & event, bool *try_again, FileLockBase *lock );
+    ULogEventOutcome readEvent (ULogEvent * & event, bool *try_again );
 
 	/** Determine the type of log this is; note that if called on an
 	    empty log, this will return true and the log type will stay
 		LOG_TYPE_UNKNOWN.
         @return true for success, false otherwise
 	*/
-	bool determineLogType( FileLockBase *lock );
+	bool determineLogType( void );
 
 	/** Skip the XML header of this log, if there is one.
 	    @param the first character after the opening '<'
@@ -409,14 +401,14 @@ class ReadUserLog
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventClassad (ULogEvent * & event, int log_type, FileLockBase *lock);
+    ULogEventOutcome readEventClassad (ULogEvent * & event, int log_type);
 
     /** Read the next event from the old style log file. The event pointer to
         set to point to a newly instatiated ULogEvent object.
         @param event pointer to be set to new object
         @return the outcome of attempting to read the log
     */
-    ULogEventOutcome readEventNormal (ULogEvent * & event, FileLockBase *lock);
+    ULogEventOutcome readEventNormal (ULogEvent * & event);
 
 	/** Reopen the log file
 		@param Restore from state?
