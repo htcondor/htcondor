@@ -168,7 +168,7 @@ int dprintf_config(
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
 	int c_info = 0); // in: number of entries in p_info array on input.                  
 
-int dprintf_config_tool(const char* subsys = NULL, int flags = 0);
+int dprintf_config_tool(const char* subsys = NULL, int flags = 0, const char * logfile = NULL);
 int dprintf_config_tool_on_error(int flags = 0);
 
 // parse strflags and cat_and_flags and merge them into the in,out args
@@ -441,6 +441,7 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #endif
 
 #define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
+#define dprintf_set_tool_debug_log(name, flags, filename) dprintf_config_tool(name, flags, filename)
 
 #endif /* CONDOR_DEBUG_H */
 
