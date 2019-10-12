@@ -58,6 +58,10 @@
 #include <map>
 #include <sstream>
 
+#define PREEN_EXIT_STATUS_SUCCESS       0
+#define PREEN_EXIT_STATUS_FAILURE       1
+#define PREEN_EXIT_STATUS_EMAIL_FAILURE 2
+
 using namespace std;
 
 State get_machine_state();
@@ -83,7 +87,6 @@ StringList	*BadFiles;			// list of files which don't belong
 
 // prototypes of local interest
 void usage();
-void send_mail_file();
 void init_params();
 void check_spool_dir();
 void check_execute_dir();
@@ -93,15 +96,10 @@ void check_tmp_dir();
 void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
-void produce_output();
+int send_email();
 bool is_valid_shared_exe( const char *name );
-bool is_ckpt_file_or_submit_digest( const char *name );
-bool is_v2_ckpt( const char *name );
-bool is_v3_ckpt( const char *name );
-bool is_submit_digest( const char *name );
-bool cluster_exists( int );
-bool proc_exists( int, int );
-bool is_myproxy_file( const char *name );
+bool is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid);
+bool is_myproxy_file( const char *name, JOB_ID_KEY & jid );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
 bool linked_recently(char const *fname,time_t delta);
@@ -116,8 +114,8 @@ std::string get_corefile_program( const char* corefile, const char* dir );
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug]\n", MyName );
-	exit( 1 );
+	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug] [-log <filename>]\n", MyName );
+	exit( PREEN_EXIT_STATUS_FAILURE );
 }
 
 
@@ -152,6 +150,15 @@ main( int argc, char *argv[] )
                 dprintf_set_tool_debug("TOOL", 0);
 				break;
 
+			  case 'l':
+				  if (argv[1]) {
+					  dprintf_set_tool_debug_log("TOOL", 0, argv[1]);
+					  ++argv;
+				  } else {
+					  dprintf_set_tool_debug("TOOL", 0);
+				  }
+				  break;
+
 			  case 'v':
 				VerboseFlag = true;
 				break;
@@ -180,10 +187,10 @@ main( int argc, char *argv[] )
 	{
 		// always append D_FULLDEBUG locally when verbose.
 		// shouldn't matter if it already exists.
-		std::string szVerbose="D_FULLDEBUG";
+		std::string szVerbose="D_ALWAYS:2 D_PID";
 		char * pval = param("TOOL_DEBUG");
 		if( pval ) {
-			szVerbose+="|";
+			szVerbose+=" ";
 			szVerbose+=pval;
 			free( pval );
 		}
@@ -191,7 +198,7 @@ main( int argc, char *argv[] )
 		
 	}
 	dprintf( D_ALWAYS, "********************************\n");
-	dprintf( D_ALWAYS, "STARTING: condor_preen\n");
+	dprintf( D_ALWAYS, "STARTING: condor_preen PID: %d\n", getpid());
 	dprintf( D_ALWAYS, "********************************\n");
 	
 		// Do the file checking
@@ -205,18 +212,28 @@ main( int argc, char *argv[] )
 #endif
 
 		// Produce output, either on stdout or by mail
+	int exit_status = PREEN_EXIT_STATUS_SUCCESS;
 	if( !BadFiles->isEmpty() ) {
-		produce_output();
+		// write the files we deleted to the daemon log
+		for (const char * str = BadFiles->first(); str; str = BadFiles->next()) {
+			dprintf(D_ALWAYS, "%s\n", str);
+		}
+
+		dprintf(D_ALWAYS, "Results: %d file%s preened\n", BadFiles->number(), (BadFiles->number()>1) ? "s" : "");
+
+		exit_status = send_email();
+	} else {
+		dprintf(D_ALWAYS, "Results: No files preened\n");
 	}
 
 		// Clean up
 	delete BadFiles;
 
 	dprintf( D_ALWAYS, "********************************\n");
-	dprintf( D_ALWAYS, "ENDING: condor_preen\n");
+	dprintf( D_ALWAYS, "ENDING: condor_preen PID: %d STATUS: %d\n", getpid(), exit_status);
 	dprintf( D_ALWAYS, "********************************\n");
 	
-	return 0;
+	return exit_status;
 }
 
 /*
@@ -225,8 +242,8 @@ main( int argc, char *argv[] )
   If MailFlag is set, we send the output to the condor administrators
   via mail, otherwise we just print it on stdout.
 */
-void
-produce_output()
+int
+send_email()
 {
 	char	*str;
 	FILE	*mailer;
@@ -237,7 +254,13 @@ produce_output()
 
 	if( MailFlag ) {
 		if( (mailer=email_nonjob_open(PreenAdmin, subject.Value())) == NULL ) {
-			EXCEPT( "Can't do email_open(\"%s\", \"%s\")",PreenAdmin,subject.Value());
+			dprintf(D_ALWAYS|D_FAILURE, "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.Value());
+		#ifdef WIN32
+			if ( ! param_defined("SMTP_SERVER")) {
+				dprintf(D_ALWAYS, "SMTP_SERVER not configured\n");
+			}
+		#endif
+			return PREEN_EXIT_STATUS_EMAIL_FAILURE;
 		}
 	} else {
 		mailer = stdout;
@@ -253,7 +276,6 @@ produce_output()
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
 		szTmp.formatstr("  %s\n", str);
-		dprintf(D_ALWAYS, "%s", szTmp.Value() );
 		fprintf( mailer, "%s", szTmp.Value() );
 	}
 
@@ -273,64 +295,64 @@ produce_output()
 		fprintf( mailer, "%s\n", explanation );
 		email_close( mailer );
 	}
+
+	return PREEN_EXIT_STATUS_SUCCESS;
 }
 
-bool
-check_job_spool_hierarchy( char const *parent, char const *child, std::set< std::string > &stale_spool_files )
-{
-	ASSERT( parent );
-	ASSERT( child );
-
-		// We expect directories of the form produced by SpooledJobFiles::getJobSpoolPath()
-		// and GetSpooledExecutablePath().
-		// e.g. $(SPOOL)/<cluster mod 10000>/<proc mod 10000>/cluster<cluster>.proc<proc>.subproc<proc>
-		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
-
+// return true if this directory name could be a clusterid mode 10000 or procid mod 10000
+static bool is_job_subdir(const char * child) {
 	char *end=NULL;
 	long l = strtol(child,&end,10);
-	if( l == LONG_MIN || !end || *end != '\0' ) {
+	if (l == LONG_MIN || !end || *end != '\0') {
 		return false; // not part of the job spool hierarchy
 	}
-
-	std::string topdir;
-	formatstr(topdir,"%s%c%s",parent,DIR_DELIM_CHAR,child);
-	Directory dir(topdir.c_str(),PRIV_ROOT);
-	char const *f;
-	while( (f=dir.Next()) ) {
-
-			// see if it's a legitimate job spool file/directory
-		if( is_ckpt_file_or_submit_digest(f) ) {
-			good_file( topdir.c_str(), f );
-			continue;
-		}
-
-		if( IsDirectory(dir.GetFullPath()) && !IsSymlink(dir.GetFullPath()) ) {
-			if( check_job_spool_hierarchy( topdir.c_str(), f, stale_spool_files ) ) {
-				good_file( topdir.c_str(), f );
-				continue;
-			}
-		}
-
-		const char* dirPath = dir.GetFullPath();
-		stale_spool_files.insert( dirPath );
-	}
-
-		// By returning true here, we indicate that this directory is
-		// part of the spool directory hierarchy and should not be
-		// deleted.  We do return true even if the directory is empty.
-		// If we wanted to remove empty directories of this type, we
-		// would need to do so with rmdir(), not a recursive remove,
-		// because new job directories might show up inside this
-		// directory between the time we examine the directory
-		// contents and the time we remove the directory.  We don't
-		// bother dealing with that case, because if something ever
-		// causes the self-cleaning of these directories to fail, the
-		// self-cleaning will be tried again the next time the
-		// directory is used.  In the worst case, the spool hierarchy
-		// is self-limited in how many entries will be made anyway.
-
 	return true;
 }
+
+// class used to hold/manage a list of 'maybe stale' files by jobid that are
+// valid only when the schedd has active jobs with corresponding job ids
+class JobIdSpoolFiles {
+public:
+	std::deque<std::string> files;
+	std::map<JOB_ID_KEY, std::vector<int>> jid_to_files;
+
+	// make it convenient to iterate the files collection
+	std::deque<std::string>::iterator begin() { return files.begin(); }
+	std::deque<std::string>::iterator end() { return files.end(); }
+
+	bool empty() { return jid_to_files.empty(); }
+	int  size() { return (int)jid_to_files.size(); }
+
+	// append a filename, and add the index of that file to the jid_to_files map at the given key
+	void add(const JOB_ID_KEY & jid, const std::string & fn) {
+		int ix = (int)files.size();
+		jid_to_files[jid].push_back(ix);
+		files.push_back(fn);
+	}
+	int first_cluster_id() {
+		if (jid_to_files.empty()) { return 0; }
+		return jid_to_files.begin()->first.cluster;
+	}
+	int last_cluster_id() {
+		if (jid_to_files.empty()) { return 0; }
+		return jid_to_files.rbegin()->first.cluster;
+	}
+	// clear all files corresponding to a given job id, then remove the job id.
+	void clear(const JOB_ID_KEY & jid) {
+		auto found = jid_to_files.find(jid);
+		if (found != jid_to_files.end()) {
+			for (auto it = found->second.begin(); it != found->second.end(); ++it) {
+				files[*it].clear(); // clear string, can't delete the entry because find items by index
+			}
+			jid_to_files.erase(found);
+		}
+		// if we have a prod id, also clear cluster specific jobs for that cluster
+		if (jid.proc >= 0) {
+			JOB_ID_KEY cid(jid.cluster, -1);
+			clear(cid);
+		}
+	}
+};
 
 /*
   Check the condor spool directory for extraneous files.  Files found
@@ -343,19 +365,16 @@ check_job_spool_hierarchy( char const *parent, char const *child, std::set< std:
 void
 check_spool_dir()
 {
-    unsigned int	history_length, startd_history_length;
+    size_t	history_length, startd_history_length;
 	const char  	*f;
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list;
-	std::set<std::string> maybe_stale_spool_files;
-	std::set<std::string> stale_spool_files;
-	Qmgr_connection *qmgr = NULL;
-	double			last_connection_time;
-	double			max_connection_time;
+	JobIdSpoolFiles maybe_stale;
+	std::string tmpstr;
 
 	if ( ValidSpoolFiles == NULL ) {
-		dprintf( D_ALWAYS, "Not cleaning spool directory: No VALID_SPOOL_FILES defined\n");
+		dprintf( D_ALWAYS, "Not cleaning spool directory: VALID_SPOOL_FILES not configured\n");
 		return;
 	}
 
@@ -366,9 +385,6 @@ check_spool_dir()
     startd_history = param("STARTD_HISTORY");
    	startd_history = condor_basename(startd_history);
 	startd_history_length = strlen(startd_history);
-	   
-	last_connection_time = _condor_debug_get_time_double();
-	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
@@ -443,89 +459,167 @@ check_spool_dir()
 			continue;
 		}
 
-			// We still don't know if this file is good or bad, and we can't
-			// tell without asking the schedd. Add it to our potentially stale
-			// files list, we'll deal with it later.
-		maybe_stale_spool_files.insert( f );
+		// if the file is a directory, look into it.
+		if (dir.IsDirectory() && ! dir.IsSymlink()) {
+
+			// we will set is_good to true if this is a directory that has a possibly valid file or subdir
+			// we can't ever delete those that *might* be good because they can never become completely stale
+			// so we mark them as definitely good so long as they are non-empty. this affects verbose logging
+			// and mot much else
+			bool is_good = false;
+
+			// We expect directories of the form produced by SpooledJobFiles::getJobSpoolPath()
+			// and GetSpooledExecutablePath().
+			// e.g. $(SPOOL)/<cluster mod 10000>/<proc mod 10000>/cluster<cluster>.proc<proc>.subproc<proc>/<jobfiles>
+			// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
+			// or $(SPOOL)/<cluster mod 10000>/condor_submit.<cluster>.*   (late materialization digest and itemdata)
+			if (is_job_subdir(f)) {
+				const char * clusterdir = dir.GetFullPath();
+				Directory dir2(clusterdir,PRIV_ROOT);
+				const char *f2;
+				JOB_ID_KEY jid;
+
+				while ((f2 = dir2.Next())) {
+					// does it match the pattern of a <proc mod 10000> directory?
+					// if it does, then we need to check it for valid spool files
+					if (is_job_subdir(f2)) {
+						// if it is a directory, check it for spooled job files
+						if (dir2.IsDirectory() && ! dir2.IsSymlink())  {
+							is_good = true;
+							const char * procdir = dir2.GetFullPath();
+							Directory dir3(procdir,PRIV_ROOT);
+							const char *f3;
+							while ((f3 = dir3.Next())) {
+								if (is_ckpt_file_or_submit_digest(f3, jid)) {
+									// put it in the list of files/dirs needing jobid checks
+									// directories for spooled job files will end up here
+									formatstr(tmpstr,"%s%c%s%c%s",f,DIR_DELIM_CHAR,f2,DIR_DELIM_CHAR,f3);
+									maybe_stale.add(jid, tmpstr);
+								} else {
+									// not a valid pattern, we can delete this one now
+									bad_file(procdir, f3, dir3);
+								}
+							}
+						} else {
+							// matches the pattern of a proc dir, but it is not a dir so it's invalid
+							bad_file(clusterdir, f2, dir2);
+						}
+					} else if (is_ckpt_file_or_submit_digest(f2, jid)) {
+						// put it in the list of files needing jobid checks
+						formatstr(tmpstr,"%s%c%s",f,DIR_DELIM_CHAR,f2);
+						maybe_stale.add(jid, tmpstr);
+						is_good = true;
+					} else {
+						// file is not a submit_digest, checkpoint, or proc subdir. it is invalid
+						// we can delete it now.
+						bad_file(clusterdir, f2, dir2);
+					}
+				}
+			} else {
+				// file is not of a valid pattern, delete it now
+				bad_file(Spool, f, dir);
+			}
+
+			// NOTE: anything that matches the pattern *might* be a valid future clusterdir even if it
+			// is no longer a valid past clusterdir, so we can't ever delete it while the schedd is alive.
+			if (is_good) {
+				good_file(Spool, f);
+			}
+
+		} else {
+			// file was not a directory, we can deal with it right now.
+			JOB_ID_KEY jid;
+			if (is_ckpt_file_or_submit_digest(f, jid) || is_myproxy_file(f, jid)) {
+				maybe_stale.add(jid, f);
+			} else {
+				// not a directory, and also clearly not a checkpoint or submit file
+				// so we can delete it now
+				bad_file(Spool, f, dir);
+			}
+		}
 	}
 
-		// Step 2: Connect to the schedd, and check if the files in 
-		// stage_spool_files are truly stale. If we find any that are not, 
-		// remove from the list. Also if we stay connected to the schedd for
-		// too long, force a temporary disconnect so it can recover.
-	for( auto i = maybe_stale_spool_files.begin(); i != maybe_stale_spool_files.end(); ++i ) {
-		
-		std::string spool_file = *i;
+	// We now (may) have a list of files that have valid naming patterns, but might be stale
+	// if they refer to jobs no longer in the schedd.  So we need to contact the schedd to find out.
+	if ( ! maybe_stale.empty()) {
+
+		bool can_delete_stale_files = false; // assume we will not be able to contact the schedd
+		dprintf(D_ALWAYS, "Found files for %d jobs. Asking schedd if the jobs are still present\n", maybe_stale.size());
 
 		// Establish (or re-establish) schedd connection
-		if ( !qmgr ) {
-			if ( !( qmgr = ConnectQ (0, 0, false) ) ) {
-				dprintf( D_ALWAYS, "Unknown error connecting to job queue. "
-					"Aborting without deleting files.\n" );
-				return;
-			}
-			last_connection_time = _condor_debug_get_time_double();
-		}
+		Daemon schedd(DT_SCHEDD, NULL);
+		if ( ! schedd.locate()) {
+			// schedd.locate() will dprintf an error if it does not succeed
+			// dprintf(D_ALWAYS, "Can't find address of local Schedd\n");
+		} else {
+			CondorError  errstack;
+			int cmd = QUERY_JOB_ADS;
+			Sock *sock = schedd.startCommand(cmd, Stream::reli_sock, 0, &errstack);
+			if ( ! sock) {
+				dprintf(D_ALWAYS, "Can't connect to schedd: %s\n", errstack.getFullText().c_str() );
+			} else {
 
-			// See if it's a legitimate checkpoint.
-		if( is_ckpt_file_or_submit_digest( spool_file.c_str() ) ) {
-			good_file( Spool, spool_file.c_str() );
-			continue;
-		}
-
-			// See if it's a legimate MyProxy password file.
-		if ( is_myproxy_file( spool_file.c_str() ) ) {
-			good_file( Spool, spool_file.c_str() );
-			continue;
-		}
-
-			// If a directory, check through subdirectories. Because we are not
-			// in the dir.Next() loop anymore, need to create full path manually.
-		MyString spool_file_full_path;
-		dircat( dir.GetDirectoryPath(), spool_file.c_str(), spool_file_full_path );
-		if( IsDirectory( spool_file_full_path.Value() ) && !IsSymlink( spool_file_full_path.Value() ) ) {
-			if( check_job_spool_hierarchy( Spool, spool_file.c_str(), stale_spool_files ) ) {
-				good_file( Spool, spool_file.c_str() );
-				continue;
-			}
-		}
-
-			// At this point we know for sure the file is stale
-		stale_spool_files.insert( spool_file );
-
-			// If the schedd is connected, check how long the connection has
-			// been active. If it has exceeded a maximum connection time 
-			// (defined by PREEN_MAX_SCHEDD_CONNECTION_TIME) then disconnect.
-			// This will give the schedd some time to deal with everything that
-			// happened while it was blocked.
-		if ( qmgr ) {
-			if ( _condor_debug_get_time_double() > 
-							( last_connection_time + max_connection_time ) ) {
-				if ( DisconnectQ( qmgr ) ) {
-					qmgr = NULL;
-				} 
-				else {
-					dprintf( D_ALWAYS, "Error disconnecting from job queue.\n" );
+				// build a query ad
+				ClassAd ad;
+				ad.Assign(ATTR_PROJECTION, ATTR_CLUSTER_ID "," ATTR_PROC_ID);
+				int firstid = maybe_stale.first_cluster_id();
+				int lastid = maybe_stale.last_cluster_id();
+				if (firstid == lastid) {
+					formatstr(tmpstr, ATTR_CLUSTER_ID "==%d", firstid);
+				} else {
+					formatstr(tmpstr, ATTR_CLUSTER_ID ">=%d && " ATTR_CLUSTER_ID "<=%d", firstid, lastid);
 				}
+				ad.AssignExpr(ATTR_REQUIREMENTS, tmpstr.c_str());
+				ad.Assign("IncludeClusterAd", true);
+
+				if ( ! putClassAd(sock, ad) || ! sock->end_of_message()) {
+					dprintf(D_ALWAYS, "Error, schedd communication error\n");
+				} else {
+					ad.Clear();
+					while (getClassAd(sock, ad) && sock->end_of_message()) {
+						// we succeedd in contacting the schedd, and we got a reply
+						// so we can safely delete anything left in the maybe_stale collection
+						// once we are done with this loop.
+						can_delete_stale_files = true;
+
+						// the end of the jobs collection is indicated by a classad with Owner==0
+						long long intVal;
+						if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) { // last ad is not a real job ad
+							break;
+						}
+
+						// construct a job id key, and clear 'maybe stale' files that match the key
+						// this also removes the key from the maybe_stale collection. 
+						JOB_ID_KEY jid;
+						if (ad.EvaluateAttrInt(ATTR_CLUSTER_ID, jid.cluster)) {
+							jid.proc = -1;
+							ad.EvaluateAttrInt(ATTR_PROC_ID, jid.proc);
+							maybe_stale.clear(jid);
+						}
+
+						ad.Clear(); // clear the ad for the next loop iteration.
+					}
+				}
+
+				sock->close();
+				delete sock;
 			}
 		}
-	}
 
-		// Now disconnect from the schedd for good.
-	if ( qmgr ) {
-		if ( DisconnectQ( qmgr ) ) {
-			qmgr = NULL;
-		} 
-		else {
-			dprintf( D_ALWAYS, "Error disconnecting from job queue.\n" );
+		if (can_delete_stale_files) {
+			if (maybe_stale.size() > 0) {
+				dprintf(D_ALWAYS, "Deleting files for %d jobs no longer in the local schedd\n", maybe_stale.size());
+				// we can now delete all of the non-empty filenames in the maybe_stale collection
+				for (auto it = maybe_stale.begin(); it != maybe_stale.end(); ++it) {
+					if (it->empty()) continue; // files that were discovered to be not-stale were cleared.
+					bad_file(Spool, it->c_str(), dir);
+				}
+			} else {
+				dprintf(D_ALWAYS, "All job id's are still current\n");
+			}
+		} else {
+			dprintf(D_ALWAYS, "Assuming all job id's are still current\n");
 		}
-	}
-
-		// Step 3: Now that we have a final list of stale files, it's time to 
-		// go through and actually flag them all for deletion.
-	for( auto i = stale_spool_files.begin(); i != stale_spool_files.end(); ++i ) {
-		std::string spool_file = *i;
-		bad_file( Spool, spool_file.c_str(), dir );
 	}
 }
 
@@ -549,33 +643,12 @@ is_valid_shared_exe( const char *name )
 	return true;
 }
 
-/*
-  Given the name of a file in the spool directory, return true if it's a
-  legitimate checkpoint file or submit digest, and false otherwise.  If the name starts
-  with "cluster", it should be a V3 style checkpoint. If it starts with condor_submit
-  it's a submit digest, Otherwise it is either a V2 style checkpoint, or not a checkpoint at all.
-*/
-bool
-is_ckpt_file_or_submit_digest( const char *name )
-{
-	if (name[0] == 'c') { // might start with 'cluster' or 'condor_submit'
-		if( name[1] == 'l' ) { // might start with 'cluster'
-			return is_v3_ckpt( name );
-		} else if ( name[1] == 'o' ) { // might start with 'condor_submit'
-			return is_submit_digest( name );
-		}
-	} else if ( name[0] == 'j') { // might start with 'job'
-		return is_v2_ckpt( name );
-	}
-	return false;
-}
-
 
 /*
-  Grab an integer value which has been embedded in a file name.  We're given
-  a name to examine, and a pattern to search for.  If the pattern exists,
-  then the number we want follows it immediately.  If the pattern doesn't
-  exist, we return -1.
+Grab an integer value which has been embedded in a file name.  We're given
+a name to examine, and a pattern to search for.  If the pattern exists,
+then the number we want follows it immediately.  If the pattern doesn't
+exist, we return -1.
 */
 inline int
 grab_val( const char *str, const char *pattern )
@@ -589,87 +662,53 @@ grab_val( const char *str, const char *pattern )
 }
 
 /*
-  We're given the name of a file which appears to be a V2 checkpoint file.
-  We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return true if we find it, and false
-  otherwise.
-
-  V2 checkpoint files formats are:
-	  job<#>.ickpt		- initial checkpoint file
-	  job<#>.ckpt.<#>	- specific checkpoint file
+Given the name of a file in the spool directory, return true if has the pattern
+of a legitimate checkpoint file or submit digest, and false otherwise.  If the name starts
+with "cluster", it should be a V3 style checkpoint. If it starts with condor_submit
+it's a submit digest, Otherwise it is either a V2 style checkpoint, or not a checkpoint at all.
+if true is returned, then the ID of the job (or of the cluster) that must exist for
+the file to be still valid is also returned.
 */
 bool
-is_v2_ckpt( const char *name )
+is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid)
 {
-	int		cluster;
-	int		proc;
+	if (name[0] == 'c') { // might start with 'cluster' or 'condor_submit'
+		if( name[1] == 'l' ) { // might start with 'cluster'
+			// V3 checkpoint file formats are:
+			// cluster<#>.ickpt.subproc<#>		- initial checkpoint file
+			// 	cluster<#>.proc<#>.subproc<#>		- specific checkpoint file
+			jid.cluster = grab_val(name, "cluster");
+			jid.proc = grab_val(name, ".proc");
+			return jid.cluster > 0;
+		} else if ( name[1] == 'o' ) { // might start with 'condor_submit'
+			jid.cluster = grab_val( name, "condor_submit." );
+			jid.proc = -1;
+			return jid.cluster > 0;
+		}
+	} else if ( name[0] == 'j') { // might start with 'job'
+		// V2 checkpoint files formats are:
+		// job<#>.ickpt		- initial checkpoint file
+		// job<#>.ckpt.<#>	- specific checkpoint file
 
-	cluster = grab_val( name, "job" );
-	proc = grab_val( name, ".ckpt." );
-
-	if( proc < 0 ) {
-		return cluster_exists( cluster );
-	} else {
-		return proc_exists( cluster, proc );
+		jid.cluster = grab_val(name, "job");
+		jid.proc = grab_val(name, ".ckpt.");
+		return jid.cluster > 0;
 	}
+	return false;
 }
 
-/*
-  We're given the name of a file which appears to be a V3 checkpoint file.
-  We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return true if we find it, and false
-  otherwise.
-
-  V3 checkpoint file formats are:
-	  cluster<#>.ickpt.subproc<#>		- initial checkpoint file
-	  cluster<#>.proc<#>.subproc<#>		- specific checkpoint file
-*/
 bool
-is_v3_ckpt( const char *name )
+is_myproxy_file(const char *name, JOB_ID_KEY & jid)
 {
-	int		cluster;
-	int		proc;
-
-	cluster = grab_val( name, "cluster" );
-	proc = grab_val( name, ".proc" );
-	grab_val( name, ".subproc" );
-		
-	if( proc < 0 ) {
-		return cluster_exists( cluster );
-	} else {
-		return proc_exists( cluster, proc );
-	}
-}
-
-/*
-  Check whether the given file could be a valid submit digest
-  for a queued late materialization job factory
-*/
-bool
-is_submit_digest( const char *name )
-{
-	int cluster = grab_val( name, "condor_submit." );
-	return cluster_exists( cluster );
-}
-
-
-/*
-  Check whether the given file could be a valid MyProxy password file
-  for a queued job.
-*/
-bool
-is_myproxy_file( const char *name )
-{
-	int cluster, proc;
-
-		// TODO This will accept files that look like a valid MyProxy
-		//   password file with extra characters on the end of the name.
-	int rc = sscanf( name, "mpp.%d.%d", &cluster, &proc );
+	// TODO This will accept files that look like a valid MyProxy
+	//   password file with extra characters on the end of the name.
+	int rc = sscanf( name, "mpp.%d.%d", &jid.cluster, &jid.proc );
 	if ( rc != 2 ) {
 		return false;
 	}
-	return proc_exists( cluster, proc );
+	return jid.cluster > 0 && jid.proc >= 0;
 }
+
 
 /*
   Check whether the given file could be a valid MyProxy password file
@@ -684,32 +723,6 @@ is_ccb_file( const char *name )
 	return false;
 }
 
-/*
-  Check to see whether a given cluster number exists in the job queue.
-*/
-bool
-cluster_exists( int cluster )
-{
-	return proc_exists( cluster, -1 );
-}
-
-/*
-  Check to see whether a given cluster and process number exist in the
-  job queue.
-*/
-bool
-proc_exists( int cluster, int proc )
-{
-	if (cluster <= 0)
-		return false;
-
-	int id = 0;
-	if (GetAttributeInt(cluster, proc, ATTR_CLUSTER_ID, &id) < 0) {
-		return false;
-	}
-
-	return true;
-}
 
 /*
   Scan the execute directory looking for bogus files.

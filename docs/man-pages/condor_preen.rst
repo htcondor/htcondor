@@ -10,7 +10,7 @@ Synopsis
 --------
 
 **condor_preen** [**-mail** ] [**-remove** ] [**-verbose** ]
-[**-debug** ]
+[**-debug** ] [**-log <filename>**]
 
 Description
 -----------
@@ -50,16 +50,22 @@ Options
     Remove the offending files and directories rather than reporting on
     them.
  **-verbose**
-    List all files found in the Condor directories, even those which are
-    not considered extraneous.
+    List all files or directories found in the Condor directories and considered
+    for deletion, even those which are not extraneous. This option also modifies the output produced by
+    the **-debug** and **-log** options
  **-debug**
-    Print extra debugging information as the command executes.
+    Print extra debugging information to stderr as the command executes.
+ **-log <filename>**
+    Write extra debugging information to <filename> as the command executes.
 
 Exit Status
 -----------
 
 *condor_preen* will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+and it will exit with a non-zero value upon failure.  An exit status
+of 2 indicates that *condor_preen* attempted to send email about deleted
+files but was unable to. This usually indicates an error in the configuration
+for sending email.  An exit status of 1 indicates a general failure.
 
 Author
 ------

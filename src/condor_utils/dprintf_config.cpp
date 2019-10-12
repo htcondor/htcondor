@@ -98,7 +98,7 @@ dprintf_config_tool_on_error(int cat_and_flags)
 }
 
 int
-dprintf_config_tool(const char* subsys, int /*flags*/)
+dprintf_config_tool(const char* subsys, int /*flags*/, const char * logfile /*=NULL*/)
 {
 	char *pval = NULL;
 	char pname[ BUFSIZ ];
@@ -155,7 +155,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 		}
 	}
 
-	tool_output[0].logPath = "2>";
+	tool_output[0].logPath = (logfile&&logfile[0]) ? logfile : "2>";
 	tool_output[0].HeaderOpts = HeaderOpts;
 	tool_output[0].VerboseCats = verbose;
 	int cOutputs = 1;
