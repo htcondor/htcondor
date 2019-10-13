@@ -1279,13 +1279,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 		}
 	}
 
-	// will not reach here
-	Unlock(lock, true);
-
-	dprintf( D_ALWAYS, "Error: got to the end of "
-			"ReadUserLog::readEventOld()\n");
-
-	return ULOG_UNK_ERROR;
+	/* UNREACHED */
 }
 
 // Static method for initializing a file state
