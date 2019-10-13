@@ -38,5 +38,9 @@ RUN pip3 --no-cache install --user build sphinx sphinx_rtd_theme nbsphinx htcond
 #
 CMD ["/bin/bash", "-l"]
 
-WORKDIR "/home/build"
+# Copy the HTCondor source tree into the image, and set the working dir to be
+# in it.
+#
+WORKDIR "/home/build/CONDOR_SRC"
+COPY --chown=build:build . /home/build/CONDOR_SRC/
 
