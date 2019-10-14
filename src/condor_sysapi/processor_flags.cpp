@@ -107,11 +107,17 @@ const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void ) {
                     
                     foundProcessorFlags += 1;
                 } else if (strcmp(attribute, "model") == 0) {
-			sscanf(value, "%d", &theInfo.model_no); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.model_no = tmp;
 		} else if (strcmp(attribute,"cpu family") == 0) {
-			sscanf(value, "%d", &theInfo.family); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.family = tmp;
 		} else if (strcmp(attribute,"cache size") == 0) {
-			sscanf(value, "%d", &theInfo.cache); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.cache = tmp;
 		}
             }
         }
