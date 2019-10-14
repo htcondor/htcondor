@@ -3223,6 +3223,7 @@ std::string *GlobusJob::buildSubmitRSL()
 			formatstr(errorString, "Failed to read job environment: %s\n",
 					env_errors.Value());
 			delete rsl;
+			if (rsl_suffix) free(rsl_suffix);
 			return NULL;
 		}
 		char **env_vec = envobj.getStringArray();
