@@ -376,95 +376,38 @@ Group Accounting
 :index:`accounting<single: accounting; groups>` :index:`by group<single: by group; accounting>`
 :index:`by group<single: by group; priority>`
 
-By default, HTCondor does all accounting on a per-user basis, and this
-accounting is primarily used to compute priorities for HTCondor's
-fair-share scheduling algorithms. However, accounting can also be done
-on a per-group basis. Multiple users can all submit jobs into the same
-accounting group, and all jobs with the same accounting group will be
-treated with the same priority. Jobs that do not specify an accounting
-group have all accounting and priority based on the user, which may be
-identified by the job ClassAd attribute ``Owner``. Jobs that do specify
-an accounting group have all accounting and priority based on the
-specified accounting group. Therefore, accounting based on groups only
-works when the jobs correctly identify their group membership.
-:index:`AcctGroup<single: AcctGroup; ClassAd job attribute>`
-:index:`AcctGroupUser<single: AcctGroupUser; ClassAd job attribute>`
+By default, HTCondor does all accounting on a per-user basis. 
+This means that HTCondor keeps track of the historical usage per-user,
+calculates a priority and fair-share per user, and allows the 
+administrator to change this fair-share per user.  In HTCondor
+terminology, the accounting principal is called the submitter.
 
-The preferred method for having a job associate itself with an
-accounting group adds a command to the submit description file that
-specifies the group name:
+The name of this submitter is, by default, the name the schedd authenticated
+when the job was first submitted to the schedd.  Usually, this is
+the operating system username.  However, the submitter can override
+the username selected by settting the submit file option
 
 ::
+	accounting_group_user = ishmael
 
-      accounting_group = group_physics
+This means this job should be treated, for accounting purposes only, as
+"ishamel", but "ishmael" will not be the operating system id the shadow
+or job uses.  Note that HTCondor trusts the user to set this
+to a valid value.  The administrator can use schedd requirements or transforms
+to validate such settings, if desired.  accounting_group_user is frequently used
+in web portals, where one trusted operating system process submits jobs on
+behalf of different users.
 
-This command causes the job ClassAd attribute ``AcctGroup`` to be set
-with this group name.
+Note that if many people submit jobs with identical accounting_group_user values,
+HTCondor treats them as one set of jobs for accounting purposes.  So, if
+Alice submits 100 jobs as accounting_group_user ishmael, and so does Bob
+a moment later, HTCondor will not try to fair-share between them, 
+as it would do if they had not set accounting_group_user.  If all these 
+jobs have identical requirements, they will be run First-In, First-Out, 
+so whoever submitted first makes the subsequent jobs wait until the 
+last one of the first submit is finished.
 
-If the user name of the job submitter should be other than the ``Owner``
-job ClassAd attribute, an additional command specifies the user name:
 
-::
-
-      accounting_group_user = albert
-
-This command causes the job ClassAd attribute ``AcctGroupUser`` to be
-set with this user name.
-:index:`AccountingGroup<single: AccountingGroup; ClassAd job attribute>`
-
-The previous method for defining accounting groups is no longer
-recommended. It inserted the job ClassAd attribute ``AccountingGroup``
-by setting it in the submit description file using the syntax in this
-example:
-
-::
-
-    +AccountingGroup = "group_physics.albert"
-
-In this previous method for defining accounting groups, the
-``AccountingGroup`` attribute is a string, and it therefore must be
-enclosed in double quote marks.
-
-Much of the reason that the previous method for defining accounting
-groups is no longer recommended is that the name of an accounting is
-that it used the period (.) character to separate the group name from
-the user name. Therefore, the syntax did not work if a user name
-contained a period.
-
-The name should not be qualified with a domain. Certain parts of the
-HTCondor system do append the value ``$(UID_DOMAIN)`` (as specified in
-the configuration file on the submit machine) to this string for
-internal use. For example, if the value of ``UID_DOMAIN`` is
-``example.com``, and the accounting group name is as specified,
-*condor_userprio* will show statistics for this accounting group using
-the appended domain, for example
-
-::
-
-                                        Effective
-    User Name                           Priority
-    ------------------------------      ---------
-    group_physics@example.com                0.50
-    user@example.com                        23.11
-    heavyuser@example.com                  111.13
-    ...
-
-Additionally, the *condor_userprio* command allows administrators to
-remove an entity from the accounting system in HTCondor. The **-delete**
-option to *condor_userprio* accomplishes this if all the jobs from a
-given accounting group are completed, and the administrator wishes to
-remove that group from the system. The **-delete** option identifies the
-accounting group with the fully-qualified name of the accounting group.
-For example
-
-::
-
-    condor_userprio -delete group_physics@example.com
-
-HTCondor removes entities itself as they are no longer relevant.
-Intervention by an administrator to delete entities can be beneficial
-when the use of thousands of short term accounting groups leads to
-scalability issues.
 
 Accounting Groups with Hierarchical Group Quotas
 ------------------------------------------------
@@ -473,11 +416,12 @@ Accounting Groups with Hierarchical Group Quotas
 :index:`by group<single: by group; negotiation>` :index:`quotas<single: quotas; groups>`
 :index:`hierarchical quotas for a group<single: hierarchical quotas for a group; quotas>`
 
+With additional configuration, it is possible to create accounting
+groups, where the submitters within the group maintain their distinct
+identity, and fair-share still happens within members of that group.
+
 An upper limit on the number of slots allocated to a group of users can
-be specified with group quotas. This policy may be desired when
-different groups provide their computers to create one large HTCondor
-pool, and want to restrict the number of jobs running from one group to
-the number of machines the group has provided.
+be specified with group quotas.
 
 Consider an example pool with thirty slots: twenty slots are owned by
 the physics group and ten are owned by the chemistry group. The desired
@@ -486,15 +430,6 @@ the physicists, and only ten from the chemists. These machines are
 otherwise identical, so it does not matter which machines run which
 group's jobs. It only matters that the proportions of allocated slots
 are correct.
-
-Instead of quotas, this could be implemented by configuring the ``RANK``
-expression such that the twenty machines owned by the physics group
-prefer jobs submitted by the physics users. Likewise, the ten machines
-owned by the chemistry group are configured to prefer jobs submitted by
-the chemistry group. However, this steers jobs to execute on specific
-machines, instead of the desired policy which allocates numbers of
-machines, where these machines can be any of the pool's machines that
-are available.
 
 Group quotas may implement this policy. Define the groups and set their
 quotas in the configuration of the central manager:
@@ -518,7 +453,7 @@ subgroup name, etc. Group names are case-insensitive for negotiation.
 :index:`<none> group<single: <none> group; group accounting>`
 
 At the root of the tree that defines the hierarchical groups is the
-invented "<none>" group. The implied quota of the "<none>" group will be
+"<none>" group. The implied quota of the "<none>" group will be
 all available slots. This string will appear in the output of
 *condor_status*.
 
