@@ -79,7 +79,7 @@ a job runs is specified in the submit description file. If a universe is
 not specified, the default is vanilla.
 
 :index:`vanilla<single: vanilla; universe>` The vanilla universe is a good
-default, for it has the fewest restriction on the job.
+default, for it has the fewest restrictions on the job.
 :index:`Grid<single: Grid; universe>` The grid universe allows users to submit
 jobs using HTCondor's interface. These jobs are submitted for execution
 on grid resources. :index:`java<single: java; universe>` :index:`Java`
