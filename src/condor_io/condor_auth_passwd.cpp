@@ -622,6 +622,8 @@ Condor_Auth_Passwd::fetchLogin()
 			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K\n");
 			free(ka);
 			free(kb);
+			free(seed_ka);
+			free(seed_kb);
 			return nullptr;
 		}
 		memcpy(m_k, &ka[0], key_strength_bytes_v2());
@@ -855,6 +857,10 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 				auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
 				if ((max_age != -1) && age > max_age) {
 					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", (long)age, max_age);
+					free(ka);
+					free(kb);
+					free(seed_ka);
+					free(seed_kb);
 					return false;
 				}
 			}
