@@ -634,6 +634,8 @@ Condor_Auth_Passwd::fetchLogin()
 			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K'\n");
 			free(ka);
 			free(kb);
+			free(seed_ka);
+			free(seed_kb);
 			return nullptr;
 		}
 		memcpy(m_k_prime, &kb[0], key_strength_bytes_v2());
