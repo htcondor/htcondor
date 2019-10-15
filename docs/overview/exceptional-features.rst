@@ -30,7 +30,8 @@ Exceptional Features
     graph.
  HTCondor Can Use Foreign Resources, from a Grid, or a Cloud, or a Supercomputer Allocation
     The technique of glidein allows jobs submitted to HTCondor to be
-    executed on grid machines in various locations worldwide.
+    executed on grid machines in various locations worldwide.  HTCondor's
+	grid universe allows direct submission of jobs to remote systems.
  Sensitive to the Desires of Machine Owners
     The owner of a machine has complete priority over the use of the
     machine. An owner is generally happy to let others compute on the
@@ -38,18 +39,20 @@ Exceptional Features
     The owner does not want to take special action to regain control.
     HTCondor handles this automatically.
  Flexible Policy Mechanisms
+    HTCondor allows users to specify very flexible policies for 
+    how they want jobs to be run.  Conversely, it independently
+    allows the owners of machines to specify very flexible policies
+    about what jobs (if any) should be run on their machines.  Together
+    HTCondor merges and adjudicates these policy requests into one
+    coherent system.
+
     The ClassAd mechanism :index:`ClassAd`\ in HTCondor provides
-    an extremely flexible, expressive framework for matchmaking resource
+    an expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
     requirements and job desires. For example, a user can require that a
-    job run on a machine with 64 Mbytes of RAM, but state a preference
-    for 128 Mbytes, if available. A workstation owner can state a
-    preference that the workstation runs jobs from a specified set of
-    users. The owner can also require that there be no interactive
-    workstation activity detectable at certain hours before HTCondor
-    could start a job. Job requirements/preferences and resource
-    availability constraints can be described in terms of powerful
-    expressions, resulting in HTCondor's adaptation to nearly any
-    desired policy.
+	for a job to run at all, it must be started on a machine with a
+    certain amount of memory, but should there be multiple available
+    machines that meet that criteria, to select the one with the most
+    memory.
 
 :index:`overview<single: overview; HTCondor>` :index:`overview`
