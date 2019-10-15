@@ -71,6 +71,7 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 		sprintf(letter, "%x", hashResult[i]);
 		strcat(entryHashName, letter);
 	}
+	delete [] hashSource;
 
 	return entryHashName;
 }
