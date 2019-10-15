@@ -222,10 +222,10 @@ Reqexp::compute( amask_t how_much )
 
 			static const char *climit = nullptr;
 	
-			if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", true)) {
-				climit = climit_simple;	
-			} else {
+			if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
 				climit = climit_full;	
+			} else {
+				climit = climit_simple;	
 			}
 
 			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
@@ -238,14 +238,22 @@ Reqexp::compute( amask_t how_much )
 				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
 				for ( ; it != resmap.end();  ++it) {
 					const char * rn = it->first.c_str();
-					formatstr_cat(wrlimit,
-						" && "
-						 "(TARGET.Request%s is UNDEFINED ||"
-							"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
-								"TARGET.Request%s,"
-								"TARGET._condor_Request%s)"
-						 ")",
-						rn, rn, rn, rn, rn);
+					if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
+									"TARGET.Request%s,"
+									"TARGET._condor_Request%s)"
+							 ")",
+							rn, rn, rn, rn, rn);
+					} else {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= TARGET.Request%s)",
+							rn, rn, rn);
+					}
 				}
 				// then append the final closing )
 				wrlimit += ")";

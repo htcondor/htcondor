@@ -65,7 +65,6 @@ A universe in HTCondor
 execution environment. HTCondor Version 8.9.1 supports several different
 universes for user jobs:
 
--  standard
 -  vanilla
 -  grid
 -  java
@@ -77,16 +76,10 @@ universes for user jobs:
 
 The **universe** :index:`universe<single: universe; submit commands>` under which
 a job runs is specified in the submit description file. If a universe is
-not specified, the default is vanilla, unless your HTCondor
-administrator has changed the default. However, we strongly encourage
-you to specify the universe, since the default can be changed by your
-HTCondor administrator, and the default that ships with HTCondor has
-changed. :index:`standard<single: standard; universe>`
+not specified, the default is vanilla.
 
-The standard universe provides migration and reliability, but has some
-restrictions on the programs that can be run.
-:index:`vanilla<single: vanilla; universe>` The vanilla universe provides fewer
-services, but has very few restrictions.
+:index:`vanilla<single: vanilla; universe>` The vanilla universe is a good
+default, for it has the fewest restrictions on the job.
 :index:`Grid<single: Grid; universe>` The grid universe allows users to submit
 jobs using HTCondor's interface. These jobs are submitted for execution
 on grid resources. :index:`java<single: java; universe>` :index:`Java`
@@ -101,109 +94,6 @@ about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
 allows users to run jobs where the job is no longer a simple executable,
 but a disk image, facilitating the execution of a virtual machine. The
 docker universe runs a Docker container as an HTCondor job.
-
-Standard Universe
-'''''''''''''''''
-
-:index:`standard<single: standard; universe>`
-
-In the standard universe, HTCondor provides checkpointing and remote
-system calls. These features make a job more reliable and allow it
-uniform access to resources from anywhere in the pool. To prepare a
-program as a standard universe job, it must be relinked with
-*condor_compile*. Most programs can be prepared as a standard universe
-job, but there are a few restrictions. :index:`checkpoint`
-:index:`checkpoint image`
-
-HTCondor checkpoints a job at regular intervals. A checkpoint image is
-essentially a snapshot of the current state of a job. If a job must be
-migrated from one machine to another, HTCondor makes a checkpoint image,
-copies the image to the new machine, and restarts the job continuing the
-job from where it left off. If a machine should crash or fail while it
-is running a job, HTCondor can restart the job on a new machine using
-the most recent checkpoint image. In this way, jobs can run for months
-or years even in the face of occasional computer failures.
-:index:`remote system call` :index:`shadow`
-
-Remote system calls make a job perceive that it is executing on its home
-machine, even though the job may execute on many different machines over
-its lifetime. When a job runs on a remote machine, a second process,
-called a *condor_shadow* runs on the machine where the job was
-submitted.
-:index:`condor_shadow` :index:`condor_shadow<single: condor_shadow; agents>`
-:index:`condor_shadow<single: condor_shadow; HTCondor daemon>` :index:`condor_shadow<single: condor_shadow; remote system call>`
-When the job attempts a system call, the *condor_shadow* performs the
-system call instead and sends the results to the remote machine. For
-example, if a job attempts to open a file that is stored on the
-submitting machine, the *condor_shadow* will find the file, and send
-the data to the machine where the job is running.
-
-To convert your program into a standard universe job, you must use
-*condor_compile* to relink it with the HTCondor libraries. Put
-*condor_compile* in front of your usual link command. You do not need
-to modify the program's source code, but you do need access to the
-unlinked object files. A commercial program that is packaged as a single
-executable file cannot be converted into a standard universe job.
-
-For example, if you would have linked the job by executing:
-
-::
-
-    % cc main.o tools.o -o program
-
-Then, relink the job for HTCondor with:
-
-::
-
-    % condor_compile cc main.o tools.o -o program
-
-There are a few restrictions on standard universe jobs:
-
-:index:`fork<single: fork; Unix>` :index:`exec<single: exec; Unix>`
-:index:`system<single: system; Unix>`
-
-#. Multi-process jobs are not allowed. This includes system calls such
-   as ``fork()``, ``exec()``, and ``system()``. :index:`pipe<single: pipe; Unix>`
-   :index:`semaphore<single: semaphore; Unix>` :index:`shared memory<single: shared memory; Unix>`
-#. Interprocess communication is not allowed. This includes pipes,
-   semaphores, and shared memory. :index:`socket<single: socket; Unix>`
-   :index:`network`
-#. Network communication must be brief. A job may make network
-   connections using system calls such as ``socket()``, but a network
-   connection left open for long periods will delay checkpointing and
-   migration. :index:`signal` :index:`SIGUSR2<single: SIGUSR2; signal>`
-   :index:`SIGTSTP<single: SIGTSTP; signal>`
-#. Sending or receiving the SIGUSR2 or SIGTSTP signals is not allowed.
-   HTCondor reserves these signals for its own use. Sending or receiving
-   all other signals is allowed. :index:`alarm<single: alarm; Unix>`
-   :index:`timer<single: timer; Unix>` :index:`sleep<single: sleep; Unix>`
-#. Alarms, timers, and sleeping are not allowed. This includes system
-   calls such as ``alarm()``, ``getitimer()``, and ``sleep()``.
-   :index:`kernel-level<single: kernel-level; thread>` :index:`user-level<single: user-level; thread>`
-#. Multiple kernel-level threads are not allowed. However, multiple
-   user-level threads are allowed. :index:`memory-mapped<single: memory-mapped; file>`
-   :index:`mmap<single: mmap; Unix>`
-#. Memory mapped files are not allowed. This includes system calls such
-   as ``mmap()`` and ``munmap()``. :index:`locking<single: locking; file>`
-   :index:`flock<single: flock; Unix>` :index:`lockf<single: lockf; Unix>`
-#. File locks are allowed, but not retained between checkpoints.
-   :index:`read only<single: read only; file>` :index:`write only<single: write only; file>`
-#. All files must be opened read-only or write-only. A file opened for
-   both reading and writing will cause trouble if a job must be rolled
-   back to an old checkpoint image. For compatibility reasons, a file
-   opened for both reading and writing will result in a warning but not
-   an error.
-#. A fair amount of disk space must be available on the submitting
-   machine for storing a job's checkpoint images. A checkpoint image is
-   approximately equal to the virtual memory consumed by a job while it
-   runs. If disk space is short, a special checkpoint server can be
-   designated for storing all the checkpoint images for a pool.
-   :index:`dynamic<single: dynamic; linking>` :index:`static<single: static; linking>`
-#. On Linux, the job must be statically linked. *condor_compile* does
-   this by default. :index:`large files<single: large files; Unix>`
-#. Reading to or writing from files larger than 2 GBytes is only
-   supported when the submit side *condor_shadow* and the standard
-   universe user job application itself are both 64-bit executables.
 
 Vanilla Universe
 ''''''''''''''''

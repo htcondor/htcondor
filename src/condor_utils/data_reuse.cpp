@@ -91,10 +91,10 @@ DataReuseDirectory::CreatePaths()
 		return;
 	}
 	name = dircat(m_dirpath.c_str(), "sha256", subdir);
-	char subdir_name[3];
-	subdir_name[2] = '\0';
+	char subdir_name[4];
 	for (int idx = 0; idx < 256; idx++) {
 		sprintf(subdir_name, "%02x", idx);
+		subdir_name[2] = '\0';
 		auto name2 = dircat(name, subdir_name, subdir2);
 		if (!mkdir_and_parents_if_needed(name2, 0700, 0700, PRIV_CONDOR)) {
 			m_valid = false;
@@ -131,7 +131,7 @@ DataReuseDirectory::LogSentry::~LogSentry()
 }
 
 
-DataReuseDirectory::LogSentry &&
+DataReuseDirectory::LogSentry
 DataReuseDirectory::LockLog(CondorError &err)
 {
 	LogSentry sentry(*this, err);

@@ -3092,7 +3092,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 
 			// This might match some, but not all jobs and machines,
 			// but fills in the candidate lists of the partial matches as a side effect
-		idle_group.satisfyJobs(&allJobs, &idle_candidate_machines, &idle_candidate_jobs);
+		(void) idle_group.satisfyJobs(&allJobs, &idle_candidate_machines, &idle_candidate_jobs);
 
 		if (unclaimed_group.satisfyJobs(&allJobs, &unclaimed_candidate_machines, &unclaimed_candidate_jobs)) {
 				// idle + unclaimed could satsify this request

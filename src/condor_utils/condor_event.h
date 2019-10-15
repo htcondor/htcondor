@@ -2342,7 +2342,7 @@ private:
 
 class FileCompleteEvent final : public ULogEvent {
 public:
-	FileCompleteEvent() {eventNumber = ULOG_FILE_COMPLETE;}
+	FileCompleteEvent() : m_size(0) {eventNumber = ULOG_FILE_COMPLETE;}
 	~FileCompleteEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
@@ -2399,7 +2399,7 @@ private:
 
 class FileRemovedEvent final : public ULogEvent {
 public:
-	FileRemovedEvent() {eventNumber = ULOG_FILE_REMOVED;}
+	FileRemovedEvent() : m_size(0) {eventNumber = ULOG_FILE_REMOVED;}
 	~FileRemovedEvent() {};
 
 	virtual int readEvent( FILE * f, bool & got_sync_line ) override;

@@ -96,32 +96,6 @@ jobs.
 
 **Example 2**
 
-Example 2 queues up one copy of the program *foo* (which had been
-created by *condor_compile*) for execution by HTCondor. No
-**input** :index:`input<single: input; submit commands>`,
-**output** :index:`output<single: output; submit commands>`, or
-**error** :index:`error<single: error; submit commands>` commands are given in
-the submit description file, so ``stdin``, ``stdout``, and ``stderr``
-will all refer to ``/dev/null``. The program may produce output by
-explicitly opening a file and writing to it.
-
-::
-
-      ####################
-      #
-      # Example 2
-      # Standard universe submit description file
-      #
-      ####################
-
-      Executable   = foo
-      Universe     = standard
-      Log          = foo.log
-      Queue
-
-
-**Example 3**
-
 Example 3 queues two copies of the program *mathematica*. The first copy
 will run in directory ``run_1``, and the second will run in directory
 ``run_2`` due to the
@@ -143,7 +117,7 @@ then execute on pool machines that provide at least 1 GByte of memory.
 
       ####################
       #
-      # Example 3: demonstrate use of multiple
+      # Example 2: demonstrate use of multiple
       # directories for data organization.
       #
       ####################
@@ -163,9 +137,9 @@ then execute on pool machines that provide at least 1 GByte of memory.
       queue
 
 
-**Example 4**
+**Example 3**
 
-The submit description file for Example 4 queues 150
+The submit description file for Example 3 queues 150
 :index:`running multiple programs`\ runs of program *foo*
 which has been compiled and linked for Linux running on a 32-bit Intel
 processor. This job requires HTCondor to run the program on machines
@@ -186,7 +160,7 @@ queued programs will be written into the single file ``foo.log``.
 
       ####################
       #
-      # Example 4: Show off some fancy features including
+      # Example 3: Show off some fancy features including
       # the use of pre-defined macros.
       #
       ####################
