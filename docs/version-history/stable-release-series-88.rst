@@ -17,6 +17,13 @@ Release Notes:
 
 .. HTCondor version 8.8.6 released on Month Date, 2019.
 
+-  The default encryption algorithm used by HTCondor was changed from
+   `Triple-DES` to `Blowfish`.
+   On a busy submit machine, many encrypted file transfers may consume
+   significant CPU time.
+   `Blowfish` is about six times faster and uses less memory than `Triple-DES`.
+   :ticket:`7288`
+
 New Features:
 
 -  None.
