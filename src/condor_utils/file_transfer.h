@@ -539,6 +539,49 @@ class FileTransfer final: public Service {
 	bool outputFileIsSpooled(char const *fname);
 
 	void callClientCallback();
+
+		// Manages the information about a single file to potentially reuse.
+	class ReuseInfo
+	{
+	public:
+		ReuseInfo(const std::string &filename,
+			const std::string &checksum,
+			const std::string &checksum_type,
+			const std::string &tag,
+			uint64_t size)
+		: m_size(size),
+		m_filename(filename),
+		m_checksum(checksum),
+		m_checksum_type(checksum_type),
+		m_tag(tag)
+		{}
+
+		const std::string &filename() const {return m_filename;}
+		const std::string &checksum() const {return m_checksum;}
+		const std::string &checksum_type() const {return m_checksum_type;}
+		uint64_t size() const {return m_size;}
+
+	private:
+		const uint64_t m_size{0};
+		const std::string m_filename;
+		const std::string m_checksum;
+		const std::string m_checksum_type;
+		const std::string m_tag;
+	};
+
+		// A list of all the potential files to reuse
+	std::vector<ReuseInfo> m_reuse_info;
+		// Any errors occurred when parsing a data manifest.  The parsing
+		// occurs quite early in the upload protocol, before there is a reasonable
+		// context to respond with an error message.  Hence, we stash errors here
+		// and report them when it is reasonable to generate a hold message for the
+		// user.
+	CondorError m_reuse_info_err;
+
+	// Parse the contents of a data manifest file for data reuse.
+	// Returns true on success; false otherwise.  In the case of a failure, the
+	// err object is filled in with an appropriate error message.
+	bool ParseDataManifest();
 };
 
 // returns 0 if no expiration

@@ -55,38 +55,8 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <string>
 
-namespace {
-
-class ReuseInfo
-{
-public:
-	ReuseInfo(const std::string &filename,
-		const std::string &checksum,
-		const std::string &checksum_type,
-		const std::string &tag,
-		uint64_t size)
-	: m_size(size),
-	m_filename(filename),
-	m_checksum(checksum),
-	m_checksum_type(checksum_type),
-	m_tag(tag)
-	{}
-
-	const std::string &filename() const {return m_filename;}
-	const std::string &checksum() const {return m_checksum;}
-	const std::string &checksum_type() const {return m_checksum_type;}
-	uint64_t size() const {return m_size;}
-
-private:
-	const uint64_t m_size{0};
-	const std::string m_filename;
-	const std::string m_checksum;
-	const std::string m_checksum_type;
-	const std::string m_tag;
-};
-
-}
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -399,6 +369,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		} 
 #endif
 	}
+	m_reuse_info.clear();
+	m_reuse_info_err.clear();
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus 
 	// ATTR_JOB_INPUT, ATTR_JOB_CMD, and ATTR_ULOG_FILE if simple_init.
@@ -1567,6 +1539,17 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 					}
 				}
 			}
+			// Similarly, we want to look through any data reuse file and treat them as input
+			// files.  We must handle the manifest here in order to ensure the manifest files
+			// are treated in the same manner as anything else that appeared on transfer_input_files
+			if (!transobject->ParseDataManifest()) {
+				transobject->m_reuse_info.clear();
+			}
+			for (const auto &info : transobject->m_reuse_info) {
+				if (!transobject->InputFiles->file_contains(info.filename().c_str()))
+					transobject->InputFiles->append(info.filename().c_str());
+			}
+
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
@@ -2479,10 +2462,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							if (!m_reuse_dir->RetrieveFile(dest_fname, checksum, checksum_type, tag,
 								err))
 							{
-								dprintf(D_FULLDEBUG, "Failed to retrieve file from data"
-									" reuse directory: %s\n", err.getFullText().c_str());
+								dprintf(D_FULLDEBUG, "Failed to retrieve file of size %lld from data"
+									" reuse directory: %s\n", size, err.getFullText().c_str());
 								reuse_info.emplace_back(filename, checksum, checksum_type,
-									tag, size);
+									tag, size < 0 ? 0 : size);
 								continue;
 							}
 							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", filename.c_str());
@@ -2494,7 +2477,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							retrieved_list->push_back(expr);
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
-							0, [](uint64_t val, ReuseInfo &info) {return info.size() + val;});
+							static_cast<uint64_t>(0), [](uint64_t val, const ReuseInfo &info) {return info.size() + val;});
 						dprintf(D_FULLDEBUG, "There are %lu bytes to retrieve.\n", to_retrieve);
 						if (to_retrieve) {
 							CondorError err;
@@ -2666,6 +2649,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				{
 					dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
 					err.getFullText().c_str());
+						// Checksum failed; we shouldn't start the job with this file
+					if (!strcmp(err.subsys(), "DataReuse") && err.code() == 11) {
+						rc = -1;
+					}
 				}
 			}
 
@@ -2758,6 +2745,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			{
 				dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.Value(),
 					err.getFullText().c_str());
+					// Checksum of downloaded file failed to match the user-provided one.
+				if (!strcmp(err.subsys(), "DataReuse") && err.code() == 11) {
+					rc = -1;
+				}
 			}
 		} else {
 			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes, &xfer_queue );
@@ -3523,6 +3514,85 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 }
 
 
+bool
+FileTransfer::ParseDataManifest()
+{
+	CondorError &err = m_reuse_info_err; err.clear(); // Aliased; got tired of long var name.
+	m_reuse_info.clear();
+
+	std::string tag;
+	if (jobAd.EvaluateAttrString(ATTR_USER, tag))
+	{
+		dprintf(D_FULLDEBUG, "ParseDataManifest: Tag to use for data reuse: %s\n", tag.c_str());
+	} else {
+		tag = "";
+	}
+
+	std::string checksum_info;
+	if (!jobAd.EvaluateAttrString("DataReuseManifestSHA256", checksum_info))
+	{
+		return true;
+	}
+	std::unique_ptr<FILE, decltype(&fclose)>
+	manifest(safe_fopen_wrapper_follow(checksum_info.c_str(), "r"), fclose);
+	if (!manifest.get()) {
+		dprintf(D_ALWAYS, "ParseDataManifest: Failed to open SHA256 manifest %s: %s.\n", checksum_info.c_str(), strerror(errno));
+		err.pushf("ParseDataManifest", 1, "Failed to open SHA256 manifest %s: %s.", checksum_info.c_str(), strerror(errno));
+		return false;
+	}
+	int lineno = 0;
+	for (std::string line; readLine(line, manifest.get(), false);) {
+		lineno++;
+		if (!line[0] || line[0] == '\n' || line[0] == '#') {
+			continue;
+		}
+		StringList sl(line.c_str());
+		sl.rewind();
+		const char *cksum = sl.next();
+		if (cksum == nullptr) {
+			dprintf(D_ALWAYS, "ParseDataManifest: Invalid manifest line: %s (line #%d)\n", line.c_str(), lineno);
+			err.pushf("ParseDataManifest", 2, "Invalid manifest line: %s (line #%d)", line.c_str(), lineno);
+			return false;
+		}
+		const char *fname = sl.next();
+		if (fname == nullptr) {
+			dprintf(D_ALWAYS, "ParseDataManifest: Invalid manifest file line (missing name): %s (line #%d)\n", line.c_str(), lineno);
+			err.pushf("ParseDataManifest", 3, "Invalid manifest file line (missing name): %s (line #%d)", line.c_str(), lineno);
+			return false;
+		}
+			// NOTE: manifest files output from sha256sum don't include a file size;
+			// requiring a size here is disappointing because that means the user can't
+			// use sha256sum directly.  Can be addressed in two ways:
+			//   - stat()'ing the file on the submit sided, then
+			//   - falling back to requiring this column (for URLs; we can't stat them).
+		const char *size_str = sl.next();
+		long long bytes_long;
+		if (size_str == nullptr) {
+			if (IsUrl(fname)) {
+				dprintf(D_ALWAYS, "ParseDataManifest: Invalid manifest file line (missing size for URL): %s (line #%d)\n", line.c_str(), lineno);
+				err.pushf("ParseDataManifest", 4, "Invalid manifest file line (missing size for URL): %s (line #%d)", line.c_str(), lineno);
+				return false;
+			}
+			struct stat statbuf;
+			if (-1 == stat(fname, &statbuf)) {
+				err.pushf("ParseDataManifest", 5, "Unable to get size of file %s in data manifest: %s (line #%d)", fname, strerror(errno), lineno);
+				return false;
+			}
+			bytes_long = statbuf.st_size;
+		} else {
+			try {
+				bytes_long = std::stoll(size_str);
+			} catch (...) {
+				err.pushf("ParseDataManifest", 6, "Invalid size in manifest file line: %s (line #%d)", line.c_str(), lineno);
+				return false;
+			}
+		}
+		m_reuse_info.emplace_back(fname, cksum, "sha256", tag, bytes_long);
+	}
+	return true;
+}
+
+
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
@@ -3630,7 +3700,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
-	std::vector<ReuseInfo> reuse_info;
 	std::string tag;
 	if (jobAd.EvaluateAttrString(ATTR_USER, tag))
 	{
@@ -3669,7 +3738,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
-		if (PeerDoesReuseInfo) {
+		if (PeerDoesReuseInfo && !m_final_transfer_flag && !simple_init) {
 			std::string checksum_info;
 			if ( ExecFile && !simple_init && !tag.empty() &&
 				(MATCH == file_strcmp(fileitem.srcName().c_str(), ExecFile)) &&
@@ -3684,7 +3753,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					checksum_type = checksum_info.substr(0, sep);
 					checksum = checksum_info.substr(sep + 1);
 				}
-				reuse_info.emplace_back("condor_exec.exe", checksum, checksum_type, tag, fileitem.fileSize());
+				m_reuse_info.emplace_back("condor_exec.exe", checksum, checksum_type, tag, fileitem.fileSize());
 			}
 		}
 		const std::string &src_url = fileitem.srcName();
@@ -3701,8 +3770,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 	}
 
+		// If the FTO is in the wrong state - or the peer doesn't support
+		// reuse, clear out the built-up information and any relevant errors.
+	if (!PeerDoesReuseInfo || m_final_transfer_flag || simple_init) {
+		m_reuse_info.clear();
+		m_reuse_info_err.clear();
+	}
+
+
 	std::unordered_set<std::string> skip_files;
-	if (!reuse_info.empty())
+	if (!m_reuse_info.empty())
 	{
 		dprintf(D_FULLDEBUG, "DoUpload: Sending remote side hints about potential file reuse.\n");
 
@@ -3733,7 +3810,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		file_info.InsertAttr("SubCommand", sub);
 		file_info.InsertAttr("Tag", tag);
 		std::vector<ExprTree*> info_list;
-		for (auto &info : reuse_info) {
+		for (auto &info : m_reuse_info) {
 			classad::ClassAd *ad = new classad::ClassAd();
 			ad->InsertAttr("FileName", info.filename());
 			ad->InsertAttr("ChecksumType", info.checksum_type());
@@ -3868,6 +3945,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 			// Anything the remote side was able to reuse we do not send again.
 		if (skip_files.find(filename) != skip_files.end()) {
+			dprintf(D_FULLDEBUG, "Skipping file %s as it was reused.\n", filename.c_str());
 			continue;
 		}
 
@@ -4453,6 +4531,21 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 		total_bytes += result;
+	}
+
+	// If we had an error when parsing the data manifest, it occurred far too early for us to
+	// send a reasonable error back to the queue.  Hence, we delay looking at the error object until now.
+	if (!m_reuse_info_err.empty()) {
+		error_desc.formatstr_cat(": %s", m_reuse_info_err.getFullText().c_str());
+		if (!first_failed_file_transfer_happened) {
+			first_failed_file_transfer_happened = true;
+			first_failed_upload_success = false;
+			first_failed_try_again = false;
+			first_failed_hold_code = CONDOR_HOLD_CODE_UploadFileError;
+			first_failed_hold_subcode = 2;
+			first_failed_error_desc = error_desc;
+			first_failed_line_number = __LINE__;
+		}
 	}
 
 	do_download_ack = true;
