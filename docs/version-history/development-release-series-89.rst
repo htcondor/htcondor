@@ -34,6 +34,9 @@ Release Notes:
   only affect you if you're not using one the readers provided by HTCondor.
   :ticket:`7191`
 
+- `DAGMAN_USE_JOIN_NODES` is now on by default.
+  :ticket:`7271`
+
 New Features:
 
 - HTCondor now supports secure download and upload to and from S3.  See
