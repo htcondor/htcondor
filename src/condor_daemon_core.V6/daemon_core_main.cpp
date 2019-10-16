@@ -2250,14 +2250,14 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 		error_string = "Client ID not provided.";
 	}
 
-	if (request_id != -1 && client_id != iter->second->getClientId()) {
+	if (!error_code && request_id != -1 && client_id != iter->second->getClientId()) {
 		error_code = 5;
 		error_string = "Request unknown.";
 		request_id = -1;
 		dprintf(D_SECURITY, "Request ID (%s) correct but client ID (%s) incorrect.\n", request_id_str.c_str(),
 			client_id.c_str());
 	}
-	if (request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
+	if (!error_code && request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
 		error_code = 5;
 		error_string = "Request in incorrect state.";
 		request_id = -1;
@@ -2265,7 +2265,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 
 		// If we do not have ADMINISTRATOR privileges, the requested identity
 		// and the authenticated identity must match!
-	if (!has_admin && strcmp(iter->second->getRequestedIdentity().c_str(),
+	if (!error_code && !has_admin && strcmp(iter->second->getRequestedIdentity().c_str(),
 		static_cast<Sock*>(stream)->getFullyQualifiedUser()))
 	{
 		error_code = 6;
