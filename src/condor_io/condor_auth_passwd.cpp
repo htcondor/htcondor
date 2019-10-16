@@ -601,6 +601,7 @@ Condor_Auth_Passwd::fetchLogin()
 			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K\n");
 			free(ka);
 			free(kb);
+			free(seed_ka);
 			free(seed_kb);
 			return nullptr;
 		}
@@ -643,6 +644,8 @@ Condor_Auth_Passwd::fetchLogin()
 		m_keyfile_token = token;
 		free(ka);
 		free(kb);
+		free(seed_ka);
+		free(seed_kb);
 		return strdup(username.c_str());
 	}
 
