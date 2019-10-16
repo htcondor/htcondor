@@ -19,9 +19,9 @@ Here are all the steps needed to run a job using HTCondor.
  Submit description file.
     A submit description file controls the all details of a job submission.
     Ths file tells HTCondor everything it needs to know to run the job
-    on a remote machine, e.g. much memory and cpu cores are needed, what
-    input files the job needs and other aspects of the kind of machine the
-    job might need.
+    on a remote machine, e.g. how much memory and how many cpu cores are
+    needed, what input files the job needs, and other aspects of the kind of
+    machine the job might need.
 
     Write a submit description file to go with the job, using the
     examples provided in the :doc:`/users-manual/submitting-a-job` 
@@ -36,7 +36,7 @@ Here are all the steps needed to run a job using HTCondor.
     as integers separated by a dot.  You use this Cluster and Proc
     id to manage the job later.
 
-Once submitted, HTCondor manages the full lifetype of the job. You can monitor
+Once submitted, HTCondor manages the full lifetime of the job. You can monitor
 the job's progress with the *condor_q*
 :index:`condor_q<single: condor_q; HTCondor commands>` and *condor_status*
 commands. :index:`condor_status<single: condor_status; HTCondor commands>` 
