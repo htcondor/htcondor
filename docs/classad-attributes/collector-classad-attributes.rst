@@ -66,7 +66,7 @@ Collector ClassAd Attributes
 
     identifies that the *condor_collector* counts 567 vanilla universe
     jobs currently running. ``<universe>`` is one of ``Unknown``,
-    ``Standard``, ``Vanilla``, ``Scheduler``, ``Java``, ``Parallel``,
+    ``Vanilla``, ``Scheduler``, ``Java``, ``Parallel``,
     ``VM``, or ``Local``. There are other universes, but they are not
     listed here, as they represent ones that are no longer used in
     Condor.
@@ -232,7 +232,7 @@ Collector ClassAd Attributes
     identifies that the *condor_collector* saw 401 vanilla universe
     jobs currently running at one point in time, and that was the
     largest number it had encountered. ``<universe>`` is one of
-    ``Unknown``, ``Standard``, ``Vanilla``, ``Scheduler``, ``Java``,
+    ``Unknown``, ``Vanilla``, ``Scheduler``, ``Java``,
     ``Parallel``, ``VM``, or ``Local``. There are other universes, but
     they are not listed here, as they represent ones that are no longer
     used in Condor.

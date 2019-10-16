@@ -397,11 +397,6 @@ addition to using a shared port. This is done both by setting
 ``USE_SHARED_PORT = True`` and by specifying a fixed port for the daemon
 using ``<SUBSYS>_ARGS = -p <portnum>``.
 
-The TCP connections required to manage standard universe jobs do not
-make use of shared ports. Therefore, if the firewall is configured to
-only allow connections through the shared port, standard universe jobs
-will not be able to run.
-
 Configuring HTCondor for Machines With Multiple Network Interfaces
 ------------------------------------------------------------------
 
@@ -546,36 +541,6 @@ In the central manager's local configuration file:
     COLLECTOR = $(SBIN)/condor_collector
     DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
 
-If the central manager and farm machines are all NT, then only vanilla
-universe will work now. However, if this is set up for Unix, then at
-this point, standard universe jobs should be able to function in the
-pool. But, if ``UID_DOMAIN`` :index:`UID_DOMAIN` is not configured
-to be homogeneous across the farm machines, the standard universe jobs
-will run as nobody on the farm machines.
-
-In order to get vanilla jobs and file server load balancing for standard
-universe jobs working (under Unix), do some more work both in the
-cluster you have put together and in HTCondor to make everything work.
-First, you need a file server (which could also be the central manager)
-to serve files to all of the farm machines. This could be NFS or AFS,
-and it does not really matter to HTCondor. The mount point of the
-directories you wish your users to use must be the same across all of
-the farm machines. Now, configure ``UID_DOMAIN``
-:index:`UID_DOMAIN` and ``FILESYSTEM_DOMAIN``
-:index:`FILESYSTEM_DOMAIN` to be homogeneous across the farm
-machines and the central manager. Inform HTCondor that an NFS or AFS
-file system exists and that is done in this manner. In the global (to
-the farm) configuration file:
-
-::
-
-    # If you have NFS
-    USE_NFS = True
-    # If you have AFS
-    HAS_AFS = True
-    USE_AFS = True
-    # if you want both NFS and AFS, then enable both sets above
-
 Now, if the cluster is set up so that it is possible for a machine name
 to never have a domain name (for example, there is machine name but no
 fully qualified domain name in ``/etc/hosts``), configure
@@ -661,8 +626,6 @@ bi-directional communication given only one-directional connectivity.
 See :ref:`admin-manual/networking:port usage in htcondor` for information on
 opening port ranges. Also note that CCB works nicely with
 *condor_shared_port*.
-
-Unfortunately at this time, CCB does not support standard universe jobs.
 
 Any *condor_collector* may be used as a CCB server. There is no
 requirement that the *condor_collector* acting as the CCB server be the

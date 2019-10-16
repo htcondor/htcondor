@@ -23,11 +23,8 @@ Description
 of machines and force the jobs to vacate the machine. The job(s) remains
 in the submitting machine's job queue.
 
-Given the (default) **-graceful** option, a job running under the
-standard universe will first produce a checkpoint and then the job will
-be killed. HTCondor will then restart the job somewhere else, using the
-checkpoint to continue from where it left off. A job running under the
-vanilla universe is killed, and HTCondor restarts the job from the
+Given the (default) **-graceful** option, jobs are killed
+and HTCondor restarts the job from the
 beginning somewhere else. *condor_vacate* has no effect on a machine
 with no HTCondor job currently running.
 

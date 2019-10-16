@@ -1747,7 +1747,7 @@ jobs for any job that may be wrapped using the script defined by the
 configuration variable ``USER_JOB_WRAPPER``
 :index:`USER_JOB_WRAPPER`. These are jobs within universes that
 are controlled by the *condor_starter* daemon, and they include the
-**vanilla**, **standard**, **java**, **local**, and **parallel**
+**vanilla**, **java**, **local**, and **parallel**
 universes.
 
 The job's ClassAd is written by the *condor_starter* daemon. It will

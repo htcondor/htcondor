@@ -25,7 +25,7 @@ Description
 *condor_submit* is the program for submitting jobs for execution under
 HTCondor. *condor_submit* requires one or more submit description
 commands to direct the queuing of jobs. These commands may come from a
-file, standard input, the command line, or from some combination of
+file,   standard input, the command line, or from some combination of
 these. One submit description may contain specifications for the queuing
 of many HTCondor jobs at once. A single invocation of *condor_submit*
 may cause one or more clusters. A cluster is a set of jobs specified in
@@ -474,15 +474,6 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
 
-    If submitting into the standard universe, then the named executable
-    must have been re-linked with the HTCondor libraries (such as via
-    the *condor_compile* command). If submitting into the vanilla
-    universe (the default), then the named executable need not be
-    re-linked and can be any process which can run in the background
-    (shell scripts work fine as well). If submitting into the Java
-    universe, then the argument must be a compiled ``.class`` file.
-    :index:`getenv<single: getenv; submit commands>`
-
  getenv = <True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
@@ -686,7 +677,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     one submit description file.
     :index:`universe<single: universe; submit commands>`
 
- universe = <vanilla | standard | scheduler | local | grid | java| vm | parallel | docker>
+ universe = <vanilla | scheduler | local | grid | java | vm | parallel | docker>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
@@ -697,10 +688,6 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     mechanisms for taking checkpoints; these are ones that have not been
     linked with the HTCondor libraries. Use the **vanilla** universe to
     submit shell scripts to HTCondor.
-
-    The **standard** universe tells HTCondor that this job has been
-    re-linked via *condor_compile* with the HTCondor libraries and
-    therefore supports taking checkpoints and remote system calls.
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -956,7 +943,7 @@ FILE TRANSFER COMMANDS
  max_transfer_input_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
     MiB of the input files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not defined, the value set by configuration variable
@@ -971,7 +958,7 @@ FILE TRANSFER COMMANDS
  max_transfer_output_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
     MiB of the output files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the value set by configuration variable
@@ -996,9 +983,8 @@ FILE TRANSFER COMMANDS
     The
     **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
     setting is used to define if HTCondor should transfer files to and
-    from the remote machine where the job runs. The file transfer
-    mechanism is used to run jobs which are not in the standard universe
-    (and can therefore use remote system calls for file access) on
+    from the remote machine where the job runs.  The file transfer
+    mechanism is used to run jobs on
     machines which do not have a shared file system with the submit
     machine.
     **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
@@ -1388,9 +1374,8 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. This expression is available for the vanilla, java,
-    parallel, grid, local and scheduler universes. It is additionally
-    available, when submitted from a Unix machine, for the standard
-    universe. :index:`on_exit_hold_reason<single: on_exit_hold_reason; submit commands>`
+    parallel, grid, local and scheduler universes.
+    :index:`on_exit_hold_reason<single: on_exit_hold_reason; submit commands>`
 
  on_exit_hold_reason = <ClassAd String Expression>
     When the job is placed on hold due to the
@@ -1413,9 +1398,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``True`` (the default value when undefined), then it allows the job
     to leave the queue normally. If ``False``, then the job is placed
     back into the Idle state. If the user job runs under the vanilla
-    universe, then the job restarts from the beginning. If the user job
-    runs under the standard universe, then it continues from where it
-    left off, using the last checkpoint.
+    universe, then the job restarts from the beginning.
 
     For example, suppose a job occasionally segfaults, but chances are
     that the job will finish successfully if the job is run again with
@@ -1521,214 +1504,6 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
-
-COMMANDS SPECIFIC TO THE STANDARD UNIVERSE
-:index:`allow_startup_script<single: allow_startup_script; submit commands>`
-
- allow_startup_script = <True | False>
-    If True, a standard universe job will execute a script instead of
-    submitting the job, and the consistency check to see if the
-    executable has been linked using *condor_compile* is omitted. The
-    **executable** :index:`executable<single: executable; submit commands>` command
-    within the submit description file specifies the name of the script.
-    The script is used to do preprocessing before the job is submitted.
-    The shell script ends with an *exec* of the job executable, such
-    that the process id of the executable is the same as that of the
-    shell script. Here is an example script that gets a copy of a
-    machine-specific executable before the *exec*.
-
-    ::
-
-           #! /bin/sh
-
-           # get the host name of the machine
-           $host=`uname -n`
-
-           # grab a standard universe executable designed specifically
-           # for this host
-           scp elsewhere@cs.wisc.edu:${host} executable
-
-           # The PID MUST stay the same, so exec the new standard universe process.
-           exec executable ${1+"$@"}
-
-    If this command is not present (defined), then the value defaults to
-    false. :index:`append_files<single: append_files; submit commands>`
-
- append_files = file1, file2, ...
-    If your job attempts to access a file mentioned in this list,
-    HTCondor will force all writes to that file to be appended to the
-    end. Furthermore, condor_submit will not truncate it. This list
-    uses the same syntax as compress_files, shown above.
-
-    This option may yield some surprising results. If several jobs
-    attempt to write to the same file, their output may be intermixed.
-    If a job is evicted from one or more machines during the course of
-    its lifetime, such an output file might contain several copies of
-    the results. This option should be only be used when you wish a
-    certain file to be treated as a running log instead of a precise
-    result.
-
-    This option only applies to standard-universe jobs.
-    :index:`buffer_files<single: buffer_files; submit commands>`
-    :index:`buffer_size<single: buffer_size; submit commands>`
-    :index:`buffer_block_size<single: buffer_block_size; submit commands>`
-
- buffer_files = < " name = (size,block-size) ; name2 = (size,block-size) ... " >; buffer_size = <bytes-in-buffer>; buffer_block_size = <bytes-in-block>
-    HTCondor keeps a buffer of recently-used data for each file a job
-    accesses. This buffer is used both to cache commonly-used data and
-    to consolidate small reads and writes into larger operations that
-    get better throughput. The default settings should produce
-    reasonable results for most programs.
-
-    These options only apply to standard-universe jobs.
-
-    If needed, you may set the buffer controls individually for each
-    file using the buffer_files option. For example, to set the buffer
-    size to 1 MiB and the block size to 256 KiB for the file
-    ``input.data``, use this command:
-
-    ::
-
-        buffer_files = "input.data=(1000000,256000)"
-
-    Alternatively, you may use these two options to set the default
-    sizes for all files used by your job:
-
-    ::
-
-        buffer_size = 1000000
-        buffer_block_size = 256000
-
-    If you do not set these, HTCondor will use the values given by these
-    two configuration file macros:
-
-    ::
-
-        DEFAULT_IO_BUFFER_SIZE = 1000000
-        DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
-
-    Finally, if no other settings are present, HTCondor will use a
-    buffer of 512 KiB and a block size of 32 KiB.
-    :index:`compress_files<single: compress_files; submit commands>`
-
- compress_files = file1, file2, ...
-    If your job attempts to access any of the files mentioned in this
-    list, HTCondor will automatically compress them (if writing) or
-    decompress them (if reading). The compress format is the same as
-    used by GNU gzip.
-
-    The files given in this list may be simple file names or complete
-    paths and may include \* as a wild card. For example, this list
-    causes the file /tmp/data.gz, any file named event.gz, and any file
-    ending in .gzip to be automatically compressed or decompressed as
-    needed:
-
-    ::
-
-        compress_files = /tmp/data.gz, event.gz, *.gzip
-
-    Due to the nature of the compression format, compressed files must
-    only be accessed sequentially. Random access reading is allowed but
-    is very slow, while random access writing is simply not possible.
-    This restriction may be avoided by using both compress_files and
-    fetch_files at the same time. When this is done, a file is kept in
-    the decompressed state at the execution machine, but is compressed
-    for transfer to its original location.
-
-    This option only applies to standard universe jobs.
-    :index:`fetch_files<single: fetch_files; submit commands>`
-
- fetch_files = file1, file2, ...
-    If your job attempts to access a file mentioned in this list,
-    HTCondor will automatically copy the whole file to the executing
-    machine, where it can be accessed quickly. When your job closes the
-    file, it will be copied back to its original location. This list
-    uses the same syntax as compress_files, shown above.
-
-    This option only applies to standard universe jobs.
-    :index:`file_remaps<single: file_remaps; submit commands>`
-
- file_remaps = < " name = newname ; name2 = newname2 ... ">
-    Directs HTCondor to use a new file name in place of an old one.
-    *name* describes a file name that your job may attempt to open, and
-    *newname* describes the file name it should be replaced with.
-    *newname* may include an optional leading access specifier, local:
-    or remote:. If left unspecified, the default access specifier is
-    remote:. Multiple remaps can be specified by separating each with a
-    semicolon.
-
-    This option only applies to standard universe jobs.
-
-    If you wish to remap file names that contain equals signs or
-    semicolons, these special characters may be escaped with a
-    backslash.
-
-     Example One:
-        Suppose that your job reads a file named ``dataset.1``. To
-        instruct HTCondor to force your job to read ``other.dataset``
-        instead, add this to the submit file:
-
-        ::
-
-            file_remaps = "dataset.1=other.dataset"
-
-     Example Two:
-        Suppose that your run many jobs which all read in the same large
-        file, called ``very.big``. If this file can be found in the same
-        place on a local disk in every machine in the pool, (say
-        ``/bigdisk/bigfile``,) you can instruct HTCondor of this fact by
-        remapping ``very.big`` to ``/bigdisk/bigfile`` and specifying
-        that the file is to be read locally, which will be much faster
-        than reading over the network.
-
-        ::
-
-            file_remaps = "very.big = local:/bigdisk/bigfile"
-
-     Example Three:
-        Several remaps can be applied at once by separating each with a
-        semicolon.
-
-        ::
-
-            file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
-
-    :index:`local_files<single: local_files; submit commands>`
-
- local_files = file1, file2, ...
-    If your job attempts to access a file mentioned in this list,
-    HTCondor will cause it to be read or written at the execution
-    machine. This is most useful for temporary files not used for input
-    or output. This list uses the same syntax as compress_files, shown
-    above.
-
-    ::
-
-        local_files = /tmp/*
-
-    This option only applies to standard universe jobs.
-    :index:`want_remote_io<single: want_remote_io; submit commands>`
-
- want_remote_io = <True | False>
-    This option controls how a file is opened and manipulated in a
-    standard universe job. If this option is true, which is the default,
-    then the *condor_shadow* makes all decisions about how each and
-    every file should be opened by the executing job. This entails a
-    network round trip (or more) from the job to the *condor_shadow*
-    and back again for every single ``open()`` in addition to other
-    needed information about the file. If set to false, then when the
-    job queries the *condor_shadow* for the first time about how to
-    open a file, the *condor_shadow* will inform the job to
-    automatically perform all of its file manipulation on the local file
-    system on the execute machine and any file remapping will be
-    ignored. This means that there **must** be a shared file system
-    (such as NFS or AFS) between the execute machine and the submit
-    machine and that **ALL** paths that the job could open on the
-    execute machine must be valid. The ability of the standard universe
-    job to checkpoint, possibly to a checkpoint server, is not affected
-    by this attribute. However, when the job resumes it will be
-    expecting the same file system conditions that were present when the
-    job checkpointed.
 
 COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit commands>`
 
@@ -2400,12 +2175,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     is ``True``, then *condor_submit* copies the executable to the
     local spool directory before running it on a remote host. As copying
     can be quite time consuming and unnecessary, the default value is
-    ``False`` for all job universes other than the standard universe.
+    ``False`` for all job universes.
     When ``False``, *condor_submit* does not copy the executable to a
-    local spool directory. The default is ``True`` in standard universe,
-    because resuming execution from a checkpoint can only be guaranteed
-    to work using precisely the same executable that created the
-    checkpoint. :index:`coresize<single: coresize; submit commands>`
+    local spool directory.
+    :index:`coresize<single: coresize; submit commands>`
  coresize = <size>
     Should the user's program abort and produce a core file,
     **coresize** specifies the maximum size in bytes of the core file
@@ -2541,11 +2314,6 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     the machine from which the job is submitted where the input files
     come from, and where the job's output files go to.
 
-    For standard universe jobs, it is the directory on the machine from
-    which the job is submitted where the *condor_shadow* daemon runs;
-    the current working directory for file input and output accomplished
-    through remote system calls.
-
     For scheduler universe jobs, it is the directory on the machine from
     which the job is submitted where the job runs; the current working
     directory for file input and output with respect to relative path
@@ -2623,10 +2391,8 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     **signal-number** :index:`signal-number<single: signal-number; submit commands>`.
     **signal-number** :index:`signal-number<single: signal-number; submit commands>`
     needs to be an integer which represents a valid signal on the
-    execution machine. For jobs submitted to the standard universe, the
-    default value is the number for SIGTSTP which tells the HTCondor
-    libraries to initiate a checkpoint of the process. For jobs
-    submitted to other universes, the default value, when not defined,
+    execution machine.
+    The default value
     is SIGTERM, which is the standard way to terminate a program in
     Unix. :index:`kill_sig_timeout<single: kill_sig_timeout; submit commands>`
  kill_sig_timeout = <seconds>
@@ -2713,7 +2479,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     lead-time for soft-killing is determined by the maximum vacating
     time granted to the job.
 
-    Standard universe jobs and any jobs running with
+    Any jobs running with
     **nice_user** :index:`nice_user<single: nice_user; submit commands>` priority
     have a default
     **max_job_retirement_time** :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
@@ -2764,8 +2530,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     :index:`remote_initialdir<single: remote_initialdir; submit commands>`
  remote_initialdir = <directory-path>
     The path specifies the directory in which the job is to be executed
-    on the remote machine. This is currently supported in all universes
-    except for the standard universe.
+    on the remote machine.
     :index:`rendezvousdir<single: rendezvousdir; submit commands>`
  rendezvousdir = <directory-path>
     Used to specify the shared file system directory to be used for file
@@ -2782,8 +2547,8 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     administrative details on configuring Windows to support this
     option. :index:`stack_size<single: stack_size; submit commands>`
  stack_size = <size in bytes>
-    This command applies only to Linux platform jobs that are not
-    standard universe jobs. An integer number of bytes, representing the
+    This command applies only to Linux platforms.
+    An integer number of bytes, representing the
     amount of stack space to be allocated for the job. This value
     replaces the default allocation of stack space, which is unlimited
     in size. :index:`submit_event_notes<single: submit_event_notes; submit commands>`
@@ -3210,7 +2975,7 @@ Examples
              ####################
 
              Executable     = foo
-             Universe       = standard
+             Universe       = vanilla
              Requirements   = OpSys == "LINUX" && Arch =="INTEL"
              Rank           = Memory >= 64
              Request_Memory = 32 Mb
@@ -3289,14 +3054,6 @@ General Remarks
    an HTCondor job which is still in the queue. For example, the
    compressing of data or output files before an HTCondor job has
    completed is a common mistake.
--  To disable checkpointing for Standard Universe jobs, include the
-   line:
-
-   ::
-
-             +WantCheckpoint = False
-
-   in the submit description file before the queue command(s).
 
 See Also
 --------

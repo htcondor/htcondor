@@ -38,9 +38,7 @@ A job in the hold state remains in the job queue, but the job will not
 run until released with *condor_release*.
 
 A currently running job that is placed in the hold state by
-*condor_hold* is sent a hard kill signal. For a standard universe job,
-this means that the job is removed from the machine without allowing a
-checkpoint to be produced first.
+*condor_hold* is sent a hard kill signal.
 
 Options
 -------

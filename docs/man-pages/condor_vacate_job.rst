@@ -29,18 +29,12 @@ Description
 and vacates them from the host(s) where they are currently running. The
 jobs remain in the job queue and return to the idle state.
 
-A job running under the standard universe will first produce a
-checkpoint and then the job will be killed. HTCondor will then restart
-the job somewhere else, using the checkpoint to continue from where it
-left off. A job running under any other universe will be sent a soft
+A running job running will be sent a soft
 kill signal (SIGTERM by default, or whatever is defined as the
 ``SoftKillSig`` in the job ClassAd), and HTCondor will restart the job
 from the beginning somewhere else.
 
-If the **-fast** option is used, the job(s) will be immediately killed,
-meaning that standard universe jobs will not be allowed to checkpoint,
-and the job will have to revert to the last checkpoint or start over
-from the beginning.
+If the **-fast** option is used, the job(s) will be immediately killed.
 
 If the **-name** option is specified, the named *condor_schedd* is
 targeted for processing. If the **-addr** option is used, the
@@ -108,11 +102,11 @@ To vacate all jobs of a user named Mary:
 
     % condor_vacate_job mary
 
-To vacate all standard universe jobs owned by Mary:
+To vacate all vanilla universe jobs owned by Mary:
 
 ::
 
-    % condor_vacate_job -constraint 'JobUniverse == 1 && Owner == "mary"'
+    % condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
 
 Note that the entire constraint, including the quotation marks, must be
 enclosed in single quote marks for most shells.
