@@ -31,7 +31,7 @@ Exceptional Features
  HTCondor Can Use Foreign Resources, from a Grid, or a Cloud, or a Supercomputer Allocation
     The technique of glidein allows jobs submitted to HTCondor to be
     executed on grid machines in various locations worldwide.  HTCondor's
-	grid universe allows direct submission of jobs to remote systems.
+    grid universe allows direct submission of jobs to remote systems.
  Sensitive to the Desires of Machine Owners
     The owner of a machine has complete priority over the use of the
     machine. An owner is generally happy to let others compute on the
@@ -50,7 +50,7 @@ Exceptional Features
     an expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
     requirements and job desires. For example, a user can require that a
-	for a job to run at all, it must be started on a machine with a
+    for a job to run at all, it must be started on a machine with a
     certain amount of memory, but should there be multiple available
     machines that meet that criteria, to select the one with the most
     memory.

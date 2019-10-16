@@ -13,24 +13,20 @@ Here are all the steps needed to run a job using HTCondor.
     job. :index:`batch ready<single: batch ready; job>` HTCondor runs the program
     unattended and in the background. A program that runs in the
     background will not be able to do interactive input and output.
-    HTCondor can redirect console output (``stdout`` and ``stderr``) and
-    keyboard input (``stdin``) to and from files for the program. Create
-    any needed files that contain the proper keystrokes needed for
-    program input. Make certain the program will run correctly with the
-    files.
+    Create any needed files that contain the proper inputs for the problem
+    Make certain the program will run correctly with the files.
 
  Submit description file.
-    Controlling the details of a job submission is a submit description
-    file. The file contains information about the job such as what
-    executable to run, how much memory and cpu cores are needed to run
-	the job, and many other details about the job.
+    A submit description file controls the all details of a job submission.
+    Ths file tells HTCondor everything it needs to know to run the job
+    on a remote machine, e.g. much memory and cpu cores are needed, what
+    input files the job needs and other aspects of the kind of machine the
+    job might need.
 
     Write a submit description file to go with the job, using the
     examples provided in the :doc:`/users-manual/submitting-a-job` 
-    section for guidance.
-
-    There are many possible options that can be set in a submit
-    file, but most submit files only use a few.  The complete list
+    section for guidance. There are many possible options that can be 
+    set in a submit file, but most submit files only use a few.  The complete list
     of submit file options can be found in :doc:`/man-pages/condor_submit`.
 
  Submit the Job.
@@ -40,11 +36,11 @@ Here are all the steps needed to run a job using HTCondor.
     as integers separated by a dot.  You use this Cluster and Proc
     id to manage the job later.
 
-Once submitted, HTCondor does the rest toward running the job. Monitor
+Once submitted, HTCondor manages the full lifetype of the job. You can monitor
 the job's progress with the *condor_q*
 :index:`condor_q<single: condor_q; HTCondor commands>` and *condor_status*
 commands. :index:`condor_status<single: condor_status; HTCondor commands>` 
-If desired, HTCondor can even inform you in a log file
+If desired, HTCondor can inform you in a log file
 about changes to the state of your job -- when it starts executing, when
 it uses more resources, when it completes, or when it is preempted 
 from a machine.
@@ -52,166 +48,8 @@ from a machine.
 When your program completes, HTCondor will tell you (by e-mail, if
 preferred) the exit status of your program and various statistics about
 its performances, including time used and I/O performed. If you are
-using a log file for the job (which is recommended) the exit status will
-be recorded in the log file. You can remove a job from the queue
+using a log file for the job, the exit status will
+be recorded in there. You can remove a job from the queue
 prematurely with *condor_rm*.
 :index:`condor_rm<single: condor_rm; HTCondor commands>`
-
-Choosing an HTCondor Universe
------------------------------
-
-A universe in HTCondor
-:index:`universe` :index:`universe<single: universe; HTCondor>` defines an
-execution environment. HTCondor Version 8.9.1 supports several different
-universes for user jobs:
-
--  vanilla
--  grid
--  java
--  scheduler
--  local
--  parallel
--  vm
--  docker
-
-The **universe** :index:`universe<single: universe; submit commands>` under which
-a job runs is specified in the submit description file. If a universe is
-not specified, the default is vanilla.
-
-:index:`vanilla<single: vanilla; universe>` The vanilla universe is a good
-default, for it has the fewest restrictions on the job.
-:index:`Grid<single: Grid; universe>` The grid universe allows users to submit
-jobs using HTCondor's interface. These jobs are submitted for execution
-on grid resources. :index:`java<single: java; universe>` :index:`Java`
-:index:`Java Virtual Machine` :index:`JVM` The java
-universe allows users to run jobs written for the Java Virtual Machine
-(JVM). The scheduler universe allows users to submit lightweight jobs to
-be spawned by the program known as a daemon on the submit host itself.
-:index:`parallel<single: parallel; universe>` The parallel universe is for programs
-that require multiple machines for one job. See the 
-:doc:`/users-manual/parallel-applications` section for more
-about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
-allows users to run jobs where the job is no longer a simple executable,
-but a disk image, facilitating the execution of a virtual machine. The
-docker universe runs a Docker container as an HTCondor job.
-
-Vanilla Universe
-''''''''''''''''
-
-:index:`vanilla<single: vanilla; universe>`
-
-The vanilla universe in HTCondor is intended for programs which cannot
-be successfully re-linked. Shell scripts are another case where the
-vanilla universe is useful. Unfortunately, jobs run under the vanilla
-universe cannot checkpoint or use remote system calls. This has
-unfortunate consequences for a job that is partially completed when the
-remote machine running a job must be returned to its owner. HTCondor has
-only two choices. It can suspend the job, hoping to complete it at a
-later time, or it can give up and restart the job from the beginning on
-another machine in the pool.
-
-Since HTCondor's remote system call features cannot be used with the
-vanilla universe, access to the job's input and output files becomes a
-concern. One option is for HTCondor to rely on a shared file system,
-such as NFS or AFS. Alternatively, HTCondor has a mechanism for
-transferring files on behalf of the user. In this case, HTCondor will
-transfer any files needed by a job to the execution site, run the job,
-and transfer the output back to the submitting machine.
-
-Under Unix, HTCondor presumes a shared file system for vanilla jobs.
-However, if a shared file system is unavailable, a user can enable the
-HTCondor File Transfer mechanism. On Windows platforms, the default is
-to use the File Transfer mechanism. For details on running a job with a
-shared file system, see :ref:`users-manual/submitting-a-job:submitting jobs
-using a shared file system`. For details on using the
-HTCondor File Transfer mechanism, see 
-:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
-system: htcondor's file transfer mechanism`.
-
-Grid Universe
-'''''''''''''
-
-:index:`Grid<single: Grid; universe>`
-
-The Grid universe in HTCondor is intended to provide the standard
-HTCondor interface to users who wish to start jobs intended for remote
-management systems. :doc:`/grid-computing/grid-universe` section has details
-on using the Grid universe. The manual page for :doc:`/man-pages/condor_submit`
-has detailed descriptions of the grid-related attributes.
-
-Java Universe
-'''''''''''''
-
-:index:`Java<single: Java; universe>`
-
-A program submitted to the Java universe may run on any sort of machine
-with a JVM regardless of its location, owner, or JVM version. HTCondor
-will take care of all the details such as finding the JVM binary and
-setting the classpath.
-
-Scheduler Universe
-''''''''''''''''''
-
-:index:`scheduler<single: scheduler; universe>` :index:`scheduler universe`
-
-The scheduler universe allows users to submit lightweight jobs to be run
-immediately, alongside the *condor_schedd* daemon on the submit host
-itself. Scheduler universe jobs are not matched with a remote machine,
-and will never be preempted. The job's requirements expression is
-evaluated against the *condor_schedd* 's ClassAd.
-
-Originally intended for meta-schedulers such as *condor_dagman*, the
-scheduler universe can also be used to manage jobs of any sort that must
-run on the submit host.
-
-However, unlike the local universe, the scheduler universe does not use
-a *condor_starter* daemon to manage the job, and thus offers limited
-features and policy support. The local universe is a better choice for
-most jobs which must run on the submit host, as it offers a richer set
-of job management features, and is more consistent with other universes
-such as the vanilla universe. The scheduler universe may be retired in
-the future, in favor of the newer local universe.
-
-Local Universe
-''''''''''''''
-
-:index:`local<single: local; universe>` :index:`local universe`
-
-The local universe allows an HTCondor job to be submitted and executed
-with different assumptions for the execution conditions of the job. The
-job does not wait to be matched with a machine. It instead executes
-right away, on the machine where the job is submitted. The job will
-never be preempted. The job's requirements expression is evaluated
-against the *condor_schedd* 's ClassAd.
-
-Parallel Universe
-'''''''''''''''''
-
-:index:`parallel<single: parallel; universe>` :index:`parallel universe`
-
-The parallel universe allows parallel programs, such as MPI jobs, to be
-run within the opportunistic HTCondor environment. Please see
-the :ref:`users-manual/parallel-applications:parallel applications (including
-mpi applications)` section for more details.
-
-VM Universe
-'''''''''''
-
-:index:`vm<single: vm; universe>` :index:`vm universe`
-
-HTCondor facilitates the execution of VMware and Xen virtual machines
-with the vm universe.
-
-Please see the :doc:`/users-manual/virtual-machine-applications` section for
-details.
-
-Docker Universe
-'''''''''''''''
-
-:index:`docker<single: docker; universe>` :index:`docker universe`
-
-The docker universe runs a docker container on an execute host as a job.
-Please see the :doc:`/users-manual/docker-universe-applications` section for
-details.
-
 

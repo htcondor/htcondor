@@ -13,6 +13,7 @@ Users' Manual
    priorities-and-preemption
    dagman-applications
    matchmaking-with-classads
+   choosing-an-htcondor-universe
    java-applications
    parallel-applications
    virtual-machine-applications
