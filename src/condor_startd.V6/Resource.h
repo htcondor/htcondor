@@ -112,6 +112,8 @@ public:
 	void	releaseAllClaimsReversibly( void );
 	void	killAllClaims( void );
 
+	void	dropAdInLogFile( void );
+
         void	setBadputCausedByDraining();
         bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
 
