@@ -28,6 +28,7 @@
 #include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
 #include "classad_helpers.h"
+#include "ToE.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -86,7 +87,7 @@ static bool handleFTL(int error) {
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1) { }
+DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1), shouldAskForServicePorts(false) { }
 
 DockerProc::~DockerProc() { 
 	if ( daemonCore && daemonCore->SocketIsRegistered(&listener)) {
@@ -188,7 +189,7 @@ int DockerProc::StartJob() {
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, shouldAskForServicePorts, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
@@ -266,8 +267,12 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// When we get here docker create has just succeeded
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
-		
-		// Now ssh-to-job can go
+
+		// It would be nice if we could find out what port Docker selected
+		// for search service (if any) before we actually started the job,
+		// but (understandably) Docker doesn't do that.
+
+		// It seems like this should be done _after_ we call start Container().
 		Starter->SetJobEnvironmentReady(true);
 
 		CondorError err;
@@ -731,11 +736,28 @@ bool DockerProc::ShutdownFast() {
 
 void
 DockerProc::getStats() {
-	DockerAPI::stats( containerName, memUsage, netIn, netOut, userCpu, sysCpu);
+	if( shouldAskForServicePorts ) {
+		if( DockerAPI::getServicePorts( containerName, * JobAd, serviceAd ) == 0 ) {
+			shouldAskForServicePorts = false;
+
+			// Append serviceAd to the sandbox's copy of the job ad.
+			std::string jobAdFileName;
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
+			{
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				// ... sigh ...
+				ToE::writeTag( & serviceAd, jobAdFileName );
+			}
+		}
+	}
+	DockerAPI::stats(containerName, memUsage, netIn, netOut, userCpu, sysCpu);
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	dprintf( D_FULLDEBUG, "DockerProc::PublishUpdateAd() container '%s'\n", containerName.c_str() );
+
+	// Copy the service-to-port map into the update ad.
+	ad->Update( serviceAd );
 
 	//
 	// If we want to use the existing reporting code (probably a good

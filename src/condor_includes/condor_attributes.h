@@ -85,6 +85,7 @@
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
 #define ATTR_COMMAND  "Command"
 #define ATTR_COMPRESS_FILES  "CompressFiles"
+#define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
 #define ATTR_CKPT_ARCH  "CkptArch"
 #define ATTR_CKPT_LAST_READ  "CkptLastRead"

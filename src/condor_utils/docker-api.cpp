@@ -82,6 +82,7 @@ int DockerAPI::createContainer(
 	const std::list<std::string> extraVolumes,
 	int & pid,
 	int * childFDs,
+	bool & shouldAskForPorts,
 	CondorError & /* err */ )
 {
 	gc_image(imageID);
@@ -105,9 +106,9 @@ int DockerAPI::createContainer(
 	runArgs.AppendArg( "--cidfile=" + cidFileName );
 */
 
-	
+
 	// Configure resource limits.
-	
+
 	// First cpus
 	int  cpus;
 	int cpuShare;
@@ -127,13 +128,13 @@ int DockerAPI::createContainer(
 		std::string mem;
 		formatstr(mem, "--memory=%dm", memory);
 		runArgs.AppendArg(mem);
-	} 
+	}
 
 	// drop unneeded Linux capabilities
 	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true /*default*/,
 		true /*do_log*/, &machineAd, &jobAd)) {
 		runArgs.AppendArg("--cap-drop=all");
-			
+
 		// --no-new-privileges flag appears in docker 1.11
 		runArgs.AppendArg("--security-opt");
 		runArgs.AppendArg("no-new-privileges");
@@ -174,7 +175,7 @@ int DockerAPI::createContainer(
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if  (assignedGpus.length() > 0) {
-		
+
 		// Always need to map these two devices
 		runArgs.AppendArg("--device");
 		runArgs.AppendArg("/dev/nvidiactl");
@@ -197,7 +198,7 @@ int DockerAPI::createContainer(
 		}
 	}
 
-	
+
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
 	runArgs.AppendArg( sandboxPath );
@@ -213,7 +214,7 @@ int DockerAPI::createContainer(
 	uid = get_user_uid();
 	gid = get_user_gid();
 #endif
-	
+
 	if ((uid == 0) || (gid == 0)) {
 		dprintf(D_ALWAYS|D_FAILURE, "Failed to get userid to run docker job\n");
 		return -9;
@@ -264,6 +265,30 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--network=host");
 	}
 
+	// Handle port forwarding.
+	std::string containerServiceNames;
+	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
+	if(! containerServiceNames.empty()) {
+		StringList services(containerServiceNames.c_str());
+		services.rewind();
+		const char * service = NULL;
+		while( NULL != (service = services.next()) ) {
+			int portNo = -1;
+			std::string attrName;
+			formatstr( attrName, "%s_%s", service, "ContainerPort" );
+			if( jobAd.LookupInteger( attrName, portNo ) ) {
+				runArgs.AppendArg("-p");
+				runArgs.AppendArg(portNo);
+				shouldAskForPorts = true;
+			} else {
+				// FIXME: This should actually be a hold message.
+				dprintf( D_ALWAYS, "Requested container service '%s' did "
+					"not specify a port, or the specified port was not "
+					"a number.\n", service );
+				return -1;
+			}
+		}
+	}
 
 	MyString args_error;
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
@@ -278,7 +303,7 @@ int DockerAPI::createContainer(
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
 
-	
+
 	// If no command given, the default command in the image will run
 	if (command.length() > 0) {
 		runArgs.AppendArg( command );
@@ -655,24 +680,8 @@ convertUnits(uint64_t raw, char *unit) {
 }
 #endif
 
-
-	/* Find usage stats on a running container by talking
- 	 * directly to the server
- 	 */
- 	 
 int
-DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut, uint64_t &userCpu, uint64_t &sysCpu) {
-
-#if defined(WIN32)
-	return -1;
-#else
-
-	/*
- 	 * Create a Unix domain socket 
- 	 *
- 	 * This is what the docker server listens on
- 	 */
-
+sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
 		dprintf(D_ALWAYS, "Can't create unix domain socket, no docker statistics will be available\n");
@@ -681,7 +690,7 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 
 	struct sockaddr_un sa;
 	memset(&sa, 0, sizeof(sa));
-	
+
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "/var/run/docker.sock",sizeof(sa.sun_path) - 1);
 
@@ -695,17 +704,12 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	}
 	}
 
-	char request[256];
-
-	sprintf(request, "GET /containers/%s/stats?stream=0 HTTP/1.0\r\n\r\n", container.c_str());
-	int ret = write(uds, request, strlen(request));
+	int ret = write(uds, request.c_str(), request.length());
 	if (ret < 0) {
 		dprintf(D_ALWAYS, "Can't send request to docker server, no statistics will be available\n");
 		close(uds);
 		return -1;
 	}
-
-	std::string response;
 
 	char buf[1024];
 	int written;
@@ -713,14 +717,33 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	// read with 200 second timeout, no flags, nonblocking
 	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, 0, false)) > 0) {
 		response.append(buf, written);
-	} 
+	}
 
-	dprintf(D_FULLDEBUG, "docker stats: %s\n", response.c_str());
+	dprintf(D_FULLDEBUG, "sendDockerAPIRequest(%s) = %s\n",
+		request.c_str(), response.c_str());
 	close(uds);
+	return 0;
+}
+
+
+	/* Find usage stats on a running container by talking
+	 * directly to the server
+	 */
+
+int
+DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut, uint64_t &userCpu, uint64_t &sysCpu) {
+#if defined(WIN32)
+	return -1;
+#else
+	std::string request, response;
+	formatstr( request, "GET /containers/%s/stats?stream=0 HTTP/1.0\r\n\r\n", container.c_str());
+
+	int rv = sendDockerAPIRequest( request, response );
+	if( rv < 0 ) { return rv; }
 
 	// Response now contains an enormous JSON formatted response
 	// Hackily extract the fields we are interested in
-	
+
 	size_t pos;
 	memUsage = netIn = netOut = userCpu = sysCpu = 0;
 
@@ -769,73 +792,7 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 
 	return 0;
 #endif
-
-} /*
- *  getting stats by running docker stats is now deprecated
- */
-
-#if 0
-int
-DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut) {
-newstats(container, memUsage, netIn, netOut);
-	ArgList args;
-	if ( ! add_docker_arg(args))
-		return -1;
-	args.AppendArg( "stats" );
-	args.AppendArg( "--no-stream" );
-	args.AppendArg( container.c_str() );
-
-	MyString displayString;
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-
-	args.GetArgsStringForLogging( & displayString );
-
-	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
-
-		// Read from Docker's combined output and error streams.
-	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	const int statLineSize = 256;
-	char header[statLineSize];
-	char data[statLineSize];
-	if( NULL == fgets( header, statLineSize, dockerResults ) ) {
-		my_pclose(dockerResults);
-		return -2;
-	}
-
-	if( NULL == fgets( data, statLineSize, dockerResults ) ) {
-		my_pclose(dockerResults);
-		return -2;
-	}
-	my_pclose(dockerResults);
-
-	dprintf(D_FULLDEBUG, "Docker stats data is:\n%s\n", data);
-		// condor stats output looks like:
-		// Name	cpu%   mem usage/limit  mem%  net i/o   block i/o
-		// container  0.00%  0 B / 0 B        0.00% 0 B / 0 B  0 B / 0 B
-		//
-	char memUsageUnit[2];
-	char netInUnit[2];
-	char netOutUnit[2];
-
-	double memRaw, netInRaw, netOutRaw;
-	int matches = sscanf(data, "%*s %*g%% %lg %s / %*g %*s %*g%% %lg %s / %lg %s", &memRaw, &memUsageUnit[0], &netInRaw, &netInUnit[0], &netOutRaw, &netOutUnit[0]);
-	if (matches < 6) {
-		return -2;
-	}
-
-	memUsage = convertUnits(memRaw, memUsageUnit);
-	netIn    = convertUnits(netInRaw, netInUnit);
-	netOut   = convertUnits(netOutRaw, netOutUnit);
-  
-	dprintf(D_FULLDEBUG, "memUsage is %g (%s), net In is %g (%s), net Out is %g (%s)\n", memRaw, memUsageUnit, netInRaw, netInUnit, netOutRaw, netOutUnit);
-	return 0;
 }
-#endif
 
 int DockerAPI::detect( CondorError & err ) {
 	// FIXME: Remove ::version() as a public API and return it from here,
@@ -1417,4 +1374,93 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	hostname += machine;
 
 	return hostname;
+}
+
+int
+DockerAPI::getServicePorts( const std::string & container,
+  const ClassAd & jobAd, ClassAd & serviceAd ) {
+#if defined(WIN32)
+	return -1
+#else
+	std::string request, response;
+	formatstr( request, "GET /containers/%s/json HTTP/1.0\r\n\r\n",
+		container.c_str() );
+	int rv = sendDockerAPIRequest( request, response );
+	if( rv < 0 ) { return rv; }
+
+	// Strip the HTTP headers out of response.
+	auto separator = response.find( "\r\n\r\n" );
+	if( separator != std::string::npos ) {
+		response = response.substr( separator + 4 );
+	}
+
+	// Convert the JSON blob to a ClassAd so we can deal with it.
+	classad::ClassAd result;
+	classad::ClassAdJsonParser cajp;
+	if(! cajp.ParseClassAd( response, result, true )) {
+		return -1;
+	}
+
+	//
+	// FIXME: Will result going out of scope clean everything up?
+	//
+
+	// This is clumsier than it seems like it ought to be.
+	ExprTree * ns = result.Lookup( "NetworkSettings" );
+	if( ns == NULL ) { return -2; }
+	classad::ClassAd * nsCA = dynamic_cast< classad::ClassAd * >(ns);
+	if( nsCA == NULL ) { return -2; }
+
+	ExprTree * p = nsCA->Lookup( "Ports" );
+	if( p == NULL ) { return -1; }
+	classad::ClassAd * pCA = dynamic_cast< classad::ClassAd * >(p);
+	if( p == NULL ) { return -1; }
+
+    std::map< int, int > containerPortToHostPortMap;
+	for( auto i = pCA->begin(); i != pCA->end(); ++i ) {
+		ExprTree * hi = pCA->Lookup( i->first );
+		classad::ExprList * hl = dynamic_cast< classad::ExprList * >(hi);
+		if( hl == NULL ) { return -1; }
+
+		std::vector< ExprTree * > pairs;
+		hl->GetComponents( pairs );
+
+		for( const auto j : pairs ) {
+			classad::ClassAd * hostCA = dynamic_cast<classad::ClassAd *>(j);
+			if( hostCA == NULL ) { return -1; }
+
+			std::string hp;
+			if(! hostCA->EvaluateAttrString( "HostPort", hp )) { return -1; }
+
+			unsigned long containerPort = std::stoul( i->first );
+			unsigned long hostPort = std::stoul( hp );
+			containerPortToHostPortMap[containerPort] = hostPort;
+			dprintf( D_FULLDEBUG, "DockerAPI::getServicePorts() - container port %lu <- host port %lu\n", containerPort, hostPort );
+		}
+	}
+
+	std::string containerServiceNames;
+	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
+	if(! containerServiceNames.empty()) {
+		StringList services(containerServiceNames.c_str());
+		services.rewind();
+		const char * service = NULL;
+		while( NULL != (service = services.next()) ) {
+		    int portNo = -1;
+			std::string attrName;
+			formatstr( attrName, "%s_%s", service, "ContainerPort" );
+			if( jobAd.LookupInteger( attrName, portNo ) ) {
+				if( containerPortToHostPortMap.count(portNo) ) {
+					formatstr( attrName, "%s_%s", service, "HostPort" );
+					serviceAd.InsertAttr( attrName, containerPortToHostPortMap[portNo] );
+				}
+			}
+		}
+
+		dprintf( D_FULLDEBUG, "DockerAPI::getServicePorts() - service to host map:\n" );
+		dPrintAd( D_FULLDEBUG, serviceAd );
+	}
+
+	return 0;
+#endif /* defined(WIN32) */
 }

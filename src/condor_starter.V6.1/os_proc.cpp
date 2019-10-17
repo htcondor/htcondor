@@ -693,6 +693,9 @@ OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
+	// FIXME: We're only not writing ssh proc ToE tags to the job ad right
+	// now because we're not running as root here.  Instead, SSH procs
+	// should just skip this section entirely.
 	if (JobPid == pid) {
 		// Write the appropriate ToE tag if the process exited of its own accord.
 		if(! requested_exit) {
