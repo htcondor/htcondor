@@ -16,7 +16,6 @@
  # 
  ############################################################### 
  
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # disable PCRE build unless dep added to externals.
@@ -51,7 +50,74 @@ if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 		-DCLASSAD_VERSION_PATCH=${CMAKE_MATCH_3} )
 endif()
 
-file( GLOB Headers classad/*.h )
+set( Headers
+classad/attrrefs.h
+classad/cclassad.h
+classad/classadCache.h
+classad/classad_containers.h
+classad/classad_distribution.h
+classad/classadErrno.h
+classad/classad.h
+classad/classadItor.h
+classad/collectionBase.h
+classad/collection.h
+classad/common.h
+classad/debug.h
+classad/exprList.h
+classad/exprTree.h
+classad/fnCall.h
+classad/indexfile.h
+classad/jsonSink.h
+classad/jsonSource.h
+classad/lexer.h
+classad/lexerSource.h
+classad/literals.h
+classad/matchClassad.h
+classad/operators.h
+classad/query.h
+classad/sink.h
+classad/source.h
+classad/transaction.h
+classad/util.h
+classad/value.h
+classad/view.h
+classad/xmlLexer.h
+classad/xmlSink.h
+classad/xmlSource.h
+)
+
+set (ClassadSrcs
+attrrefs.cpp
+classadCache.cpp
+classad.cpp
+collectionBase.cpp
+collection.cpp
+common.cpp
+cxi.cpp
+debug.cpp
+exprList.cpp
+exprTree.cpp
+fnCall.cpp
+indexfile.cpp
+jsonSink.cpp
+jsonSource.cpp
+lexer.cpp
+lexerSource.cpp
+literals.cpp
+matchClassad.cpp
+operators.cpp
+query.cpp
+shared.cpp
+sink.cpp
+source.cpp
+transaction.cpp
+util.cpp
+value.cpp
+view.cpp
+xmlLexer.cpp
+xmlSink.cpp
+xmlSource.cpp
+)
 
 #####################################################################
 
@@ -62,7 +128,6 @@ condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysb
 
 if (NOT WINDOWS)
 
-  condor_selective_glob("attrrefs.*;classad.*;classadCache.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;jsonSink.*;jsonSource.*;cclassad.*;common.*" ClassadSrcs)
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
@@ -103,7 +168,6 @@ if (NOT WINDOWS)
 
 else()	
 	# windows specific configuration.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*;json*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set (CLASSADS_FOUND classads)
 	set (CLASSADS_FOUND_STATIC classads)
