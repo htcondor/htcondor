@@ -940,11 +940,11 @@ display (std::string & out, MyRowOfValues & rov)
 				case PFT_INT:
 				case PFT_POINTER:
 				case PFT_CHAR:
-					pval->IsNumber(intValue);
+					(void) pval->IsNumber(intValue);
 					pszVal = format_value<long long>(mstrValue, intValue, fmt_info.type, *fmt);
 					break;
 				case PFT_FLOAT:
-					pval->IsNumber(realValue);
+					(void) pval->IsNumber(realValue);
 					pszVal = format_value<double>(mstrValue, realValue, fmt_info.type, *fmt);
 					break;
 				case PFT_STRING:
@@ -969,7 +969,7 @@ display (std::string & out, MyRowOfValues & rov)
 				}
 			}
 		} else if ( ! pszVal) {
-			pval->IsStringValue(pszVal);
+			(void) pval->IsStringValue(pszVal);
 		}
 
 		// at this point, pszVal is the display text for the column
