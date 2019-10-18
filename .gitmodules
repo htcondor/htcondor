@@ -1,0 +1,3 @@
+[submodule "bindings/python/htchirp"]
+	path = bindings/python/htchirp
+	url = https://github.com/htcondor/htchirp
