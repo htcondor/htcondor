@@ -3,12 +3,9 @@ Submitting a Job
 
 :index:`submitting<single: submitting; job>`
 
-A job is submitted for execution to HTCondor using the *condor_submit*
-command.
-:index:`condor_submit<single: condor_submit; HTCondor commands>`\ *condor_submit* takes
-as an argument the name of a file called a submit description file.
+The *condor_submit* command takes a job description file as input
+and submits the job described therein to HTCondor.
 :index:`submit description file`\ :index:`submit description<single: submit description; file>`
-This file contains commands and keywords to direct the queuing of jobs.
 In the submit description file, HTCondor finds everything it needs to
 know about the job. Items such as the name of the executable to run, the
 initial working directory, and command-line arguments to the program all
@@ -16,19 +13,13 @@ go into the submit description file. *condor_submit* creates a job
 ClassAd based upon the information, and HTCondor works toward running
 the job. :index:`contents of<single: contents of; submit description file>`
 
-The contents of a submit description file have been designed to save
-time for HTCondor users. It is easy to submit multiple runs of a program
+It is easy to submit multiple runs of a program
 to HTCondor with a single submit description file. To run the same
-program many times on different input data sets, arrange the data files
+program many times with different input data sets, arrange the data files
 accordingly so that each run reads its own input, and each run writes
 its own output. Each individual run may have its own initial working
 directory, files mapped for ``stdin``, ``stdout``, ``stderr``,
-command-line arguments, and shell environment; these are all specified
-in the submit description file. A program that directly opens its own
-files will read the file names to use either from ``stdin`` or from the
-command line. A program that opens a static file, given by file name,
-every time will need to use a separate subdirectory for the output of
-each run.
+command-line arguments, and shell environment.
 
 The :doc:`/man-pages/condor_submit` manual page contains a complete and full
 description of how to use *condor_submit*. It also includes descriptions of
@@ -36,8 +27,8 @@ all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
 
-Note that job ClassAd attributes can be set directly in a submit file
-using the **+<attribute> = <value>** syntax (see
+Note that user-defined custom job ClassAd attributes can be set 
+directly in a submit file using the **+<attribute> = <value>** syntax (see
 :doc:`/man-pages/condor_submit` for details.)
 
 Sample submit description files
@@ -51,32 +42,23 @@ there are more in the :doc:`/man-pages/condor_submit` manual page.
 **Example 1**
 
 Example 1 is one of the simplest submit description files possible. It
-queues up the program *myexe* for execution somewhere in the pool. Use
-of the vanilla universe is implied, as that is the default when not
-specified in the submit description file.
+queues up the program *myexe* for execution somewhere in the pool.
 
-An executable is compiled to run on a specific platform. Since this
-submit description file does not specify a platform, HTCondor will use
-its default, which is to run the job on a machine which has the same
-architecture and operating system as the machine where *condor_submit*
-is run to submit the job.
+As this submit description file does not request a specific operating
+system to run on, HTCondor will use the default, which is to run the job
+on a machine which has the same architecture and operating system 
+it was submitted from.
 
-Standard input for this job will come from the file ``inputfile``, as
-specified by the **input** :index:`input<single: input; submit commands>`
-command, and standard output for this job will go to the file
-``outputfile``, as specified by the
-**output** :index:`output<single: output; submit commands>` command. HTCondor
-expects to find ``inputfile`` in the current working directory when this
-job is submitted, and the system will take care of getting the input
-file to where it needs to be when the job is executed, as well as
-bringing back the output results (to the current working directory)
-after job execution.
+Before submitting a job to HTCondor, it is a good idea to test it
+first locally, by running it from a command shell.  This example job
+might look like this when run from the shell prompt.
 
-A log file, ``myexe.log``, will also be produced that contains events
-the job had during its lifetime inside of HTCondor. When the job
-finishes, its exit conditions will be noted in the log file. This file's
-contents are an excellent way to figure out what happened to submitted
-jobs.
+::
+
+      $ ./myexe SomeArgument
+
+      
+The corresponding submit description file might look like the following
 
 ::
 
@@ -87,11 +69,33 @@ jobs.
       #
       ####################
 
-      Executable   = myexe
-      Log          = myexe.log
-      Input        = inputfile
-      Output       = outputfile
-      Queue
+      executable   = myexe
+
+      arguments    = SomeArgument
+
+      output       = outputfile
+      error        = errorfile
+      log          = myexe.log
+
+      request_cpus   = 1
+      request_memory = 1024
+      request_disk   = 10240
+
+      queue
+
+The standard output for this job will go to the file
+``outputfile``, as specified by the
+**output** :index:`output<single: output; submit commands>` command. Likewise,
+the standard error output will go to ``errorfile``. 
+
+A log file, ``myexe.log``, will also be produced that contains events
+the job had during its lifetime inside of HTCondor. When the job
+finishes, its exit conditions and resource usage will be noted in the log file. 
+This file's contents are an excellent way to figure out what happened to jobs.
+
+HTCondor needs to know how many machine resources to allocate to this job.
+The ``request_`` lines describe that this job should be allocated 1 cpu core, 1024 
+megabytes of memory and 10240 kilobytes of scratch disk space.
 
 
 **Example 2**
