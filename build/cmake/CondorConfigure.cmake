@@ -1402,6 +1402,10 @@ else(MSVC)
 		endif()
 	endif(LINUX)
 
+	if (LINUX)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+	endif(LINUX)
+
 	if( HAVE_LIBDL AND NOT BSD_UNIX )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
 	endif()
