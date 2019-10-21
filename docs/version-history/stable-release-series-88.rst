@@ -47,6 +47,11 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug where a misconfigured collector could forward ads to itself.
+   The collector now recognizes more cases of this misconfiguration and
+   properly ignores them.
+   :ticket:`7229`
+
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
    :ticket:`7221`
