@@ -23,7 +23,6 @@
 #include "directory.h"
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 #include "daemon.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filesystem_remap.h"
 #include "docker-api.h"
 
@@ -97,16 +96,6 @@ check_execute_dir_perms( char const *exec_path )
 	if (stat(exec_path, &st) < 0) {
 		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
 				strerror( errno ) ); 
-	}
-
-	// in PrivSep mode, the EXECUTE directory must be trusted by
-	// the PrivSep kernel. we can't determine this ourselves in general
-	// (since the PrivSep Switchboard can be recompiled to trust
-	// non-root users), so we'll have to be satisfied for now that we
-	// could stat its path
-	//
-	if (privsep_enabled()) {
-		return;
 	}
 
 	// the following logic sets up the new_mode variable, depending
@@ -282,11 +271,6 @@ cleanup_execute_dirs( StringList &list )
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		// if we're using PrivSep, the Switchboard will only allow
-		// us to remove subdirectories of EXECUTE - so we need to
-		// list them and ask the Switchboard to delete each one
-		//
-
 		MyString dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
@@ -301,16 +285,7 @@ cleanup_execute_dirs( StringList &list )
 				check_recovery_file( execute_dir.GetFullPath() );
 			}
 
-			if (privsep_enabled()) {
-				execute_dir.Rewind();
-				while (execute_dir.Next()) {
-					dprintf(D_FULLDEBUG, "Attempting to remove %s\n",execute_dir.GetFullPath());
-					privsep_remove_dir(execute_dir.GetFullPath());
-				}
-			}
-			else {
-				execute_dir.Remove_Entire_Directory();
-			}
+			execute_dir.Remove_Entire_Directory();
 		}
 #endif
 	}

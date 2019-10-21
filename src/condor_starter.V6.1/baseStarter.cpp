@@ -299,7 +299,6 @@ CStarter::Config()
 		}
 	}
 	if (!m_configured) {
-		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);
 #if !defined(LINUX)
 		dprintf(D_ALWAYS,
@@ -307,15 +306,7 @@ CStarter::Config()
 		            "ignoring\n");
 		gl = false;
 #endif
-		if (ps && gl) {
-			EXCEPT("can't support both "
-			           "PRIVSEP_ENABLED and GLEXEC_JOB");
-		}
-		if (ps) {
-			m_privsep_helper = new CondorPrivSepHelper;
-			ASSERT(m_privsep_helper != NULL);
-		}
-		else if (gl) {
+		if (gl) {
 #if defined(LINUX)
 			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
@@ -1826,32 +1817,23 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-	if (cpsh != NULL) {
-		// the privsep switchboard now ALWAYS creates directories with
-		// permissions 0700.
-		cpsh->initialize_sandbox(WorkingDir.Value());
-		WriteAdFiles();
-	} else {
-		// we can only get here if we are not using *CONDOR* PrivSep.  but we
-		// might be using glexec.  glexec relies on being able to read the
-		// contents of the execute directory as a non-condor user, so in that
-		// case, use 0755.  for all other cases, use the more-restrictive 0700.
+	// we might be using glexec.  glexec relies on being able to read the
+	// contents of the execute directory as a non-condor user, so in that
+	// case, use 0755.  for all other cases, use the more-restrictive 0700.
 
-		int dir_perms = 0700;
+	int dir_perms = 0700;
 
-		// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
-		// defines permissions on execute directory (subject to umask)
-		char *who = param("JOB_EXECDIR_PERMISSIONS");
-		if(who != NULL)	{
-			if(!strcasecmp(who, "user"))
-				dir_perms = 0700;
-			else if(!strcasecmp(who, "group"))
-				dir_perms = 0750;
-			else if(!strcasecmp(who, "world"))
-				dir_perms = 0755;
-			free(who);
-		}
+	// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
+	// defines permissions on execute directory (subject to umask)
+	char *who = param("JOB_EXECDIR_PERMISSIONS");
+	if(who != NULL)	{
+		if(!strcasecmp(who, "user"))
+			dir_perms = 0700;
+		else if(!strcasecmp(who, "group"))
+			dir_perms = 0750;
+		else if(!strcasecmp(who, "world"))
+			dir_perms = 0755;
+		free(who);
 
 #if defined(LINUX)
 		if(glexecPrivSepHelper()) {
@@ -2711,34 +2693,7 @@ CStarter::PeriodicCkpt( void )
 	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
 
-			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_condor(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						false,
-						err.holdCode(),
-						err.holdSubCode());
-					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint\n");
-					return false;
-				}
-			}
-
 			bool transfer_ok = jic->uploadWorkingFiles();
-
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_user(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						true,
-						err.holdCode(),
-						err.holdSubCode());
-					EXCEPT("failed to restore sandbox to user ownership after checkpoint");
-					return false;
-				}
-			}
 
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
@@ -3703,20 +3658,6 @@ CStarter::removeTempExecuteDir( void )
 
 	MyString dir_name = "dir_";
 	dir_name += IntToStr( daemonCore->getpid() );
-
-#if !defined(WIN32)
-	if (condorPrivSepHelper() != NULL) {
-		MyString path_name;
-		path_name.formatstr("%s/%s", Execute, dir_name.Value());
-		if (!privsep_remove_dir(path_name.Value())) {
-			dprintf(D_ALWAYS,
-			        "privsep_remove_dir failed for %s\n",
-			        path_name.Value());
-			return false;
-		}
-		return true;
-	}
-#endif
 
 #if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&

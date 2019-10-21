@@ -31,7 +31,6 @@
 #include "daemon_types.h"
 #include "directory.h"
 #include "condor_environ.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"

@@ -32,9 +32,7 @@
 #include "vmgahp.h"
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "sig_install.h"
-#include "../condor_privsep/privsep_fork_exec.h"
 
 // FreeBSD 6, OS X 10.4, Solaris 5.9 don't automatically give you environ to work with
 extern DLL_IMPORT_MAGIC char **environ;
@@ -533,7 +531,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	int stdout_pipes[2];
 	int stdin_pipes[2];
 	int pid;
-	bool use_privsep = false;
 	switch ( priv ) {
 	case PRIV_ROOT:
 		prev = set_root_priv();
@@ -541,11 +538,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	case PRIV_USER:
 	case PRIV_USER_FINAL:
 		prev = set_user_priv();
-#if !defined(WIN32)
-		if ( privsep_enabled() && (job_user_uid != get_condor_uid()) ) {
-			use_privsep = true;
-		}
-#endif
 		break;
 	default:
 		// Stay as Condor user, this should be a no-op
@@ -558,12 +550,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    set_priv( prev );
 	    return -1;
 	  }
-	//if ( use_privsep ) {
-	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
-	//}
-	//else {
 	fp = my_popen( args, "r", merge_stderr_with_stdout ? MY_POPEN_OPT_WANT_STDERR : 0 );
-	//}
 #else
 	// The old way of doing things (and the Win32 way of doing
 	//	things)
@@ -575,7 +562,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    return -1;
 	  }
 
-	PrivSepForkExec psforkexec;
 	char ** args_array = args.GetStringArray();
 	int error_pipe[2];
 
@@ -595,22 +581,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    set_priv( prev );
 	    return -1;
 	  }
-
-	if ( use_privsep ) {
-	  if(!psforkexec.init())
-	    {
-	      vmprintf(D_ALWAYS,
-		       "my_popenv failure on %s\n",
-		       args_array[0]);
-	      close(stdin_pipes[0]);
-	      close(stdin_pipes[1]);
-	      close(stdout_pipes[0]);
-	      close(stdout_pipes[1]);
-		  deleteStringArray( args_array );
-	      set_priv( prev );
-	      return -1;
-	    }
-	}
 
 	if(cmd_err != NULL)
 	  {
@@ -685,15 +655,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 
 	    MyString cmd = args_array[0];
 
-	    if ( use_privsep ) {
-	    
-	      ArgList al;
-	      psforkexec.in_child(cmd, al);
-          deleteStringArray( args_array );
-	      args_array = al.GetStringArray();
-	    }
-
-
 	    execvp(cmd.Value(), args_array);
 	    vmprintf(D_ALWAYS, "Could not execute %s: %s\n", args_array[0], strerror(errno));
 	    exit(-1);
@@ -719,35 +680,6 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		return -1;
 	      }
 	  }
-
-	if ( use_privsep ) {
-	  FILE* _fp = psforkexec.parent_begin();
-	  privsep_exec_set_uid(_fp, job_user_uid);
-	  privsep_exec_set_path(_fp, args_array[0]);
-	  privsep_exec_set_args(_fp, args);
-	  Env env;
-	  env.MergeFrom(environ);
-	  privsep_exec_set_env(_fp, env);
-	  privsep_exec_set_iwd(_fp, ".");
-
-	  privsep_exec_set_inherit_fd(_fp, 1);
-	  privsep_exec_set_inherit_fd(_fp, 2);
-	  privsep_exec_set_inherit_fd(_fp, 0);
-	
-	  if (!psforkexec.parent_end()) {
-	    vmprintf(D_ALWAYS,
-		     "my_popenv failure on %s\n",
-		     args_array[0]);
-	    fclose(fp);
-		fclose(fp_for_stdin);
-		if (childerr) {
-			fclose(childerr);
-		}
-		deleteStringArray( args_array );
-		set_priv( prev );
-	    return -1;
-	  }
-	}
 
 	deleteStringArray( args_array );
 #endif

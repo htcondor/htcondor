@@ -27,7 +27,6 @@
 #include "setenv.h"
 #include "directory.h"
 #include "basename.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "procd_config.h"
 
 // enable PROCAPI profileing code.
@@ -483,10 +482,10 @@ ProcFamilyProxy::start_procd()
 	// config file
 	//
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() && !privsep_enabled()) {
+		if (!can_switch_ids()) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		int min_tracking_gid = param_integer("MIN_TRACKING_GID", 0);
 		if (min_tracking_gid == 0) {
@@ -569,25 +568,17 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	if (privsep_enabled()) {
-		m_procd_pid = privsep_spawn_procd(exe.Value(),
-		                                  args,
-		                                  std_io,
-		                                  m_reaper_id);
-	}
-	else {
-		m_procd_pid = daemonCore->Create_Process(exe.Value(),
-		                                         args,
-		                                         PRIV_ROOT,
-		                                         m_reaper_id,
-		                                         FALSE,
-		                                         FALSE,
-		                                         &env,
-		                                         NULL,
-		                                         NULL,
-		                                         NULL,
-		                                         std_io);
-	}
+	m_procd_pid = daemonCore->Create_Process(exe.Value(),
+	                                         args,
+	                                         PRIV_ROOT,
+	                                         m_reaper_id,
+	                                         FALSE,
+	                                         FALSE,
+	                                         &env,
+	                                         NULL,
+	                                         NULL,
+	                                         NULL,
+	                                         std_io);
 	if (m_procd_pid == FALSE) {
 		dprintf(D_ALWAYS, "start_procd: unable to execute the procd\n");
 		daemonCore->Close_Pipe(pipe_ends[0]);

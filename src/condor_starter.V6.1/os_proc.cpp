@@ -515,14 +515,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	else {
 		char const *username = NULL;
 		char const *how = "";
-		CondorPrivSepHelper* cpsh = Starter->condorPrivSepHelper();
-		if( cpsh ) {
-			username = cpsh->get_user_name();
-			how = "via privsep switchboard ";
-		}
-		else {
-			username = get_user_loginname();
-		}
+		username = get_user_loginname();
 		if( !username ) {
 			username = "same uid as parent: personal condor";
 		}

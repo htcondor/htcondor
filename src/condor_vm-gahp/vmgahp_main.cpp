@@ -29,7 +29,6 @@
 #  include "xen_type.linux.h"
 #endif
 #include "subsystem_info.h"
-#include "../condor_privsep/condor_privsep.h"
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
@@ -132,7 +131,7 @@ void
 init_uids()
 {
 #if !defined(WIN32)
-	bool SwitchUid = can_switch_ids() || privsep_enabled();
+	bool SwitchUid = can_switch_ids();
 
 	caller_uid = getuid();
 	caller_gid = getgid();

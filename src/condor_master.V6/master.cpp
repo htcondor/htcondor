@@ -72,7 +72,6 @@ void	init_params();
 void	init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
-void	check_uid_for_privsep();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -652,8 +651,6 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
-		// Make sure if PrivSep is on we're not running as root
-	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
@@ -2055,29 +2052,6 @@ void init_firewall_exceptions() {
 	if ( credd_image_path ) { free(credd_image_path); }	
 	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
 	if ( kbdd_image_path ) { free(kbdd_image_path); }
-#endif
-}
-
-void
-check_uid_for_privsep()
-{
-#if !defined(WIN32)
-	if (param_boolean("PRIVSEP_ENABLED", false) && (getuid() == 0)) {
-		uid_t condor_uid = get_condor_uid();
-		if (condor_uid == 0) {
-			EXCEPT("PRIVSEP_ENABLED set, but current UID is 0 "
-			           "and condor UID is also set to root");
-		}
-		dprintf(D_ALWAYS,
-		        "PRIVSEP_ENABLED set, but UID is 0; "
-		            "will drop to UID %u and restart\n",
-		        (unsigned)condor_uid);
-		daemons.CleanupBeforeRestart();
-		set_condor_priv_final();
-		daemons.ExecMaster();
-		EXCEPT("attempt to restart (via exec) failed (%s)",
-		       strerror(errno));
-	}
 #endif
 }
 
