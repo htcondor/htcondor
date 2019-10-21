@@ -62,8 +62,11 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 	strcat( (char*) hashSource, modifiedTimeStr.c_str() );
 
 	// Now calculate the hash
-	memcpy(hashResult, Condor_MD_MAC::computeOnce(hashSource,
-		strlen((const char*) hashSource)), HASHNAMELEN);
+	unsigned char *theHash = Condor_MD_MAC::computeOnce(hashSource,
+		strlen((const char *) hashSource));
+	memcpy(hashResult, theHash, HASHNAMELEN);
+	free(theHash);
+
 	char entryHashName[HASHNAMELEN * 2]; // 2 chars per hex byte
 	entryHashName[0] = '\0';
 	char letter[3];
