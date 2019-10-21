@@ -77,7 +77,8 @@ void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen();
+void	run_preen();	 // timer handler
+int		run_preen_now(); // actually start preen if it is not already running.
 void	usage(const char* );
 void	main_shutdown_graceful();
 void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore state
@@ -930,6 +931,7 @@ handle_agent_fetch_log (ReliSock* stream) {
 	return res;
 }
 
+
 int
 handle_subsys_command( int cmd, Stream* stream )
 {
@@ -947,6 +949,14 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
+
+	// for testing condor_on -preen is allowed, but preen is not really a daemon
+	// so we intercept it here and 
+	if (strcasecmp(subsys, "preen") == MATCH) {
+		free(subsys);
+		return run_preen_now();
+	}
+
 	subsys = strupr( subsys );
 	if( !(daemon = daemons.FindDaemon(subsys)) ) {
 		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
@@ -1650,8 +1660,8 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-void
-run_preen()
+int
+run_preen_now()
 {
 	char *args=NULL;
 	const char	*preen_base;
@@ -1660,11 +1670,13 @@ run_preen()
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 	if ( preen_pid > 0 ) {
-		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d)\n", preen_pid );
+		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d), ignoring command to run Preen.\n", preen_pid );
+		return FALSE;
 	}
 
 	if( FS_Preen == NULL ) {
-		return;
+		dprintf( D_ALWAYS, "WARNING: PREEN has no configured value, ignoring command to run Preen.\n" );
+		return FALSE;
 	}
 	preen_base = condor_basename( FS_Preen );
 	arglist.AppendArg(preen_base);
@@ -1682,8 +1694,11 @@ run_preen()
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
+	return TRUE;
 }
 
+// this is the preen timer callback
+void run_preen() { run_preen_now(); }
 
 void
 RestartMaster()

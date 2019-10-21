@@ -91,6 +91,13 @@ New Features:
 
   :ticket:`7278`
 
+- Added an example of a multifile plugin to transfer files from a locally
+  mounted Gluster file system. This script is also designed to be a template 
+  for other file transfer plugins, as the logic to download or upload files is
+  clearly indicated and could be easily changed to support different file
+  services.
+  :ticket:`7212`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
