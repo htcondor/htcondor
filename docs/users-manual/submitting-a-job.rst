@@ -43,7 +43,6 @@ there are more in the :doc:`/man-pages/condor_submit` manual page.
 
 Example 1 is one of the simplest submit description files possible. It
 queues up the program *myexe* for execution somewhere in the pool.
-
 As this submit description file does not request a specific operating
 system to run on, HTCondor will use the default, which is to run the job
 on a machine which has the same architecture and operating system 
@@ -80,7 +79,9 @@ The corresponding submit description file might look like the following
       request_cpus   = 1
       request_memory = 1024
       request_disk   = 10240
-
+      
+      should_transfer_files = yes
+      when_to_transfer_output = on_exit
       queue
 
 The standard output for this job will go to the file
@@ -100,86 +101,43 @@ megabytes of memory and 10240 kilobytes of scratch disk space.
 
 **Example 2**
 
-Example 3 queues two copies of the program *mathematica*. The first copy
-will run in directory ``run_1``, and the second will run in directory
-``run_2`` due to the
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` command. For
-each copy, ``stdin`` will be ``test.data``, ``stdout`` will be
-``loop.out``, and ``stderr`` will be ``loop.error``. Each run will read
-input and write output files within its own directory. Placing data
-files in separate directories is a convenient way to organize data when
-a large group of HTCondor jobs is to run. The example file shows program
-submission of *mathematica* as a vanilla universe job. The vanilla
-universe is most often the right choice of universe when the source
-and/or object code is not available.
-
-The **request_memory** :index:`request_memory<single: request_memory; submit commands>`
-command is included to ensure that the *mathematica* jobs match with and
-then execute on pool machines that provide at least 1 GByte of memory.
-
-::
-
-      ####################
-      #
-      # Example 2: demonstrate use of multiple
-      # directories for data organization.
-      #
-      ####################
-
-      executable     = mathematica
-      universe       = vanilla
-      input          = test.data
-      output         = loop.out
-      error          = loop.error
-      log            = loop.log
-      request_memory = 1 GB
-
-      initialdir     = run_1
-      queue
-
-      initialdir     = run_2
-      queue
-
-
-**Example 3**
-
-The submit description file for Example 3 queues 150
+The submit description file for Example 2 queues 150
 :index:`running multiple programs`\ runs of program *foo*
-which has been compiled and linked for Linux running on a 32-bit Intel
-processor. This job requires HTCondor to run the program on machines
-which have greater than 32 MiB of physical memory, and the
-**rank** :index:`rank<single: rank; submit commands>` command expresses a
-preference to run each instance of the program on machines with more
-than 64 MiB. It also advises HTCondor that this standard universe job
-will use up to 28000 KiB of memory when running. Each of the 150 runs of
-the program is given its own process number, starting with process
-number 0. So, files ``stdin``, ``stdout``, and ``stderr`` will refer to
-``in.0``, ``out.0``, and ``err.0`` for the first run of the program,
-``in.1``, ``out.1``, and ``err.1`` for the second run of the program,
+processor. This job requires machines which have at least
+4 GiB of physical memory, one cpu core and 16 Gb of scratch disk.
+Each of the 150 runs of the program is given its own HTCondor process number, 
+starting with 0. $(Process) is expanded by condor to the actual number
+used by each instance of the job. So, ``stdout``, and ``stderr`` will refer to
+``out.0``, and ``err.0`` for the first run of the program,
+``out.1``, and ``err.1`` for the second run of the program,
 and so forth. A log file containing entries about when and where
 HTCondor runs, checkpoints, and migrates processes for all the 150
 queued programs will be written into the single file ``foo.log``.
+If there are 150 or more available slots in your pool, all 150 instance
+might be run at the same time, otherwise, HTCondor will run as many as
+it can concurrently.
 
 ::
 
       ####################
       #
-      # Example 3: Show off some fancy features including
+      # Example 2: Show off some fancy features including
       # the use of pre-defined macros.
       #
       ####################
 
       Executable     = foo
-      Universe       = standard
-      requirements   = OpSys == "LINUX" && Arch =="INTEL"
-      rank           = Memory >= 64
-      image_size     = 28000
-      request_memory = 32
+
+      request_memory = 4096
+      request_cpus   = 1
+      request_disk   = 16383
 
       error   = err.$(Process)
-      input   = in.$(Process)
       output  = out.$(Process)
       log     = foo.log
+
+      should_transfer_files = yes
+      when_to_transfer_output = on_exit
 
       queue 150
 
@@ -1530,6 +1488,7 @@ initial working directory as ``/scratch/test/out1``.
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
+
     transfer_input_files = files/in1,files/in2
     transfer_output_files = /tmp/out1
 
@@ -1785,36 +1744,6 @@ space to hold all these files:
 
       && (Disk >= DiskUsage)
 
-:index:`rank<single: rank; submit commands>`
-
-If should_transfer_files = IF_NEEDED and the job prefers to run on a
-machine in the local file system domain over transferring files, but is
-still willing to allow the job to run remotely and transfer files, the
-``Rank`` expression works well. Use:
-
-::
-
-    rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
-
-The ``Rank`` expression is a floating point value, so if other items are
-considered in ranking the possible machines this job may run on, add the
-items:
-
-::
-
-    Rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
-
-The value of ``kflops`` can vary widely among machines, so this ``Rank``
-expression will likely not do as it intends. To place emphasis on the
-job running in the same file system domain, but still consider floating
-point speed among the machines in the file system domain, weight the
-part of the expression that is matching the file system domains. For
-example:
-
-::
-
-    Rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
-
 Environment Variables
 ---------------------
 
@@ -1933,13 +1862,6 @@ Without this ``requirement``, *condor_submit* will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
-Cross submission works for all universes except ``scheduler`` and
-``local``. See :doc:`/grid-computing/grid-universe` section for how matchmaking
-works in the ``grid`` universe. The burden is on the user to both obtain
-and specify the correct executable for the target architecture. To list
-the architecture and operating systems of the machines in a pool, run
-*condor_status*.
-
 Vanilla Universe Example for Execution on Differing Architectures
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -2027,84 +1949,6 @@ example, the submit description file given above specifies three
 available executables. If one is missing, HTCondor reports back that an
 executable is missing when it happens to match the job with a resource
 that requires the missing binary.
-
-Standard Universe Example for Execution on Differing Architectures
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-Jobs submitted to the standard universe may produce checkpoints. A
-checkpoint can then be used to start up and continue execution of a
-partially completed job. For a partially completed job, the checkpoint
-and the job are specific to a platform. If migrated to a different
-machine, correct execution requires that the platform must remain the
-same.
-
-In previous versions of HTCondor, the author of the heterogeneous
-submission file would need to write extra policy expressions in the
-``requirements`` expression to force HTCondor to choose the same type of
-platform when continuing a checkpointed job. However, since it is needed
-in the common case, this additional policy is now automatically added to
-the ``requirements`` expression. The additional expression is added
-provided the user does not use ``CkptArch`` in the ``requirements``
-expression. HTCondor will remain backward compatible for those users who
-have explicitly specified ``CkptRequirements``-implying use of
-``CkptArch``, in their ``requirements`` expression.
-
-The expression added when the attribute ``CkptArch`` is not specified
-will default to
-
-::
-
-      # Added by HTCondor
-      CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
-                          ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
-
-      Requirements = (<user specified policy>) && $(CkptRequirements)
-
-The behavior of the ``CkptRequirements`` expressions and its addition to
-``requirements`` is as follows. The ``CkptRequirements`` expression
-guarantees correct operation in the two possible cases for a job. In the
-first case, the job has not produced a checkpoint. The ClassAd
-attributes ``CkptArch`` and ``CkptOpSys`` will be undefined, and
-therefore the meta operator (=?=) evaluates to true. In the second case,
-the job has produced a checkpoint. The Machine ClassAd is restricted to
-require further execution only on a machine of the same platform. The
-attributes ``CkptArch`` and ``CkptOpSys`` will be defined, ensuring that
-the platform chosen for further execution will be the same as the one
-used just before the checkpoint.
-
-Note that this restriction of platforms also applies to platforms where
-the executables are binary compatible.
-
-The complete submit description file for this example:
-
-::
-
-      ####################
-      #
-      # Example of heterogeneous submission
-      #
-      ####################
-
-      universe     = standard
-      Executable   = povray.$$(OpSys).$$(Arch)
-      Log          = povray.log
-      Output       = povray.out.$(Process)
-      Error        = povray.err.$(Process)
-
-      # HTCondor automatically adds the correct expressions to insure that the
-      # checkpointed jobs will restart on the correct platform types.
-      Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
-                     (Arch == "X86_64" && OpSys == "LINUX") )
-
-      Arguments    = +W1024 +H768 +Iimage1.pov
-      Queue
-
-      Arguments    = +W1024 +H768 +Iimage2.pov
-      Queue
-
-      Arguments    = +W1024 +H768 +Iimage3.pov
-      Queue
-
 
 Vanilla Universe Example for Execution on Differing Operating Systems
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
