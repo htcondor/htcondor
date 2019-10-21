@@ -76,7 +76,7 @@ const char* subsys = NULL;
 const char* exec_program = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
-char *subsys_arg = NULL;
+const char *subsys_arg = NULL;
 bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
@@ -462,6 +462,11 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "ERROR: -pool requires another argument\n" );
 					usage( NULL );
 				}
+			}
+			else if (is_dash_arg_prefix(*tmp, "preen", -1)) {
+				subsys_check(MyName);
+				dt = DT_GENERIC;
+				subsys_arg = "preen";
 			}
 			else {
 				fprintf( stderr, "ERROR: \"%s\" "
