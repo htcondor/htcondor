@@ -689,8 +689,10 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		args.GetArgsStringForDisplay( &args_string, 0 );
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
 				  args_string.Value() );
-		if (childerr)
+		if (childerr) {
 			fclose(childerr);
+			fclose(fp_for_stdin);
+		}
 		return -1;
 	}
 
