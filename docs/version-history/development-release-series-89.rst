@@ -34,6 +34,10 @@ New Features:
   job self-checkpoints.
   :ticket:`7189`
 
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+  built-in submit variables. These expand to the time of submission.
+  :ticket:`7283`
+
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
   a result of a job being evicted when
@@ -92,6 +96,18 @@ Bugs Fixed:
   and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
   to shut down cleanly.
   :ticket:`7247`
+
+- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+  submit commands that begin with ``request_<tag>`` as custom resource requests unless
+  ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
+  :ticket:`7172`
+
+- The python bindings ``Submit`` object now converts keys of the form ``+Attr``
+  to ``MY.Attr`` when setting and getting values into the ``Submit`` object.
+  The ``Submit`` object had been storing ``+Attr`` keys and then converting
+  these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
+  to some very strange error conditions.
+  :ticket:`7261`
 
 Version 8.9.3
 -------------
