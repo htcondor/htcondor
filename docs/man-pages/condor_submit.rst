@@ -2879,6 +2879,14 @@ them.**
     Set to the full pathname of the submit file being processed by
     *condor_submit*. If submit statements are read from standard input,
     it is set to nothing.
+ SUBMIT_TIME
+    Set to the unix timestamp of the current time when the job is submitted.
+ YEAR
+    Set to the 4 digit year when the job is submitted.
+ MONTH
+    Set to the 2 digit month when the job is submitted.
+ DAY
+    Set to the 2 digit day when the job is submitted.
 
 Exit Status
 -----------
