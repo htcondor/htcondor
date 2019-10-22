@@ -28,7 +28,7 @@ New Features:
 
 -  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
    files and prints out a summary of the values that differ from the defaults.
-   :ticket::`7286`
+   :ticket:`7286`
 
 Bugs Fixed:
 
