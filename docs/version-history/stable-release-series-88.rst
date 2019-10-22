@@ -35,6 +35,11 @@ Bugs Fixed:
    properly ignores them.
    :ticket:`7229`
 
+-  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+   to less than 1.0, it would round down to zero, and the user would not
+   get any matches.
+   :ticket:`7313`
+
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
    :ticket:`7221`
