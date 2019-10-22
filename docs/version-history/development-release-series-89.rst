@@ -85,6 +85,10 @@ New Features:
   services.
   :ticket:`7212`
 
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed

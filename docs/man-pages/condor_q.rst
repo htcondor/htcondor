@@ -471,9 +471,12 @@ Options
  **-long**
     (output option) Display entire job ClassAds in long format (one
     attribute per line).
+ **-idle**
+    (output option) Get information about idle jobs. Note that this
+    option implies **-nobatch**.
  **-run**
     (output option) Get information about running jobs. Note that this
-    option has no effect unless used in conjunction with **-nobatch**.
+    option implies **-nobatch**.
  **-stream-results**
     (output option) Display results as jobs are fetched from the job
     queue rather than storing results in memory until all jobs have been
