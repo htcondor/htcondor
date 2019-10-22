@@ -2381,7 +2381,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
  want_graceful_removal = <boolean expression>
     If ``true``, this job will be given a chance to shut down cleanly when
     removed.  The job will be given as much time as the administrator
-    of the execute resource allows, which my be none.  The default is
+    of the execute resource allows, which may be none.  The default is
     ``false``.  For details, see the configuration setting
     :ref:`GRACEFULLY_REMOVE_JOBS<GRACEFULLY_REMOVE_JOBS>`.
     :index:`kill_sig<single: kill_sig; submit commands>`
