@@ -43,7 +43,9 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+   files and prints out a summary of the values that differ from the defaults.
+   :ticket::`7286`
 
 Bugs Fixed:
 
@@ -51,6 +53,11 @@ Bugs Fixed:
    The collector now recognizes more cases of this misconfiguration and
    properly ignores them.
    :ticket:`7229`
+
+-  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+   to less than 1.0, it would round down to zero, and the user would not
+   get any matches.
+   :ticket:`7313`
 
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
@@ -74,6 +81,11 @@ Bugs Fixed:
 -  Fixed a bug where the classad function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
+
+-  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+   but no submit file, and the arguments were sufficient that no submit file
+   was needed.
+   :ticket:`7249`
 
 Version 8.8.5
 -------------
