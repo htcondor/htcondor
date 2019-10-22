@@ -457,7 +457,6 @@ if( NOT WINDOWS)
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
 	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
@@ -765,10 +764,6 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
-elseif(${OS_NAME} STREQUAL "AIX")
-	set(AIX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
@@ -1070,39 +1065,6 @@ else ()
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
-
-	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
-
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-
-		if (EXT_GLIBC_FOUND)
-		  if (${BIT_MODE} STREQUAL "32")
-			  set (DOES_COMPRESS_CKPT ON) # this is total crap
-		  endif(${BIT_MODE} STREQUAL "32")
-
-		  if (DOES_SAVE_SIGSTATE)
-			  set(STD_U_C_FLAGS -DSAVE_SIGSTATE)
-		  endif(DOES_SAVE_SIGSTATE)
-
-		  set (STD_UNIVERSE ON)
-
-		  # seriously I've sold my soul doing this dirty work
-		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
-		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
-		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-
-		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
-
-		  message( STATUS "** Standard Universe Enabled **")
-
-		else()
-			message( STATUS "** Standard Universe Disabled **")
-		endif()
-	else()
-		message( STATUS "** Standard Universe Disabled **")
-	endif()
 
 endif(WINDOWS)
 
