@@ -26,7 +26,9 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+   files and prints out a summary of the values that differ from the defaults.
+   :ticket::`7286`
 
 Bugs Fixed:
 
@@ -62,6 +64,11 @@ Bugs Fixed:
 -  Fixed a bug where the classad function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
+
+-  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+   but no submit file, and the arguments were sufficient that no submit file
+   was needed.
+   :ticket:`7249`
 
 Version 8.8.5
 -------------
