@@ -155,10 +155,6 @@ endif()
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi condor_utils )
 
-if (HAVE_LIBDL)
-	set(APILIBDEP dl)
-endif()
-
 if (HAVE_OLD_SCANDIR)
 	add_definitions(-DHAVE_OLD_SCANDIR)
 endif()
@@ -168,7 +164,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 endif()
 
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 if (LIBUUID_FOUND)
 target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
@@ -176,7 +172,7 @@ endif()
 if (LINUX OR DARWIN)
 	condor_shared_lib( condorapi_shared "${ApiSrcs}" )
 	add_dependencies( condorapi_shared condor_utils )
-	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 

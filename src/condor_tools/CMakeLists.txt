@@ -139,7 +139,7 @@ endif()
 ############################################################
 # GPU Support
 ############################################################
-condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CMAKE_DL_LIBS}" OFF )
 
 ###########################################################
 # condor_ssh_to_job hackery

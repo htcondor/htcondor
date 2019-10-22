@@ -459,7 +459,6 @@ if( NOT WINDOWS)
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
-    find_multiple ("dl" HAVE_LIBDL )
 	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
@@ -1405,10 +1404,6 @@ else(MSVC)
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
-
-	if( HAVE_LIBDL AND NOT BSD_UNIX )
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
-	endif()
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked

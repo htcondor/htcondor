@@ -39,10 +39,6 @@ if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
 endif()
 
-if (HAVE_LIBDL)
-	set (DL_FOUND -ldl)
-endif (HAVE_LIBDL)
-
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
 		-DCLASSAD_VERSION_MAJOR=${CMAKE_MATCH_1}
@@ -129,12 +125,13 @@ condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysb
 if (NOT WINDOWS)
 
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
+  condor_set_link_libs( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
   if (LINUX OR DARWIN)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 10 )
-	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
+	condor_set_link_libs( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
   if ( DARWIN )
@@ -152,14 +149,14 @@ if (NOT WINDOWS)
 	set (CLASSADS_FOUND_STATIC classads)
   endif()
 
-  ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
   add_executable( classad_functional_tester "classad_functional_tester.cpp" )
-  condor_set_link_libs( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
+  condor_set_link_libs( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
   install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
   
-  ##condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  ##condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
   add_executable( classad_version "classad_version.cpp" )
-  condor_set_link_libs( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
+  condor_set_link_libs( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
   install (TARGETS classad_version DESTINATION ${C_BIN} )
   
   ###### Install elements with our distribution
@@ -218,5 +215,5 @@ if (NOT PROPER)
 endif(NOT PROPER)
 
 ###### Test executables
-condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
+condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
