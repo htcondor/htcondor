@@ -50,6 +50,8 @@ struct popen_entry {
 };
 struct popen_entry *popen_entry_head = NULL;
 
+static int dummy_global = 0;
+
 static void add_child(FILE* fp, child_handle_t ch)
 {
 	struct popen_entry *pe = (struct popen_entry *)malloc(sizeof(struct popen_entry));
@@ -540,14 +542,12 @@ my_popenv_impl( const char *const args[],
 		int e = errno; // capture real errno
 
 		int len = snprintf(result_buf, 10, "%d", errno);
-		int ret = write(pipe_d2[1], result_buf, len);
 
-			// Jump through some hoops just to use ret.
-		if (ret <  1) {
-			_exit( e );
-		} else {
-			_exit( e );
-		}
+		// can't do anything with write's error code,
+		// save it to global to quiet static analysis
+		dummy_global = write(pipe_d2[1], result_buf, len);
+
+		_exit( e );
 	}
 
 		/* The parent */
