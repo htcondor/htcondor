@@ -89,6 +89,10 @@ New Features:
   their requested resources.
   :ticket:`7241`
 
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
