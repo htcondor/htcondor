@@ -34,6 +34,10 @@ New Features:
   job self-checkpoints.
   :ticket:`7189`
 
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+  built-in submit variables. These expand to the time of submission.
+  :ticket:`7283`
+
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
   a result of a job being evicted when
@@ -62,15 +66,15 @@ New Features:
   arguments (in addition to positional arguments), and the ``options`` argument
   is now optional:
 
-  .. code-block::python
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
+     dag_args = { "maxidle": 10, "maxpost": 5 }
 
-    # with keyword arguments for filename and options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
+     # with keyword arguments for filename and options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
 
-    # or like this, with no options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
+     # or like this, with no options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
 
   :ticket:`7278`
 
@@ -80,6 +84,14 @@ New Features:
   clearly indicated and could be easily changed to support different file
   services.
   :ticket:`7212`
+
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
 
 Bugs Fixed:
 
@@ -92,6 +104,24 @@ Bugs Fixed:
   and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
   to shut down cleanly.
   :ticket:`7247`
+
+- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+  submit commands that begin with ``request_<tag>`` as custom resource requests unless
+  ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
+  :ticket:`7172`
+
+- The python bindings ``Submit`` object now converts keys of the form ``+Attr``
+  to ``MY.Attr`` when setting and getting values into the ``Submit`` object.
+  The ``Submit`` object had been storing ``+Attr`` keys and then converting
+  these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
+  to some very strange error conditions.
+  :ticket:`7261`
+
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location 
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
 
 Version 8.9.3
 -------------

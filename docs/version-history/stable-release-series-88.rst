@@ -43,9 +43,21 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+   files and prints out a summary of the values that differ from the defaults.
+   :ticket::`7286`
 
 Bugs Fixed:
+
+-  Fixed a bug where a misconfigured collector could forward ads to itself.
+   The collector now recognizes more cases of this misconfiguration and
+   properly ignores them.
+   :ticket:`7229`
+
+-  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+   to less than 1.0, it would round down to zero, and the user would not
+   get any matches.
+   :ticket:`7313`
 
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
@@ -69,6 +81,17 @@ Bugs Fixed:
 -  Fixed a bug where the classad function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
+
+-  *condor_preen* will no longer query the *condor_schedd* the whole time it is
+   preening the spool directory.  Instead, it now builds a list of potentially
+   obsolete files and then queries the *condor_schedd* once to find out which of
+   these files are associated with jobs still in the Schedd.
+   :ticket:`7320`
+
+-  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+   but no submit file, and the arguments were sufficient that no submit file
+   was needed.
+   :ticket:`7249`
 
 Version 8.8.5
 -------------
