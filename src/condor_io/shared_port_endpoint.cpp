@@ -248,6 +248,11 @@ SharedPortEndpoint::StopListener()
 		if (daemonCore) daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 		m_retry_remote_addr_timer = -1;
 	}
+
+	if( m_socket_check_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_socket_check_timer );
+		m_socket_check_timer = -1;
+	}
 #endif
 	m_listening = false;
 	m_registered_listener = false;
