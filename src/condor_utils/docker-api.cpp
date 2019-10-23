@@ -220,7 +220,6 @@ int DockerAPI::createContainer(
 	}
 
 #ifdef DOCKER_ALLOW_RUN_AS_ROOT
-asdfaf
 	if (param_boolean("DOCKER_RUN_AS_ROOT", false)) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		uid = gid = 0;
