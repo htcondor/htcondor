@@ -931,6 +931,9 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` is defined for the relevant
     daemon.
 
+    The format for the map file is the same as the format for
+    ``CLASSAD_USER_MAPDATA_<name>``, below.
+
 ``CLASSAD_USER_MAPDATA_<name>`` :index:`CLASSAD_USER_MAPDATA_<name>`
     A string containing data to be used to initialize the map for the
     given username. Note that this macro is only used if
@@ -939,7 +942,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     :index:`CLASSAD_USER_MAPFILE_<name>` is not defined for the
     given name.
 
-    The format for the map file and map data is the same as the format
+    The format for the map data is the same as the format
     for the security unified map file (see
     :ref:`admin-manual/security:the unified map file for authentication`
     for details).
