@@ -117,6 +117,12 @@ Bugs Fixed:
   to some very strange error conditions.
   :ticket:`7261`
 
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location 
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
+
 Version 8.9.3
 -------------
 
