@@ -106,6 +106,10 @@ New Features:
   their requested resources.
   :ticket:`7241`
 
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
@@ -129,6 +133,12 @@ Bugs Fixed:
   these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
   to some very strange error conditions.
   :ticket:`7261`
+
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location 
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
 
 Version 8.9.3
 -------------
