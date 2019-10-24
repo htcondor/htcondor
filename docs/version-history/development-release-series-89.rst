@@ -123,6 +123,13 @@ Bugs Fixed:
   this so they are now considered failures, and the jobs go on hold.
   :ticket:`7292`
 
+- Our *curl_plugin* is designed to partially retry downloads which did not
+  complete successfully (HTTP Content-Length header reporting a different number
+  than bytes downloaded). However partial retries do not work with some proxy
+  servers, causing jobs to go on hold. We've updated the plugin to not attempt
+  partial retries when a proxy is detected.
+  :ticket:`7259`
+
 Version 8.9.3
 -------------
 
