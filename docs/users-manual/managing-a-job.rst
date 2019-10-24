@@ -353,13 +353,18 @@ Job in the Hold State
 
 :index:`not running, on hold<single: not running, on hold; job>`
 
-A variety of errors and unusual conditions may cause a job to be placed
-into the Hold state. The job will stay in this state and in the job
-queue until conditions are corrected and *condor_release* is invoked.
+Should HTCondor detect something about a job that would prevent it
+from ever running successfully, say, because the executable doesn't
+exist, or input files are missing, HTCondor will put the job in Hold state.
+A job in the Hold state will remain in the queue, and show up in the
+output of the *condor_q* command, but is not eligible to run.
+The job will stay in this state until it is released or removed.  Users
+may also hold their jobs manually with the *condor_hold* command.
 
-A table listing the reasons why a job may be held is at the :doc:`/classad-attributes/job-classad-attributes` section. A
+A table listing the reasons why a job may be held is at the 
+:doc:`/classad-attributes/job-classad-attributes` section. A
 string identifying the reason that a particular job is in the Hold state
-may be displayed by invoking *condor_q*. For the example job ID 16.0,
+may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
 use:
 
 ::
