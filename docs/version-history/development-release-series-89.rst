@@ -93,6 +93,10 @@ New Features:
   sleep.
   :ticket:`7273`
 
+- `SciTokens <https://scitokens.org>`_ support is now available on
+  Enterprise Linux 7 platforms.
+  :ticket:`7248`
+  
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
@@ -129,6 +133,12 @@ Bugs Fixed:
   servers, causing jobs to go on hold. We've updated the plugin to not attempt
   partial retries when a proxy is detected.
   :ticket:`7259`
+
+- The timeout for *condor_ssh_to_job* connection has been restored to the
+  previous setting of 20 seconds. Shortening the timeout avoids getting into
+  a deadlock between the *condor_schedd*, *condor_starter*, and
+  *condor_shadow*.
+  :ticket:`7193`
 
 Version 8.9.3
 -------------
