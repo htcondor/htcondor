@@ -42,6 +42,7 @@ setup(
     maintainer="Brian Bockelman, Jason Patton, Tim Theisen",
     include_package_data=True,
     keywords="htcondor classad htc dhtc condor",
+    scripts=['scripts/classad_eval'],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",

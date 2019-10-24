@@ -16,6 +16,11 @@ if (WITH_PYTHON_BINDINGS)
     list(APPEND DEPS "${PKG_DIR}/__init__.py")
   endforeach()
 
+  # Copy the scripts directory over.
+  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/scripts"
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" "${CMAKE_CURRENT_BINARY_DIR}/scripts")
+  list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/scripts")
+
   if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
     list(APPEND DEPS classad_module htcondor)
   endif()
@@ -45,9 +50,9 @@ if (WITH_PYTHON_BINDINGS)
 
     add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
     if (WINDOWS) # Windows can call setup.py as normal
-      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB})")
+      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB} --scripts-lib=${C_BIN})")
     else() # non-Windows should call a script that invokes setup.py
-      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHONARCHLIB})")
+      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHONARCHLIB} ${C_BIN})")
     endif()
   endif()
 
@@ -61,7 +66,9 @@ if (WITH_PYTHON_BINDINGS)
       DEPENDS ${DEPS} py3classad_module py3htcondor)
 
     add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
-    install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON3_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHON3ARCHLIB})")
+    # Note that if you build with both Python 2 and Python 3, the scripts
+    # from this step will overwrite the scripts from the Python 2 install.
+    install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON3_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHON3ARCHLIB} ${C_BIN})")
   endif()
 
 endif()
