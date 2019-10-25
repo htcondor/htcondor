@@ -140,6 +140,10 @@ Bugs Fixed:
   *condor_shadow*.
   :ticket:`7193`
 
+- Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
+  timeout caused 100% CPU utilization due to an old libcurl bug.
+  :ticket:`7316`
+
 Version 8.9.3
 -------------
 
