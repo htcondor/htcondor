@@ -754,6 +754,7 @@ RemoteResource::abortFileTransfer()
 void
 RemoteResource::attemptShutdown()
 {
+	dprintf(D_ALWAYS, "MRC [RemoteResource::attemptShutdown] called\n");
 	if( filetrans.transferIsInProgress() ) {
 			// This can happen if we process the job exit message
 			// before the file transfer reaper processes the exit of
@@ -786,6 +787,7 @@ RemoteResource::attemptShutdown()
 	abortFileTransfer();
 
 		// we call our shadow's shutdown method:
+	dprintf(D_ALWAYS, "MRC [RemoteResource::attemptShutdown] calling shadow->shutDown with exit_reason = %d\n", exit_reason);
 	shadow->shutDown( exit_reason );
 }
 
@@ -1348,6 +1350,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
+	dprintf(D_ALWAYS, "MRC [RemoteResource::updateFromStarter] called\n");
 	int int_value;
 	int64_t int64_value;
 	std::string string_value;
@@ -1514,6 +1517,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
+		dprintf(D_ALWAYS, "MRC [RemoteResource::updateFromStarter] setting ATTR_ON_EXIT_BY_SIGNAL to %d\n", exited_by_signal);
 		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal);
 	}
 
@@ -1523,6 +1527,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
+		dprintf(D_ALWAYS, "MRC [RemoteResource::updateFromStarter] setting ATTR_ON_EXIT_CODE to %d\n", int_value);
 		jobAd->Assign(ATTR_ON_EXIT_CODE, int_value);
 		exit_value = int_value;
 	}
@@ -1924,6 +1929,7 @@ RemoteResource::printCheckpointStats( int debug_level )
 void
 RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 {
+	dprintf(D_ALWAYS, "MRC [RemoteResource::resourceExit] called\n");
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
 
@@ -2319,6 +2325,7 @@ RemoteResource::initFileTransfer()
 		// the job's files are spooled. This prevents FileTransfer
 		// from listing unmodified input files as intermediate files
 		// that need to be transferred back from the starter.
+	dprintf(D_ALWAYS, "MRC [RemoteResource::initFileTransfer] called\n");
 	ASSERT(jobAd);
 	int spool_time = 0;
 	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
@@ -2371,7 +2378,7 @@ void
 RemoteResource::requestReconnect( void )
 {
 	DCStarter starter( starterAddress );
-
+	
 	dprintf( D_ALWAYS, "Attempting to reconnect to starter %s\n", 
 			 starterAddress );
 		// We want this on the heap, since if this works, we're going
@@ -2494,12 +2501,13 @@ RemoteResource::requestReconnect( void )
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
 				   "HandleSyscalls", this );
 
-		// Read all the info out of the reply ad and stash it in our
+				   // Read all the info out of the reply ad and stash it in our
 		// private data members, just like we do when we get the
 		// pseudo syscall on job startup for the starter to register
 		// this stuff about itself. 
 	setStarterInfo( &reply );
 
+		// MRC: This looks like a great spot 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
 	reconnect_attempts = 0;

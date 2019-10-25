@@ -30,6 +30,7 @@
 #include "condor_attributes.h"
 #include "dc_schedd.h"
 #include "spool_version.h"
+#include "file_transfer.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -284,6 +285,17 @@ void startShadow( ClassAd *ad )
 
 	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
+
+	// MRC: I think this is where we want to check if the output files are newer than input?
+	bool skip_execution = FileTransfer::AreOutputFilesNewerThanInputFiles(ad);
+	dprintf(D_ALWAYS, "MRC [shadow_v61_main::startShadow] skip_execution = %s\n", skip_execution ? "true" : "false");
+	if (skip_execution) {
+		// MRC: We need to figure out a way to update the schedd with ExitCode here
+		ad->Assign(ATTR_ON_EXIT_CODE, 0);
+		//ad->Assign(ATTR_ON_EXIT_BY_SIGNAL, 0);
+		Shadow->isDataflowJob = true;
+		Shadow->shutDown(JOB_EXITED);
+	}
 
 	if( is_reconnect ) {
 		Shadow->attemptingReconnectAtStartup = true;

@@ -723,6 +723,11 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
+bool
+FileTransfer::AreOutputFilesNewerThanInputFiles(ClassAd *job_ad) {
+	return true;
+}
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
 int
 FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {

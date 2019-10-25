@@ -57,6 +57,7 @@ pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */,
 		   it now so we still log execute events and so on, even if
 		   it's not as acurate as we'd like.
 		*/
+	dprintf(D_ALWAYS, "MRC [pseudo_register_machine_info] called\n");
 	thisRemoteResource->beginExecution();
 	return 0;
 }
@@ -82,6 +83,7 @@ pseudo_register_job_info(ClassAd* ad)
 int
 pseudo_begin_execution()
 {
+	dprintf(D_ALWAYS, "MRC [pseudo_begin_execution] called\n");
 	thisRemoteResource->beginExecution();
 	return 0;
 }

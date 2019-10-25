@@ -125,6 +125,13 @@ class FileTransfer final: public Service {
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
+	/** Determine if output files are newer than input files.
+	 *  Used in job dataflow mode.
+	 * 
+	 * @return True if newer, False otherwse
+	 */
+	static bool AreOutputFilesNewerThanInputFiles(ClassAd *job_ad);
+
 	/** @param session_id NULL (if should auto-negotiate) or
 		       security session id to use for outgoing file transfer
 		       commands */

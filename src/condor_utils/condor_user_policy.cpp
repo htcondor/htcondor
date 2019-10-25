@@ -113,14 +113,17 @@ void
 BaseUserPolicy::checkAtExit( void )
 {
 	double old_run_time;
+	dprintf(D_ALWAYS, "MRC [BaseUserPolicy::checkAtExit] calling updateJobTime()\n");
 	this->updateJobTime( &old_run_time );
 
 #ifdef USE_NON_MUTATING_USERPOLICY
+	dprintf(D_ALWAYS, "MRC [BaseUserPolicy::checkAtExit] USE_NON_MUTATING_USERPOLICY, calling this->user_policy.AnalyzePolicy()\n");
 	int action = this->user_policy.AnalyzePolicy( *(this->job_ad), PERIODIC_THEN_EXIT );
 #else
+	dprintf(D_ALWAYS, "MRC [BaseUserPolicy::checkAtExit] calling this->user_policy.AnalyzePolicy()\n");
 	int action = this->user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
 #endif
-
+	dprintf(D_ALWAYS, "MRC [BaseUserPolicy::checkAtExit] calling restoryJobTime()\n");
 	this->restoreJobTime( old_run_time );
 
 		//
@@ -128,6 +131,7 @@ BaseUserPolicy::checkAtExit( void )
 		// Since this is all shared code w/ the periodic case, we just
 		// call a helper function to do the real work.
 		//
+	dprintf(D_ALWAYS, "MRC [BaseUserPolicy::checkAtExit] calling doAction()\n");
 	this->doAction( action, false );
 }
 

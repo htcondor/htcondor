@@ -89,6 +89,7 @@ BaseShadow::~BaseShadow() {
 void
 BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::baseInit] called\n" );
 	int pending = FALSE;
 
 	if( ! job_ad ) {
@@ -331,6 +332,7 @@ BaseShadow::shutDownFast( int reason ) {
 void
 BaseShadow::shutDown( int reason ) 
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::shutDown] called, checking job ad\n");
 		// exit now if there is no job ad
 	if ( !getJobAd() ) {
 		DC_Exit( reason );
@@ -342,10 +344,12 @@ BaseShadow::shutDown( int reason )
 		return;
 	}
 
+	dprintf(D_ALWAYS, "MRC [BaseShadow::shutDown] checking reason = %d, JOB_EXITED = %d, JOB_COREDUMPED = %d\n", reason, JOB_EXITED, JOB_COREDUMPED);
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
 		if( !waitingToUpdateSchedd() ) {
+			dprintf(D_ALWAYS, "MRC [BaseShadow::shutDown] calling shadow_user_policy.checkAtExit()\n");
 			shadow_user_policy.checkAtExit();
 				// WARNING: 'this' may have been deleted by the time we get here!!!
 		}
@@ -556,6 +560,7 @@ BaseShadow::retryJobCleanupHandler( void )
 void
 BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_NORMAL
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::terminateJob] called\n");
 	int reason;
 	bool signaled;
 
@@ -568,8 +573,9 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	if (kind == US_NORMAL) {
 		jobAd->Assign( ATTR_TERMINATION_PENDING, true );
 	}
-
+	dprintf(D_ALWAYS, "MRC [BaseShadow::terminateJob] checking kind = %d, US_TERMINATE_PENDING = %d\n", kind, US_TERMINATE_PENDING);
 	if (kind == US_TERMINATE_PENDING) {
+		dprintf(D_ALWAYS, "MRC [BaseShadow::terminateJob] kind == US_TERMINATE_PENDING\n");
 		// In this case, the job had already completed once and the
 		// status had been saved to the job queue, however, for
 		// some reason, the shadow didn't exit with a good value and
@@ -609,6 +615,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	 		exited_by_signal ? exit_signal : exit_code );
 		
 			// write stuff to user log, but get values from jobad
+		dprintf(D_ALWAYS, "MRC [BaseShadow::terminateJob] calling logTerminateEvent() with reason = %d, kind = %d\n", reason, kind);
 		logTerminateEvent( reason, kind );
 
 			// email the user, but get values from jobad
@@ -688,6 +695,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	 	signaled ? exitSignal() : exitCode() );
 
 	// write stuff to user log:
+	dprintf(D_ALWAYS, "MRC [BaseShadow::terminateJob] calling logTerminateEvent() with reason = %d\n", reason);
 	logTerminateEvent( reason );
 
 	// email the user
@@ -808,6 +816,7 @@ BaseShadow::emailRemoveEvent( const char* reason )
 
 void BaseShadow::initUserLog()
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::initUserLog] called\n");
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
@@ -830,16 +839,19 @@ void BaseShadow::initUserLog()
 // returns TRUE if attribute found.
 int getJobAdExitCode(ClassAd *jad, int &exit_code)
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::getJobAdExitCodetDown] called, exit_code = %d\n", exit_code);
 	if( ! jad->LookupInteger(ATTR_ON_EXIT_CODE, exit_code) ) {
+		dprintf(D_ALWAYS, "MRC [BaseShadow::getJobAdExitCodetDown] could not look up exit code, returning false\n");
 		return FALSE;
 	}
-
+	dprintf(D_ALWAYS, "MRC [BaseShadow::getJobAdExitCodetDown] exit_code = %d, returning true\n", exit_code);
 	return TRUE;
 }
 
 // returns TRUE if attribute found.
 int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal)
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::getJobAdExitedBySignal] called\n");
 	if( ! jad->LookupInteger(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
 		return FALSE;
 	}
@@ -850,6 +862,7 @@ int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal)
 // returns TRUE if attribute found.
 int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::getJobAdExitSignal] called\n");
 	if( ! jad->LookupInteger(ATTR_ON_EXIT_SIGNAL, exit_signal) ) {
 		return FALSE;
 	}
@@ -934,6 +947,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::logTerminateEvent] called, exitReason = %d, kind = %d\n", exitReason, kind);
 	struct rusage run_remote_rusage;
 	JobTerminatedEvent event;
 	std::string corefile;
@@ -1269,6 +1283,7 @@ BaseShadow::watchJobAttr( const std::string & name )
 bool
 BaseShadow::updateJobInQueue( update_t type )
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::updateJobInQueue] called\n");
 		// insert the bytes sent/recv'ed by this job into our job ad.
 		// we want this from the perspective of the job, so it's
 		// backwards from the perspective of the shadow.  if this
@@ -1355,6 +1370,7 @@ BaseShadow::evalPeriodicUserPolicy( void )
 void
 BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
+	dprintf(D_ALWAYS, "MRC [BaseShadow::resourceBeganExecution] called\n");
 		// Set our flag to remember we've really started.
 	began_execution = true;
 
