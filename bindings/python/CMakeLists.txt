@@ -50,7 +50,7 @@ if (WITH_PYTHON_BINDINGS)
 
     add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
     if (WINDOWS) # Windows can call setup.py as normal
-      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB} --scripts-lib=${C_BIN})")
+      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB} --install-scripts=${C_BIN})")
     else() # non-Windows should call a script that invokes setup.py
       install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHONARCHLIB} ${C_BIN})")
     endif()
