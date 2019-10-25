@@ -97,12 +97,6 @@ New Features:
   Enterprise Linux 7 platforms.
   :ticket:`7248`
 
-- Added an example of a Gluster file transfer plugin which 1) allows jobs to 
-  transfer files directly from a GlusterFS mount, bypassing the submit machine,
-  2) provides a template for our multifile transfer protocol which can easily be
-  adapted to other methods.
-  :ticket:`7212`
-  
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
