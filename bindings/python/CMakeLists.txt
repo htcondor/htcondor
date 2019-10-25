@@ -11,14 +11,18 @@ if (WITH_PYTHON_BINDINGS)
   set(DEPS "")
   foreach(PACKAGE ${PACKAGES})
     set(PKG_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
-    add_custom_command(OUTPUT "${PKG_DIR}/__init__.py"
-      COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
+    add_custom_command(
+      OUTPUT "${PKG_DIR}/__init__.py"
+      COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}"
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}" )
     list(APPEND DEPS "${PKG_DIR}/__init__.py")
   endforeach()
 
   # Copy the scripts directory over.
-  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/scripts"
-    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" "${CMAKE_CURRENT_BINARY_DIR}/scripts")
+  add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/scripts"
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" "${CMAKE_CURRENT_BINARY_DIR}/scripts"
+    DEPENDS "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" )
   list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/scripts")
 
   if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
