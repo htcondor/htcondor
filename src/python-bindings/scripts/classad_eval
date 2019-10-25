@@ -18,7 +18,7 @@ for i in range(2,len(sys.argv)):
     exprString = sys.argv[i]
     ad = classad.parseOne(adString)
     expr = classad.ExprTree(exprString)
-    result = expr.eval(ad)
-    print(result)
+    result = expr.simplify(ad)
+    print(repr(result))
 
 exit(0)
