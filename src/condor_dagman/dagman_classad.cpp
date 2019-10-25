@@ -69,8 +69,6 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
 			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts )
 {
-	static int count = 1;
-
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
 					"Skipping ClassAd update -- DagmanClassad object is invalid\n" );
