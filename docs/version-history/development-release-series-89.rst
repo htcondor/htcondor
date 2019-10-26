@@ -110,6 +110,10 @@ New Features:
   sleep.
   :ticket:`7273`
 
+- `SciTokens <https://scitokens.org>`_ support is now available on
+  Enterprise Linux 7 platforms.
+  :ticket:`7248`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
@@ -139,6 +143,23 @@ Bugs Fixed:
   header. These were previously considered successful transfers. We've fixed
   this so they are now considered failures, and the jobs go on hold.
   :ticket:`7292`
+
+- Our *curl_plugin* is designed to partially retry downloads which did not
+  complete successfully (HTTP Content-Length header reporting a different number
+  than bytes downloaded). However partial retries do not work with some proxy
+  servers, causing jobs to go on hold. We've updated the plugin to not attempt
+  partial retries when a proxy is detected.
+  :ticket:`7259`
+
+- The timeout for *condor_ssh_to_job* connection has been restored to the
+  previous setting of 20 seconds. Shortening the timeout avoids getting into
+  a deadlock between the *condor_schedd*, *condor_starter*, and
+  *condor_shadow*.
+  :ticket:`7193`
+
+- Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
+  timeout caused 100% CPU utilization due to an old libcurl bug.
+  :ticket:`7316`
 
 Version 8.9.3
 -------------
