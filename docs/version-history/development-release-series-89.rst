@@ -96,6 +96,10 @@ New Features:
   sleep.
   :ticket:`7273`
 
+- Reduced the memory needed for *condor_dagman* to load a Dag that has a large number
+  of PARENT and CHILD statements.
+  :ticket:`7170`
+
 - `SciTokens <https://scitokens.org>`_ support is now available on
   Enterprise Linux 7 platforms.
   :ticket:`7248`
@@ -106,6 +110,7 @@ New Features:
   configure the *condor_credd* to allow users to obtain Microsoft OneDrive
   tokens and requires the user request Microsoft OneDrive tokens in their
   submit file. :ticket:`7171`
+
 
 Bugs Fixed:
 
