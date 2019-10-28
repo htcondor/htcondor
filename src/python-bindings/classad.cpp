@@ -138,26 +138,6 @@ double ExprTreeHolder::toDouble() const
     return 0;  // Should never get here
 }
 
-class ScopeGuard
-{
-public:
-    ScopeGuard(classad::ExprTree &expr, const classad::ClassAd *scope_ptr)
-       : m_orig(expr.GetParentScope()), m_expr(expr), m_new(scope_ptr)
-    {
-        if (m_new) m_expr.SetParentScope(scope_ptr);
-    }
-
-    ~ScopeGuard()
-    {
-        if (m_new) m_expr.SetParentScope(m_orig);
-    }
-
-private:
-    const classad::ClassAd *m_orig;
-    classad::ExprTree &m_expr;
-    const classad::ClassAd *m_new;
-};
-
 boost::python::object
 convert_value_to_python(const classad::Value &value)
 {
@@ -257,7 +237,7 @@ ExprTreeHolder::eval( boost::python::object scope, classad::Value & value ) cons
     boost::python::extract<ClassAdWrapper *> scopeAd(scope);
 
     bool rv = false;
-    if( scopeAd.check() ) {
+    if( scopeAd.check() && scopeAd() != NULL ) {
         const classad::ClassAd * originalScope = m_expr->GetParentScope();
         m_expr->SetParentScope(scopeAd());
         rv = m_expr->Evaluate(value);
@@ -267,7 +247,6 @@ ExprTreeHolder::eval( boost::python::object scope, classad::Value & value ) cons
     } else {
         classad::EvalState state;
         rv = m_expr->Evaluate(state, value);
-        value.CopyFrom(value);
     }
     if( PyErr_Occurred() ) { boost::python::throw_error_already_set(); }
     if(! rv) { THROW_EX(TypeError, "Unable to evaluate expression" ); }
