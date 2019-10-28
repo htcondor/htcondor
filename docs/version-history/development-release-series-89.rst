@@ -97,6 +97,13 @@ New Features:
   Enterprise Linux 7 platforms.
   :ticket:`7248`
 
+- Added a new multifile transfer plugin for downloading files from
+  Microsoft OneDrive user accounts. This supports URLs like
+  "onedrive://path/to/file" and using the plugin requires the admin
+  configure the *condor_credd* to allow users to obtain Microsoft OneDrive
+  tokens and requires the user request Microsoft OneDrive tokens in their
+  submit file. :ticket:`7171`
+
 Bugs Fixed:
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
