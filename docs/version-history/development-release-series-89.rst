@@ -20,6 +20,9 @@ Release Notes:
 - `DAGMAN_USE_JOIN_NODES` is now on by default.
   :ticket:`7271`
 
+- The Python bindings are now packaged as extendable modules.
+  :ticket:`6907`
+
 New Features:
 
 - HTCondor now supports secure download and upload to and from S3.  See
