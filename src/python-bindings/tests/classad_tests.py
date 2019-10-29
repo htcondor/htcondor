@@ -293,7 +293,7 @@ class TestClassad(unittest.TestCase):
         expr = ad["test"]
         self.assertEqual("baz", expr.eval())
         self.assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})))
-        self.assertEqual("bar", expr.eval(classad.Classad({"foo": "bar"})))
+        self.assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})))
         self.assertEqual("baz", expr.eval())
 
     def test_abstime(self):
