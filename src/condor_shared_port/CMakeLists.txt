@@ -16,6 +16,8 @@
  # 
  ############################################################### 
 
-if (NOT WIN_EXEC_NODE_ONLY AND HAVE_SHARED_PORT)
-	condor_exe( condor_shared_port "shared_port_main.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+if (HAVE_SHARED_PORT)
+
+  condor_exe( condor_shared_port "shared_port_main.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+
 endif()

@@ -361,11 +361,6 @@ Regex::~Regex() {}
 bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
 
-#ifndef WIN32
-bool privsep_enabled() { return false; }
-int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
-#endif
-
 // CCB me harder
 BEGIN_C_DECLS
 void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))

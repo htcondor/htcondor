@@ -688,7 +688,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		// We only need to delete curRange if we had
 		// instantiated a new object for it
 		//
-	if ( attribute_idx == CRONTAB_DOM_IDX && curRange ) delete curRange;
+	if ( attribute_idx == CRONTAB_DOM_IDX) delete curRange;
 	
 	return ( ret );
 }

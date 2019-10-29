@@ -1319,9 +1319,6 @@ specification of trusted CAs is available at
 
 `http://curl.haxx.se/libcurl/c/curl_easy_setopt.html <http://curl.haxx.se/libcurl/c/curl_easy_setopt.html>`_
 
-Versions of HTCondor with standard universe support ship with their own
-*libcurl*, which will be linked against *OpenSSL*.
-
 The behavior when specifying both a directory and a file is undefined,
 although the EC2 GAHP allows it.
 

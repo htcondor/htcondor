@@ -1135,8 +1135,6 @@ JICShadow::initUserPriv( void )
 		}
 	}
 
-	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
-
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
@@ -1145,9 +1143,6 @@ JICShadow::initUserPriv( void )
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
 		if( init_user_ids_quiet(owner.c_str()) ) {
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user(owner.c_str());
-			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.c_str() );
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
@@ -1211,10 +1206,6 @@ JICShadow::initUserPriv( void )
 						 "priv with uid %d and gid %d\n", user_uid,
 						 user_gid );
 				return false;
-			}
-
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user((uid_t)user_uid);
 			}
 		}
 	} 
@@ -1282,9 +1273,6 @@ JICShadow::initUserPriv( void )
 			free( nobody_user );
 			return false;
 		} else {
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user(nobody_user);
-			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
 			if( checkDedicatedExecuteAccounts( nobody_user ) ) {
@@ -2069,27 +2057,16 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 
 	filesize_t execsz = 0;
 
-	// if we are using PrivSep, we need to use that mechanism to calculate
-	// the disk usage, as we don't have privs to traverse the users's execute
-	// dir.
-	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
-	if (privsep_helper) {
-		off_t total_usage = 0;
-		if (privsep_helper->get_exec_dir_usage( &total_usage)) {
-			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((total_usage+1023)/1024) );
-		}
-	} else{
-		// if there is a filetrans object, then let's send the current
-		// size of the starter execute directory back to the shadow.  this
-		// way the ATTR_DISK_USAGE will be updated, and we won't end
-		// up on a machine without enough local disk space.
-		if ( filetrans ) {
-			// make sure this computation is done with user priv, since that who
-			// owns the directory and it may not be world-readable
-			Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-			execsz = starter_dir.GetDirectorySize();
-			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
-		}
+	// if there is a filetrans object, then let's send the current
+	// size of the starter execute directory back to the shadow.  this
+	// way the ATTR_DISK_USAGE will be updated, and we won't end
+	// up on a machine without enough local disk space.
+	if ( filetrans ) {
+		// make sure this computation is done with user priv, since that who
+		// owns the directory and it may not be world-readable
+		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+		execsz = starter_dir.GetDirectorySize();
+		ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
 	}
 
 	std::string spooled_files;
@@ -2400,6 +2377,10 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		filetrans = new FileTransfer();
+		auto reuse_dir = Starter->getDataReuseDirectory();
+		if (reuse_dir) {
+			filetrans->setDataReuseDirectory(*reuse_dir);
+		}
 
 		const char *cred_path = getCredPath();
 		if (cred_path) {

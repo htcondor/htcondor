@@ -348,69 +348,23 @@ command
 
     %  condor_config_val SHADOW_LOG
 
-Memory and swap space problems may be identified by looking at the log
-file used by the *condor_schedd* daemon. The location and name of this
-log file may be discovered on the submitting machine, using the command
-
-::
-
-    %  condor_config_val SCHEDD_LOG
-
-A swap space problem will show in the log with the following message:
-
-::
-
-    2/3 17:46:53 Swap space estimate reached! No more jobs can be run!
-    12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0
-    12/3 17:46:53     0 jobs matched, 1 jobs idle
-
-As an explanation, HTCondor computes the total swap space on the submit
-machine. It then tries to limit the total number of jobs it will spawn
-based on an estimate of the size of the *condor_shadow* daemon's memory
-footprint and a configurable amount of swap space that should be
-reserved. This is done to avoid the situation within a very large pool
-in which all the jobs are submitted from a single host. The huge number
-of *condor_shadow* processes would overwhelm the submit machine, and it
-would run out of swap space and thrash.
-
-Things can go wrong if a machine has a lot of physical memory and little
-or no swap space. HTCondor does not consider the physical memory size,
-so the situation occurs where HTCondor thinks it has no swap space to
-work with, and it will not run the submitted jobs.
-
-To see how much swap space HTCondor thinks a given machine has, use the
-output of a *condor_status* command of the following form:
-
-::
-
-    % condor_status -schedd [hostname] -long | grep VirtualMemory
-
-If the value listed is 0, then this is what is confusing HTCondor. There
-are two ways to fix the problem:
-
-#. Configure the machine with some real swap space.
-#. Disable this check within HTCondor. Define the amount of reserved
-   swap space for the submit machine to 0. Set ``RESERVED_SWAP``
-   :index:`RESERVED_SWAP` to 0 in the configuration file:
-
-   ::
-
-       RESERVED_SWAP = 0
-
-   and then send a *condor_restart* to the submit machine.
-
 Job in the Hold State
 ---------------------
 
 :index:`not running, on hold<single: not running, on hold; job>`
 
-A variety of errors and unusual conditions may cause a job to be placed
-into the Hold state. The job will stay in this state and in the job
-queue until conditions are corrected and *condor_release* is invoked.
+Should HTCondor detect something about a job that would prevent it
+from ever running successfully, say, because the executable doesn't
+exist, or input files are missing, HTCondor will put the job in Hold state.
+A job in the Hold state will remain in the queue, and show up in the
+output of the *condor_q* command, but is not eligible to run.
+The job will stay in this state until it is released or removed.  Users
+may also hold their jobs manually with the *condor_hold* command.
 
-A table listing the reasons why a job may be held is at the :doc:`/classad-attributes/job-classad-attributes` section. A
+A table listing the reasons why a job may be held is at the 
+:doc:`/classad-attributes/job-classad-attributes` section. A
 string identifying the reason that a particular job is in the Hold state
-may be displayed by invoking *condor_q*. For the example job ID 16.0,
+may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
 use:
 
 ::

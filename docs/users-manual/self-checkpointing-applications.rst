@@ -336,7 +336,7 @@ Periodic Signals
 ~~~~~~~~~~~~~~~~
 
 HTCondor supports transferring checkpoint file(s) for
-``executable=s which take a checkpoint when sent a particular signal, if the =executable``
+``executable``s which take a checkpoint when sent a particular signal, if the ``executable``
 then exits in a unique way. Set ``+WantCheckpointSignal`` to ``TRUE`` to
 periodically receive checkpoint signals, and ``+CheckpointSig`` to
 specify which one. (The interval is specified by the administrator of

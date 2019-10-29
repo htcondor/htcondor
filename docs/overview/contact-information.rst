@@ -28,9 +28,9 @@ Finally, you can reach the HTCondor Team directly. The HTCondor Team is
 comprised of the developers and administrators of HTCondor at the
 University of Wisconsin-Madison. HTCondor questions, comments, pleas for
 help, and requests for commercial contract consultation or support are
-all welcome; send Internet e-mail to
+all welcome; send e-mail to
 `htcondor-admin@cs.wisc.edu <mailto:htcondor-admin@cs.wisc.edu>`_.
-Please include your name, organization, and telephone number in your
+Please include your name, organization, and email in your
 message. If you are having trouble with HTCondor, please help us
 troubleshoot by including as much pertinent information as you can,
 including snippets of HTCondor log files.

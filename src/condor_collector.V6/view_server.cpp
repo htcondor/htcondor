@@ -768,8 +768,11 @@ void ViewServer::WriteHistory()
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				MSC_SUPPRESS_WARNING(6031) // return value of rename ignored.
-				rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				int r = rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				if (r < 0) {
+					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value(), errno);
+					EXCEPT("Could not rename data file");
+				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
 				if(FileHash->lookup(DataSet[i][j].OldFileName.Value(),

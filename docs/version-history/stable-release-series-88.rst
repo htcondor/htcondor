@@ -8,6 +8,23 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.7
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.7 not yet released.
+
+.. HTCondor version 8.8.7 released on Month Date, 2019.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.8.6
 -------------
 
@@ -17,11 +34,38 @@ Release Notes:
 
 .. HTCondor version 8.8.6 released on Month Date, 2019.
 
+-  The default encryption algorithm used by HTCondor was changed from
+   `Triple-DES` to `Blowfish`.
+   On a busy submit machine, many encrypted file transfers may consume
+   significant CPU time.
+   `Blowfish` is about six times faster and uses less memory than `Triple-DES`.
+   :ticket:`7288`
+
 New Features:
 
--  None.
+-  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+   files and prints out a summary of the values that differ from the defaults.
+   :ticket:`7286`
 
 Bugs Fixed:
+
+-  Fixed a bug where a misconfigured collector could forward ads to itself.
+   The collector now recognizes more cases of this misconfiguration and
+   properly ignores them.
+   :ticket:`7229`
+
+-  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+   to less than 1.0, it would round down to zero, and the user would not
+   get any matches.
+   :ticket:`7313`
+
+-  Fixed a bug where some tools (including *condor_submit*) would use the
+   local daemon instead of failing if given a bogus hostname.
+   :ticket:`7221`
+
+-  Fixed a bug where submitting more than one job in a single cluster
+   with the -spool option only actually submitted one job in the cluster.
+   :ticket:`7282`
 
 -  Fixed a bug where ``COLLECTOR_REQUIREMENTS`` wrote too much to the log
    to be useful.  It now only writes warnings about rejected ads when
@@ -37,6 +81,17 @@ Bugs Fixed:
 -  Fixed a bug where the classad function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
+
+-  *condor_preen* will no longer query the *condor_schedd* the whole time it is
+   preening the spool directory.  Instead, it now builds a list of potentially
+   obsolete files and then queries the *condor_schedd* once to find out which of
+   these files are associated with jobs still in the Schedd.
+   :ticket:`7320`
+
+-  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+   but no submit file, and the arguments were sufficient that no submit file
+   was needed.
+   :ticket:`7249`
 
 Version 8.8.5
 -------------

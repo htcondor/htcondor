@@ -108,7 +108,7 @@ Job Considerations
 A particular job will only flock to another pool when it cannot
 currently run in the current pool.
 
-The submission of jobs other than standard universe jobs must consider
+The submission of jobs must consider
 the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file

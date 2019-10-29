@@ -6214,15 +6214,30 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
-				bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true);
+				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
-					std::string method = *it;
-					if (sign_s3_urls && (method == "s3")) {
-						method = "https";
-					}
 					answer += " && stringListIMember(\"";
-					answer += method;
+					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
+
+					if( presignS3URLs && (strcasecmp( it->c_str(), "s3" ) == 0) ) {
+						bool present = true;
+						if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
+							present = false;
+							push_error(stderr, "s3:// URLs require "
+								SUBMIT_KEY_AWSAccessKeyIdFile
+								" to be set.\n" );
+						}
+						if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
+							present = false;
+							push_error(stderr, "s3:// URLS require "
+								SUBMIT_KEY_AWSSecretAccessKeyFile
+								" to be set.\n" );
+						}
+						if(! present) {
+							ABORT_AND_RETURN(1);
+						}
+					}
 				}
 			}
 
@@ -8861,7 +8876,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 		// ignore keys that are in the 'omit' set. They should never be copied into the digest.
 		if (omit_knobs.find(key) != omit_knobs.end()) continue;
 
-		if (key && key[0] == '$') continue; // dont dump meta params.
+		if (key[0] == '$') continue; // dont dump meta params.
 
 		bool has_pending_expansions = false; // assume that we will not have unexpanded $() macros for the value
 

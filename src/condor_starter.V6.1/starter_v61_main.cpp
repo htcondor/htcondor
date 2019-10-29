@@ -61,6 +61,7 @@ static int starter_stdin_fd = -1;
 static int starter_stdout_fd = -1;
 static int starter_stderr_fd = -1;
 
+[[noreturn]]
 static void PREFAST_NORETURN
 usage()
 {

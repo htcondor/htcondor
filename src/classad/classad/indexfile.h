@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include <sys/types.h>
 
 namespace classad {

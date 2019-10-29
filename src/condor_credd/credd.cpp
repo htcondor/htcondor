@@ -397,7 +397,9 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
 	ClassAd ad;
-	getClassAd(r, ad);
+	if (!getClassAd(r, ad)) {
+		dprintf(D_ALWAYS, "credd::refresh_all_handler cannot receive classad\n");
+	}
 	r->end_of_message();
 
 	// don't actually care (at the moment) what's in the ad, it's for

@@ -159,6 +159,10 @@
 #define ATTR_DAG_NODES_UNREADY "DAG_NodesUnready"
 #define ATTR_DAG_STATUS "DAG_Status"
 #define ATTR_DAG_STATS "DAG_Stats"
+#define ATTR_DAGMAN_MAXIDLE "DAGMan_MaxIdle"
+#define ATTR_DAGMAN_MAXJOBS "DAGMan_MaxJobs"
+#define ATTR_DAGMAN_MAXPRESCRIPTS "DAGMan_MaxPreScripts"
+#define ATTR_DAGMAN_MAXPOSTSCRIPTS "DAGMan_MaxPostScripts"
 #define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
 #define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
 #define ATTR_DEFERRAL_TIME  "DeferralTime"
@@ -1148,6 +1152,15 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_MAX_TRANSFER_BYTES "MaxTransferBytes"
 
 #define ATTR_REPORT_INTERVAL "ReportInterval"
+
+// Attributes related to the data reuse directory code.
+#define ATTR_EXPIRATION_TIME "ExpirationTime"
+#define ATTR_RESERVED_SPACE "ReservedSpace"
+#define ATTR_UUID "UUID"
+#define ATTR_TAG "Tag"
+#define ATTR_SIZE "Size"
+#define ATTR_CHECKSUM "Checksum"
+#define ATTR_CHECKSUM_TYPE "ChecksumType"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

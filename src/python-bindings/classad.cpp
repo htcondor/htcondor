@@ -177,22 +177,22 @@ convert_value_to_python(const classad::Value &value)
     {
     case classad::Value::SCLASSAD_VALUE:
     case classad::Value::CLASSAD_VALUE:
-        value.IsClassAdValue(advalue);
+        (void) value.IsClassAdValue(advalue);
         wrap.reset(new ClassAdWrapper());
         wrap->CopyFrom(*advalue);
         result = boost::python::dict(wrap);
         break;
     case classad::Value::BOOLEAN_VALUE:
-        value.IsBooleanValue(boolvalue);
+        (void) value.IsBooleanValue(boolvalue);
         obj = boolvalue ? Py_True : Py_False;
         result = boost::python::object(boost::python::handle<>(boost::python::borrowed(obj)));
         break;
     case classad::Value::STRING_VALUE:
-        value.IsStringValue(strvalue);
+        (void) value.IsStringValue(strvalue);
         result = boost::python::str(strvalue);
         break;
     case classad::Value::ABSOLUTE_TIME_VALUE:
-        value.IsAbsoluteTimeValue(atime);
+        (void) value.IsAbsoluteTimeValue(atime);
         // Note we don't use offset -- atime.secs is always in UTC, which is
         // what python wants for PyDateTime_FromTimestamp
         timestamp = boost::python::long_(atime.secs);
@@ -201,15 +201,15 @@ convert_value_to_python(const classad::Value &value)
         result = boost::python::object(boost::python::handle<>(obj));
         break;
     case classad::Value::INTEGER_VALUE:
-        value.IsIntegerValue(intvalue);
+        (void) value.IsIntegerValue(intvalue);
         result = boost::python::long_(intvalue);
         break;
     case classad::Value::RELATIVE_TIME_VALUE:
-        value.IsRelativeTimeValue(realvalue);
+        (void) value.IsRelativeTimeValue(realvalue);
         result = boost::python::object(realvalue);
         break;
     case classad::Value::REAL_VALUE:
-        value.IsRealValue(realvalue);
+        (void) value.IsRealValue(realvalue);
         result = boost::python::object(realvalue);
         break;
     case classad::Value::ERROR_VALUE:

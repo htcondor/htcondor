@@ -5,9 +5,10 @@ HTCondor's Power
 
 HTCondor is a software system that creates a High-Throughput Computing
 (HTC) environment. It effectively utilizes the computing power of
-workstations that communicate over a network. HTCondor can manage a
-dedicated cluster of workstations. Its power comes from the ability to
-effectively harness non-dedicated, preexisting resources under
+computers connected over a network, be it a single cluster, a set
+of clusters on a campus, cloud resources either standalone or temporarily
+joined to a local cluster, or international grids of computing.
+Its power comes from the ability to effectively harness shared resources with
 distributed ownership.
 :index:`of machines<single: of machines; distributed ownership>`
 
@@ -15,18 +16,8 @@ A user submits the job to HTCondor. HTCondor finds an available machine
 on the network and begins running the job on that machine. HTCondor has
 the capability to detect that a machine running a HTCondor job is no
 longer available (perhaps because the owner of the machine came back
-from lunch and started typing on the keyboard). It can checkpoint
-:index:`checkpoint`\ the job and move (migrate)
-:index:`migration`\ the jobs to a different machine which would
-otherwise be idle. HTCondor continues the job on the new machine from
-precisely where it left off.
-
-In those cases where HTCondor can checkpoint and migrate a job, HTCondor
-makes it easy to maximize the number of machines which can run a job. In
-this case, there is no requirement for machines to share file systems
-(for example, with NFS or AFS), so that machines across an entire
-enterprise can run a job, including machines in different administrative
-domains.
+from lunch and started typing on the keyboard). HTCondor will automatically
+restart that job on another machine without intervention from the submitter.
 
 HTCondor can be a real time saver when a job must be run many (hundreds
 of) different times, :index:`multiple data sets<single: multiple data sets; job>`\ perhaps
@@ -36,13 +27,8 @@ machines in the HTCondor pool, dozens or even hundreds of otherwise idle
 machines can be running the job at any given moment.
 
 HTCondor does not require an account (login) on machines where it runs a
-job. HTCondor can do this because of its remote system call
-:index:`remote system call`\ technology, which traps library
-calls for such operations as reading or writing from disk files. The
-calls are transmitted over the network to be performed on the machine
-where the job was submitted.
-:index:`resource management<single: resource management; HTCondor>`
-:index:`management<single: management; resource>`
+job. HTCondor can do this because of its file transfer and split
+execution mechanisms.
 
 HTCondor provides powerful resource management by match-making resource
 :index:`matchmaking`\ owners with resource consumers. This is the
@@ -69,5 +55,3 @@ match-making process, HTCondor also considers several layers of priority
 values: the priority the user assigned to the resource request ad, the
 priority of the user which submitted the ad, and desire of machines in
 the pool to accept certain types of ads over others.
-
-      

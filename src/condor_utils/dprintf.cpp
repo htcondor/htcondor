@@ -570,7 +570,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 				buffer[bufpos-1] = ' ';
 				for (int jj = 0; jj < info.num_backtrace; ++jj) {
 					const char * fmt = (jj+1 == info.num_backtrace) ? "%p\n" : "%p, ";
-					rc = sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
+					sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
 				}
 			}
 		}

@@ -45,7 +45,7 @@ class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
-
+class CondorError;
 
 /*
 	This function tells the caller if a UserLog object should be
@@ -277,6 +277,8 @@ public:
 		mask.push_back(e);
 	}
 
+	FileLockBase *getLock(CondorError &err);
+
   private:
 
 	///
@@ -358,11 +360,6 @@ public:
     /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
 	/** ULogEvent::formatOpt flags   */  int        m_format_opts; // formerly m_use_xml
-
-#if !defined(WIN32)
-	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
-	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
-#endif
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;

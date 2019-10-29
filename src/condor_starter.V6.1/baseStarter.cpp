@@ -54,6 +54,7 @@
 #include <Regex.h>
 #include "starter_util.h"
 #include "condor_random_num.h"
+#include "data_reuse.h"
 
 extern void main_shutdown_fast();
 
@@ -298,7 +299,6 @@ CStarter::Config()
 		}
 	}
 	if (!m_configured) {
-		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);
 #if !defined(LINUX)
 		dprintf(D_ALWAYS,
@@ -306,20 +306,21 @@ CStarter::Config()
 		            "ignoring\n");
 		gl = false;
 #endif
-		if (ps && gl) {
-			EXCEPT("can't support both "
-			           "PRIVSEP_ENABLED and GLEXEC_JOB");
-		}
-		if (ps) {
-			m_privsep_helper = new CondorPrivSepHelper;
-			ASSERT(m_privsep_helper != NULL);
-		}
-		else if (gl) {
+		if (gl) {
 #if defined(LINUX)
 			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
 #endif
 		}
+	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
+		}
+	} else {
+		m_reuse_dir.reset();
 	}
 
 		// Tell our JobInfoCommunicator to reconfig, too.
@@ -1816,32 +1817,23 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-	if (cpsh != NULL) {
-		// the privsep switchboard now ALWAYS creates directories with
-		// permissions 0700.
-		cpsh->initialize_sandbox(WorkingDir.Value());
-		WriteAdFiles();
-	} else {
-		// we can only get here if we are not using *CONDOR* PrivSep.  but we
-		// might be using glexec.  glexec relies on being able to read the
-		// contents of the execute directory as a non-condor user, so in that
-		// case, use 0755.  for all other cases, use the more-restrictive 0700.
+	// we might be using glexec.  glexec relies on being able to read the
+	// contents of the execute directory as a non-condor user, so in that
+	// case, use 0755.  for all other cases, use the more-restrictive 0700.
 
-		int dir_perms = 0700;
+	int dir_perms = 0700;
 
-		// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
-		// defines permissions on execute directory (subject to umask)
-		char *who = param("JOB_EXECDIR_PERMISSIONS");
-		if(who != NULL)	{
-			if(!strcasecmp(who, "user"))
-				dir_perms = 0700;
-			else if(!strcasecmp(who, "group"))
-				dir_perms = 0750;
-			else if(!strcasecmp(who, "world"))
-				dir_perms = 0755;
-			free(who);
-		}
+	// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
+	// defines permissions on execute directory (subject to umask)
+	char *who = param("JOB_EXECDIR_PERMISSIONS");
+	if(who != NULL)	{
+		if(!strcasecmp(who, "user"))
+			dir_perms = 0700;
+		else if(!strcasecmp(who, "group"))
+			dir_perms = 0750;
+		else if(!strcasecmp(who, "world"))
+			dir_perms = 0755;
+		free(who);
 
 #if defined(LINUX)
 		if(glexecPrivSepHelper()) {
@@ -2701,34 +2693,7 @@ CStarter::PeriodicCkpt( void )
 	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
 
-			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_condor(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						false,
-						err.holdCode(),
-						err.holdSubCode());
-					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint\n");
-					return false;
-				}
-			}
-
 			bool transfer_ok = jic->uploadWorkingFiles();
-
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_user(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						true,
-						err.holdCode(),
-						err.holdSubCode());
-					EXCEPT("failed to restore sandbox to user ownership after checkpoint");
-					return false;
-				}
-			}
 
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
@@ -3313,19 +3278,29 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Cpus, to encourage jobs to stay within the number
 		// of requested cpu cores.  But trust the user, if it has
 		// already been set in the job.
+		// In addition, besides just OMP_NUM_THREADS, set an environment
+		// variable for each var name listed in STARTER_NUM_THREADS_ENV_VARS.
 
 	ClassAd * mach = jic->machClassAd();
-	MyString jobNumThreads;
-
-	proc_env->GetEnv("OMP_NUM_THREADS", jobNumThreads);
-	if (mach && (jobNumThreads.Length() == 0)) {
-		int cpus = 0;
-		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
-			if (cpus > 0) {
-				proc_env->SetEnv("OMP_NUM_THREADS", IntToStr( cpus ));
+	int cpus = 0;
+	if (mach) {
+		mach->LookupInteger(ATTR_CPUS, cpus);
+	}
+	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
+	if (cpus > 0 && cpu_vars_param) {
+		MyString jobNumThreads;
+		StringList cpu_vars_list(cpu_vars_param);
+		cpu_vars_list.remove("");
+		cpu_vars_list.rewind();
+		char *var = NULL;
+		while ((var = cpu_vars_list.next())) {
+			proc_env->GetEnv(var, jobNumThreads);
+			if (jobNumThreads.Length() == 0) {
+				proc_env->SetEnv(var, IntToStr(cpus));
 			}
 		}
 	}
+	free(cpu_vars_param);
 
 		// If using a job wrapper, set environment to location of
 		// wrapper failure file.
@@ -3683,20 +3658,6 @@ CStarter::removeTempExecuteDir( void )
 
 	MyString dir_name = "dir_";
 	dir_name += IntToStr( daemonCore->getpid() );
-
-#if !defined(WIN32)
-	if (condorPrivSepHelper() != NULL) {
-		MyString path_name;
-		path_name.formatstr("%s/%s", Execute, dir_name.Value());
-		if (!privsep_remove_dir(path_name.Value())) {
-			dprintf(D_ALWAYS,
-			        "privsep_remove_dir failed for %s\n",
-			        path_name.Value());
-			return false;
-		}
-		return true;
-	}
-#endif
 
 #if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&

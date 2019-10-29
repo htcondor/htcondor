@@ -316,7 +316,11 @@ UdpWakeOnLanWaker::initializeBroadcastAddress ()
     m_broadcast.sin_addr.s_addr ^= 0xffffffff;
 
     /* logically or the IP address with the inverted subnet mast */
-    inet_pton(AF_INET, m_public_ip, &public_ip_address.sin_addr.s_addr);
+    if (inet_pton(AF_INET, m_public_ip, &public_ip_address.sin_addr.s_addr) < 1)
+	{
+		dprintf(D_ALWAYS, "UDP waker, public ip is not a valid address, %s\n", m_public_ip);
+		goto Cleanup;
+	}
     m_broadcast.sin_addr.s_addr |= public_ip_address.sin_addr.s_addr;
 
     /* log display broadcast address */

@@ -1101,7 +1101,7 @@ Job ClassAd Attributes
     :index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobUniverse>`
     :index:`universe<single: universe; job>`
-    :index:`standard = 1<single: standard = 1; job ClassAd attribute definitions>`
+    :index:`standard = 1 (no longer used)<single: standard = 1; job ClassAd attribute definitions>`
     :index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used); job ClassAd attribute definitions>`
     :index:`linda = 3 (no longer used)<single: linda = 3 (no longer used); job ClassAd attribute definitions>`
     :index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used); job ClassAd attribute definitions>`
@@ -1122,8 +1122,6 @@ Job ClassAd Attributes
     +-------+-----------------+
     | Value | Universe        |
     +=======+=================+
-    | 1     | standard        |
-    +-------+-----------------+
     | 5     | vanilla, docker |
     +-------+-----------------+
     | 7     | scheduler       |
@@ -1167,7 +1165,7 @@ Job ClassAd Attributes
 ``KillSigTimeout``
     This attribute is replaced by the functionality in
     ``JobMaxVacateTime`` as of HTCondor version 7.7.3. The number of
-    seconds that the job (other than the standard universe) requests the
+    seconds that the job requests the
     *condor_starter* wait after sending the signal defined as
     ``KillSig`` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine's
@@ -1175,26 +1173,6 @@ Job ClassAd Attributes
     :index:`KILLING_TIMEOUT`.
     :index:`LastCheckpointPlatform<single: LastCheckpointPlatform; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; LastCheckpointPlatform>`
-
-``LastCheckpointPlatform``
-    An opaque string which is the ``CheckpointPlatform`` identifier from
-    the last machine where this standard universe job had successfully
-    produced a checkpoint.
-    :index:`LastCkptServer<single: LastCkptServer; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCkptServer>`
-
-``LastCkptServer``
-    Host name of the last checkpoint server used by this job. When a
-    pool is using multiple checkpoint servers, this tells the job where
-    to find its checkpoint file.
-    :index:`LastCkptTime<single: LastCkptTime; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCkptTime>`
-
-``LastCkptTime``
-    Time at which the job last performed a successful checkpoint.
-    Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
-    1, 1970). :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastMatchTime>`
 
 ``LastMatchTime``
     An integer containing the epoch time when the job was last
@@ -1283,7 +1261,7 @@ Job ClassAd Attributes
 ``MaxTransferInputMB``
     This integer expression specifies the maximum allowed total size in
     Mbytes of the input files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
@@ -1300,7 +1278,7 @@ Job ClassAd Attributes
 ``MaxTransferOutputMB``
     This integer expression specifies the maximum allowed total size in
     Mbytes of the output files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
@@ -1398,7 +1376,6 @@ Job ClassAd Attributes
 
 ``NumJobStarts``
     An integer count of the number of times the job started executing.
-    This is not (yet) defined for **standard** universe jobs.
     :index:`NumPids<single: NumPids; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; NumPids>`
 

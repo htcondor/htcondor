@@ -75,6 +75,11 @@ enum FileTransferStatus {
 };
 
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
+
 class FileTransfer final: public Service {
 
   public:
@@ -141,6 +146,11 @@ class FileTransfer final: public Service {
 	 *  with the file transfer plugins.
 	 */
 	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
+
+	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
+	 *  lookups
+	 */
+	void setDataReuseDirectory(htcondor::DataReuseDirectory &reuse_dir) {m_reuse_dir = &reuse_dir;}
 
 	/** Set the location of various ads describing the runtime environment.
 	 *  Used by the file transfer plugins.
@@ -390,6 +400,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesGoAhead{false};
 	bool PeerUnderstandsMkdir{false};
 	bool PeerDoesXferInfo{false};
+	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
@@ -432,6 +443,7 @@ class FileTransfer final: public Service {
 	std::map<MyString, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
+	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
@@ -461,6 +473,9 @@ class FileTransfer final: public Service {
 
 	// stores the path to the proxy after one is received
 	MyString LocalProxyName;
+
+	// Object to manage reuse of any data locally.
+	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);

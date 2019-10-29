@@ -1119,9 +1119,6 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 		int		op;
 
 		delete log_rec;
-		if( !fp ) {
-			EXCEPT("Error: failed fdopen() while recovering from corrupt log record %lu", recnum);
-		}
 
         // check if this bogus record is in the midst of a transaction
 	    // (try to find a CloseTransaction log record)

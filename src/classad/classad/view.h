@@ -25,7 +25,7 @@
 #include <string>
 #include <set>
 
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 #include "classad/matchClassad.h"
 

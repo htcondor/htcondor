@@ -4,6 +4,23 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.5
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.5 not yet released.
+
+.. HTCondor version 8.9.5 released on Month Date, 2019.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.9.4
 -------------
 
@@ -13,12 +30,36 @@ Release Notes:
 
 .. HTCondor version 8.9.4 released on Month Date, 2019.
 
+- The format of the aborted event has changed.  This will
+  only affect you if you're not using one the readers provided by HTCondor.
+  :ticket:`7191`
+
+- `DAGMAN_USE_JOIN_NODES` is now on by default.
+  :ticket:`7271`
+
 New Features:
+
+- HTCondor now supports secure download and upload to and from S3.  See
+  the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
+  :ticket:`7289`
+
+- Added ``erase_output_and_error_on_restart`` as a new submit command.  It
+  defaults to true; if set to false, and ``when_to_transfer_output`` is
+  ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
+  when the job restarts, instead of erasing them (and starting the logs
+  over).  This may make the output and error logs more useful when the
+  job self-checkpoints.
+  :ticket:`7189`
+
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+  built-in submit variables. These expand to the time of submission.
+  :ticket:`7283`
 
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
-  a result of a job being evicted when ``when_to_transfer_files = TRUE``,
-  or checkpointing when ``CheckpointExitCode`` is set).
+  a result of a job being evicted when
+  ``when_to_transfer_output = ON_EXIT_OR_EVICT``, or checkpointing when
+  ``CheckpointExitCode`` is set).
   :ticket:`7038`
 
 - GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
@@ -28,9 +69,97 @@ New Features:
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
+- Added new config parameter for execute machines,
+  CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
+  condor LD_PRELOADs into unprivileged sshd it startd a special version of
+  the linux getpwnam library call, which forces the user's shell to
+  /bin/bash and the home directory to the scratch directory.  This allows
+  condor_ssh_to_job to work on sites that don't create login shells for
+  slots users, or who want to run as nobody.
+  :ticket:`7260`
+
+- The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
+  which creates a Submit description from a DAG file, now supports keyword
+  arguments (in addition to positional arguments), and the ``options`` argument
+  is now optional:
+
+  .. code-block:: python
+
+     dag_args = { "maxidle": 10, "maxpost": 5 }
+
+     # with keyword arguments for filename and options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
+
+     # or like this, with no options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
+
+  :ticket:`7278`
+
+- Added an example of a multifile plugin to transfer files from a locally
+  mounted Gluster file system. This script is also designed to be a template 
+  for other file transfer plugins, as the logic to download or upload files is
+  clearly indicated and could be easily changed to support different file
+  services.
+  :ticket:`7212`
+
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
+- `SciTokens <https://scitokens.org>`_ support is now available on
+  Enterprise Linux 7 platforms.
+  :ticket:`7248`
+
 Bugs Fixed:
 
--  None.
+-  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
+   outside the container if the container had not completely started.
+   :ticket:`7246`
+
+- Fixed a bug where Docker universe jobs were always hard-killed (sent
+  SIGKILL).  The appropriate signals are now being sent for hold, remove,
+  and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
+  to shut down cleanly.
+  :ticket:`7247`
+
+- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+  submit commands that begin with ``request_<tag>`` as custom resource requests unless
+  ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
+  :ticket:`7172`
+
+- The python bindings ``Submit`` object now converts keys of the form ``+Attr``
+  to ``MY.Attr`` when setting and getting values into the ``Submit`` object.
+  The ``Submit`` object had been storing ``+Attr`` keys and then converting
+  these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
+  to some very strange error conditions.
+  :ticket:`7261`
+
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location 
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
+
+- Our *curl_plugin* is designed to partially retry downloads which did not
+  complete successfully (HTTP Content-Length header reporting a different number
+  than bytes downloaded). However partial retries do not work with some proxy
+  servers, causing jobs to go on hold. We've updated the plugin to not attempt
+  partial retries when a proxy is detected.
+  :ticket:`7259`
+
+- The timeout for *condor_ssh_to_job* connection has been restored to the
+  previous setting of 20 seconds. Shortening the timeout avoids getting into
+  a deadlock between the *condor_schedd*, *condor_starter*, and
+  *condor_shadow*.
+  :ticket:`7193`
+
+- Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
+  timeout caused 100% CPU utilization due to an old libcurl bug.
+  :ticket:`7316`
 
 Version 8.9.3
 -------------
@@ -164,6 +293,13 @@ New Features:
   grid universe, the cluster to submit to can be specified using the
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
+
+- HTCondor now sets numerous environment variables 
+  to tell the job (or libraries being used by the job) how many CPU cores
+  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
+  to allow the administrator to customize this set of environment 
+  variables.
+  :ticket:`7296`
 
 Bugs Fixed:
 

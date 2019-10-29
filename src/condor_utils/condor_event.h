@@ -34,6 +34,7 @@
 #endif
 
 #include <string>
+#include <chrono>
 
 namespace ToE {
     class Tag;
@@ -61,7 +62,8 @@ class MyString; // potential forward reference.
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
-	(in condor_event.C)
+	(in condor_event.cpp) and the python enums (in
+	src/python-bindings/JobEventLog.cpp).
 	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
 	         ^^^^^^           
 */
@@ -107,6 +109,11 @@ enum ULogEventNumber {
 	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 	/** For the Python bindings   */  ULOG_NONE						= 39,
 	/** File transfer             */  ULOG_FILE_TRANSFER			= 40,
+	/** Reserve space for xfer    */ ULOG_RESERVE_SPACE				= 41,
+	/** Release reserved space    */ ULOG_RELEASE_SPACE				= 42,
+	/** File xfer completed       */ ULOG_FILE_COMPLETE				= 43,
+	/** Data reused               */ ULOG_FILE_USED					= 44,
+	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
 };
 
 //----------------------------------------------------------------------------
@@ -2282,5 +2289,141 @@ class FileTransferEvent : public ULogEvent {
 };
 
 
-#endif // __CONDOR_EVENT_H__
+class ReserveSpaceEvent final : public ULogEvent {
+public:
+	ReserveSpaceEvent() {eventNumber = ULOG_RESERVE_SPACE;}
+	~ReserveSpaceEvent() {};
 
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setExpirationTime(const std::chrono::system_clock::time_point &expiry) {m_expiry = expiry;}
+	std::chrono::system_clock::time_point getExpirationTime() const {return m_expiry;}
+
+	void setReservedSpace(size_t space) {m_reserved_space = space;}
+	size_t getReservedSpace() const {return m_reserved_space;}
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	std::string generateUUID();
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+
+private:
+	std::chrono::system_clock::time_point m_expiry;
+	size_t m_reserved_space{0};
+	std::string m_uuid;
+	std::string m_tag;
+};
+
+
+class ReleaseSpaceEvent final : public ULogEvent {
+public:
+	ReleaseSpaceEvent() {eventNumber = ULOG_RELEASE_SPACE;}
+	~ReleaseSpaceEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+private:
+	std::string m_uuid;
+};
+
+
+class FileCompleteEvent final : public ULogEvent {
+public:
+	FileCompleteEvent() : m_size(0) {eventNumber = ULOG_FILE_COMPLETE;}
+	~FileCompleteEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_uuid;
+};
+
+
+class FileUsedEvent final : public ULogEvent {
+public:
+	FileUsedEvent() {eventNumber = ULOG_FILE_USED;}
+	~FileUsedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
+
+
+class FileRemovedEvent final : public ULogEvent {
+public:
+	FileRemovedEvent() : m_size(0) {eventNumber = ULOG_FILE_REMOVED;}
+	~FileRemovedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
+
+#endif // __CONDOR_EVENT_H__

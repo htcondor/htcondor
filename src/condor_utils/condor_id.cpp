@@ -51,15 +51,10 @@ CondorID::ServiceDataCompare( const ServiceData* rhs ) const
 {
 	CondorID const* id_lhs = (CondorID const*)this;
 	CondorID const* id_rhs = (CondorID const*)rhs;
-	if( id_lhs && ! id_rhs ) {
+	if( !id_rhs ) {
 		return -1;
 	}
-	if( ! id_lhs && ! id_rhs ) {
-		return 0;
-	}
-	if( ! id_lhs && id_rhs ) {
-		return -1;
-	}
+	
 	return id_lhs->Compare( *id_rhs );
 }
 

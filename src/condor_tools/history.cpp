@@ -1023,7 +1023,10 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 		exit(1);
 	}
 
-    buf.readLine(fd);
+    if (!buf.readLine(fd)) {
+		fprintf(stderr, "Error %d: cannot read from history file %s\n", errno, filename);
+		exit(1);
+	}
   
     owner = (char *) malloc(buf.Length() * sizeof(char)); 
 
@@ -1055,7 +1058,12 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
             }
 
             // Find previous delimiter + summary
-            fseek(fd, prevOffset, SEEK_SET);
+            int ret = fseek(fd, prevOffset, SEEK_SET);
+			if (ret < 0) {
+				fprintf(stderr, "Cannot seek in history file to find delimiter\n");
+				exit(1);
+			}
+
             if (!buf.readLine(fd)) {
 				fprintf(stderr, "Cannot read history file\n");
 				exit(1);
@@ -1151,7 +1159,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
 					exit(1);
 				}
-                buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
+				// Read one line to skip delimiter and adjust to actual offset of ad
+                if (!buf.readLine(LogFile)) {
+					printf( "\t*** Error: Can't read delimiter inside history file: errno %d\n", errno);
+					exit(1);
+				}
             } else { // Offset set to 0
                 BOF = true;
                 if (fseek(LogFile, offset, SEEK_SET) < 0) {

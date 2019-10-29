@@ -25,7 +25,7 @@
 #include <set>
 #include <map>
 #include <vector>
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 
 namespace classad {

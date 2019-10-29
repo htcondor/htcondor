@@ -611,6 +611,11 @@ void export_event_log() {
             .. attribute:: FACTORY_RESUMED
             .. attribute:: NONE
             .. attribute:: FILE_TRANSFER
+            .. attribute:: RESERVE_SPACE
+            .. attribute:: RELEASE_SPACE
+            .. attribute:: FILE_COMPLETE
+            .. attribute:: FILE_USED
+            .. attribute:: FILE_REMOVED
             )C0ND0R")
 		.value( "SUBMIT", ULOG_SUBMIT )
 		.value( "EXECUTE", ULOG_EXECUTE )
@@ -653,6 +658,11 @@ void export_event_log() {
 		.value( "FACTORY_RESUMED", ULOG_FACTORY_RESUMED )
 		.value( "NONE", ULOG_NONE )
 		.value( "FILE_TRANSFER", ULOG_FILE_TRANSFER )
+		.value( "RESERVE_SPACE", ULOG_RESERVE_SPACE )
+		.value( "RELEASE_SPACE", ULOG_RELEASE_SPACE )
+		.value( "FILE_COMPLETE", ULOG_FILE_COMPLETE )
+		.value( "FILE_USED", ULOG_FILE_USED )
+		.value( "FILE_REMOVED", ULOG_FILE_REMOVED )
 	;
 
 	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType",

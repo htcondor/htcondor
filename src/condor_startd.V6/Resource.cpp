@@ -693,6 +693,41 @@ Resource::killAllClaims( void )
 	shutdownAllClaims( false );
 }
 
+void
+Resource::dropAdInLogFile( void )
+{
+	// potentially filter by types if the types are defined.  otherwise print all.
+	std::string dropadtypes;
+	bool will_print = false;
+	if (param(dropadtypes, "STARTD_PRINT_ADS_FILTER")) {
+		// check the filter to see if we will print
+		dprintf(D_FULLDEBUG, "Filtering ads to \n", dropadtypes.c_str());
+		StringList sl(dropadtypes.c_str());
+		switch (get_feature()) {
+			case STANDARD_SLOT:
+				if(sl.contains_anycase("static")) will_print = true;
+				break;
+			case PARTITIONABLE_SLOT:
+				if(sl.contains_anycase("partitionable")) will_print = true;
+				break;
+			case DYNAMIC_SLOT:
+				if(sl.contains_anycase("dynamic")) will_print = true;
+				break;
+		}
+	} else {
+		// no filter, always print
+		will_print = true;
+	}
+
+	dprintf(D_FULLDEBUG, "DEBUG: will_print %i, get_feature %i, types %s\n", will_print, get_feature(), dropadtypes.c_str());
+
+	if (will_print) {
+		dprintf(D_ALWAYS, "** BEGIN CLASSAD ** %lx\n", (long int)(this));
+		dPrintAd(D_ALWAYS, *r_classad);
+		dprintf(D_ALWAYS, "** END CLASSAD ** %lx\n", (long int)(this));
+	}
+}
+
 extern ExprTree * globalDrainingStartExpr;
 
 void

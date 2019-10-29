@@ -3,12 +3,9 @@ Submitting a Job
 
 :index:`submitting<single: submitting; job>`
 
-A job is submitted for execution to HTCondor using the *condor_submit*
-command.
-:index:`condor_submit<single: condor_submit; HTCondor commands>`\ *condor_submit* takes
-as an argument the name of a file called a submit description file.
+The *condor_submit* command takes a job description file as input
+and submits the job described therein to HTCondor.
 :index:`submit description file`\ :index:`submit description<single: submit description; file>`
-This file contains commands and keywords to direct the queuing of jobs.
 In the submit description file, HTCondor finds everything it needs to
 know about the job. Items such as the name of the executable to run, the
 initial working directory, and command-line arguments to the program all
@@ -16,19 +13,13 @@ go into the submit description file. *condor_submit* creates a job
 ClassAd based upon the information, and HTCondor works toward running
 the job. :index:`contents of<single: contents of; submit description file>`
 
-The contents of a submit description file have been designed to save
-time for HTCondor users. It is easy to submit multiple runs of a program
+It is easy to submit multiple runs of a program
 to HTCondor with a single submit description file. To run the same
-program many times on different input data sets, arrange the data files
+program many times with different input data sets, arrange the data files
 accordingly so that each run reads its own input, and each run writes
 its own output. Each individual run may have its own initial working
 directory, files mapped for ``stdin``, ``stdout``, ``stderr``,
-command-line arguments, and shell environment; these are all specified
-in the submit description file. A program that directly opens its own
-files will read the file names to use either from ``stdin`` or from the
-command line. A program that opens a static file, given by file name,
-every time will need to use a separate subdirectory for the output of
-each run.
+command-line arguments, and shell environment.
 
 The :doc:`/man-pages/condor_submit` manual page contains a complete and full
 description of how to use *condor_submit*. It also includes descriptions of
@@ -36,8 +27,8 @@ all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
 
-Note that job ClassAd attributes can be set directly in a submit file
-using the **+<attribute> = <value>** syntax (see
+Note that user-defined custom job ClassAd attributes can be set 
+directly in a submit file using the **+<attribute> = <value>** syntax (see
 :doc:`/man-pages/condor_submit` for details.)
 
 Sample submit description files
@@ -51,32 +42,22 @@ there are more in the :doc:`/man-pages/condor_submit` manual page.
 **Example 1**
 
 Example 1 is one of the simplest submit description files possible. It
-queues up the program *myexe* for execution somewhere in the pool. Use
-of the vanilla universe is implied, as that is the default when not
-specified in the submit description file.
+queues up the program *myexe* for execution somewhere in the pool.
+As this submit description file does not request a specific operating
+system to run on, HTCondor will use the default, which is to run the job
+on a machine which has the same architecture and operating system 
+it was submitted from.
 
-An executable is compiled to run on a specific platform. Since this
-submit description file does not specify a platform, HTCondor will use
-its default, which is to run the job on a machine which has the same
-architecture and operating system as the machine where *condor_submit*
-is run to submit the job.
+Before submitting a job to HTCondor, it is a good idea to test it
+first locally, by running it from a command shell.  This example job
+might look like this when run from the shell prompt.
 
-Standard input for this job will come from the file ``inputfile``, as
-specified by the **input** :index:`input<single: input; submit commands>`
-command, and standard output for this job will go to the file
-``outputfile``, as specified by the
-**output** :index:`output<single: output; submit commands>` command. HTCondor
-expects to find ``inputfile`` in the current working directory when this
-job is submitted, and the system will take care of getting the input
-file to where it needs to be when the job is executed, as well as
-bringing back the output results (to the current working directory)
-after job execution.
+::
 
-A log file, ``myexe.log``, will also be produced that contains events
-the job had during its lifetime inside of HTCondor. When the job
-finishes, its exit conditions will be noted in the log file. This file's
-contents are an excellent way to figure out what happened to submitted
-jobs.
+      $ ./myexe SomeArgument
+
+      
+The corresponding submit description file might look like the following
 
 ::
 
@@ -87,121 +68,76 @@ jobs.
       #
       ####################
 
-      Executable   = myexe
-      Log          = myexe.log
-      Input        = inputfile
-      Output       = outputfile
-      Queue
+      executable   = myexe
+
+      arguments    = SomeArgument
+
+      output       = outputfile
+      error        = errorfile
+      log          = myexe.log
+
+      request_cpus   = 1
+      request_memory = 1024
+      request_disk   = 10240
+      
+      should_transfer_files = yes
+      when_to_transfer_output = on_exit
+      queue
+
+The standard output for this job will go to the file
+``outputfile``, as specified by the
+**output** :index:`output<single: output; submit commands>` command. Likewise,
+the standard error output will go to ``errorfile``. 
+
+A log file, ``myexe.log``, will also be produced that contains events
+the job had during its lifetime inside of HTCondor. When the job
+finishes, its exit conditions and resource usage will be noted in the log file. 
+This file's contents are an excellent way to figure out what happened to jobs.
+
+HTCondor needs to know how many machine resources to allocate to this job.
+The ``request_`` lines describe that this job should be allocated 1 cpu core, 1024 
+megabytes of memory and 10240 kilobytes of scratch disk space.
 
 
 **Example 2**
 
-Example 2 queues up one copy of the program *foo* (which had been
-created by *condor_compile*) for execution by HTCondor. No
-**input** :index:`input<single: input; submit commands>`,
-**output** :index:`output<single: output; submit commands>`, or
-**error** :index:`error<single: error; submit commands>` commands are given in
-the submit description file, so ``stdin``, ``stdout``, and ``stderr``
-will all refer to ``/dev/null``. The program may produce output by
-explicitly opening a file and writing to it.
-
-::
-
-      ####################
-      #
-      # Example 2
-      # Standard universe submit description file
-      #
-      ####################
-
-      Executable   = foo
-      Universe     = standard
-      Log          = foo.log
-      Queue
-
-
-**Example 3**
-
-Example 3 queues two copies of the program *mathematica*. The first copy
-will run in directory ``run_1``, and the second will run in directory
-``run_2`` due to the
-**initialdir** :index:`initialdir<single: initialdir; submit commands>` command. For
-each copy, ``stdin`` will be ``test.data``, ``stdout`` will be
-``loop.out``, and ``stderr`` will be ``loop.error``. Each run will read
-input and write output files within its own directory. Placing data
-files in separate directories is a convenient way to organize data when
-a large group of HTCondor jobs is to run. The example file shows program
-submission of *mathematica* as a vanilla universe job. The vanilla
-universe is most often the right choice of universe when the source
-and/or object code is not available.
-
-The **request_memory** :index:`request_memory<single: request_memory; submit commands>`
-command is included to ensure that the *mathematica* jobs match with and
-then execute on pool machines that provide at least 1 GByte of memory.
-
-::
-
-      ####################
-      #
-      # Example 3: demonstrate use of multiple
-      # directories for data organization.
-      #
-      ####################
-
-      executable     = mathematica
-      universe       = vanilla
-      input          = test.data
-      output         = loop.out
-      error          = loop.error
-      log            = loop.log
-      request_memory = 1 GB
-
-      initialdir     = run_1
-      queue
-
-      initialdir     = run_2
-      queue
-
-
-**Example 4**
-
-The submit description file for Example 4 queues 150
+The submit description file for Example 2 queues 150
 :index:`running multiple programs`\ runs of program *foo*
-which has been compiled and linked for Linux running on a 32-bit Intel
-processor. This job requires HTCondor to run the program on machines
-which have greater than 32 MiB of physical memory, and the
-**rank** :index:`rank<single: rank; submit commands>` command expresses a
-preference to run each instance of the program on machines with more
-than 64 MiB. It also advises HTCondor that this standard universe job
-will use up to 28000 KiB of memory when running. Each of the 150 runs of
-the program is given its own process number, starting with process
-number 0. So, files ``stdin``, ``stdout``, and ``stderr`` will refer to
-``in.0``, ``out.0``, and ``err.0`` for the first run of the program,
-``in.1``, ``out.1``, and ``err.1`` for the second run of the program,
+processor. This job requires machines which have at least
+4 GiB of physical memory, one cpu core and 16 Gb of scratch disk.
+Each of the 150 runs of the program is given its own HTCondor process number, 
+starting with 0. $(Process) is expanded by condor to the actual number
+used by each instance of the job. So, ``stdout``, and ``stderr`` will refer to
+``out.0``, and ``err.0`` for the first run of the program,
+``out.1``, and ``err.1`` for the second run of the program,
 and so forth. A log file containing entries about when and where
 HTCondor runs, checkpoints, and migrates processes for all the 150
 queued programs will be written into the single file ``foo.log``.
+If there are 150 or more available slots in your pool, all 150 instance
+might be run at the same time, otherwise, HTCondor will run as many as
+it can concurrently.
 
 ::
 
       ####################
       #
-      # Example 4: Show off some fancy features including
+      # Example 2: Show off some fancy features including
       # the use of pre-defined macros.
       #
       ####################
 
       Executable     = foo
-      Universe       = standard
-      requirements   = OpSys == "LINUX" && Arch =="INTEL"
-      rank           = Memory >= 64
-      image_size     = 28000
-      request_memory = 32
+
+      request_memory = 4096
+      request_cpus   = 1
+      request_disk   = 16383
 
       error   = err.$(Process)
-      input   = in.$(Process)
       output  = out.$(Process)
       log     = foo.log
+
+      should_transfer_files = yes
+      when_to_transfer_output = on_exit
 
       queue 150
 
@@ -1552,6 +1488,7 @@ initial working directory as ``/scratch/test/out1``.
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
+
     transfer_input_files = files/in1,files/in2
     transfer_output_files = /tmp/out1
 
@@ -1636,6 +1573,8 @@ dealing with the transfer of files.
     #. If the write of the file on the submit machine fails, for example
        because the system is out of disk space.
 
+.. _file_transfer_using_a_url:
+
 File Transfer Using a URL
 '''''''''''''''''''''''''
 
@@ -1717,6 +1656,39 @@ following in the submit file:
 
     transfer_input_files = cred+https://download.com/bar
 
+**Transferring files to and from S3**
+
+Securely downloading a file from, or uploading a file to, Amazon's Simple
+Storage Service (S3) requires a two-part credential, the "access key ID"
+and the "secret key ID".  To reduce the risk of transferring these tokens
+from the submit node to the execute node, HTCondor can instead use them
+on the submit node to construct pre-signed ``https`` URLs that temporarily allow
+the bearer access to the file specified in the URL.  Those URLs are then
+encrypted for transfer to the execute node, which downloads the files using
+its ``https`` plug-in.  To make use of this feature, specify a file containing
+your access key ID (and nothing else), a file containing your secret access
+key (and nothing else), and one or more S3 URLs in one of three forms:
+
+::
+
+    aws_access_key_id_file = /home/example/secrets/accessKeyID
+    aws_secret_access_key_file = /home/example/secrets/secretAccessKey
+    # For old, non-region-specific buckets.
+    transfer_input_files = s3://<bucket-name>/<key-name>,
+    # or, for new, region-specific buckets:
+    transfer_input_files = https://<bucket-name>.s3-<region>.amazonaws.com/<key>
+    # or, for non-AWS services with an S3 API; <host> must contain a dot:
+    transfer_input_files = https://<host>/<key>
+    # Optionally, specify a region for S3 URLs which don't include one:
+    aws_region = <region>
+
+You may also specify an S3 URL (where instead of a ``key``, you're specifying
+a ``prefix``) for the ``output_destination`` command.  The ``aws_region``
+command may also be used to specify a region for S3 URLs which don't
+include one (even for non-AWS services).
+
+You may also use S3 URLs in ``transfer_output_remaps``.
+
 Requirements and Rank for File Transfer
 '''''''''''''''''''''''''''''''''''''''
 
@@ -1771,36 +1743,6 @@ space to hold all these files:
 ::
 
       && (Disk >= DiskUsage)
-
-:index:`rank<single: rank; submit commands>`
-
-If should_transfer_files = IF_NEEDED and the job prefers to run on a
-machine in the local file system domain over transferring files, but is
-still willing to allow the job to run remotely and transfer files, the
-``Rank`` expression works well. Use:
-
-::
-
-    rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
-
-The ``Rank`` expression is a floating point value, so if other items are
-considered in ranking the possible machines this job may run on, add the
-items:
-
-::
-
-    Rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
-
-The value of ``kflops`` can vary widely among machines, so this ``Rank``
-expression will likely not do as it intends. To place emphasis on the
-job running in the same file system domain, but still consider floating
-point speed among the machines in the file system domain, weight the
-part of the expression that is matching the file system domains. For
-example:
-
-::
-
-    Rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
 
 Environment Variables
 ---------------------
@@ -1920,13 +1862,6 @@ Without this ``requirement``, *condor_submit* will assume that the
 program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
-Cross submission works for all universes except ``scheduler`` and
-``local``. See :doc:`/grid-computing/grid-universe` section for how matchmaking
-works in the ``grid`` universe. The burden is on the user to both obtain
-and specify the correct executable for the target architecture. To list
-the architecture and operating systems of the machines in a pool, run
-*condor_status*.
-
 Vanilla Universe Example for Execution on Differing Architectures
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -2014,84 +1949,6 @@ example, the submit description file given above specifies three
 available executables. If one is missing, HTCondor reports back that an
 executable is missing when it happens to match the job with a resource
 that requires the missing binary.
-
-Standard Universe Example for Execution on Differing Architectures
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-Jobs submitted to the standard universe may produce checkpoints. A
-checkpoint can then be used to start up and continue execution of a
-partially completed job. For a partially completed job, the checkpoint
-and the job are specific to a platform. If migrated to a different
-machine, correct execution requires that the platform must remain the
-same.
-
-In previous versions of HTCondor, the author of the heterogeneous
-submission file would need to write extra policy expressions in the
-``requirements`` expression to force HTCondor to choose the same type of
-platform when continuing a checkpointed job. However, since it is needed
-in the common case, this additional policy is now automatically added to
-the ``requirements`` expression. The additional expression is added
-provided the user does not use ``CkptArch`` in the ``requirements``
-expression. HTCondor will remain backward compatible for those users who
-have explicitly specified ``CkptRequirements``-implying use of
-``CkptArch``, in their ``requirements`` expression.
-
-The expression added when the attribute ``CkptArch`` is not specified
-will default to
-
-::
-
-      # Added by HTCondor
-      CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
-                          ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
-
-      Requirements = (<user specified policy>) && $(CkptRequirements)
-
-The behavior of the ``CkptRequirements`` expressions and its addition to
-``requirements`` is as follows. The ``CkptRequirements`` expression
-guarantees correct operation in the two possible cases for a job. In the
-first case, the job has not produced a checkpoint. The ClassAd
-attributes ``CkptArch`` and ``CkptOpSys`` will be undefined, and
-therefore the meta operator (=?=) evaluates to true. In the second case,
-the job has produced a checkpoint. The Machine ClassAd is restricted to
-require further execution only on a machine of the same platform. The
-attributes ``CkptArch`` and ``CkptOpSys`` will be defined, ensuring that
-the platform chosen for further execution will be the same as the one
-used just before the checkpoint.
-
-Note that this restriction of platforms also applies to platforms where
-the executables are binary compatible.
-
-The complete submit description file for this example:
-
-::
-
-      ####################
-      #
-      # Example of heterogeneous submission
-      #
-      ####################
-
-      universe     = standard
-      Executable   = povray.$$(OpSys).$$(Arch)
-      Log          = povray.log
-      Output       = povray.out.$(Process)
-      Error        = povray.err.$(Process)
-
-      # HTCondor automatically adds the correct expressions to insure that the
-      # checkpointed jobs will restart on the correct platform types.
-      Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
-                     (Arch == "X86_64" && OpSys == "LINUX") )
-
-      Arguments    = +W1024 +H768 +Iimage1.pov
-      Queue
-
-      Arguments    = +W1024 +H768 +Iimage2.pov
-      Queue
-
-      Arguments    = +W1024 +H768 +Iimage3.pov
-      Queue
-
 
 Vanilla Universe Example for Execution on Differing Operating Systems
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -555,7 +555,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 
 	// Determine the type of the log file (if needed)
 	if ( m_state->IsUnknownLogType() ) {
-		if ( !determineLogType() ) {
+		if ( !determineLogType(nullptr) ) {
 			dprintf( D_ALWAYS,
 					 "ReadUserLog::OpenLogFile(): Can't log type\n" );
 			releaseResources();
@@ -604,7 +604,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 }
 
 bool
-ReadUserLog::determineLogType( void )
+ReadUserLog::determineLogType( FileLockBase *lock )
 {
 	// now determine if the log file is XML and skip over the header (if
 	// there is one) if it is XML
@@ -612,13 +612,13 @@ ReadUserLog::determineLogType( void )
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-	Lock( false );
+	Lock( lock, false );
 
 	// store file position so we can rewind to this location
 	long filepos = ftell( m_fp );
 	if( filepos < 0 ) {
 		dprintf(D_ALWAYS, "ftell failed in ReadUserLog::determineLogType\n");
-		Unlock( false );
+		Unlock( lock, false );
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
@@ -627,7 +627,7 @@ ReadUserLog::determineLogType( void )
 	if ( fseek( m_fp, 0, SEEK_SET ) < 0 ) {
 		dprintf(D_ALWAYS,
 				"fseek(0) failed in ReadUserLog::determineLogType\n");
-		Unlock( false );
+		Unlock( lock, false );
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
@@ -647,14 +647,14 @@ ReadUserLog::determineLogType( void )
 		if ( filepos == 0 ) {
 			if( !skipXMLHeader(afterangle, filepos) ) {
 				m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
-				Unlock( false );
+				Unlock( lock, false );
 				Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 				return false;
 			}
 		}
 
 		// File type set, we're all done.
-		Unlock( false );
+		Unlock( lock, false );
 		return true;
 	} else if (YourString("{") == intro) {
 		m_state->LogType(ReadUserLogState::LOG_TYPE_JSON);
@@ -665,12 +665,12 @@ ReadUserLog::determineLogType( void )
 	if( fseek( m_fp, filepos, SEEK_SET ) ) {
 		dprintf( D_ALWAYS,
 				 "fseek failed in ReadUserLog::determineLogType\n");
-		Unlock( false );
+		Unlock( lock, false );
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
 
-	Unlock( false );
+	Unlock( lock, false );
 	return true;
 }
 
@@ -847,11 +847,18 @@ ReadUserLog::ReopenLogFile( bool restore )
 ULogEventOutcome
 ReadUserLog::readEvent (ULogEvent *& event )
 {
-	return readEvent( event, true );
+	return readEventWithLock( event, true, nullptr );
+}
+
+
+ULogEventOutcome
+ReadUserLog::readEventWithLock (ULogEvent *& event, FileLockBase & lock )
+{
+	return readEventWithLock( event, true, &lock );
 }
 
 ULogEventOutcome
-ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
+ReadUserLog::readEventWithLock (ULogEvent *& event, bool store_state, FileLockBase *lock)
 {
 	if ( !m_initialized ) {
 		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
@@ -899,7 +906,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	ULogEventOutcome	outcome = ULOG_OK;
 	bool try_again = false;
 	if( m_state->IsUnknownLogType() ) {
-	    if( !determineLogType() ) {
+	    if( !determineLogType(lock) ) {
 			outcome = ULOG_RD_ERROR;
 			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			goto CLEANUP;
@@ -907,7 +914,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	}
 
 	// Now, read the actual event (depending on the file type)
-	outcome = readEvent( event, &try_again );
+	outcome = rawReadEvent( event, &try_again, lock );
 	if ( ! m_handle_rot ) {
 		try_again = false;
 	}
@@ -961,7 +968,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	if ( try_again ) {
 		outcome = ReopenLogFile();
 		if ( ULOG_OK == outcome ) {
-			outcome = readEvent( event, (bool*)NULL );
+			outcome = rawReadEvent ( event, (bool*)NULL, lock );
 		}
 	}
 
@@ -990,17 +997,17 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 }
 
 ULogEventOutcome
-ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
+ReadUserLog::rawReadEvent ( ULogEvent *& event, bool *try_again, FileLockBase *lock )
 {
 	ULogEventOutcome	outcome;
 
 	if( m_state->IsClassadLogType() ) {
-		outcome = readEventClassad( event, m_state->LogType() );
+		outcome = readEventClassad( event, m_state->LogType(), lock );
 		if ( try_again ) {
 			*try_again = (outcome == ULOG_NO_EVENT );
 		}
 	} else if(m_state->LogType() == ReadUserLogState::LOG_TYPE_NORMAL) {
-		outcome = readEventNormal( event );
+		outcome = readEventNormal( event, lock );
 		if ( try_again ) {
 			*try_again = (outcome == ULOG_NO_EVENT );
 		}
@@ -1014,20 +1021,20 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 }
 
 ULogEventOutcome
-ReadUserLog::readEventClassad( ULogEvent *& event, int log_type )
+ReadUserLog::readEventClassad( ULogEvent *& event, int log_type, FileLockBase *lock )
 {
 
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-	Lock( true );
+	Lock( lock, true );
 
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
   	long     filepos;
   	if (!m_fp || ((filepos = ftell(m_fp)) == -1L))
   	{
-  		Unlock( true );
+  		Unlock( lock, true );
 		event = NULL;
   		return ULOG_UNK_ERROR;
   	}
@@ -1047,7 +1054,7 @@ ReadUserLog::readEventClassad( ULogEvent *& event, int log_type )
 		}
 	}
 
-	Unlock( true );
+	Unlock( lock, true );
 
 	if( !eventad ) {
 		// we don't have the full event in the stream yet; restore file
@@ -1081,19 +1088,14 @@ ReadUserLog::readEventClassad( ULogEvent *& event, int log_type )
 }
 
 ULogEventOutcome
-ReadUserLog::readEventNormal( ULogEvent *& event )
+ReadUserLog::readEventNormal( ULogEvent *& event, FileLockBase *lock )
 {
 	long   filepos;
 	int    eventnumber;
 	int    retval1, retval2;
 	bool   got_sync_line = false;
 
-	// we obtain a write lock here not because we want to write
-	// anything, but because we want to ensure we don't read
-	// mid-way through someone else's write
-	if ( m_lock->isUnlocked() ) {
-		m_lock->obtain( WRITE_LOCK );
-	}
+	Lock();
 
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
@@ -1101,9 +1103,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 	{
 		dprintf( D_FULLDEBUG,
 				 "ReadUserLog: invalid m_fp, or ftell() failed\n" );
-		if ( m_lock->isLocked() ) {
-			m_lock->release();
-		}
+		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
 	}
 
@@ -1125,9 +1125,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 		if( feof( m_fp ) ) {
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr( m_fp );
-			if( m_lock->isLocked() ) {
-				m_lock->release();
-			}
+			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}
 		dprintf( D_FULLDEBUG, "ReadUserLog: error (not EOF) reading "
@@ -1138,9 +1136,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) {
 		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
-		if ( m_lock->isLocked()) {
-			m_lock->release();
-		}
+		Unlock(lock, true);
 		return ULOG_UNK_ERROR;
 	}
 
@@ -1165,18 +1161,12 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 		// NOTE: this code is important, so don't remove or "fix"
 		// it unless you *really* know what you're doing and test it
 		// extermely well
-		if( m_lock->isLocked() ) {
-			m_lock->release();
-		}
+		Unlock(lock, true);
 		sleep( 1 );
-		if( m_lock->isUnlocked() ) {
-			m_lock->obtain( WRITE_LOCK );
-		}
+		Lock(lock, true);
 		if( fseek( m_fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d\n", __FILE__, __LINE__ );
-			if ( m_lock->isLocked() ) {
-				m_lock->release();
-			}
+			Unlock(lock, true);
 			return ULOG_UNK_ERROR;
 		}
 		if( synchronize() )
@@ -1185,9 +1175,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
-				if ( m_lock->isLocked() ) {
-					m_lock->release();
-				}
+				Unlock(lock, true);
 				return ULOG_UNK_ERROR;
 			}
 			got_sync_line = false;
@@ -1209,9 +1197,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 					if( !event ) {
 						dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
 								 "instantiate event\n" );
-						if( m_lock->isLocked() ) {
-							m_lock->release();
-						}
+						Unlock(lock, true);
 						return ULOG_UNK_ERROR;
 					}
 				}
@@ -1226,9 +1212,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				if ( ! got_sync_line) { synchronize (); }
-				if (m_lock->isLocked()) {
-					m_lock->release();
-				}
+				Unlock(lock, true);
 				return ULOG_RD_ERROR;
 			}
 			else
@@ -1236,9 +1220,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 				// finally got the event successfully --
 				// synchronize the log
 				if( got_sync_line || synchronize() ) {
-					if( m_lock->isLocked() ) {
-						m_lock->release();
-					}
+					Unlock(lock, true);
 					return ULOG_OK;
 				}
 				else
@@ -1251,9 +1233,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 					delete event;
 					event = NULL;  // To prevent FMR: Free memory read
 					clearerr( m_fp );
-					if( m_lock->isLocked() ) {
-						m_lock->release();
-					}
+					Unlock(lock, true);
 					return ULOG_NO_EVENT;
 				}
 			}
@@ -1266,17 +1246,13 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
-				if (m_lock->isLocked()) {
-					m_lock->release();
-				}
+				Unlock(lock, true);
 				return ULOG_UNK_ERROR;
 			}
 			clearerr (m_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
-			if (m_lock->isLocked()) {
-				m_lock->release();
-			}
+			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}
 	}
@@ -1285,9 +1261,7 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 		// got the event successfully -- synchronize the log
 		if (got_sync_line || synchronize ())
 		{
-			if (m_lock->isLocked()) {
-				m_lock->release();
-			}
+			Unlock(lock, true);
 			return ULOG_OK;
 		}
 		else
@@ -1300,22 +1274,12 @@ ReadUserLog::readEventNormal( ULogEvent *& event )
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (m_fp);
-			if (m_lock->isLocked() ) {
-				m_lock->release();
-			}
+			Unlock(lock, true);
 			return ULOG_NO_EVENT;
 		}
 	}
 
-	// will not reach here
-	if (m_lock->isLocked()) {
-		m_lock->release();
-	}
-
-	dprintf( D_ALWAYS, "Error: got to the end of "
-			"ReadUserLog::readEventOld()\n");
-
-	return ULOG_UNK_ERROR;
+	/* UNREACHED */
 }
 
 // Static method for initializing a file state
@@ -1354,27 +1318,27 @@ ReadUserLog::SetFileState( const ReadUserLog::FileState &state )
 
 
 void
-ReadUserLog::Lock( bool verify_init )
+ReadUserLog::Lock( FileLockBase *lock, bool verify_init )
 {
 	if( verify_init ) {
 		ASSERT ( m_initialized );
 	}
-	if ( m_lock->isUnlocked() ) {
+	if ( !lock && m_lock->isUnlocked() ) {
 		m_lock->obtain( WRITE_LOCK );
 	}
-	ASSERT( m_lock->isLocked() );
+	ASSERT( lock || m_lock->isLocked() );
 }
 
 void
-ReadUserLog::Unlock( bool verify_init )
+ReadUserLog::Unlock( FileLockBase *lock, bool verify_init )
 {
 	if( verify_init ) {
 		ASSERT ( m_initialized );
 	}
-	if ( m_lock->isLocked( ) ) {
+	if ( !lock && m_lock->isLocked( ) ) {
 		m_lock->release( );
 	}
-	ASSERT( m_lock->isUnlocked() );
+	ASSERT( lock || m_lock->isUnlocked() );
 }
 
 bool
