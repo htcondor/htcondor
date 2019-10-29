@@ -197,9 +197,7 @@ UniShadow::cleanUp( bool graceful )
 void
 UniShadow::gracefulShutDown( void )
 {
-	dprintf(D_ALWAYS, "MRC [UniShadow::gracefulShutDown] called\n");
 	if (remRes) {
-		dprintf(D_ALWAYS, "MRC [UniShadow::gracefulShutDown] remRes exists!\n");
 		int remain = remRes->remainingLeaseDuration();
 		if (!remain) {
 			// Only attempt to deactivate (gracefully) the claim if
@@ -209,7 +207,6 @@ UniShadow::gracefulShutDown( void )
 			DC_Exit( JOB_SHOULD_REQUEUE );
 		}
 	}
-	dprintf(D_ALWAYS, "MRC [UniShadow::gracefulShutDown] exiting\n");
 }
 
 
@@ -217,6 +214,7 @@ int
 UniShadow::getExitReason( void )
 {
 	if ( isDataflowJob ) {
+		// MRC: Should return a named code instead of a number.
 		return 100;
 	}
 	if( remRes ) {
@@ -278,7 +276,6 @@ void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reas
 
 void UniShadow::removeJob( const char* reason )
 {
-	dprintf(D_ALWAYS, "MRC [UniShadow::removeJob] called\n");
 	int iPrevExitReason=remRes->getExitReason();
 	
 	remRes->setExitReason( JOB_SHOULD_REMOVE );
@@ -294,7 +291,6 @@ void UniShadow::removeJob( const char* reason )
 
 void
 UniShadow::requestJobRemoval() {
-	dprintf(D_ALWAYS, "MRC [UniShadow::requestJobRemoval] called\n");
 	remRes->setExitReason( JOB_KILLED );
 	bool job_wants_graceful_removal = jobWantsGracefulRemoval();
 	dprintf(D_ALWAYS,"Requesting %s removal of job.\n",
@@ -303,7 +299,6 @@ UniShadow::requestJobRemoval() {
 }
 
 int UniShadow::handleJobRemoval(int sig) {
-	dprintf(D_ALWAYS, "MRC [UniShadow::handleJobRemoval] called\n");
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;
 		// if we're not in the middle of trying to reconnect, we
@@ -399,8 +394,8 @@ UniShadow::exitSignal( void )
 int
 UniShadow::exitCode( void )
 {
-	dprintf(D_ALWAYS, "MRC [UniShadow::exitCode] remRes->exitCode = %d\n", remRes->exitCode());
 	if (isDataflowJob) {
+		// MRC: Should return a named code instead of a number.
 		return 0;
 	}
 	return remRes->exitCode();

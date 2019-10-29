@@ -519,7 +519,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	{
 		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
 	}
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] checking ATTR_JOB_STATUS\n");
+
 	if( ! ad.LookupInteger(ATTR_JOB_STATUS,state) ) {
 		return UNDEFINED_EVAL;
 	}
@@ -542,7 +542,6 @@ UserPolicy::AnalyzePolicy( int mode )
 
 	/* Should I perform a remove based on the epoch time? */
 	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] checking ATTR_TIMER_REMOVE_CHECK");
 	if ( ! ad.LookupInteger(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 		//check if attribute exists, but is undefined
 		ExprTree * expr = ad.Lookup(ATTR_TIMER_REMOVE_CHECK);
@@ -569,7 +568,6 @@ UserPolicy::AnalyzePolicy( int mode )
 	int retval;
 
 	/* should I perform a periodic hold? */
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] checking state\n");
 	if(state!=HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
 			return retval;
@@ -584,7 +582,6 @@ UserPolicy::AnalyzePolicy( int mode )
 	}
 
 	/* Should I perform a periodic remove? */
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] calling AnalyzeSinglePeriodicPolicy()\n");
 	if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_REMOVE_CHECK, POLICY_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
 		return retval;
 	}
@@ -599,7 +596,6 @@ UserPolicy::AnalyzePolicy( int mode )
 
 	/* This better be in the classad because it determines how the process
 		exited, either by signal, or by exit() */
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] checking ATTR_ON_EXIT_BY_SIGNAL\n");
 	if( ! ad.LookupExpr(ATTR_ON_EXIT_BY_SIGNAL) ) {
 		EXCEPT( "UserPolicy Error: %s is not present in the classad",
 				ATTR_ON_EXIT_BY_SIGNAL );
@@ -609,7 +605,6 @@ UserPolicy::AnalyzePolicy( int mode )
 		are defined, if not, then except because
 		caller should have filled this in if calling
 		this function saying to check the exit policies. */
-	dprintf(D_ALWAYS, "MRC [UserPolicy::AnalyzePolicy] checking ATTR_ON_EXIT_CODE\n");
 	if( ad.LookupExpr(ATTR_ON_EXIT_CODE) == 0 && 
 		ad.LookupExpr(ATTR_ON_EXIT_SIGNAL) == 0 )
 	{

@@ -286,13 +286,14 @@ void startShadow( ClassAd *ad )
 	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
-	// MRC: I think this is where we want to check if the output files are newer than input?
-	bool skip_execution = FileTransfer::AreOutputFilesNewerThanInputFiles(ad);
-	dprintf(D_ALWAYS, "MRC [shadow_v61_main::startShadow] skip_execution = %s\n", skip_execution ? "true" : "false");
-	if (skip_execution) {
-		// MRC: We need to figure out a way to update the schedd with ExitCode here
+	// Determine if this is a dataflow job (a job that we skip because output 
+	// files are newer than input files)
+	// If it is, we want to shut down the job before it ever starts.
+	bool is_dataflow_job = FileTransfer::IsDataflowJob(ad);
+	if (is_dataflow_job) {
+		// Set a few attributes in the plumbing that will convince the shadow
+		// to shut down this job as if it ran and exited successfully.
 		ad->Assign(ATTR_ON_EXIT_CODE, 0);
-		//ad->Assign(ATTR_ON_EXIT_BY_SIGNAL, 0);
 		Shadow->isDataflowJob = true;
 		Shadow->shutDown(JOB_EXITED);
 	}
