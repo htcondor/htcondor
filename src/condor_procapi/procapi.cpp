@@ -975,7 +975,7 @@ ProcAPI::checkBootTime(long now)
 			while( r && strstr(s, "btime") == NULL ) {
 				r = fgets( s, 256, fp );
 			}
-			sscanf( s, "%s %lu", junk, &stat_boottime );
+			(void) sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
 		}
 
