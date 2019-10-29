@@ -265,6 +265,8 @@ export_classad()
 {
     using namespace boost::python;
 
+    boost::python::scope().attr("_registered_functions") = boost::python::dict();
+
     def("version", ClassadLibraryVersion,
         R"C0ND0R(
         Return the version of the linked ClassAd library.
@@ -847,8 +849,4 @@ export_classad()
         &classad_from_python_dict::convertible,
         &classad_from_python_dict::construct,
         boost::python::type_id<ClassAdWrapper>());
-
-    // boost::python::scope().attr("_registered_functions") = boost::python::dict();
-    py_import("classad").attr("_registered_functions") = boost::python::dict();
-
 }
