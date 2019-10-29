@@ -288,12 +288,12 @@ class TestClassad(unittest.TestCase):
 
     def test_temp_scope(self):
         expr = classad.ExprTree("foo")
-        self.assertEqual("bar", expr.eval({"foo": "bar"}))
+        self.assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})))
         ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
         expr = ad["test"]
         self.assertEqual("baz", expr.eval())
-        self.assertEqual("bar", expr.eval({"foo": "bar"}))
-        self.assertEqual("bar", expr.eval({"foo": "bar"}))
+        self.assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})))
+        self.assertEqual("bar", expr.eval(classad.Classad({"foo": "bar"})))
         self.assertEqual("baz", expr.eval())
 
     def test_abstime(self):
@@ -403,7 +403,7 @@ class TestClassad(unittest.TestCase):
         self.assertRaises(BadException, classad.ExprTree('myBad(1, 2)').eval)
         self.assertRaises(TypeError, classad.ExprTree('myComplex(1)').eval)
         self.assertEqual(classad.Value.Undefined, classad.ExprTree('myExpr()').eval())
-        self.assertEqual(classad.ExprTree('myExpr()').eval({"foo": 2}), 2)
+        self.assertEqual(classad.ExprTree('myExpr()').eval(classad.ClassAd({"foo": 2})), 2)
         self.assertRaises(TypeError, classad.ExprTree('myAdd(1)').eval) # myAdd requires 2 arguments; only one is given.
         self.assertEqual(classad.ExprTree('myFoo([foo = 1])').eval(), 1)
         self.assertEqual(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
