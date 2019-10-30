@@ -220,6 +220,7 @@ void zz2printf(int debug_levels, KeyInfo *k) {
 */
 
 static int _condor_fast_exit = 0;
+static int dummyGlobal;
 
 void **curr_dataptr;
 void **curr_regdataptr;
@@ -8543,13 +8544,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            int ret = write(errorpipe[1], &child_errno, sizeof(child_errno));
+            dummyGlobal = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
-			if (ret < 1) {
-				exit(4);
-			} else {
-				exit(4);
-			}
+			exit(4);
         }
 			// if we got this far, we know we don't need the errorpipe
 			// anymore, so we can close it now...
