@@ -1848,14 +1848,14 @@ main( int argc, char **argv )
         if (pwbuf) {
             if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/run/condor", 0775) == 0) {
-                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                    (void) chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    (void) chmod("/var/run/condor", 0775); // Override umask
                 }
             }
             if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/lock/condor", 0775) == 0) {
-                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                    (void) chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    (void) chmod("/var/lock/condor", 0775); // Override umask
                 }
             }
         }
