@@ -111,6 +111,17 @@ New Features:
   tokens and requires the user request Microsoft OneDrive tokens in their
   submit file. :ticket:`7171`
 
+- Externally-issued SciTokens can be exchanged for an equivalent HTCondor-issued
+  token, enabling authorization flows in some cases where SciTokens could
+  not otherwise be used (such as when the remote daemon has no host certificate).
+  :ticket:`7281`
+
+- The *condor_schedd* now keeps track of which submitters it has advertised to
+  flocked pools.  The *condor_schedd* will only honor matchingmaking requests
+  from flocked pool for submitters it did not advertise to the flock pool.  This
+  new logic only applies to auto-created authorizations (introduced in 8.9.3)
+  and not NEGOTIATOR-level authorizations setup by pool administrators.
+  :ticket:`7100`
 
 Bugs Fixed:
 
@@ -158,6 +169,12 @@ Bugs Fixed:
 - Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
   timeout caused 100% CPU utilization due to an old libcurl bug.
   :ticket:`7316`
+
+- The Condor Connection Broker (CCB) will allow daemons to register at the
+  ``ADVERTISE_STARTD``, ``ADVERTISE_SCHEDD``, and ``ADVERTISE_MASTER`` authorization
+  level.  This reduces the minimum authorization needed by daemons that are located
+  behind NATs.
+  :ticket:`7225`
 
 Version 8.9.3
 -------------
