@@ -159,10 +159,7 @@ Security Management
    .. automethod:: write
 
 .. autoclass:: TokenRequest
-
-   .. automethod:: submit
-   .. automethod:: done
-   .. automethod:: result
+   :members:
 
 Reading Job Events
 ------------------
