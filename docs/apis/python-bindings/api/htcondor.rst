@@ -152,7 +152,17 @@ Security Management
    .. automethod:: setGSICredential
    .. automethod:: setPoolPassword
    .. automethod:: setTag
+   .. automethod:: setToken
 
+.. autoclass:: Token
+
+   .. automethod:: write
+
+.. autoclass:: TokenRequest
+
+   .. automethod:: submit
+   .. automethod:: done
+   .. automethod:: result
 
 Reading Job Events
 ------------------
