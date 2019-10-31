@@ -15,6 +15,7 @@ else:
     package_data["htcondor"] = ["*.pyd", "*.dll", "htcondor_libs/*.dll*"]
     package_data["classad"] = ["*.pyd", "*.dll"]
 
+packages.append("htcondor.scripts")
 
 class BinaryDistribution(Distribution):
     """ Forces BinaryDistribution. """
@@ -42,7 +43,9 @@ setup(
     maintainer="Brian Bockelman, Jason Patton, Tim Theisen",
     include_package_data=True,
     keywords="htcondor classad htc dhtc condor",
-    scripts=['scripts/classad_eval'],
+    entry_points = {
+        'console_scripts': ['classad_eval=htcondor.scripts.classad_eval:main'],
+    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",

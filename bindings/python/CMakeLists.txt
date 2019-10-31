@@ -21,7 +21,7 @@ if (WITH_PYTHON_BINDINGS)
   # Copy the scripts directory over.
   add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/scripts"
-    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" "${CMAKE_CURRENT_BINARY_DIR}/scripts"
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" "${CMAKE_CURRENT_BINARY_DIR}/htcondor/scripts"
     DEPENDS "${CMAKE_SOURCE_DIR}/src/python-bindings/scripts" )
   list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/scripts")
 
