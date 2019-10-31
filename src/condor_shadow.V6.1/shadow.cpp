@@ -213,6 +213,9 @@ UniShadow::gracefulShutDown( void )
 int
 UniShadow::getExitReason( void )
 {
+	if ( isDataflowJob ) {
+		return JOB_EXITED;
+	}
 	if( remRes ) {
 		return remRes->getExitReason();
 	}
@@ -388,6 +391,9 @@ UniShadow::exitSignal( void )
 int
 UniShadow::exitCode( void )
 {
+	if (isDataflowJob) {
+		return 0;
+	}
 	return remRes->exitCode();
 }
 

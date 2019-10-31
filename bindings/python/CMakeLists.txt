@@ -54,9 +54,23 @@ if (WITH_PYTHON_BINDINGS)
 
     add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
     if (WINDOWS) # Windows can call setup.py as normal
-      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB} --install-scripts=${C_BIN})")
+      install(CODE "execute_process(
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB} ${C_BIN}
+            ERROR_VARIABLE _err
+            RESULT_VARIABLE _ret)
+        if (NOT \${_ret} EQUAL \"0\")
+            message( FATAL_ERROR \"\${_err}\" )
+        endif()")
     else() # non-Windows should call a script that invokes setup.py
-      install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHONARCHLIB} ${C_BIN})")
+      install(CODE "execute_process(
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND ${INSTALL_SH} ${PYTHON_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHONARCHLIB}
+            ERROR_VARIABLE _err
+            RESULT_VARIABLE _ret)
+        if (NOT \${_ret} EQUAL \"0\")
+            message( FATAL_ERROR \"\${_err}\" )
+        endif()")
     endif()
   endif()
 
@@ -70,9 +84,14 @@ if (WITH_PYTHON_BINDINGS)
       DEPENDS ${DEPS} py3classad_module py3htcondor)
 
     add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
-    # Note that if you build with both Python 2 and Python 3, the scripts
-    # from this step will overwrite the scripts from the Python 2 install.
-    install(CODE "execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND ${INSTALL_SH} ${PYTHON3_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHON3ARCHLIB} ${C_BIN})")
+    install(CODE "execute_process(
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND ${INSTALL_SH} ${PYTHON3_EXECUTABLE} ${SETUP_PY} ${CMAKE_INSTALL_PREFIX} ${C_PYTHON3ARCHLIB} ${C_BIN}
+            ERROR_VARIABLE _err
+            RESULT_VARIABLE _ret)
+        if (NOT \${_ret} EQUAL \"0\")
+            message( FATAL_ERROR \"\${_err}\" )
+        endif()")
   endif()
 
 endif()

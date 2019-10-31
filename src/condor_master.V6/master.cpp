@@ -125,6 +125,7 @@ int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
+static int dummyGlobal;
 
 // daemons in this list are used when DAEMON_LIST is not configured
 // all will added to the list of daemons that condor_on can use
@@ -1848,14 +1849,14 @@ main( int argc, char **argv )
         if (pwbuf) {
             if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/run/condor", 0775) == 0) {
-                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
                 }
             }
             if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/lock/condor", 0775) == 0) {
-                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
                 }
             }
         }

@@ -177,4 +177,181 @@ undefined. This has the further effect of changing the duration of a
 claim lease, the amount of time that the execution machine waits before
 dropping a claim due to missing keep alive messages.
 
+Heterogeneous Submit: Execution on Differing Architectures
+----------------------------------------------------------
+
+:index:`heterogeneous submit<single: heterogeneous submit; job>`
+:index:`on a different architecture<single: on a different architecture; running a job>`
+:index:`submitting a job to<single: submitting a job to; heterogeneous pool>`
+
+If executables are available for the different platforms of machines in
+the HTCondor pool, HTCondor can be allowed the choice of a larger number
+of machines when allocating a machine for a job. Modifications to the
+submit description file allow this choice of platforms.
+
+A simplified example is a cross submission. An executable is available
+for one platform, but the submission is done from a different platform.
+Given the correct executable, the ``requirements`` command in the submit
+description file specifies the target architecture. For example, an
+executable compiled for a 32-bit Intel processor running Windows Vista,
+submitted from an Intel architecture running Linux would add the
+``requirement``
+
+::
+
+      requirements = Arch == "INTEL" && OpSys == "WINDOWS"
+
+Without this ``requirement``, *condor_submit* will assume that the
+program is to be executed on a machine with the same platform as the
+machine where the job is submitted.
+
+Vanilla Universe Example for Execution on Differing Architectures
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+A more complex example of a heterogeneous submission occurs when a job
+may be executed on many different architectures to gain full use of a
+diverse architecture and operating system pool. If the executables are
+available for the different architectures, then a modification to the
+submit description file will allow HTCondor to choose an executable
+after an available machine is chosen.
+
+A special-purpose Machine Ad substitution macro can be used in string
+attributes in the submit description file. The macro has the form
+
+::
+
+      $$(MachineAdAttribute)
+
+The $$() informs HTCondor to substitute the requested
+``MachineAdAttribute`` from the machine where the job will be executed.
+
+An example of the heterogeneous job submission has executables available
+for two platforms: RHEL 3 on both 32-bit and 64-bit Intel processors.
+This example uses *povray* to render images using a popular free
+rendering engine.
+
+The substitution macro chooses a specific executable after a platform
+for running the job is chosen. These executables must therefore be named
+based on the machine attributes that describe a platform. The
+executables named
+
+::
+
+      povray.LINUX.INTEL
+      povray.LINUX.X86_64
+
+will work correctly for the macro
+
+::
+
+      povray.$$(OpSys).$$(Arch)
+
+The executables or links to executables with this name are placed into
+the initial working directory so that they may be found by HTCondor. A
+submit description file that queues three jobs for this example:
+
+::
+
+      ####################
+      #
+      # Example of heterogeneous submission
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = povray.$$(OpSys).$$(Arch)
+      Log          = povray.log
+      Output       = povray.out.$(Process)
+      Error        = povray.err.$(Process)
+
+      Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys =="LINUX")
+
+      Arguments    = +W1024 +H768 +Iimage1.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage2.pov
+      Queue
+
+      Arguments    = +W1024 +H768 +Iimage3.pov
+      Queue
+
+These jobs are submitted to the vanilla universe to assure that once a
+job is started on a specific platform, it will finish running on that
+platform. Switching platforms in the middle of job execution cannot work
+correctly.
+
+There are two common errors made with the substitution macro. The first
+is the use of a non-existent ``MachineAdAttribute``. If the specified
+``MachineAdAttribute`` does not exist in the machine's ClassAd, then
+HTCondor will place the job in the held state until the problem is
+resolved.
+
+The second common error occurs due to an incomplete job set up. For
+example, the submit description file given above specifies three
+available executables. If one is missing, HTCondor reports back that an
+executable is missing when it happens to match the job with a resource
+that requires the missing binary.
+
+Vanilla Universe Example for Execution on Differing Operating Systems
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The addition of several related OpSys attributes assists in selection of
+specific operating systems and versions in heterogeneous pools.
+
+::
+
+      ####################
+      #
+      # Example targeting only RedHat platforms
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = (OpSysName == "RedHat")
+
+      Queue
+
+::
+
+      ####################
+      #
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6)
+
+      Queue
+
+Here is a more compact way to specify a RedHat 6 platform.
+
+::
+
+      ####################
+      #
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      #
+      ####################
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = ( OpSysAndVer == "RedHat6")
+
+      Queue
 

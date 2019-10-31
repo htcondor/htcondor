@@ -611,7 +611,7 @@ GlobusResource::CheckMonitor()
 					monitorActive = true;
 					registeredJobs.Rewind();
 					while ( registeredJobs.Next( base_job ) ) {
-						job = dynamic_cast<GlobusJob*>( base_job );
+						job = static_cast<GlobusJob*>( base_job );
 						job->SetEvaluateState();
 					}
 				}
