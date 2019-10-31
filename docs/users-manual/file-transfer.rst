@@ -6,102 +6,75 @@ Submitting Jobs Without a Shared File System: HTCondor's File Transfer Mechanism
 :index:`file transfer mechanism`
 :index:`transferring files`
 
-HTCondor works well without a shared file system. The HTCondor file
-transfer mechanism permits the user to select which files are
-transferred and under which circumstances. HTCondor can transfer any
-files needed by a job from the machine where the job was submitted into
-a remote scratch directory on the machine where the job is to be
-executed. HTCondor executes the job and transfers output back to the
-submitting machine. The user specifies which files and directories to
-transfer, and at what point the output files should be copied back to
-the submitting machine. This specification is done within the job's
-submit description file.
+HTCondor works well without a shared file system between the submit
+machines and the worker nodes. The HTCondor file
+transfer mechanism allows the user to explicitly select which input files are
+transferred from the submit machine to the worker node. Before the
+job starts, HTCondor will transfer these files, potentially 
+delaying this transfer request, if starting the transfer right away
+would overload the submit machine.  Delaying requests like this prevents
+the crashes so common with too-busy shared file servers. These input files are placed
+into a scratch directory on the worker node, which is the starting current 
+directory of the job.  When the job completes, by default, HTCondor detects any
+newly-created files at the top level of this sandbox directory, and
+transfers them back to the submitting machine.  The input sandbox is
+what we call the executable and all the declared input files of a job.  The
+set of all files created by the job is the output sandbox.
 
 Specifying If and When to Transfer Files
 ''''''''''''''''''''''''''''''''''''''''
 
-To enable the file transfer mechanism, place two commands in the job's
+To enable the file transfer mechanism, place this command in the job's
 submit description file:
 **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
-and
-**when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`.
-By default, they will be:
 
 ::
 
-      should_transfer_files = IF_NEEDED
-      when_to_transfer_output = ON_EXIT
+      should_transfer_files = YES
 
 Setting the
 **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
 command explicitly enables or disables the file transfer mechanism. The
 command takes on one of three possible values:
 
-#. YES: HTCondor transfers both the executable and the file defined by
-   the **input** :index:`input<single: input; submit commands>` command from
-   the machine where the job is submitted to the remote machine where
-   the job is to be executed. The file defined by the
-   **output** :index:`output<single: output; submit commands>` command as well
-   as any files created by the execution of the job are transferred back
-   to the machine where the job was submitted. When they are transferred
-   and the directory location of the files is determined by the command
+#. YES: HTCondor transfers the input sandbox from
+   the submit machine to the execute machine.  The output sandbox 
+   is transferred back to the submit machine.  The command
    **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`.
-#. IF_NEEDED: HTCondor transfers files if the job is matched with and
-   to be executed on a machine in a different ``FileSystemDomain`` than
-   the one the submit machine belongs to, the same as if
+   controls when the output sandbox is transferred back, and what directory
+   it is stored in.
+
+#. IF_NEEDED: HTCondor only transfers sandboxes when the job is matched with
+   a machine in a different ``FileSystemDomain`` than
+   the one the submit machine belongs to, as if
    should_transfer_files = YES. If the job is matched with a machine
-   in the local ``FileSystemDomain``, HTCondor will not transfer files
-   and relies on the shared file system.
-#. NO: HTCondor's file transfer mechanism is disabled.
+   in the same ``FileSystemDomain`` as the submitting machine, HTCondor 
+   will not transfer files and relies on the shared file system.
+#. NO: HTCondor's file transfer mechanism is disabled.  In this case is
+   is the responsibility of the user to ensure that all data used by the
+   job is accessible on the remote worker node.
 
 The **when_to_transfer_output** command tells HTCondor when output
 files are to be transferred back to the submit machine. The command
 takes on one of two possible values:
 
-#. ON_EXIT: HTCondor transfers the file defined by the
-   **output** :index:`output<single: output; submit commands>` command, as well
-   as any other files in the remote scratch directory created by the
-   job, back to the submit machine only when the job exits on its own.
+#. ON_EXIT (the default): HTCondor transfers the output sandbox
+   back to the submit machine only when the job exits on its own. If the
+   job is preempted or removed, no files are transfered back.
 #. ON_EXIT_OR_EVICT: HTCondor behaves the same as described for the
-   value ON_EXIT when the job exits on its own. However, if, and each
-   time the job is evicted from a machine, files are transferred back at
-   eviction time. The files that are transferred back at eviction time
-   may include intermediate files that are not part of the final output
-   of the job. When
-   **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
-   is specified, its list governs which are transferred back at eviction
-   time. Before the job starts running again, all of the files that were
-   stored when the job was last evicted are copied to the job's new
-   remote scratch directory.
+   value ON_EXIT when the job exits on its own. However, each
+   time the job is evicted from a machine, the output sandbox is 
+   transferred back to the submit machine and placed under the **SPOOL** directory.
+   eviction time. Before the job starts running again, the former output
+   sandbox is copied to the job's new remote scratch directory.
+
+   If **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+   is specified, this list governs which files are transferred back at eviction
+   time. If a file listed in **transfer_output_files** does not exist 
+   at eviction time, the job will go on hold.
 
    The purpose of saving files at eviction time is to allow the job to
-   resume from where it left off. This is similar to using the
-   checkpoint feature of the standard universe, but just specifying
-   ON_EXIT_OR_EVICT is not enough to make a job capable of producing
-   or utilizing checkpoints. The job must be designed to save and
-   restore its state using the files that are saved at eviction time.
-
-   The files that are transferred back at eviction time are not stored
-   in the location where the job's final output will be written when the
-   job exits. HTCondor manages these files automatically, so usually the
-   only reason for a user to worry about them is to make sure that there
-   is enough space to store them. The files are stored on the submit
-   machine in a temporary directory within the directory defined by the
-   configuration variable ``SPOOL``. The directory is named using the
-   ``ClusterId`` and ``ProcId`` job ClassAd attributes. The directory
-   name takes the form:
-
-   ::
-
-          <X mod 10000>/<Y mod 10000>/cluster<X>.proc<Y>.subproc0
-
-   where <X> is the value of ``ClusterId``, and <Y> is the value of
-   ``ProcId``. As an example, if job 735.0 is evicted, it will produce
-   the directory
-
-   ::
-
-          $(SPOOL)/735/0/cluster735.proc0.subproc0
+   resume from where it left off. 
 
 The default values for these two submit commands make sense as used
 together. If only **should_transfer_files** is set, and set to the
@@ -125,7 +98,8 @@ Specifying What Files to Transfer
 '''''''''''''''''''''''''''''''''
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
-following files before the job is run on a remote machine.
+following files before the job is run on a remote machine as the input
+sandbox:
 
 #. the executable, as defined with the
    **executable** :index:`executable<single: executable; submit commands>` command
@@ -135,7 +109,7 @@ following files before the job is run on a remote machine.
    **jar_files** :index:`jar_files<single: jar_files; submit commands>` command
 
 If the job requires other input files, the submit description file
-should utilize the
+should have the
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
 command. This comma-separated list specifies any other files or
 directories that HTCondor is to transfer to the remote scratch
@@ -146,25 +120,18 @@ executable. For example:
 ::
 
       should_transfer_files = YES
-      when_to_transfer_output = ON_EXIT
       transfer_input_files = file1,file2
 
 This example explicitly enables the file transfer mechanism, and it
-transfers the executable, the file specified by the **input** command,
-any jar files specified by the **jar_files** command, and files
-``file1`` and ``file2``.
+transfers the executable, the file specified by the **input** command.
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files from the execute machine back to the submit machine
-after the job exits.
+after the job exits, as the output sandbox.
 
 #. the output file, as defined with the **output** command
 #. the error file, as defined with the **error** command
-#. any files created by the job in the remote scratch directory; this
-   only occurs for jobs other than **grid** universe, and for HTCondor-C
-   **grid** universe jobs; directories created by the job within the
-   remote scratch directory are ignored for this automatic detection of
-   files to be transferred.
+#. any files created by the job in the remote scratch directory.
 
 A path given for **output** and **error** commands represents a path on
 the submit machine. If no path is specified, the directory specified
@@ -178,8 +145,7 @@ submission failure, if these files cannot be written by HTCondor.
 To restrict the output files or permit entire directory contents to be
 transferred, specify the exact list with
 **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
-Delimit the list of file names, directory names, or paths with commas.
-When this list is defined, and any of the files or directories do not
+When this comma separated list is defined, and any of the files or directories do not
 exist as the job exits, HTCondor considers this an error, and places the
 job on hold. Setting
 **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
@@ -201,14 +167,7 @@ is specified by further adding a submit command of the form:
 
     transfer_output_files = file1, file2
 
-For **grid** universe jobs other than than HTCondor-C grid jobs, files
-to be transferred (other than standard output and standard error) must
-be specified using **transfer_output_files** in the submit description
-file, because automatic detection of new files created by the job does
-not take place.
-
-Here are examples to promote understanding of what files and directories
-are transferred, and how they are named after transfer. Assume that the
+Here are examples of file transfer with HTCondor. Assume that the
 job produces the following structure within the remote scratch
 directory:
 
@@ -261,10 +220,10 @@ file specified with ``d1/o3``.
 File Paths for File Transfer
 ''''''''''''''''''''''''''''
 
-The file transfer mechanism specifies file names and/or paths on both
+The file transfer mechanism specifies file names on both
 the file system of the submit machine and on the file system of the
 execute machine. Care must be taken to know which machine, submit or
-execute, is utilizing the file name and/or path.
+execute, is referencing the file name.
 
 Files in the
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
@@ -284,18 +243,13 @@ There are three ways to specify files and paths for
    specified.
 #. Absolute.
 
-Before executing the program, HTCondor copies the executable, an input
-file as specified by the submit command
-**input** :index:`input<single: input; submit commands>`, along with any input
-files specified by
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
-All these files are placed into a remote scratch directory on the
-execute machine, in which the program runs. Therefore, the executing
+Before executing the program, HTCondor copies the input sandbox
+into a remote scratch directory on the
+execute machine, where the program runs. Therefore, the executing
 program must access input files relative to its working directory.
 Because all files and directories listed for transfer are placed into a
 single, flat directory, inputs must be uniquely named to avoid collision
-when transferred. A collision causes the last file in the list to
-overwrite the earlier one.
+when transferred.
 
 Both relative and absolute paths may be used in
 **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
@@ -353,7 +307,6 @@ transferred back into the directory ``/scratch/test``.
     Log             = logs/log.$(cluster)
 
     should_transfer_files = YES
-    when_to_transfer_output = ON_EXIT
     transfer_input_files = files/in1,files/in2
 
     Arguments       = in1 in2 out1
