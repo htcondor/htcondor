@@ -1,3 +1,6 @@
+#include "condor_common.h"
+
+#include <algorithm>
 #include "ranger.h"
 
 
