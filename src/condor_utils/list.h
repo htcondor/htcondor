@@ -126,6 +126,7 @@ public:
 	List(int dummy); // to allow custruction of list as struct member
 
 	virtual ~List();
+	List<ObjType> & operator=(List<ObjType> &&rhs);
 	bool	Append( ObjType * obj );
 	void	Clear();
 
@@ -301,6 +302,28 @@ List<ObjType>::~List()
 	}
 	delete dummy;
 	// cout << "Destructed list" << endl;
+}
+
+template <class ObjType>
+List<ObjType> &
+List<ObjType>::operator=(List<ObjType> &&rhs)
+{
+	// First destroy ourselves
+	while( !IsEmpty() ) {
+		RemoveItem( dummy->next );
+	}
+	delete dummy;
+
+	// Now move the rhs list over...
+	this->dummy = rhs.dummy;
+
+	// and make the old rhs destroyable
+	rhs.dummy = new Item<ObjType>( 0 );
+	rhs.dummy->next = rhs.dummy;
+	rhs.dummy->prev = rhs.dummy;
+	rhs.current = rhs.dummy;
+	rhs.num_elem = 0;
+	return *this;
 }
 
 /*
