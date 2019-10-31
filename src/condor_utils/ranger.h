@@ -27,7 +27,7 @@ struct ranger {
     iterator begin()            const { return forest.begin(); }
     iterator end()              const { return forest.end();   }
 
-    inline elements elements()  const;
+    inline elements get_elements() const;
 
     private:
     // the state of our ranger
@@ -110,7 +110,7 @@ struct ranger::elements::iterator {
 
 // these are inline but must appear after their return type definitions
 
-typename ranger::elements  ranger::elements()        const { return *this; }
+ranger::elements           ranger::get_elements()    const { return *this; }
 
 ranger::elements::iterator ranger::elements::begin() const { return r.begin(); }
 ranger::elements::iterator ranger::elements::end()   const { return r.end();   }

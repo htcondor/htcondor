@@ -104,7 +104,7 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 
 /* This allows:
  *
- *      for (int i : myranger.elements())
+ *      for (int i : myranger.get_elements())
  *          process_int(i);
  *
  *
