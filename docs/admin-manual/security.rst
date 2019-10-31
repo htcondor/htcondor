@@ -1640,7 +1640,7 @@ required of further communication.
 
 Note at this time, integrity checks are not performed upon job data
 files that are transferred by HTCondor via the File Transfer Mechanism
-described in :ref:`users-manual/submitting-a-job:submitting jobs without a
+described in :ref:`users-manual/file-transfer:submitting jobs without a
 shared file system: htcondor's file transfer mechanism`.
 
 The client uses one of two macros to enable or disable an integrity

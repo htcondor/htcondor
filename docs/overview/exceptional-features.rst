@@ -11,7 +11,8 @@ Exceptional Features
  Security
     HTCondor can be configured to use strong authentication and
     encryption between the services on remote machines used to manage
-    jobs.
+    jobs.  The HTCondor worker node scratch directories can be encrypted,
+    so that if a node is stolen or broken into, scratch files are unreadable.
  No Changes Necessary to User's Source Code
     No special programming is required to use HTCondor. HTCondor is able
     to run non-interactive programs.
@@ -28,7 +29,7 @@ Exceptional Features
     directed acyclic graph, where each job is a node in the graph. Jobs
     are submitted to HTCondor following the dependencies given by the
     graph.
- HTCondor Can Use Foreign Resources, from a Grid, or a Cloud, or a Supercomputer Allocation
+ HTCondor Can Use Remote Resources, from a Grid, or a Cloud, or a Supercomputer Allocation
     The technique of glidein allows jobs submitted to HTCondor to be
     executed on grid machines in various locations worldwide.  HTCondor's
     grid universe allows direct submission of jobs to remote systems.

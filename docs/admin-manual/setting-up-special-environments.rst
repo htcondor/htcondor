@@ -117,7 +117,7 @@ to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
-see the :ref:`users-manual/submitting-a-job:submitting jobs without a shared
+see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details.
 
 For transferring output files, either the entire output sandbox, which
@@ -128,7 +128,7 @@ command
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
 **output_destination** :index:`output_destination<single: output_destination; submit commands>`;
-see the :ref:`users-manual/submitting-a-job:submitting jobs without a shared
+see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details. The plug-in
 is invoked once for each output file to be transferred.
 

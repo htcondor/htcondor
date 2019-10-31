@@ -9,6 +9,7 @@ Users' Manual
    introduction-users-manual
    running-a-job-steps
    submitting-a-job
+   file-transfer
    managing-a-job
    priorities-and-preemption
    dagman-applications
