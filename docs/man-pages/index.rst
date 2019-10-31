@@ -13,6 +13,7 @@ Command Reference Manual (man pages)
    bosco_stop
    bosco_uninstall
    classads
+   classad_eval
    condor_advertise
    condor_annex
    condor_check_userlogs
