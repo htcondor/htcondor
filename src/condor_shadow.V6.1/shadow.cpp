@@ -214,8 +214,7 @@ int
 UniShadow::getExitReason( void )
 {
 	if ( isDataflowJob ) {
-		// MRC: Should return a named code instead of a number.
-		return 100;
+		return JOB_EXITED;
 	}
 	if( remRes ) {
 		return remRes->getExitReason();
@@ -393,7 +392,6 @@ int
 UniShadow::exitCode( void )
 {
 	if (isDataflowJob) {
-		// MRC: Should return a named code instead of a number.
 		return 0;
 	}
 	return remRes->exitCode();

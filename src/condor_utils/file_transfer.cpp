@@ -774,12 +774,15 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Parse the list of input files
 	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, &input_files );
-    char* token = strtok( input_files, delimiters );
-    while ( token ) {
-		// Stat each file. Add the last-modified timestamp to set of timestamps.
-		std::string input_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
-		if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
-			input_timestamps.insert( file_stat.st_mtime );
+	char* token = strtok( input_files, delimiters );
+	while ( token ) {
+		// Skip any file path that looks like a URL or transfer plugin related
+		if ( strstr( token, "://" ) == NULL ) {
+			// Stat each file. Add the last-modified timestamp to set of timestamps.
+			std::string input_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
+			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
+				input_timestamps.insert( file_stat.st_mtime );
+			}
 		}
 		token = strtok( NULL, delimiters );
 	}
