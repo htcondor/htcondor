@@ -30,6 +30,7 @@
 #include "condor_attributes.h"
 #include "dc_schedd.h"
 #include "spool_version.h"
+#include "file_transfer.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -285,7 +286,22 @@ void startShadow( ClassAd *ad )
 	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
-	if( is_reconnect ) {
+	// Check if we want to skip dataflow jobs (where output files exist and are
+	// newer than input files). If so, skip the job before it ever starts.
+	bool skip_dataflow_jobs = param_boolean( "SHADOW_SKIP_DATAFLOW_JOBS", false );
+	if ( skip_dataflow_jobs ) {
+		if ( FileTransfer::IsDataflowJob( ad ) ) {
+			// Set a few attributes in the plumbing that will convince the shadow
+			// to shut down this job as if it ran and exited successfully.
+			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
+			ad->Assign( ATTR_ON_EXIT_CODE, 0 );
+			Shadow->isDataflowJob = true;
+			Shadow->shutDown( JOB_EXITED );
+		}
+		dprintf(D_ALWAYS, "Job %d.%d is not a dataflow job, running it as usual\n", cluster, proc);
+	}
+
+	if ( is_reconnect ) {
 		Shadow->attemptingReconnectAtStartup = true;
 		Shadow->reconnect();
 	} else {

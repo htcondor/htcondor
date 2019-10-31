@@ -757,6 +757,64 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
+bool
+FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
+
+	bool is_dataflow = false;
+	char *iwd = NULL;
+	char *input_files = NULL;
+	char *output_files = NULL;
+	const char* delimiters = ",";
+	std::set<int> input_timestamps;
+	std::set<int> output_timestamps;
+	struct stat file_stat;
+
+	// Lookup the working directory
+	job_ad->LookupString( ATTR_JOB_IWD, &iwd );
+
+	// Parse the list of input files
+	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, &input_files );
+	char* token = strtok( input_files, delimiters );
+	while ( token ) {
+		// Skip any file path that looks like a URL or transfer plugin related
+		if ( strstr( token, "://" ) == NULL ) {
+			// Stat each file. Add the last-modified timestamp to set of timestamps.
+			std::string input_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
+			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
+				input_timestamps.insert( file_stat.st_mtime );
+			}
+		}
+		token = strtok( NULL, delimiters );
+	}
+
+	// Parse the list of output files
+	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &output_files );
+	token = strtok( output_files, delimiters );
+    while ( token ) {
+		// Stat each file. Add the last-modified timestamp to set of timestamps.
+		std::string output_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
+		if ( stat( output_filename.c_str(), &file_stat ) == 0 ) {
+			output_timestamps.insert( file_stat.st_mtime );
+		}
+		else {
+			// If we were unable to stat this output file, assume it doesn't
+			// exist, and hence this job is not a dataflow job.
+			return false;
+		}
+		token = strtok( NULL, delimiters );
+	}
+
+	// If the oldest output file is more recent than the newest input files,
+	// then this is a dataflow job.
+	if ( !input_timestamps.empty() && !output_timestamps.empty() ) {
+		auto newest_input = input_timestamps.rbegin();
+		auto oldest_output = output_timestamps.begin();
+		is_dataflow = *oldest_output > *newest_input;
+	}
+
+	return is_dataflow;
+}
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
 int
 FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
