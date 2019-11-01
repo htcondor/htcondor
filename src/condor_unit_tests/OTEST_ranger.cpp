@@ -36,6 +36,7 @@ struct testcase {
     const char *expected_result;
 };
 
+// test cases for load, insert/erase, persist
 const testcase test_table[] = {
     {Insert, "2",                         "2"                          },
     {Insert, "2",                         "2"                          },
@@ -86,6 +87,51 @@ void driver_register_all<TEST_TABLE_COUNT>(FunctionDriver &driver)
     (void) driver;
 }
 
+
+
+struct testcase2 {
+    const char *input;
+    struct { int start, back; };
+    const char *expected_result;
+};
+
+// test cases for load, persist slice
+const testcase2 test_table2[] = {
+    {"10-20;30-40;50-60", {1,100}, "10-20;30-40;50-60"},
+    {"10-20;30-40;50-60", {1,35},  "10-20;30-35"      },
+    {"10-20;30-40;50-60", {10,35}, "10-20;30-35"      },
+    {"10-20;30-40;50-60", {11,35}, "11-20;30-35"      },
+    {"10-20;30-40;50-60", {11,39}, "11-20;30-39"      },
+    {"10-20;30-40;50-60", {11,40}, "11-20;30-40"      },
+    {"10-20;30-40;50-60", {11,41}, "11-20;30-40"      },
+    {"10-20;30-40;50-60", {25,45}, "30-40"            },
+    {"10-20;30-40;50-60", {29,41}, "30-40"            },
+    {"10-20;30-40;50-60", {30,41}, "30-40"            },
+    {"10-20;30-40;50-60", {29,40}, "30-40"            },
+    {"10-20;30-40;50-60", {31,40}, "31-40"            },
+    {"10-20;30-40;50-60", {30,39}, "30-39"            },
+    {"10-20;30-40;50-60", {31,39}, "31-39"            }
+};
+
+static const int TEST_TABLE2_COUNT = sizeof test_table2 / sizeof test_table2[0];
+
+template <int N>
+static bool test_ranger_misc_load_persist_slice_tmpl();
+
+template <int N>
+static void driver_register_all2(FunctionDriver &driver)
+{
+    driver.register_function(test_ranger_misc_load_persist_slice_tmpl<N>);
+    driver_register_all2<N+1>(driver);
+}
+
+template <>
+void driver_register_all2<TEST_TABLE2_COUNT>(FunctionDriver &driver)
+{
+    (void) driver;
+}
+
+
 bool OTEST_ranger(void) {
     emit_object("ranger");
     emit_comment("This module contains functions for manipulating range "
@@ -93,6 +139,7 @@ bool OTEST_ranger(void) {
 
     FunctionDriver driver;
     driver_register_all<0>(driver);
+    driver_register_all2<0>(driver);
 
     return driver.do_all_functions();
 }
@@ -124,7 +171,7 @@ static int ranger_load_erase_persist(const char *prev, const char *input,
 }
 
 
-// test a row in the test case table
+// test a row in the test case table (load, insert/erase, persist)
 
 static bool test_ranger_misc_persist_load(int N)
 {
@@ -165,5 +212,63 @@ template <int N>
 static bool test_ranger_misc_persist_load_tmpl()
 {
     return test_ranger_misc_persist_load(N);
+}
+
+
+//////////////////
+
+
+static int ranger_load_persist_slice(const char *input, int start, int back,
+                                     std::string &s)
+{
+    ranger r;
+    if (load(r, input)) {
+        emit_alert("Unexpected error loading range spec for persist slice");
+        return -1;
+    }
+    persist_slice(s, r, start, back);
+
+    return 0;
+}
+
+
+// test a row in the test case table (load, persist slice)
+
+static bool test_ranger_misc_load_persist_slice(int N)
+{
+    char slicebuf[64];
+    const testcase2 &t = test_table2[N];
+    std::string s;
+    s.reserve(256);
+
+    sprintf(slicebuf, "%d-%d", t.start, t.back);
+
+    emit_test("Test misc ranger load/persist slice");
+    emit_input_header();
+    emit_param("Input", t.input);
+    emit_param("Slice", slicebuf);
+
+    int ret = ranger_load_persist_slice(t.input, t.start, t.back, s);
+
+    if (ret != 0)
+        FAIL;
+
+    emit_output_expected_header();
+    emit_retval(t.expected_result);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != t.expected_result)
+        FAIL;
+    PASS;
+
+}
+
+
+template <int N>
+static bool test_ranger_misc_load_persist_slice_tmpl()
+{
+    return test_ranger_misc_load_persist_slice(N);
 }
 
