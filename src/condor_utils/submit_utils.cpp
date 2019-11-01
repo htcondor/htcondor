@@ -7592,9 +7592,14 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
 	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
 
+	// as of 8.9.5 we no longer think it is a good idea for submit to set the Owner attribute
+	// for jobs, even for local jobs, but just in case, set this knob to true to enable the
+	// pre 8.9.5 behavior.
+	bool set_local_owner = param_boolean("SUBMIT_SHOULD_SET_LOCAL_OWNER", false);
+
 	// Set the owner attribute to undefined for remote jobs or jobs where
 	// the caller did not provide a username
-	if (IsRemoteJob || submit_username.empty()) {
+	if (IsRemoteJob || submit_username.empty() || ! set_local_owner) {
 		baseJob.AssignExpr(ATTR_OWNER, "Undefined");
 	} else {
 		baseJob.Assign(ATTR_OWNER, submit_username.c_str());

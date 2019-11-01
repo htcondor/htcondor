@@ -15,7 +15,14 @@ Release Notes:
 
 New Features:
 
--  None.
+-  *condor_submit* will no longer set the ``Owner`` attribute of jobs
+   it submits to the name of the current user. It now leaves this attribute up
+   to the *condor_schedd* to set.  This change was made because the *condor_schedd*
+   will reject the submission if the ``Owner`` attribute is set but does not
+   match the name of the mapped authenticated user submitting the job, and it is
+   difficult for *condor_submit* to know what the mapped name is when there is a mapfile
+   configured.
+   :ticket:`7355`
 
 Bugs Fixed:
 
