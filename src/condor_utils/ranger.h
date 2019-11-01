@@ -22,6 +22,7 @@ struct ranger {
 
     bool contains(value_type x) const;
     bool empty()                const { return forest.empty(); }
+    size_t size()               const { return forest.size(); }
     void clear()                      { forest.clear(); }
 
     inline iterator begin() const;
