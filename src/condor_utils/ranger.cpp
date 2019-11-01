@@ -91,6 +91,11 @@ ranger::find(value_type x) const
     return {it, it != forest.end() && it->_start <= x};
 }
 
+bool ranger::contains(value_type x) const
+{
+    return find(x).second;
+}
+
 ranger::ranger(const std::initializer_list<ranger::range> &il)
 {
     for (const range &rr : il)

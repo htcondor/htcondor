@@ -20,7 +20,7 @@ struct ranger {
 
     std::pair<iterator, bool> find(value_type x) const;
 
-    bool contains(value_type x) const { return find(x).second; }
+    bool contains(value_type x) const;
     bool empty()                const { return forest.empty(); }
     void clear()                      { forest.clear(); }
 
