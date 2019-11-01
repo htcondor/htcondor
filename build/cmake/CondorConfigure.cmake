@@ -1382,20 +1382,6 @@ else(MSVC)
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
-	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
-
-		if (NOT ${SYS_ARCH} MATCHES "64" )
-			add_definitions( -DI386=${SYS_ARCH} )
-		endif()
-
-		# set for maximum binary compatibility based on current machine arch.
-		check_c_compiler_flag(-mtune=generic c_mtune)
-		if (c_mtune)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=generic")
-		endif(c_mtune)
-
-	endif()
-
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
 	# Append C flags list to C++ flags list.
