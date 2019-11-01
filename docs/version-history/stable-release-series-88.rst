@@ -21,7 +21,9 @@ New Features:
 
 -  None.
 
-Bugs Fixed:
+-  Fixed a bug that caused *condor_submit* to fail when the remote option
+   was used and the remote Schedd was using a mapfile.
+   :ticket:`7353`
 
 -  None.
 

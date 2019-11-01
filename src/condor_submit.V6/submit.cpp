@@ -233,7 +233,7 @@ int  SendLastExecutable();
 static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
 
-char *owner = NULL;
+char *username = NULL;
 char *myproxy_password = NULL;
 
 int process_job_credentials();
@@ -564,10 +564,11 @@ main( int argc, const char *argv[] )
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	//TODO:this should go away, and the owner name be placed in ad by schedd!
-	owner = my_username();
-	if( !owner ) {
-		owner = strdup("unknown");
+	// We pass this in to submit_utils, but it isn't used to set the Owner attribute for remote submits
+	// it's only used to set the default accounting user
+	username = my_username();
+	if( !username ) {
+		username = strdup("unknown");
 	}
 
 	init_params();
@@ -1062,7 +1063,7 @@ main( int argc, const char *argv[] )
 	submit_hash.setFakeFileCreationChecks(DashDryRun);
 	submit_hash.setScheddVersion(MySchedd ? MySchedd->version() : CondorVersion());
 	if (myproxy_password) submit_hash.setMyProxyPassword(myproxy_password);
-	submit_hash.init_base_ad(get_submit_time(), owner);
+	submit_hash.init_base_ad(get_submit_time(), username);
 
 	if ( !DumpClassAdToFile ) {
 		if ( !CmdFileIsStdin && ! terse) {
@@ -1676,18 +1677,16 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 	return new_exe;
 }
 
-int send_cluster_ad(SubmitHash & hash, int ClusterId)
+int send_cluster_ad(SubmitHash & hash, int ClusterId, bool is_interactive, bool is_remote)
 {
 	int rval = 0;
 
 	// make the cluster ad.
 	//
 	// use make_job_ad for job 0 to populate the cluster ad.
-	const bool is_interactive = false; // for now, interactive jobs don't work
-	const bool dash_remote = false; // for now, remote jobs don't work.
 	void * pv_check_arg = NULL; // future?
 	ClassAd * job = hash.make_job_ad(JOB_ID_KEY(ClusterId,0),
-	                                 0, 0, is_interactive, dash_remote,
+	                                 0, 0, is_interactive, is_remote,
 	                                 check_sub_file, pv_check_arg);
 	if ( ! job) {
 		return -1;
@@ -2004,7 +2003,7 @@ int submit_jobs (
 
 			// submit the cluster ad
 			//
-			rval = send_cluster_ad(submit_hash, ClusterId);
+			rval = send_cluster_ad(submit_hash, ClusterId, dash_interactive, dash_remote);
 			if (rval < 0)
 				break;
 
@@ -2546,8 +2545,9 @@ DoCleanup(int,int,const char*)
 		}
 	}
 
-	if (owner) {
-		free(owner);
+	if (username) {
+		free(username);
+		username = NULL;
 	}
 	if (myproxy_password) {
 		free (myproxy_password);
@@ -3000,7 +3000,7 @@ int SendLastExecutable()
 		int ret;
 		if ( ! hash.IsEmpty()) {
 			ClassAd tmp_ad;
-			tmp_ad.Assign(ATTR_OWNER, owner);
+			tmp_ad.Assign(ATTR_OWNER, username);
 			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}

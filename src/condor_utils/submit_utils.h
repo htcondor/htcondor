@@ -531,7 +531,7 @@ public:
 
 	// establishes default job attibutes that are independent of submit file (i.e. SUBMIT_ATTRS, etc)
 	// call once before parsing the submit file and/or calling make_job_ad.
-	int init_base_ad(time_t _submit_time, const char * owner); // returns 0 on success
+	int init_base_ad(time_t _submit_time, const char * username); // returns 0 on success
 
 	// establish default attributes using a foreign ad rather than by calling init_base_ad above
 	// used by late materialization when the 'base' ad is the cluster ad in the job queue.
@@ -621,7 +621,7 @@ protected:
 	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
-	MyString   submit_owner; // owner specified to init_cluster_ad
+	MyString   submit_username; // username specified to init_cluster_ad
 
 	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
