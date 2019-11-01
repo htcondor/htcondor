@@ -30,6 +30,12 @@ struct ranger {
 
     inline elements get_elements() const;
 
+    // first/final range/element; do not call if empty()
+    inline const range &front()         const;
+    inline const range &back()          const;
+    inline value_type   front_element() const;
+    inline value_type   back_element()  const;
+
     private:
     // the state of our ranger
     set_type forest;
@@ -42,6 +48,7 @@ struct ranger::range {
     range(value_type e) : _start(0), _end(e) {}
     range(value_type s, value_type e) : _start(s), _end(e) {}
 
+    value_type back()             const { return _end - 1; }
     value_type size()             const { return _end - _start; }
     bool contains(value_type x)   const { return _start <= x && x < _end; }
     bool contains(const range &r) const
@@ -122,6 +129,11 @@ ranger::range::iterator    ranger::range::end()      const { return _end;   }
 ranger::iterator           ranger::begin()   const { return forest.begin(); }
 ranger::iterator           ranger::end()     const { return forest.end();   }
 
+const ranger::range &ranger::front()         const { return *begin();       }
+ranger::value_type   ranger::front_element() const { return front()._start; }
+
+const ranger::range &ranger::back()          const { return *--end();       }
+ranger::value_type   ranger::back_element()  const { return back().back();  }
 
 
 /*  persist / load ranger objects
