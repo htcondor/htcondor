@@ -221,8 +221,11 @@ void persist_range(std::string &s, const ranger &r, const ranger::range &rr)
         return;
 
     auto rit = r.find(rr._start).first;
-    for (; rit != r.end() && rit->_start < rr._end; ++rit)
-        persist_range_single(s, *rit);
+    for (; rit != r.end() && rit->_start < rr._end; ++rit) {
+        ranger::range rr_new = { std::max(rit->_start, rr._start),
+                                 std::min(rit->_end,   rr._end) };
+        persist_range_single(s, rr_new);
+    }
 
     s.erase(s.size() - 1);
 }
