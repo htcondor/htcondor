@@ -24,8 +24,8 @@ struct ranger {
     bool empty()                const { return forest.empty(); }
     void clear()                      { forest.clear(); }
 
-    iterator begin()            const { return forest.begin(); }
-    iterator end()              const { return forest.end();   }
+    inline iterator begin() const;
+    inline iterator end()   const;
 
     inline elements get_elements() const;
 
@@ -118,6 +118,8 @@ ranger::elements::iterator ranger::elements::end()   const { return r.end();   }
 ranger::range::iterator    ranger::range::begin()    const { return _start; }
 ranger::range::iterator    ranger::range::end()      const { return _end;   }
 
+ranger::iterator           ranger::begin()   const { return forest.begin(); }
+ranger::iterator           ranger::end()     const { return forest.end();   }
 
 
 
