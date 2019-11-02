@@ -257,20 +257,13 @@ questions:
         core file from the jobs submitted to your pool.
      ``spool``
         The ``spool`` directory holds the job queue and history files,
-        and the checkpoint files for all jobs submitted from a given
-        machine. As a result, disk space requirements for the ``spool``
-        directory can be quite large, particularly if users are
-        submitting jobs with very large executables or image sizes. By
-        using a checkpoint server (see the :doc:`/admin-manual/checkpoint-server` section on Installing
-        a Checkpoint Server on for details), you can ease the disk space
-        requirements, since all checkpoint files are stored on the
-        server instead of the spool directories for each machine.
-        However, the initial checkpoint files (the executables for all
-        the clusters you submit) are still stored in the spool
-        directory, so you will need some space, even with a checkpoint
-        server. The amount of space will depend on how many executables,
-        and what size they are, that need to be stored in the spool
-        directory.
+        and the files transferred, if any, when a job which set
+        ``when_to_transfer_files`` to ``EXIT_OR_EVICT`` is evicted.  It
+        also holds the input and output files of remotely-submitted jobs.
+        Disk usage therefore varies widely based on the job mix, but
+        since the schedd will abort if it can't append to the job queue,
+        you want to make sure this directory is on a partition which
+        won't run out of space.
      ``log``
         Each HTCondor daemon writes its own log file, and each log file
         is placed in the ``log`` directory. You can specify what size
@@ -1334,16 +1327,9 @@ configuration variable ``MASTER_CHECK_NEW_EXEC_INTERVAL``
 
 When the *condor_master* notices new binaries, it begins a graceful
 restart. On an execute machine, a graceful restart means that running
-jobs are preempted. Standard universe jobs will attempt to take a
-checkpoint. This could be a bottleneck if all machines in a large pool
-attempt to do this at the same time. If they do not complete within the
-cutoff time specified by the ``KILL`` policy expression (defaults to 10
-minutes), then the jobs are killed without producing a checkpoint. It
-may be appropriate to increase this cutoff time, and a better approach
-may be to upgrade the pool in stages rather than all at once.
+jobs are preempted.
 
-For universes other than the standard universe, jobs are preempted. If
-jobs have been guaranteed a certain amount of uninterrupted run time
+If jobs have been guaranteed a certain amount of uninterrupted run time
 with ``MaxJobRetirementTime``, then the job is not killed until the
 specified amount of retirement time has been exceeded (which is 0 by
 default). The first step of killing the job is a soft kill signal, which
@@ -1351,8 +1337,8 @@ can be intercepted by the job so that it can exit gracefully, perhaps
 saving its state. If the job has not gone away once the ``KILL``
 expression fires (10 minutes by default), then the job is forcibly
 hard-killed. Since the graceful shutdown of jobs may rely on shared
-resources such as disks where state is saved, the same reasoning applies
-as for the standard universe: it may be appropriate to increase the
+resources such as disks where state is saved,
+it may be appropriate to increase the
 cutoff time for large pools, and a better approach may be to upgrade the
 pool in stages to avoid jobs running out of time.
 
@@ -1385,9 +1371,7 @@ implementation of security in HTCondor.
 
         condor_off -startd <hostname>
 
-    A running **standard** universe job will be allowed to take a
-    checkpoint before the job is killed. A running job under another
-    universe will be killed. If it is instead desired that the machine
+    Jobs will be killed. If it is instead desired that the machine
     stops running jobs only after the currently executing job completes,
     the command is
 

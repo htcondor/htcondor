@@ -553,8 +553,8 @@ class Dag {
 	bool isCycle();
 
 	// max number of PRE & POST scripts to run at once (0 means no limit)
-    const int _maxPreScripts;
-    const int _maxPostScripts;
+    int _maxPreScripts;
+    int _maxPostScripts;
 
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
@@ -655,6 +655,11 @@ class Dag {
 	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
 	int MaxPreScripts(void) { return _maxPreScripts; }
 	int MaxPostScripts(void) { return _maxPostScripts; }
+
+	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
+	void SetMaxJobsSubmitted(int maxJobs) { _maxJobsSubmitted = maxJobs; };
+	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
+	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
 	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
 
@@ -1072,7 +1077,7 @@ private:
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    const int _maxJobsSubmitted;
+    int _maxJobsSubmitted;
 
 		// Number of DAG job procs currently idle.
 	int _numIdleJobProcs;
@@ -1080,7 +1085,7 @@ private:
     	// Maximum number of idle job procs to allow (stop submitting if the
 		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
-    const int _maxIdleJobProcs;
+    int _maxIdleJobProcs;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts

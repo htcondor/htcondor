@@ -120,7 +120,6 @@ BaseUserPolicy::checkAtExit( void )
 #else
 	int action = this->user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
 #endif
-
 	this->restoreJobTime( old_run_time );
 
 		//

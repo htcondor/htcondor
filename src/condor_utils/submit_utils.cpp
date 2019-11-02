@@ -6411,7 +6411,7 @@ int SubmitHash::SetAccountingGroup()
 
 	const char * group_user = NULL;
 	if ( ! gu) {
-		group_user = submit_owner.Value();
+		group_user = submit_username.Value();
 	} else {
 		group_user = gu;
 	}
@@ -7550,7 +7550,7 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	}
 
 	MACRO_EVAL_CONTEXT ctx = mctx; mctx.use_mask = 0;
-	ad->LookupString (ATTR_OWNER, submit_owner);
+	ad->LookupString (ATTR_OWNER, submit_username);
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
@@ -7565,11 +7565,11 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	return 0;
 }
 
-int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
+int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 {
 	MyString buffer;
-	ASSERT(owner);
-	submit_owner = owner;
+	submit_username.clear();
+	if (username) { submit_username = username; }
 
 	delete job; job = NULL;
 	delete procAd; procAd = NULL;
@@ -7592,8 +7592,18 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
 	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
 
-	//PRAGMA_REMIND("should not be setting owner at all...")
-	baseJob.Assign(ATTR_OWNER, owner);
+	// as of 8.9.5 we no longer think it is a good idea for submit to set the Owner attribute
+	// for jobs, even for local jobs, but just in case, set this knob to true to enable the
+	// pre 8.9.5 behavior.
+	bool set_local_owner = param_boolean("SUBMIT_SHOULD_SET_LOCAL_OWNER", false);
+
+	// Set the owner attribute to undefined for remote jobs or jobs where
+	// the caller did not provide a username
+	if (IsRemoteJob || submit_username.empty() || ! set_local_owner) {
+		baseJob.AssignExpr(ATTR_OWNER, "Undefined");
+	} else {
+		baseJob.Assign(ATTR_OWNER, submit_username.c_str());
+	}
 
 #ifdef WIN32
 	// put the NT domain into the ad as well

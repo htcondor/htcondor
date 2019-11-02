@@ -384,11 +384,16 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
+	m_client_status(0),
+	m_server_status(0),
+	m_ret_value(0),
+	m_sk({0,0,0,0,0,0}),
     m_version(version),
     m_k(NULL),
     m_k_prime(NULL),
     m_k_len(0),
-    m_k_prime_len(0)
+    m_k_prime_len(0),
+	m_state(ServerRec1)
 {
 }
 
@@ -614,6 +619,8 @@ Condor_Auth_Passwd::fetchLogin()
 			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K'\n");
 			free(ka);
 			free(kb);
+			free(seed_ka);
+			free(seed_kb);
 			return nullptr;
 		}
 

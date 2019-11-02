@@ -211,7 +211,7 @@ If the remote *condor_collector* is not listening on the standard port
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
 HTCondor's file transfer mechanism (see the 
-:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+:ref:`users-manual/file-transfer:submitting jobs without a shared file
 system: htcondor's file transfer mechanism` section), the mechanism is applied
 based on the resulting job universe on the remote machine.
 
@@ -1318,9 +1318,6 @@ implementation. HTCondor uses *libcurl*; information about the *libcurl*
 specification of trusted CAs is available at
 
 `http://curl.haxx.se/libcurl/c/curl_easy_setopt.html <http://curl.haxx.se/libcurl/c/curl_easy_setopt.html>`_
-
-Versions of HTCondor with standard universe support ship with their own
-*libcurl*, which will be linked against *OpenSSL*.
 
 The behavior when specifying both a directory and a file is undefined,
 although the EC2 GAHP allows it.

@@ -113,7 +113,7 @@ StartdNamedClassAdList::ClearJob ( StartdCronJob * job )
 bool
 StartdNamedClassAdList::Register( StartdNamedClassAd *ad )
 {
-	NamedClassAd *nad = dynamic_cast<NamedClassAd *>(ad);
+	NamedClassAd *nad = static_cast<NamedClassAd *>(ad);
 	return NamedClassAdList::Register( nad );
 }
 

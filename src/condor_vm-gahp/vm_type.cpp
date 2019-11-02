@@ -33,7 +33,6 @@
 #include "condor_vm_universe_types.h"
 #include "vm_type.h"
 #include "condor_mkstemp.h"
-#include "../condor_privsep/condor_privsep.h"
 
 extern VMGahp *vmgahp;
 
@@ -60,12 +59,7 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_start_time = 0;
 	m_stop_time = 0;
 	m_last_status_time = 0;
-
-	if ( privsep_enabled() ) {
-		m_file_owner = PRIV_CONDOR;
-	} else {
-		m_file_owner = PRIV_USER;
-	}
+	m_file_owner = PRIV_USER;
 
 	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
 

@@ -25,7 +25,7 @@
 #include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
-#include "condor_privsep_helper.h"
+#include "privsep_helper.h"
 #include "exit.h"
 
 #if defined(LINUX)
@@ -283,18 +283,13 @@ public:
 	int PeekRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
 
 
-		/** This will return NULL if we're not using either
-		    PrivSep or GLExec */
+		/** This will return NULL if we're not using GLExec */
 	PrivSepHelper* privSepHelper()
 	{
 		return m_privsep_helper;
 	}
-		/** This will return NULL if we're not using PrivSep */
-	CondorPrivSepHelper* condorPrivSepHelper()
-	{
-		return dynamic_cast<CondorPrivSepHelper*>(m_privsep_helper);
-	}
 #if defined(LINUX)
+		/** This will return NULL if we're not using PrivSep */
 	GLExecPrivSepHelper* glexecPrivSepHelper()
 	{
 		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);

@@ -15,7 +15,14 @@ Release Notes:
 
 New Features:
 
--  None.
+-  *condor_submit* will no longer set the ``Owner`` attribute of jobs
+   it submits to the name of the current user. It now leaves this attribute up
+   to the *condor_schedd* to set.  This change was made because the *condor_schedd*
+   will reject the submission if the ``Owner`` attribute is set but does not
+   match the name of the mapped authenticated user submitting the job, and it is
+   difficult for *condor_submit* to know what the mapped name is when there is a mapfile
+   configured.
+   :ticket:`7355`
 
 Bugs Fixed:
 
@@ -51,6 +58,10 @@ New Features:
   job self-checkpoints.
   :ticket:`7189`
 
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+  built-in submit variables. These expand to the time of submission.
+  :ticket:`7283`
+
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
   a result of a job being evicted when
@@ -79,17 +90,36 @@ New Features:
   arguments (in addition to positional arguments), and the ``options`` argument
   is now optional:
 
-  .. code-block::python
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
+     dag_args = { "maxidle": 10, "maxpost": 5 }
 
-    # with keyword arguments for filename and options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
+     # with keyword arguments for filename and options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
 
-    # or like this, with no options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
+     # or like this, with no options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
 
   :ticket:`7278`
+
+- Added an example of a multifile plugin to transfer files from a locally
+  mounted Gluster file system. This script is also designed to be a template 
+  for other file transfer plugins, as the logic to download or upload files is
+  clearly indicated and could be easily changed to support different file
+  services.
+  :ticket:`7212`
+
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
+- `SciTokens <https://scitokens.org>`_ support is now available on
+  Enterprise Linux 7 platforms.
+  :ticket:`7248`
 
 Bugs Fixed:
 
@@ -102,6 +132,41 @@ Bugs Fixed:
   and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
   to shut down cleanly.
   :ticket:`7247`
+
+- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+  submit commands that begin with ``request_<tag>`` as custom resource requests unless
+  ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
+  :ticket:`7172`
+
+- The python bindings ``Submit`` object now converts keys of the form ``+Attr``
+  to ``MY.Attr`` when setting and getting values into the ``Submit`` object.
+  The ``Submit`` object had been storing ``+Attr`` keys and then converting
+  these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
+  to some very strange error conditions.
+  :ticket:`7261`
+
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location 
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
+
+- Our *curl_plugin* is designed to partially retry downloads which did not
+  complete successfully (HTTP Content-Length header reporting a different number
+  than bytes downloaded). However partial retries do not work with some proxy
+  servers, causing jobs to go on hold. We've updated the plugin to not attempt
+  partial retries when a proxy is detected.
+  :ticket:`7259`
+
+- The timeout for *condor_ssh_to_job* connection has been restored to the
+  previous setting of 20 seconds. Shortening the timeout avoids getting into
+  a deadlock between the *condor_schedd*, *condor_starter*, and
+  *condor_shadow*.
+  :ticket:`7193`
+
+- Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
+  timeout caused 100% CPU utilization due to an old libcurl bug.
+  :ticket:`7316`
 
 Version 8.9.3
 -------------

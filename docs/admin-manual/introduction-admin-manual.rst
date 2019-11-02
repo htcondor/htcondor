@@ -82,23 +82,7 @@ Submit
     machine. First, every submitted job that is currently running on a
     remote machine runs a process on the submit machine. As a result,
     lots of running jobs will need a fair amount of swap space and/or
-    real memory. In addition, the checkpoint files from standard
-    universe jobs are stored on the local disk of the submit machine. If
-    these jobs have a large memory image and there are a lot of them,
-    the submit machine will need a lot of disk space to hold these
-    files. This disk space requirement can be somewhat alleviated by
-    using a checkpoint server, however the binaries of the jobs are
-    still stored on the submit machine.
-    :index:`checkpoint server`
-    :index:`checkpoint server<single: checkpoint server; machine>`
-
-Checkpoint Server
-    Machines in the pool can be configured to act as checkpoint servers.
-    This is optional, and is not part of the standard HTCondor binary
-    distribution. A checkpoint server is a machine that stores
-    checkpoint files for sets of jobs. A machine with this role should
-    have lots of disk space and a good network connection to the rest of
-    the pool, as the traffic can be quite heavy.
+    real memory.
 
 The HTCondor Daemons
 --------------------
@@ -162,16 +146,8 @@ started under HTCondor and what they do:
 
 *condor_shadow*
     This daemon runs on the machine where a given request was submitted
-    and acts as the resource manager for the request. Jobs that are
-    linked for HTCondor's standard universe, which perform remote system
-    calls, do so via the *condor_shadow*. Any system call performed on
-    the remote execute machine is sent over the network, back to the
-    *condor_shadow* which performs the system call on the submit
-    machine, and the result is sent back over the network to the job on
-    the execute machine. In addition, the *condor_shadow* is
-    responsible for making decisions about the request, such as where
-    checkpoint files should be stored, and how certain files should be
-    accessed. :index:`condor_collector daemon`
+    and acts as the resource manager for the request.
+    :index:`condor_collector daemon`
 
 *condor_collector*
     This daemon is responsible for collecting all the information about

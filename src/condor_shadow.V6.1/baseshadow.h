@@ -416,6 +416,8 @@ class BaseShadow : public Service
 			or just with JOB_SHOULD_REQUEUE. */
 	bool attemptingReconnectAtStartup;
 
+	bool isDataflowJob = false;
+
  protected:
 
 		/** Note that this is the base, "unexpanded" ClassAd for the job.

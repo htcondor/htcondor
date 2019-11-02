@@ -46,7 +46,6 @@
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
@@ -476,43 +475,43 @@ check_spool_dir()
 			if (is_job_subdir(f)) {
 				const char * clusterdir = dir.GetFullPath();
 				Directory dir2(clusterdir,PRIV_ROOT);
-				const char *f2;
+				const char *fn2;
 				JOB_ID_KEY jid;
 
-				while ((f2 = dir2.Next())) {
+				while ((fn2 = dir2.Next())) {
 					// does it match the pattern of a <proc mod 10000> directory?
 					// if it does, then we need to check it for valid spool files
-					if (is_job_subdir(f2)) {
+					if (is_job_subdir(fn2)) {
 						// if it is a directory, check it for spooled job files
 						if (dir2.IsDirectory() && ! dir2.IsSymlink())  {
 							is_good = true;
 							const char * procdir = dir2.GetFullPath();
 							Directory dir3(procdir,PRIV_ROOT);
-							const char *f3;
-							while ((f3 = dir3.Next())) {
-								if (is_ckpt_file_or_submit_digest(f3, jid)) {
+							const char *fn3;
+							while ((fn3 = dir3.Next())) {
+								if (is_ckpt_file_or_submit_digest(fn3, jid)) {
 									// put it in the list of files/dirs needing jobid checks
 									// directories for spooled job files will end up here
-									formatstr(tmpstr,"%s%c%s%c%s",f,DIR_DELIM_CHAR,f2,DIR_DELIM_CHAR,f3);
+									formatstr(tmpstr,"%s%c%s%c%s",f,DIR_DELIM_CHAR,fn2,DIR_DELIM_CHAR,fn3);
 									maybe_stale.add(jid, tmpstr);
 								} else {
 									// not a valid pattern, we can delete this one now
-									bad_file(procdir, f3, dir3);
+									bad_file(procdir, fn3, dir3);
 								}
 							}
 						} else {
 							// matches the pattern of a proc dir, but it is not a dir so it's invalid
-							bad_file(clusterdir, f2, dir2);
+							bad_file(clusterdir, fn2, dir2);
 						}
-					} else if (is_ckpt_file_or_submit_digest(f2, jid)) {
+					} else if (is_ckpt_file_or_submit_digest(fn2, jid)) {
 						// put it in the list of files needing jobid checks
-						formatstr(tmpstr,"%s%c%s",f,DIR_DELIM_CHAR,f2);
+						formatstr(tmpstr,"%s%c%s",f,DIR_DELIM_CHAR,fn2);
 						maybe_stale.add(jid, tmpstr);
 						is_good = true;
 					} else {
 						// file is not a submit_digest, checkpoint, or proc subdir. it is invalid
 						// we can delete it now.
-						bad_file(clusterdir, f2, dir2);
+						bad_file(clusterdir, fn2, dir2);
 					}
 				}
 			} else {
@@ -1127,15 +1126,6 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 
 	if( RmFlag ) {
 		bool removed = dir.Remove_Full_Path( pathname.Value() );
-		if( !removed && privsep_enabled() ) {
-			removed = privsep_remove_dir( pathname.Value() );
-			if( VerboseFlag ) {
-				if( removed ) {
-					dprintf( D_ALWAYS, "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
-					printf( "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
-				}
-			}
-		}
 		if( removed ) {
 			buf.formatstr( "%s - Removed", pathname.Value() );
 		} else {

@@ -110,11 +110,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     programs are installed. The default value is ``$(RELEASE_DIR)``/bin.
 
 ``LIB`` :index:`LIB`
-    This directory points to the HTCondor directory where libraries used
-    to link jobs for HTCondor's standard universe are stored. The
-    *condor_compile* program uses this macro to find these libraries,
-    so it must be defined for *condor_compile* to function. The default
-    value is ``$(RELEASE_DIR)``/lib.
+    This directory points to the HTCondor directory containing its
+    libraries.  On Windows, libraries are located in ``BIN``.
 
 ``LIBEXEC`` :index:`LIBEXEC`
     This directory points to the HTCondor directory where support
@@ -931,6 +928,9 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` is defined for the relevant
     daemon.
 
+    The format for the map file is the same as the format for
+    ``CLASSAD_USER_MAPDATA_<name>``, below.
+
 ``CLASSAD_USER_MAPDATA_<name>`` :index:`CLASSAD_USER_MAPDATA_<name>`
     A string containing data to be used to initialize the map for the
     given username. Note that this macro is only used if
@@ -939,7 +939,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     :index:`CLASSAD_USER_MAPFILE_<name>` is not defined for the
     given name.
 
-    The format for the map file and map data is the same as the format
+    The format for the map data is the same as the format
     for the security unified map file (see
     :ref:`admin-manual/security:the unified map file for authentication`
     for details).
@@ -1314,12 +1314,6 @@ subsystem corresponding to the daemon.
         are having trouble getting HTCondor to work because of problems
         with DNS, NIS or other host name resolving systems in use.
 
-    ``D_CKPT``
-        When this flag is set, the HTCondor process checkpoint support
-        code, which is linked into a STANDARD universe user job, will
-        output some low-level details about the checkpoint procedure
-        into the ``$(SHADOW_LOG)``.
-
     ``D_SECURITY``
         This flag will enable debug messages pertaining to the setup of
         secure network communication, including messages for the
@@ -1561,9 +1555,7 @@ DaemonCore Configuration File Entries
 
 Please read :doc:`/admin-manual/daemoncore` for
 details on DaemonCore. There are certain configuration file settings
-that DaemonCore uses which affect all HTCondor daemons (except the
-checkpoint server, standard universe shadow, and standard universe
-starter, none of which use DaemonCore).
+that DaemonCore uses which affect all HTCondor daemons.
 
 ``ALLOW...`` :index:`ALLOW`
     All macros that begin with either ``ALLOW`` :index:`ALLOW` or
@@ -2301,10 +2293,8 @@ using a shared file system`.
     domains, but it is a gaping security hole. It is not recommended.
 
     An administrator can also leave ``UID_DOMAIN`` undefined. This will
-    force HTCondor to always run jobs as user nobody. Running standard
-    universe jobs as user nobody enhances security and should cause no
-    problems, because the jobs use remote I/O to access all of their
-    files. However, if vanilla jobs are run as user nobody, then files
+    force HTCondor to always run jobs as user nobody.
+    If vanilla jobs are run as user nobody, then files
     that need to be accessed by the job will need to be marked as world
     readable/writable so the user nobody can access them.
 
@@ -2446,206 +2436,15 @@ using a shared file system`.
     this macro to ``True``. It defaults to ``False``.
 
 ``USE_NFS`` :index:`USE_NFS`
-    This macro influences how HTCondor jobs running in the standard
-    universe access their files. By default, HTCondor will redirect the
-    file I/O requests of standard universe jobs from the executing
-    machine to the submitting machine. So, as an HTCondor job migrates
-    around the network, the file system always appears to be identical
-    to the file system where the job was submitted. However, consider
-    the case where a user's data files are sitting on an NFS server. The
-    machine running the user's program will send all I/O over the
-    network to the submitting machine, which in turn sends all the I/O
-    back over the network to the NFS file server. Thus, all of the
-    program's I/O is being sent over the network twice.
-
-    If this configuration variable is ``True``, then HTCondor will
-    attempt to read/write files directly on the executing machine
-    without redirecting I/O back to the submitting machine, if both the
-    submitting machine and the machine running the job are both
-    accessing the same NFS servers (if they are both in the same
-    ``$(FILESYSTEM_DOMAIN)`` and in the same ``$(UID_DOMAIN)``, as
-    described above). The result is I/O performed by HTCondor standard
-    universe jobs is only sent over the network once. While sending all
-    file operations over the network twice might sound really bad,
-    unless you are operating over networks where bandwidth as at a very
-    high premium, practical experience reveals that this scheme offers
-    very little real performance gain. There are also some (fairly rare)
-    situations where this scheme can break down.
-
-    Setting ``$(USE_NFS)`` to ``False`` is always safe. It may result in
-    slightly more network traffic, but HTCondor jobs are most often
-    heavy on CPU and light on I/O. It also ensures that a remote
-    standard universe HTCondor job will always use HTCondor's remote
-    system calls mechanism to reroute I/O and therefore see the exact
-    same file system that the user sees on the machine where she/he
-    submitted the job.
-
-    Some gritty details for folks who want to know: If the you set
-    ``$(USE_NFS)`` to ``True``, and the ``$(FILESYSTEM_DOMAIN)`` of both
-    the submitting machine and the remote machine about to execute the
-    job match, and the ``$(FILESYSTEM_DOMAIN)`` claimed by the submit
-    machine is indeed found to be a subset of what an inverse look up to
-    a DNS (domain name server) reports as the fully qualified domain
-    name for the submit machine's IP address (this security measure
-    safeguards against the submit machine from lying), then the job will
-    access files using a local system call, without redirecting them to
-    the submitting machine (with NFS). Otherwise, the system call will
-    get routed back to the submitting machine using HTCondor's remote
-    system call mechanism.
-
-    .. note::
-
-        When submitting a vanilla job,
-        *condor_submit* will, by default, append requirements to the Job
-        ClassAd that specify the machine to run the job must be in the same
-        ``$(FILESYSTEM_DOMAIN)`` and the same ``$(UID_DOMAIN)``.
-
-    This configuration variable similarly changes the semantics of Chirp
+    This configuration variable changes the semantics of Chirp
     file I/O when running in the vanilla, java or parallel universe. If
     this variable is set in those universes, Chirp will not send I/O
     requests over the network as requested, but perform them directly to
-    the locally mounted file system. Other than Chirp file access, this
-    variable is unused outside of the standard universe.
+    the locally mounted file system.
 
 ``IGNORE_NFS_LOCK_ERRORS`` :index:`IGNORE_NFS_LOCK_ERRORS`
     When set to ``True``, all errors related to file locking errors from
     NFS are ignored. Defaults to ``False``, not ignoring errors.
-
-``USE_AFS`` :index:`USE_AFS`
-    If your machines have AFS, this macro determines whether HTCondor
-    will use remote system calls for standard universe jobs to send I/O
-    requests to the submit machine, or if it should use local file
-    access on the execute machine (which will then use AFS to get to the
-    submitter's files). Read the setting above on ``$(USE_NFS)`` for a
-    discussion of why you might want to use AFS access instead of remote
-    system calls.
-
-    One important difference between ``$(USE_NFS)`` and ``$(USE_AFS)``
-    is the AFS cache. With ``$(USE_AFS)`` set to ``True``, the remote
-    HTCondor job executing on some machine will start modifying the AFS
-    cache, possibly evicting the machine owner's files from the cache to
-    make room for its own. Generally speaking, since we try to minimize
-    the impact of having an HTCondor job run on a given machine, we do
-    not recommend using this setting.
-
-    While sending all file operations over the network twice might sound
-    really bad, unless you are operating over networks where bandwidth
-    as at a very high premium, practical experience reveals that this
-    scheme offers very little real performance gain. There are also some
-    (fairly rare) situations where this scheme can break down.
-
-    Setting ``$(USE_AFS)`` to ``False`` is always safe. It may result in
-    slightly more network traffic, but HTCondor jobs are usually heavy
-    on CPU and light on I/O. ``False`` ensures that a remote standard
-    universe HTCondor job will always see the exact same file system
-    that the user on sees on the machine where he/she submitted the job.
-    Plus, it will ensure that the machine where the job executes does
-    not have its AFS cache modified as a result of the HTCondor job
-    being there.
-
-    However, things may be different at your site, which is why the
-    setting is there.
-
-Checkpoint Server Configuration File Macros
--------------------------------------------
-
-:index:`checkpoint server configuration variables<single: checkpoint server configuration variables; configuration>`
-
-These macros control whether or not HTCondor uses a checkpoint server.
-This section describes the settings that the checkpoint server itself
-needs defined. See :doc:`/admin-manual/checkpoint-server` for details on
-installing and running a checkpoint server.
-
-``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST`
-    The host name of a checkpoint server.
-
-``STARTER_CHOOSES_CKPT_SERVER`` :index:`STARTER_CHOOSES_CKPT_SERVER`
-    If this parameter is ``True`` or undefined on the submit machine,
-    the checkpoint server specified by ``$(CKPT_SERVER_HOST)`` on the
-    execute machine is used. If it is ``False`` on the submit machine,
-    the checkpoint server specified by ``$(CKPT_SERVER_HOST)`` on the
-    submit machine is used.
-
-``CKPT_SERVER_DIR`` :index:`CKPT_SERVER_DIR`
-    The full path of the directory the checkpoint server should use to
-    store checkpoint files. Depending on the size of the pool and the
-    size of the jobs submitted, this directory and its subdirectories
-    might need to store many MiB of data.
-
-``USE_CKPT_SERVER`` :index:`USE_CKPT_SERVER`
-    A boolean which determines if a given submit machine is to use a
-    checkpoint server if one is available. If a checkpoint server is not
-    available or the variable ``USE_CKPT_SERVER`` is set to ``False``,
-    checkpoints will be written to the local ``$(SPOOL)`` directory on
-    the submission machine.
-
-``MAX_DISCARDED_RUN_TIME`` :index:`MAX_DISCARDED_RUN_TIME`
-    If the *condor_shadow* daemon is unable to read a checkpoint file
-    from the checkpoint server, it keeps trying only if the job has
-    accumulated more than this many seconds of CPU usage. Otherwise, the
-    job is started from scratch. Defaults to 3600 (1 hour). This
-    variable is only used if ``$(USE_CKPT_SERVER)`` is ``True``.
-
-``CKPT_SERVER_CHECK_PARENT_INTERVAL`` :index:`CKPT_SERVER_CHECK_PARENT_INTERVAL`
-    This is the number of seconds between checks to see whether the
-    parent of the checkpoint server (usually the *condor_master*) has
-    died. If the parent has died, the checkpoint server shuts itself
-    down. The default is 120 seconds. A setting of 0 disables this
-    check.
-
-``CKPT_SERVER_INTERVAL`` :index:`CKPT_SERVER_INTERVAL`
-    The maximum number of seconds the checkpoint server waits for
-    activity on network sockets before performing other tasks. The
-    default value is 300 seconds.
-
-``CKPT_SERVER_CLASSAD_FILE`` :index:`CKPT_SERVER_CLASSAD_FILE`
-    A string that represents a file in the file system to which ClassAds
-    will be written. The ClassAds denote information about stored
-    checkpoint files, such as owner, shadow IP address, name of the
-    file, and size of the file. This information is also independently
-    recorded in the ``TransferLog``. The default setting is undefined,
-    which means a checkpoint server ClassAd file will not be kept.
-
-``CKPT_SERVER_CLEAN_INTERVAL`` :index:`CKPT_SERVER_CLEAN_INTERVAL`
-    The number of seconds that must pass until the ClassAd log file as
-    described by the ``CKPT_SERVER_CLASSAD_FILE`` variable gets
-    truncated. The default is 86400 seconds, which is one day.
-
-``CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL`` :index:`CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL`
-    The number of seconds between attempts to discover and remove stale
-    checkpoint files. It defaults to 86400 seconds, which is one day.
-
-``CKPT_SERVER_SOCKET_BUFSIZE`` :index:`CKPT_SERVER_SOCKET_BUFSIZE`
-    The number of bytes representing the size of the TCP send/recv
-    buffer on the socket file descriptor related to moving the
-    checkpoint file to and from the checkpoint server. The default value
-    is 0, which allows the operating system to decide the size.
-
-``CKPT_SERVER_MAX_PROCESSES`` :index:`CKPT_SERVER_MAX_PROCESSES`
-    The maximum number of child processes that could be working on
-    behalf of the checkpoint server. This includes store processes and
-    restore processes. The default value is 50.
-
-``CKPT_SERVER_MAX_STORE_PROCESSES`` :index:`CKPT_SERVER_MAX_STORE_PROCESSES`
-    The maximum number of child process strictly devoted to the storage
-    of checkpoints. The default is the value of
-    ``CKPT_SERVER_MAX_PROCESSES``.
-
-``CKPT_SERVER_MAX_RESTORE_PROCESSES`` :index:`CKPT_SERVER_MAX_RESTORE_PROCESSES`
-    The maximum number of child process strictly devoted to the
-    restoring of checkpoints. The default is the value of
-    ``CKPT_SERVER_MAX_PROCESSES``.
-
-``CKPT_SERVER_STALE_CKPT_AGE_CUTOFF`` :index:`CKPT_SERVER_STALE_CKPT_AGE_CUTOFF`
-    The number of seconds after which if a checkpoint file has not been
-    accessed, it is considered stale. The default value is 5184000
-    seconds, which is sixty days.
-
-``ALWAYS_USE_LOCAL_CKPT_SERVER`` :index:`ALWAYS_USE_LOCAL_CKPT_SERVER`
-    A boolean value that defaults to ``False``. When ``True``, it forces
-    all checkpoints to be read from a checkpoint server running on the
-    same machine where the job is running. This is intended to be used
-    when all checkpoint servers access a shared file system.
 
 condor_master Configuration File Macros
 ----------------------------------------
@@ -3221,8 +3020,7 @@ section.
 ``PERIODIC_CHECKPOINT`` :index:`PERIODIC_CHECKPOINT`
     A boolean expression that, when ``True``, causes HTCondor to
     initiate a checkpoint of the currently running job. This setting
-    applies to all standard universe jobs and to vm universe jobs that
-    have set
+    applies to vm universe jobs that have set
     **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
     to ``True`` in the submit description file.
 
@@ -3253,39 +3051,6 @@ section.
     A list of additional from the above default attributes from dynamic
     slots that will be rolled up into a list attribute in their parent
     partitionable slot, prefixed with the name Child.
-
-``IS_VALID_CHECKPOINT_PLATFORM`` :index:`IS_VALID_CHECKPOINT_PLATFORM`
-    A boolean expression that is logically ANDed with the with the
-    ``START`` expression to limit which machines a standard universe job
-    may continue execution on once they have produced a checkpoint. The
-    default expression is
-
-    ::
-
-           IS_VALID_CHECKPOINT_PLATFORM =
-           (
-             ( (TARGET.JobUniverse == 1) == FALSE) ||
-
-             (
-               (MY.CheckpointPlatform =!= UNDEFINED) &&
-               (
-                 (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
-                 (TARGET.NumCkpts == 0)
-               )
-             )
-           )
-
-
-``CHECKPOINT_PLATFORM`` :index:`CHECKPOINT_PLATFORM`
-    A string used to override the automatically-generated machine
-    ClassAd attribute ``CheckpointPlatform`` (see section
-    :ref:`classad-attributes/machine-classad-attributes:machine classad
-    attributes`), which is used to identify the platform upon which a job
-    previously generated a checkpoint under the standard universe. This
-    restricts the machine matches that may be considered for a job and where
-    the job may resume. Overriding the value may be necessary for architectures
-    that are the same in name, but actually have differences in instruction
-    sets, such as the AVX extensions to the Intel processor.
 
 ``WANT_SUSPEND`` :index:`WANT_SUSPEND`
     A boolean expression that, when ``True``, tells HTCondor to evaluate
@@ -4613,8 +4378,8 @@ These macros control the *condor_schedd*.
     output files from execute machines to the submit machine. The limit
     applies to all jobs submitted from the same *condor_schedd*. The
     default is 100. A setting of 0 means unlimited transfers. This limit
-    currently does not apply to grid universe jobs or standard universe
-    jobs, and it also does not apply to streaming output files. When the
+    currently does not apply to grid universe jobs,
+    and it also does not apply to streaming output files. When the
     limit is reached, additional transfers will queue up and wait before
     proceeding.
 
@@ -4623,7 +4388,7 @@ These macros control the *condor_schedd*.
     files from the submit machine to execute machines. The limit applies
     to all jobs submitted from the same *condor_schedd*. The default is
     100. A setting of 0 means unlimited transfers. This limit currently
-    does not apply to grid universe jobs or standard universe jobs. When
+    does not apply to grid universe jobs. When
     the limit is reached, additional transfers will queue up and wait
     before proceeding.
 
@@ -4699,7 +4464,7 @@ These macros control the *condor_schedd*.
 ``MAX_TRANSFER_INPUT_MB`` :index:`MAX_TRANSFER_INPUT_MB`
     This integer expression specifies the maximum allowed total size in
     MiB of the input files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe, or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value ``-1`` indicates
     no limit. The default value is -1. The job may override the system
@@ -4714,7 +4479,7 @@ These macros control the *condor_schedd*.
 ``MAX_TRANSFER_OUTPUT_MB`` :index:`MAX_TRANSFER_OUTPUT_MB`
     This integer expression specifies the maximum allowed total size in
     MiB of the output files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe, or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value ``-1`` indicates
     no limit. The default value is -1. The job may override the system
@@ -5991,8 +5756,7 @@ These settings affect the *condor_starter*.
     *condor_starter*. When the user job and/or
     ``STARTER_JOB_ENVIRONMENT`` define an environment variable that is
     in the *condor_starter* 's environment, the setting from the
-    *condor_starter* 's environment is overridden. This variable does
-    not apply to standard universe jobs.
+    *condor_starter* 's environment is overridden.
 
 ``NAMED_CHROOT`` :index:`NAMED_CHROOT`
     A comma and/or space separated list of full paths to one or more
@@ -6140,8 +5904,7 @@ These settings affect the *condor_starter*.
 
 ``MEMORY_USAGE_METRIC`` :index:`MEMORY_USAGE_METRIC`
     A ClassAd expression that produces an initial value for the job
-    ClassAd attribute ``MemoryUsage`` in jobs that are not standard
-    universe and not vm universe.
+    ClassAd attribute ``MemoryUsage`` in jobs that are not vm universe.
 
 ``MEMORY_USAGE_METRIC_VM`` :index:`MEMORY_USAGE_METRIC_VM`
     A ClassAd expression that produces an initial value for the job
@@ -6297,30 +6060,22 @@ site use the following macros:
 ``APPEND_REQ_VANILLA`` :index:`APPEND_REQ_VANILLA`
     Expression to be appended to vanilla job requirements.
 
-``APPEND_REQ_STANDARD`` :index:`APPEND_REQ_STANDARD`
-    Expression to be appended to standard job requirements.
-
 ``APPEND_REQUIREMENTS`` :index:`APPEND_REQUIREMENTS`
     Expression to be appended to any type of universe jobs. However, if
-    ``APPEND_REQ_VANILLA`` or ``APPEND_REQ_STANDARD`` is defined, then
-    ignore the ``APPEND_REQUIREMENTS`` for those universes.
+    ``APPEND_REQ_VANILLA`` is defined, then
+    ignore the ``APPEND_REQUIREMENTS`` for that universe.
 
 ``APPEND_RANK`` :index:`APPEND_RANK`
-    Expression to be appended to job rank. ``APPEND_RANK_STANDARD`` or
+    Expression to be appended to job rank.
     ``APPEND_RANK_VANILLA`` will override this setting if defined.
-
-``APPEND_RANK_STANDARD`` :index:`APPEND_RANK_STANDARD`
-    Expression to be appended to standard job rank.
 
 ``APPEND_RANK_VANILLA`` :index:`APPEND_RANK_VANILLA`
     Expression to append to vanilla job rank.
 
 .. note::
 
-    The ``APPEND_RANK_STANDARD`` :index:`APPEND_RANK_STANDARD`
-    and ``APPEND_RANK_VANILLA`` :index:`APPEND_RANK_VANILLA` macros
-    were called ``APPEND_PREF_STANDARD`` :index:`APPEND_PREF_STANDARD`
-    and ``APPEND_PREF_VANILLA`` :index:`APPEND_PREF_VANILLA` in
+    The ``APPEND_RANK_VANILLA`` :index:`APPEND_RANK_VANILLA` macro
+    was called ``APPEND_PREF_VANILLA`` :index:`APPEND_PREF_VANILLA` in
     previous versions of HTCondor.
 
 In addition, you may provide default ``Rank`` expressions if your users
@@ -6336,13 +6091,6 @@ do not specify their own with:
     such that when undefined, the value used will be 0.0. When both
     ``DEFAULT_RANK`` and ``DEFAULT_RANK_VANILLA`` are defined, the value
     for ``DEFAULT_RANK_VANILLA`` is used for vanilla universe jobs.
-
-``DEFAULT_RANK_STANDARD`` :index:`DEFAULT_RANK_STANDARD`
-    Default rank for standard universe jobs. There is no default value,
-    such that when undefined, the value used will be 0.0. When both
-    ``DEFAULT_RANK`` and ``DEFAULT_RANK_STANDARD`` are defined, the
-    value for ``DEFAULT_RANK_STANDARD`` is used for standard universe
-    jobs.
 
 ``DEFAULT_IO_BUFFER_SIZE`` :index:`DEFAULT_IO_BUFFER_SIZE`
     HTCondor keeps a buffer of recently-used data for each file an
@@ -6373,9 +6121,8 @@ do not specify their own with:
     **output** :index:`output<single: output; submit commands>` or
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
     This can significantly decrease the amount of time required to
-    submit a large group of jobs. For standard universe, the setting is
-    ignored and file checks are always performed. The default value is
-    ``True``.
+    submit a large group of jobs.
+    The default value is ``True``.
 
 ``WARN_ON_UNUSED_SUBMIT_FILE_MACROS`` :index:`WARN_ON_UNUSED_SUBMIT_FILE_MACROS`
     A boolean variable that defaults to ``True``. When ``True``,

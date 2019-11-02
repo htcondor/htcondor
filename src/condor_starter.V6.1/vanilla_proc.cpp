@@ -312,12 +312,11 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() &&
-		    (Starter->condorPrivSepHelper() == NULL))
+		if (!can_switch_ids())
 		{
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		fi.group_ptr = &tracking_gid;
 	}

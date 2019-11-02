@@ -1095,16 +1095,6 @@ win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?
 
-[PRIVSEP_ENABLED]
-default=false
-type=bool
-tags=privsep,privsep_client.WINDOWS
-
-[PRIVSEP_SWITCHBOARD]
-default=
-type=string
-tags=privsep,privsep_client.UNIX
-
 [HAD_USE_PRIMARY]
 default=false
 type=bool
@@ -4291,6 +4281,12 @@ default=false
 type=bool
 tags=shadow
 restart=true
+
+[SHADOW_SKIP_DATAFLOW_JOBS]
+default=false
+type=bool
+tags=shadow,dataflow
+description=Skip dataflow jobs (output files exist, more recent than input files)?
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%

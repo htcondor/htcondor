@@ -54,7 +54,8 @@ class DagmanClassad {
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
 				int ready, int failed, int unready,
-				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats );
+				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
+				int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A MyString to receive the Owner value.
@@ -117,6 +118,9 @@ class DagmanClassad {
 			@return true if we got the requested attribute, false otherwise
 		*/
 	bool GetDagAttribute( const char *attrName, MyString &attrVal,
+				bool printWarning = true );
+
+	bool GetDagAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true );
 
 		// Whether this object is valid.

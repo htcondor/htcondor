@@ -457,9 +457,7 @@ if( NOT WINDOWS)
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
-    find_multiple ("dl" HAVE_LIBDL )
 	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
@@ -766,10 +764,6 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
-elseif(${OS_NAME} STREQUAL "AIX")
-	set(AIX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
@@ -1072,39 +1066,6 @@ else ()
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
 
-	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
-
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-
-		if (EXT_GLIBC_FOUND)
-		  if (${BIT_MODE} STREQUAL "32")
-			  set (DOES_COMPRESS_CKPT ON) # this is total crap
-		  endif(${BIT_MODE} STREQUAL "32")
-
-		  if (DOES_SAVE_SIGSTATE)
-			  set(STD_U_C_FLAGS -DSAVE_SIGSTATE)
-		  endif(DOES_SAVE_SIGSTATE)
-
-		  set (STD_UNIVERSE ON)
-
-		  # seriously I've sold my soul doing this dirty work
-		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
-		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
-		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-
-		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
-
-		  message( STATUS "** Standard Universe Enabled **")
-
-		else()
-			message( STATUS "** Standard Universe Disabled **")
-		endif()
-	else()
-		message( STATUS "** Standard Universe Disabled **")
-	endif()
-
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
@@ -1402,9 +1363,9 @@ else(MSVC)
 		endif()
 	endif(LINUX)
 
-	if( HAVE_LIBDL AND NOT BSD_UNIX )
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
-	endif()
+	if (LINUX)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+	endif(LINUX)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
@@ -1420,20 +1381,6 @@ else(MSVC)
 	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
-
-	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
-
-		if (NOT ${SYS_ARCH} MATCHES "64" )
-			add_definitions( -DI386=${SYS_ARCH} )
-		endif()
-
-		# set for maximum binary compatibility based on current machine arch.
-		check_c_compiler_flag(-mtune=generic c_mtune)
-		if (c_mtune)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=generic")
-		endif(c_mtune)
-
-	endif()
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 

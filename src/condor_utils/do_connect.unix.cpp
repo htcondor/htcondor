@@ -162,9 +162,7 @@ int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 			case EINPROGRESS:
 				break;
 			default:
-				if (set_fd_blocking(sockfd) < 0) {
-					return -1;
-				}
+				(void) set_fd_blocking(sockfd);
 				return -1;
 			}
 	}

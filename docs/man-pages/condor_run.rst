@@ -71,7 +71,7 @@ Options
 
  **-u** *universe*
     Submit the job under the specified universe. The default is vanilla.
-    While any universe may be specified, only the vanilla, standard,
+    While any universe may be specified, only the vanilla,
     scheduler, and local universes result in a submit description file
     that may work properly.
  **-a** *submitcmd*

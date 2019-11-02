@@ -56,7 +56,7 @@ endif(UNIX)
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.
-set( EXTRA_SRCS "${SAFE_OPEN_SRC};${ANALYSIS_UTIL_SRCS};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${CKPT_SERVER_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PRIVSEP_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
+set( EXTRA_SRCS "${SAFE_OPEN_SRC};${ANALYSIS_UTIL_SRCS};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${CKPT_SERVER_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
 if (UNIX)
 set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
@@ -155,10 +155,6 @@ endif()
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi condor_utils )
 
-if (HAVE_LIBDL)
-	set(APILIBDEP dl)
-endif()
-
 if (HAVE_OLD_SCANDIR)
 	add_definitions(-DHAVE_OLD_SCANDIR)
 endif()
@@ -168,7 +164,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 endif()
 
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 if (LIBUUID_FOUND)
 target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
@@ -176,7 +172,7 @@ endif()
 if (LINUX OR DARWIN)
 	condor_shared_lib( condorapi_shared "${ApiSrcs}" )
 	add_dependencies( condorapi_shared condor_utils )
-	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
+	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 

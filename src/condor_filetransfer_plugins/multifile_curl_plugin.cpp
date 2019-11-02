@@ -139,11 +139,16 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
     curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
 
-    if (m_speed_limit > 0) {
-        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
-    }
-    if (m_speed_time > 0) {
-        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
+    curl_version_info_data *libcurl_version = curl_version_info(CURLVERSION_NOW);
+    if (libcurl_version) {
+        if (libcurl_version->age > 0 && libcurl_version->version_num >= 0x072600) {
+            if (m_speed_limit > 0) {
+                curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
+            }
+            if (m_speed_time > 0) {
+                curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
+            }
+        }
     }
 
     // Provide default read / write callback functions; note these

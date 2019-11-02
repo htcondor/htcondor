@@ -728,6 +728,13 @@ void register_cleanup_reminder_timer()
 void PREFAST_NORETURN
 startd_exit() 
 {
+	// print resources into log.  we need to do this before we free them
+	if(param_boolean("STARTD_PRINT_ADS_ON_SHUTDOWN", false)) {
+		dprintf(D_ALWAYS, "*** BEGIN AD DUMP ***\n");
+		resmgr->walk(&Resource::dropAdInLogFile);
+		dprintf(D_ALWAYS, "*** END AD DUMP ***\n");
+	}
+
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
 		dprintf( D_ALWAYS, "Deleting cron job manager\n" );

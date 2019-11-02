@@ -39,7 +39,6 @@
 #include "access.h"
 #include "internet.h"
 #include "spooled_job_files.h"
-#include "../condor_ckpt_server/server_interface.h"
 #include "generic_query.h"
 #include "condor_query.h"
 #include "directory.h"
@@ -77,7 +76,6 @@
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
 #include "subsystem_info.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "authentication.h"
 #include "setenv.h"
 #include "classadHistory.h"
@@ -120,9 +118,6 @@ extern GridUniverseLogic* _gridlogic;
 
 extern "C"
 {
-/*	int SetCkptServerHost(const char *host);
-	int RemoveLocalOrRemoteFile(const char *, const char *);
-*/
 	int prio_compar(prio_rec*, prio_rec*);
 }
 
@@ -9014,28 +9009,6 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
-		if ( privsep_enabled() ) {
-			// If there is no available transferd for this job (and it 
-			// requires it), then start one and put the job back into the queue
-			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
-				if (! availableTransferd(cluster, proc) ) {
-					dprintf(D_ALWAYS, 
-						"Deferring job start until transferd is registered\n");
-
-					// stop the running of this job
-					mark_job_stopped( job_id );
-					RemoveShadowRecFromMrec(srec);
-					delete srec;
-				
-					// start up a transferd for this job.
-					startTransferd(cluster, proc);
-
-					continue;
-				}
-			}
-		}
-			
-
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
 		int universe = srec->universe;
@@ -9550,51 +9523,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	}
 
 	MyString argbuf;
-
-	// send the location of the transferd the shadow should use for
-	// this user. Due to the nasty method of command line argument parsing
-	// by the shadow, this should be first on the command line.
-	if ( privsep_enabled() && 
-			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
-	{
-		TransferDaemon *td = NULL;
-		switch( universe ) {
-			case CONDOR_UNIVERSE_VANILLA:
-			case CONDOR_UNIVERSE_JAVA:
-			case CONDOR_UNIVERSE_MPI:
-			case CONDOR_UNIVERSE_PARALLEL:
-			case CONDOR_UNIVERSE_VM:
-				if (! availableTransferd(job_id->cluster, job_id->proc, td) )
-				{
-					dprintf(D_ALWAYS,
-						"Scheduler::spawnShadow() Race condition hit. "
-						"Thought transferd was available and it wasn't. "
-						"stopping execution of job.\n");
-
-					mark_job_stopped(job_id);
-					if( FindSrecByProcID(*job_id) ) {
-						// we already added the srec to our tables..
-						delete_shadow_rec( srec );
-						srec = NULL;
-					}
-					free( shadow_path );
-					return;
-				}
-				args.AppendArg("--transferd");
-				args.AppendArg(td->get_sinful());
-				break;
-
-			case CONDOR_UNIVERSE_STANDARD:
-				/* no transferd for this universe */
-				break;
-
-		default:
-			EXCEPT( "StartJobHandler() does not support %d universe jobs",
-					universe );
-			break;
-
-		}
-	}
 
 	if ( sh_reads_file ) {
 		if( sh_is_dc ) { 
@@ -12945,25 +12873,10 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		ClassAd *job_ad = GetJobAd( job_id->cluster, job_id->proc );
 		this->calculateCronTabSchedule( job_ad, true );
 	}
-	
+
 	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%p )\n", pid,
 			 job_id );
 }
-
-#ifdef CLIPPED
-	// If clipped, we don't deal with the old ckpt server, so we stub it,
-	// thus we do not have to link in the ckpt_server_api.
-int 
-RemoveLocalOrRemoteFile(const char *, const char *, const char *)
-{
-	return 0;
-}
-int
-SetCkptServerHost(const char *)
-{
-	return 0;
-}
-#endif // of ifdef CLIPPED
 
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
@@ -12971,7 +12884,6 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	std::string	ckpt_name;
 	MyString	owner_buf;
 	MyString	server;
-	int		universe = CONDOR_UNIVERSE_STANDARD;
 
 		/* In order to remove from the checkpoint server, we need to know
 		 * the owner's name.  If not passed in, look it up now.
@@ -12985,29 +12897,6 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	}
 
 	ClassAd * ad = GetJobAd(cluster, proc);
-
-		/* Remove any checkpoint files.  If for some reason we do 
-		 * not know the owner, don't bother sending to the ckpt
-		 * server.
-		 */
-	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
-	if ( universe == CONDOR_UNIVERSE_STANDARD && owner ) {
-		SpooledJobFiles::getJobSpoolPath(ad, ckpt_name);
-
-		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
-							   server) == 0) {
-			SetCkptServerHost(server.Value());
-		} else {
-			SetCkptServerHost(NULL); // no ckpt on ckpt server
-		}
-
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
-
-		ckpt_name += ".tmp";
-
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
-	}
-
 	if(ad) {
 		SpooledJobFiles::removeJobSpoolDirectory(ad);
 		FreeJobAd(ad);

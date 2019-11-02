@@ -300,14 +300,11 @@ The available output data are as follows:
     a job has not yet produced a checkpoint, this information is not
     available.
  INPUT
-    (**-io** only) For standard universe, FileReadBytes; otherwise,
-    BytesRecvd.
+    (**-io** only) BytesRecvd.
  OUTPUT
-    (**-io** only) For standard universe, FileWriteBytes; otherwise,
-    BytesSent.
+    (**-io** only) BytesSent.
  RATE
-    (**-io** only) For standard universe, FileReadBytes+FileWriteBytes;
-    otherwise, BytesRecvd+BytesSent.
+    (**-io** only) BytesRecvd+BytesSent.
  MISC
     (**-io** only) JobUniverse.
  CPU_TIME
@@ -471,9 +468,12 @@ Options
  **-long**
     (output option) Display entire job ClassAds in long format (one
     attribute per line).
+ **-idle**
+    (output option) Get information about idle jobs. Note that this
+    option implies **-nobatch**.
  **-run**
     (output option) Get information about running jobs. Note that this
-    option has no effect unless used in conjunction with **-nobatch**.
+    option implies **-nobatch**.
  **-stream-results**
     (output option) Display results as jobs are fetched from the job
     queue rather than storing results in memory until all jobs have been
@@ -646,10 +646,6 @@ is based on instantaneous and local information. Therefore, there are
 some situations such as when several submitters are contending for
 resources, or if the pool is rapidly changing state which cannot be
 accurately diagnosed.
-
-Options **-goodput**, **-cputime**, and **-io** are most useful for
-standard universe jobs, since they rely on values computed when a job
-produces a checkpoint.
 
 It is possible to to hold jobs that are in the X state. To avoid this it
 is best to construct a **-constraint** *expression* that option

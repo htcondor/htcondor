@@ -4,7 +4,7 @@ Administrators' Manual
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
    introduction-admin-manual
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
@@ -14,7 +14,6 @@ Administrators' Manual
    policy-configuration
    security
    networking
-   checkpoint-server
    daemoncore
    monitoring
    high-availability

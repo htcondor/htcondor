@@ -41,33 +41,15 @@ Vanilla Universe
 
 :index:`vanilla<single: vanilla; universe>`
 
-The vanilla universe in HTCondor is intended for programs which cannot
-be successfully re-linked. Shell scripts are another case where the
-vanilla universe is useful. Unfortunately, jobs run under the vanilla
-universe cannot checkpoint or use remote system calls. This has
-unfortunate consequences for a job that is partially completed when the
-remote machine running a job must be returned to its owner. HTCondor has
-only two choices. It can suspend the job, hoping to complete it at a
-later time, or it can give up and restart the job from the beginning on
-another machine in the pool.
+The vanilla universe in HTCondor is intended for most programs.
+Shell scripts are another case where the vanilla universe is useful. 
 
-Since HTCondor's remote system call features cannot be used with the
-vanilla universe, access to the job's input and output files becomes a
-concern. One option is for HTCondor to rely on a shared file system,
+Access to the job's input and output files is a concern for vanilla
+universe jobs. One option is for HTCondor to rely on a shared file system,
 such as NFS or AFS. Alternatively, HTCondor has a mechanism for
 transferring files on behalf of the user. In this case, HTCondor will
 transfer any files needed by a job to the execution site, run the job,
 and transfer the output back to the submitting machine.
-
-Under Unix, HTCondor presumes a shared file system for vanilla jobs.
-However, if a shared file system is unavailable, a user can enable the
-HTCondor File Transfer mechanism. On Windows platforms, the default is
-to use the File Transfer mechanism. For details on running a job with a
-shared file system, see :ref:`users-manual/submitting-a-job:submitting jobs
-using a shared file system`. For details on using the
-HTCondor File Transfer mechanism, see 
-:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
-system: htcondor's file transfer mechanism`.
 
 Grid Universe
 '''''''''''''

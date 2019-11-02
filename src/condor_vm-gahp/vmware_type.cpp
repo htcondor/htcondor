@@ -30,7 +30,6 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "vmware_type.h"
-#include "../condor_privsep/condor_privsep.h"
 
 #define VMWARE_TMP_FILE "vmware_status.condor"
 #define VMWARE_TMP_TEMPLATE		"vmXXXXXX"
@@ -1090,19 +1089,6 @@ VMwareType::Start()
 			vmprintf(D_ALWAYS, "Failed to restart with checkpointed files\n");
 			vmprintf(D_ALWAYS, "So, we will try to create a new configuration file\n");
 
-#if !defined(WIN32)
-			if (privsep_enabled()) {
-				if (!privsep_chown_dir(get_condor_uid(),
-				                       job_user_uid,
-				                       workingdir.Value()))
-				{
-					m_result_msg = VMGAHP_ERR_CRITICAL;
-					return false;
-				}
-				m_file_owner = PRIV_CONDOR;
-			}
-#endif
-
 			deleteNonTransferredFiles();
 			m_configfile = "";
 			m_restart_with_ckpt = false;
@@ -1116,19 +1102,6 @@ VMwareType::Start()
 			// Keep going..
 		}
 	}
-
-#if !defined(WIN32)
-	if (privsep_enabled()) {
-		if (!privsep_chown_dir(job_user_uid,
-		                       get_condor_uid(),
-		                       workingdir.Value()))
-		{
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}
-		m_file_owner = PRIV_USER;
-	}
-#endif
 
 	if( m_need_snapshot ) {
 		if( Snapshot() == false ) {
@@ -1221,19 +1194,6 @@ bool
 VMwareType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Shutdown\n");
-
-#if !defined(WIN32)
-	if (privsep_enabled()) {
-		if (!privsep_chown_dir(get_condor_uid(),
-		                       job_user_uid,
-		                       workingdir.Value()))
-		{
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}
-		m_file_owner = PRIV_CONDOR;
-	}
-#endif
 
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {

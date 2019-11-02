@@ -72,12 +72,12 @@ void	init_params();
 void	init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
-void	check_uid_for_privsep();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen();
+void	run_preen();	 // timer handler
+int		run_preen_now(); // actually start preen if it is not already running.
 void	usage(const char* );
 void	main_shutdown_graceful();
 void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore state
@@ -125,6 +125,7 @@ int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
+static int dummyGlobal;
 
 // daemons in this list are used when DAEMON_LIST is not configured
 // all will added to the list of daemons that condor_on can use
@@ -651,8 +652,6 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
-		// Make sure if PrivSep is on we're not running as root
-	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
@@ -930,6 +929,7 @@ handle_agent_fetch_log (ReliSock* stream) {
 	return res;
 }
 
+
 int
 handle_subsys_command( int cmd, Stream* stream )
 {
@@ -947,6 +947,14 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
+
+	// for testing condor_on -preen is allowed, but preen is not really a daemon
+	// so we intercept it here and 
+	if (strcasecmp(subsys, "preen") == MATCH) {
+		free(subsys);
+		return run_preen_now();
+	}
+
 	subsys = strupr( subsys );
 	if( !(daemon = daemons.FindDaemon(subsys)) ) {
 		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
@@ -1650,8 +1658,8 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-void
-run_preen()
+int
+run_preen_now()
 {
 	char *args=NULL;
 	const char	*preen_base;
@@ -1660,11 +1668,13 @@ run_preen()
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 	if ( preen_pid > 0 ) {
-		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d)\n", preen_pid );
+		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d), ignoring command to run Preen.\n", preen_pid );
+		return FALSE;
 	}
 
 	if( FS_Preen == NULL ) {
-		return;
+		dprintf( D_ALWAYS, "WARNING: PREEN has no configured value, ignoring command to run Preen.\n" );
+		return FALSE;
 	}
 	preen_base = condor_basename( FS_Preen );
 	arglist.AppendArg(preen_base);
@@ -1682,8 +1692,11 @@ run_preen()
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
+	return TRUE;
 }
 
+// this is the preen timer callback
+void run_preen() { run_preen_now(); }
 
 void
 RestartMaster()
@@ -1836,14 +1849,14 @@ main( int argc, char **argv )
         if (pwbuf) {
             if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/run/condor", 0775) == 0) {
-                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
                 }
             }
             if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/lock/condor", 0775) == 0) {
-                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
                 }
             }
         }
@@ -2040,29 +2053,6 @@ void init_firewall_exceptions() {
 	if ( credd_image_path ) { free(credd_image_path); }	
 	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
 	if ( kbdd_image_path ) { free(kbdd_image_path); }
-#endif
-}
-
-void
-check_uid_for_privsep()
-{
-#if !defined(WIN32)
-	if (param_boolean("PRIVSEP_ENABLED", false) && (getuid() == 0)) {
-		uid_t condor_uid = get_condor_uid();
-		if (condor_uid == 0) {
-			EXCEPT("PRIVSEP_ENABLED set, but current UID is 0 "
-			           "and condor UID is also set to root");
-		}
-		dprintf(D_ALWAYS,
-		        "PRIVSEP_ENABLED set, but UID is 0; "
-		            "will drop to UID %u and restart\n",
-		        (unsigned)condor_uid);
-		daemons.CleanupBeforeRestart();
-		set_condor_priv_final();
-		daemons.ExecMaster();
-		EXCEPT("attempt to restart (via exec) failed (%s)",
-		       strerror(errno));
-	}
 #endif
 }
 

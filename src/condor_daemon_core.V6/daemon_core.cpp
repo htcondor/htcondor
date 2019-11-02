@@ -72,7 +72,6 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #include "condor_version.h"
 #include "setenv.h"
 #include "my_popen.h"
-#include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
 #include "process_control.WINDOWS.h"
@@ -221,6 +220,7 @@ void zz2printf(int debug_levels, KeyInfo *k) {
 */
 
 static int _condor_fast_exit = 0;
+static int dummyGlobal;
 
 void **curr_dataptr;
 void **curr_regdataptr;
@@ -4885,7 +4885,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
-	if (privsep_enabled() || param_boolean("GLEXEC_JOB", false)) {
+	if (param_boolean("GLEXEC_JOB", false)) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
 			ASSERT(m_proc_family != NULL);
 			bool ok =  m_proc_family->signal_process(pid, sig);
@@ -8544,13 +8544,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            int ret = write(errorpipe[1], &child_errno, sizeof(child_errno));
+            dummyGlobal = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
-			if (ret < 1) {
-				exit(4);
-			} else {
-				exit(4);
-			}
+			exit(4);
         }
 			// if we got this far, we know we don't need the errorpipe
 			// anymore, so we can close it now...

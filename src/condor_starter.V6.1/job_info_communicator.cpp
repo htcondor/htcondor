@@ -26,7 +26,6 @@
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "basename.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "condor_vm_universe_types.h"
 #include "hook_utils.h"
 #include "classad_visa.h"
