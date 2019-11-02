@@ -13,7 +13,7 @@ ranger::iterator ranger::insert(ranger::range r)
     // can use upper_bound instead to avoid this and leave them fractured
     iterator it_start = forest.lower_bound(r._start);
     iterator it = it_start;
-    while (it != forest.end() && it->_start <= r._end)  // '<' for no coalesce
+    while (it != end() && it->_start <= r._end)  // '<' for no coalesce
         ++it;
 
     iterator it_end = it;
@@ -58,7 +58,7 @@ ranger::iterator ranger::erase(ranger::range r)
 {
     iterator it_start = forest.upper_bound(r._start);
     iterator it = it_start;
-    while (it != forest.end() && it->_start < r._end)
+    while (it != end() && it->_start < r._end)
         ++it;
 
     iterator it_end = it;
@@ -90,7 +90,7 @@ std::pair<ranger::iterator, bool>
 ranger::find(value_type x) const
 {
     iterator it = forest.upper_bound(x);
-    return {it, it != forest.end() && it->_start <= x};
+    return {it, it != end() && it->_start <= x};
 }
 
 bool ranger::contains(value_type x) const
