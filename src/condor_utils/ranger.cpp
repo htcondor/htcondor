@@ -105,16 +105,40 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 }
 
 
+// specialize lower_bound / upper_bound based on forest type
+static inline std::set<ranger::range>::const_iterator
+lower_bounder(const std::set<ranger::range> &f, ranger::range rr)
+{
+    return f.lower_bound(rr);
+}
+
+static inline std::set<ranger::range>::const_iterator
+upper_bounder(const std::set<ranger::range> &f, ranger::range rr)
+{
+    return f.upper_bound(rr);
+}
+
+static inline std::vector<ranger::range>::const_iterator
+lower_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+{
+    return std::lower_bound(f.begin(), f.end(), rr);
+}
+
+static inline std::vector<ranger::range>::const_iterator
+upper_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+{
+    return std::upper_bound(f.begin(), f.end(), rr);
+}
 
 
 ranger::iterator ranger::lower_bound(value_type x) const
 {
-    return forest.lower_bound(x);
+    return lower_bounder(forest, x);
 }
 
 ranger::iterator ranger::upper_bound(value_type x) const
 {
-    return forest.upper_bound(x);
+    return upper_bounder(forest, x);
 }
 
 
