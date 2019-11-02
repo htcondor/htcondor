@@ -1424,8 +1424,7 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
-message(STATUS "LATEX: ${LATEX}")
-message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree

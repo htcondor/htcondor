@@ -554,7 +554,7 @@ sub parseOptions
 
         my(@condor_req_dirs) = qw( src );
         if ($runtype eq "build") {
-           if( ! defined($opt_skip_doc )) { push @condor_req_dirs, 'doc'; }
+           if( ! defined($opt_skip_doc )) { push @condor_req_dirs, 'docs'; }
            if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
         }
     	foreach my $subdir (@condor_req_dirs) {
