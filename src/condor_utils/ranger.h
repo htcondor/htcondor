@@ -18,6 +18,9 @@ struct ranger {
     iterator insert(range r);
     iterator erase(range r);
 
+    iterator lower_bound(value_type x) const;
+    iterator upper_bound(value_type x) const;
+
     std::pair<iterator, bool> find(value_type x) const;
 
     bool contains(value_type x) const;

@@ -11,7 +11,7 @@ ranger::iterator ranger::insert(ranger::range r)
 {
     // lower_bound here will coalesce an adjacent disjoint range;
     // can use upper_bound instead to avoid this and leave them fractured
-    iterator it_start = forest.lower_bound(r._start);
+    iterator it_start = lower_bound(r._start);
     iterator it = it_start;
     while (it != end() && it->_start <= r._end)  // '<' for no coalesce
         ++it;
@@ -56,7 +56,7 @@ bool shrink_single_edge(const ranger::range &rm, const ranger::range &at)
 
 ranger::iterator ranger::erase(ranger::range r)
 {
-    iterator it_start = forest.upper_bound(r._start);
+    iterator it_start = upper_bound(r._start);
     iterator it = it_start;
     while (it != end() && it->_start < r._end)
         ++it;
@@ -89,7 +89,7 @@ ranger::iterator ranger::erase(ranger::range r)
 std::pair<ranger::iterator, bool>
 ranger::find(value_type x) const
 {
-    iterator it = forest.upper_bound(x);
+    iterator it = upper_bound(x);
     return {it, it != end() && it->_start <= x};
 }
 
@@ -102,6 +102,19 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 {
     for (const range &rr : il)
         insert(rr);
+}
+
+
+
+
+ranger::iterator ranger::lower_bound(value_type x) const
+{
+    return forest.lower_bound(x);
+}
+
+ranger::iterator ranger::upper_bound(value_type x) const
+{
+    return forest.upper_bound(x);
 }
 
 
