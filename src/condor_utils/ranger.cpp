@@ -75,8 +75,10 @@ ranger::iterator ranger::erase(ranger::range r)
     range rr_back  = *it_back;
 
     iterator hint = forest.erase(it_start, it_end);
-    if (rr_start._start < r._start)
+    if (rr_start._start < r._start) {
         hint = forest.insert(hint, {rr_start._start, r._start});
+        ++hint;  // advance to erasure gap
+    }
 
     if (r._end < rr_back._end)
         hint = forest.insert(hint, {r._end, rr_back._end});
