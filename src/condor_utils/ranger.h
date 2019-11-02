@@ -8,9 +8,9 @@ typedef struct ranger range_mask;
 struct ranger {
     struct range;
     struct elements;
-    typedef int                 value_type;
-    typedef std::set<range>     set_type;
-    typedef set_type::const_iterator iterator;
+    typedef int                         value_type;
+    typedef std::set<range>             forest_type;
+    typedef forest_type::const_iterator iterator;
 
     ranger() {};
     ranger(const std::initializer_list<range> &il);
@@ -41,7 +41,7 @@ struct ranger {
 
     private:
     // the state of our ranger
-    set_type forest;
+    forest_type forest;
 };
 
 struct ranger::range {
