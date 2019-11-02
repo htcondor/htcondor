@@ -214,6 +214,7 @@ Source122: glibc-2.5-20061008T1257-x86_64-p0.tar.gz
 Source123: zlib-1.2.3.tar.gz
 %endif
 
+Patch1: old-sphinx.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -354,10 +355,15 @@ BuildRequires: systemd-units
 Requires: systemd
 %endif
 
-BuildRequires: transfig
-BuildRequires: latex2html
-# We don't build the manual (yet)
-#BuildRequires: texlive-epstopdf
+%if 0%{?rhel} == 6
+BuildRequires: python-sphinx10 python-sphinx_rtd_theme
+%else
+%ifarch %{ix86}
+BuildRequires: python-sphinx
+%else
+BuildRequires: python-sphinx python-sphinx_rtd_theme
+%endif
+%endif
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -823,6 +829,8 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+%patch1 -p1
+
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
 %endif
@@ -838,7 +846,11 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 # build man files
-make -C doc just-man-pages
+%if 0%{?rhel} == 6
+make -C docs SPHINXBUILD=sphinx-1.0-build man
+%else
+make -C docs man
+%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
@@ -1007,7 +1019,7 @@ populate %_libexecdir/condor %{buildroot}/usr/libexec/*
 
 # man pages go under %{_mandir}
 mkdir -p %{buildroot}/%{_mandir}
-mv %{buildroot}/usr/man/man1 %{buildroot}/%{_mandir}
+mv %{buildroot}/usr/man %{buildroot}/%{_mandir}/man1
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
