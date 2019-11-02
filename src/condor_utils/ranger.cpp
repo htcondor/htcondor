@@ -87,13 +87,13 @@ ranger::iterator ranger::erase(ranger::range r)
 }
 
 std::pair<ranger::iterator, bool>
-ranger::find(value_type x) const
+ranger::find(element_type x) const
 {
     iterator it = upper_bound(x);
     return {it, it != end() && it->_start <= x};
 }
 
-bool ranger::contains(value_type x) const
+bool ranger::contains(element_type x) const
 {
     return find(x).second;
 }
@@ -131,12 +131,12 @@ upper_bounder(const std::vector<ranger::range> &f, ranger::range rr)
 }
 
 
-ranger::iterator ranger::lower_bound(value_type x) const
+ranger::iterator ranger::lower_bound(element_type x) const
 {
     return lower_bounder(forest, x);
 }
 
-ranger::iterator ranger::upper_bound(value_type x) const
+ranger::iterator ranger::upper_bound(element_type x) const
 {
     return upper_bounder(forest, x);
 }
@@ -167,7 +167,7 @@ void ranger::elements::iterator::mk_valid()
     }
 }
 
-ranger::value_type ranger::elements::iterator::operator*()
+ranger::element_type ranger::elements::iterator::operator*()
 {
     mk_valid();
     return *rit;

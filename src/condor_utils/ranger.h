@@ -8,7 +8,7 @@ typedef struct ranger range_mask;
 struct ranger {
     struct range;
     struct elements;
-    typedef int                         value_type;
+    typedef int                         element_type;
     typedef std::set<range>             forest_type;
     typedef forest_type::const_iterator iterator;
 
@@ -18,12 +18,12 @@ struct ranger {
     iterator insert(range r);
     iterator erase(range r);
 
-    iterator lower_bound(value_type x) const;
-    iterator upper_bound(value_type x) const;
+    iterator lower_bound(element_type x) const;
+    iterator upper_bound(element_type x) const;
 
-    std::pair<iterator, bool> find(value_type x) const;
+    std::pair<iterator, bool> find(element_type x) const;
 
-    bool contains(value_type x) const;
+    bool contains(element_type x) const;
     bool empty()                const { return forest.empty(); }
     size_t size()               const { return forest.size(); }
     void clear()                      { forest.clear(); }
@@ -36,8 +36,8 @@ struct ranger {
     // first/final range/element; do not call if empty()
     inline const range &front()         const;
     inline const range &back()          const;
-    inline value_type   front_element() const;
-    inline value_type   back_element()  const;
+    inline element_type front_element() const;
+    inline element_type back_element()  const;
 
     private:
     // the state of our ranger
@@ -46,7 +46,7 @@ struct ranger {
 
 struct ranger::range {
     struct iterator;
-    typedef ranger::value_type value_type;
+    typedef ranger::element_type value_type;
 
     range(value_type e) : _start(0), _end(e) {}
     range(value_type s, value_type e) : _start(s), _end(e) {}
@@ -69,7 +69,7 @@ struct ranger::range {
 };
 
 struct ranger::range::iterator {
-    typedef ranger::value_type value_type;
+    typedef ranger::element_type value_type;
 
     iterator() : i(0) {}
     iterator(value_type n) : i(n) {}
@@ -91,6 +91,7 @@ struct ranger::range::iterator {
 
 struct ranger::elements {
     struct iterator;
+    typedef ranger::element_type value_type;
 
     elements(const ranger &r) : r(r) {}
 
@@ -133,10 +134,10 @@ ranger::iterator           ranger::begin()   const { return forest.begin(); }
 ranger::iterator           ranger::end()     const { return forest.end();   }
 
 const ranger::range &ranger::front()         const { return *begin();       }
-ranger::value_type   ranger::front_element() const { return front()._start; }
+ranger::element_type ranger::front_element() const { return front()._start; }
 
 const ranger::range &ranger::back()          const { return *--end();       }
-ranger::value_type   ranger::back_element()  const { return back().back();  }
+ranger::element_type ranger::back_element()  const { return back().back();  }
 
 
 /*  persist / load ranger objects
