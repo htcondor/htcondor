@@ -655,31 +655,7 @@ DockerAPI::unpause( const std::string & container, CondorError & err ) {
 	return run_simple_docker_command("unpause", container, default_timeout, err);
 }
 
-#if 0
-static uint64_t
-convertUnits(uint64_t raw, char *unit) {
-	switch (*unit) {
-	case 'B':
-		return raw;
-		break;
-	case 'K':
-		return raw * 1024;
-		break;
-	case 'M':
-		return raw * 1024 * 1024;
-		break;
-	case 'G':
-		return raw * 1024 * 1024 * 1024;
-		break;
-	case 'T':
-		return raw * 1024 * 1024 * 1024 * 1024;
-	default:
-		return -1;
-		break;
-	}
-}
-#endif
-
+#if !defined(WIN32)
 int
 sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -724,6 +700,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	close(uds);
 	return 0;
 }
+#endif /* WIN32 */
 
 
 	/* Find usage stats on a running container by talking
