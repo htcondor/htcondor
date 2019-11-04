@@ -416,15 +416,8 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  # Using -O2 crashes the compiler on ppc mac os x when compiling
-	  # condor_submit
-	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
-	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
-	  else()
-
-            add_definitions(-D_FORTIFY_SOURCE=2)
-	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
-	  endif()
+      add_definitions(-D_FORTIFY_SOURCE=2)
+	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
