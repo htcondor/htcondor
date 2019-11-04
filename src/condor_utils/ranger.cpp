@@ -11,9 +11,9 @@ ranger::iterator ranger::insert(ranger::range r)
 {
     // lower_bound here will coalesce an adjacent disjoint range;
     // can use upper_bound instead to avoid this and leave them fractured
-    iterator it_start = forest.lower_bound(r._start);
+    iterator it_start = lower_bound(r._start);
     iterator it = it_start;
-    while (it != forest.end() && it->_start <= r._end)  // '<' for no coalesce
+    while (it != end() && it->_start <= r._end)  // '<' for no coalesce
         ++it;
 
     iterator it_end = it;
@@ -39,26 +39,11 @@ ranger::iterator ranger::insert(ranger::range r)
     return forest.insert(hint, rr_new);
 }
 
-static
-bool shrink_single_edge(const ranger::range &rm, const ranger::range &at)
-{
-    bool erase_start = rm._start <= at._start;
-    bool erase_back  = at._end   <= rm._end;
-    if (erase_start ^ erase_back) {
-        if (erase_start)
-            at._start = rm._end;
-        else
-            at._end = rm._start;
-        return true;
-    }
-    return false;
-}
-
 ranger::iterator ranger::erase(ranger::range r)
 {
-    iterator it_start = forest.upper_bound(r._start);
+    iterator it_start = upper_bound(r._start);
     iterator it = it_start;
-    while (it != forest.end() && it->_start < r._end)
+    while (it != end() && it->_start < r._end)
         ++it;
 
     iterator it_end = it;
@@ -66,32 +51,35 @@ ranger::iterator ranger::erase(ranger::range r)
         return it_start;
 
     iterator it_back = --it;
+    range orig_back = *it_back;
 
-    // avoid erase+insert if only shrinking an edge of a range
-    if (it_start == it_back && shrink_single_edge(r, *it_start))
-        return it_start;
+    if (it_start->_start < r._start && r._end < it_start->_end) {
+        // split a single range
+        it_start->_end = r._start;
+        return forest.insert(it_end, range(r._end, orig_back._end));
+    }
 
-    range rr_start = *it_start;
-    range rr_back  = *it_back;
+    if (it_start->_start < r._start) {
+        it_start->_end = r._start;
+        ++it_start;
+    }
 
-    iterator hint = forest.erase(it_start, it_end);
-    if (rr_start._start < r._start)
-        hint = forest.insert(hint, {rr_start._start, r._start});
+    if (r._end < orig_back._end) {
+        it_back->_start = r._end;
+        --it_end;
+    }
 
-    if (r._end < rr_back._end)
-        hint = forest.insert(hint, {r._end, rr_back._end});
-
-    return hint;
+    return it_start == it_end ? it_end : forest.erase(it_start, it_end);
 }
 
 std::pair<ranger::iterator, bool>
-ranger::find(value_type x) const
+ranger::find(element_type x) const
 {
-    iterator it = forest.upper_bound(x);
-    return {it, it != forest.end() && it->_start <= x};
+    iterator it = upper_bound(x);
+    return {it, it != end() && it->_start <= x};
 }
 
-bool ranger::contains(value_type x) const
+bool ranger::contains(element_type x) const
 {
     return find(x).second;
 }
@@ -100,6 +88,43 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 {
     for (const range &rr : il)
         insert(rr);
+}
+
+
+// specialize lower_bound / upper_bound based on forest type
+static inline std::set<ranger::range>::const_iterator
+lower_bounder(const std::set<ranger::range> &f, ranger::range rr)
+{
+    return f.lower_bound(rr);
+}
+
+static inline std::set<ranger::range>::const_iterator
+upper_bounder(const std::set<ranger::range> &f, ranger::range rr)
+{
+    return f.upper_bound(rr);
+}
+
+static inline std::vector<ranger::range>::const_iterator
+lower_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+{
+    return std::lower_bound(f.begin(), f.end(), rr);
+}
+
+static inline std::vector<ranger::range>::const_iterator
+upper_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+{
+    return std::upper_bound(f.begin(), f.end(), rr);
+}
+
+
+ranger::iterator ranger::lower_bound(element_type x) const
+{
+    return lower_bounder(forest, x);
+}
+
+ranger::iterator ranger::upper_bound(element_type x) const
+{
+    return upper_bounder(forest, x);
 }
 
 
@@ -128,7 +153,7 @@ void ranger::elements::iterator::mk_valid()
     }
 }
 
-ranger::value_type ranger::elements::iterator::operator*()
+ranger::element_type ranger::elements::iterator::operator*()
 {
     mk_valid();
     return *rit;
