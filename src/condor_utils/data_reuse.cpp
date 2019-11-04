@@ -572,7 +572,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	}
 	auto retval = rename(&dest_tmp_fname[0], dest_fname.c_str());
 	if (-1 == retval) {
-		err.pushf("DataReuse", errno, "Failed to rename temp reuse file %s to final filename %s: %s.", &dest_tmp_fname[0], dest_fname.c_str(), strerror(errno));
+		err.pushf("DataReuse", errno, "Failed to rename temp reuse file %s to final filename %s: %s.", dest_tmp_fname.data(), dest_fname.c_str(), strerror(errno));
 		unlink(&dest_tmp_fname[0]);
 		return false;
 	}
