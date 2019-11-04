@@ -20,16 +20,15 @@ ranger::iterator ranger::insert(ranger::range r)
     if (it_start == it_end)
         return forest.insert(it_end, r);
 
-    if (it_start->contains(r))
-        return it_start;
-
     iterator it_back = --it;
-    range rr_new = { std::min(it_start->_start, r._start),
-                     std::max(it_back->_end, r._end) };
+    element_type min_start = std::min(it_start->_start, r._start);
 
     // update back of affected range in-place
-    it_back->_start = rr_new._start;
-    it_back->_end = rr_new._end;
+    if (min_start < it_back->_start)
+        it_back->_start = min_start;
+
+    if (it_back->_end < r._end)
+        it_back->_end = r._end;
 
     return it_start == it_back ? it_back : forest.erase(it_start, it_back);
 }
