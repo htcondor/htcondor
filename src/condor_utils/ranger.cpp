@@ -34,9 +34,10 @@ ranger::iterator ranger::insert(ranger::range r)
         return it_start;
     }
 
-    iterator hint = forest.erase(it_start, it_end);
+    it_back->_start = rr_new._start;
+    it_back->_end = rr_new._end;
 
-    return forest.insert(hint, rr_new);
+    return forest.erase(it_start, it_back);
 }
 
 ranger::iterator ranger::erase(ranger::range r)
