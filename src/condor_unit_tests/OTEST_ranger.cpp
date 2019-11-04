@@ -132,6 +132,82 @@ void driver_register_all2<TEST_TABLE2_COUNT>(FunctionDriver &driver)
 }
 
 
+struct testcase3 {
+    const char *input;
+    int element;
+    bool expected_result;
+};
+
+// test cases for contains (element)
+const testcase3 test_table3[] = {
+    {"",                   123,  false},
+    {"10-20",              123,  false},
+    {"10-20",                5,  false},
+    {"10-20",                9,  false},
+    {"10-20",               10,  true },
+    {"10-20",               11,  true },
+    {"10-20",               19,  true },
+    {"10-20",               20,  true },
+    {"10-20",               21,  false},
+    {"10-20",               22,  false},
+    {"10-20;30-40",        123,  false},
+    {"10-20;30-40",          5,  false},
+    {"10-20;30-40",          9,  false},
+    {"10-20;30-40",         10,  true },
+    {"10-20;30-40",         11,  true },
+    {"10-20;30-40",         19,  true },
+    {"10-20;30-40",         20,  true },
+    {"10-20;30-40",         21,  false},
+    {"10-20;30-40",         22,  false},
+    {"10-20;30-40",         29,  false},
+    {"10-20;30-40",         30,  true },
+    {"10-20;30-40",         31,  true },
+    {"10-20;30-40",         39,  true },
+    {"10-20;30-40",         40,  true },
+    {"10-20;30-40",         41,  false},
+    {"10-20;30-40",         42,  false},
+    {"10-20;30-40;50-60",  123,  false},
+    {"10-20;30-40;50-60",    5,  false},
+    {"10-20;30-40;50-60",    9,  false},
+    {"10-20;30-40;50-60",   10,  true },
+    {"10-20;30-40;50-60",   11,  true },
+    {"10-20;30-40;50-60",   19,  true },
+    {"10-20;30-40;50-60",   20,  true },
+    {"10-20;30-40;50-60",   21,  false},
+    {"10-20;30-40;50-60",   22,  false},
+    {"10-20;30-40;50-60",   29,  false},
+    {"10-20;30-40;50-60",   30,  true },
+    {"10-20;30-40;50-60",   31,  true },
+    {"10-20;30-40;50-60",   39,  true },
+    {"10-20;30-40;50-60",   40,  true },
+    {"10-20;30-40;50-60",   41,  false},
+    {"10-20;30-40;50-60",   42,  false},
+    {"10-20;22-30",         19,  true },
+    {"10-20;22-30",         20,  true },
+    {"10-20;22-30",         21,  false},
+    {"10-20;22-30",         22,  true },
+    {"10-20;22-30",         23,  true }
+};
+
+static const int TEST_TABLE3_COUNT = sizeof test_table3 / sizeof test_table3[0];
+
+template <int N>
+static bool test_ranger_misc_contains_tmpl();
+
+template <int N>
+static void driver_register_all3(FunctionDriver &driver)
+{
+    driver.register_function(test_ranger_misc_contains_tmpl<N>);
+    driver_register_all3<N+1>(driver);
+}
+
+template <>
+void driver_register_all3<TEST_TABLE3_COUNT>(FunctionDriver &driver)
+{
+    (void) driver;
+}
+
+
 bool OTEST_ranger(void) {
     emit_object("ranger");
     emit_comment("This module contains functions for manipulating range "
@@ -140,6 +216,7 @@ bool OTEST_ranger(void) {
     FunctionDriver driver;
     driver_register_all<0>(driver);
     driver_register_all2<0>(driver);
+    driver_register_all3<0>(driver);
 
     return driver.do_all_functions();
 }
@@ -270,5 +347,53 @@ template <int N>
 static bool test_ranger_misc_load_persist_slice_tmpl()
 {
     return test_ranger_misc_load_persist_slice(N);
+}
+
+
+//////////////////
+
+
+static const char *boolstr(bool truth)
+{
+    return truth ? "true" : "false";
+}
+
+// test a row in the test case table (contains)
+
+static bool test_ranger_misc_contains(int N)
+{
+    char elementbuf[64];
+    const testcase3 &t = test_table3[N];
+
+    sprintf(elementbuf, "%d", t.element);
+
+    emit_test("Test misc ranger contains element");
+    emit_input_header();
+    emit_param("Input", t.input);
+    emit_param("Element", elementbuf);
+
+    ranger r;
+    if (load(r, t.input)) {
+        emit_alert("Unexpected error loading range spec for contains");
+        FAIL;
+    }
+    bool contains_element = r.contains(t.element);
+
+    emit_output_expected_header();
+    emit_retval(boolstr(t.expected_result));
+
+    emit_output_actual_header();
+    emit_retval(boolstr(contains_element));
+
+    if (contains_element != t.expected_result)
+        FAIL;
+    PASS;
+}
+
+
+template <int N>
+static bool test_ranger_misc_contains_tmpl()
+{
+    return test_ranger_misc_contains(N);
 }
 
