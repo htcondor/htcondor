@@ -60,7 +60,7 @@ int DockerAPI::pruneContainers() {
 				dprintf( D_ALWAYS | D_FAILURE, "Declaring a hung docker\n");
 				return DockerAPI::docker_hung;
 			}
-		} 
+		}
 	}
 	return 0;
 }
@@ -368,7 +368,7 @@ int DockerAPI::startContainer(
 	return 0;
 }
 
-int 
+int
 DockerAPI::execInContainer( const std::string &containerName,
 			    const std::string &command,
 			    const ArgList     &arguments,
@@ -381,7 +381,7 @@ DockerAPI::execInContainer( const std::string &containerName,
 	if ( ! add_docker_arg(execArgs))
 		return -1;
 	execArgs.AppendArg("exec");
-	execArgs.AppendArg("-ti"); 
+	execArgs.AppendArg("-ti");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
@@ -451,7 +451,7 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 			dprintf( D_ALWAYS, "Cannot do Docker offline check, DOCKER is not properly set\n");
 			return DockerAPI::docker_hung;
 		}
-		
+
 		infoArgs.AppendArg( "info" );
 		MyString displayString;
 		infoArgs.GetArgsStringForLogging( & displayString );
@@ -496,7 +496,6 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	// Read from Docker's combined output and error streams.
-#if 1
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	MyPopenTimer pgm;
 	if (pgm.start_program( rmArgs, true, NULL, false ) < 0) {
@@ -526,38 +525,6 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 		// Didn't get back the result I expected, report the error and check to see if docker is hung.
 		return check_if_docker_offline(pgm, "Docker remove", -4);
 	}
-#else
-	FILE * dockerResults = my_popen( rmArgs, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	// On a success, Docker writes the containerID back out.
-	char buffer[1024];
-	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
-		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
-		} else {
-			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-		}
-		my_pclose( dockerResults );
-		return -3;
-	}
-
-	int length = strlen( buffer );
-	if( length < 1 || strncmp( buffer, containerID.c_str(), length - 1 ) != 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Docker remove failed, printing first few lines of output.\n" );
-		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		while( NULL != fgets( buffer, 1024, dockerResults ) ) {
-			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		}
-		my_pclose( dockerResults );
-		return -4;
-	}
-
-	my_pclose( dockerResults );
-#endif
 	return 0;
 }
 
@@ -565,7 +532,7 @@ int
 DockerAPI::rmi(const std::string &image, CondorError &err) {
 		// First, try to remove the named image
 	run_simple_docker_command("rmi", image, default_timeout, err, true);
-		
+
 		// That may have succeed or failed.  It could have
 		// failed if the image doesn't exist (anymore), or
 		// if someone else deleted it outside of condor.
@@ -583,7 +550,6 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	args.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
-#if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program(args, true, NULL, false) < 0) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
@@ -600,33 +566,6 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	}
 
 	return pgm.output_size() > 0;
-#else
-	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	char buffer[1024];
-	std::vector< std::string > output;
-	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
-		size_t end = strlen(buffer);
-		if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
-		output.push_back( buffer );
-	}
-
-	int exitCode = my_pclose( dockerResults );
-	if( exitCode != 0 ) {
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, output[0].c_str() );
-		return -3;
-	}
-
-	if (output.size() == 0) {
-		return 0;
-	} else {
-		return 1;
-	}
-#endif
 }
 
 
@@ -790,7 +729,6 @@ int DockerAPI::detect( CondorError & err ) {
 	infoArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
-#if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program(infoArgs, true, NULL, false) < 0) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
@@ -815,32 +753,6 @@ int DockerAPI::detect( CondorError & err ) {
 		} while (line.readLine(pgm.output(), false));
 	}
 
-#else
-	FILE * dockerResults = my_popen( infoArgs, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	// Even if we don't care about the success output, the failure output
-	// can be handy for debugging...
-	char buffer[1024];
-	std::vector< std::string > output;
-	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
-		size_t end = strlen(buffer);
-		if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
-		output.push_back( buffer );
-	}
-	for( unsigned i = 0; i < output.size(); ++i ) {
-		dprintf( D_FULLDEBUG, "[docker info] %s\n", output[i].c_str() );
-	}
-
-	int exitCode = my_pclose( dockerResults );
-	if( exitCode != 0 ) {
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, output[0].c_str() );
-		return -3;
-	}
-#endif
 	return 0;
 }
 
@@ -858,7 +770,6 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	versionArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
-#if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program(versionArgs, false, NULL, false) < 0) {
 		// treat 'file not found' as not really error
@@ -906,44 +817,6 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 
 	version = line.c_str();
 
-#else
-	FILE * dockerResults = my_popen( versionArgs, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	char buffer[1024];
-	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
-		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
-		} else {
-			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-		}
-		my_pclose( dockerResults );
-		return -3;
-	}
-
-	if( NULL != fgets( buffer, 1024, dockerResults ) ) {
-		if( strstr( buffer, "Jansens" ) != NULL ) {
-			dprintf( D_ALWAYS | D_FAILURE, "The DOCKER configuration setting appears to point to OpenBox's docker.  If you want to use Docker.IO, please set DOCKER appropriately in your configuration.\n" );
-		} else {
-			dprintf( D_ALWAYS | D_FAILURE, "Read more than one line (or a very long line) from '%s', which we think means it's not Docker.  The (first line of the) trailing text was '%s'.\n", displayString.c_str(), buffer );
-		}
-		my_pclose( dockerResults );
-		return -5;
-	}
-
-	int exitCode = my_pclose( dockerResults );
-	if( exitCode != 0 ) {
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, buffer );
-		return -4;
-	}
-
-	size_t end = strlen(buffer);
-	if (end > 0 && buffer[end-1] == '\n') { buffer[end-1] = '\0'; }
-	version = buffer;
-#endif
 	sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
 	return 0;
 }
@@ -979,7 +852,6 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	inspectArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-#if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program(inspectArgs, true, NULL, false) < 0) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
@@ -1014,7 +886,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 			} else {
 				correctOutput[i] = line.c_str();
 			}
-			std::string::iterator first = 
+			std::string::iterator first =
 				std::find(correctOutput[i].begin(),
 					correctOutput[i].end(),
 					'\"');
@@ -1028,33 +900,6 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 			++i;
 		}
 	}
-#else
-	FILE * dockerResults = my_popen( inspectArgs, "r", 1 , 0, false);
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to run '%s'.\n", displayString.c_str() );
-		return -6;
-	}
-
-	// If the output isn't exactly formatElements.number() lines long,
-	// something has gone wrong and we'll at least be able to print out
-	// the error message(s).
-	char buffer[1024];
-	std::vector<std::string> correctOutput(formatElements.number());
-	for( int i = 0; i < formatElements.number(); ++i ) {
-		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
-			correctOutput[i] = buffer;
-			std::string::iterator first = 
-				std::find(correctOutput[i].begin(),
-					correctOutput[i].end(),
-					'\"');
-			if (first != correctOutput[i].end()) {
-				std::replace(++first,
-					-- --correctOutput[i].end(), '\"','\'');
-			}
-		}
-	}
-	my_pclose( dockerResults );
-#endif
 
 	int attrCount = 0;
 	for( int i = 0; i < formatElements.number(); ++i ) {
@@ -1151,7 +996,6 @@ run_docker_command(const ArgList & a, const std::string &container, int timeout,
   args.GetArgsStringForLogging( & displayString );
   dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-#if 1
 	MyPopenTimer pgm;
 	if (pgm.start_program( args, true, NULL, false ) < 0) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
@@ -1187,42 +1031,6 @@ run_docker_command(const ArgList & a, const std::string &container, int timeout,
 		}
 		return -4;
 	}
-
-#else
-  // Read from Docker's combined output and error streams.
-  FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
-  if( dockerResults == NULL ) {
-    dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-    return -2;
-  }
-
-  // On a success, Docker writes the containerID back out.
-  char buffer[1024];
-  if( NULL == fgets( buffer, 1024, dockerResults ) ) {
-    if( errno ) {
-      dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
-    } else {
-      dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-    }
-    my_pclose( dockerResults );
-    return -3;
-  }
-
-  size_t length = strlen( buffer );
-  if (!ignore_output) {
-    if( length < 1 || strncmp( buffer, container.c_str(), length - 1 ) != 0 ) {
-      dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str() );
-      dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-      while( NULL != fgets( buffer, 1024, dockerResults ) ) {
-	dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-      }
-      my_pclose( dockerResults );
-      return -4;
-    }
-  }
-
-  my_pclose( dockerResults );
-#endif
   return 0;
 }
 
@@ -1233,12 +1041,12 @@ run_simple_docker_command(const std::string &command, const std::string &contain
     return run_docker_command(args, container, timeout, err, ignore_output);
 }
 
-static int 
+static int
 gc_image(const std::string & image) {
 
   std::list<std::string> images;
   std::string imageFilename;
-  
+
   int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 8);
   cache_size--;
   if (cache_size < 0) cache_size = 0;
@@ -1248,7 +1056,7 @@ gc_image(const std::string & image) {
     ASSERT(false);
   }
 
-  
+
   TemporaryPrivSentry sentry(PRIV_ROOT);
   imageFilename += "/.startd_docker_images";
 
@@ -1270,7 +1078,7 @@ gc_image(const std::string & image) {
       if (strlen(existingImage) > 1) {
 	existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
       } else {
-	continue; // zero length image name, skip		
+	continue; // zero length image name, skip
       }
       std::string tmp(existingImage);
       //
@@ -1330,13 +1138,13 @@ gc_image(const std::string & image) {
   return 0;
 }
 
-std::string 
+std::string
 makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	std::string hostname;
 
 	std::string owner("unknown");
 	jobAd->LookupString(ATTR_OWNER, owner);
-	
+
 	hostname += owner;
 
 	int cluster = 1;
@@ -1357,7 +1165,7 @@ int
 DockerAPI::getServicePorts( const std::string & container,
   const ClassAd & jobAd, ClassAd & serviceAd ) {
 #if defined(WIN32)
-	return -1
+	return -1;
 #else
 	std::string request, response;
 	formatstr( request, "GET /containers/%s/json HTTP/1.0\r\n\r\n",
