@@ -24,9 +24,9 @@ struct ranger {
     std::pair<iterator, bool> find(element_type x) const;
 
     bool contains(element_type x) const;
-    bool empty()                const { return forest.empty(); }
-    size_t size()               const { return forest.size(); }
-    void clear()                      { forest.clear(); }
+    bool empty()                  const { return forest.empty(); }
+    size_t size()                 const { return forest.size(); }
+    void clear()                        { forest.clear(); }
 
     inline iterator begin() const;
     inline iterator end()   const;
