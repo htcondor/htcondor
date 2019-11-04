@@ -27,17 +27,11 @@ ranger::iterator ranger::insert(ranger::range r)
     range rr_new = { std::min(it_start->_start, r._start),
                      std::max(it_back->_end, r._end) };
 
-    // avoid erase+insert if only expanding a range
-    if (it_start == it_back) {
-        it_start->_start = rr_new._start;
-        it_start->_end = rr_new._end;
-        return it_start;
-    }
-
+    // update back of affected range in-place
     it_back->_start = rr_new._start;
     it_back->_end = rr_new._end;
 
-    return forest.erase(it_start, it_back);
+    return it_start == it_back ? it_back : forest.erase(it_start, it_back);
 }
 
 ranger::iterator ranger::erase(ranger::range r)
