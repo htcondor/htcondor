@@ -51,12 +51,12 @@ ranger::iterator ranger::erase(ranger::range r)
         return it_start;
 
     iterator it_back = --it;
-    range rr_back = *it_back;
+    range orig_back = *it_back;
 
     if (it_start->_start < r._start && r._end < it_start->_end) {
         // split a single range
         it_start->_end = r._start;
-        return forest.insert(it_end, range(r._end, rr_back._end));
+        return forest.insert(it_end, range(r._end, orig_back._end));
     }
 
     if (it_start->_start < r._start) {
@@ -64,7 +64,7 @@ ranger::iterator ranger::erase(ranger::range r)
         ++it_start;
     }
 
-    if (r._end < rr_back._end) {
+    if (r._end < orig_back._end) {
         it_back->_start = r._end;
         --it_end;
     }
