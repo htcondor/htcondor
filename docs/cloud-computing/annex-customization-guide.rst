@@ -1,8 +1,8 @@
 HTCondor Annex Customization Guide
 ==================================
 
-Aside from the configuration macros (see the 
-:doc:`/cloud-computing/annex-configuration` section), the major way to 
+Aside from the configuration macros (see the
+:doc:`/cloud-computing/annex-configuration` section), the major way to
 ustomize *condor_annex* is my customizing the default disk image. Because
 the implementation of *condor_annex* varies from service to service, and that
 implementation determines the constraints on the disk image, the this section
@@ -137,15 +137,4 @@ this firewall rule is added during the boot sequence, it will be in
 place before HTCondor can start any user jobs, and should therefore be
 effective in preventing access to the instance's credentials by normal
 users or their jobs.
-
-Azure
------
-
-Not implemented as of v8.7.8.
-
-Google Cloud Platform
----------------------
-
-Not implemented as of v8.7.8.
-
 

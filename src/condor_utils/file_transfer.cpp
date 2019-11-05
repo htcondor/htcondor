@@ -51,6 +51,8 @@
 #include <fstream>
 #include <algorithm>
 #include <numeric>
+#include <sstream>
+#include <string>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -761,47 +763,45 @@ bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	bool is_dataflow = false;
-	char *iwd = NULL;
-	char *input_files = NULL;
-	char *output_files = NULL;
-	const char* delimiters = ",";
 	std::set<int> input_timestamps;
 	std::set<int> output_timestamps;
+	std::string iwd;
+	std::string input_files;
+	std::string output_files;
+	std::string token;
 	struct stat file_stat;
 
 	// Lookup the working directory
-	job_ad->LookupString( ATTR_JOB_IWD, &iwd );
+	job_ad->LookupString( ATTR_JOB_IWD, iwd );
 
 	// Parse the list of input files
-	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, &input_files );
-	char* token = strtok( input_files, delimiters );
-	while ( token ) {
+	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files );
+	std::stringstream is( input_files );
+	while ( getline( is, token, ',' ) ) {
 		// Skip any file path that looks like a URL or transfer plugin related
-		if ( strstr( token, "://" ) == NULL ) {
+		if ( token.find( "://" ) == std::string::npos ) {
 			// Stat each file. Add the last-modified timestamp to set of timestamps.
-			std::string input_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
+			std::string input_filename = iwd + DIR_DELIM_CHAR + token;
 			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
 				input_timestamps.insert( file_stat.st_mtime );
 			}
 		}
-		token = strtok( NULL, delimiters );
 	}
 
 	// Parse the list of output files
-	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &output_files );
-	token = strtok( output_files, delimiters );
-    while ( token ) {
+	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
+	std::stringstream os( output_files );
+	while ( getline( os, token, ',' ) ) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
-		std::string output_filename = std::string( iwd ) + DIR_DELIM_CHAR + std::string( token );
+		std::string output_filename = iwd + DIR_DELIM_CHAR + token;
 		if ( stat( output_filename.c_str(), &file_stat ) == 0 ) {
 			output_timestamps.insert( file_stat.st_mtime );
 		}
 		else {
-			// If we were unable to stat this output file, assume it doesn't
-			// exist, and hence this job is not a dataflow job.
+			// Failure to stat this output file suggests the file doesn't exist.
+			// A job must have all declared outputs to be a dataflow job. Abort.
 			return false;
 		}
-		token = strtok( NULL, delimiters );
 	}
 
 	// If the oldest output file is more recent than the newest input files,

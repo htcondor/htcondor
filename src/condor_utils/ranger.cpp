@@ -20,23 +20,17 @@ ranger::iterator ranger::insert(ranger::range r)
     if (it_start == it_end)
         return forest.insert(it_end, r);
 
-    if (it_start->contains(r))
-        return it_start;
-
     iterator it_back = --it;
-    range rr_new = { std::min(it_start->_start, r._start),
-                     std::max(it_back->_end, r._end) };
+    element_type min_start = std::min(it_start->_start, r._start);
 
-    // avoid erase+insert if only expanding a range
-    if (it_start == it_back) {
-        it_start->_start = rr_new._start;
-        it_start->_end = rr_new._end;
-        return it_start;
-    }
+    // update back of affected range in-place
+    if (min_start < it_back->_start)
+        it_back->_start = min_start;
 
-    iterator hint = forest.erase(it_start, it_end);
+    if (it_back->_end < r._end)
+        it_back->_end = r._end;
 
-    return forest.insert(hint, rr_new);
+    return it_start == it_back ? it_back : forest.erase(it_start, it_back);
 }
 
 ranger::iterator ranger::erase(ranger::range r)
@@ -91,7 +85,7 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 }
 
 
-// specialize lower_bound / upper_bound based on forest type
+// specialize for std::set containers to use std::set::lower_bound
 static inline std::set<ranger::range>::const_iterator
 lower_bounder(const std::set<ranger::range> &f, ranger::range rr)
 {
@@ -104,14 +98,15 @@ upper_bounder(const std::set<ranger::range> &f, ranger::range rr)
     return f.upper_bound(rr);
 }
 
-static inline std::vector<ranger::range>::const_iterator
-lower_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+// generic containers (other than std::set) use std::lower_bound
+template <class C> static inline typename C::const_iterator
+lower_bounder(const C &f, ranger::range rr)
 {
     return std::lower_bound(f.begin(), f.end(), rr);
 }
 
-static inline std::vector<ranger::range>::const_iterator
-upper_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+template <class C> static inline typename C::const_iterator
+upper_bounder(const C &f, ranger::range rr)
 {
     return std::upper_bound(f.begin(), f.end(), rr);
 }

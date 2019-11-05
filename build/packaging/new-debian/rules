@@ -70,12 +70,12 @@ override_dh_shlibdeps:
 
 doc/build:
 	mkdir -p $@
-	# Need a more recent version htlatex for this
+	# TODO: Build the manual now that we are using Sphinx
 	# $(MAKE) -C doc ref.html
 	# mv doc/ref.html $@/html
-	$(MAKE) -C doc just-man-pages
+	$(MAKE) -C docs man
 	mkdir -p $@/man
-	mv doc/man/man1/* $@/man
+	mv docs/_build/man/* $@/man
 
 
 override_dh_auto_install:
@@ -113,7 +113,7 @@ override_dh_auto_clean:
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
 	# docs
-	$(MAKE) -C doc clean
+	$(MAKE) -C docs clean
 	-rm -f doc/condor-*-Manual.tar
 	-rm -rf doc/just-man-pages
 	-rm -rf doc/build

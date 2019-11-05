@@ -44,6 +44,9 @@ Release Notes:
 - `DAGMAN_USE_JOIN_NODES` is now on by default.
   :ticket:`7271`
 
+- The Python bindings are now packaged as extendable modules.
+  :ticket:`6907`
+
 New Features:
 
 - HTCondor now supports secure download and upload to and from S3.  See
@@ -117,9 +120,32 @@ New Features:
   sleep.
   :ticket:`7273`
 
+- Reduced the memory needed for *condor_dagman* to load a Dag that has a large number
+  of PARENT and CHILD statements.
+  :ticket:`7170`
+
 - `SciTokens <https://scitokens.org>`_ support is now available on
   Enterprise Linux 7 platforms.
   :ticket:`7248`
+
+- Added a new multifile transfer plugin for downloading files from
+  Microsoft OneDrive user accounts. This supports URLs like
+  "onedrive://path/to/file" and using the plugin requires the admin
+  configure the *condor_credd* to allow users to obtain Microsoft OneDrive
+  tokens and requires the user request Microsoft OneDrive tokens in their
+  submit file. :ticket:`7171`
+
+- Externally-issued SciTokens can be exchanged for an equivalent HTCondor-issued
+  token, enabling authorization flows in some cases where SciTokens could
+  not otherwise be used (such as when the remote daemon has no host certificate).
+  :ticket:`7281`
+
+- The *condor_schedd* now keeps track of which submitters it has advertised to
+  flocked pools.  The *condor_schedd* will only honor matchingmaking requests
+  from flocked pool for submitters it did not advertise to the flock pool.  This
+  new logic only applies to auto-created authorizations (introduced in 8.9.3)
+  and not NEGOTIATOR-level authorizations setup by pool administrators.
+  :ticket:`7100`
 
 Bugs Fixed:
 
@@ -167,6 +193,12 @@ Bugs Fixed:
 - Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
   timeout caused 100% CPU utilization due to an old libcurl bug.
   :ticket:`7316`
+
+- The Condor Connection Broker (CCB) will allow daemons to register at the
+  ``ADVERTISE_STARTD``, ``ADVERTISE_SCHEDD``, and ``ADVERTISE_MASTER`` authorization
+  level.  This reduces the minimum authorization needed by daemons that are located
+  behind NATs.
+  :ticket:`7225`
 
 Version 8.9.3
 -------------
