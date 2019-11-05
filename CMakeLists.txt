@@ -130,29 +130,28 @@ add_subdirectory (bindings/python)
 # ideally one would transform the building of the docs to cmake or a script
 
 # logic here to support old nmi builds
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 
-	if (NOT WANT_MAN_PAGES OR ${LATEX} STREQUAL "LATEX-NOTFOUND" OR ${LATEX2HTML} STREQUAL "LATEX2HTML-NOTFOUND")
+	if (NOT WANT_MAN_PAGES OR ${SPHINXBUILD} STREQUAL "SPHINXBUILD-NOTFOUND")
 		message(STATUS "NOTE: Skipping man-pages")
 	else()
 		
 		message(STATUS "NOTE: Will try building man-pages")
 		# NOTE: deps are not configured to detect file changes.
-		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
+		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1
 						COMMAND make
-						ARGS just-man-pages
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
-						#DEPENDS )
+						ARGS SPHINXBUILD=${SPHINXBUILD} man
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs )
 
-		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1 )
+		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1 )
 		
-		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
+		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
 	endif()
 
 else()
 	message(STATUS "NOTE: Will install prebuilt man-pages")
 	#Use trailing slash; otherwise, it will be C_MAN/man
-	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
+	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
 endif()
 
 ##########################################################################

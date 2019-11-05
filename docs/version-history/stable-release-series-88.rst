@@ -34,6 +34,14 @@ Release Notes:
 
 .. HTCondor version 8.8.6 released on Month Date, 2019.
 
+-  The classad builtin function regexMember has new semantics if
+   any member of the list is undefined.  Previously, if any member
+   of the list argument was undefined, it returned false.  Now, if
+   any member of the list is undefined, it never returns false.  If any
+   member of the list is undefined, and a defined member of the list matches,
+   the function returns true.  Otherwise, it returns undefined.
+   :ticket:`7243`
+
 -  The default encryption algorithm used by HTCondor was changed from
    `Triple-DES` to `Blowfish`.
    On a busy submit machine, many encrypted file transfers may consume
@@ -92,6 +100,10 @@ Bugs Fixed:
    but no submit file, and the arguments were sufficient that no submit file
    was needed.
    :ticket:`7249`
+
+- Fixed a bug where the *condor_master* could crash upon reconfiguration if
+  the configuration was changed to not use the *condor_shared_port* daemon.
+  :ticket:`7335`
 
 Version 8.8.5
 -------------
