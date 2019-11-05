@@ -1206,18 +1206,24 @@ FILE TRANSFER COMMANDS
     **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
     equal to *ON_EXIT* will cause HTCondor to transfer the job's output
     files back to the submitting machine only when the job completes
-    (exits on its own).
+    (exits on its own).  If a job is evicted and started again 
+    the subsequent execution will start with only the executable and 
+    input files in the scratch directory sandbox.
 
-    The *ON_EXIT_OR_EVICT* option is intended for fault tolerant jobs
+    The *ON_EXIT_OR_EVICT* option is intended for jobs
     which periodically save their own state and can restart where they
     left off. In this case, files are spooled to the submit machine any
-    time the job leaves a remote site, either because it exited on its
-    own, or was evicted by the HTCondor system for any reason prior to
+    time the job was evicted by the HTCondor system for any reason prior to
     job completion. The files spooled back are placed in a directory
     defined by the value of the ``SPOOL`` configuration variable. Any
-    output files transferred back to the submit machine are
+    such files transferred back to the submit machine are
     automatically sent back out again as input files if the job
-    restarts.
+    restarts.  The set of files transfered back is the same set that would
+    be transfered if the job completed.  If *transfer_output_files* is not 
+    set, all files in the top level scratch directory will be saved.  Files
+    in subdirectories will not be preserved.  If *transfer_output_files* is set
+    only those files are saved.  If a file listed in *transfer_output_files* 
+    does not exist at evict time, the job will go on hold.
 
  aws_access_key_id_file
     Required if you specify an S3 URL, this command specifies the file containing
