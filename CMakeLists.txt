@@ -132,7 +132,7 @@ add_subdirectory (bindings/python)
 # logic here to support old nmi builds
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
 
-	if (NOT WANT_MAN_PAGES OR ${LATEX} STREQUAL "LATEX-NOTFOUND" OR ${LATEX2HTML} STREQUAL "LATEX2HTML-NOTFOUND")
+	if (NOT WANT_MAN_PAGES )
 		message(STATUS "NOTE: Skipping man-pages")
 	else()
 		
