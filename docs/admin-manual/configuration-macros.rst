@@ -7400,10 +7400,7 @@ These macros affect the *condor_gridmanager*.
 ``GRIDMANAGER_RESOURCE_PROBE_INTERVAL`` :index:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`
     When a resource appears to be down, how often (in seconds) the
     *condor_gridmanager* should ping it to test if it is up again.
-
-``GRIDMANAGER_RESOURCE_PROBE_DELAY`` :index:`GRIDMANAGER_RESOURCE_PROBE_DELAY`
-    The number of seconds between pings of a remote resource that is
-    currently down. The default is 5 minutes (300 seconds).
+    The default is 5 minutes (300 seconds).
 
 ``GRIDMANAGER_EMPTY_RESOURCE_DELAY`` :index:`GRIDMANAGER_EMPTY_RESOURCE_DELAY`
     The number of seconds that the *condor_gridmanager* retains
