@@ -35,6 +35,7 @@ my $path = File::Spec->rel2abs($map_file);
 
 my $append_config;
 $append_config = "
+	SUBMIT_SHOULD_SET_LOCAL_OWNER = true
 	use FEATURE : AssignAccountingGroup($path)
 ";
 
