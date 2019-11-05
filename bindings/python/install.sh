@@ -5,10 +5,11 @@ PYTHON=$1
 SETUP_PY=$2
 PREFIX=$3
 LIB_DIR=$4
+SCRIPTS_DIR=$5
 
 if [ ! -z "$DESTDIR" ]; then
     echo "Prepending PREFIX with DESTDIR"
     PREFIX=${DESTDIR}/${PREFIX}
 fi
 
-$PYTHON $SETUP_PY install --root=$PREFIX --install-lib=$LIB_DIR
+$PYTHON $SETUP_PY install --root=$PREFIX --install-lib=$LIB_DIR --install-scripts=${SCRIPTS_DIR}

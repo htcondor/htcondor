@@ -140,6 +140,12 @@ class Literal : public ExprTree
 			if (lit) { lit->value.SetUndefinedValue(); }
 			return lit;
 		}
+		static Literal* MakeUndefined( Value * & v ) {
+			Literal* lit = new Literal();
+			// lit->value is already the undefined value.
+			if (lit) { v = & lit->value; }
+			return lit;
+		}
 
 		/// optimized value replacers
 		void SetBool(bool val) { value.SetBooleanValue(val); }
@@ -196,7 +202,7 @@ class Literal : public ExprTree
 			val.CopyFrom( value );
 			val.ApplyFactor();
 		}
-		
+
 		/** Special case fetch of the c_str() within a literal string
 		 *  to avoid copying it into a new literal
 		 */

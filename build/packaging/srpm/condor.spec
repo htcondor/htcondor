@@ -988,6 +988,7 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 # Remove condor_top with no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
+rm -f %{buildroot}/%{_bindir}/classad_eval
 %endif
 
 # Remove junk
@@ -1565,6 +1566,7 @@ rm -rf %{buildroot}
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/classad_eval
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
 %_libexecdir/condor/libcollector_python_plugin.so
@@ -1577,6 +1579,7 @@ rm -rf %{buildroot}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/classad_eval
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
