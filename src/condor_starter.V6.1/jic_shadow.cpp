@@ -2691,7 +2691,7 @@ JICShadow::initUserCredentials() {
 	}
 
 
-	// OLD METHOD (used by CERN and DESY)
+	// OLD METHOD (used by people using Kerbreros/AFS)
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -2827,7 +2827,7 @@ JICShadow::refreshSandboxCredentials()
 	  then, if needed, copy them to the job sandbox.
 	*/
 
-	dprintf(D_ALWAYS, "CERN: in refreshSandboxCredentials()\n");
+	dprintf(D_ALWAYS, "CREDS: in refreshSandboxCredentials()\n");
 
 	// poor, abuse return code.  used for booleans and syscalls, with
 	// opposite meanings.  assume failure.
@@ -2878,7 +2878,7 @@ JICShadow::refreshSandboxCredentials()
 	sprintf(sandboxccfilename, "%s%c%s.cc", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
 	sprintf(sandboxcctmpfilename, "%s%c%s.cc.tmp", Starter->GetWorkingDir(), DIR_DELIM_CHAR, user.c_str());
 
-	dprintf(D_ALWAYS, "CERN: copying %s as root to %s as user %s\n",
+	dprintf(D_ALWAYS, "CREDS: copying %s as root to %s as user %s\n",
 		ccfilename, sandboxcctmpfilename, user.c_str());
 
 	// read entire ccfilename as root into ccbuf
@@ -2908,7 +2908,7 @@ JICShadow::refreshSandboxCredentials()
 		goto resettimer;
 	}
 
-	dprintf(D_ALWAYS, "CERN: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
+	dprintf(D_ALWAYS, "CREDS: renamed %s to %s\n", sandboxcctmpfilename, sandboxccfilename);
 
 	// aklog now if we decide to go that route
 	// my_popen_env("aklog", KRB5CCNAME=sandbox copy of .cc)
@@ -2918,7 +2918,7 @@ JICShadow::refreshSandboxCredentials()
 
 	// only need to do this once
 	if(getCredPath() == NULL) {
-		dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
+		dprintf(D_ALWAYS, "CREDS: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
 		setCredPath(sandboxccfilename);
 	}
 
@@ -2946,9 +2946,9 @@ resettimer:
 			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
 		}
 		dprintf(D_ALWAYS,
-			"CERN: will check credential again in %i seconds\n", sec_cred_refresh);
+			"CREDS: will check credential again in %i seconds\n", sec_cred_refresh);
 	} else {
-		dprintf(D_ALWAYS, "CERN: cred refresh is DISABLED.\n");
+		dprintf(D_ALWAYS, "CREDS: cred refresh is DISABLED.\n");
 	}
 
 	// return boolean value true on success
