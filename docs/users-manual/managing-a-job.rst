@@ -635,23 +635,27 @@ records of these reasons "Tickets of Execution".
 A ticket of execution is usually issued by the *condor_startd*, and
 includes:
 
-- when the *condor_startd* was told, or otherwise decided, to terminate the job;
-- who made the decision to terminate, usually a Sinful string;
+- when the *condor_startd* was told, or otherwise decided, to terminate the job
+  (the ``when`` attribute);
+- who made the decision to terminate, usually a Sinful string
+  (the ``who`` attribute);
 - and what method was employed to command the termination, as both as
-  string and an integer.
+  string and an integer (the ``How`` and ``HowCode`` attributes).
 
 The relevant log events include a human-readable rendition of the ToE,
 and the job ad is updated with the ToE after the usual delay.
 
-As of version 8.9.3, HTCondor only issues ToE in two cases:
+As of version 8.9.4, HTCondor only issues ToE in three cases:
 
-- when the job terminates of its own accord (issued by the starter);
+- when the job terminates of its own accord (issued by the starter,
+  ``HowCode`` 0);
 - and when the startd terminates the job because it received a
-  ``DEACTIVATE_CLAIM`` command.
+  ``DEACTIVATE_CLAIM`` commmand (``HowCode`` 1)
+- or a ``DEACTIVATE_CLAIM_FORCIBLY`` command (``HowCode`` 2).
 
 In both cases, HTCondor records the ToE in the job ad.  In the event
 log(s), event 005 (job completion) includes the ToE for the first case,
-and event 009 (job aborted) includes the ToE for the second case.
+and event 009 (job aborted) includes the ToE for the second and third cases.
 
 Future HTCondor releases will issue ToEs in additional cases and include
 them in additional log events.
