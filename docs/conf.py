@@ -245,7 +245,7 @@ man_pages = [
     ('man-pages/bosco_cluster', 'bosco_cluster', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/bosco_findplatform', 'bosco_findplatform', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/bosco_install', 'bosco_install', u'HTCondor Manual', [u'HTCondor'], 1),
-    ('man-pages/bosco_sshstart', 'bosco_sshstart', u'HTCondor Manual', [u'HTCondor'], 1),
+    ('man-pages/bosco_ssh_start', 'bosco_ssh_start', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/bosco_start', 'bosco_start', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/bosco_stop', 'bosco_stop', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/bosco_uninstall', 'bosco_uninstall', u'HTCondor Manual', [u'HTCondor'], 1),
@@ -317,8 +317,8 @@ man_pages = [
     ('man-pages/condor_version', 'condor_version', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_wait', 'condor_wait', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_who', 'condor_who', u'HTCondor Manual', [u'HTCondor'], 1),
-    ('man-pages/giddalloc', 'giddalloc', u'HTCondor Manual', [u'HTCondor'], 1),
-    ('man-pages/procdctl', 'procdctl', u'HTCondor Manual', [u'HTCondor'], 1)
+    ('man-pages/gidd_alloc', 'gidd_alloc', u'HTCondor Manual', [u'HTCondor'], 1),
+    ('man-pages/procd_ctl', 'procd_ctl', u'HTCondor Manual', [u'HTCondor'], 1)
 ]
 
 # If true, show URL addresses after external links.
