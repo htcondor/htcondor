@@ -85,7 +85,7 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
 }
 
 
-// specialize lower_bound / upper_bound based on forest type
+// specialize for std::set containers to use std::set::lower_bound
 static inline std::set<ranger::range>::const_iterator
 lower_bounder(const std::set<ranger::range> &f, ranger::range rr)
 {
@@ -98,14 +98,15 @@ upper_bounder(const std::set<ranger::range> &f, ranger::range rr)
     return f.upper_bound(rr);
 }
 
-static inline std::vector<ranger::range>::const_iterator
-lower_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+// generic containers (other than std::set) use std::lower_bound
+template <class C> static inline typename C::const_iterator
+lower_bounder(const C &f, ranger::range rr)
 {
     return std::lower_bound(f.begin(), f.end(), rr);
 }
 
-static inline std::vector<ranger::range>::const_iterator
-upper_bounder(const std::vector<ranger::range> &f, ranger::range rr)
+template <class C> static inline typename C::const_iterator
+upper_bounder(const C &f, ranger::range rr)
 {
     return std::upper_bound(f.begin(), f.end(), rr);
 }
