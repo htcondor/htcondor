@@ -80,4 +80,4 @@ Command Reference Manual (man pages)
    condor_wait
    condor_who
    gidd_alloc
-   procd_ctl      
+   procd_ctl

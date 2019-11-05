@@ -2376,7 +2376,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
 	condor_sockaddr addr = Q_SOCK->endpoint();
-	if ( !Q_SOCK->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+	if ( !Q_SOCK->isAuthorizationInBoundingSet("WRITE") ||
 		daemonCore->Verify("queue management", WRITE, addr,
 		Q_SOCK->getFullyQualifiedUser()) == FALSE )
 	{
