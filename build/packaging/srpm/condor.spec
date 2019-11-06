@@ -28,6 +28,11 @@
 %endif
 %endif
 
+# Not supporting std universe in RHEL/CentOS 8
+%if 0%{?rhel} >= 8
+%define std_univ 0
+%endif
+
 # enable std universe by default 
 %if %undefined std_univ
 %define std_univ 1
@@ -42,7 +47,6 @@
 
 %if %uw_build
 %define debug 1
-%define verbose 1
 %endif
 
 # define these to 1 if you want to include externals in source rpm
@@ -88,6 +92,11 @@
 %if 0%{?rhel} >= 7
 %define cream 0
 %endif
+%endif
+
+# cream support is going away, skip for EL8
+%if 0%{?rhel} >= 8
+%define cream 0
 %endif
 
 %if 0%{?osg} && 0%{?rhel} == 7
@@ -241,7 +250,11 @@ BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
+%if 0%{?rhel} >= 8
+BuildRequires: platform-python-devel
+%else
 BuildRequires: python-devel
+%endif
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
@@ -276,7 +289,11 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
+%if 0%{?rhel} >= 8
+BuildRequires: platform-python-devel
+%else
 BuildRequires: python-devel
+%endif
 BuildRequires: libcurl-devel
 %endif
 
@@ -318,10 +335,19 @@ BuildRequires: wso2-axis2-devel >= 2.1.0-4
 BuildRequires: mongodb-devel >= 1.6.4-3
 %endif
 
-# libcgroup < 0.37 has a bug that invalidates our accounting.
 %if %cgroups
+%if 0%{?rhel} >= 8
+BuildRequires: libcgroup
+Requires: libcgroup
+%else
+# libcgroup < 0.37 has a bug that invalidates our accounting.
 BuildRequires: libcgroup-devel >= 0.37
 Requires: libcgroup >= 0.37
+%endif
+%endif
+
+%if %cream && %uw_build
+BuildRequires: c-ares-devel
 %endif
 
 %if %cream && ! %uw_build
@@ -331,7 +357,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} == 7
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -339,8 +365,16 @@ BuildRequires: boost169-static
 %endif
 %endif
 
+%if 0%{?rhel} >= 8
+BuildRequires: boost-static
+%endif
+
 %if 0%{?rhel} >= 6 || 0%{?fedora}
+%if 0%{?rhel} >= 8
+BuildRequires: boost-python3-devel
+%else
 BuildRequires: boost-python
+%endif
 BuildRequires: libuuid-devel
 Requires: libuuid
 %endif
@@ -357,12 +391,18 @@ Requires: systemd
 
 %if 0%{?rhel} == 6
 BuildRequires: python-sphinx10 python-sphinx_rtd_theme
-%else
+%endif
+
+%if 0%{?rhel} == 7
 %ifarch %{ix86}
 BuildRequires: python-sphinx
 %else
 BuildRequires: python-sphinx python-sphinx_rtd_theme
 %endif
+%endif
+
+%if 0%{?rhel} >= 8
+BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
 Requires: /usr/sbin/sendmail
@@ -614,6 +654,7 @@ host as the DedicatedScheduler.
 
 #######################
 %if %python
+%if 0%{?rhel} <= 7
 %package -n python2-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
@@ -644,6 +685,7 @@ Provides: htcondor.so
 %description -n python2-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
+%endif
 
 
 %if 0%{?rhel} >= 7
@@ -652,9 +694,14 @@ the ClassAd library and HTCondor from python
 %package -n python3-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
-Requires: python36
 Requires: %name = %version-%release
+%if 0%{?rhel} == 7
 Requires: boost169-python3
+Requires: python36
+%else
+Requires: boost-python3
+Requires: platform-python3
+%endif
 
 %if 0%{?rhel} >= 7 && ! %uw_build
 # auto provides generator does not pick these up for some reason
@@ -708,7 +755,12 @@ Includes all the files necessary to support running standard universe jobs.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
+%if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
+%endif
+%if 0%{?rhel} >= 7
+Requires: python3-condor = %version-%release
+%endif
 
 %description -n minicondor
 This example configuration is good for trying out HTCondor for the first time.
@@ -800,7 +852,12 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
+%if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
+%endif
+%if 0%{?rhel} >= 7
+Requires: python3-condor = %version-%release
+%endif
 Requires: %name-bosco = %version-%release
 %if %std_univ
 Requires: %name-std-universe = %version-%release
@@ -1795,6 +1852,7 @@ rm -rf %{buildroot}
 %endif
 
 %if %python
+%if 0%{?rhel} <= 7
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1803,6 +1861,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libcollector_python_plugin.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
+%endif
 
 %if 0%{?rhel} >= 7
 %ifarch x86_64

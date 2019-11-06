@@ -7,6 +7,7 @@ if [ -f /etc/redhat-release -o -f /etc/debian_version ]; then
     date +'%Y%m%d%H%M' > BUILD-ID
     buildid=$(<BUILD-ID)
     mkdir -p /tmp/$buildid/condor-$condor_version
+    cp -p .??* /tmp/$buildid/condor-$condor_version
     cp -pr * /tmp/$buildid/condor-$condor_version
     src_dir=$PWD
     cd /tmp/$buildid
