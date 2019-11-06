@@ -76,7 +76,7 @@ else (WINDOWS)
                 set(USE_SYSTEM_BOOST True)
             endif()
         endif()
-        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
             set(USE_SYSTEM_BOOST True)
         endif()
         if (${SYSTEM_NAME} MATCHES "fc")
@@ -84,7 +84,7 @@ else (WINDOWS)
         endif()
     endif()
 
-	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
+	find_package( Boost 1.66 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
