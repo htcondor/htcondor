@@ -5179,25 +5179,6 @@ These macros control the *condor_schedd*.
     possible for jobs to be erroneously assigned duplicate cluster ids,
     which will result in a corrupt job queue.
 
-``GRIDMANAGER_SELECTION_EXPR`` :index:`GRIDMANAGER_SELECTION_EXPR`
-    By default, the *condor_schedd* daemon will start a new
-    *condor_gridmanager* process for each discrete user that submits a
-    grid universe job, that is, for each discrete value of job attribute
-    ``Owner`` across all grid universe job ClassAds. For additional
-    isolation and/or scalability of grid job management, additional
-    *condor_gridmanager* processes can be spawned to share the load; to
-    do so, set this variable to be a ClassAd expression. The result of
-    the evaluation of this expression in the context of a grid universe
-    job ClassAd will be treated as a hash value. All jobs that hash to
-    the same value via this expression will go to the same
-    *condor_gridmanager*. For instance, to spawn a separate
-    *condor_gridmanager* process to manage each unique remote site, the
-    following expression works:
-
-    ::
-
-          GRIDMANAGER_SELECTION_EXPR = GridResource
-
 ``CKPT_SERVER_CLIENT_TIMEOUT`` :index:`CKPT_SERVER_CLIENT_TIMEOUT`
     An integer which specifies how long in seconds the *condor_schedd*
     is willing to wait for a response from a checkpoint server before
@@ -7366,6 +7347,20 @@ These macros affect the *condor_gridmanager*.
     If False, the job will stay in the last known state, and HTCondor-G
     will periodically check to see if the job's proxy has been
     refreshed, at which point management of the job will resume.
+
+``GRIDMANAGER_SELECTION_EXPR`` :index:`GRIDMANAGER_SELECTION_EXPR`
+    By default, the gridmanager operates on a per-``Owner`` basis.  That
+    is, the *condor_schedd* starts a distinct *condor_gridmanager* for each
+    grid universe job with a distinct ``Owner``.  For additional isolation
+    and/or scalability, you may set this macro to a ClassAd expression.
+    It will be evaluated against each grid universe job, and jobs with
+    the same evaluated result will go to the same gridmanager.  For instance,
+    if you want to isolate job going to different remote sites from each
+    other, the following expression works:
+
+    ::
+
+          GRIDMANAGER_SELECTION_EXPR = GridResource
 
 ``GRIDMANAGER_CONTACT_SCHEDD_DELAY`` :index:`GRIDMANAGER_CONTACT_SCHEDD_DELAY`
     The minimum number of seconds between connections to the
