@@ -33,9 +33,14 @@ my $map_content;
 my $map_file = "$testname.map";
 my $path = File::Spec->rel2abs($map_file);
 
-my $append_config;
-$append_config = "
+#testreq: personal
+my $base_config = <<CONDOR_TESTREQ_CONFIG;
 	SUBMIT_SHOULD_SET_LOCAL_OWNER = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+# add this to the config use use when we start a secondary personal condor
+my $append_config = "
 	use FEATURE : AssignAccountingGroup($path)
 ";
 
