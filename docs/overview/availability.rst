@@ -37,8 +37,8 @@ binary distributions.
 |                                      | - All versions Windows 7 or greater  |
 |                                      |   (clipped)                          |
 |                                      | - Red Hat Enterprise Linux 7         |
-|                                      |   (clipped)                          |
 |                                      | - Red Hat Enterprise Linux 8         |
+|                                      |   (clipped)                          |
 |                                      | - Debian Linux 8; Jessie             |
 |                                      | - Debian Linux 9; Stretch            |
 |                                      |   (clipped)                          |
