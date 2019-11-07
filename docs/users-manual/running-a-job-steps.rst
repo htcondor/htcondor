@@ -78,7 +78,7 @@ Choosing an HTCondor Universe
 
 A universe in HTCondor
 :index:`universe` :index:`universe<single: universe; HTCondor>` defines an
-execution environment. HTCondor Version 8.9.1 supports several different
+execution environment. HTCondor Version |release| supports several different
 universes for user jobs:
 
 -  standard
