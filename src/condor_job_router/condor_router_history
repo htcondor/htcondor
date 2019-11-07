@@ -210,7 +210,7 @@ for jobid in class_ads.keys():
 	status_code = job_status_codes[int(jobstatus)]
 
 	remote_walltime = ad.get("remotewallclocktime",0)
-	remote_walltime = long(round(float(remote_walltime)))
+	remote_walltime = int(round(float(remote_walltime)))
 
 	site_sum = site_summaries.get(route)
 	if not site_sum:
