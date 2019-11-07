@@ -15,42 +15,22 @@ A platform is an architecture/operating system combination.
 :index:`definition of<single: definition of; clipped platform>`
 :index:`availability<single: availability; clipped platform>`
 
-In the following table, *clipped* means that HTCondor does not support
-checkpointing or remote system calls on the given platform. This means that
-standard universe jobs are not supported. Some clipped platforms will have
-further limitations with respect to supported universes. See the
-:ref:`users-manual/running-a-job-steps:choosing an htcondor universe` section
-for more details on job universes within HTCondor and their abilities and
-limitations.
-
 The HTCondor source code is available for public download alongside the
 binary distributions.
 
 +--------------------------------------+--------------------------------------+
 | Architecture                         | Operating System                     |
 +--------------------------------------+--------------------------------------+
-| Intel x86                            | - RedHat Enterprise Linux 6          |
-|                                      | - All versions Windows 7 or greater  |
-|                                      |   (clipped)                          |
+| Intel x86                            | - All versions Windows 7 or greater  |
 +--------------------------------------+--------------------------------------+
-| x86_64                               | - Red Hat Enterprise Linux 6         |
-|                                      | - All versions Windows 7 or greater  |
-|                                      |   (clipped)                          |
+| x86_64                               | - All versions Windows 7 or greater  |
 |                                      | - Red Hat Enterprise Linux 7         |
 |                                      | - Red Hat Enterprise Linux 8         |
-|                                      |   (clipped)                          |
-|                                      | - Debian Linux 8; Jessie             |
 |                                      | - Debian Linux 9; Stretch            |
-|                                      |   (clipped)                          |
 |                                      | - Debian Linux 10; Buster            |
-|                                      |   (clipped)                          |
 |                                      | - Macintosh OS X 10.10 through 10.15 |
-|                                      |   (clipped)                          |
-|                                      | - Ubuntu 14.04; Trusty Tahr          |
 |                                      | - Ubuntu 16.04; Xenial Xerus         |
-|                                      |   (clipped)                          |
 |                                      | - Ubuntu 18.04; Bionic Beaver        |
-|                                      |   (clipped)                          |
 +--------------------------------------+--------------------------------------+
 
 
