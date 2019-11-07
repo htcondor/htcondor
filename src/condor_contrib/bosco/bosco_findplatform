@@ -181,14 +181,14 @@ def install(platform, multiuser=False, options=None):
   import commands
   # make tmp dir
   if not platform in SUPPORTED_PLATFORMS:
-        print("Your system is not supported. Aborting the installation.")
+      print("Your system is not supported. Aborting the installation.")
       sys.exit(1)
   try:
     tmp_dir = tempfile.mkdtemp() # create dir
     # download bosco and save directly to file
     condor_dir = ""
     try:
-            print("Downloading BOSCO from %s" % URL_DICT[platform])
+      print("Downloading BOSCO from %s" % URL_DICT[platform])
       response = urllib2.urlopen(URL_DICT[platform])
       fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
       f = open(fname, 'wb')
@@ -203,10 +203,10 @@ def install(platform, multiuser=False, options=None):
     except:
       (etype, evalue, etraceback) = sys.exc_info()
       if evalue:
-                print(evalue)
+        print(evalue)
       condor_dir_list = []
     if not condor_dir_list:
-            print("The download and extraction of BOSCO failed. Aborting the installation.")
+      print("The download and extraction of BOSCO failed. Aborting the installation.")
       sys.exit(1)
     # run bosco_install (pass parameters)
     options_list = ""
@@ -215,11 +215,11 @@ def install(platform, multiuser=False, options=None):
     if not options_list:
       if multiuser:
         options_list = "--prefix=/opt/bosco"
-                print("Installing BOSCO in /opt/bosco")
+        print("Installing BOSCO in /opt/bosco")
       else:
-                print("Installing BOSCO in ~/bosco")
+        print("Installing BOSCO in ~/bosco")
     else:
-            print("Installing BOSCO with: ./bosco_install %s" % options_list)
+      print("Installing BOSCO with: ./bosco_install %s" % options_list)
     cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[platform]),
                 #"tar xzf %s/bosco-download.tar.gz -C %s" % (tmp_dir, tmp_dir),
                 "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
@@ -227,20 +227,20 @@ def install(platform, multiuser=False, options=None):
     for cmd in cmd_list:
       ec, out = commands.getstatusoutput(cmd)
       if ec != 0:
-                print("Error installing BOSCO")
-                print("Command %s failed:\n%s" % (cmd, out))
-                print("Aborting BOSCO installation")
+        print("Error installing BOSCO")
+        print("Command %s failed:\n%s" % (cmd, out))
+        print("Aborting BOSCO installation")
         sys.exit(1)
       else:
-                print(out)
+        print(out)
   finally:
     try:
       shutil.rmtree(tmp_dir) # delete directory
-        except OSError as e:
+    except OSError as e:
       if e.errno != 2: # code 2 - no such file or directory
         raise
   # rm itself and exit or not?  
-    print("Congratulations, you installed BOSCO succesfully!")
+  print("Congratulations, you installed BOSCO succesfully!")
   return
    
 if __name__ == "__main__":
@@ -278,22 +278,22 @@ if __name__ == "__main__":
   (opts, args) = parser.parse_args(my_par)
   # options consistency
   if opts.force and not opts.force in SUPPORTED_PLATFORMS:
-        print("The platform %s is not supported.\n" % opts.force)
+    print("The platform %s is not supported.\n" % opts.force)
     parser.print_help()
     sys.exit(-1)
   if opts.details and opts.bit:
-        print("Option full and bit are mutually exclusive\n")
+    print("Option full and bit are mutually exclusive\n")
     parser.print_help()
     sys.exit(-1)
   # run
   if opts.bit:
     if platform.architecture()[0]=='64bit':
-            print(BIT64)
+      print(BIT64)
     else:
-            print(BIT32)
+      print(BIT32)
     sys.exit(0)
   elif opts.details:
-        print(findversion_detail())
+    print(findversion_detail())
   else:
     if opts.force:
       res = opts.force
@@ -303,6 +303,6 @@ if __name__ == "__main__":
       install(res, False, install_par)
       sys.exit(0)
     elif opts.url:
-            print(URL_DICT[res])
+      print(URL_DICT[res])
     else:
-            print(res)
+      print(res)
