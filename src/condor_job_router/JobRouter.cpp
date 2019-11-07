@@ -105,6 +105,7 @@ JobRouter::~JobRouter() {
 		RemoveJob(job);
 	}
 
+	m_route_order.clear();
 	DeallocateRoutingTable(m_routes);
 
 	if(m_router_lock) {
@@ -243,7 +244,11 @@ JobRouter::config() {
 	}
 
 
-	RoutingTable *new_routes = new RoutingTable(hashFunction);
+	RoutingTable *new_routes = new RoutingTable();
+
+	// for backward compatibility with 8.8.6, build a name table in the order that 8.8.6 would use.
+	// If JOB_ROUTE_NAMES is not configured, this will be the order that routes are matched
+	HashTable<std::string,int> hash_order(hashFunction);
 
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
@@ -348,7 +353,7 @@ JobRouter::config() {
 		}
 		std::string routing_file_str;
 		char buf[200];
-		int n;
+		size_t n;
 		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
 			buf[n] = '\0';
 			routing_file_str += buf;
@@ -356,10 +361,16 @@ JobRouter::config() {
 		n = my_pclose( fp );
 		if( n != 0 ) {
 			EXCEPT("Command '%s' specified for %s returned non-zero status %d",
-				   routing_cmd.c_str(), PARAM_JOB_ROUTER_ENTRIES_CMD, n);
+				   routing_cmd.c_str(), PARAM_JOB_ROUTER_ENTRIES_CMD, (int)n);
 		}
 
-		ParseRoutingEntries( routing_file_str, PARAM_JOB_ROUTER_ENTRIES_CMD, router_defaults_ad, allow_empty_requirements, new_routes );
+		ParseRoutingEntries(
+			routing_file_str,
+			PARAM_JOB_ROUTER_ENTRIES_CMD,
+			router_defaults_ad,
+			allow_empty_requirements,
+			hash_order,
+			new_routes);
 	}
 
 	if( routing_file.size() ) {
@@ -370,18 +381,30 @@ JobRouter::config() {
 		}
 		std::string routing_file_str;
 		char buf[200];
-		int n;
+		size_t n;
 		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
 			buf[n] = '\0';
 			routing_file_str += buf;
 		}
 		fclose( fp );
 
-		ParseRoutingEntries( routing_file_str, PARAM_JOB_ROUTER_ENTRIES_FILE, router_defaults_ad, allow_empty_requirements, new_routes );
+		ParseRoutingEntries(
+			routing_file_str,
+			PARAM_JOB_ROUTER_ENTRIES_FILE,
+			router_defaults_ad,
+			allow_empty_requirements,
+			hash_order,
+			new_routes);
 	}
 
 	if( routing_str.size() ) {
-		ParseRoutingEntries( routing_str, PARAM_JOB_ROUTER_ENTRIES, router_defaults_ad, allow_empty_requirements, new_routes );
+		ParseRoutingEntries(
+			routing_str,
+			PARAM_JOB_ROUTER_ENTRIES,
+			router_defaults_ad,
+			allow_empty_requirements,
+			hash_order,
+			new_routes);
 	}
 
 	if(!m_enable_job_routing) {
@@ -389,7 +412,7 @@ JobRouter::config() {
 		return;
 	}
 
-	SetRoutingTable(new_routes);
+	SetRoutingTable(new_routes, hash_order);
 
 		// Whether to release the source job if the routed job
 		// goes on hold
@@ -494,9 +517,9 @@ JobRouter::config() {
 void JobRouter::dump_routes(FILE* hf) // dump the routing information to the given file.
 {
 	int ixRoute = 1;
-	JobRoute *route;
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
+	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
+		JobRoute *route = m_routes->at(*it);
+		if ( ! route) continue;
 		/*
 		classad::ClassAd *RouteAd() {return &m_route_ad;}
 		char const *Name() {return m_name.c_str();}
@@ -787,7 +810,14 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 }
 
 void
-JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *param_name, classad::ClassAd const &router_defaults_ad, bool allow_empty_requirements, RoutingTable *new_routes ) {
+JobRouter::ParseRoutingEntries(
+	std::string const &routing_string,
+	char const *param_name,
+	classad::ClassAd const &router_defaults_ad,
+	bool allow_empty_requirements,
+	HashTable<std::string,int> & hash_order,
+	RoutingTable *new_routes )
+{
 
 		// Now parse a list of routing entries.  The expected syntax is
 		// a list of ClassAds, optionally delimited by commas and or
@@ -795,11 +825,19 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 	dprintf(D_FULLDEBUG,"Parsing %s=%s\n",param_name,routing_string.c_str());
 
+	// prepare to make a source label indicating the param and index
+	const char *  source_fmt = "entries:%d";
+	if (MATCH == strcmp(param_name, PARAM_JOB_ROUTER_ENTRIES_CMD)) { source_fmt = "cmd:%d"; }
+	else if (MATCH == strcmp(param_name, PARAM_JOB_ROUTER_ENTRIES_FILE)) { source_fmt = "file:%d"; }
+
+	int source_index = 0;
 	int offset = 0;
 	while(1) {
 		if(offset >= (int)routing_string.size()) break;
 
-		JobRoute * route = new JobRoute();
+		MyString source_name;
+		formatstr(source_name, source_fmt, source_index++);
+		JobRoute * route = new JobRoute(source_name.c_str());
 		JobRoute *existing_route = NULL;
 		int this_offset = offset; //save offset before eating an ad.
 		bool ignore_route = false;
@@ -837,8 +875,10 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 		}
 
 		const char * route_name = route->Name();
-		if (new_routes->lookup(route_name, existing_route) != -1)
-		{
+		int hash_index = hash_order.getNumElements(); // in case we are not replacing
+		auto found = new_routes->find(route_name);
+		if (found != new_routes->end()) {
+			existing_route = found->second;
 			// Two routes have the same name.  Since route names
 			// are optional, these names may have been
 			// auto-generated from other portions of the route ad.
@@ -851,7 +891,10 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 				override_entry = 1;
 			}
 			if (override_entry > 0) {  // OverrideRoutingEntry=true
-				new_routes->remove(route_name);
+				// preserve the original hash index if we replace a route
+				hash_order.lookup(existing_route->Name(), hash_index);
+				hash_order.remove(existing_route->Name());
+				new_routes->erase(route_name);
 				delete existing_route;
 			}
 			if (override_entry == 0) { // OverrideRoutingEntry=false
@@ -862,51 +905,143 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 		if ( ignore_route) {
 			delete route; route = NULL;
 		} else {
-			new_routes->insert(route_name, route);
+			(*new_routes)[route->Name()] = route;
+			// also insert the name into hash_order hashtable so we know what that order would be
+			hash_order.insert(route->Name(), hash_index);
 		}
 	}
 }
 
 JobRoute *
 JobRouter::GetRouteByName(char const *name) {
-	JobRoute *route = NULL;
-	if(m_routes->lookup(name,route) == -1) {
-		return NULL;
+	auto found = m_routes->find(name);
+	if (found != m_routes->end()) {
+		return found->second;
 	}
-	return route;
+	return NULL;
 }
 
-void
-JobRouter::SetRoutingTable(RoutingTable *new_routes) {
+void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,int> & hash_order)
+{
 	// Now we have a set of new routes in new_routes.
 	// Replace our existing routing table with these.
 
 	JobRoute *route=NULL;
 
 	// look for routes that have been dropped
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
-		JobRoute *new_route = NULL;
-		if(new_routes->lookup(route->Name(),new_route) == -1) {
+	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+		route = it->second;
+		if (0 == new_routes->count(route->Name())) {
 			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteString().c_str());
 		}
 	}
 
 	// look for routes that have been added
-	new_routes->startIterations();
-	while(new_routes->iterate(route)) {
-		JobRoute *old_route = NULL;
-		if(m_routes->lookup(route->Name(),old_route) == -1) {
+	for (auto it = new_routes->begin(); it != new_routes->end(); ++it) {
+		route = it->second;
+		auto found = m_routes->find(route->Name());
+		if (found == m_routes->end()) {
 			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteString().c_str());
 		}
 		else {
 				// preserve state from the old route entry
-			route->CopyState(old_route);
+			route->CopyState(found->second);
 		}
 	}
-
+	m_route_order.clear();
 	DeallocateRoutingTable(m_routes);
 	m_routes = new_routes;
+
+	// build the m_route_order list, containing the names of the routes in the order in which they whould be matched
+	// This is controlled by a knob 
+	auto_free_ptr order(param("JOB_ROUTE_NAMES"));
+	if ( ! order) {
+		dprintf(D_ALWAYS, "Routes will be matched in hashtable order because JOB_ROUTE_NAMES was not configured.\n");
+		// routes in case-sensitive hashtable order for backward compatibility with 8.8.6
+		hash_order.startIterations();
+		std::string name;
+		int declaration_order;
+		while(hash_order.iterate(name, declaration_order)) {
+			m_route_order.push_back(name);
+		}
+	} else {
+		// routes in specified order
+		std::string tmp; tmp.reserve(200);
+
+		// build a set of route names, we will remove names from this list as we put them into the order list
+		classad::References remaining_names;
+		for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+			route = it->second;
+			remaining_names.insert(route->Name());
+		}
+
+#ifdef ROUTE_ORDER_CONFIG_WITH_STAR
+		// build a route_order list using names from the JOB_ROUTE_NAMES param that exist in the routing table
+		// put routes in the order list if they are before the * entry, and in the final list if they are after it
+		// we also remove routes them from the remaining_names set.
+		std::list<std::string> final_routes;
+		bool is_final = false;
+		StringTokenIterator it(order);
+		for (const char * name = it.first(); name; name = it.next()) {
+			auto rt = m_routes->find(name);
+			if (rt != m_routes->end()) {
+				route = rt->second;
+				if (is_final) {
+					final_routes.push_back(route->Name());
+				} else {
+					m_route_order.push_back(route->Name());
+				}
+				remaining_names.erase(route->Name());
+			} else if (*name == '*') {
+				is_final = true;
+			} else {
+				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTE_NAMES not found in the routing table\n", name);
+			}
+		}
+
+		// remaining_names now has the route names that are not in the JOB_ROUTE_NAMES list
+		// append the routes not named in the JOB_ROUTE_NAMES into the order list
+		for (auto rn = remaining_names.begin(); rn != remaining_names.end(); ++rn) {
+			m_route_order.push_back(*rn);
+		}
+
+		// now append the final routes into the order list
+		for (auto rn = final_routes.begin(); rn != final_routes.end(); ++rn) {
+			m_route_order.push_back(*rn);
+		}
+#else
+		// Use only the routes listed in JOB_ROUTE_NAMES
+		// in the order they are specified there.
+		StringTokenIterator it(order);
+		for (const char * name = it.first(); name; name = it.next()) {
+			auto rt = m_routes->find(name);
+			if (rt != m_routes->end()) {
+				route = rt->second;
+				m_route_order.push_back(route->Name());
+				remaining_names.erase(route->Name());
+			} else {
+				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTE_NAMES not found in the routing table.\n", name);
+			}
+		}
+
+		// if there are defined routes not listed in the route order, print their names now
+		if ( ! remaining_names.empty()) {
+			tmp.clear();
+			for (auto rn = remaining_names.begin(); rn != remaining_names.end(); ++rn) {
+				if ( ! tmp.empty()) { tmp += ", "; }
+				tmp += *rn;
+			}
+		}
+#endif
+
+		// print the resulting route order
+		tmp.clear();
+		for (auto rn = m_route_order.begin(); rn != m_route_order.end(); ++rn) {
+			if ( ! tmp.empty()) { tmp += ", "; }
+			tmp += *rn;
+		}
+		dprintf(D_ALWAYS, "Routes will be matched in this order: %s\n", tmp.c_str());
+	}
 
 	UpdateRouteStats();
 }
@@ -914,9 +1049,9 @@ JobRouter::SetRoutingTable(RoutingTable *new_routes) {
 
 void
 JobRouter::DeallocateRoutingTable(RoutingTable *routes) {
-	JobRoute *route;
-	routes->startIterations();
-	while(routes->iterate(route)) {
+	for (auto it = routes->begin(); it != routes->end(); ++it) {
+		JobRoute * route = it->second;
+		it->second = NULL;
 		delete route;
 	}
 	delete routes;
@@ -924,7 +1059,7 @@ JobRouter::DeallocateRoutingTable(RoutingTable *routes) {
 
 RoutingTable *
 JobRouter::AllocateRoutingTable() {
-	return new RoutingTable(hashFunction);
+	return new RoutingTable();
 }
 
 void
@@ -1254,16 +1389,18 @@ JobRouter::GetCandidateJobs() {
 	std::string umbrella_constraint;
 
 	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
-		"Route Name             Submitted/Max        Idle/Max     Throttle");
+		"Route Name             Source    Submitted/Max        Idle/Max     Throttle");
 	if ( ! m_operate_as_tool) {
 		dbuf += " Recent: Started Succeeded Failed\n";
 	} else {
 		dbuf += "\n";
 	}
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
-		formatstr_cat(dbuf, "%-24s %7d/%7d %7d/%7d %8s",
+	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
+		route = m_routes->at(*it);
+		if ( ! route) continue;
+		formatstr_cat(dbuf, "%-24s %-11s %7d/%7d %7d/%7d %8s",
 		      route->Name(),
+		      route->Source(),
 		      route->CurrentRoutedJobs(),
 		      route->MaxJobs(),
 		      route->CurrentIdleJobs(),
@@ -1288,8 +1425,8 @@ JobRouter::GetCandidateJobs() {
 	// Each route may have its own constraint, but in case many of them
 	// are the same, add only unique constraints to the list.
 	std::string route_constraints;
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
+	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+		route = it->second;
 		if(route->AcceptingMoreJobs()) {
 			std::string existing_constraint;
 			std::string this_constraint = route->RouteRequirementsString();
@@ -1440,9 +1577,10 @@ JobRoute *
 JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 	std::vector<JobRoute *> matches;
 	JobRoute *route=NULL;
-	m_routes->startIterations();
 	*all_routes_full = true;
-	while(m_routes->iterate(route)) {
+	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
+		route = m_routes->at(*it);
+		if ( ! route) continue;
 #ifdef USE_XFORM_UTILS
 		if(!route->AcceptingMoreJobs()) continue;
 		*all_routes_full = false;
@@ -1489,14 +1627,16 @@ void
 JobRouter::UpdateRouteStats() {
 	RoutedJob *job;
 	JobRoute *route;
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
+	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+		route = it->second;
 		route->ResetCurrentRoutedJobs();
 	}
+
 	m_jobs.startIterations();
 	while(m_jobs.iterate(job)) {
 		if(!job->route_name.empty()) {
-			if(m_routes->lookup(job->route_name,route) != -1) {
+			route = m_routes->at(job->route_name);
+			if (route) {
 				route->IncrementCurrentRoutedJobs();
 				if(job->IsRunning()) {
 					route->IncrementCurrentRunningJobs();
@@ -1505,8 +1645,8 @@ JobRouter::UpdateRouteStats() {
 		}
 	}
 
-	m_routes->startIterations();
-	while(m_routes->iterate(route)) {
+	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+		route = it->second;
 		route->AdjustFailureThrottles();
 	}
 }
@@ -2577,7 +2717,7 @@ JobRouter::InvalidatePublicAd() {
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
 
-JobRoute::JobRoute() {
+JobRoute::JobRoute(const char * source) : m_source(source) {
 	m_num_jobs = 0;
 	m_num_running_jobs = 0;
 	m_max_jobs = 0;
