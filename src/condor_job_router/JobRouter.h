@@ -35,7 +35,10 @@ class RoutedJob;
 class Scheduler;
 class JobRouterHookMgr;
 
-typedef HashTable<std::string,JobRoute *> RoutingTable;
+// uncomment this to insert routes that are not not in the JOB_ROUTE_ORDER param where the * is in the list
+//#define ROUTE_ORDER_CONFIG_WITH_STAR
+
+typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 
 /*
  * The JobRouter is responsible for finding idle jobs of one flavor
@@ -117,6 +120,7 @@ class JobRouter: public Service {
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
+	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
 
 	Scheduler *m_scheduler;        // provides us with a mirror of the real schedd's job collection
 	Scheduler *m_scheduler2;       // if non-NULL, mirror of job queue in destination schedd
@@ -210,9 +214,15 @@ private:
 			int hold_code = 0, int sub_code = 0);
 
 
-	void SetRoutingTable(RoutingTable *new_routes);
+	void SetRoutingTable(RoutingTable *new_routes, HashTable<std::string, int> & hash_order);
 
-	void ParseRoutingEntries( std::string const &entries, char const *param_name, classad::ClassAd const &router_defaults_ad, bool allow_empty_requirements, RoutingTable *new_routes );
+	void ParseRoutingEntries(
+		std::string const &entries,
+		char const *param_name,
+		classad::ClassAd const &router_defaults_ad,
+		bool allow_empty_requirements,
+		HashTable<std::string,int> & hash_order,
+		RoutingTable *new_routes );
 
 	JobRoute *GetRouteByName(char const *name);
 

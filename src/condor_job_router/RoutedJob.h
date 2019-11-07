@@ -97,7 +97,7 @@ class RoutedJob {
 
 class JobRoute {
  public:
-	JobRoute();
+	JobRoute(const char * source);
 	virtual ~JobRoute();
 
 #ifdef USE_XFORM_UTILS
@@ -108,6 +108,7 @@ class JobRoute {
 	classad::ClassAd *RouteAd() {return &m_route_ad;}
 #endif
 	char const *Name() {return m_name.c_str();}
+	char const *Source() {return m_source.c_str(); } // where the route was sourced, i.e. CMD, FILE or ROUTE
 	int MaxJobs() {return m_max_jobs;}
 	int MaxIdleJobs() {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() {return m_num_jobs;}
@@ -198,6 +199,7 @@ class JobRoute {
 
 	// stuff extracted from the route_ad:
 	std::string m_name;           // name distinguishing this route from others
+	std::string m_source;         // source of route. one of cmd:n, file:n or jre:n
 	int m_target_universe;        // universe of routed job
 	std::string m_grid_resource;  // if routing to grid universe, the grid site
 	int m_max_jobs;               // maximum jobs to route
