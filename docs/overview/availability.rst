@@ -46,7 +46,6 @@ binary distributions.
 |                                      |   (clipped)                          |
 |                                      | - Macintosh OS X 10.10 through 10.15 |
 |                                      |   (clipped)                          |
-|                                      | - Ubuntu 14.04; Trusty Tahr          |
 |                                      | - Ubuntu 16.04; Xenial Xerus         |
 |                                      |   (clipped)                          |
 |                                      | - Ubuntu 18.04; Bionic Beaver        |
