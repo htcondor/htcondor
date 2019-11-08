@@ -247,7 +247,7 @@ JobRouter::config() {
 	RoutingTable *new_routes = new RoutingTable();
 
 	// for backward compatibility with 8.8.6, build a name table in the order that 8.8.6 would use.
-	// If JOB_ROUTE_NAMES is not configured, this will be the order that routes are matched
+	// If JOB_ROUTER_ROUTE_NAMES is not configured, this will be the order that routes are matched
 	HashTable<std::string,int> hash_order(hashFunction);
 
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
@@ -516,10 +516,19 @@ JobRouter::config() {
 
 void JobRouter::dump_routes(FILE* hf) // dump the routing information to the given file.
 {
+	// build a set of route names, we will remove names from this list as we print them
+	classad::References remaining_names;
+	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
+		JobRoute * route = it->second;
+		remaining_names.insert(route->Name());
+	}
+
+	// print the enabled routes in the order that they will be used
 	int ixRoute = 1;
 	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
 		JobRoute *route = m_routes->at(*it);
 		if ( ! route) continue;
+		remaining_names.erase(route->Name());
 		/*
 		classad::ClassAd *RouteAd() {return &m_route_ad;}
 		char const *Name() {return m_name.c_str();}
@@ -534,6 +543,7 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 		*/
 		fprintf(hf, "Route %d\n", ixRoute);
 		fprintf(hf, "Name         : \"%s\"\n", route->Name());
+		fprintf(hf, "Source       : %s\n", route->Source());
 		fprintf(hf, "Universe     : %d\n", route->TargetUniverse());
 		//fprintf(hf, "RoutedJobs   : %d\n", route->CurrentRoutedJobs());
 		fprintf(hf, "MaxJobs      : %d\n", route->MaxJobs());
@@ -550,6 +560,19 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 
 		fprintf(hf, "\n");
 		++ixRoute;
+	}
+
+	// remaining nams now has the list of routes in the route table that are disabled
+	// bacause they aren't in the route_order list.
+	if ( ! remaining_names.empty()) {
+		fprintf(hf, "Disabled routes:\n");
+		for (auto it = remaining_names.begin(); it != remaining_names.end(); ++it) {
+			JobRoute * route = m_routes->at(*it);
+			if ( ! route) continue;
+			fprintf(hf, "Name         : \"%s\"\n", route->Name());
+			fprintf(hf, "Source       : %s\n", route->Source());
+			fprintf(hf, "\n");
+		}
 	}
 }
 
@@ -954,9 +977,9 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 
 	// build the m_route_order list, containing the names of the routes in the order in which they whould be matched
 	// This is controlled by a knob 
-	auto_free_ptr order(param("JOB_ROUTE_NAMES"));
+	auto_free_ptr order(param("JOB_ROUTER_ROUTE_NAMES"));
 	if ( ! order) {
-		dprintf(D_ALWAYS, "Routes will be matched in hashtable order because JOB_ROUTE_NAMES was not configured.\n");
+		dprintf(D_ALWAYS, "Routes will be matched in hashtable order because JOB_ROUTER_ROUTE_NAMES was not configured.\n");
 		// routes in case-sensitive hashtable order for backward compatibility with 8.8.6
 		hash_order.startIterations();
 		std::string name;
@@ -976,7 +999,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 		}
 
 #ifdef ROUTE_ORDER_CONFIG_WITH_STAR
-		// build a route_order list using names from the JOB_ROUTE_NAMES param that exist in the routing table
+		// build a route_order list using names from the JOB_ROUTER_ROUTE_NAMES param that exist in the routing table
 		// put routes in the order list if they are before the * entry, and in the final list if they are after it
 		// we also remove routes them from the remaining_names set.
 		std::list<std::string> final_routes;
@@ -995,12 +1018,12 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 			} else if (*name == '*') {
 				is_final = true;
 			} else {
-				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTE_NAMES not found in the routing table\n", name);
+				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTER_ROUTE_NAMES not found in the routing table\n", name);
 			}
 		}
 
-		// remaining_names now has the route names that are not in the JOB_ROUTE_NAMES list
-		// append the routes not named in the JOB_ROUTE_NAMES into the order list
+		// remaining_names now has the route names that are not in the JOB_ROUTER_ROUTE_NAMES list
+		// append the routes not named in the JOB_ROUTER_ROUTE_NAMES into the order list
 		for (auto rn = remaining_names.begin(); rn != remaining_names.end(); ++rn) {
 			m_route_order.push_back(*rn);
 		}
@@ -1010,7 +1033,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 			m_route_order.push_back(*rn);
 		}
 #else
-		// Use only the routes listed in JOB_ROUTE_NAMES
+		// Use only the routes listed in JOB_ROUTER_ROUTE_NAMES
 		// in the order they are specified there.
 		StringTokenIterator it(order);
 		for (const char * name = it.first(); name; name = it.next()) {
@@ -1020,7 +1043,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 				m_route_order.push_back(route->Name());
 				remaining_names.erase(route->Name());
 			} else {
-				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTE_NAMES not found in the routing table.\n", name);
+				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTER_ROUTE_NAMES not found in the routing table.\n", name);
 			}
 		}
 
@@ -1031,6 +1054,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 				if ( ! tmp.empty()) { tmp += ", "; }
 				tmp += *rn;
 			}
+			dprintf(D_ALWAYS, "Routes not in JOB_ROUTER_ROUTE_NAMES will be disabled: %s\n", tmp.c_str());
 		}
 #endif
 
