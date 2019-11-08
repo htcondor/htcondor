@@ -207,8 +207,11 @@ BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 %if 0%{?rhel} >= 8
 BuildRequires: platform-python-devel
+BuildRequires: platform-python-setuptools
 %else
 BuildRequires: python-devel
+BuildRequires: python-setuptools
+BuildRequires: python3-setuptools
 %endif
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
