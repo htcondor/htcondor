@@ -64,6 +64,11 @@
 %endif
 %endif
 
+# cream support is going away, skip for EL8
+%if 0%{?rhel} >= 8
+%define cream 0
+%endif
+
 %define glexec 1
 
 # Temporarily turn parallel_setup off

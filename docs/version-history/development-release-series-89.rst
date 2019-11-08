@@ -149,6 +149,10 @@ New Features:
 
 Bugs Fixed:
 
+- The *curl_plugin* now correctly advertises ``file`` and ``ftp`` as
+  supported methods.
+  :ticket:`7357`
+
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
    outside the container if the container had not completely started.
    :ticket:`7246`

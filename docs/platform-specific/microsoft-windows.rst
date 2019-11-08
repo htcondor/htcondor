@@ -9,9 +9,7 @@ every bit as capable on Windows as it is on Unix - or even more capable.
 
 Porting HTCondor from Unix to Windows is a formidable task, because many
 components of HTCondor must interact closely with the underlying
-operating system. Provided is a clipped version of HTCondor for Windows.
-A clipped version is one in which there is no checkpointing and there
-are no remote system calls.
+operating system.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
