@@ -135,7 +135,7 @@ if (NOT WINDOWS)
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
   if ( DARWIN )
-	set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CLASSADS_INSTALL_LOC}/lib )
+	set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib )
 	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
   endif()
 
@@ -195,19 +195,17 @@ if (NOT PROPER)
 
   if (NOT WINDOWS)
 	############################################################################## 
-	# the only reason this exists is b/c our externals depend on it
-	# (blahp & creame)
-	file( COPY ${Headers} DESTINATION ${CLASSADS_INSTALL_LOC}/include/classad )
+	file( COPY ${Headers} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/classad )
 	set_target_properties( classads
-		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
-		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
+		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
 		OUTPUT_NAME classad)
 	if ( LINUX OR DARWIN )
 		set_target_properties( classad
-			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
-			LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-			RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib)
+			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 	endif()
 
   endif()
