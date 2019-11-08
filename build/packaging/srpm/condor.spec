@@ -787,7 +787,9 @@ exit 0
 %endif
 
 %patch1 -p1
+%if 0%{?rhel} >= 8
 %patch2 -p1
+%endif
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
