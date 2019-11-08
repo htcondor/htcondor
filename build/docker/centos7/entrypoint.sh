@@ -9,6 +9,7 @@ if [[ "$HTCONDOR_CHECK_FOR_REPO" = true && ! -d "$HTCONDOR_REPO_DIR" ]]; then
   >&2 echo "HTCondor source repository NOT found in container, cloning from $HTCONDOR_GIT_URL@$HTCONDOR_CLONE_BRANCH"
   git clone \
     --branch "$HTCONDOR_CLONE_BRANCH" \
+    --depth 1 \
     "$HTCONDOR_GIT_URL" \
     "$HTCONDOR_REPO_DIR"
 fi
