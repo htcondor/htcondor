@@ -12,8 +12,6 @@ the World Wide Web at URL
 Binary distributions of this HTCondor Version |release| release are
 available for the platforms detailed in Table `1.1 <#x8-80071>`_.
 A platform is an architecture/operating system combination.
-:index:`definition of<single: definition of; clipped platform>`
-:index:`availability<single: availability; clipped platform>`
 
 The HTCondor source code is available for public download alongside the
 binary distributions.
