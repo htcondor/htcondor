@@ -107,6 +107,9 @@ Bugs Fixed:
   the configuration was changed to not use the *condor_shared_port* daemon.
   :ticket:`7335`
 
+- Fixed a memory leak in the SSL authentication method.
+  :ticket:`7363`
+
 Version 8.8.5
 -------------
 
