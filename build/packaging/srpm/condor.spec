@@ -177,6 +177,7 @@ Source118: voms-2.0.6.tar.gz
 %endif
 
 Patch1: old-sphinx.patch
+Patch2: python-shebang.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -778,6 +779,7 @@ exit 0
 %endif
 
 %patch1 -p1
+%patch2 -p1
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
