@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """
 htsub command to submit high throughput jobs via BOSCO/HTCondor:
 http://jira.opensciencegrid.org/browse/CAMPUS-54
@@ -34,6 +34,9 @@ htstat
 htqueue
 htquery
 """
+
+from __future__ import print_function
+
 __author__ = 'marco'
 
 import sys
@@ -145,7 +148,7 @@ def do_submit(sub_dir, sub_str):
     Create the files and submit the job
     """
     if not sub_dir:
-        print "Submit dir not defined!"
+        print("Submit dir not defined!")
         exit(1)
     fname = os.path.join(sub_dir, "htjob.submit")
     #log("Condor submit file: %s" % fname, logging.DEBUG)
@@ -156,15 +159,15 @@ def do_submit(sub_dir, sub_str):
     log("Submit file:\n%s" % sub_str, logging.DEBUG)
     ec, out = commands.getstatusoutput('condor_submit %s' % fname)
     if ec==0:
-        print "Job submitted successfully: %s" % out
+        print("Job submitted successfully: %s" % out)
     else:
-        print "Error in submitting job (%s): %s" % (ec, out)
+        print("Error in submitting job (%s): %s" % (ec, out))
 
 
 def do_cleanup(tmp_dir):
     try:
         shutil.rmtree(tmp_dir) # delete directory
-    except OSError, e:
+    except OSError as e:
         if e.errno != 2: # code 2 - no such file or directory
             raise
 

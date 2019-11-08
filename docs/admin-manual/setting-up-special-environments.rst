@@ -1285,7 +1285,7 @@ Installing the BOINC client software
 
 :index:`BOINC Installation<single: BOINC Installation; Backfill>`
 
-In HTCondor Version 8.9.1, the *boinc_client* must be manually
+In HTCondor Version |release|, the *boinc_client* must be manually
 downloaded, installed and configured outside of HTCondor. Download the
 *boinc_client* executables at
 `http://boinc.berkeley.edu/download.php <http://boinc.berkeley.edu/download.php>`_.

@@ -407,7 +407,7 @@ questions:
     the :doc:`/admin-manual/setting-up-special-environments` section
     in the manual. HTCondor does not currently have a way to
     authenticate itself to AFS. A solution is not ready for Version
-    8.9.1. This implies that you are probably not going to want to have
+    |release|. This implies that you are probably not going to want to have
     the ``LOCAL_DIR`` :index:`LOCAL_DIR` for HTCondor on AFS.
     However, you can (and probably should) have the HTCondor
     ``RELEASE_DIR`` on AFS, so that you can share one copy of those

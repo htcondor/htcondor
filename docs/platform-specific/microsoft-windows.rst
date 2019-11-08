@@ -47,8 +47,8 @@ Supported Features under Windows
 
 Except for those items listed above, most everything works the same way
 in HTCondor as it does in the Unix release. This release is based on the
-HTCondor Version 8.9.1 source tree, and thus the feature set is the same
-as HTCondor Version 8.9.1 for Unix. For instance, all of the following
+HTCondor Version |release| source tree, and thus the feature set is the same
+as HTCondor Version |release| for Unix. For instance, all of the following
 work in HTCondor:
 
 -  The ability to submit, run, and manage queues of jobs running on a

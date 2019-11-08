@@ -9,7 +9,7 @@ Availability
 HTCondor is currently available as a free download from the Internet via
 the World Wide Web at URL
 `http://htcondor.org/downloads/ <http://htcondor.org/downloads/>`_.
-Binary distributions of this HTCondor Version 8.9.1 release are
+Binary distributions of this HTCondor Version |release| release are
 available for the platforms detailed in Table `1.1 <#x8-80071>`_.
 A platform is an architecture/operating system combination.
 :index:`definition of<single: definition of; clipped platform>`
@@ -37,12 +37,15 @@ binary distributions.
 |                                      | - All versions Windows 7 or greater  |
 |                                      |   (clipped)                          |
 |                                      | - Red Hat Enterprise Linux 7         |
-|                                      | - Debian Linux 8.0 (jessie)          |
-|                                      | - Debian Linux 9.0 (stretch)         |
+|                                      | - Red Hat Enterprise Linux 8         |
 |                                      |   (clipped)                          |
-|                                      | - Macintosh OS X 10.10 through 10.13 |
+|                                      | - Debian Linux 8; Jessie             |
+|                                      | - Debian Linux 9; Stretch            |
 |                                      |   (clipped)                          |
-|                                      | - Ubuntu 14.04; Trusty Tahr          |
+|                                      | - Debian Linux 10; Buster            |
+|                                      |   (clipped)                          |
+|                                      | - Macintosh OS X 10.10 through 10.15 |
+|                                      |   (clipped)                          |
 |                                      | - Ubuntu 16.04; Xenial Xerus         |
 |                                      |   (clipped)                          |
 |                                      | - Ubuntu 18.04; Bionic Beaver        |
@@ -59,7 +62,7 @@ various operating systems, see the :doc:`/platform-specific/index` chapter.
 Jobs submitted to the standard universe utilize *condor_compile* to
 relink programs with libraries provided by HTCondor.
 The following table lists supported compilers by platform for
-this Version 8.9.1 release. Other compilers may work, but are not
+this Version |release| release. Other compilers may work, but are not
 supported.
 :index:`list of supported compilers<single: list of supported compilers; condor_compile>`
 :index:`list of supported compilers<single: list of supported compilers; condor_compile command>`
