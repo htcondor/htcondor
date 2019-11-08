@@ -655,7 +655,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
 	setRemoteDomain( UNMAPPED_DOMAIN );
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
-		//free(key);
+	(*X509_free)(peer);
 	(*SSL_CTX_free_ptr)(ctx);
 	(*SSL_free_ptr)(ssl);
 		//BIO_free(conn_in); // Thanks, valgrind.
