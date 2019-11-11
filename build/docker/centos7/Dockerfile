@@ -46,10 +46,10 @@ ENV \
     # A reasonable release dir path
     HTCONDOR_RELEASE_DIR="/home/build/release_dir" \
     # By default, we will check that we have a HTCondor source repo, and clone it if not present
-    HTCONDOR_CHECK_FOR_REPO=true\
+    HTCONDOR_CHECK_FOR_REPO=true \
     # The remote git repo to get HTCondor source from if it's not present
     HTCONDOR_GIT_URL="https://github.com/htcondor/htcondor.git" \
     # Which branch to checkout if we do have to get source remotely
-    HTCONDOR_CLONE_BRANCH="master" \
+    HTCONDOR_BRANCH="master" \
     # Use a fancier ninja build progress meter by default
     NINJA_STATUS="%es [%u -> %r -> %f/%t] "
