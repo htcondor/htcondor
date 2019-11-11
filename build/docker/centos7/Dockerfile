@@ -28,7 +28,8 @@ USER build
 RUN pip3 --no-cache install --user build sphinx sphinx_rtd_theme nbsphinx sphinx-autobuild
 
 # Set up entrypoint script; see that script for more on what it does
-COPY entrypoint.sh /home/build/.entrypoint.sh
+COPY --chown=build:build entrypoint.sh /home/build/.entrypoint.sh
+RUN chmod +x /home/build/.entrypoint.sh
 ENTRYPOINT ["/home/build/.entrypoint.sh"]
 
 # Default to running a bash login shell; we do this (the -l) so
