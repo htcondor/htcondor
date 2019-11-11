@@ -14,9 +14,16 @@ struct ranger {
 
     ranger() {};
     ranger(const std::initializer_list<range> &il);
+    ranger(const std::initializer_list<element_type> &il);
 
     iterator insert(range r);
     iterator erase(range r);
+
+    inline void insert(element_type e);
+    inline void erase(element_type e);
+
+    inline void insert_slice(element_type front, element_type back);
+    inline void erase_slice(element_type front, element_type back);
 
     iterator lower_bound(element_type x) const;
     iterator upper_bound(element_type x) const;
@@ -138,6 +145,15 @@ ranger::element_type ranger::front_element() const { return front()._start; }
 
 const ranger::range &ranger::back()          const { return *--end();       }
 ranger::element_type ranger::back_element()  const { return back().back();  }
+
+void ranger::insert(element_type e) { insert(range(e, e + 1)); }
+void ranger::erase(element_type e)  { erase(range(e, e + 1));  }
+
+void ranger::insert_slice(element_type front, element_type back)
+{ insert(range(front, back + 1)); }
+
+void ranger::erase_slice(element_type front, element_type back)
+{ erase(range(front, back + 1)); }
 
 
 /*  persist / load ranger objects

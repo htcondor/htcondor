@@ -84,6 +84,12 @@ ranger::ranger(const std::initializer_list<ranger::range> &il)
         insert(rr);
 }
 
+ranger::ranger(const std::initializer_list<ranger::element_type> &il)
+{
+    for (const element_type &e : il)
+        insert(e);
+}
+
 
 // specialize for std::set containers to use std::set::lower_bound
 static inline std::set<ranger::range>::const_iterator
