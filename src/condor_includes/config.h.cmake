@@ -87,66 +87,6 @@
 //#cmakedefine HAVE_CC_SHARED_FLAG
 //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
-// These don't appear to be used at all
-///* Define to 1 if the tool 'find' is available */
-//#cmakedefine HAVE_FIND
-///* Define to 1 if you have the 'fseeko' function. */
-//#cmakedefine HAVE_FSEEKO
-///* Define to 1 if you have the 'ftello' function. */
-//#cmakedefine HAVE_FTELLO
-///* Define to 1 if you have the 'getdirentries' function. */
-//#cmakedefine HAVE_GETDIRENTRIES
-///* Define if jar is available */
-//#cmakedefine HAVE_JAR
-///* Define if javac is available */
-//#cmakedefine HAVE_JAVAC
-///* Define to 1 if you have the 'crypt' library (-lcrypt). */
-//#cmakedefine HAVE_LIBCRYPT
-///* check for usable libsasl */
-//#cmakedefine HAVE_LIBSASL
-///* check for usable libsasl2 */
-//#cmakedefine HAVE_LIBSASL2
-///* Define if sha256sum is available */
-//#cmakedefine HAVE_SHA256SUM
-///* Define to 1 if you have the <memory.h> header file. */
-//#cmakedefine HAVE_MEMORY_H
-///* Define to 1 if the tool 'objcopy' is available */
-//#cmakedefine HAVE_OBJCOPY
-///* Define to 1 if objcopy can seperate the debugging symbols from an executable */
-//#cmakedefine HAVE_OBJCOPY_DEBUGLINK
-///* Define if making rpms */
-//#cmakedefine HAVE_RPM
-///* Define if sha1sum is available */
-//#cmakedefine HAVE_SHA1SUM
-///* Define to 1 if you have the <stdlib.h> header file. */
-//#cmakedefine HAVE_STDLIB_H
-///* Define to 1 if you have the <strings.h> header file. */
-//#cmakedefine HAVE_STRINGS_H
-///* Define to 1 if you have the <string.h> header file. */
-//#cmakedefine HAVE_STRING_H
-///* Define to 1 if 'f_fsid' is member of 'struct statvfs'. (USED)*/
-//#cmakedefine HAVE_STRUCT_STATVFS_F_FSID
-///* Define to 1 if you have the <sys/stat.h> header file. */
-//#cmakedefine HAVE_SYS_STAT_H
-///* Define to 1 is tar has --exclude option */
-//#cmakedefine HAVE_TAR_EXCLUDE_FLAG
-///* Define to 1 is tar has --files-from option */
-//#cmakedefine HAVE_TAR_FILES_FROM_FLAG
-///* Define to 1 if you have the 'tmpnam' function. */
-//#cmakedefine HAVE_TMPNAM
-///* Define to 1 if you have the <unistd.h> header file. */
-//#cmakedefine HAVE_UNISTD_H
-///* Define to 1 if you have the 'vsnprintf' function. */
-//#cmakedefine HAVE_VSNPRINTF
-///* Define to 1 if you have the ANSI C header files. */
-//#cmakedefine STDC_HEADERS
-///* Define to 1 if the X Window System is missing or not being used. */
-//#cmakedefine X_DISPLAY_MISSING
-///* Define to 1 if 'lex' declares 'yytext' as a 'char *' by default, not a 'char[]'. */
-//#cmakedefine YYTEXT_POINTER
-//////////////////////////////////////////////////
-
 #cmakedefine BUILDID ${BUILDID}
 
 /////////////////////////////////////////
@@ -155,9 +95,6 @@
 
 /* Define if sha1 checksums are required for released packages*/
 #cmakedefine ENABLE_CHECKSUM_SHA1 1
-
-/* Define if enabling NeST (USED)*/
-#cmakedefine WANT_NEST 1
 
 /* Define to 1 to support invoking hooks throughout the workflow of a job (USED)*/
 #cmakedefine HAVE_JOB_HOOKS 1
@@ -283,9 +220,6 @@
 
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
-
-/* Do we have the srb external (USED) Imake stork*/
-#cmakedefine HAVE_EXT_SRB 1
 
 /* Do we have the unicoregahp external (USED)*/
 #cmakedefine HAVE_EXT_UNICOREGAHP 1
@@ -415,9 +349,6 @@
 
 /* Define to 1 if you have the <openssl/ssl.h> header file. (USED)*/
 #cmakedefine HAVE_OPENSSL_SSL_H 1
-
-/* Do we have Oracle support (USED)*/
-#cmakedefine HAVE_ORACLE 1
 
 /* Define to 1 if you have the <os_types.h> header file. (USED)*/
 #cmakedefine HAVE_OS_TYPES_H 1

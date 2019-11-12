@@ -43,7 +43,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
-	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
@@ -416,15 +415,8 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  # Using -O2 crashes the compiler on ppc mac os x when compiling
-	  # condor_submit
-	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
-	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
-	  else()
-
-            add_definitions(-D_FORTIFY_SOURCE=2)
-	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
-	  endif()
+      add_definitions(-D_FORTIFY_SOURCE=2)
+	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
@@ -463,8 +455,6 @@ if( NOT WINDOWS)
 	# On RedHat6, there's a libcares19 package, but no libcares
 	find_multiple( "cares19" HAVE_LIBCARES19 )
 	find_multiple( "pam" HAVE_LIBPAM )
-	find_program( BISON bison )
-	find_program( FLEX flex )
 	find_program( AUTOCONF autoconf )
 	find_program( AUTOMAKE automake )
 	find_program( LIBTOOLIZE libtoolize )
@@ -661,8 +651,7 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
-find_program(LATEX2HTML latex2html)
-find_program(LATEX latex)
+find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -1394,8 +1383,7 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
-message(STATUS "LATEX: ${LATEX}")
-message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree

@@ -1060,6 +1060,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
     	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
 		if (peer) {
 			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+			(*X509_free)(peer);
 			setRemoteUser( "ssl" );
 		} else {
 			strcpy(subjectname, "unauthenticated");

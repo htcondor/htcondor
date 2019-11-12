@@ -297,11 +297,12 @@ List<ObjType>::IsEmpty() const
 template <class ObjType>
 List<ObjType>::~List()
 {
+	if (!dummy) return;
+
 	while( !IsEmpty() ) {
 		RemoveItem( dummy->next );
 	}
 	delete dummy;
-	// cout << "Destructed list" << endl;
 }
 
 template <class ObjType>
@@ -316,11 +317,10 @@ List<ObjType>::operator=(List<ObjType> &&rhs)
 
 	// Now move the rhs list over...
 	this->dummy = rhs.dummy;
+	this->num_elem = rhs.num_elem;
 
 	// and make the old rhs destroyable
-	rhs.dummy = new Item<ObjType>( 0 );
-	rhs.dummy->next = rhs.dummy;
-	rhs.dummy->prev = rhs.dummy;
+	rhs.dummy = nullptr;
 	rhs.current = rhs.dummy;
 	rhs.num_elem = 0;
 	return *this;

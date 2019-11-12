@@ -1,0 +1,100 @@
+diff --git a/externals/bundles/blahp/1.16.5.1/pbs_status.py b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+index bf626d8..5fa3925 100755
+--- a/externals/bundles/blahp/1.16.5.1/pbs_status.py
++++ b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ #  File:     pbs_status.py
+ #
+diff --git a/src/azure_gahp/AzureGAHPServer.py b/src/azure_gahp/AzureGAHPServer.py
+index 274a8d3..95ec0c4 100644
+--- a/src/azure_gahp/AzureGAHPServer.py
++++ b/src/azure_gahp/AzureGAHPServer.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python2 -u
++#!/usr/bin/env python3 -u
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/bosco_findplatform b/src/condor_contrib/bosco/bosco_findplatform
+index 2a00bd8..0208ed6 100755
+--- a/src/condor_contrib/bosco/bosco_findplatform
++++ b/src/condor_contrib/bosco/bosco_findplatform
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ #Marco Mambelli - first version 10/8/2012 
+ 
+ from __future__ import print_function
+diff --git a/src/condor_contrib/bosco/bosco_ssh_start b/src/condor_contrib/bosco/bosco_ssh_start
+index 6848fa9..2e51439 100755
+--- a/src/condor_contrib/bosco/bosco_ssh_start
++++ b/src/condor_contrib/bosco/bosco_ssh_start
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/htsub b/src/condor_contrib/bosco/htsub
+index 536b1aa..cde2f5f 100755
+--- a/src/condor_contrib/bosco/htsub
++++ b/src/condor_contrib/bosco/htsub
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ """
+ htsub command to submit high throughput jobs via BOSCO/HTCondor:
+ http://jira.opensciencegrid.org/browse/CAMPUS-54
+diff --git a/src/condor_contrib/campus_factory/bin/glidein_creation b/src/condor_contrib/campus_factory/bin/glidein_creation
+index 6745210..8067a71 100755
+--- a/src/condor_contrib/campus_factory/bin/glidein_creation
++++ b/src/condor_contrib/campus_factory/bin/glidein_creation
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ import warnings
+ warnings.filterwarnings("ignore", category=DeprecationWarning)
+diff --git a/src/condor_contrib/campus_factory/bin/runfactory b/src/condor_contrib/campus_factory/bin/runfactory
+index 2efe168..3af42cf 100755
+--- a/src/condor_contrib/campus_factory/bin/runfactory
++++ b/src/condor_contrib/campus_factory/bin/runfactory
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ from optparse import OptionParser
+ 
+ from campus_factory.Factory import Factory
+diff --git a/src/condor_gridmanager/slurm_status.py b/src/condor_gridmanager/slurm_status.py
+index 9ca5bd3..3d695c0 100755
+--- a/src/condor_gridmanager/slurm_status.py
++++ b/src/condor_gridmanager/slurm_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ #  File:     slurm_status.py
+ #
+diff --git a/src/condor_job_router/condor_router_history b/src/condor_job_router/condor_router_history
+index fbc4193..93296a5 100755
+--- a/src/condor_job_router/condor_router_history
++++ b/src/condor_job_router/condor_router_history
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python2
++#!/usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_scripts/condor_top b/src/condor_scripts/condor_top
+index bd647c2..3fbc080 100755
+--- a/src/condor_scripts/condor_top
++++ b/src/condor_scripts/condor_top
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python2
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import classad

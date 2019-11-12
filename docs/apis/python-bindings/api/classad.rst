@@ -41,6 +41,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ExprTree.isnt_
    .. automethod:: ExprTree.sameAs
    .. automethod:: ExprTree.eval
+   .. automethod:: ExprTree.simplify
 
 
 Parsing and Creating ClassAds

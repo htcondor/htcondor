@@ -3,22 +3,19 @@ Introduction
 
 To be clear, our concern throughout this chapter is with commercial
 services which rent computational resources over the Internet at short
-notice and charge in small increments (by the minute or the hour). In
-2016, the four largest such services [1]_
-were (in alphabetical order) Amazon Web Services ('AWS'), (Microsoft)
-Azure, Google Cloud Platform ('GCP'), and (IBM) SoftLayer; as of version
-8.7.8, the *condor_annex* tool supports only AWS. AWS can start booting
+notice and charge in small increments (by the minute or the hour).
+Currently, the *condor_annex* tool supports only AWS.  AWS can start booting
 a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM
-until you stop paying the hourly charge. The other cloud services are
+until you stop paying the hourly charge.  The other cloud services are
 broadly similar.
 
 If you already have access to the Grid, you may wonder why you would
-want to begin cloud computing. The cloud services offer two major
+want to begin cloud computing.  The cloud services offer two major
 advantages over the Grid: first, cloud resources are typically available
 more quickly and in greater quantity than from the Grid; and second,
 because cloud resources are virtual machines, they are considerably more
-customizable than Grid resources. The major disadvantages are, of
+customizable than Grid resources.  The major disadvantages are, of
 course, cost and complexity (although we hope that *condor_annex*
 reduces the latter).
 
@@ -76,9 +73,3 @@ acceptable-use policies, or because you can't change the firewall, or
 because you'd use too much bandwidth.  In those cases, you can instead
 "seed" the cloud with a single-node HTCondor installation and expand it using
 *condor_annex*.  See :ref:`condor_in_the_cloud` for instructions.
-
-.. rubric: Footnotes
-
-.. [1] That is, "infrastructure-as-a-service" providers.
-
-

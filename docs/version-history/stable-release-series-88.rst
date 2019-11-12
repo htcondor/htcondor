@@ -103,6 +103,13 @@ Bugs Fixed:
    was needed.
    :ticket:`7249`
 
+- Fixed a bug where the *condor_master* could crash upon reconfiguration if
+  the configuration was changed to not use the *condor_shared_port* daemon.
+  :ticket:`7335`
+
+- Fixed a memory leak in the SSL authentication method.
+  :ticket:`7363`
+
 Version 8.8.5
 -------------
 

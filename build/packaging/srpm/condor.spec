@@ -28,7 +28,6 @@
 
 %if %uw_build
 %define debug 1
-%define verbose 1
 %endif
 
 # define these to 1 if you want to include externals in source rpm
@@ -63,6 +62,11 @@
 %if 0%{?rhel} >= 7
 %define cream 0
 %endif
+%endif
+
+# cream support is going away, skip for EL8
+%if 0%{?rhel} >= 8
+%define cream 0
 %endif
 
 %define glexec 1
@@ -177,6 +181,8 @@ Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
 %endif
 
+Patch1: old-sphinx.patch
+Patch2: python-shebang.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -199,7 +205,14 @@ BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
+%if 0%{?rhel} >= 8
+BuildRequires: platform-python-devel
+BuildRequires: platform-python-setuptools
+%else
 BuildRequires: python-devel
+BuildRequires: python-setuptools
+BuildRequires: python3-setuptools
+%endif
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
@@ -234,7 +247,11 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
+%if 0%{?rhel} >= 8
+BuildRequires: platform-python-devel
+%else
 BuildRequires: python-devel
+%endif
 BuildRequires: libcurl-devel
 %endif
 
@@ -271,10 +288,19 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: mongodb-devel >= 1.6.4-3
 %endif
 
-# libcgroup < 0.37 has a bug that invalidates our accounting.
 %if %cgroups
+%if 0%{?rhel} >= 8
+BuildRequires: libcgroup
+Requires: libcgroup
+%else
+# libcgroup < 0.37 has a bug that invalidates our accounting.
 BuildRequires: libcgroup-devel >= 0.37
 Requires: libcgroup >= 0.37
+%endif
+%endif
+
+%if %cream && %uw_build
+BuildRequires: c-ares-devel
 %endif
 
 %if %cream && ! %uw_build
@@ -284,7 +310,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} == 7
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -292,8 +318,16 @@ BuildRequires: boost169-static
 %endif
 %endif
 
+%if 0%{?rhel} >= 8
+BuildRequires: boost-static
+%endif
+
 %if 0%{?rhel} >= 6 || 0%{?fedora}
+%if 0%{?rhel} >= 8
+BuildRequires: boost-python3-devel
+%else
 BuildRequires: boost-python
+%endif
 BuildRequires: libuuid-devel
 Requires: libuuid
 %endif
@@ -308,10 +342,21 @@ BuildRequires: systemd-units
 Requires: systemd
 %endif
 
-BuildRequires: transfig
-BuildRequires: latex2html
-# We don't build the manual (yet)
-#BuildRequires: texlive-epstopdf
+%if 0%{?rhel} == 6
+BuildRequires: python-sphinx10 python-sphinx_rtd_theme
+%endif
+
+%if 0%{?rhel} == 7
+%ifarch %{ix86}
+BuildRequires: python-sphinx
+%else
+BuildRequires: python-sphinx python-sphinx_rtd_theme
+%endif
+%endif
+
+%if 0%{?rhel} >= 8
+BuildRequires: python3-sphinx python3-sphinx_rtd_theme
+%endif
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -522,6 +567,7 @@ host as the DedicatedScheduler.
 
 #######################
 %if %python
+%if 0%{?rhel} <= 7
 %package -n python2-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
@@ -552,6 +598,7 @@ Obsoletes: %{name}-python < %{version}-%{release}
 %description -n python2-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
+%endif
 
 
 %if 0%{?rhel} >= 7
@@ -560,9 +607,14 @@ the ClassAd library and HTCondor from python
 %package -n python3-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
-Requires: python36
 Requires: %name = %version-%release
+%if 0%{?rhel} == 7
 Requires: boost169-python3
+Requires: python36
+%else
+Requires: boost-python3
+Requires: platform-python3
+%endif
 
 #%if 0%{?rhel} >= 7 && ! %uw_build
 # auto provides generator does not pick these up for some reason
@@ -606,7 +658,12 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
+%if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
+%endif
+%if 0%{?rhel} >= 7
+Requires: python3-condor = %version-%release
+%endif
 
 %description -n minicondor
 This example configuration is good for trying out HTCondor for the first time.
@@ -698,7 +755,12 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
+%if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
+%endif
+%if 0%{?rhel} >= 7
+Requires: python3-condor = %version-%release
+%endif
 Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
@@ -724,6 +786,11 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+%patch1 -p1
+%if 0%{?rhel} >= 8
+%patch2 -p1
+%endif
+
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
 %endif
@@ -735,7 +802,11 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 # build man files
-make -C doc just-man-pages
+%if 0%{?rhel} == 6
+make -C docs SPHINXBUILD=sphinx-1.0-build man
+%else
+make -C docs man
+%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
@@ -900,7 +971,7 @@ populate %_libexecdir/condor %{buildroot}/usr/libexec/*
 
 # man pages go under %{_mandir}
 mkdir -p %{buildroot}/%{_mandir}
-mv %{buildroot}/usr/man/man1 %{buildroot}/%{_mandir}
+mv %{buildroot}/usr/man %{buildroot}/%{_mandir}/man1
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
@@ -976,6 +1047,7 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 # Remove condor_top with no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
+rm -f %{buildroot}/%{_bindir}/classad_eval
 %endif
 
 # Remove junk
@@ -1550,21 +1622,25 @@ rm -rf %{buildroot}
 %endif
 
 %if %python
+%if 0%{?rhel} <= 7
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/classad_eval
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
 %_libexecdir/condor/libcollector_python_plugin.so
 %{python_sitearch}/classad/
 %{python_sitearch}/htcondor/
 %{python_sitearch}/htcondor-*.egg-info/
+%endif
 
 %if 0%{?rhel} >= 7
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/classad_eval
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so

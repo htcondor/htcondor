@@ -8,11 +8,12 @@ Command Reference Manual (man pages)
    bosco_cluster
    bosco_findplatform
    bosco_install
-   bosco_sshstart
+   bosco_ssh_start
    bosco_start
    bosco_stop
    bosco_uninstall
    classads
+   classad_eval
    condor_advertise
    condor_annex
    condor_check_userlogs
@@ -79,5 +80,5 @@ Command Reference Manual (man pages)
    condor_version
    condor_wait
    condor_who
-   giddalloc
-   procdctl
+   gidd_alloc
+   procd_ctl

@@ -132,6 +132,155 @@ void driver_register_all2<TEST_TABLE2_COUNT>(FunctionDriver &driver)
 }
 
 
+struct testcase3 {
+    const char *input;
+    int element;
+    bool expected_result;
+};
+
+// test cases for contains (element)
+const testcase3 test_table3[] = {
+    {"",                   123,  false},
+    {"10-20",              123,  false},
+    {"10-20",                5,  false},
+    {"10-20",                9,  false},
+    {"10-20",               10,  true },
+    {"10-20",               11,  true },
+    {"10-20",               19,  true },
+    {"10-20",               20,  true },
+    {"10-20",               21,  false},
+    {"10-20",               22,  false},
+    {"10-20;30-40",        123,  false},
+    {"10-20;30-40",          5,  false},
+    {"10-20;30-40",          9,  false},
+    {"10-20;30-40",         10,  true },
+    {"10-20;30-40",         11,  true },
+    {"10-20;30-40",         19,  true },
+    {"10-20;30-40",         20,  true },
+    {"10-20;30-40",         21,  false},
+    {"10-20;30-40",         22,  false},
+    {"10-20;30-40",         29,  false},
+    {"10-20;30-40",         30,  true },
+    {"10-20;30-40",         31,  true },
+    {"10-20;30-40",         39,  true },
+    {"10-20;30-40",         40,  true },
+    {"10-20;30-40",         41,  false},
+    {"10-20;30-40",         42,  false},
+    {"10-20;30-40;50-60",  123,  false},
+    {"10-20;30-40;50-60",    5,  false},
+    {"10-20;30-40;50-60",    9,  false},
+    {"10-20;30-40;50-60",   10,  true },
+    {"10-20;30-40;50-60",   11,  true },
+    {"10-20;30-40;50-60",   19,  true },
+    {"10-20;30-40;50-60",   20,  true },
+    {"10-20;30-40;50-60",   21,  false},
+    {"10-20;30-40;50-60",   22,  false},
+    {"10-20;30-40;50-60",   29,  false},
+    {"10-20;30-40;50-60",   30,  true },
+    {"10-20;30-40;50-60",   31,  true },
+    {"10-20;30-40;50-60",   39,  true },
+    {"10-20;30-40;50-60",   40,  true },
+    {"10-20;30-40;50-60",   41,  false},
+    {"10-20;30-40;50-60",   42,  false},
+    {"10-20;22-30",         19,  true },
+    {"10-20;22-30",         20,  true },
+    {"10-20;22-30",         21,  false},
+    {"10-20;22-30",         22,  true },
+    {"10-20;22-30",         23,  true }
+};
+
+static const int TEST_TABLE3_COUNT = sizeof test_table3 / sizeof test_table3[0];
+
+template <int N>
+static bool test_ranger_misc_contains_tmpl();
+
+template <int N>
+static void driver_register_all3(FunctionDriver &driver)
+{
+    driver.register_function(test_ranger_misc_contains_tmpl<N>);
+    driver_register_all3<N+1>(driver);
+}
+
+template <>
+void driver_register_all3<TEST_TABLE3_COUNT>(FunctionDriver &driver)
+{
+    (void) driver;
+}
+
+
+struct testcase4 {
+    Action action;
+    const char *input;
+    int element;
+    const char *expected_result;
+};
+
+const testcase4 test_table4[] = {
+    {Insert, "",     2,  "2"    },
+    {Insert, "2",    2,  "2"    },
+    {Insert, "2",    3,  "2-3"  },
+    {Insert, "2-3",  2,  "2-3"  },
+    {Insert, "2-3",  3,  "2-3"  },
+    {Insert, "2;4",  3,  "2-4"  },
+    {Insert, "2;4",  1,  "1-2;4"},
+    {Insert, "2;4",  5,  "2;4-5"},
+
+    {Insert, "10-20;30-40;50-60",   5,  "5;10-20;30-40;50-60" },
+    {Insert, "10-20;30-40;50-60",   9,  "9-20;30-40;50-60"    },
+    {Insert, "10-20;30-40;50-60",  21,  "10-21;30-40;50-60"   },
+    {Insert, "10-20;30-40;50-60",  22,  "10-20;22;30-40;50-60"},
+    {Insert, "10-20;30-40;50-60",  29,  "10-20;29-40;50-60"   },
+    {Insert, "10-20;30-40;50-60",  31,  "10-20;30-40;50-60"   },
+    {Insert, "10-20;30-40;50-60",  41,  "10-20;30-41;50-60"   },
+    {Insert, "10-20;30-40;50-60",  42,  "10-20;30-40;42;50-60"},
+    {Insert, "10-20;30-40;50-60",  49,  "10-20;30-40;49-60"   },
+    {Insert, "10-20;30-40;50-60",  60,  "10-20;30-40;50-60"   },
+    {Insert, "10-20;30-40;50-60",  61,  "10-20;30-40;50-61"   },
+    {Insert, "10-20;30-40;50-60",  62,  "10-20;30-40;50-60;62"},
+
+    {Erase, "",       5, ""           },
+    {Erase, "4",      5, "4"          },
+    {Erase, "5",      5, ""           },
+    {Erase, "6",      5, "6"          },
+    {Erase, "10-12", 11, "10;12"      },
+    {Erase, "10-20",  9, "10-20"      },
+    {Erase, "10-20", 10, "11-20"      },
+    {Erase, "10-20", 11, "10;12-20"   },
+    {Erase, "10-20", 15, "10-14;16-20"},
+    {Erase, "10-20", 19, "10-18;20"   },
+    {Erase, "10-20", 20, "10-19"      },
+
+    {Erase, "10-20;30-40;50-60", 30, "10-20;31-40;50-60"},
+    {Erase, "10-20;30-40;50-60", 40, "10-20;30-39;50-60"},
+    {Erase, "10-20;30-40;50-60", 50, "10-20;30-40;51-60"},
+    {Erase, "10-20;30-40;50-60", 60, "10-20;30-40;50-59"}
+};
+
+
+static const int TEST_TABLE4_COUNT = sizeof test_table4 / sizeof test_table4[0];
+
+
+template <int N>
+static bool test_ranger_misc_element_tmpl();
+
+template <int N>
+static void driver_register_all4(FunctionDriver &driver)
+{
+    driver.register_function(test_ranger_misc_element_tmpl<N>);
+    driver_register_all4<N+1>(driver);
+}
+
+template <>
+void driver_register_all4<TEST_TABLE_COUNT>(FunctionDriver &driver)
+{
+    (void) driver;
+}
+
+
+static bool test_ranger_initializer_list_elements();
+static bool test_ranger_initializer_list_ranges();
+
+
 bool OTEST_ranger(void) {
     emit_object("ranger");
     emit_comment("This module contains functions for manipulating range "
@@ -140,6 +289,11 @@ bool OTEST_ranger(void) {
     FunctionDriver driver;
     driver_register_all<0>(driver);
     driver_register_all2<0>(driver);
+    driver_register_all3<0>(driver);
+    driver_register_all4<0>(driver);
+
+    driver.register_function(test_ranger_initializer_list_elements);
+    driver.register_function(test_ranger_initializer_list_ranges);
 
     return driver.do_all_functions();
 }
@@ -270,5 +424,186 @@ template <int N>
 static bool test_ranger_misc_load_persist_slice_tmpl()
 {
     return test_ranger_misc_load_persist_slice(N);
+}
+
+
+//////////////////
+
+
+static const char *boolstr(bool truth)
+{
+    return truth ? "true" : "false";
+}
+
+// test a row in the test case table (contains)
+
+static bool test_ranger_misc_contains(int N)
+{
+    char elementbuf[64];
+    const testcase3 &t = test_table3[N];
+
+    sprintf(elementbuf, "%d", t.element);
+
+    emit_test("Test misc ranger contains element");
+    emit_input_header();
+    emit_param("Input", t.input);
+    emit_param("Element", elementbuf);
+
+    ranger r;
+    if (load(r, t.input)) {
+        emit_alert("Unexpected error loading range spec for contains");
+        FAIL;
+    }
+    bool contains_element = r.contains(t.element);
+
+    emit_output_expected_header();
+    emit_retval(boolstr(t.expected_result));
+
+    emit_output_actual_header();
+    emit_retval(boolstr(contains_element));
+
+    if (contains_element != t.expected_result)
+        FAIL;
+    PASS;
+}
+
+
+template <int N>
+static bool test_ranger_misc_contains_tmpl()
+{
+    return test_ranger_misc_contains(N);
+}
+
+void xx_bld_test()
+{
+    ranger r = { 1, 2, 3, 45};
+    ranger r2 = { {1,10}, {20,30}, {40,50} };
+
+}
+
+
+//////////////////
+
+
+static int ranger_load_insert_persist_elt(const char *input, int elt,
+                                          std::string &s)
+{
+    ranger r;
+    if (load(r, input) < 0) {
+        emit_alert("Unexpected error loading range spec for element insert");
+        return -1;
+    }
+    r.insert(elt);
+    persist(s, r);
+    return 0;
+}
+
+static int ranger_load_erase_persist_elt(const char *input, int elt,
+                                         std::string &s)
+{
+    ranger r, e;
+    if (load(r, input) < 0) {
+        emit_alert("Unexpected error loading range spec for element erase");
+        return -1;
+    }
+    r.erase(elt);
+    persist(s, r);
+    return 0;
+}
+
+
+static bool test_ranger_misc_element(int N)
+{
+    char elementbuf[64];
+    const testcase4 &t = test_table4[N];
+
+    sprintf(elementbuf, "%d", t.element);
+
+    std::string s;
+
+    emit_test("Test misc ranger element-wise manipulation");
+    emit_input_header();
+    emit_param("Input", t.input);
+    emit_param("Action", t.action == Insert ? "insert" : "erase");
+    emit_param("Element", elementbuf);
+
+    int ret = (t.action == Insert ? ranger_load_insert_persist_elt
+                                  : ranger_load_erase_persist_elt)
+              (t.input, t.element, s);
+
+    if (ret != 0)
+        FAIL;
+
+    emit_output_expected_header();
+    emit_retval(t.expected_result);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != t.expected_result)
+        FAIL;
+    PASS;
+}
+
+
+// one of these templated functions gets generated for every test case, so we
+// keep it very light weight as a wrapper around the main test function above
+
+template <int N>
+static bool test_ranger_misc_element_tmpl()
+{
+    return test_ranger_misc_element(N);
+}
+
+
+//////////////////
+
+
+static bool test_ranger_initializer_list_elements()
+{
+    ranger r = {1, 2, 3, 5, 10};
+
+    const char *expected = "1-3;5;10";
+
+    std::string s;
+    persist(s, r);
+
+    emit_test("Test initializer lists working as expected");
+    emit_input_header();
+    emit_param("Input", "{1, 2, 3, 5, 10}");
+
+    emit_output_expected_header();
+    emit_retval(expected);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != expected)
+        FAIL;
+    PASS;
+}
+
+static bool test_ranger_initializer_list_ranges()
+{
+    ranger r = {{20,30}, {40,50}, {60,80}};
+
+    const char *expected = "20-29;40-49;60-79";
+
+    std::string s;
+    persist(s, r);
+
+    emit_test("Test initializer lists working as expected");
+    emit_input_header();
+    emit_param("Input", "{{20,30}, {40,50}, {60,80}}");
+
+    emit_output_expected_header();
+    emit_retval(expected);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != expected)
+        FAIL;
+    PASS;
 }
 

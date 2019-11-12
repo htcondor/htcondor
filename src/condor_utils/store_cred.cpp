@@ -316,7 +316,7 @@ UNIX_GET_CRED(const char *user, const char *domain)
 	// create filenames
 	MyString filename;
 	filename.formatstr("%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
-	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
+	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
 	unsigned char *buf = 0;

@@ -96,6 +96,7 @@ sub dry_run {
 	# add the additional job ads that would appear in condor_q -long
 	for my $i (0..$index-1){
 		my $owner = $Attr{$i}{Owner};
+		if ($owner eq 'undefined') { $Attr{$i}{Owner} = '"billg"'; $owner = '"billg"'; }
 		$owner = substr($owner,0,length($owner)-1);
 		my $FileSystemDomain = $Attr{$i}{FileSystemDomain};
 		$FileSystemDomain = substr($FileSystemDomain, 1, length($FileSystemDomain)-1);
