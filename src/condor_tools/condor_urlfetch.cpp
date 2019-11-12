@@ -108,12 +108,12 @@ int main(int argc, const char *argv[])
         	return 1;
 		}
 
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        r = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
 		if (r != CURLE_OK) {
         	fprintf(stderr, "condor_urlfetch: Can't setopt CUROPT_WRITEFUNCTION\n");
         	return 1;
 		}
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        r = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 		if (r != CURLE_OK) {
         	fprintf(stderr, "condor_urlfetch: Can't setopt CUROPT_WRITEDATA\n");
         	return 1;
