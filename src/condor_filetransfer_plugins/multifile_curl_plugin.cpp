@@ -280,11 +280,32 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
         return rval;
     }
 
-    curl_easy_setopt( _handle, CURLOPT_READDATA, file );
-    curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
-    curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_READDATA, file );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_READDATA\n");
+		return -1;
+	}
 
-    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+    r = curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_UPLOAD\n");
+		return -1;
+	}
+
+    r = curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_INFILESIZE_LARGE\n");
+		return -1;
+	}
+
+    if (header_list) {
+		r = curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CUROPT_HTTPHEADER\n");
+			return -1;
+		}
+	}
 
     // Update some statistics
     _this_file_stats->TransferType = "upload";
