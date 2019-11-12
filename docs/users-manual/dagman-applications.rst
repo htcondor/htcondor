@@ -897,6 +897,44 @@ In the case where a machine is scheduled to go down, DAGMan will clean
 up memory and exit. However, it will leave any submitted jobs in the
 HTCondor queue.
 
+Editing a Running DAG
+---------------------
+
+:index:`editing a running DAG<single: editing a running DAG; DAGMan>`
+
+Certain properties of a running DAG can be changed after the workflow has been
+started. The values of these properties are published in the *condor_dagman* 
+job ad; changing any of these properties using *condor_qedit* will also update
+the internal DAGMan value.
+
+Currently, you can change the following attributes:
+
++-------------------------+-----------------------------------------------------+
+| **Attribute Name**      | **Attribute Description**                           |
++-------------------------+-----------------------------------------------------+
+| *DAGMan_MaxJobs*        | Maximum number of running jobs                      |
++-------------------------+-----------------------------------------------------+
+| *DAGMan_MaxIdle*        | Maximum number of idle jobs                         |
++-------------------------+-----------------------------------------------------+
+| *DAGMan_MaxPreScripts*  | Maximum number of running PRE scripts               |
++-------------------------+-----------------------------------------------------+
+| *DAGMan_MaxPostScripts* | Maximum number of running POST scripts              |
++-------------------------+-----------------------------------------------------+
+
+To edit one of these properties, use the *condor_qedit* tool with the job ID of
+the *condor_dagman* job, for example:
+
+::
+
+    condor_qedit <dagman-job-id> DAGMan_MaxJobs 1000
+
+To view all the properties of a *condor_dagman* job:
+
+::
+
+    condor_q -l <dagman-job-id> | grep DAGMan
+
+
 Suspending a Running DAG
 ------------------------
 

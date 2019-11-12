@@ -24,6 +24,12 @@ New Features:
    configured.
    :ticket:`7355`
 
+-  Added the ability to edit certain properties of a running *condor_dagman*
+   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**. 
+   A user can call *condor_qedit* to set new values in the job ad, which will
+   then be updated in the running workflow.
+   :ticket:`7236`
+
 Bugs Fixed:
 
 -  None.
