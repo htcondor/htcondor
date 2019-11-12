@@ -205,14 +205,12 @@ BuildRequires: libXScrnSaver-devel
 BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
-%if 0%{?rhel} >= 8
-BuildRequires: platform-python-devel
-BuildRequires: platform-python-setuptools
-%else
+%if 0%{?rhel} == 7
 BuildRequires: python-devel
 BuildRequires: python-setuptools
-BuildRequires: python3-setuptools
 %endif
+BuildRequires: python3-devel
+BuildRequires: python3-setuptools
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
@@ -248,7 +246,7 @@ BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
 %if 0%{?rhel} >= 8
-BuildRequires: platform-python-devel
+BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
 %endif
@@ -394,9 +392,14 @@ Requires(preun):/sbin/service
 Requires(postun):/sbin/service
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} == 7
 Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
+%endif
+
+%if 0%{?rhel} >= 8
+Requires(post): python3-policycoreutils
+Requires(post): selinux-policy-targeted
 %endif
 
 #Provides: user(condor) = 43
@@ -613,7 +616,7 @@ Requires: boost169-python3
 Requires: python36
 %else
 Requires: boost-python3
-Requires: platform-python3
+Requires: python3
 %endif
 
 #%if 0%{?rhel} >= 7 && ! %uw_build
