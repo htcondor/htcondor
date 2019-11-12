@@ -109,35 +109,20 @@ Details About How HTCondor Jobs Vacate Machines
 :index:`vacate` :index:`vacate<single: vacate; preemption>`
 
 When HTCondor needs a job to vacate a machine for whatever reason, it
-sends the job an asynchronous signal specified in the ``KillSig``
+sends the job an operating system signal specified in the ``KillSig``
 attribute of the job's ClassAd. The value of this attribute can be
 specified by the user at submit time by placing the **kill_sig** option
 in the HTCondor submit description file.
 
-If a program wanted to do some special work when required to vacate a
-machine, the program may set up a signal handler to use a trappable
-signal as an indication to clean up. When submitting this job, this
-clean up signal is specified to be used with **kill_sig**. Note that
-the clean up work needs to be quick. If the job takes too long to go
-away, HTCondor follows up with a SIGKILL signal which immediately
-terminates the process.
+If a program wanted to do some work when asked to vacate a
+machine, the program may set up a signal handler to handle this
+signal. This clean up signal is specified with **kill_sig**. Note that
+the clean up work needs to be quick. If the job takes too long to exit
+after getting the **kill_sig**, HTCondor sends a SIGKILL signal 
+which immediately terminates the process.
 :index:`condor_compile<single: condor_compile; HTCondor commands>`
 
-A job that is linked using *condor_compile* and is subsequently
-submitted into the standard universe, will checkpoint and exit upon
-receipt of a SIGTSTP signal. Thus, SIGTSTP is the default value for
-``KillSig`` when submitting to the standard universe. The user's code
-may still checkpoint itself at any time by calling one of the following
-functions exported by the HTCondor libraries:
-
- ckpt()()
-    Performs a checkpoint and then returns.
- ckpt_and_exit()()
-    Checkpoints and exits; HTCondor will then restart the process again
-    later, potentially on a different machine.
-
-For jobs submitted into the vanilla universe, the default value for
-``KillSig`` is SIGTERM, the usual method to nicely terminate a Unix
-program.
+The default value for ``KillSig`` is SIGTERM, the usual method 
+to nicely terminate a Unix program.
 
 
