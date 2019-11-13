@@ -1505,7 +1505,7 @@ Job::Release(int proc)
 	if( _onHold[proc] ) {
 		_onHold[proc] = 0;
 #else
-	PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
+	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
 			"is not on hold\n", GetJobName(), GetCluster(), GetProc());
@@ -1525,7 +1525,7 @@ void
 Job::ExecMetrics( int proc, const struct tm &eventTime,
 			DagmanMetrics *metrics )
 {
-	PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
+	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
 		_gotEvents.resize( proc+1, 0 );
 	}
@@ -1548,7 +1548,7 @@ void
 Job::TermAbortMetrics( int proc, const struct tm &eventTime,
 			DagmanMetrics *metrics )
 {
-	PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
+	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
 		debug_printf( DEBUG_NORMAL,
 					"Warning for node %s: got terminated or aborted event for proc %d, but no execute event!\n",
