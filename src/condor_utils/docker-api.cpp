@@ -1187,7 +1187,7 @@ DockerAPI::getServicePorts( const std::string & container,
 	}
 
 	//
-	// FIXME: Will result going out of scope clean everything up?
+    // When result goes out scope, it will free all the pointers returned here.
 	//
 
 	// This is clumsier than it seems like it ought to be.
