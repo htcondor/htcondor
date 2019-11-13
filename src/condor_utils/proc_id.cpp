@@ -219,7 +219,7 @@ inline size_t hashkey_compat_hash(const char * p)
 }
 #endif
 
-size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key)
+size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key) noexcept
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];

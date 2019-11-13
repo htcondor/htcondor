@@ -95,6 +95,7 @@
 #include "condor_auth_passwd.h"
 #include "condor_secman.h"
 #include "token_utils.h"
+#include "jobsets.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -144,16 +145,6 @@ extern DedicatedScheduler dedicated_scheduler;
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
-
-// These functions are defined in qmgmt.cpp.
-// We don't have a good schedd-internal header file, so we declare them
-// here for use in this file.
-int
-SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
-int
-SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0);
-int
-SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
 
 bool ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs );
 
@@ -724,12 +715,16 @@ Scheduler::Scheduler() :
 	m_job_machine_attrs_history_length = 0;
 	m_history_helper_max = 0;
 	m_history_helper_rid = -1;
-	
+
+	jobSets = nullptr;
 }
 
 
 Scheduler::~Scheduler()
 {
+	delete jobSets;
+	jobSets = nullptr;
+
 	delete m_adSchedd;
     delete m_adBase;
 	if (MyShadowSockName)
@@ -12925,6 +12920,17 @@ Scheduler::Init()
 		////////////////////////////////////////////////////////////////////
 
     stats.Reconfig();
+
+	if (first_time_in_init) {
+		if (param_boolean("USE_JOBSETS", false)) {
+			ASSERT(jobSets == nullptr);
+			jobSets = new JobSets();
+			ASSERT(jobSets);
+		}
+	}
+	if (jobSets) {
+		jobSets->reconfig();
+	}
 
 	if( Spool ) free( Spool );
 	if( !(Spool = param("SPOOL")) ) {
