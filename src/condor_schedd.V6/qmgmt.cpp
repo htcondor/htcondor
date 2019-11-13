@@ -1499,9 +1499,11 @@ void JobQueueJob::PopulateFromAd()
 		}
 	}
 
+#if 0 // we purposefully do NOT want to initialize the set_id here! -Todd Tannenbaum Oct 2019
 	if ( ! set_id) {
 		this->LookupInteger(ATTR_JOB_SET_ID, set_id);
 	}
+#endif
 
 
 #if 0	// we don't do this anymore, since we update both the ad and the job object
@@ -1864,8 +1866,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	} // WHILE
 
 
-	// If there were any JobSets in the log, scan again to add jobs into those sets
-	if (scheduler.jobSets && scheduler.jobSets->count() > 0) {
+	// If JobSets enabled, scan again to add jobs into sets
+	if (scheduler.jobSets ) {
 		dprintf(D_FULLDEBUG, "Restoring JobSet state\n");
 		unsigned int updates = 0;
 		JobQueue->StartIterateAllClassAds();
