@@ -44,6 +44,8 @@ cd condor-${condor_version}
 
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
+elif $(grep -qi buster /etc/os-release); then
+    dist='buster'
 elif $(grep -qi xenial /etc/os-release); then
     dist='xenial'
 elif $(grep -qi bionic /etc/os-release); then
@@ -57,10 +59,10 @@ echo "Distribution is $dist"
 cp -pr build/packaging/new-debian debian
 
 # Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
+#dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
-#dch --release --distribution $dist ignored
+dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

@@ -2139,6 +2139,14 @@ fi
 %endif
 
 %changelog
+* Wed Nov 13 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.6-1
+- Initial support for CentOS 8
+- Fixed a memory leak in SSL authentication
+- Fixed a bug where "condor_submit -spool" would only submit the first job
+- Reduced encrypted file transfer CPU usage by a factor of six
+- "condor_config_val -summary" displays changes from a default configuration
+- Improved the ClassAd documentation, added many functions that were omitted
+
 * Thu Sep 05 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
 - Fixed two performance problems on Windows
 - Fixed Java universe on Debian and Ubuntu systems
