@@ -818,6 +818,9 @@ registerFunction(boost::python::object function, boost::python::object name)
 classad::ExprTree*
 convert_python_to_exprtree(boost::python::object value)
 {
+	if( value.ptr() == Py_None ) {
+		return classad::Literal::MakeUndefined();
+	}
     boost::python::extract<ExprTreeHolder&> expr_obj(value);
     if (expr_obj.check())
     {
