@@ -950,7 +950,9 @@ mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
 # And the Python bindings
 %if %python
+%if 0%{?rhel} <= 7
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
+%endif
 %if 0%{?rhel} >= 7
 %ifarch x86_64
 populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
