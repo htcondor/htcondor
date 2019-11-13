@@ -1,0 +1,51 @@
+#!/bin/bash
+###########################################
+# DESY HTCondor Config                    #
+###########################################
+
+DEBUGFILE=/tmp/htckrb5debug
+COMMAND=$0
+CCDIR="$*"
+
+logging () {
+if [[ -f $DEBUGFILE ]]; then
+    DATE=$(date +'%T %x')
+    echo "$DATE $COMMAND $CCDIR $1" >> $DEBUGFILE
+fi
+#DATE=$(date +'%T %x')
+#echo "$DATE $COMMAND $CCDIR $1"
+}
+
+CONDOR_SBIN=`condor_config_val SBIN`
+CONDOR_AKLOG=$CONDOR_SBIN/condor_aklog
+
+if [[ -f /usr/heimdal/bin/klist ]]; then
+        PRINCE=`/usr/heimdal/bin/klist 2>/dev/null | grep Principal:`
+elif [[ -f /usr/kerberos/bin/klist ]]; then
+        PRINCE=`/usr/kerberos/bin/klist 2>/dev/null | grep principal:`
+elif [[ -f /usr/bin/klist ]]; then
+        PRINCE=`/usr/bin/klist 2>/dev/null | grep principal:`
+else
+        PRINCE=""
+fi
+
+if [[ -n "$PRINCE" ]]; then
+        logging "start get PRINCE ok"
+else
+        #echo "Reject: Could not verify user"
+        logging "start get PRINCE failed"
+        exit 1
+fi
+if [[ -n $KRB5CCNAME && -f ${KRB5CCNAME#FILE:} ]]; then
+#        /usr/bin/aklog
+#        /usr/sbin/condor_aklog
+        $CONDOR_AKLOG
+        TOKENFILE=${KRB5CCNAME#FILE:}
+        cat "$TOKENFILE"
+        logging "start get TOKENFILE $TOKENFILE ok"
+#        sleep 10 # Give Storage Time
+        exit 0
+else
+        logging "start get TOKENFILE failed"
+        exit 1
+fi
