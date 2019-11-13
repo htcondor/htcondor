@@ -54,6 +54,7 @@
 #include "condor_url.h"
 #include "classad_helpers.h"
 #include "iso_dates.h"
+#include "jobsets.h"
 #include <param_info.h>
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -302,9 +303,12 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, cons
 	JOB_ID_KEY jid(key);
 	if (jid.cluster > 0 && jid.proc < 0) {
 		return new JobQueueCluster(jid);
-	} else {
+	} else 
+	if (jid.cluster > 0 && jid.proc >= 0) {
 		return new JobQueueJob();
 	}
+	else
+		return new JobQueueBase();
 }
 
 
@@ -1469,22 +1473,33 @@ bool JobQueueJob::IsNoopJob()
 // After the job queue is loaded from disk, or a new job is submitted
 // the fields in the job object have to be initialized to match the ad
 //
-void JobQueueJob::PopulateFromAd()
+void JobQueueBase::PopulateFromAd()
 {
-	if ( ! entry_type) {
-		if ( ! jid.cluster) {
+	if (!entry_type) {
+		if (!jid.cluster) {
 			this->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 			this->LookupInteger(ATTR_PROC_ID, jid.proc);
 		}
 		if (jid.cluster == 0 && jid.proc == 0) entry_type = entry_type_header;
+		else if (jid.cluster == 0) entry_type = entry_type_jobset;
 		else if (jid.cluster > 0) entry_type = (jid.proc < 0) ? entry_type_cluster : entry_type_job;
 	}
+}
+
+void JobQueueJob::PopulateFromAd()
+{
+	// First have our base class fill in whatever it can
+	JobQueueBase::PopulateFromAd();
 
 	if ( ! universe) {
 		int uni;
 		if (this->LookupInteger(ATTR_JOB_UNIVERSE, uni)) {
 			this->universe = uni;
 		}
+	}
+
+	if ( ! set_id) {
+		this->LookupInteger(ATTR_JOB_SET_ID, set_id);
 	}
 
 
@@ -1547,6 +1562,12 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		stored_cluster_num = 0;
 	}
 
+	if (ad && scheduler.jobSets) {
+		int stored_jobset_num = 0;
+		ad->LookupInteger(ATTR_NEXT_CLUSTER_NUM, stored_jobset_num);
+		scheduler.jobSets->setNextSetId(stored_jobset_num);
+	}
+
     // If a stored cluster id exceeds a configured maximum, tag it for re-computation
     if ((cluster_maximum_val > 0) && (stored_cluster_num > cluster_maximum_val)) {
         dprintf(D_ALWAYS, "Stored cluster id %d exceeds configured max %d.  Flagging for reset.\n", stored_cluster_num, cluster_maximum_val);
@@ -1564,16 +1585,34 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->Iterate(key,ad)) {
 		ad->jid = key; // make sure that job object has correct jobid.
+
 		if (key.cluster <= 0 || key.proc < 0 ) {
-			if (key.cluster >= 0) {
+
+			// make ownerinfo structs by looking at all cluster ads
+			if (key.cluster > 0) {
 				if ( ! ad->ownerinfo) {
 					if (ad->LookupString(ATTR_OWNER, owner)) {
 						AddOwnerHistory( owner );
 						ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
 					}
-				}
-				ad->PopulateFromAd();
+				}				
 			}
+
+			// set entry_type and some other JobQueueBase and JobQueueJob data members
+			ad->PopulateFromAd();
+
+			// if this ad represents a job set, create that job set
+			if (ad->IsJobSet()) {
+				if (scheduler.jobSets) {
+					scheduler.jobSets->restoreJobSet(ad);
+				} else {
+					JOB_ID_KEY_BUF job_id(key);
+					dprintf(D_FULLDEBUG, "JobSets disabled, removing JobSet state for id %s\n",
+						job_id.c_str());
+					JobQueue->DestroyClassAd(job_id);
+				}
+			}
+
 			continue;  // done with cluster & header ads
 		}
 
@@ -1822,6 +1861,24 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			TotalJobsCount++;
 		}
 	} // WHILE
+
+
+	// If there were any JobSets in the log, scan again to add jobs into those sets
+	if (scheduler.jobSets && scheduler.jobSets->count() > 0) {
+		dprintf(D_FULLDEBUG, "Restoring JobSet state\n");
+		unsigned int updates = 0;
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->Iterate(ad)) {
+			if ( ad->IsJob() && 
+				 scheduler.jobSets->update(*ad, -1, ad->Status()) ) 
+			{
+				updates++;
+			}
+		}
+		dprintf(D_FULLDEBUG, "Finished restoring JobSet state, mapping %u jobs into %lu sets\n",
+			updates, scheduler.jobSets->count());
+	}
+
 
     // We defined a candidate next_cluster_num above, as (current-max-clust) + (increment).
     // If the candidate exceeds the configured max, then wrap it.  Default maximum is zero,
@@ -3163,8 +3220,10 @@ int DestroyProc(int cluster_id, int proc_id)
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
-			// For performance, wrap the myproxy attribute change and
-			// job deletion into one transaction.
+			// Start a transaction - this is particularly important because we 
+			// want the remote the job and persist the jobSet attributes in one
+			// transaction so we do not have off-by-one errors in our set aggregates
+			// if machine crashed at the wrong moment.
 		BeginTransaction();
 	}
 
@@ -3179,6 +3238,17 @@ int DestroyProc(int cluster_id, int proc_id)
 	(void)DestroyMyProxyPassword (cluster_id, proc_id);
 
 	JobQueue->DestroyClassAd(key);
+
+	/* If job is a member of the set, remote the job from the set
+	   and also at the same time save persistent set aggregates
+	   now before the job leaves the queue, so that we dont lose info
+	   about this job if the schedd crashes.
+	   Note we must do this in the same transaction as the call to
+	   DestroyClassAd() above.
+	*/
+	if (scheduler.jobSets) {
+		scheduler.jobSets->removeJobFromSet(*ad);
+	}
 
 	DecrementClusterSize(cluster_id, clusterad);
 
@@ -3332,6 +3402,9 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				JobQueue->DestroyClassAd(key);
 
+				// TAT TODO: Why all this duplicate code?? Why not call DestroyProc() ?
+				// if (scheduler.jobSets) scheduler.jobSets->removeJobFromSet(*ad);
+
 					// remove any match (startd) ad stored w/ this job
 				if ( scheduler.resourcesByProcID ) {
 					ClassAd *ad_to_remove = NULL;
@@ -3429,6 +3502,10 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 
 		// ignore header and ads.
 		if (job->IsHeader())
+			continue;
+
+		// ignore jobset ads
+		if (job->IsJobSet())
 			continue;
 
 		// ignore cluster ads unless the PostSubmitClusterChange flag is set.
@@ -3588,7 +3665,7 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=NULL)
 
 
 int
-SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0)
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
 {
 	if (attr_name == NULL ) {return -1;}
 
@@ -3605,7 +3682,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 
 
 int
-SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
 {
 	if (attr_name == NULL || attr_value == NULL) {return -1;}
 
@@ -3627,7 +3704,7 @@ SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, con
 }
 
 int
-SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0)
+SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
 {
 	if (attr_name == NULL || attr_value == NULL) {return -1;}
 
@@ -4327,6 +4404,13 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 			int job_status = 0;
 			job->LookupInteger(ATTR_JOB_STATUS, job_status);
 			if (job_status != job->Status()) {
+
+				// JobSets
+				if (scheduler.jobSets) {
+					scheduler.jobSets->update(*job, job->Status(), job_status);
+				}
+				
+
 				if (job->ownerinfo) {
 					IncrementLiveJobCounter(job->ownerinfo->live, universe, job->Status(), -1);
 					IncrementLiveJobCounter(job->ownerinfo->live, universe, job_status, 1);
@@ -5127,8 +5211,18 @@ CommitTransactionAndLive( SetAttributeFlags_t flags,
 int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	std::list<std::string> new_ad_keys;
+	
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
+
+		// filter out all the keys that do not belong to jobs, ie jobsets
+	new_ad_keys.remove_if([](const std::string & val) {
+		JobQueueKey job_id(val.c_str());
+		if (job_id.cluster < 1)
+			return true;
+		return false;
+	});
+
 	if ( ! new_ad_keys.empty()) { SetSubmitTotalProcs(new_ad_keys); }
 
 	if ( !new_ad_keys.empty() ) {
@@ -7992,4 +8086,80 @@ dirtyJobQueue()
 
 int GetJobQueuedCount() {
     return job_queued_count;
+}
+
+/**********************************************************************
+ * These qmgt function support JobSets - see jobsets.cpp       
+*/
+
+bool 
+JobSetDestroy(int setid)
+{
+	int cluster = 0;
+	int proc = 0 - setid;
+
+	JobQueueKeyBuf key;
+	IdToKey(cluster, proc, key);
+
+	return JobQueue->DestroyClassAd(key);
+}
+
+bool
+JobSetStoreAllDirtyAttrs(int setid, ClassAd & src, bool create)
+{
+	bool ret;
+	int cluster = 0;
+	int proc = 0 - setid;
+	const char *rhstr = 0;
+	ExprTree * tree;
+	bool first_time = true;
+	bool need_commit = false;
+
+	JobQueueKeyBuf key;
+	IdToKey(cluster,proc,key);
+
+	for (auto  it = src.dirtyBegin(); it != src.dirtyEnd(); ++it) {
+		rhstr = NULL;
+		tree = src.Lookup(*it);
+		if (tree) {
+			rhstr = ExprTreeToString(tree);
+		}
+		if (!rhstr) {
+			dprintf(D_ALWAYS, "(%d.%d) JobSetStoreAllDirtyAttrs: Problem processing classad\n", cluster, proc);
+			return false;
+		}
+
+		if (first_time) {
+			first_time = false;
+
+			bool already_in_transaction = InTransaction();
+			if (!already_in_transaction) {
+				BeginTransaction();
+				need_commit = true;
+			}
+
+			if (create) {
+				ret = JobQueue->NewClassAd(key, GetMyTypeName(src), GetTargetTypeName(src));
+				if (!ret) {
+					dprintf(D_ALWAYS, "(%d.%d) JobSetStoreAllDirtyAttrs: Problem storing new classad\n", cluster, proc);
+					return false;
+				}
+			}
+		}
+
+		ret = JobQueue->SetAttribute(key, it->c_str(), rhstr);		
+
+		if (!ret) {
+			dprintf(D_ALWAYS, "(%d.%d) JobSetStoreAllDirtyAttrs: Failed to set %s = %s\n", cluster, proc, it->c_str(), rhstr);
+			return false;
+		}
+	}
+
+	if (need_commit) {
+		CommitNonDurableTransactionOrDieTrying();
+	}
+
+	src.ClearAllDirtyFlags();
+
+	return true;
 }

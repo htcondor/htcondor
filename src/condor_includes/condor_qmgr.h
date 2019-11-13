@@ -210,10 +210,17 @@ int SetAttributeString(int cluster, int proc, const char *attr,
 int SetAttributeExpr(int cluster, int proc, const char *attr,
                      const ExprTree *value, SetAttributeFlags_t flags = 0);
 
-// Internal function for only the schedd to use.
+// Internal SetSecure functions for only the schedd to use.
+// These functions are defined in qmgmt.cpp.
 int SetSecureAttributeInt(int cluster_id, int proc_id,
-                          const char *attr_name, int attr_value,
-                          SetAttributeFlags_t flags);
+                         const char *attr_name, int attr_value,
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttribute(int cluster_id, int proc_id,
+                         const char *attr_name, const char *attr_value, 
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttributeString(int cluster_id, int proc_id, 
+                         const char *attr_name, const char *attr_value, 
+                         SetAttributeFlags_t flags = 0);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.

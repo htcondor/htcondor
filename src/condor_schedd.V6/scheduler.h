@@ -530,6 +530,8 @@ private:
 	ClassAd owner_ad;
 };
 
+class JobSets; // forward reference - declared in jobsets.h
+
 class Scheduler : public Service
 {
   public:
@@ -822,6 +824,9 @@ class Scheduler : public Service
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
+
+	// Class to manage sets of Job 
+	JobSets *jobSets;
 
 private:
 
