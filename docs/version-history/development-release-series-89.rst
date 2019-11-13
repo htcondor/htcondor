@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  The Python 3 bindings were missing the division operator for
+   :class:`~classad.ExprTree`.
+   :ticket:`7372`
 
 Version 8.9.4
 -------------
