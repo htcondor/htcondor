@@ -614,17 +614,20 @@ VanillaProc::StartJob()
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 
 			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
