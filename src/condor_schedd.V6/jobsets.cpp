@@ -124,17 +124,27 @@ JobSets::restoreJobSet(ClassAd *setAd)
 
 JobSets::JobSet* JobSets::getOrCreateSet(JobQueueJob & job)
 {
-	unsigned int setId = job.set_id;
+	int setId = job.set_id;
 	bool newSet = false;
 	bool appendJobToSet = false;
 	std::string setName;
 
-	if (!setId) {
+	if (setId == -1) {
+		// job is not in a set, bail out quickly now before ad lookups etc
+		return nullptr;
+	}
+
+	if (setId == 0) {
 		appendJobToSet = true;
 		// We have not yet added this job to any set
 		if (!job.LookupString(ATTR_JOB_SET_NAME, setName)) {
 			// default to cluster id...
 			setName = std::to_string(job.jid.cluster);
+		}
+		if (setName.empty()) {
+			// remember this job is not in a set for fast bailout next time
+			job.set_id = -1; 
+			return nullptr;
 		}
 		std::string key = job.ownerinfo->name + setName;
 		auto it = mapAliasToId.find(key);
@@ -202,6 +212,12 @@ bool JobSets::update(JobQueueJob & job, int old_status, int new_status)
 		return true;
 	}
 
+	if (job.set_id <= 0) {
+		// If this job has not yet been placed into a set, then do not decrement 
+		// job counters for leaving the old_status.
+		old_status = -1;
+	}
+
 	JobSet * set = getOrCreateSet(job);
 
 	if (!set) {
@@ -227,7 +243,7 @@ bool JobSets::update(JobQueueJob & job, int old_status, int new_status)
 
 bool JobSets::removeJobFromSet(JobQueueJob & job)
 {
-	if (!job.set_id) return true;
+	if (job.set_id <= 0) return true;
 
 	JobSet* jobset = getOrCreateSet(job);
 	ASSERT(jobset);
@@ -257,6 +273,7 @@ bool JobSets::removeJobFromSet(JobQueueJob & job)
 	}
 
 	jobset->jobsInSet.erase(job.jid);
+	job.set_id = -1;
 
 	// Check if time to destroy this set...
 	if (jobset->jobsInSet.size() == 0 &&
