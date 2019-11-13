@@ -391,7 +391,11 @@ Requires: systemd
 %endif
 
 %if 0%{?rhel} == 6
+%ifarch %{ix86}
+BuildRequires: python-sphinx10
+%else
 BuildRequires: python-sphinx10 python-sphinx_rtd_theme
+%endif
 %endif
 
 %if 0%{?rhel} == 7
