@@ -896,19 +896,23 @@ convert_python_to_exprtree(boost::python::object value)
         if (!keys) {
             PyErr_Clear();
         } else {
-            ClassAdWrapper *ad = new ClassAdWrapper();
-            boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
-            while (true)
-            {
-                PyObject *pyobj = PyIter_Next(iter.ptr());
-                if (!pyobj) {break;}
-                boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
-                std::string key_str = boost::python::extract<std::string>(key_obj);
-                boost::python::object val = value[key_obj];
-                classad::ExprTree *val_expr = convert_python_to_exprtree(val);
-                ad->Insert(key_str, val_expr);
+            PyObject * iter = PyObject_GetIter(keys);
+            if (!iter) {
+                PyErr_Clear();
+            } else {
+                ClassAdWrapper *ad = new ClassAdWrapper();
+                while (true)
+                {
+                    PyObject *pyobj = PyIter_Next(iter);
+                    if (!pyobj) {break;}
+                    boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
+                    std::string key_str = boost::python::extract<std::string>(key_obj);
+                    boost::python::object val = value[key_obj];
+                    classad::ExprTree *val_expr = convert_python_to_exprtree(val);
+                    ad->Insert(key_str, val_expr);
+                }
+                return ad;
             }
-            return ad;
         }
     }
     PyObject *py_iter = PyObject_GetIter(value.ptr());
