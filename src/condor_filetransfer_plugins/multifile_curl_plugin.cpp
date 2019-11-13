@@ -136,29 +136,54 @@ void
 MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::string &cred,
         struct curl_slist *& header_list)
 {
-    curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
-    curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_URL\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CONNECTIMEOUT\n");
+	}
 
     curl_version_info_data *libcurl_version = curl_version_info(CURLVERSION_NOW);
     if (libcurl_version) {
         if (libcurl_version->age > 0 && libcurl_version->version_num >= 0x072600) {
             if (m_speed_limit > 0) {
-                curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
+                r = curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
+				if (r != CURLE_OK) {
+					fprintf(stderr, "Can't setopt LOW_SPEED_LIMIT\n");
+				}
             }
             if (m_speed_time > 0) {
-                curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
+                r = curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
+				if (r != CURLE_OK) {
+					fprintf(stderr, "Can't setopt LOW_SPEED_TIME\n");
+				}
             }
         }
     }
 
     // Provide default read / write callback functions; note these
     // don't segfault if a nullptr is given as the read/write data.
-    curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
-    curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &CurlWriteCallback );
+    r = curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt READFUNCTION\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &CurlWriteCallback );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt WRITEFUNCTION\n");
+	}
 
     // Prevent curl from spewing to stdout / in by default.
-    curl_easy_setopt( _handle, CURLOPT_READDATA, NULL );
-    curl_easy_setopt( _handle, CURLOPT_WRITEDATA, NULL );
+    r = curl_easy_setopt( _handle, CURLOPT_READDATA, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt READDATA\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEDATA, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt WRITEDATA\n");
+	}
 
     std::string token;
 
@@ -166,14 +191,23 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     if( !strncasecmp( url.c_str(), "http://", 7 ) ||
             !strncasecmp( url.c_str(), "https://", 8 ) ||
             !strncasecmp( url.c_str(), "file://", 7 ) ) {
-        curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
-        curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
+        r = curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt FOLLOWLOCATION\n");
+		}
+        r = curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt HEADERFUNCTOIN\n");
+		}
 
         GetToken(cred, token);
     }
     // Libcurl options for FTP
     else if( !strncasecmp( url.c_str(), "ftp://", 6 ) ) {
-        curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &FtpWriteCallback );
+        r = curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &FtpWriteCallback );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt WRITEFUNCTION\n");
+		}
     }
 
     if (!token.empty()) {
@@ -189,15 +223,24 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     // happens? 500 errors fail before we see HTTP headers but I don't
     // think that's a big deal.
     // * Let's keep it set to 1 for now.
-    curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
+    r = curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt FAILONERROR\n");
+	}
 
     if( _diagnostic ) {
-        curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
+        r = curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt VERBOSE\n");
+		}
     }
 
     // Setup a buffer to store error messages. For debug use.
     _error_buffer[0] = '\0';
-    curl_easy_setopt( _handle, CURLOPT_ERRORBUFFER, _error_buffer );
+    r = curl_easy_setopt( _handle, CURLOPT_ERRORBUFFER, _error_buffer );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt ERRORBUFFER\n");
+	}
 }
 
 FILE *
@@ -284,18 +327,21 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
     r = curl_easy_setopt( _handle, CURLOPT_READDATA, file );
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CUROPT_READDATA\n");
+        fclose( file );
 		return -1;
 	}
 
     r = curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CUROPT_UPLOAD\n");
+        fclose( file );
 		return -1;
 	}
 
     r = curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CUROPT_INFILESIZE_LARGE\n");
+        fclose( file );
 		return -1;
 	}
 
@@ -303,6 +349,7 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
 		r = curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
 		if (r != CURLE_OK) {
 			fprintf(stderr, "Can't setopt CUROPT_HTTPHEADER\n");
+        	fclose( file );
 			return -1;
 		}
 	}
@@ -351,15 +398,30 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
     }   
 
     // Libcurl options that apply to all transfer protocols
-    curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
-    curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_WRITEDATA\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+	}
 
-    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+    if (header_list) {
+		r = curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_HTTPHEADER\n");
+		}
+	}
 
     // If we are attempting to resume a download, set additional flags
     if( partial_bytes ) {
         sprintf( partial_range, "%lu-", partial_bytes );
-        curl_easy_setopt( _handle, CURLOPT_RANGE, partial_range );
+        r = curl_easy_setopt( _handle, CURLOPT_RANGE, partial_range );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		}
     }
 
     // Update some statistics
@@ -634,9 +696,22 @@ MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
     int rval = -1;
 
     // Send a basic request, with Range set to a null range
-    curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
-    curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
-    curl_easy_setopt( _handle, CURLOPT_RANGE, "0-0" );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_URL\n");
+		return 0;
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_CONNECTTIMEOUT\n");
+		return 0;
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_RANGE, "0-0" );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		return 0;
+	}
 
     rval = curl_easy_perform(_handle);
 
@@ -660,7 +735,11 @@ MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
 
     // If we've gotten this far the server does not support resume. Clear the
     // HTTP "Range" header and return false.
-    curl_easy_setopt( _handle, CURLOPT_RANGE, NULL );
+    r = curl_easy_setopt( _handle, CURLOPT_RANGE, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		return 0;
+	}
     return 0;
 }
 
