@@ -32,7 +32,14 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  The Python 3 bindings were missing the division operator for
+   :class:`~classad.ExprTree`.
+   :ticket:`7372`
+
+-  When calling :meth:`classad.ClassAd.setdefault` without a default, or
+   with a default of None, if the default is used, it is now treated as the
+   :attr:`classad.Value.Undefined` ClassAd value.
+   :ticket:`7370`
 
 Version 8.9.4
 -------------
