@@ -1565,7 +1565,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	if (ad && scheduler.jobSets) {
 		int stored_jobset_num = 0;
-		ad->LookupInteger(ATTR_NEXT_CLUSTER_NUM, stored_jobset_num);
+		ad->LookupInteger(ATTR_NEXT_JOBSET_NUM, stored_jobset_num);
 		scheduler.jobSets->setNextSetId(stored_jobset_num);
 	}
 
