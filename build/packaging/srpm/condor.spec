@@ -1875,6 +1875,14 @@ fi
 %endif
 
 %changelog
+* Wed Nov 13 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.6-1
+- Initial support for CentOS 8
+- Fixed a memory leak in SSL authentication
+- Fixed a bug where "condor_submit -spool" would only submit the first job
+- Reduced encrypted file transfer CPU usage by a factor of six
+- "condor_config_val -summary" displays changes from a default configuration
+- Improved the ClassAd documentation, added many functions that were omitted
+
 * Tue Sep 17 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.3-1
 - TOKEN and SSL authentication methods are now enabled by default
 - The job and global event logs use ISO 8601 formatted dates by default
