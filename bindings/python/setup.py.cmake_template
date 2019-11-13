@@ -10,10 +10,10 @@ long_description = open("${CMAKE_CURRENT_SOURCE_DIR}/README.rst", "r").read()
 package_data = {}
 if os.name == "posix":
     package_data["htcondor"] = ["*.so", "htcondor_libs/*.so*"]
-    package_data["classad"] = ["*.so"]
+    package_data["classad"] = ["*.so", "py.typed", "classad.pyi"]
 else:
     package_data["htcondor"] = ["*.pyd", "*.dll", "htcondor_libs/*.dll*"]
-    package_data["classad"] = ["*.pyd", "*.dll"]
+    package_data["classad"] = ["*.pyd", "*.dll", "py.typed", "classad.pyi"]
 
 packages.append("htcondor.scripts")
 
