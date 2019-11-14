@@ -130,6 +130,10 @@ New Features:
 - Added Python bindings for the TOKEN request API.
   :ticket:`7162`
 
+- In addition to administrators, token requests can be approved by the user whose
+  identity is requested.
+  :ticket:`7159`
+
 Bugs Fixed:
 
 - The *curl_plugin* now correctly advertises ``file`` and ``ftp`` as
