@@ -20,9 +20,11 @@ using namespace boost::python;
 
 enum DaemonCommands
 {
+  DDAEMONS_ON = DAEMONS_ON,
   DDAEMONS_OFF = DAEMONS_OFF,
   DDAEMONS_OFF_FAST = DAEMONS_OFF_FAST,
   DDAEMONS_OFF_PEACEFUL = DAEMONS_OFF_PEACEFUL,
+  DDAEMON_ON = DAEMON_ON,
   DDAEMON_OFF = DAEMON_OFF,
   DDAEMON_OFF_FAST = DAEMON_OFF_FAST,
   DDAEMON_OFF_PEACEFUL = DAEMON_OFF_PEACEFUL,
@@ -241,9 +243,11 @@ void
 export_dc_tool()
 {
     enum_<DaemonCommands>("DaemonCommands")
+        .value("DaemonsOn", DDAEMONS_ON)
         .value("DaemonsOff", DDAEMONS_OFF)
         .value("DaemonsOffFast", DDAEMONS_OFF_FAST)
         .value("DaemonsOffPeaceful", DDAEMONS_OFF_PEACEFUL)
+        .value("DaemonOn", DDAEMON_ON)
         .value("DaemonOff", DDAEMON_OFF)
         .value("DaemonOffFast", DDAEMON_OFF_FAST)
         .value("DaemonOffPeaceful", DDAEMON_OFF_PEACEFUL)
