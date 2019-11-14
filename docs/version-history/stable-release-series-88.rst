@@ -17,9 +17,13 @@ Release Notes:
 
 .. HTCondor version 8.8.7 released on Month Date, 2019.
 
+
 New Features:
 
--  None.
+-  Added a python enum for DaemonOn and DaemonsOn
+   :ticket:`7380`
+
+Bugs Fixed:
 
 -  Fixed a bug that caused *condor_submit* to fail when the remote option
    was used and the remote Schedd was using a mapfile.
