@@ -11,6 +11,7 @@ Users' Manual
    submitting-a-job
    file-transfer
    managing-a-job
+   automatic-job-management
    priorities-and-preemption
    dagman-applications
    matchmaking-with-classads
