@@ -44,6 +44,8 @@ cd condor-${condor_version}
 
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
+elif $(grep -qi buster /etc/os-release); then
+    dist='buster'
 elif $(grep -qi xenial /etc/os-release); then
     dist='xenial'
 elif $(grep -qi bionic /etc/os-release); then

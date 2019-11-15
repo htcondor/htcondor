@@ -252,7 +252,7 @@ BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 %if 0%{?rhel} >= 8
-BuildRequires: platform-python-devel
+BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
 %endif
@@ -291,7 +291,7 @@ BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
 %if 0%{?rhel} >= 8
-BuildRequires: platform-python-devel
+BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
 %endif
@@ -391,7 +391,11 @@ Requires: systemd
 %endif
 
 %if 0%{?rhel} == 6
+%ifarch %{ix86}
+BuildRequires: python-sphinx10
+%else
 BuildRequires: python-sphinx10 python-sphinx_rtd_theme
+%endif
 %endif
 
 %if 0%{?rhel} == 7
@@ -440,9 +444,14 @@ Requires(preun):/sbin/service
 Requires(postun):/sbin/service
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} == 7
 Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
+%endif
+
+%if 0%{?rhel} >= 8
+Requires(post): python3-policycoreutils
+Requires(post): selinux-policy-targeted
 %endif
 
 #Provides: user(condor) = 43
@@ -701,7 +710,7 @@ Requires: boost169-python3
 Requires: python36
 %else
 Requires: boost-python3
-Requires: platform-python3
+Requires: python3
 %endif
 
 %if 0%{?rhel} >= 7 && ! %uw_build
@@ -2134,6 +2143,14 @@ fi
 %endif
 
 %changelog
+* Wed Nov 13 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.6-1
+- Initial support for CentOS 8
+- Fixed a memory leak in SSL authentication
+- Fixed a bug where "condor_submit -spool" would only submit the first job
+- Reduced encrypted file transfer CPU usage by a factor of six
+- "condor_config_val -summary" displays changes from a default configuration
+- Improved the ClassAd documentation, added many functions that were omitted
+
 * Thu Sep 05 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.5-1
 - Fixed two performance problems on Windows
 - Fixed Java universe on Debian and Ubuntu systems
