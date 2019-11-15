@@ -780,7 +780,15 @@ export_classad()
 
     register_ptr_to_python< boost::shared_ptr<ClassAdWrapper> >();
 
-    boost::python::enum_<classad::Value::ValueType> value_type("Value");
+    boost::python::enum_<classad::Value::ValueType> value_type("Value",
+        R"C0ND0R(
+        An enumeration of the two special ClassAd values ``Undefined`` and ``Error``.
+
+        The values of the enumeration are:
+
+        .. attribute:: Undefined
+        .. attribute:: Error
+        )C0ND0R");
     value_type
         .value("Error", classad::Value::ERROR_VALUE)
         .value("Undefined", classad::Value::UNDEFINED_VALUE)
