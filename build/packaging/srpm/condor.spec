@@ -954,7 +954,9 @@ mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
 # And the Python bindings
 %if %python
+%if 0%{?rhel} <= 7
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
+%endif
 %if 0%{?rhel} >= 7
 %ifarch x86_64
 populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
@@ -1304,14 +1306,18 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_mips
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/box_plugin.py
+%_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/onedrive_plugin.py
+# TODO: get rid of these
+# Not sure where these are getting built
+%if 0%{?rhel} <= 7
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
-%_libexecdir/condor/gdrive_plugin.py
 %_libexecdir/condor/gdrive_plugin.pyc
 %_libexecdir/condor/gdrive_plugin.pyo
-%_libexecdir/condor/onedrive_plugin.py
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
+%endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port

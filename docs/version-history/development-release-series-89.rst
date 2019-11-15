@@ -85,8 +85,8 @@ New Features:
   ``CheckpointExitCode`` is set).
   :ticket:`7038`
 
-- GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
-  ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
+- GPU monitoring is now on by default.  It reports ``DeviceGPUsAverageUsage``
+  and ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
   are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
   ``GPUsAverageUsage`` because all other usage values are peaks.  We also
   now report GPU memory usage in the job termination event.
@@ -119,7 +119,7 @@ New Features:
   :ticket:`7278`
 
 - Added an example of a multifile plugin to transfer files from a locally
-  mounted Gluster file system. This script is also designed to be a template 
+  mounted Gluster file system. This script is also designed to be a template
   for other file transfer plugins, as the logic to download or upload files is
   clearly indicated and could be easily changed to support different file
   services.
@@ -153,12 +153,23 @@ New Features:
   not otherwise be used (such as when the remote daemon has no host certificate).
   :ticket:`7281`
 
+- The *condor_annex* tool will now check during setup for instance credentials
+  if none were specified.
+  :ticket:`7097`
+
 - The *condor_schedd* now keeps track of which submitters it has advertised to
   flocked pools.  The *condor_schedd* will only honor matchingmaking requests
   from flocked pool for submitters it did not advertise to the flock pool.  This
   new logic only applies to auto-created authorizations (introduced in 8.9.3)
   and not NEGOTIATOR-level authorizations setup by pool administrators.
   :ticket:`7100`
+
+- Added Python bindings for the TOKEN request API.
+  :ticket:`7162`
+
+- In addition to administrators, token requests can be approved by the user whose
+  identity is requested.
+  :ticket:`7159`
 
 Bugs Fixed:
 
