@@ -913,7 +913,10 @@ convert_python_to_exprtree(boost::python::object value)
                     boost::python::object val = value[key_obj];
                     classad::ExprTree *val_expr = convert_python_to_exprtree(val);
                     ad->Insert(key_str, val_expr);
+                    // This _should_ be being called by key_obj.
+                    // Py_DECREF(pyobj);
                 }
+                Py_DECREF(iter);
                 return ad;
             }
         }
