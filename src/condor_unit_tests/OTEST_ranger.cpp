@@ -27,17 +27,22 @@
 #include "unit_test_utils.h"
 #include "emit.h"
 #include "ranger.h"
+#include "proc.h"
+
+
+/////////////
+
 
 enum Action { Erase, Insert };
 
-struct testcase {
+struct testcase1 {
     Action action;
     const char *input;
     const char *expected_result;
 };
 
 // test cases for load, insert/erase, persist
-const testcase test_table[] = {
+const testcase1 test_table1[] = {
     {Insert, "2",                         "2"                          },
     {Insert, "2",                         "2"                          },
     {Insert, "5-10",                      "2;5-10"                     },
@@ -65,28 +70,7 @@ const testcase test_table[] = {
 };
 
 
-static const int TEST_TABLE_COUNT = sizeof test_table / sizeof test_table[0];
-
-
-// do some template magic to automatically register one
-// test function per test case in the above table
-
-template <int N>
-static bool test_ranger_misc_persist_load_tmpl();
-
-template <int N>
-static void driver_register_all(FunctionDriver &driver)
-{
-    driver.register_function(test_ranger_misc_persist_load_tmpl<N>);
-    driver_register_all<N+1>(driver);
-}
-
-template <>
-void driver_register_all<TEST_TABLE_COUNT>(FunctionDriver &driver)
-{
-    (void) driver;
-}
-
+/////////////
 
 
 struct testcase2 {
@@ -113,23 +97,8 @@ const testcase2 test_table2[] = {
     {"10-20;30-40;50-60", {31,39}, "31-39"            }
 };
 
-static const int TEST_TABLE2_COUNT = sizeof test_table2 / sizeof test_table2[0];
 
-template <int N>
-static bool test_ranger_misc_load_persist_slice_tmpl();
-
-template <int N>
-static void driver_register_all2(FunctionDriver &driver)
-{
-    driver.register_function(test_ranger_misc_load_persist_slice_tmpl<N>);
-    driver_register_all2<N+1>(driver);
-}
-
-template <>
-void driver_register_all2<TEST_TABLE2_COUNT>(FunctionDriver &driver)
-{
-    (void) driver;
-}
+/////////////
 
 
 struct testcase3 {
@@ -189,23 +158,8 @@ const testcase3 test_table3[] = {
     {"10-20;22-30",         23,  true }
 };
 
-static const int TEST_TABLE3_COUNT = sizeof test_table3 / sizeof test_table3[0];
 
-template <int N>
-static bool test_ranger_misc_contains_tmpl();
-
-template <int N>
-static void driver_register_all3(FunctionDriver &driver)
-{
-    driver.register_function(test_ranger_misc_contains_tmpl<N>);
-    driver_register_all3<N+1>(driver);
-}
-
-template <>
-void driver_register_all3<TEST_TABLE3_COUNT>(FunctionDriver &driver)
-{
-    (void) driver;
-}
+/////////////
 
 
 struct testcase4 {
@@ -257,25 +211,114 @@ const testcase4 test_table4[] = {
 };
 
 
-static const int TEST_TABLE4_COUNT = sizeof test_table4 / sizeof test_table4[0];
+/////////////
 
 
-template <int N>
-static bool test_ranger_misc_element_tmpl();
+using testcase5 = testcase1;
 
-template <int N>
-static void driver_register_all4(FunctionDriver &driver)
-{
-    driver.register_function(test_ranger_misc_element_tmpl<N>);
-    driver_register_all4<N+1>(driver);
-}
+// test cases for load, insert/erase, persist -- job ids
+const testcase5 test_table5[] = {
+    {Insert, "2.1",                    "2.1"                                },
+    {Insert, "2.1",                    "2.1"                                },
+    {Insert, "3.5-3.10",               "2.1;3.5-3.10"                       },
+    {Insert, "3.11-3.20;4.1;5.1-5.10", "2.1;3.5-3.20;4.1;5.1-5.10"          },
+    {Erase,  "3.10",                   "2.1;3.5-3.9;3.11-3.20;4.1;5.1-5.10" },
+    {Erase,  "3.0-4.-1",               "2.1;4.1;5.1-5.10"                   },
+    {Erase,  "5.1",                    "2.1;4.1;5.2-5.10"                   },
+    {Erase,  "5.10",                   "2.1;4.1;5.2-5.9"                    },
+    {Erase,  "4.1",                    "2.1;5.2-5.9"                        },
+    {Erase,  "2.1",                    "5.2-5.9"                            }
+};
 
-template <>
-void driver_register_all4<TEST_TABLE_COUNT>(FunctionDriver &driver)
-{
-    (void) driver;
-}
 
+/////////////
+
+
+struct testcase6 {
+    const char *input;
+    JOB_ID_KEY element;
+    bool expected_result;
+};
+
+// test cases for contains (element)
+const testcase6 test_table6[] = {
+    {"",                       {1,123},  false},
+    {"1.10-1.20",              {1,123},  false},
+    {"1.10-1.20",              {1,  5},  false},
+    {"1.10-1.20",              {1,  9},  false},
+    {"1.10-1.20",              {1, 10},  true },
+    {"1.10-1.20",              {1, 11},  true },
+    {"1.10-1.20",              {1, 19},  true },
+    {"1.10-1.20",              {1, 20},  true },
+    {"1.10-1.20",              {1, 21},  false},
+    {"1.10-1.20",              {1, 22},  false},
+    {"1.10-1.20;1.30-1.40",    {1,123},  false},
+    {"1.10-1.20;1.30-1.40",    {1,  5},  false},
+    {"1.10-1.20;1.30-1.40",    {1,  9},  false},
+    {"1.10-1.20;1.30-1.40",    {1, 10},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 11},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 19},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 20},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 21},  false},
+    {"1.10-1.20;1.30-1.40",    {1, 22},  false},
+    {"1.10-1.20;1.30-1.40",    {1, 29},  false},
+    {"1.10-1.20;1.30-1.40",    {1, 30},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 31},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 39},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 40},  true },
+    {"1.10-1.20;1.30-1.40",    {1, 41},  false},
+    {"1.10-1.20;1.30-1.40",    {1, 42},  false},
+};
+
+
+//////////////////////////////////////////////
+
+
+// do some template magic to automatically register one
+// test function per test case in the above tables
+
+// one templated function gets generated for every test case, so we keep
+// each one very light weight as a wrapper around the main test function
+// for each table
+
+#define ARRAY_LEN(arr) (sizeof arr / sizeof arr[0])
+
+#define TEST_TABLE_SETUP(n, funcname)                                         \
+                                                                              \
+static const int TEST_TABLE##n##_COUNT = ARRAY_LEN(test_table##n);            \
+                                                                              \
+static bool funcname(int N);                                                  \
+                                                                              \
+template <int N>                                                              \
+static bool funcname##_tmpl() { return funcname(N); }                         \
+                                                                              \
+template <int N>                                                              \
+static void driver_register_all##n(FunctionDriver &driver)                    \
+{                                                                             \
+    driver.register_function(funcname##_tmpl<N>);                             \
+    driver_register_all##n<N+1>(driver);                                      \
+}                                                                             \
+                                                                              \
+template <>                                                                   \
+void driver_register_all##n<TEST_TABLE##n##_COUNT>(FunctionDriver &driver)    \
+{                                                                             \
+    (void) driver;                                                            \
+}                                                                             \
+                                                                              \
+
+// one for each test_tableN and corresponding test function
+TEST_TABLE_SETUP(1, test_ranger_misc_persist_load)
+TEST_TABLE_SETUP(2, test_ranger_misc_load_persist_slice)
+TEST_TABLE_SETUP(3, test_ranger_misc_contains)
+TEST_TABLE_SETUP(4, test_ranger_misc_element)
+TEST_TABLE_SETUP(5, test_ranger_misc_jobid_persist_load)
+TEST_TABLE_SETUP(6, test_ranger_misc_contains_jobid)
+
+
+//////////////////////////////////////////////
+
+
+// misc individual tests
 
 static bool test_ranger_initializer_list_elements();
 static bool test_ranger_initializer_list_ranges();
@@ -287,10 +330,14 @@ bool OTEST_ranger(void) {
         "mask objects, testing the load and persist functionality.");
 
     FunctionDriver driver;
-    driver_register_all<0>(driver);
+
+    // one of these per TEST_TABLE_SETUP(N, ...) above
+    driver_register_all1<0>(driver);
     driver_register_all2<0>(driver);
     driver_register_all3<0>(driver);
     driver_register_all4<0>(driver);
+    driver_register_all5<0>(driver);
+    driver_register_all6<0>(driver);
 
     driver.register_function(test_ranger_initializer_list_elements);
     driver.register_function(test_ranger_initializer_list_ranges);
@@ -298,29 +345,33 @@ bool OTEST_ranger(void) {
     return driver.do_all_functions();
 }
 
+//////////////////
+
+template <class T>
 static int ranger_load_insert_persist(const char *prev, const char *input,
                                       std::string &s)
 {
-    ranger r;
-    if (load(r, prev) < 0 || load(r, input)) {
+    ranger<T> r;
+    if (r.load(prev) < 0 || r.load(input)) {
         emit_alert("Unexpected error loading range spec for insert");
         return -1;
     }
-    persist(s, r);
+    r.persist(s);
     return 0;
 }
 
+template <class T>
 static int ranger_load_erase_persist(const char *prev, const char *input,
                                      std::string &s)
 {
-    ranger r, e;
-    if (load(r, prev) < 0 || load(e, input)) {
+    ranger<T> r, e;
+    if (r.load(prev) < 0 || e.load(input)) {
         emit_alert("Unexpected error loading range spec for erase");
         return -1;
     }
     for (auto &range : e)
         r.erase(range);
-    persist(s, r);
+    r.persist(s);
     return 0;
 }
 
@@ -329,8 +380,8 @@ static int ranger_load_erase_persist(const char *prev, const char *input,
 
 static bool test_ranger_misc_persist_load(int N)
 {
-    const char *prev = N > 0 ? test_table[N-1].expected_result : "";
-    const testcase &t = test_table[N];
+    const char *prev = N > 0 ? test_table1[N-1].expected_result : "";
+    const testcase1 &t = test_table1[N];
     std::string s;
     s.reserve(256);
 
@@ -340,8 +391,8 @@ static bool test_ranger_misc_persist_load(int N)
     emit_param("Input", t.input);
     emit_param("Action", t.action == Insert ? "insert" : "erase");
 
-    int ret = (t.action == Insert ? ranger_load_insert_persist
-                                  : ranger_load_erase_persist)
+    int ret = (t.action == Insert ? ranger_load_insert_persist<int>
+                                  : ranger_load_erase_persist<int>)
               (prev, t.input, s);
 
     if (ret != 0)
@@ -359,28 +410,18 @@ static bool test_ranger_misc_persist_load(int N)
 }
 
 
-// one of these templated functions gets generated for every test case, so we
-// keep it very light weight as a wrapper around the main test function above
-
-template <int N>
-static bool test_ranger_misc_persist_load_tmpl()
-{
-    return test_ranger_misc_persist_load(N);
-}
-
-
 //////////////////
 
 
 static int ranger_load_persist_slice(const char *input, int start, int back,
                                      std::string &s)
 {
-    ranger r;
-    if (load(r, input)) {
+    ranger<int> r;
+    if (r.load(input)) {
         emit_alert("Unexpected error loading range spec for persist slice");
         return -1;
     }
-    persist_slice(s, r, start, back);
+    r.persist_slice(s, start, back);
 
     return 0;
 }
@@ -420,12 +461,6 @@ static bool test_ranger_misc_load_persist_slice(int N)
 }
 
 
-template <int N>
-static bool test_ranger_misc_load_persist_slice_tmpl()
-{
-    return test_ranger_misc_load_persist_slice(N);
-}
-
 
 //////////////////
 
@@ -449,8 +484,8 @@ static bool test_ranger_misc_contains(int N)
     emit_param("Input", t.input);
     emit_param("Element", elementbuf);
 
-    ranger r;
-    if (load(r, t.input)) {
+    ranger<int> r;
+    if (r.load(t.input)) {
         emit_alert("Unexpected error loading range spec for contains");
         FAIL;
     }
@@ -468,18 +503,6 @@ static bool test_ranger_misc_contains(int N)
 }
 
 
-template <int N>
-static bool test_ranger_misc_contains_tmpl()
-{
-    return test_ranger_misc_contains(N);
-}
-
-void xx_bld_test()
-{
-    ranger r = { 1, 2, 3, 45};
-    ranger r2 = { {1,10}, {20,30}, {40,50} };
-
-}
 
 
 //////////////////
@@ -488,26 +511,26 @@ void xx_bld_test()
 static int ranger_load_insert_persist_elt(const char *input, int elt,
                                           std::string &s)
 {
-    ranger r;
-    if (load(r, input) < 0) {
+    ranger<int> r;
+    if (r.load(input) < 0) {
         emit_alert("Unexpected error loading range spec for element insert");
         return -1;
     }
     r.insert(elt);
-    persist(s, r);
+    r.persist(s);
     return 0;
 }
 
 static int ranger_load_erase_persist_elt(const char *input, int elt,
                                          std::string &s)
 {
-    ranger r, e;
-    if (load(r, input) < 0) {
+    ranger<int> r, e;
+    if (r.load(input) < 0) {
         emit_alert("Unexpected error loading range spec for element erase");
         return -1;
     }
     r.erase(elt);
-    persist(s, r);
+    r.persist(s);
     return 0;
 }
 
@@ -546,27 +569,18 @@ static bool test_ranger_misc_element(int N)
 }
 
 
-// one of these templated functions gets generated for every test case, so we
-// keep it very light weight as a wrapper around the main test function above
-
-template <int N>
-static bool test_ranger_misc_element_tmpl()
-{
-    return test_ranger_misc_element(N);
-}
-
 
 //////////////////
 
 
 static bool test_ranger_initializer_list_elements()
 {
-    ranger r = {1, 2, 3, 5, 10};
+    ranger<int> r = {1, 2, 3, 5, 10};
 
     const char *expected = "1-3;5;10";
 
     std::string s;
-    persist(s, r);
+    r.persist(s);
 
     emit_test("Test initializer lists working as expected");
     emit_input_header();
@@ -585,12 +599,12 @@ static bool test_ranger_initializer_list_elements()
 
 static bool test_ranger_initializer_list_ranges()
 {
-    ranger r = {{20,30}, {40,50}, {60,80}};
+    ranger<int> r = {{20,30}, {40,50}, {60,80}};
 
     const char *expected = "20-29;40-49;60-79";
 
     std::string s;
-    persist(s, r);
+    r.persist(s);
 
     emit_test("Test initializer lists working as expected");
     emit_input_header();
@@ -606,4 +620,82 @@ static bool test_ranger_initializer_list_ranges()
         FAIL;
     PASS;
 }
+
+
+//////////////////
+
+
+// test a row in the test case table (load, insert/erase, persist)
+
+static bool test_ranger_misc_jobid_persist_load(int N)
+{
+    const char *prev = N > 0 ? test_table5[N-1].expected_result : "";
+    const testcase5 &t = test_table5[N];
+    std::string s;
+    s.reserve(256);
+
+    emit_test("Test misc ranger manipulation");
+    emit_input_header();
+    emit_param("State", prev);
+    emit_param("Input", t.input);
+    emit_param("Action", t.action == Insert ? "insert" : "erase");
+
+    int ret = (t.action == Insert ? ranger_load_insert_persist<JOB_ID_KEY>
+                                  : ranger_load_erase_persist<JOB_ID_KEY>)
+              (prev, t.input, s);
+
+    if (ret != 0)
+        FAIL;
+
+    emit_output_expected_header();
+    emit_retval(t.expected_result);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != t.expected_result)
+        FAIL;
+    PASS;
+}
+
+
+
+//////////////////
+
+
+// test a row in the test case table (contains jobid)
+
+static bool test_ranger_misc_contains_jobid(int N)
+{
+    char elementbuf[64];
+    const testcase6 &t = test_table6[N];
+
+    sprintf(elementbuf, "%d.%d", t.element.cluster, t.element.proc);
+
+    emit_test("Test misc ranger contains jobid element");
+    emit_input_header();
+    emit_param("Input", t.input);
+    emit_param("Element", elementbuf);
+
+    ranger<JOB_ID_KEY> r;
+    if (r.load(t.input)) {
+        emit_alert("Unexpected error loading range spec for contains");
+        FAIL;
+    }
+    bool contains_element = r.contains(t.element);
+
+    emit_output_expected_header();
+    emit_retval(boolstr(t.expected_result));
+
+    emit_output_actual_header();
+    emit_retval(boolstr(contains_element));
+
+    if (contains_element != t.expected_result)
+        FAIL;
+    PASS;
+}
+
+
+
+//////////////////
 

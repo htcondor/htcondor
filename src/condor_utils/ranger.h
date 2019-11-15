@@ -2,15 +2,15 @@
 #define __RANGER_H__
 
 #include <set>
+#include <string>
 
-typedef struct ranger range_mask;
-
+template <class T>
 struct ranger {
     struct range;
     struct elements;
-    typedef int                         element_type;
-    typedef std::set<range>             forest_type;
-    typedef forest_type::const_iterator iterator;
+    typedef T                                    element_type;
+    typedef std::set<range>                      forest_type;
+    typedef typename forest_type::const_iterator iterator;
 
     ranger() {};
     ranger(const std::initializer_list<range> &il);
@@ -19,96 +19,121 @@ struct ranger {
     iterator insert(range r);
     iterator erase(range r);
 
-    inline void insert(element_type e);
-    inline void erase(element_type e);
+    iterator insert(element_type e) { return insert(range(e, e + 1)); }
+    iterator erase(element_type e)  { return erase(range(e, e + 1));  }
 
-    inline void insert_slice(element_type front, element_type back);
-    inline void erase_slice(element_type front, element_type back);
+    iterator insert_slice(element_type front, element_type back)
+    { return insert(range(front, back + 1)); }
+
+    iterator erase_slice(element_type front, element_type back)
+    { return erase(range(front, back + 1)); }
 
     iterator lower_bound(element_type x) const;
     iterator upper_bound(element_type x) const;
 
     std::pair<iterator, bool> find(element_type x) const;
 
-    bool contains(element_type x) const;
+    bool contains(element_type x) const { return find(x).second; }
     bool empty()                  const { return forest.empty(); }
     size_t size()                 const { return forest.size(); }
     void clear()                        { forest.clear(); }
 
-    inline iterator begin() const;
-    inline iterator end()   const;
+    iterator begin() const { return forest.begin(); }
+    iterator end()   const { return forest.end(); }
 
-    inline elements get_elements() const;
+    elements get_elements() const { return *this; }
 
     // first/final range/element; do not call if empty()
-    inline const range &front()         const;
-    inline const range &back()          const;
-    inline element_type front_element() const;
-    inline element_type back_element()  const;
+    const range &front()         const { return *begin(); }
+    const range &back()          const { return *--end(); }
+    element_type front_element() const { return front().front(); }
+    element_type back_element()  const { return back().back(); }
+
+
+
+
+/*  persist / load ranger objects
+ *
+ *  The serialized format is one or more sub-ranges, separated by semicolons,
+ *  where each sub-range is either N-M (for inclusive N..M) or N for a single
+ *  element.  Eg, "2", "5-10", "4;7;10-20;44;50-60"
+ */
+
+    void persist(std::string &s) const;
+    void persist_range(std::string &s, const range &rr) const;
+    void persist_slice(std::string &s, element_type start,
+                                       element_type back) const;
+
+    // insert sub-ranges serialized in s
+    // return 0 on success, (-1 - (position in string)) on parse failure
+    int load(const char *s);
 
     private:
     // the state of our ranger
     forest_type forest;
 };
 
-struct ranger::range {
+template <class T>
+struct ranger<T>::range {
     struct iterator;
     typedef ranger::element_type value_type;
 
-    range(value_type e) : _start(0), _end(e) {}
+    range(value_type e) : _start(), _end(e) {}
     range(value_type s, value_type e) : _start(s), _end(e) {}
 
+    value_type front()            const { return _start;   }
     value_type back()             const { return _end - 1; }
-    value_type size()             const { return _end - _start; }
-    bool contains(value_type x)   const { return _start <= x && x < _end; }
+
+    bool contains(value_type x)   const { return !(x < _start) && x < _end; }
     bool contains(const range &r) const
-    { return _start <= r._start && r._end < _end; }
+    { return !(r._start < _start) && r._end < _end; }
 
     // only for use in our disjoint ranger forest context
     bool operator< (const range &r2) const { return _end < r2._end; }
 
-    inline iterator begin() const;
-    inline iterator end()   const;
+    iterator begin() const { return _start; }
+    iterator end()   const { return _end;   }
 
     // data members; a valid range in ranger forest context has _start < _end
     mutable value_type _start;
     mutable value_type _end;
 };
 
-struct ranger::range::iterator {
+template <class T>
+struct ranger<T>::range::iterator {
     typedef ranger::element_type value_type;
 
-    iterator() : i(0) {}
+    iterator() : i() {}
     iterator(value_type n) : i(n) {}
 
     value_type  operator*()             const {      return i;     }
-    iterator    operator+(value_type n) const {      return i+n;   }
-    iterator    operator-(value_type n) const {      return i-n;   }
+    iterator    operator+(int n)        const {      return i+n;   }
+    iterator    operator-(int n)        const {      return i-n;   }
     iterator   &operator++()                  { ++i; return *this; }
     iterator   &operator--()                  { --i; return *this; }
-    iterator    operator++(int)               {      return i++;   }
-    iterator    operator--(int)               {      return i--;   }
 
-    // takes care of rel ops :D
-    operator value_type()               const {      return i;     }
+    bool operator==(const iterator &b)  const { return i == b.i;   }
+    bool operator!=(const iterator &b)  const { return !(i==b.i);  }
 
     // this is both the iterator "position" and the value
     value_type i;
 };
 
-struct ranger::elements {
+template <class T>
+struct ranger<T>::elements {
     struct iterator;
     typedef ranger::element_type value_type;
 
     elements(const ranger &r) : r(r) {}
 
-    inline iterator begin() const;
-    inline iterator end()   const;
+    iterator begin() const { return r.begin(); }
+    iterator end()   const { return r.end();   }
 
     const ranger &r;
 };
 
-struct ranger::elements::iterator {
+template <class T>
+struct ranger<T>::elements::iterator {
     iterator(ranger::iterator si) : sit(si), rit_valid(0) {}
     iterator() : rit_valid(0) {}
 
@@ -121,56 +146,10 @@ struct ranger::elements::iterator {
     private:
     void mk_valid();
 
-    ranger::iterator sit;
-    range::iterator rit;
+    typename ranger::iterator sit;
+    typename range::iterator rit;
     bool rit_valid;
 };
-
-
-// these are inline but must appear after their return type definitions
-
-ranger::elements           ranger::get_elements()    const { return *this; }
-
-ranger::elements::iterator ranger::elements::begin() const { return r.begin(); }
-ranger::elements::iterator ranger::elements::end()   const { return r.end();   }
-
-ranger::range::iterator    ranger::range::begin()    const { return _start; }
-ranger::range::iterator    ranger::range::end()      const { return _end;   }
-
-ranger::iterator           ranger::begin()   const { return forest.begin(); }
-ranger::iterator           ranger::end()     const { return forest.end();   }
-
-const ranger::range &ranger::front()         const { return *begin();       }
-ranger::element_type ranger::front_element() const { return front()._start; }
-
-const ranger::range &ranger::back()          const { return *--end();       }
-ranger::element_type ranger::back_element()  const { return back().back();  }
-
-void ranger::insert(element_type e) { insert(range(e, e + 1)); }
-void ranger::erase(element_type e)  { erase(range(e, e + 1));  }
-
-void ranger::insert_slice(element_type front, element_type back)
-{ insert(range(front, back + 1)); }
-
-void ranger::erase_slice(element_type front, element_type back)
-{ erase(range(front, back + 1)); }
-
-
-/*  persist / load ranger objects
- *
- *  The serialized format is one or more sub-ranges, separated by semicolons,
- *  where each sub-range is either N-M (for inclusive N..M) or N for a single
- *  integer.  Eg, "2", "5-10", "4;7;10-20;44;50-60"
- */
-
-#include <string>
-
-void persist(std::string &s, const ranger &r);
-void persist_slice(std::string &s, const ranger &r, int start, int back);
-void persist_range(std::string &s, const ranger &r, const ranger::range &rr);
-
-// return 0 on success, (-1 - (position in string)) on parse failure
-int load(ranger &r, const char *s);
 
 
 #endif
