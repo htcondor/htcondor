@@ -154,17 +154,20 @@ stack as HTCondor proper, so it will work if the execute machine is behind a fir
 Simply run, where xx.yy is the job id of a running job:
 
 ::
+
      condor_tail xx.yy
 
 
 or
 
 ::
+
      condor_tail -f xx.yy
 
 to continuously follow the standard output.  To copy a different file, run
 
 ::
+
      condor_tail xx.yy name_of_output_file
 
 
