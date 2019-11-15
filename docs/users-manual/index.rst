@@ -6,7 +6,6 @@ Users' Manual
    :glob:
 
    welcome-to-htcondor
-   introduction-users-manual
    running-a-job-steps
    submitting-a-job
    file-transfer
