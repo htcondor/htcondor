@@ -62,7 +62,7 @@ public:
 	 * cache () - will cache a copy of the pTree and return 
 	 * an indirect envelope
 	 */
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 	static ExprTree * cache ( std::string & pName, ExprTree * pTree, const std::string & szValue );
 	static ExprTree * cache_lazy ( std::string & pName, const std::string & szValue );
 #else
