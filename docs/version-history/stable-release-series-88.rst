@@ -36,17 +36,14 @@ Version 8.8.6
 
 Release Notes:
 
--  HTCondor version 8.8.6 not yet released.
+- HTCondor version 8.8.6 released on November 13, 2019.
 
-.. HTCondor version 8.8.6 released on Month Date, 2019.
-
--  The classad builtin function regexMember has new semantics if
-   any member of the list is undefined.  Previously, if any member
-   of the list argument was undefined, it returned false.  Now, if
-   any member of the list is undefined, it never returns false.  If any
-   member of the list is undefined, and a defined member of the list matches,
-   the function returns true.  Otherwise, it returns undefined.
-   :ticket:`7243`
+-  Initial support for Enterprise Linux 8 (CentOS 8).
+   We recommend running HTCondor on systems with SELinux disabled.
+   If SELinux is enabled, the audit log will contain many AVC messages
+   in the audit log. Also, CREAM support is not present in this port.
+   If there is demand, we may support CREAM in the future.
+   :ticket:`7358`
 
 -  The default encryption algorithm used by HTCondor was changed from
    `Triple-DES` to `Blowfish`.
@@ -55,20 +52,41 @@ Release Notes:
    `Blowfish` is about six times faster and uses less memory than `Triple-DES`.
    :ticket:`7288`
 
+-  The ClassAd builtin function regexMember has new semantics if
+   any member of the list is undefined.  Previously, if any member
+   of the list argument was undefined, it returned false.  Now, if
+   any member of the list is undefined, it never returns false.  If any
+   member of the list is undefined, and a defined member of the list matches,
+   the function returns true.  Otherwise, it returns undefined.
+   :ticket:`7243`
+
 New Features:
 
 -  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
    files and prints out a summary of the values that differ from the defaults.
    :ticket:`7286`
 
+- Updated the BOSCO find platform script to download the binary tarball
+  via HTTPS instead of FTP.
+  :ticket:`7362`
+
 Bugs Fixed:
+
+- Fixed a memory leak in the SSL authentication method.
+  This memory leak could cause long running daemons, such as the
+  *condor_collector* to grow in size without bound.
+  :ticket:`7363`
+
+-  Fixed a bug where submitting more than one job in a single cluster
+   with the -spool option only actually submitted one job in the cluster.
+   :ticket:`7282`
 
 -  Fixed a bug where a misconfigured collector could forward ads to itself.
    The collector now recognizes more cases of this misconfiguration and
    properly ignores them.
    :ticket:`7229`
 
--  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+-  Fixed a bug where if the administrator configured a SLOT_WEIGHT that evaluated
    to less than 1.0, it would round down to zero, and the user would not
    get any matches.
    :ticket:`7313`
@@ -76,10 +94,6 @@ Bugs Fixed:
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
    :ticket:`7221`
-
--  Fixed a bug where submitting more than one job in a single cluster
-   with the -spool option only actually submitted one job in the cluster.
-   :ticket:`7282`
 
 -  Fixed a bug where ``COLLECTOR_REQUIREMENTS`` wrote too much to the log
    to be useful.  It now only writes warnings about rejected ads when
@@ -92,7 +106,7 @@ Bugs Fixed:
    credentials are used for some requests.
    :ticket:`7218`
 
--  Fixed a bug where the classad function bool() would return the wrong
+-  Fixed a bug where the ClassAd function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
 
@@ -111,8 +125,9 @@ Bugs Fixed:
   the configuration was changed to not use the *condor_shared_port* daemon.
   :ticket:`7335`
 
-- Fixed a memory leak in the SSL authentication method.
-  :ticket:`7363`
+- Fixed a bug where using a custom print format with *condor_q* would not
+  produce any output when doing aggregation.
+  :ticket:`7290`
 
 Version 8.8.5
 -------------
