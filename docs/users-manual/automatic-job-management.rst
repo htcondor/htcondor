@@ -55,12 +55,14 @@ which can be used in these expressions.  For example, to automatically remove a
 job which has been in the queue for more than 100 hours, the submit file could have
 
 ::
-      periodic_remove = (time() - QDate) > (100 * 3600)
+
+       periodic_remove = (time() - QDate) > (100 * 3600)
 
 or, to remove jobs that have been running for more than two hours:
 
 ::
-      periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
+
+       periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
 
 Automatically placing a job on hold
 -----------------------------------
@@ -89,10 +91,12 @@ a job that was held with **periodic_hold** is to include the **HoldReasonSubCode
 in the **periodic_release** expression.
 
 ::
-      periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
-      periodic_hold_reason = "Job ran for more than two hours"
-      periodic_hold_subcode = 42
-      periodic_release = (HoldReasonSubCode == 42)
+
+       periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
+       periodic_hold_reason = "Job ran for more than two hours"
+       periodic_hold_subcode = 42
+       periodic_release = (HoldReasonSubCode == 42)
+
 
 Holding a completed job
 -----------------------
@@ -105,5 +109,7 @@ For example, if a job should never exit by a signal, the job can be put on hold 
 does with
 
 ::
-      on_exit_hold = ExitBySignal == true
+
+       on_exit_hold = ExitBySignal == true
+
 
