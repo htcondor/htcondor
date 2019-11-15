@@ -1513,7 +1513,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 		if (stat (filePath.c_str(), &statbuf) >= 0)
 		{
 			file_there = 1;
-			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 filePath.c_str() );
 			/* We should not exit here - file did rotate but something else created it newly. We
