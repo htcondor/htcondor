@@ -301,8 +301,8 @@ void ranger<T>::persist_range(std::string &s, const range &rr) const
 
     auto rit = find(rr._start).first;
     for (; rit != end() && rit->_start < rr._end; ++rit) {
-        typename ranger<T>::range rr_new = { std::max(rit->_start, rr._start),
-                                             std::min(rit->_end,   rr._end) };
+        range rr_new = { std::max(rit->_start, rr._start),
+                         std::min(rit->_end,   rr._end) };
         persist_range_single<T>(s, rr_new);
     }
 

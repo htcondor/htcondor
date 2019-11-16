@@ -76,7 +76,7 @@ struct ranger {
 template <class T>
 struct ranger<T>::range {
     struct iterator;
-    typedef ranger::element_type value_type;
+    typedef typename ranger::element_type value_type;
 
     range(value_type e) : _start(), _end(e) {}
     range(value_type s, value_type e) : _start(s), _end(e) {}
@@ -101,7 +101,7 @@ struct ranger<T>::range {
 
 template <class T>
 struct ranger<T>::range::iterator {
-    typedef ranger::element_type value_type;
+    typedef typename ranger::element_type value_type;
 
     iterator() : i() {}
     iterator(value_type n) : i(n) {}
@@ -122,7 +122,7 @@ struct ranger<T>::range::iterator {
 template <class T>
 struct ranger<T>::elements {
     struct iterator;
-    typedef ranger::element_type value_type;
+    typedef typename ranger::element_type value_type;
 
     elements(const ranger &r) : r(r) {}
 
@@ -134,7 +134,7 @@ struct ranger<T>::elements {
 
 template <class T>
 struct ranger<T>::elements::iterator {
-    iterator(ranger::iterator si) : sit(si), rit_valid(0) {}
+    iterator(typename ranger::iterator si) : sit(si), rit_valid(0) {}
     iterator() : rit_valid(0) {}
 
     value_type operator*();
