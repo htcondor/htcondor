@@ -1,3 +1,13 @@
+condor (8.9.4-1) unstable; urgency=medium
+
+  * Amazon S3 file transfers using pre-signed URLs
+  * Further reductions in DAGMan memory usage
+  * Added -idle option to condor_q to display information about idle jobs
+  * Support for SciTokens authentication
+  * A tool, condor_evicted_files, to examine the SPOOL of an idle job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2019 15:40:14 -0600
+
 condor (8.8.6-1) stable; urgency=medium
 
   * Initial support for CentOS 8

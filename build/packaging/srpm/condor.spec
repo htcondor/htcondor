@@ -1885,6 +1885,13 @@ fi
 %endif
 
 %changelog
+* Tue Nov 19 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.4-1
+- Amazon S3 file transfers using pre-signed URLs
+- Further reductions in DAGMan memory usage
+- Added -idle option to condor_q to display information about idle jobs
+- Support for SciTokens authentication
+- A tool, condor_evicted_files, to examine the SPOOL of an idle job
+
 * Wed Nov 13 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.6-1
 - Initial support for CentOS 8
 - Fixed a memory leak in SSL authentication
