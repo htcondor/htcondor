@@ -210,7 +210,7 @@ ReliSock *ns;
 
 int
 DockerProc::ExecReaper(int pid, int status) {
-	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d with status %d\n", pid, status);
+	dprintf( D_FULLDEBUG, "DockerProc::ExecReaper() pid is %d with status %d\n", pid, status);
 	if (pid == execPid) {
 		dprintf(D_ALWAYS, "docker exec pid %d exited\n", pid);
 		delete ns;
@@ -325,10 +325,25 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
-
 		daemonCore->Cancel_Timer(updateTid);
 
+		// Once the container has terminated, I don't care what Docker
+		// thinks; nobody's going to be answering the phone.
+		std::string containerServiceNames;
+		JobAd->LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
+		if(! containerServiceNames.empty()) {
+			StringList services(containerServiceNames.c_str());
+			services.rewind();
+			const char * service = NULL;
+			while( NULL != (service = services.next()) ) {
+				std::string attrName;
+				formatstr( attrName, "%s_%s", service, "HostPort" );
+				serviceAd.Insert( attrName, classad::Literal::MakeUndefined() );
+			}
+		}
+
 		TemporaryPrivSentry sentry(PRIV_ROOT);
+
 		//
 		// Even running Docker in attached mode, we have a race condition
 		// is exiting when the container exits, not when the docker daemon
@@ -349,7 +364,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 
 			if( ! dockerAd.LookupBool( "Running", running ) ) {
-				dprintf( D_FULLDEBUG, "Inspection of container '%s' failed to reveal its running state; sleeping a second (%d already slept) to give Docke a chance to catch up.\n", containerName.c_str(), i );
+				dprintf( D_FULLDEBUG, "Inspection of container '%s' failed to reveal its running state; sleeping a second (%d already slept) to give Docker a chance to catch up.\n", containerName.c_str(), i );
 				sleep( 1 );
 				continue;
 			}
@@ -373,13 +388,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				imageName = "Unknown"; // shouldn't ever happen
 			}
 
-			/*
-			std::string message;
-			formatstr(message, "Cannot start container\n");
-
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
-			return VanillaProc::JobReaper( pid, status );
-			*/
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -401,7 +409,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		if (! dockerAd.LookupString( "OOMKilled", oomkilled)) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
 		}
-		
+
 		if (oomkilled.find("true") == 0) {
 			ClassAd *machineAd = Starter->jic->machClassAd();
 			int memory;
@@ -410,7 +418,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "Docker job has gone over memory limit of %d Mb", memory);
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
-			
+
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 			DockerAPI::rm( containerName, error );
 
@@ -435,7 +443,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "Error running docker job: %s", dockerError.c_str());
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
-			
+
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 			DockerAPI::rm( containerName, error );
 
@@ -446,8 +454,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			Starter->ShutdownFast();
 			return 0;
-		} 
-		
+		}
+
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
