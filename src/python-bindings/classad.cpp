@@ -917,8 +917,10 @@ convert_python_to_exprtree(boost::python::object value)
                     // Py_DECREF(pyobj);
                 }
                 Py_DECREF(iter);
+                Py_DECREF(keys);
                 return ad;
             }
+            Py_DECREF(keys);
         }
     }
     PyObject *py_iter = PyObject_GetIter(value.ptr());
