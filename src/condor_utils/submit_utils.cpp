@@ -137,7 +137,7 @@ const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, cl
 	if ( ! expr)
 		return NULL;
 	classad::Value::NumberFactor f;
-	const classad::Value * pval = &dynamic_cast<classad::Literal*>(expr)->getValue(f);
+	const classad::Value * pval = &static_cast<classad::Literal*>(expr)->getValue(f);
 	if (!pval || (pval->GetType() != vt))
 		return NULL;
 	return pval;
