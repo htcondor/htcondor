@@ -22,7 +22,7 @@
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "counted_ptr.h"
+#include <memory>
 #include "basename.h"
 #include "utc_time.h"
 
@@ -829,7 +829,7 @@ SharedPortEndpoint::InitRemoteAddress()
 	fclose( fp );
 
 		// avoid leaking ad when returning from this function
-	counted_ptr<ClassAd> smart_ad_ptr(ad);
+	std::unique_ptr<ClassAd> smart_ad_ptr(ad);
 
 	if( errorReadingAd ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to read ad from %s.\n",
