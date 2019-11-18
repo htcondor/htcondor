@@ -142,6 +142,10 @@ typedef struct JOB_ID_KEY {
 		if ( ! diff) diff = this->proc - cp.proc;
 		return diff < 0;
 	}
+	JOB_ID_KEY operator+(int i) const { return {cluster, proc + i}; }
+	JOB_ID_KEY operator-(int i) const { return {cluster, proc - i}; }
+	JOB_ID_KEY &operator++() { ++proc; return *this; }
+	JOB_ID_KEY &operator--() { --proc; return *this; }
 	JOB_ID_KEY() : cluster(0), proc(0) {}
 	JOB_ID_KEY(int c, int p) : cluster(c), proc(p) {}
 	JOB_ID_KEY(const PROC_ID & rhs) : cluster(rhs.cluster), proc(rhs.proc) {}

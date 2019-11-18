@@ -135,6 +135,16 @@ operator=(const MyString& S)
     return *this;
 }
 
+/** Destructively moves a MyString guts from rhs to this */
+MyString& 
+MyString::operator=(MyString &&rhs) {
+	this->Data     = rhs.Data;
+	this->Len      = rhs.Len;
+	this->capacity = rhs.capacity;
+	rhs.init();
+	return *this;
+}
+
 MyString& MyString::
 operator=(const std::string& S) 
 {

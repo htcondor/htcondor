@@ -135,6 +135,9 @@ class MyString
 	/** Copies a MyString into the object */
 	MyString& operator=(const MyString& S);
 
+	/** Destructively moves a MyString guts from rhs to this */
+	MyString& operator=(MyString &&rhs);
+
 	/** Copies a std::string into the object */
 	MyString& operator=(const std::string& S);
 

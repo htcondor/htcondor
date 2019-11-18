@@ -2076,6 +2076,11 @@ default=false
 type=bool
 tags=tt,ttmanager
 
+[SUBMIT_ALLOW_GETENV]
+default=true
+type=bool
+tags=submit
+
 [SUBMIT_SKIP_FILECHECKS]
 default=true
 type=string
