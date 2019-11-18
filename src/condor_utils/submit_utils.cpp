@@ -1686,7 +1686,12 @@ int SubmitHash::SetEnvironment()
 	// if getenv == TRUE, merge the variables from the user's environment that
 	// are not already set in the envobject
 	if (submit_param_bool(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt, false)) {
-		envobject.Import( );
+		if (param_boolean("SUBMIT_ALLOW_GETENV", true)) {
+			envobject.Import( );
+		} else {
+			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
+			ABORT_AND_RETURN(1);
+		}
 	}
 
 	// There may already be environment info in the ClassAd from SUBMIT_ATTRS.
