@@ -869,6 +869,7 @@ int DockerAPI::detect( CondorError & err ) {
 		MyString line;
 		line.readLine(pgm.output(), false); line.chomp();
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+		dprintf( D_ALWAYS, "  Try adding condor to the docker group in /etc/group\n");
 		return -3;
 	}
 
