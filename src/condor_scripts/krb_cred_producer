@@ -3,49 +3,115 @@
 # DESY HTCondor Config                    #
 ###########################################
 
-DEBUGFILE=/tmp/htckrb5debug
+DEBUGFILE=/tmp/htckrb5debug.$USER
+
+# UNCOMMENT THE LINE BELOW TO ENABLE DEBUGGING:
+#touch $DEBUGFILE
+
+
+
+##
+## You should not need to modify anything below here unless
+## you are overriding the auto-detected values and are sure
+## that is what you want to do!
+##
+
+# for debugging, if it is enabled
 COMMAND=$0
 CCDIR="$*"
 
+# debug function.  will only log if the log already exists.
 logging () {
 if [[ -f $DEBUGFILE ]]; then
     DATE=$(date +'%T %x')
     echo "$DATE $COMMAND $CCDIR $1" >> $DEBUGFILE
 fi
-#DATE=$(date +'%T %x')
-#echo "$DATE $COMMAND $CCDIR $1"
 }
 
+
+# this is needed to bootstrap and find most other values
+CCV=`which condor_config_val`
+if [[ $CCV ]]; then
+        logging "found condor_config_val $CCV"
+else
+        logging "couldn't find condor_config_val"
+        exit 1
+fi
+
+
+# this will tell us where condor_aklog lives
 CONDOR_SBIN=`condor_config_val SBIN`
+if [[ $CONDOR_SBIN ]]; then
+        logging "found CONDOR_SBIN $CONDOR_SBIN"
+else
+        logging "couldn't find CONDOR_SBIN"
+        exit 1
+fi
+
+
+# make sure the environment variable is set
+if [[ $KRB5CCNAME ]]; then
+        logging "using KRB5CCNAME $KRB5CCNAME"
+else
+        logging "KRB5CCNAME not set!"
+        exit 1
+fi
+
+
+# make sure the credential cache exists where KRB5CCNAME says it does
+if [[ -f ${KRB5CCNAME#FILE:} ]]; then
+        logging "$KRB5CCNAME exists"
+else
+        logging "$KRB5CCNAME doesn't exist!"
+        exit 1
+fi
+
+
+# we don't use this ourself but condor_aklog will fail so check it now
+KL=`which klist`
+if [[ $KL ]]; then
+        logging "found klist $KL"
+else
+        logging "couldn't find klist"
+        exit 1
+fi
+
+
+# we don't use this ourself but condor_aklog will fail so check it now
+PRINCE=`klist 2>/dev/null | grep rincipal:`
+if [[ $PRINCE ]]; then
+        logging "using $PRINCE"
+else
+        logging "couldn't find user principal using klist"
+        exit 1
+fi
+
+
+# make sure condor_aklog exists where we think it does
 CONDOR_AKLOG=$CONDOR_SBIN/condor_aklog
-
-if [[ -f /usr/heimdal/bin/klist ]]; then
-        PRINCE=`/usr/heimdal/bin/klist 2>/dev/null | grep Principal:`
-elif [[ -f /usr/kerberos/bin/klist ]]; then
-        PRINCE=`/usr/kerberos/bin/klist 2>/dev/null | grep principal:`
-elif [[ -f /usr/bin/klist ]]; then
-        PRINCE=`/usr/bin/klist 2>/dev/null | grep principal:`
+if [[ -f $CONDOR_AKLOG ]]; then
+        logging "$CONDOR_AKLOG exists"
 else
-        PRINCE=""
-fi
-
-if [[ -n "$PRINCE" ]]; then
-        logging "start get PRINCE ok"
-else
-        #echo "Reject: Could not verify user"
-        logging "start get PRINCE failed"
+        logging "$CONDOR_AKLOG doesn't exist!"
         exit 1
 fi
-if [[ -n $KRB5CCNAME && -f ${KRB5CCNAME#FILE:} ]]; then
-#        /usr/bin/aklog
-#        /usr/sbin/condor_aklog
-        $CONDOR_AKLOG
-        TOKENFILE=${KRB5CCNAME#FILE:}
-        cat "$TOKENFILE"
-        logging "start get TOKENFILE $TOKENFILE ok"
-#        sleep 10 # Give Storage Time
-        exit 0
+
+
+# run condor_aklog and make sure it worked
+if $CONDOR_AKLOG; then
+	logging "successfully ran $CONDOR_AKLOG"
 else
-        logging "start get TOKENFILE failed"
-        exit 1
+	logging "failed to run $CONDOR_AKLOG"
+	exit 1
 fi
+
+
+# finally, produce the credential cache to stdout
+CCFILE=${KRB5CCNAME#FILE:}
+cat "$CCFILE"
+logging "produced contents of $CCFILE"
+
+
+# success!
+exit 0
+
