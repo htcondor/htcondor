@@ -83,33 +83,10 @@ if (WANT_FULL_DEPLOYMENT)
 endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor_vacate "${C_BIN}" "condor_reschedule" "${C_BIN}")
 
-if (NOT WINDOWS)
-	if (STD_UNIVERSE)
-		clone_install(condor_vacate "${C_BIN}" "condor_checkpoint" "${C_BIN}")
-		src_target_ref( ckpt "maps" CKPT_REFS)
-		# condor_exe(condor_ckpt_probe "probe_process.cpp;${CKPT_REFS}" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS}" OFF)
-		#
-		# Statically link condor_ckpt_probe; see #2901.
-		#
-		# This is wasteful, since we've already built three of these source
-		# files, but it's a lot simpler than figuring out how to link the
-		# object files.
-		set( _orig_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} )
-		set( CMAKE_FIND_LIBRARY_SUFFIXES .a )
-		find_library( HAVE_STATIC_LIBDL dl )
-		set( CMAKE_FIND_LIBRARY_SUFFIXES ${_orig_CMAKE_FIND_LIBRARY_SUFFIXES} )
-		if (NOT HAVE_STATIC_LIBDL)
-			message( FATAL_ERROR "Can't find libdl.a, needed for condor_ckpt_probe" )
-		endif()
-		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.c )
-		install( TARGETS condor_ckpt_probe DESTINATION "${C_LIBEXEC}" )
-        set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
-        set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )
-	endif(STD_UNIVERSE)
-else(NOT WINDOWS)
+if (WINDOWS)
 	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
 	clone_install(condor_vacate "${C_BIN}" "condor_squawk" "${C_BIN}")
-endif(NOT WINDOWS)
+endif(WINDOWS)
 
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 

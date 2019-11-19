@@ -28,12 +28,9 @@ extern "C" {
 void
 limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 {
-	int		scm;
 	struct	rlimit current = {0,0};
 	struct	rlimit desired = {0,0};
 	char const *kind_str = "";
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
 	/* Find out current limit for this resource */
 	if( getrlimit(resource, &current) < 0 ) {
@@ -181,8 +178,6 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 			strerror(errno) );
 		}
 	}
-
-	(void)SetSyscalls( scm );
 }
 
 } /* extern "C" */

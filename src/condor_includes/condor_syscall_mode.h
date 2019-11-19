@@ -34,26 +34,8 @@
 typedef int BOOL;
 #endif
 
-static const int SYS_LOCAL = 1;
-static const int 	SYS_REMOTE = 0;
-static const int	SYS_RECORDED = 2;
-static const int	SYS_MAPPED = 2;
-
-static const int	SYS_UNRECORDED = 0;
-static const int	SYS_UNMAPPED = 0;
-
 #if defined(__cplusplus)
 extern "C" {
-#endif
-
-int SetSyscalls( int mode );
-int GetSyscallMode( void );
-BOOL LocalSysCalls( void );
-BOOL RemoteSysCalls( void );
-BOOL MappingFileDescriptors( void );
-
-#if defined(Solaris)
-	int syscall( int, ... );
 #endif
 
 #if defined(__cplusplus)

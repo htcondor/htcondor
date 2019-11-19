@@ -50,7 +50,6 @@ int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 const char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)(int,int,const char*);
-int		SetSyscalls(int);
 void	(*_EXCEPT_Reporter)(const char * msg, int line, const char * file) = NULL;
 
 extern int		_condor_dprintf_works;
@@ -71,7 +70,6 @@ _EXCEPT_(const char *fmt, ...)
 	va_list pvar;
 	char buf[ BUFSIZ ];
 
-	(void)SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 	va_start(pvar, fmt);
 
 	vsprintf( buf, fmt, pvar );

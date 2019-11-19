@@ -205,13 +205,3 @@ condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
-
-##################################################
-# std universe stubgen stuff
-if (STD_UNIVERSE)
-	command_target(y.tab yacc "-d;${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_yacc.y" y.tab.c)
-	command_target(lex.yy lex "${CMAKE_CURRENT_SOURCE_DIR}/stub_gen_lex.l" lex.yy.c)
-	condor_exe(stub_gen "lex.yy.c;y.tab.c;lex.yy.c" OFF "" OFF)
-endif(STD_UNIVERSE)
-##################################################
-

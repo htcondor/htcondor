@@ -203,7 +203,6 @@ char	*DebugLock = NULL;
 int		DebugLockIsMutex = -1;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
-int		SetSyscalls(int mode);
 
 int		LockFd = -1;
 

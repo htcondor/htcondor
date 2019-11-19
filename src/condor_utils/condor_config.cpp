@@ -108,7 +108,6 @@ bool real_config(const char* host, int wantsQuiet, int config_options, const cha
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
-int SetSyscalls(int);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
@@ -905,7 +904,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	const char* config_source = root_config;
 	MyString config_file_tmp; // used as a temp buffer by find_global
 	char* tmp = NULL;
-	int scm;
 
 	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 	config_options |= CONFIG_OPT_COLON_IS_META_ONLY;
@@ -926,13 +924,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
-
-		/*
-		  N.B. if we are using the yellow pages, system calls which are
-		  not supported by either remote system calls or file descriptor
- 		  mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-		*/
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 		// Try to find user "condor" in the passwd file.
 	init_tilde();
@@ -1191,8 +1182,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
 	if(!condor_fsync_on)
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
-
-	(void)SetSyscalls( scm );
 
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
 	ClassAd::Reconfig();

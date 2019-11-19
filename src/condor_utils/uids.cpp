@@ -1038,20 +1038,12 @@ delete_passwd_cache() {
 void
 init_condor_ids()
 {
-	int scm;
 	bool result;
 	char* env_val = NULL;
 	char* config_val = NULL;
 	char* val = NULL;
 	uid_t envCondorUid = INT_MAX;
 	gid_t envCondorGid = INT_MAX;
-
-        /*
-        ** N.B. if we are using the yellow pages, system calls which are
-        ** not supported by either remote system calls or file descriptor
-        ** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-        */
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 	uid_t MyUid = get_my_uid();
 	gid_t MyGid = get_my_gid();
@@ -1183,7 +1175,6 @@ init_condor_ids()
 	}
 
 	(void)endpwent();
-	(void)SetSyscalls( scm );
 	
 	CondorIdsInited = TRUE;
 }
@@ -1334,7 +1325,6 @@ init_nobody_ids( int is_quiet )
 int
 init_user_ids_implementation( const char username[], int is_quiet )
 {
-	int					scm;
 	uid_t 				usr_uid;
 	gid_t				usr_gid;
 
@@ -1362,13 +1352,6 @@ init_user_ids_implementation( const char username[], int is_quiet )
 										NULL, is_quiet ); 
 	}
 
-	/*
-	** N.B. if we are using the yellow pages, system calls which are
-	** not supported by either remote system calls or file descriptor
-	** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-	*/
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-
 	if( ! strcasecmp(username, "nobody") ) {
 			// There's so much special logic for user nobody that it's
 			// all in a seperate function now.
@@ -1381,11 +1364,9 @@ init_user_ids_implementation( const char username[], int is_quiet )
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
 		(void)endpwent();
-		(void)SetSyscalls( scm );
 		return FALSE;
 	}
 	(void)endpwent();
-	(void)SetSyscalls( scm );
 	return set_user_ids_implementation( usr_uid, usr_gid, username, is_quiet ); 
 }
 

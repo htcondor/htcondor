@@ -66,22 +66,6 @@
 #	endif
 #endif
 
-/*
-**	System calls can be either:
-**		local or remote...
-**		recorded or unrecorded...
-*/
-
-#define SYS_LOCAL		0x0001		/* Perform local system calls            */
-#define SYS_REMOTE		0			/* Comment for calls to SetSyscalls     */
-#define SYS_RECORDED	0x0002		/* Record information needed for restart */
-#define SYS_UNRECORDED	0			/* Comment for calls to SetSyscalls     */
-#define SYS_MAPPED		SYS_RECORDED    /* more descriptive name */
-#define SYS_UNMAPPED	SYS_UNRECORDED   /* more descriptive name */
-
-/*
-extern int Syscalls;
-*/
 #if defined(__cplusplus)
 extern "C" {
 #endif
