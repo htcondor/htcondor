@@ -203,59 +203,6 @@ if (BUILD_TESTING)
 		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_vmu_ckpt.sh")
 	endif(HAVE_VMWARE)
 
-	if (STD_UNIVERSE)
-		# C-Tests
-
-		if(${SYS_ARCH} MATCHES "X86_64")
-			condor_pl_test(job_ckpt_lfs_std "Do we handle files with larger than 32-bit file offsets?" "stduniv;quick;full")
-		endif()
-
-		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
-		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full")
-		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full")
-
-		# C++-Tests
-		condor_pl_test(job_ckpt_constructor_std "Test C++ global and local constructors" "stduniv;framework;quick;full")
-		condor_pl_test(job_ckpt_env_std "Is the environment restored after ckpt?" "stduniv;framework;quick;full")
-		condor_pl_test(job_ckpt_memory-file_std "Does the memory_file class work across ckpts?" "stduniv;framework;quick;full")
-		condor_pl_test(job_core-cpp_exception_std "C++ exception handling" "framework;quick;full")
-		condor_pl_test(job_core-cpp_mem-alloc_std "Memory allocation and constructors" "framework;quick;full")
-		condor_pl_test(job_rsc_fstream_std "Does the C++ fstream() interface work?" "stduniv;framework;quick;full")
-
-		# Common to both
-		condor_pl_test(job_core_bigenv_std "Standard job with an enormous environment" "framework;quick;full")
-		condor_pl_test(job_rsc_all-syscalls_std "Tests nearly all remote syscalls" "stduniv;framework;critical;quick;full;rsc")
-		condor_pl_test(job_rsc_hello_std "Tests various RSC I/O methods" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_fcntl_std "Does fcntl() work remotely?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_truncate_std "Can we truncate files with open() remotely?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_getdirentries_std "Does getdirentries() work remotely?" "stduniv;quick;full;rsc")
-		condor_pl_test(job_rsc_fgets_std "job_rsc_fgets_std" "stduniv;framework;long;full;rsc")
-		condor_pl_test(job_rsc_fread_std "Does fread() work remotely?" "stduniv;framework;long;full;rsc")
-		condor_pl_test(job_rsc_ftell_std "Does ftell() work remotely?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_open-N-serial_std "Can we open/close N files in serial?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_atexit_std "Does atexit() still work?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_stat_std "Does stat() work remotely?" "stduniv;framework;quick;full;rsc")
-		condor_pl_test(job_rsc_zero-calloc_std "Does calloc() allocated zero'ed-out memory?" "stduniv;framework;long;full;rsc")
-		condor_pl_test(job_ckpt_combo-sanity_std "combination of sbrk() and register inspection for overall ckpt sanity" "stduniv;long;full;rsc")
-		condor_pl_test(job_ckpt_io-async_std "file I/O during async ckpt signals" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_io-buffer-async_std "file buffing during async ckpt/restore" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_io-buffer-async-compressed_std "file buffing during async ckpt/restore with compression" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_stack_std "ckpt/restore function call stack" "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_standalone_std "standalone ckpt/restore function call stack" "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_nscd_std "Test if we handle nscd correctly." "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_floats_std "ckpt/restore floating point registers" "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_floats-async_std "checks floating point ops with async ckpts" "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_integers_std "ckpt/restore integer registers" "stduniv;framework;quick;full;ckpt")
-		condor_pl_test(job_ckpt_signals_std "ckpt/restore signal state" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_dup_std "ckpt/restore file table state with dup() calls" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_longjmp_std "Can we ckpt while longjmp()'ing around?" "stduniv;long;full;ckpt")
-		condor_pl_test(job_ckpt_gettimeofday_std "ckpt/restore current time-of-day" "stduniv;long;full;ckpt")
-		condor_pl_test(job_ckpt_open-async-ckpt_std "async ckpt/restore of open file table" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_open-N-parallel_std "ckpt/restore of N files open at once" "stduniv;quick;full;ckpt")
-		#condor_pl_test(job_ckpt_getrusage-loop_std "async ckpt/restore of open file table" "stduniv;quick;full;ckpt")
-		condor_pl_test(job_ckpt_socket-support_std "Do we support sockets around ckpt/restore?" "stduniv;long;full;ckpt")
-	endif(STD_UNIVERSE)
-
 	##########################################################
 	# now all the common tests.
 
