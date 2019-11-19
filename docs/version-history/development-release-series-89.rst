@@ -46,25 +46,45 @@ Version 8.9.4
 
 Release Notes:
 
--  HTCondor version 8.9.4 not yet released.
+- HTCondor version 8.9.4 released on November 19, 2019.
 
-.. HTCondor version 8.9.4 released on Month Date, 2019.
+- The Python bindings are now packaged as extendable modules.
+  :ticket:`6907`
 
 - The format of the aborted event has changed.  This will
   only affect you if you're not using one the readers provided by HTCondor.
   :ticket:`7191`
 
-- `DAGMAN_USE_JOIN_NODES` is now on by default.
+- ``DAGMAN_USE_JOIN_NODES`` is now on by default.
   :ticket:`7271`
-
-- The Python bindings are now packaged as extendable modules.
-  :ticket:`6907`
 
 New Features:
 
 - HTCondor now supports secure download and upload to and from S3.  See
   the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
   :ticket:`7289`
+
+- Reduced the memory needed for *condor_dagman* to load a DAG that has a large number
+  of PARENT and CHILD statements.
+  :ticket:`7170`
+
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
+- `SciTokens <https://scitokens.org>`_ support is now available.
+  :ticket:`7248`
+
+- Added a new tool, :ref:`condor_evicted_files`,
+  to help users find files that HTCondor is holding on to for them (as
+  a result of a job being evicted when
+  ``when_to_transfer_output = ON_EXIT_OR_EVICT``, or checkpointing when
+  ``CheckpointExitCode`` is set).
+  :ticket:`7038`
 
 - Added ``erase_output_and_error_on_restart`` as a new submit command.  It
   defaults to true; if set to false, and ``when_to_transfer_output`` is
@@ -78,24 +98,17 @@ New Features:
   built-in submit variables. These expand to the time of submission.
   :ticket:`7283`
 
-- Added a new tool, :ref:`condor_evicted_files`,
-  to help users find files that HTCondor is holding on to for them (as
-  a result of a job being evicted when
-  ``when_to_transfer_output = ON_EXIT_OR_EVICT``, or checkpointing when
-  ``CheckpointExitCode`` is set).
-  :ticket:`7038`
-
 - GPU monitoring is now on by default.  It reports ``DeviceGPUsAverageUsage``
   and ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
-  are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
+  are for the lifetime of the *condor_startd*.  Also, we renamed ``GPUsUsage`` to
   ``GPUsAverageUsage`` because all other usage values are peaks.  We also
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
-- Added new config parameter for execute machines,
+- Added new configuration parameter for execute machines,
   CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
-  condor LD_PRELOADs into unprivileged sshd it startd a special version of
-  the linux getpwnam library call, which forces the user's shell to
+  condor LD_PRELOADs into unprivileged sshd it *condor_startd* a special version of
+  the Linux getpwnam() library call, which forces the user's shell to
   /bin/bash and the home directory to the scratch directory.  This allows
   condor_ssh_to_job to work on sites that don't create login shells for
   slots users, or who want to run as nobody.
@@ -118,32 +131,16 @@ New Features:
 
   :ticket:`7278`
 
-- Added an example of a multifile plugin to transfer files from a locally
+- Added an example of a multi-file plugin to transfer files from a locally
   mounted Gluster file system. This script is also designed to be a template
   for other file transfer plugins, as the logic to download or upload files is
   clearly indicated and could be easily changed to support different file
   services.
   :ticket:`7212`
 
-- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
-  their requested resources.
-  :ticket:`7241`
-
-- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
-  sleep.
-  :ticket:`7273`
-
-- Reduced the memory needed for *condor_dagman* to load a Dag that has a large number
-  of PARENT and CHILD statements.
-  :ticket:`7170`
-
-- `SciTokens <https://scitokens.org>`_ support is now available on
-  Enterprise Linux 7 platforms.
-  :ticket:`7248`
-
-- Added a new multifile transfer plugin for downloading files from
+- Added a new multi-file transfer plugin for downloading files from
   Microsoft OneDrive user accounts. This supports URLs like
-  "onedrive://path/to/file" and using the plugin requires the admin
+  "onedrive://path/to/file" and using the plugin requires the administrator
   configure the *condor_credd* to allow users to obtain Microsoft OneDrive
   tokens and requires the user request Microsoft OneDrive tokens in their
   submit file. :ticket:`7171`
@@ -158,7 +155,7 @@ New Features:
   :ticket:`7097`
 
 - The *condor_schedd* now keeps track of which submitters it has advertised to
-  flocked pools.  The *condor_schedd* will only honor matchingmaking requests
+  flocked pools.  The *condor_schedd* will only honor matchmaking requests
   from flocked pool for submitters it did not advertise to the flock pool.  This
   new logic only applies to auto-created authorizations (introduced in 8.9.3)
   and not NEGOTIATOR-level authorizations setup by pool administrators.
