@@ -25,12 +25,17 @@ New Features:
    :ticket:`7355`
 
 -  Added the ability to edit certain properties of a running *condor_dagman*
-   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**. 
+   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**.
    A user can call *condor_qedit* to set new values in the job ad, which will
    then be updated in the running workflow.
    :ticket:`7236`
 
 Bugs Fixed:
+
+-  The Python 3 bindings no longer segfault when putting a
+   :class:`~classad.ClassAd` constructed from a Python dictionary into another
+   :class:`~classad.ClassAd`.
+   :ticket:`7371`
 
 -  The Python 3 bindings were missing the division operator for
    :class:`~classad.ExprTree`.
