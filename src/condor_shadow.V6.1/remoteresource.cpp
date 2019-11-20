@@ -1573,6 +1573,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
+		// Arguably, this should actually check the list of container services
+		// and only forward the matching attributes through, but I'm not
+		// actually worried.
+		} else if( ends_with( it->first, "_HostPort" ) ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
 		}
 	}
 

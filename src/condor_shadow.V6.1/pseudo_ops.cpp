@@ -195,6 +195,7 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 	fix_update_ad(*ad);
 	thisRemoteResource->updateFromStarter( ad );
 	thisRemoteResource->resourceExit( reason, status );
+	Shadow->updateJobInQueue( U_STATUS );
 	return 0;
 }
 
