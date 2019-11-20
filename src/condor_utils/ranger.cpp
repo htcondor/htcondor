@@ -95,47 +95,48 @@ ranger<T>::ranger(const std::initializer_list<element_type> &il)
 }
 
 
+// use std::lower_bound for generic containers (other than std::set)
+template <class Forest>
+struct bounder {
+    typedef typename Forest::value_type Range;
+    typedef typename Forest::const_iterator iterator;
+
+    static iterator lower_bound(const Forest &f, const Range &r) {
+        return std::lower_bound(f.begin(), f.end(), r);
+    }
+
+    static iterator upper_bound(const Forest &f, const Range &r) {
+        return std::upper_bound(f.begin(), f.end(), r);
+    }
+};
+
+
 // specialize for std::set containers to use std::set::lower_bound
-template <class T>
-static inline typename std::set<typename ranger<T>::range>::const_iterator
-lower_bounder(const typename std::set<typename ranger<T>::range> &f,
-                                      typename ranger<T>::range rr)
-{
-    return f.lower_bound(rr);
-}
+template <class Range>
+struct bounder<std::set<Range> > {
+    typedef std::set<Range> Forest;
+    typedef typename Forest::const_iterator iterator;
 
-template <class T>
-static inline typename std::set<typename ranger<T>::range>::const_iterator
-upper_bounder(const typename std::set<typename ranger<T>::range> &f,
-                                      typename ranger<T>::range rr)
-{
-    return f.upper_bound(rr);
-}
+    static iterator lower_bound(const Forest &f, const Range &r) {
+        return f.lower_bound(r);
+    }
 
-// generic containers (other than std::set) use std::lower_bound
-template <class C, class T> static inline typename C::const_iterator
-lower_bounder(const C &f, typename ranger<T>::range rr)
-{
-    return std::lower_bound(f.begin(), f.end(), rr);
-}
-
-template <class C, class T> static inline typename C::const_iterator
-upper_bounder(const C &f, typename ranger<T>::range rr)
-{
-    return std::upper_bound(f.begin(), f.end(), rr);
-}
+    static iterator upper_bound(const Forest &f, const Range &r) {
+        return f.upper_bound(r);
+    }
+};
 
 
 template <class T>
 typename ranger<T>::iterator ranger<T>::lower_bound(element_type x) const
 {
-    return lower_bounder<forest_type,T>(forest, x);
+    return bounder<forest_type>::lower_bound(forest, x);
 }
 
 template <class T>
 typename ranger<T>::iterator ranger<T>::upper_bound(element_type x) const
 {
-    return upper_bounder<forest_type,T>(forest, x);
+    return bounder<forest_type>::upper_bound(forest, x);
 }
 
 
