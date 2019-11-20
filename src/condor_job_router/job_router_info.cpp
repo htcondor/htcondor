@@ -154,7 +154,6 @@ int main(int argc, const char *argv[])
 	bool dash_config = false;
 	bool dash_match_jobs = false;
 	bool dash_diagnostic = false;
-	bool dash_d_always = true;
 	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
 
@@ -169,7 +168,6 @@ int main(int argc, const char *argv[])
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			my_exit(0);
 		} else if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
-			dash_d_always = true;
 			if (pcolon && (is_arg_prefix(pcolon+1, "verbose", 1) || is_arg_prefix(pcolon+1, "full", 1))) {
 				//dash_d_fulldebug = true;
 			}
@@ -199,7 +197,7 @@ int main(int argc, const char *argv[])
 	unsigned int cat_and_flags = D_FULLDEBUG | D_CAT;
 	//if (dash_d_fulldebug) { cat_and_flags |= D_FULLDEBUG; }
 	DebugOutputChoice choice=1<<D_ERROR;
-	if (dash_d_always || dash_diagnostic) { choice |= 1<<D_ALWAYS; }
+	if (dash_diagnostic) { choice |= 1<<D_ALWAYS; }
 	dprintf_set_output_intercept(cat_and_flags, choice, _dprintf_intercept);
 
 
