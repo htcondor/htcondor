@@ -12,7 +12,7 @@ Users' Manual
    managing-a-job
    automatic-job-management
    priorities-and-preemption
-   dagman-applications
+   dagman-workflows
    matchmaking-with-classads
    choosing-an-htcondor-universe
    java-applications
