@@ -275,7 +275,7 @@ int DockerAPI::createContainer(
 		while( NULL != (service = services.next()) ) {
 			int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s_%s", service, "ContainerPort" );
+			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				runArgs.AppendArg("-p");
 				runArgs.AppendArg(portNo);
@@ -1233,7 +1233,7 @@ DockerAPI::getServicePorts( const std::string & container,
 		while( NULL != (service = services.next()) ) {
 		    int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s_%s", service, "ContainerPort" );
+			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				if( containerPortToHostPortMap.count(portNo) ) {
 					formatstr( attrName, "%s_%s", service, "HostPort" );

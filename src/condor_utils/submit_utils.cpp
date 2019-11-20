@@ -621,6 +621,7 @@ struct SimpleSubmitKeyword {
 		f_special_periodic  = f_special + 0x10000,
 		f_special_leaveinq  = f_special + 0x11000,
 		f_special_retries   = f_special + 0x12000,
+		f_special_container = f_special + 0x13000,
 
 		f_special_killsig = f_special + 0x19000,
 		f_special_gsicred = f_special + 0x1a000,
@@ -5194,6 +5195,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	// invoke SetContainerSpecial
+	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
 
 	{NULL, NULL, 0}, // end of table
 };
@@ -7840,6 +7843,9 @@ ClassAd* SubmitHash::make_job_ad (
 	SetJobRetries(); /* factory:ok */
 	SetKillSig(); /* factory:ok  */
 
+	// Orthogonal to all other functions.  This position is arbitrary.
+	SetContainerSpecial();
+
 	SetRequestResources(); /* n attrs, prunable by pattern, factory:ok */
 	SetConcurrencyLimits(); /* 2 attrs, prunable, factory:ok */
 	SetAccountingGroup(); /* 3 attrs, prunable, factory:ok */
@@ -7892,6 +7898,36 @@ ClassAd* SubmitHash::make_job_ad (
 		}
 	}
 	return procAd;
+}
+
+int SubmitHash::SetContainerSpecial()
+{
+	RETURN_IF_ABORT();
+
+	if( IsDockerJob ) {
+		auto_free_ptr serviceList( submit_param( SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES ));
+		if( serviceList ) {
+			AssignJobString( ATTR_CONTAINER_SERVICE_NAMES, serviceList );
+
+			const char * service = NULL;
+			StringList sl(serviceList);
+
+			sl.rewind();
+			while( (service = sl.next()) != NULL ) {
+				std::string attrName;
+				formatstr( attrName, "%s%s", service, SUBMIT_KEY_ContainerPortSuffix );
+				int portNo = submit_param_int( attrName.c_str(), NULL, -1 );
+				if( 0 <= portNo && portNo <= 65535 ) {
+					formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+					AssignJobVal( attrName.c_str(), portNo );
+				} else {
+					push_error( stderr, "Requested container service '%s' was not assigned a port, or the assigned port was not valid.\n", service );
+					ABORT_AND_RETURN( 1 );
+				}
+			}
+		}
+	}
+	return 0;
 }
 
 void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
