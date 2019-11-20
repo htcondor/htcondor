@@ -246,6 +246,9 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 
+#define SUBMIT_KEY_ContainerServiceNames "container_service_names"
+#define SUBMIT_KEY_ContainerPortSuffix "_container_port"
+
 //
 // VM universe Parameters
 //
@@ -771,6 +774,9 @@ protected:
 	// return value is NULL if false,
 	// otherwise it is the name of the attribute that tells us we need job deferral
 	const char * NeedsJobDeferral();
+
+    // For now, just handles port-forwarding.
+    int SetContainerSpecial();
 
 	int CheckStdFile(
 		_submit_file_role role,
