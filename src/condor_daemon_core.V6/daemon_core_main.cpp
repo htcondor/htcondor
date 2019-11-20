@@ -1102,6 +1102,16 @@ handle_log_append( char* append_str )
 	sprintf( tmp2, "%s.%s", tmp1, append_str );
 	config_insert( buf, tmp2 );
 	free( tmp1 );
+
+	if (get_mySubSystem()->getLocalName()) {
+		std::string fullParamName;
+		fullParamName.append(get_mySubSystem()->getLocalName());
+		fullParamName.append(".");
+		fullParamName.append(get_mySubSystem()->getName());
+		fullParamName.append("_LOG");
+
+		config_insert( fullParamName.c_str(), tmp2 );
+	}
 	free( tmp2 );
 }
 
