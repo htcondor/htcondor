@@ -12,7 +12,7 @@ using namespace std::rel_ops;
 
 
 template <class T>
-typename ranger<T>::iterator ranger<T>::insert(range r)
+auto ranger<T>::insert(range r) -> iterator
 {
     // lower_bound here will coalesce an adjacent disjoint range;
     // can use upper_bound instead to avoid this and leave them fractured
@@ -39,7 +39,7 @@ typename ranger<T>::iterator ranger<T>::insert(range r)
 }
 
 template <class T>
-typename ranger<T>::iterator ranger<T>::erase(range r)
+auto ranger<T>::erase(range r) -> iterator
 {
     iterator it_start = upper_bound(r._start);
     iterator it = it_start;
@@ -73,8 +73,7 @@ typename ranger<T>::iterator ranger<T>::erase(range r)
 }
 
 template <class T>
-std::pair<typename ranger<T>::iterator, bool>
-ranger<T>::find(element_type x) const
+auto ranger<T>::find(element_type x) const -> std::pair<iterator, bool>
 {
     iterator it = upper_bound(x);
     return {it, it != end() && it->_start <= x};
@@ -128,13 +127,13 @@ struct bounder<std::set<Range> > {
 
 
 template <class T>
-typename ranger<T>::iterator ranger<T>::lower_bound(element_type x) const
+auto ranger<T>::lower_bound(element_type x) const -> iterator
 {
     return bounder<forest_type>::lower_bound(forest, x);
 }
 
 template <class T>
-typename ranger<T>::iterator ranger<T>::upper_bound(element_type x) const
+auto ranger<T>::upper_bound(element_type x) const -> iterator
 {
     return bounder<forest_type>::upper_bound(forest, x);
 }
@@ -167,16 +166,14 @@ void ranger<T>::elements::iterator::mk_valid()
 }
 
 template <class T>
-typename ranger<T>::element_type
-ranger<T>::elements::iterator::operator*()
+auto ranger<T>::elements::iterator::operator*() -> value_type
 {
     mk_valid();
     return *rit;
 }
 
 template <class T>
-typename ranger<T>::elements::iterator &
-ranger<T>::elements::iterator::operator++()
+auto ranger<T>::elements::iterator::operator++() -> iterator &
 {
     mk_valid();
     if (++rit == sit->end()) {
@@ -187,8 +184,7 @@ ranger<T>::elements::iterator::operator++()
 }
 
 template <class T>
-typename ranger<T>::elements::iterator &
-ranger<T>::elements::iterator::operator--()
+auto ranger<T>::elements::iterator::operator--() -> iterator &
 {
     mk_valid();
     if (rit == sit->begin()) {
