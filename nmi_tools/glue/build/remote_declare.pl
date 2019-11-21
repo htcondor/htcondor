@@ -125,9 +125,6 @@ else {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
-    if ($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/) {
-        print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
-    }
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";

@@ -321,15 +321,8 @@ sub check_rpm {
 
 sub create_deb {    
     my $is_debug = $_[0];
-    if (!($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/)) {
-        # Use native packaging tool
-        return dirname($0) . "/build_uw_deb.sh";
-    } else {
-        #Reconfigure cmake variables for native package build   
-        my $command = get_cmake_args();
-        my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
-        return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make VERBOSE=1 package";
-    }
+    # Use native packaging tool
+    return dirname($0) . "/build_uw_deb.sh";
 }
 
 sub check_deb {
@@ -338,11 +331,6 @@ sub check_deb {
     my $debs;
     for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
     if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
-    } else {
-        # Only works with a single deb
-        return "dpkg-deb -I $debs";
-    }
+    # return "lintian $debs";
+    return "dpkg-deb -W $debs";
 }

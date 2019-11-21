@@ -29,7 +29,10 @@ Bugs Fixed:
    was used and the remote Schedd was using a mapfile.
    :ticket:`7353`
 
--  None.
+-  Fixed potential authentication failures between the *condor_schedd*
+   and *condor_startd* when multiple *condor_startd* s are using the
+   same shared port server. :ticket:`7391`
+
 
 Version 8.8.6
 -------------
