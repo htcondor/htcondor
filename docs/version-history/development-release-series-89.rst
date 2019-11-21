@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+-  You may now specify ports to forward into your Docker container.  See
+   :ref:`Docker and Networking` for details.
+   :ticket:`7322`
+
 -  *condor_submit* will no longer set the ``Owner`` attribute of jobs
    it submits to the name of the current user. It now leaves this attribute up
    to the *condor_schedd* to set.  This change was made because the *condor_schedd*
