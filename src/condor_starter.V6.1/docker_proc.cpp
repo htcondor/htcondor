@@ -136,6 +136,14 @@ int DockerProc::StartJob() {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
+	//
+	// temporary hack to allow condor_submit -i to work better
+	// with docker universe
+	bool isInteractive = false;
+	JobAd->LookupBool("InteractiveJob", isInteractive);	
+	if (isInteractive) {
+		args.AppendArg("86400");
+	}
 
 	Env job_env;
 	MyString env_errors;
