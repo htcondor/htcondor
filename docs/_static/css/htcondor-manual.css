@@ -1,3 +1,8 @@
+a.macro {
+	font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace;
+	font-size: 90%;
+}
+
 table.indextable {
 	margin-bottom: 20px;
 }

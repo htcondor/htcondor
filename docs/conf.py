@@ -57,6 +57,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'ticket',
     'macro',
+    'macro-def',
     'index',
 ]
 autosectionlabel_prefix_document = True
