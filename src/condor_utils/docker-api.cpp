@@ -1200,7 +1200,7 @@ DockerAPI::getServicePorts( const std::string & container,
 	ExprTree * p = nsCA->Lookup( "Ports" );
 	if( p == NULL ) { return -1; }
 	classad::ClassAd * pCA = dynamic_cast< classad::ClassAd * >(p);
-	if( p == NULL ) { return -1; }
+	if( pCA == NULL ) { return -1; }
 
     std::map< int, int > containerPortToHostPortMap;
 	for( auto i = pCA->begin(); i != pCA->end(); ++i ) {
