@@ -2244,7 +2244,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 				pmeta->matches_default = same_param_value(def_value, pitem->raw_value, is_path);
 			}
 		}
-		if (tvalue) free(tvalue);
+		free(tvalue);
 		return;
 	}
 

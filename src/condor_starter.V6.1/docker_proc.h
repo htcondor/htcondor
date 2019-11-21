@@ -47,6 +47,9 @@ class DockerProc : public VanillaProc {
 		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;
 		int execReaperId;
+
+		bool shouldAskForServicePorts;
+		ClassAd serviceAd;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */

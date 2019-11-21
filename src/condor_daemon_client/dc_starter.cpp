@@ -242,7 +242,10 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
 		// read reply from starter
 	int success=0;
-	sock->get(success);
+	int r = sock->get(success);
+	if (!r) {
+		dprintf(D_ALWAYS, "Error reading hold message reply from starter\n");
+	}
 
 	return success!=0;
 }

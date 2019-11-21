@@ -1,102 +1,74 @@
-DAGMan Applications
-===================
+DAGMan Workflows
+================
 
 :index:`DAGMan` :index:`directed acyclic graph (DAG)`
 :index:`Directed Acyclic Graph Manager (DAGMan)`
 :index:`dependencies within<single: dependencies within; job>`
 
-A directed acyclic graph (DAG) can be used to represent a set of
-computations where the input, output, or execution of one or more
-computations is dependent on one or more other computations. The
-computations are nodes (vertices) in the graph, and the edges (arcs)
-identify the dependencies. HTCondor finds machines for the execution of
-programs, but it does not schedule programs based on dependencies. The
-Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for the
-execution of programs (computations). DAGMan submits the programs to
-HTCondor in an order represented by a DAG and processes the results. A
-DAG input file describes the DAG.
+DAGMan is a HTCondor tool that allows multiple jobs to be organized in
+**workflows**, represented as a directed acyclic graph (DAG). A DAGMan workflow
+automatically submits jobs in a particular order, such that certain jobs need
+to complete before others start running. This allows the outputs of some jobs
+to be used as inputs for others, and makes it easy to replicate a workflow
+multiple times in the future.
 
-DAGMan is itself executed as a scheduler universe job within HTCondor.
-It submits the HTCondor jobs within nodes in such a way as to enforce
-the DAG's dependencies. DAGMan also handles recovery and reporting on
-the HTCondor jobs.
-
-DAGMan Terminology
-------------------
-
-:index:`terminology<single: terminology; DAGMan>`
-
-A node within a DAG may encompass more than a single program submitted
-to run under HTCondor. The following diagram illustrates the
-elements of a node.
-
-.. figure:: /_images/dagman-node.png
-  :width: 400
-  :alt: One Node within a DAG
-  :align: center
-
-  One Node within a DAG
-
-More than one HTCondor job may belong to a single node. All HTCondor
-jobs within a node must be within a single cluster, as given by the job
-ClassAd attribute ``ClusterId``.
-
-DAGMan enforces the dependencies within a DAG using the events recorded
-in a separate file that is specified by the default configuration. If
-the exact same DAG were to be submitted more than once, such that these
-DAGs were running at the same time, expected them to fail in
-unpredictable and unexpected ways. They would all be using the same
-single file to enforce dependencies.
-
-As DAGMan schedules and submits jobs within nodes to HTCondor, these
-jobs are defined to succeed or fail based on their return values. This
-success or failure is propagated in well-defined ways to the level of a
-node within a DAG. Further progression of computation (towards
-completing the DAG) is based upon the success or failure of nodes.
-
-The failure of a single job within a cluster of multiple jobs (within a
-single node) causes the entire cluster of jobs to fail. Any other jobs
-within the failed cluster of jobs are immediately removed. Each node
-within a DAG may be further constrained to succeed or fail based upon
-the return values of a PRE script and/or a POST script.
-
-The DAG Input File: Basic Commands
-----------------------------------
+Describing Workflows with DAGMan
+--------------------------------
 
 :index:`DAG input file<single: DAG input file; DAGMan>`
 
-The input file used by DAGMan is called a DAG input file. It specifies
-the nodes of the DAG as well as the dependencies that order the DAG. All
-items are optional, except that there must be at least one *JOB* item.
+A DAGMan workflow is described in a **DAG input file**. The input file specifies
+the nodes of the DAG as well as the dependencies that order the DAG.
 
-Comments may be placed in the DAG input file. The pound character (#) as
-the first character on a line identifies the line as a comment. Comments
-do not span lines.
+A **node** within a DAG represents a unit of work. It contains the following:
+
+-   **Job**: An HTCondor job, defined in a submit file.
+-   **PRE script** (optional): A script that runs before the job starts.
+    Typically used to verify that all inputs are valid.
+-   **POST script** (optional): A script that runs after the job finishes.
+    Typically used to verify outputs and clean up temporary files.
+
+The following diagram illustrates the elements of a node:
+
+.. figure:: /_images/dagman-node.png
+    :width: 400
+    :alt: One Node within a DAG
+    :align: center
+
+    One Node within a DAG
+
+An **edge** in DAGMan describes a dependency between two nodes. DAG edges are 
+directional; each has a **parent** and a **child**, where the parent node must
+finish running before the child starts. Any node can have an unlimited number
+of parents and children.
+ 
+
+Example: Diamond DAG
+''''''''''''''''''''
 
 A simple diamond-shaped DAG, as shown in the following image
 is presented as a starting point for examples. This DAG contains 4
 nodes.
 
 .. figure:: /_images/dagman-diamond-dag.png
-  :width: 300
-  :alt: Diamond DAG
-  :align: center
+    :width: 300
+    :alt: Diamond DAG
+    :align: center
 
-  Diamond DAG
+    Diamond DAG
 
-
-A very simple DAG input file for this diamond-shaped DAG is
+A very simple DAG input file for this diamond-shaped DAG is:
 
 ::
 
-        # File name: diamond.dag
-        #
-        JOB  A  A.condor
-        JOB  B  B.condor
-        JOB  C  C.condor
-        JOB  D  D.condor
-        PARENT A CHILD B C
-        PARENT B C CHILD D
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor
+    JOB  B  B.condor
+    JOB  C  C.condor
+    JOB  D  D.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
 
 A set of basic commands appearing in a DAG input file is described
 below.
@@ -107,10 +79,10 @@ JOB
 :index:`JOB command<single: JOB command; DAG input file>`
 
 The *JOB* command specifies an HTCondor job. The syntax used for each
-*JOB* command is
+*JOB* command is:
 
-**JOB** *JobName* *SubmitDescriptionFileName* [**DIR** *directory*]
-[**NOOP**] [**DONE**]
+    **JOB** *JobName* *SubmitDescriptionFileName* [**DIR** *directory*] 
+    [**NOOP**] [**DONE**]
 
 A *JOB* entry maps a *JobName* to an HTCondor submit description file.
 The *JobName* uniquely identifies nodes within the DAG input file and in
@@ -189,7 +161,7 @@ only be started once all its parents have successfully completed.
 
 The syntax used for each dependency (PARENT/CHILD) command is
 
-**PARENT** *ParentJobName...* **CHILD** *ChildJobName...*
+    **PARENT** *ParentJobName...* **CHILD** *ChildJobName...*
 
 The *PARENT* keyword is followed by one or more *ParentJobName*s. The
 *CHILD* keyword is followed by one or more *ChildJobName* s. Each child
@@ -244,11 +216,11 @@ an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
 
-**SCRIPT** [**DEFER** *status time*] **PRE**
-*JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
+    **SCRIPT** [**DEFER** *status time*] **PRE**
+    *JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
 
-**SCRIPT** [**DEFER** *status time*] **POST**
-*JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
+    **SCRIPT** [**DEFER** *status time*] **POST**
+    *JobName* | **ALL_NODES** *ExecutableName* [*arguments*]
 
 The *SCRIPT* command uses the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
@@ -374,11 +346,11 @@ The special macros are as follows:
    *JobName*.
 -  ``$RETRY`` evaluates to an integer value set to 0 the first time a
    node is run, and is incremented each time the node is retried. See
-   :ref:`users-manual/dagman-applications:advanced features of dagman` for
+   :ref:`users-manual/dagman-workflows:advanced features of dagman` for
    the description of how to cause nodes to be retried.
 -  ``$MAX_RETRIES`` evaluates to an integer value set to the maximum
    number of retries for the node. See
-   :ref:`users-manual/dagman-applications:advanced features of dagman` for the
+   :ref:`users-manual/dagman-workflows:advanced features of dagman` for the
    description of how to cause nodes to be retried. If no retries are set for
    the node, ``$MAX_RETRIES`` will be set to 0.
 -  :index:`defined for a DAGMan node job<single: defined for a DAGMan node job; job ID>`\ :index:`defined for a DAGMan node job<single: defined for a DAGMan node job; job ID>`
@@ -431,7 +403,7 @@ The special macros are as follows:
    -  4: removed; the DAG has been removed by *condor_rm*
    -  5: cycle; a cycle was found in the DAG
    -  6: halted; the DAG has been halted
-      (see :ref:`users-manual/dagman-applications:suspending a running dag`)
+      (see :ref:`users-manual/dagman-workflows:suspending a running dag`)
 
 -  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
    in the DAG.
@@ -513,7 +485,7 @@ The behavior of DAGMan with respect to node success or failure can be
 changed with the addition of a *PRE_SKIP* command. A *PRE_SKIP* line
 within the DAG input file uses the syntax:
 
-**PRE_SKIP** *JobName* | **ALL_NODES** *non-zero-exit-code*
+    **PRE_SKIP** *JobName* | **ALL_NODES** *non-zero-exit-code*
 
 The PRE script of a node identified by *JobName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
@@ -711,7 +683,7 @@ a node job submit file that queues 5 procs will count as one for
 
 **Subsets of nodes:** Node submission can also be throttled in a
 finer-grained manner by grouping nodes into categories. See section
-:ref:`users-manual/dagman-applications:advanced features of dagman` for
+:ref:`users-manual/dagman-workflows:advanced features of dagman` for
 more details.
 
 **PRE/POST scripts:** Since PRE and POST scripts run on the submit
@@ -1565,7 +1537,7 @@ The configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED`` and the
 *condor_submit_dag* *-maxjobs* command-line option are still enforced
 if these *CATEGORY* and *MAXJOBS* throttles are used.
 
-Please see the end of :ref:`users-manual/dagman-applications:advanced features
+Please see the end of :ref:`users-manual/dagman-workflows:advanced features
 of dagman` on DAG Splicing for a description of the interaction between
 categories and splices.
 
@@ -1738,7 +1710,7 @@ The first listed is ``A.dag``. The remainder of the specialized file
 name adds a suffix onto this first DAG input file name, ``A.dag``. The
 suffix is ``_multi.rescue<XXX>``, where ``<XXX>`` is substituted by the
 3-digit number of the Rescue DAG created as defined in
-:ref:`users-manual/dagman-applications:the rescue dag` section. The first
+:ref:`users-manual/dagman-workflows:the rescue dag` section. The first
 time a Rescue DAG is created for the example, it will have the file name
 ``A.dag_multi.rescue001``.
 
@@ -1859,7 +1831,7 @@ HTCondor job). HTCondor DAGMan handles this situation easily, and allows
 DAGs to be nested to any depth.
 
 There are two ways that DAGs can be nested within other DAGs: sub-DAGs
-and splices (see :ref:`users-manual/dagman-applications:advanced features
+and splices (see :ref:`users-manual/dagman-workflows:advanced features
 of dagman`)
 
 With sub-DAGs, each DAG has its own *condor_dagman* job, which then
@@ -2728,7 +2700,7 @@ HTCondor job is described by the contents of the HTCondor submit
 description file given by *SubmitDescriptionFileName*.
 
 The keywords *DIR* and *NOOP* are as detailed in
-:ref:`users-manual/dagman-applications:the dag input file: basic commands`.
+:ref:`users-manual/dagman-workflows:the dag input file: basic commands`.
 If both *DIR* and *NOOP* are used, they must appear in the order shown within
 the syntax specification.
 
@@ -3573,7 +3545,7 @@ into its own job ClassAd. The attributes are fully described in
 
 Note that most of this information is also available in the
 ``dagman.out`` file as described in
-:ref:`users-manual/dagman-applications:dag monitoring and dag removal`.
+:ref:`users-manual/dagman-workflows:dag monitoring and dag removal`.
 
 Utilizing the Power of DAGMan for Large Numbers of Jobs
 -------------------------------------------------------
@@ -3874,7 +3846,7 @@ Here is an explanation of each of the items in the file:
    -  ``4``: removed; the DAG has been removed by *condor_rm*
    -  ``5``: a cycle was found in the DAG
    -  ``6``: the DAG has been halted; see the
-      :ref:`users-manual/dagman-applications:suspending a running dag` section
+      :ref:`users-manual/dagman-workflows:suspending a running dag` section
       for an explanation of halting a DAG
 
    Note that any ``dag_status`` other than 0 corresponds to a non-zero

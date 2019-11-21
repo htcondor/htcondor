@@ -7996,7 +7996,7 @@ HTCondor.
 **Note**: Many, if not all, of these configuration variables will be
 most appropriately set on a per DAG basis, rather than in the global
 HTCondor configuration files. Per DAG configuration is explained in
-:ref:`users-manual/dagman-applications:advanced features of dagman`. Also
+:ref:`users-manual/dagman-workflows:advanced features of dagman`. Also
 note that configuration settings of a running *condor_dagman* job are
 not changed by doing a *condor_reconfig*.
 

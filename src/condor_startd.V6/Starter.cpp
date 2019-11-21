@@ -873,6 +873,16 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
 
+	// If a slot-type is defined, pass it as the local name
+	// so starter params can switch on slot-type
+	if (claim->rip()->type() != 0) {
+		args.AppendArg("-local-name");
+
+		std::string slot_type_name("slot_type_");
+		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		args.AppendArg(slot_type_name);
+	}
+
 	// Note: the "-a" option is a daemon core option, so it
 	// must come first on the command line.
 	if (append != APPEND_NOTHING) {
