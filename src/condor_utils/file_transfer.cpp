@@ -416,6 +416,26 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->deleteCurrent();
 			}
 		}
+
+			// We want to spool the manifest file from client to schedd on
+			// submit; this way, the reuse information is available for job startup
+		std::string manifest_file;
+		if (jobAd.EvaluateAttrString("DataReuseManifestSHA256", manifest_file))
+		{
+			if (!InputFiles->file_contains(manifest_file.c_str()))
+				InputFiles->append(manifest_file.c_str());
+		}
+		if (!ParseDataManifest()) {
+			m_reuse_info.clear();
+		}
+			// If we need to reuse data to the worker, we might also benefit from
+			// not spooling when reuse is an option.
+		for (const auto &info : m_reuse_info) {
+			if (!InputFiles->file_contains(info.filename().c_str()))
+				InputFiles->append(info.filename().c_str());
+		}
+
+
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
