@@ -33,7 +33,7 @@ index 301ca09..333f888 100644
 -    'sphinx.ext.napoleon',
      'ticket',
      'macro',
-     'index',
+     'macro-def',
 diff --git a/docs/extensions/index.py b/docs/extensions/index.py
 index 7565e0b..c02bf21 100644
 --- a/docs/extensions/index.py

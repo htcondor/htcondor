@@ -32,4 +32,4 @@ index 301ca09..333f888 100644
 -    'sphinx.ext.napoleon',
      'ticket',
      'macro',
-     'index',
+     'macro-def',
