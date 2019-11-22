@@ -94,7 +94,13 @@ const testcase2 test_table2[] = {
     {"10-20;30-40;50-60", {29,40}, "30-40"            },
     {"10-20;30-40;50-60", {31,40}, "31-40"            },
     {"10-20;30-40;50-60", {30,39}, "30-39"            },
-    {"10-20;30-40;50-60", {31,39}, "31-39"            }
+    {"10-20;30-40;50-60", {31,39}, "31-39"            },
+    {"10-20;30-40;50-60", {0,5},   ""                 },
+    {"10-20;30-40;50-60", {0,9},   ""                 },
+    {"10-20;30-40;50-60", {0,10},  "10"               },
+    {"10-20;30-40;50-60", {21,29}, ""                 },
+    {"10-20;30-40;50-60", {20,29}, "20"               },
+    {"10-20;30-40;50-60", {20,30}, "20;30"            },
 };
 
 
@@ -322,6 +328,8 @@ TEST_TABLE_SETUP(6, test_ranger_misc_contains_jobid)
 
 static bool test_ranger_initializer_list_elements();
 static bool test_ranger_initializer_list_ranges();
+static bool test_ranger_initializer_list_jobid_elements();
+static bool test_ranger_initializer_list_jobid_ranges();
 
 
 bool OTEST_ranger(void) {
@@ -341,6 +349,8 @@ bool OTEST_ranger(void) {
 
     driver.register_function(test_ranger_initializer_list_elements);
     driver.register_function(test_ranger_initializer_list_ranges);
+    driver.register_function(test_ranger_initializer_list_jobid_elements);
+    driver.register_function(test_ranger_initializer_list_jobid_ranges);
 
     return driver.do_all_functions();
 }
@@ -582,7 +592,7 @@ static bool test_ranger_initializer_list_elements()
     std::string s;
     r.persist(s);
 
-    emit_test("Test initializer lists working as expected");
+    emit_test("Test initializer lists of elements working as expected");
     emit_input_header();
     emit_param("Input", "{1, 2, 3, 5, 10}");
 
@@ -606,9 +616,58 @@ static bool test_ranger_initializer_list_ranges()
     std::string s;
     r.persist(s);
 
-    emit_test("Test initializer lists working as expected");
+    emit_test("Test initializer lists of ranges working as expected");
     emit_input_header();
     emit_param("Input", "{{20,30}, {40,50}, {60,80}}");
+
+    emit_output_expected_header();
+    emit_retval(expected);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != expected)
+        FAIL;
+    PASS;
+}
+
+
+static bool test_ranger_initializer_list_jobid_elements()
+{
+    ranger<JOB_ID_KEY> r = {{1,1}, {1,2}, {1,3}, {5,5}, {10,10}};
+
+    const char *expected = "1.1-1.3;5.5;10.10";
+
+    std::string s;
+    r.persist(s);
+
+    emit_test("Test initializer lists of jobid elements working as expected");
+    emit_input_header();
+    emit_param("Input", "{{1,1}, {1,2}, {1,3}, {5,5}, {10,10}}");
+
+    emit_output_expected_header();
+    emit_retval(expected);
+
+    emit_output_actual_header();
+    emit_retval(s.c_str());
+
+    if (s != expected)
+        FAIL;
+    PASS;
+}
+
+static bool test_ranger_initializer_list_jobid_ranges()
+{
+    ranger<JOB_ID_KEY> r = {{{1,20},{1,30}}, {{2,40},{2,50}}, {{3,60},{3,80}}};
+
+    const char *expected = "1.20-1.29;2.40-2.49;3.60-3.79";
+
+    std::string s;
+    r.persist(s);
+
+    emit_test("Test initializer lists of jobid ranges working as expected");
+    emit_input_header();
+    emit_param("Input", "{{{1,20},{1,30}}, {{2,40},{2,50}}, {{3,60},{3,80}}}");
 
     emit_output_expected_header();
     emit_retval(expected);
