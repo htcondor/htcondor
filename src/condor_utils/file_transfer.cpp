@@ -3758,24 +3758,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
-		if (PeerDoesReuseInfo && !m_final_transfer_flag && !simple_init) {
-			std::string checksum_info;
-			if ( ExecFile && !simple_init && !tag.empty() &&
-				(MATCH == file_strcmp(fileitem.srcName().c_str(), ExecFile)) &&
-				jobAd.EvaluateAttrString("ExecutableChecksum", checksum_info))
-			{
-				std::string checksum_type, checksum;
-				auto sep = checksum_info.find(':');
-				if (sep == std::string::npos) {
-					checksum_type = "sha256";
-					checksum = checksum_info;
-				} else {
-					checksum_type = checksum_info.substr(0, sep);
-					checksum = checksum_info.substr(sep + 1);
-				}
-				m_reuse_info.emplace_back("condor_exec.exe", checksum, checksum_type, tag, fileitem.fileSize());
-			}
-		}
 		const std::string &src_url = fileitem.srcName();
 		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
 			std::string new_src_url = "https://" + src_url.substr(5);
