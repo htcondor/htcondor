@@ -3557,14 +3557,17 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
-	bool should_invoke_output_plugins, tmp;
-	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
-		should_invoke_output_plugins = m_final_transfer_flag;
-	} else {
-		if (!InitDownloadFilenameRemaps(&jobAd)) {
+	bool should_invoke_output_plugins = m_final_transfer_flag;
+	bool tmp;
+	if (jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp) && !tmp) {
+			// InitDownloadFilenameRemaps is always called by the server
+			// (the function name is a misnomer) for final transfers.  However,
+			// in this case, we also want output files to be remapped to URLs
+			// when spooling.  Hence, we call it here.
+		if (!m_final_transfer_flag && !InitDownloadFilenameRemaps(&jobAd)) {
 			return -1;
 		}
-		should_invoke_output_plugins = !tmp;
+		should_invoke_output_plugins == true;
 	}
 
 	uploadStartTime = condor_gettimestamp_double();
