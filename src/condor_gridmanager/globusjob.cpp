@@ -3527,6 +3527,11 @@ GlobusJob::JmShouldSleep()
 	if ( probeNow == true ) {
 		return false;
 	}
+
+	if (!jobProxy) {
+		return false;
+	}
+
 	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 		// Don't forward the refreshed proxy if the remote proxy has more
 		// than GRIDMANAGER_PROXY_RENEW_LIMIT time left.
