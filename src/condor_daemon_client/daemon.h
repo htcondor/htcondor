@@ -39,8 +39,6 @@ class Daemon;
 #include "command_strings.h"
 #include "dc_message.h"
 
-template <class p> class counted_ptr; // Forward declaration
-
 /** 
   Class used to pass around and store information about a given
   daemon.  You instantiate one of these objects and pass in the type
@@ -806,7 +804,6 @@ protected:
 			@return true if we found everything in the ad, false if not
 		 */
 	bool getInfoFromAd( const ClassAd* ad );
-	bool getInfoFromAd( counted_ptr<class ClassAd>& ad );
 
 		/** Initialize one of our values from the given ClassAd* and
 			attribute name.  This is shared code when we query the
@@ -824,9 +821,6 @@ protected:
 		*/
 	bool initStringFromAd( const ClassAd* ad, const char* attrname,
 						   char** value_str );
-
-	bool initStringFromAd(counted_ptr<class ClassAd>& ad, const char* attrname, 
-		char** value_str );
 
 		/* 
 		   These helpers prevent memory leaks.  Whenever we want to
