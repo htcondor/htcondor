@@ -2958,7 +2958,7 @@ DaemonCore::thread_switch_callback(void* & incoming_contextVP)
 		// allocate an incoming context above before panicing about
 		// no outgoing context.  Whew.
 	WorkerThreadPtr_t context = CondorThreads::get_handle(last_tid);
-	if ( !context.is_null() ) {
+	if ( context ) {
 		outgoing_context = (DCThreadState *) context->user_pointer_;
 		if (!outgoing_context) {
 				EXCEPT("ERROR: daemonCore - no thread context for tid %d",

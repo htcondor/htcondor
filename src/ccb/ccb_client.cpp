@@ -122,8 +122,8 @@ CCBClient::myName()
 bool
 CCBClient::ReverseConnect_blocking( CondorError *error )
 {
-	counted_ptr<ReliSock> listen_sock;
-	counted_ptr<SharedPortEndpoint> shared_listener;
+	std::shared_ptr<ReliSock> listen_sock;
+	std::shared_ptr<SharedPortEndpoint> shared_listener;
 	char const *listener_addr = NULL;
 
 	m_ccb_contacts.rewind();
@@ -143,7 +143,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		// FIXME: Assumes that shared port knows what it's doing.
 		//
 		if( SharedPortEndpoint::UseSharedPort() ) {
-			shared_listener = counted_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
+			shared_listener = std::shared_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
 			shared_listener->InitAndReconfig();
 			MyString errmsg;
 			if( !shared_listener->CreateListener() ) {
@@ -169,7 +169,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				continue;
 			}
 
-			listen_sock = counted_ptr<ReliSock>( new ReliSock() );
+			listen_sock = std::shared_ptr<ReliSock>( new ReliSock() );
 			// Should bind() should accept a condor_sockaddr directly?
 			listen_sock->bind( ccbSA.get_protocol(), false, 0, false );
 			if( ! listen_sock->listen() ) {
@@ -304,7 +304,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 					if( shared_listener.get() ) {
 						shared_listener->RemoveListenerFromSelector(selector);
 							// destruct the shared port endpoint
-						shared_listener = counted_ptr<SharedPortEndpoint>(NULL);
+						shared_listener = std::shared_ptr<SharedPortEndpoint>(NULL);
 					}
 
 					success = true;
@@ -359,7 +359,7 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address,
 }
 
 bool
-CCBClient::AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_ptr<SharedPortEndpoint> shared_listener)
+CCBClient::AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener)
 {
 	// This happens when we are in ReverseConnect_blocking().
 	// and our listen socket becomes readable, indicating that
