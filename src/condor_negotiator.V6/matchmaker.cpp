@@ -4955,6 +4955,10 @@ rejectForConcurrencyLimits(std::string &limits)
 // getSinfulStringProtocolBools() short-circuits based on the comparison
 // in Matchmaker::matchmakingAlgorithm(); it is not a general-purpose function.
 //
+// If isIPv4 or isIPv6 is true, then the function will return early if
+// the given protocol is found in the sinful string. This optimizes cases
+// where we only care whether at least one of the protocols of interest
+// is present.
 
 void
 getSinfulStringProtocolBools( bool isIPv4, bool isIPv6,
@@ -5169,7 +5173,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 	bool isIPv4 = false;
 	bool isIPv6 = false;
-	getSinfulStringProtocolBools( true, true, scheddAddr, isIPv4, isIPv6 );
+	getSinfulStringProtocolBools( false, false, scheddAddr, isIPv4, isIPv6 );
 
 	while ((candidate = startdAds.Next ())) {
 		bool v4 = false;

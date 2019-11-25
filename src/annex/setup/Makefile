@@ -2,7 +2,7 @@
 # Upload the functions and templates to the appropriate place(s) on S3.
 #
 
-VERSION = 8
+VERSION = 9
 FUNCTIONS = sfr-lease-$(VERSION).zip odi-lease-$(VERSION).zip check-connectivity-$(VERSION).zip
 TEMPLATES = template-$(VERSION).json role-$(VERSION).json bucket-$(VERSION).json security-group-$(VERSION).json
 S3TARGETS = $(FUNCTIONS:%=.upload/%) $(TEMPLATES:%=.upload/%)
@@ -64,7 +64,7 @@ security-group-$(VERSION).json : generate-security-group
 #
 # Run the template generator (for distribution).
 #
-templates : template role bucket
+templates : template role bucket security-group
 template : template-$(VERSION).json
 role : role-$(VERSION).json
 bucket : bucket-$(VERSION).json
@@ -78,7 +78,7 @@ buckets:
 	@for region in $(REGIONS); do echo $${region}; ./make-bucket $${region}; done
 
 amis:
-    @for region in $(REGIONS); do echo $${region}; ./copy-default-ami $${region}; done
+	@for region in $(REGIONS); do echo $${region}; ./copy-default-ami $${region}; done
 
 clean:
 	@rm -f $(FUNCTIONS) $(TEMPLATES)

@@ -33,6 +33,9 @@ Bugs Fixed:
    and *condor_startd* when multiple *condor_startd* s are using the
    same shared port server. :ticket:`7391`
 
+-  Fixed a bug where the *condor_negotiator* would refuse to match an
+   IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
+   :ticket:`7397`
 
 Version 8.8.6
 -------------
