@@ -5470,6 +5470,10 @@ default=$(SBIN)/gce_gahp
 default=/tmp/GceGahpLog.$(USERNAME)
 win32_default=NUL
 
+[GCE_GAHP_LIFETIME]
+default=0
+type=int
+
 [ANNEX_GAHP]
 default=$(EC2_GAHP)
 type=path
