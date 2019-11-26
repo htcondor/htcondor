@@ -57,7 +57,7 @@ index 7565e0b..c02bf21 100644
      # otherwise we just create a "single" entry
      else:
 diff --git a/docs/extensions/macro-def.py b/docs/extensions/macro-def.py
-index 862724c..4e9709b 100644
+index 862724c..7e65090 100644
 --- a/docs/extensions/macro-def.py
 +++ b/docs/extensions/macro-def.py
 @@ -5,7 +5,7 @@ from docutils import nodes, utils
@@ -69,18 +69,12 @@ index 862724c..4e9709b 100644
  
  
  def dump(obj):
-@@ -21,7 +21,13 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
+@@ -21,7 +21,7 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
      targetnode = nodes.target('', text, ids=[targetid], classes=["macro-def"])
      
      # Automatically include an index entry for macro definitions
 -    entries = process_index_entry(text, targetid)
-+    # but allow giving main entry
-+    main = ''
-+    if target.startswith('!'):
-+        target = target[1:]
-+        title = title[1:]
-+        main = 'main'
-+    entries = [('single', target, targetid, main, None)]
++    entries = [('single', text, targetid, '', None)]
      indexnode = addnodes.index()
      indexnode['entries'] = entries
      set_role_source_info(inliner, lineno, indexnode)
