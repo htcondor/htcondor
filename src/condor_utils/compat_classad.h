@@ -193,6 +193,11 @@ class ClassAd : public classad::ClassAd
 	ClassAd &operator=(const ClassAd &rhs)
 		{ classad::ClassAd::operator=(rhs); return *this; }
 
+ 	ClassAd &operator=(ClassAd &&rhs) {
+		classad::ClassAd::operator=(rhs);
+		return *this;
+	}
+
 		/**@name Deprecated functions (only for use within Condor) */
 		//@{
 

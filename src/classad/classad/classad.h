@@ -569,6 +569,16 @@ class ClassAd : public ExprTree
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
+		ClassAd &operator=(ClassAd &&rhs) {
+			this->do_dirty_tracking = rhs.do_dirty_tracking;
+			this->chained_parent_ad = rhs.chained_parent_ad;
+			this->alternateScope = rhs.alternateScope;
+
+			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+			this->attrList = std::move(rhs.attrList);
+
+			return *this;
+		}
         /** Fill in this ClassAd with the contents of the other ClassAd.
          *  This ClassAd is cleared of its contents before the copy happens.
          *  @return true if the copy succeeded, false otherwise.
