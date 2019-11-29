@@ -22,20 +22,7 @@
 #define CONDOR_SECMAN_H
 
 #include "condor_common.h"
-// #include "condor_debug.h"
-// #include "condor_config.h"
-// #include "condor_ver_info.h"
-
-// #include "daemon.h"
-// #include "condor_string.h"
-// #include "condor_attributes.h"
-// #include "condor_adtypes.h"
-// #include "condor_query.h"
-// #include "my_hostname.h"
-// #include "internet.h"
-// #include "HashTable.h"
 #include "KeyCache.h"
-// #include "condor_daemon_core.h"
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
 
@@ -110,6 +97,7 @@ public:
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
+	SecMan &operator=(SecMan &&);
 
 		// A struct to order all the startCommand parameters below (as opposed
 		// to having 10 parameters to a single function).

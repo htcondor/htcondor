@@ -2894,6 +2894,18 @@ const SecMan & SecMan::operator=(const SecMan & /* copy */) {
 	return *this;
 }
 
+SecMan &
+SecMan::operator=(SecMan && rhs) {
+	this->m_cached_auth_level   = rhs.m_cached_auth_level;
+	this->m_cached_raw_protocol = rhs.m_cached_raw_protocol;
+	this->m_cached_use_tmp_sec_session = rhs.m_cached_use_tmp_sec_session;
+	this->m_cached_force_authentication = rhs.m_cached_force_authentication;
+	this->m_cached_policy_ad = std::move(rhs.m_cached_policy_ad);
+	this->m_cached_return_value = rhs.m_cached_return_value;
+	return *this;
+}
+
+
 
 SecMan::~SecMan() {
 	sec_man_ref_count--;
