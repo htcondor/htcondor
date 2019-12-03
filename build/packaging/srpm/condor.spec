@@ -1202,6 +1202,7 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-rest
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libdrmaa.so
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libglobus*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libvomsapi*.so*
+populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
 # these probably belong elsewhere
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
@@ -1716,6 +1717,7 @@ rm -rf %{buildroot}
 %_libdir/condor/libdrmaa.so
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
+%_libdir/condor/libSciTokens.so*
 %_libdir/condor/ugahp.jar
 
 %files externals

@@ -17,13 +17,20 @@
  #
  ###############################################################
 
-if (UNIX AND NOT DARWIN)
+if (UNIX)
     option(WITH_SCITOKENS "Compiling with support for SciTokens" ON)
-endif(UNIX AND NOT DARWIN)
+endif(UNIX)
 
 if (WITH_SCITOKENS)
 
 	if ( NOT PROPER )
+
+		# On macOS, force the SciTokens build to use the OS-supplied
+		# SSL library, ignoring any from MacPorts (which CMake likes
+		# to use by default).
+		if ( DARWIN )
+			set ( CONFIGURE_ARGS -DLIBCRYPTO_INCLUDE_DIRS=${DARWIN_OPENSSL_INCLUDE} -DLIBCRYPTO_LIBRARIES=${DARWIN_OPENSSL_LIB_DIR}/libcrypto.dylib )
+		endif()
 
 		condor_pre_external( SCITOKENS scitokens-0.3.4 "lib;include" "done" )
 
@@ -31,8 +38,10 @@ if (WITH_SCITOKENS)
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${SCITOKENS_STAGE}/dl
 				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.3.4.tar.gz
+				    #--Patch step ----------
+				    PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cmake -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${SCITOKENS_INSTALL_LOC}
+				    CONFIGURE_COMMAND cmake ${CONFIGURE_ARGS} -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${SCITOKENS_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
@@ -41,15 +50,57 @@ if (WITH_SCITOKENS)
 				    INSTALL_COMMAND make install && touch ${SCITOKENS_INSTALL_LOC}/done)
 
 		# Set the target dependencies which the rest of condor depends on.
-		if (APPLE)
+		if (DARWIN)
 			set( SCITOKENS_SO "libSciTokens.0.dylib" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.dylib")
-		else(APPLE)
+		else(DARWIN)
 			set( SCITOKENS_SO "libSciTokens.so.0" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.so")
-		endif()
+		endif(DARWIN)
 
 		condor_post_external( scitokens include OFF "${SCITOKENS_FOUND}" )
+
+		if ( LINUX )
+			# Install the SciTokens library manually.
+			# In order to use an install(FILES) command, we'd
+			# have to explicitly list evey file.
+			# We can't use a file(GLOB) because that's evaluated
+			# when cmake is run, which may be before the
+			# external is built.
+			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			install( CODE "execute_process(COMMAND find ${SCITOKENS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
+				COMMAND xargs -isrc cp -a --remove-destination src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			if ( CONDOR_STRIP_PACKAGES )
+				# Strip the libraries manually.
+				# Since cmake didn't create the libraries
+				# itself, it doesn't know to strip them.
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libSciTokens.so*
+					COMMAND xargs strip)" )
+			endif()
+		endif()
+		if ( DARWIN )
+			# Install the SciTokens library manually.
+			# In order to use an install(FILES) command, we'd
+			# have to explicitly list evey file.
+			# We can't use a file(GLOB) because that's evaluated
+			# when cmake is run, which may be before the
+			# external is built.
+			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			install( CODE "execute_process(COMMAND find ${SCITOKENS_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
+				COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+
+			# Fix up the share library dependencies
+			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libSciTokens*.dylib
+				 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
+
+			if ( CONDOR_STRIP_PACKAGES )
+				# Strip the libraries manually.
+				# Since cmake didn't create the libraries
+				# itself, it doesn't know to strip them.
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libSciTokens*.dylib
+					COMMAND xargs strip -x)" )
+			endif()
+		endif()
 
 	else(NOT PROPER)
 
