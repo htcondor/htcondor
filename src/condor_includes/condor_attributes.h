@@ -971,6 +971,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
 #define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"
+#define ATTR_EC2_SESSION_TOKEN  "EC2SessionToken"
 #define ATTR_EC2_AMI_ID  "EC2AmiID"
 #define ATTR_EC2_KEY_PAIR  "EC2KeyPair"
 #define ATTR_EC2_KEY_PAIR_FILE  "EC2KeyPairFile"
