@@ -746,7 +746,7 @@ other than those given by $(Process) are desired.
 ::
 
       MyIndex     = $(Process) + 1
-      initial_dir = run-$INT(MyIndex, %04d)
+      initial_dir = run-$INT(MyIndex,%04d)
 
 Assuming that there are three jobs queued, such that $(Process) becomes
 0, 1, and 2, ``initial_dir`` will evaluate to the directories
@@ -761,7 +761,7 @@ This variation on Example 1 generates a file name extension which is a
 ::
 
       Values     = $(Process) * 10
-      Extension  = $INT(Values, %03d)
+      Extension  = $INT(Values,%03d)
       input      = X.$(Extension)
 
 Assuming that there are four jobs queued, such that $(Process) becomes
