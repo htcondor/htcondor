@@ -976,7 +976,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             mySock->end_of_message();
 
             // Now, unwrap it.  
-            if ( authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
+            if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
 				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
 			} else {
@@ -1010,7 +1010,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            if (!authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
+            if ((authenticator_ == nullptr) || !authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
 			{
 				// failed to wrap key.
 				return 0;
