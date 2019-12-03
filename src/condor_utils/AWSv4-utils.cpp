@@ -215,6 +215,7 @@ AWSv4Impl::createSignature( const std::string & secretAccessKey,
 bool
 generate_presigned_url( const std::string & accessKeyID,
   const std::string & secretAccessKey,
+  const std::string & securityToken,
   const std::string & s3url,
   const std::string & input_region,
   const std::string & verb,
@@ -321,6 +322,9 @@ generate_presigned_url( const std::string & accessKeyID,
     queries["X-Amz-Date"] = dateAndTime;
     queries["X-Amz-Expires"] = "3600";
     queries["X-Amz-SignedHeaders"] = signedHeaders;
+    if(! securityToken.empty()) {
+        queries["X-Amz-Security-Token"] = securityToken;
+    }
 
     std::string buffer;
     for( const auto & i : queries ) {
@@ -392,6 +396,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	}
 	trim( accessKeyID );
 
+
 	std::string secretAccessKeyFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_SECRET_ACCESS_KEY, secretAccessKeyFile );
 	if( secretAccessKeyFile.empty() ) {
@@ -406,9 +411,23 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	}
 	trim( secretAccessKey );
 
+
+	// AWS calls it the "session token" in the user documentation and the
+	// "security token" in the API.  We translate between the two here.
+	std::string securityToken;
+	std::string securityTokenFile;
+	jobAd.EvaluateAttrString( ATTR_EC2_SESSION_TOKEN, securityTokenFile );
+	if(! securityTokenFile.empty()) {
+		if(! AWSv4Impl::readShortFile( securityTokenFile, securityToken )) {
+			dprintf( D_ALWAYS, "Unable to read from security token file.\n" );
+			return false;
+		}
+		trim( securityToken );
+	}
+
 	std::string region;
 	jobAd.EvaluateAttrString( ATTR_AWS_REGION, region );
 
-	return generate_presigned_url( accessKeyID, secretAccessKey,
+	return generate_presigned_url( accessKeyID, secretAccessKey, securityToken,
 		s3url, region, verb, presignedURL, err );
 }
