@@ -479,7 +479,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// last '@' and set the user and domain.  if there is more than one '@',
 	// the user will contain the leftovers after the split and the domain
 	// always has none.
-	if (retval && use_mapfile) {
+	if (retval && use_mapfile && authenticator_) {
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
 			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
@@ -492,7 +492,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
 		}
 #if defined(HAVE_EXT_GLOBUS)
-	} else if (auth_status == CAUTH_GSI ) {
+	} else if (authenticator_ && (auth_status == CAUTH_GSI)) {
 		// Fall back to using the globus mapping mechanism.  GSI is a bit unique in that
 		// it may be horribly expensive - or cause a SEGFAULT - to do an authorization callout.
 		// Hence, we delay it until after we apply a mapfile or, here, have no map file.
@@ -976,7 +976,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             mySock->end_of_message();
 
             // Now, unwrap it.  
-            if ( authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
+            if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
 				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
 			} else {
@@ -1010,7 +1010,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            if (!authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
+            if ((authenticator_ == nullptr) || !authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
 			{
 				// failed to wrap key.
 				return 0;

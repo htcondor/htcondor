@@ -214,6 +214,19 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	return *this;
 }
 
+addrinfo_iterator &
+addrinfo_iterator::operator=(addrinfo_iterator &&rhs) {
+	// First, destroy my current self
+	if (cxt_) cxt_->release();
+
+	this->cxt_ = rhs.cxt_;
+	rhs.cxt_ = nullptr;
+
+	this->current_ = rhs.current_;
+	return *this;
+}
+
+
 addrinfo* addrinfo_iterator::next()
 {
 	if( ! current_ ) {

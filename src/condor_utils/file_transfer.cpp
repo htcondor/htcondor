@@ -3126,7 +3126,18 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 		ad.Assign(ATTR_HOLD_REASON_CODE,hold_code);
 		ad.Assign(ATTR_HOLD_REASON_SUBCODE,hold_subcode);
 		if(hold_reason) {
-			ad.Assign(ATTR_HOLD_REASON,hold_reason);
+				// If we include a newline character in the hold reason, then internal schedd
+				// circuit breakers will drop the whole update.
+				//
+				// HTCondor code shouldn't generate newlines - but potentially file transfer
+				// plugins could!
+			if (strchr(hold_reason, '\n')) {
+				MyString hold_reason_str(hold_reason);
+				hold_reason_str.replaceString("\n", "\\n");
+				ad.InsertAttr(ATTR_HOLD_REASON, hold_reason_str.c_str());
+			} else {
+				ad.Assign(ATTR_HOLD_REASON,hold_reason);
+			}
 		}
 	}
 	s->encode();

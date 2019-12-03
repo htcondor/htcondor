@@ -131,6 +131,12 @@ public:
 	const List<char> &getList( void ) const { return m_strings; };
 	const char *getDelimiters(void) const { return m_delimiters; };
 
+	StringList &operator=(StringList &&rhs) {
+		this->m_strings = std::move(rhs.m_strings);
+		this->m_delimiters = rhs.m_delimiters;
+		rhs.m_delimiters = nullptr;
+		return *this;
+	}
 protected:
     const char * contains_withwildcard( const char *string,
 										bool anycase,
