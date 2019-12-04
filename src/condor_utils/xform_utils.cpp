@@ -290,11 +290,9 @@ void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_F
 	if (LocalMacroSet.errors) {
 		LocalMacroSet.errors->push("XForm", -1, message);
 	} else {
-		fprintf(fh, "\nERROR: %s", message ? message : "");
+		fprintf(fh, "\nERROR: %s", message);
 	}
-	if (message) {
-		free(message);
-	}
+	free(message);
 }
 
 void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
