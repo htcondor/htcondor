@@ -548,6 +548,12 @@ customization=expert
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS]
+default=false
+type=bool
+tags=dagman
+restart=never
+
 [DAGMAN_PROHIBIT_MULTI_JOBS]
 default=false
 type=bool

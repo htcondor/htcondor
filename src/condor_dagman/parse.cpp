@@ -45,7 +45,7 @@
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
-static const char * ILLEGAL_CHARS = "+.";
+static const char * ILLEGAL_CHARS = "+";
 
 static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
@@ -123,17 +123,6 @@ isReservedWord( const char *token )
     }
     return false;
 }
-
-bool
-containsIllegalChars( const char *token ) {
-    for( unsigned int i = 0; i < strlen(token); i++ ) {
-        if( strchr( ILLEGAL_CHARS, token[i] ) ) {
-            return true;
-        }
-    }
-    return false;
-}
-
 
 bool
 isDelimiter( char c ) {
@@ -577,7 +566,8 @@ parse_node( Dag *dag,
 		return false;
 	}
 
-    if( containsIllegalChars( nodeName ) ) {
+	bool allowIllegalChars = param_boolean("DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS", false );
+	if ( !allowIllegalChars && ( strcspn ( nodeName, ILLEGAL_CHARS ) < strlen ( nodeName ) ) ) {
         MyString errorMessage;
     	errorMessage.formatstr( "ERROR: %s (line %d): JobName %s contains one "
                   "or more illegal characters (", dagFile, lineNum, nodeName );
