@@ -1854,8 +1854,21 @@ SecManStartCommand::sendAuthInfo_inner()
 		dPrintAd ( D_SECURITY, m_auth_info );
 	}
 
+	// if we are resuming, create a "projection" for just the important attributes
+	classad::References proj;
+	if (m_have_session) {
+		dprintf(D_SECURITY, "SESSION: Using a projection to resume session.\n");
+		proj.insert(ATTR_SEC_USE_SESSION);
+		proj.insert(ATTR_SEC_SID);
+		proj.insert(ATTR_SEC_COMMAND);
+		proj.insert(ATTR_SEC_AUTH_COMMAND);
+		proj.insert(ATTR_SEC_SERVER_COMMAND_SOCK);
+		proj.insert(ATTR_SEC_CONNECT_SINFUL);
+		proj.insert(ATTR_SEC_COOKIE);
+	}
+
 	// send the classad
-	if (! putClassAd(m_sock, m_auth_info)) {
+	if (! putClassAd(m_sock, m_auth_info, 0, proj.empty() ? NULL : &proj)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to send auth_info." );
