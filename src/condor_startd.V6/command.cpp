@@ -462,6 +462,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
+	dprintf(D_FULLDEBUG, "CREDS: Releasing claim.\n");
+
 	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
@@ -498,6 +500,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	if (rip->r_cur && rip->r_cur->client()) {
 		curuser = rip->r_cur->client()->user();
 	}
+
+	dprintf(D_FULLDEBUG, "CREDS: Claim was owned by %s\n", curuser.c_str());
 
 	//There are two cases: claim id is the current or the preempting claim
 	if( rip->r_pre && rip->r_pre->idMatches(id) ) {
@@ -541,6 +545,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 
 countres:
 
+	dprintf(D_FULLDEBUG, "CREDS: Counting resources in use by %s\n", curuser.c_str());
+
 	ClassAdList cal;
 	resmgr->makeAdList(&cal);
         ClassAd *ad;
@@ -551,6 +557,7 @@ countres:
 		std::string name;
                 ad->LookupString("RemoteUser",remoteuser);
                 ad->LookupString("Name",name);
+		dprintf(D_FULLDEBUG, "CREDS: Examining %s owned by %s\n", name.c_str(), remoteuser.c_str());
 		if(strcmp(curuser.c_str(), remoteuser.c_str()) == 0) {
 			ResCount++;
 		}
