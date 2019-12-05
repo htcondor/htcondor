@@ -17,6 +17,12 @@ Release Notes:
 
 .. HTCondor version 8.8.7 released on Month Date, 2019.
 
+-  For *condor_annex* users: Amazon Web Services is deprecating support for
+   the Node.js 8.10 runtime used by *condor_annex*.  If you ran the *condor_annex*
+   setup command with a previous version of HTCondor, you should update your
+   setup to use the new runtime.  `Instructions <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime>`_
+   are available.
+   :ticket:`7400`
 
 New Features:
 
@@ -33,6 +39,9 @@ Bugs Fixed:
    and *condor_startd* when multiple *condor_startd* s are using the
    same shared port server. :ticket:`7391`
 
+-  Fixed a bug where the *condor_negotiator* would refuse to match an
+   IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
+   :ticket:`7397`
 
 Version 8.8.6
 -------------

@@ -303,7 +303,8 @@ void ranger<T>::persist_range(std::string &s, const range &rr) const
         persist_range_single<T>(s, rr_new);
     }
 
-    s.erase(s.size() - 1);
+    if (!s.empty())
+        s.erase(s.size() - 1);
 }
 
 template <class T>

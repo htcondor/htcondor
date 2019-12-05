@@ -122,11 +122,11 @@ if ( LINUX )
 endif()
 
 if (DLOPEN_GSI_LIBS)
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 else()
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} ${SCITOKENS_FOUND} )
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 endif()
-if (LIBUUID_FOUND)
+if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils ${LIBUUID_FOUND})
 endif()
 
@@ -165,8 +165,8 @@ endif()
 
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
-if (LIBUUID_FOUND)
-target_link_libraries(condorapi ${LIBUUID_FOUND})
+if (LINUX AND LIBUUID_FOUND)
+	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
 
 if (LINUX OR DARWIN)

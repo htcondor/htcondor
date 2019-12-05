@@ -2958,7 +2958,7 @@ DaemonCore::thread_switch_callback(void* & incoming_contextVP)
 		// allocate an incoming context above before panicing about
 		// no outgoing context.  Whew.
 	WorkerThreadPtr_t context = CondorThreads::get_handle(last_tid);
-	if ( !context.is_null() ) {
+	if ( context ) {
 		outgoing_context = (DCThreadState *) context->user_pointer_;
 		if (!outgoing_context) {
 				EXCEPT("ERROR: daemonCore - no thread context for tid %d",
@@ -11210,8 +11210,8 @@ bool DaemonCore::SockPair::has_relisock(bool b) {
 	if(!b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_relisock must never be called with false as an argument.");
 	}
-	if(m_rsock.is_null()) {
-		m_rsock = counted_ptr<ReliSock>(new ReliSock);
+	if(!m_rsock) {
+		m_rsock = std::shared_ptr<ReliSock>(new ReliSock);
 	}
 	return true;
 }
@@ -11220,8 +11220,8 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 	if(!b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_safesock must never be called with false as an argument.");
 	}
-	if(m_ssock.is_null()) {
-		m_ssock = counted_ptr<SafeSock>(new SafeSock);
+	if(!m_ssock) {
+		m_ssock = std::shared_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
 }

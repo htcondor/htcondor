@@ -39,7 +39,6 @@
 #include "condor_netaddr.h"
 #include "condor_sinful.h"
 
-#include "counted_ptr.h"
 #include "ipv6_hostname.h"
 
 #include <sstream>
@@ -1915,7 +1914,7 @@ Daemon::readLocalClassAd( const char* subsys )
 	if(!m_daemon_ad_ptr) {
 		m_daemon_ad_ptr = new ClassAd(*adFromFile);
 	}
-	counted_ptr<ClassAd> smart_ad_ptr(adFromFile);
+	std::unique_ptr<ClassAd> smart_ad_ptr(adFromFile);
 	
 	fclose(addr_fp);
 
@@ -1923,7 +1922,7 @@ Daemon::readLocalClassAd( const char* subsys )
 		return false;	// did that just leak adFromFile?
 	}
 
-	return getInfoFromAd( smart_ad_ptr );
+	return getInfoFromAd( smart_ad_ptr.get() );
 }
 
 bool
@@ -1997,13 +1996,6 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 
 bool
-Daemon::getInfoFromAd( counted_ptr<class ClassAd>& ad )
-{
-	return getInfoFromAd( ad.get() );
-}
-
-
-bool
 Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value )
 {
 	if( ! value ) {
@@ -2031,13 +2023,6 @@ Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value 
 	tmp = NULL;
 	return true;
 }
-
-bool
-Daemon::initStringFromAd( counted_ptr<class ClassAd>& ad, const char* attrname, char** value )
-{
-	return initStringFromAd( ad.get(), attrname, value);
-}
-
 
 char*
 Daemon::New_full_hostname( char* str )

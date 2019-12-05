@@ -319,7 +319,7 @@ ThreadImplementation::get_main_thread_ptr()
 	static WorkerThreadPtr_t main_thread_ptr;
 
 	// create a thread object for the main thread if we have not already
-	if ( main_thread_ptr.is_null() ) {
+	if ( !main_thread_ptr ) {
 		ASSERT ( already_been_here == false );
 		WorkerThreadPtr_t main_thread_tmp(new WorkerThread("Main Thread",NULL));
 		main_thread_ptr = main_thread_tmp;
@@ -402,7 +402,7 @@ WorkerThread::set_status(thread_status_t newstatus)
 		 mytid != previous_running_tid ) 
 	{
 		WorkerThreadPtr_t context = CondorThreads::get_handle(previous_running_tid);
-		if ( !context.is_null() ) {
+		if ( context ) {
 			if ( context->status_ == THREAD_RUNNING ) {
 				context->status_ = THREAD_READY;
 				dprintf(D_THREADS,
@@ -649,7 +649,7 @@ ThreadImplementation::get_handle(int tid)
 		ThreadInfo ti( pthread_self() );
 		TI->hashThreadToWorker.lookup(ti,worker);
 
-		if ( worker.is_null() ) {
+		if ( !worker) {
 			// not in our table; if this is the first time we are being
 			// called, it would be from pool_init, thus we have 
 			// been called from the main thread.  if so, insert the 

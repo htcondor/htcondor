@@ -579,9 +579,8 @@ MASTER_ADDRESS_FILE = $(LOG)/.master_address
 ##  hawkeye_startd
 ##--------------------------------------------------------------------
 ##  Where are the various hawkeye_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_STANDARD
+STARTER_LIST = STARTER
 STARTER			= $(SBIN)/hawkeye_starter
-STARTER_STANDARD	= $(SBIN)/hawkeye_starter.std
 STARTER_LOCAL		= $(SBIN)/hawkeye_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)

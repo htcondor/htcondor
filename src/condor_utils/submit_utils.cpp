@@ -539,19 +539,15 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	if (message) {
-		vsprintf ( message, format, ap );
-	}
+	vsprintf ( message, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
 		SubmitMacroSet.errors->push("Submit", -1, message);
 	} else {
-		fprintf(fh, "\nERROR: %s", message ? message : "");
+		fprintf(fh, "\nERROR: %s", message);
 	}
-	if (message) {
-		free(message);
-	}
+	free(message);
 }
 
 void SubmitHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);

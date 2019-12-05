@@ -824,9 +824,8 @@ NEGOTIATOR_INTERVAL = 15
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_STANDARD
+STARTER_LIST = STARTER
 STARTER			= $(SBIN)/condor_starter
-STARTER_STANDARD	= $(SBIN)/condor_starter.std
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1012,9 +1011,8 @@ NUM_VIRTUAL_MACHINES = 1
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
-SHADOW_LIST = SHADOW, SHADOW_STANDARD
+SHADOW_LIST = SHADOW
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't

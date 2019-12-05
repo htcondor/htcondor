@@ -266,7 +266,7 @@ SharedPortEndpoint::StopListener()
 		m_retry_remote_addr_timer = -1;
 	}
 
-	if( m_socket_check_timer != -1 ) {
+	if( daemonCore && m_socket_check_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_socket_check_timer );
 		m_socket_check_timer = -1;
 	}

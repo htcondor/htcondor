@@ -759,13 +759,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			continue;
 		}
 
-			// covert imgsize_bytes to k
-		if( imgsize_bytes/1024 > ULONG_MAX ) {
-			procRaw.imgsize = ULONG_MAX;
-		}
-		else {
-			procRaw.imgsize = imgsize_bytes/1024;
-		}
+		// covert imgsize_bytes to k
+		procRaw.imgsize = imgsize_bytes/1024;
 
 		// do a small verification of the read in data...
 		if ( pid == procRaw.pid ) {
