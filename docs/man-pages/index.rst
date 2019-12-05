@@ -67,6 +67,7 @@ Command Reference Manual (man pages)
    condor_submit
    condor_suspend
    condor_tail
+   condor_token_create
    condor_top
    condor_transfer_data
    condor_transform_ads
