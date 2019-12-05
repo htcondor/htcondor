@@ -3,7 +3,7 @@
 *condor_token_create*
 ======================
 
-given a password file, create an authentication token
+given a password file, create an authentication token for the TOKEN authentication method
 :index:`condor_token_create<single: condor_token_create; HTCondor commands>`\ :index:`condor_token_create command`
 
 Synopsis
@@ -18,12 +18,12 @@ Synopsis
 Description
 -----------
 
-*condor_token_create* will read a HTCondor password file inside the
-*SEC_PASSWORD_DIRECTORY* and use it to create an authentication token.
+*condor_token_create* will read an HTCondor password file inside the
+*SEC_PASSWORD_DIRECTORY* (by default, this is the pool password) and use it to create an authentication token.
 The authentication token may be subsequently used by clients to authenticate
 against a remote HTCondor server.  Tokens allow fine-grained authentication
-as individual HTCondor users; in comparison, anyone with a pool password is
-may authenticate as the HTCondor administrator.
+as individual HTCondor users as opposed to pool password, where anything
+in possession of the pool password will authenticate as the same user.
 
 An identity must be specified for the token; this will be the client's
 resulting identity at the remote HTCondor server.
@@ -70,7 +70,7 @@ Options
     not specified, the token will contain no lifetime restrictions.
  **-token** *filename*
     Specifies a filename, relative to the directory in the *SEC_TOKEN_DIRECTORY*
-    configuration variable (defaulting to ``~/.condor/tokens.d``), where
+    configuration variable (for example, on Linux this defaults to ``~/.condor/tokens.d``), where
     the resulting token is stored.  If not specified, the token will be
     sent to ``stdout``.
 
