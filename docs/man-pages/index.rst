@@ -69,6 +69,7 @@ Command Reference Manual (man pages)
    condor_tail
    condor_token_create
    condor_token_fetch
+   condor_token_request
    condor_top
    condor_transfer_data
    condor_transform_ads
