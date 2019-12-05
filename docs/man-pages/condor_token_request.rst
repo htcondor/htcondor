@@ -123,6 +123,11 @@ Exit Status
 *condor_token_request* will exit with a non-zero status value if it
 fails to request or recieve the token.  Otherwise, it will exit 0.
 
+See also
+--------
+
+:manpage:`condor_token_create(1)`, :manpage:`condor_token_fetch(1)`
+
 Author
 ------
 

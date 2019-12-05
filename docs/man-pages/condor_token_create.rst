@@ -108,6 +108,11 @@ Exit Status
 fails to read the password file, sign the token, write the output, or
 experiences some other error.  Otherwise, it will exit 0.
 
+See also
+--------
+
+:manpage:`condor_store_cred(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request(1)`
+
 Author
 ------
 
@@ -120,4 +125,3 @@ Copyright © 1990-2019 Center for High Throughput Computing, Computer
 Sciences Department, University of Wisconsin-Madison, Madison, WI. All
 Rights Reserved. Licensed under the Apache License, Version 2.0.
 
-      
