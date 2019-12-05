@@ -195,7 +195,7 @@ ShadowMgr::init( void )
 	tmp = param( "SHADOW_LIST" );
 	if( ! tmp ) {
 			// Not defined, give them a default
-		tmp = strdup( "SHADOW, SHADOW_STANDARD" );
+		tmp = strdup( "SHADOW" );
 		dprintf(D_ALWAYS,
 				"WARNING: SHADOW_LIST not defined in config file, "
 				"using default: %s\n", tmp);

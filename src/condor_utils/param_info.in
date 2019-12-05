@@ -1090,11 +1090,6 @@ default=1
 type=int
 tags=sysapi,reconfig
 
-[CKPT_PROBE]
-default=$(LIBEXEC)/condor_ckpt_probe
-win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
-type=path
-
 [RELEASE_DIR]
 default=/tmp/condorinstall0
 win32_default=c:\condor
@@ -1788,7 +1783,7 @@ type=string
 tags=startd,Resource
 
 [STARTER_LIST]
-default=STARTER, STARTER_STANDARD
+default=STARTER
 win32_default=STARTER
 type=string
 tags=startd,starter_mgr
@@ -3188,7 +3183,7 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SHADOW_LIST]
-default=SHADOW, SHADOW_STANDARD
+default=SHADOW
 win32_default=SHADOW
 type=string
 tags=schedd,shadow_mgr
@@ -3197,13 +3192,6 @@ tags=schedd,shadow_mgr
 default=$(SBIN)/condor_shadow
 win32_default=$(SBIN)\condor_shadow.exe
 description=Path to vanilla shadow binary
-type=path
-tags=schedd
-
-[SHADOW_STANDARD]
-default=$(SBIN)/condor_shadow.std
-win32_default=
-description=Path to standard universe shadow binary
 type=path
 tags=schedd
 
@@ -5306,12 +5294,6 @@ type=path
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
 description=Path to Vanilla Starter binary
-type=path
-
-[STARTER_STANDARD]
-default=$(SBIN)/condor_starter.std
-win32_default=
-description=Path to the Standard Universe Starter binary
 type=path
 
 [MASTER_ADDRESS_FILE]

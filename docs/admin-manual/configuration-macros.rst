@@ -577,12 +577,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     system default value to take precedence, and is commented out in the
     default configuration file.
 
-:macro-def:`CKPT_PROBE`
-    Defines the path and executable name of the helper process HTCondor
-    will use to determine information for the ``CheckpointPlatform``
-    attribute in the machine's ClassAd. The default value is
-    ``$(LIBEXEC)/condor_ckpt_probe``.
-
 :macro-def:`ABORT_ON_EXCEPTION`
     When HTCondor programs detect a fatal internal exception, they
     normally log an error message and exit. If you have turned on
