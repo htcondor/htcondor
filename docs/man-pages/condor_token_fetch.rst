@@ -3,7 +3,7 @@
 *condor_token_fetch*
 ======================
 
-obtain a token from a remote daemon
+obtain a token from a remote daemon for the TOKEN authentication method
 :index:`condor_token_fetch<single: condor_token_fetch; HTCondor commands>`\ :index:`condor_token_fetch command`
 
 Synopsis

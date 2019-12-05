@@ -3,7 +3,7 @@
 *condor_token_request*
 ======================
 
-request a token from a remote daemon
+interactively request a token from a remote daemon for the TOKEN authentication method
 :index:`condor_token_request<single: condor_token_request; HTCondor commands>`\ :index:`condor_token_request command`
 
 Synopsis
@@ -20,17 +20,19 @@ Description
 -----------
 
 *condor_token_request* will request an authentication token from a remote
-daemon.  Unlike *condor_token_fetch*, the user doesn't need to have an existing
-authenticated identity with the remote daemon when using *condor_token_request*.
-Token requests must be approved by the daemon's administrator using
-*condor_token_request_approve*.
+daemon. Token requests must be approved by the daemon's administrator using
+*condor_token_request_approve*.  Unlike *condor_token_fetch*, the user doesn't
+need an existing identity with the remote daemon when using
+*condor_token_request* (an anonymous method, such as ``SSL`` without a client
+certificate will suffice).
 
 If the request is successfully enqueued, the request ID will be printed to ``stderr``;
-the administrator will need to know the ID to approve the request.
+the administrator will need to know the ID to approve the request.  *condor_token_request*
+will wait until the request is approved, timing out after an hour.
 
 The token request mechanism provides a powerful way to bootstrap authentication
-in a HTCondor pool - a remote user can request an identity, call the system
-administrator on the telephone to confirm the authenticity of the request, and
+in a HTCondor pool - a remote user can request an identity, verify the authenticity of
+the request out-of-band with the remote daemon's administrator, and
 then securely recieve their authentication token.
 
 By default, *condor_token_request* will query the local *condor_collector*; by specifying
@@ -110,7 +112,7 @@ and then to save it to ``~/.condor/tokens.d/friend``:
 
 ::
 
-    % condor_token_fetch -pool htcondor.cs.wisc.edu \
+    % condor_token_request -pool htcondor.cs.wisc.edu \
                          -identity friend@cs.wisc.edu \
                          -lifetime 600 -token friend
     Token request enqueued.  Ask an administrator to please approve request 2720841.
