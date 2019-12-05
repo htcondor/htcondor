@@ -321,6 +321,7 @@ man_pages = [
     ('man-pages/condor_suspend', 'condor_suspend', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_tail', 'condor_tail', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_token_create', 'condor_token_create', u'HTCondor Manual', [u'HTCondor'], 1),
+    ('man-pages/condor_token_fetch', 'condor_token_fetch', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_top', 'condor_top', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_transfer_data', 'condor_transfer_data', u'HTCondor Manual', [u'HTCondor'], 1),
     ('man-pages/condor_transform_ads', 'condor_transform_ads', u'HTCondor Manual', [u'HTCondor'], 1),
