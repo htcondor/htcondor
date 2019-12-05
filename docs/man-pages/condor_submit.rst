@@ -463,6 +463,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     another. If HTCondor detects that the error and output files for a
     job are the same, it will run the job such that the output and error
     data is merged. :index:`executable<single: executable; submit commands>`
+
  executable = <pathname>
     An optional path and a required file name of the executable file for
     this job cluster. Only one
@@ -473,6 +474,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     If no path or a relative path is used, then the executable file is
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
+    :index:`getenv<single: getenv; submit commands>`
 
  getenv = <True | False>
     If **getenv** is set to

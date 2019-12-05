@@ -76,7 +76,7 @@ Machine ClassAd Attributes
     *condor_startd* initializes, it checks for this support. If the
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
-    :index:`CheckpointPlatform<single: CheckpointPlatform; ClassAd machine attribute>`
+    :index:`ClockDay<single: ClockDay; ClassAd machine attribute>`
 
 ``ClockDay``
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
