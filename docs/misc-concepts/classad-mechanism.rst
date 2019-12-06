@@ -1055,8 +1055,9 @@ characters other than these as options are ignored.
     
     :index:`userMap()<single: userMap(); ClassAd functions>`
 ``List userMap(String mapSetName, String userName)``
-    Map an input string using the given mapping set. Returns a list of
-    groups to which the user belongs.
+    Map an input string using the given mapping set. Returns a string containing
+    the list of groups to which the user belongs separated by commas or undefined
+    if the user was not found in the map file.
     
     :index:`userMap()<single: userMap(); ClassAd functions>`
 
