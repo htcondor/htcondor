@@ -70,6 +70,7 @@ Command Reference Manual (man pages)
    condor_token_create
    condor_token_fetch
    condor_token_request
+   condor_token_request_approve
    condor_top
    condor_transfer_data
    condor_transform_ads
