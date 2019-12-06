@@ -378,11 +378,14 @@ Consider the example
 In this example, the bar character at the end of the line causes the
 script ``list-infiles.sh`` to be invoked, and the output of the script
 is parsed and incorporated into the submit description file. If this
-bash script contains
+bash script is in the PATH when submit is run, and contains
 
 ::
 
+      #!/bin/sh
+
       echo "transfer_input_files = `ls -m infiles/*.dat`"
+      exit 0
 
 then the output of this script has specified the set of input files to
 transfer to the execute host. For example, if directory ``infiles``
