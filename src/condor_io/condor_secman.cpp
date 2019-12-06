@@ -105,6 +105,7 @@ char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
+classad::References SecMan::m_resume_proj;
 
 void
 SecMan::setTag(const std::string &tag) {
@@ -1854,22 +1855,10 @@ SecManStartCommand::sendAuthInfo_inner()
 		dPrintAd ( D_SECURITY, m_auth_info );
 	}
 
-	// if we are resuming, create a "projection" for just the important attributes
-	classad::References proj;
-	if (m_have_session) {
-		dprintf(D_SECURITY, "SESSION: Using a projection to resume session.\n");
-		proj.insert(ATTR_SEC_USE_SESSION);
-		proj.insert(ATTR_SEC_SID);
-		proj.insert(ATTR_SEC_COMMAND);
-		proj.insert(ATTR_SEC_AUTH_COMMAND);
-		proj.insert(ATTR_SEC_SERVER_COMMAND_SOCK);
-		proj.insert(ATTR_SEC_CONNECT_SINFUL);
-		proj.insert(ATTR_SEC_COOKIE);
-	}
-
 	// send the classad
-	if (! putClassAd(m_sock, m_auth_info, 0, proj.empty() ? NULL : &proj)) {
-		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
+	// if we are resuming, use the projection so we send the minimum number of attributes
+	if (! putClassAd(m_sock, m_auth_info, 0, m_have_session ? SecMan::getResumeProj() : NULL)) {
+		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info (resume was %i)\n", m_have_session);
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to send auth_info." );
 		return StartCommandFailed;
@@ -2885,7 +2874,19 @@ SecMan::SecMan() :
 	m_cached_use_tmp_sec_session(false),
 	m_cached_force_authentication(false),
 	m_cached_return_value(-1) {
-	
+
+	// the list of ClassAd attributes we need to resume a session
+	if (m_resume_proj.empty()) {
+		dprintf(D_ALWAYS, "ZKM: buidling projection.\n");
+		m_resume_proj.insert(ATTR_SEC_USE_SESSION);
+		m_resume_proj.insert(ATTR_SEC_SID);
+		m_resume_proj.insert(ATTR_SEC_COMMAND);
+		m_resume_proj.insert(ATTR_SEC_AUTH_COMMAND);
+		m_resume_proj.insert(ATTR_SEC_SERVER_COMMAND_SOCK);
+		m_resume_proj.insert(ATTR_SEC_CONNECT_SINFUL);
+		m_resume_proj.insert(ATTR_SEC_COOKIE);
+	}
+
 	if ( NULL == m_ipverify ) {
 		m_ipverify = new IpVerify( );
 	}

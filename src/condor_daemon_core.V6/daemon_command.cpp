@@ -1032,6 +1032,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		} // end !using_cookie
 	} // end DC_AUTHENTICATE
 
+	dprintf( D_DAEMONCORE, "DAEMONCORE: Leaving ReadCommand(m_req==%i)\n", m_req);
+
 	// This path means they were using "old-school" commands.  No DC_AUTHENTICATE,
 	// just raw command numbers.  We still want to do IPVerify on these however, so
 	// skip all the Authentication and Crypto and go straight to that phase.
