@@ -67,6 +67,10 @@ Bugs Fixed:
    :attr:`classad.Value.Undefined` ClassAd value.
    :ticket:`7370`
 
+-  When file transfers fail with an error message containing a newline (``\n``)
+   character, the error message will now be propagated to the job's hold message.
+   :ticket:`7395`
+
 Version 8.9.4
 -------------
 
