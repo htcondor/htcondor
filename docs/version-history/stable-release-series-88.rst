@@ -43,6 +43,11 @@ Bugs Fixed:
    IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
    :ticket:`7397`
 
+-  Fixed a bug that can cause the *condor_gridmanager* to exit and
+   restart repeatedly if a Condor-C (i.e. grid-type *condor*) job's
+   proxy file disappears.
+   :ticket:`7409`
+
 Version 8.8.6
 -------------
 
