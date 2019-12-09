@@ -122,10 +122,12 @@ Bugs Fixed:
    value when passed a string.
    :ticket:`7253`
 
--  *condor_preen* will no longer query the *condor_schedd* the whole time it is
-   preening the spool directory.  Instead, it now builds a list of potentially
-   obsolete files and then queries the *condor_schedd* once to find out which of
-   these files are associated with jobs still in the Schedd.
+-  Fixed a bug where *condor_preen* may mistakenly remove files from the
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   :ticket:`7320`
+
+-  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day
+   for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
 -  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
