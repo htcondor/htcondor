@@ -59,9 +59,10 @@ try:
 except (AttributeError, IndexError):
     __version__ = htcondor.version().split()[1]
 
-# add locks
-_lock.add_locks_to_module(htcondor)
+# add locks in-place
+_lock.add_locks_to_module(htcondor, skip=_lock.DO_NOT_LOCK)
 
 # re-import htcondor with a splat to get it into our namespace
+# because of import caching, this respects the mutation we did above
 from .htcondor import *
 from .htcondor import _Param

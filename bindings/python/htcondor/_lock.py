@@ -27,39 +27,44 @@ LOCK = threading.RLock()
 # determine which daemon we are talking to (somehow...),
 # and get the lock object for that daemon, creating it if it doesn't exist
 
-# any function/method included in BLACKLIST will not be locked
+# any function/method included in DO_NOT_LOCK will not be locked
 # * if you include a class, none of its methods will be locked
 # * enums don't need to be listed; they have no methods, not even __init__
 # * context manager __enter__ methods SHOULD be listed here if they return self (avoid recursion)
-BLACKLIST = [
+DO_NOT_LOCK = {
     htcondor.version,
     htcondor.platform,
     htcondor.JobEventLog,
     htcondor.JobEvent,
     htcondor.SubmitResult,
     htcondor.Transaction.__enter__,  # avoids recursion (this method returns self!)
-]
+}
 
 
-def add_locks_to_module(mod):
+def add_locks_to_module(mod, skip=None):
+    skip = skip or set()
+
     for name, obj in vars(mod).items():
-        if obj in BLACKLIST:
+        if obj in skip:
             continue
 
+        # "recurse" down into classes, but actually use a different function
         if inspect.isclass(obj):
-            setattr(mod, name, add_locks_to_class_methods(obj))
+            setattr(mod, name, add_locks_to_class_methods(obj, skip = skip))
+        # functions defined by boost look like builtins, not functions
         elif inspect.isbuiltin(obj):
-            # functions defined by boost look like builtins, not functions
             setattr(mod, name, add_lock(obj))
 
 
-def add_locks_to_class_methods(cls):
+def add_locks_to_class_methods(cls, skip=None):
+    skip = skip or set()
+
     for name, obj in vars(cls).items():
-        if obj in BLACKLIST:
+        if obj in skip:
             continue
 
+        # functions defined by boost look like builtins, not functions
         if inspect.isbuiltin(obj):
-            # functions defined by boost look like builtins, not functions
             setattr(cls, name, add_lock(obj))
     return cls
 
@@ -73,10 +78,10 @@ def add_lock(func):
             acquired = LOCK.acquire()
 
             rv = func(*args, **kwargs)
-            is_cm = is_context_manager(rv)
 
             # if the function returned a context manager,
             # create a LockedContext to manage the lock
+            is_cm = is_context_manager(rv)
             if is_cm:
                 return LockedContext(rv, LOCK)
             else:
@@ -88,10 +93,6 @@ def add_lock(func):
                 LOCK.release()
 
     return wrapper
-
-
-def is_context_manager(obj):
-    return all(hasattr(obj, m) for m in ("__enter__", "__exit__"))
 
 
 class LockedContext:
@@ -106,4 +107,11 @@ class LockedContext:
         try:
             return self.cm.__exit__(*args, **kwargs)
         finally:
+            # we don't need to check if the lock was acquired here
+            # we are guaranteed to have it, because it was passed to us already-acquired
             self.lock.release()
+
+
+def is_context_manager(obj):
+    """An object is a context manager if it has __enter__ and __exit__ methods."""
+    return all(hasattr(obj, m) for m in ("__enter__", "__exit__"))
