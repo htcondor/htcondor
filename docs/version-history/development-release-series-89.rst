@@ -19,15 +19,21 @@ New Features:
    :ref:`Docker and Networking` for details.
    :ticket:`7322`
 
-- If you define a startd with different SLOT_TYPEs, you can use the SLOT_TYPE as
-  a prefix for configuration entries.  This can be useful to set different BASE_GROUPs
-  for different slot types within the same startd. For example,
-  SLOT_TYPE_1.BASE_CGROUP = hi_prio
-  :ticket:`7390`
+-  If you define a startd with different SLOT_TYPEs, you can use the SLOT_TYPE as
+   a prefix for configuration entries.  This can be useful to set different BASE_GROUPs
+   for different slot types within the same startd. For example,
+   SLOT_TYPE_1.BASE_CGROUP = hi_prio
+   :ticket:`7390`
 
 -  Improved the performance of the negotiatior by simplifying the definition of
    the startd's WithinResourceLimits attribute when custom resources are defined.
    :ticket:`7323`
+
+-  Added a new knob SUBMIT_ALLOW_GETENV.  This defaults to true.  When set to
+   false, a submit file with getenv = true will become an error.  Admins may
+   want to set this to false to prevent users from submitting jobs that depend
+   on the local environment of the submit machine.
+   :ticket:`7383`
 
 -  *condor_submit* will no longer set the ``Owner`` attribute of jobs
    it submits to the name of the current user. It now leaves this attribute up
