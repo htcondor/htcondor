@@ -61,6 +61,9 @@ Bugs Fixed:
    :class:`~classad.ExprTree`.
    :ticket:`7372`
 
+-  condor_submit -i now works with Docker universe jobs.
+   :ticket:`7394`
+
 -  When calling :meth:`classad.ClassAd.setdefault` without a default, or
    with a default of None, if the default is used, it is now treated as the
    :attr:`classad.Value.Undefined` ClassAd value.
