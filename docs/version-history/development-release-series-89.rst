@@ -25,6 +25,10 @@ New Features:
   SLOT_TYPE_1.BASE_CGROUP = hi_prio
   :ticket:`7390`
 
+-  Improved the performance of the negotiatior by simplifying the definition of
+   the startd's WithinResourceLimits attribute when custom resources are defined.
+   :ticket:`7323`
+
 -  *condor_submit* will no longer set the ``Owner`` attribute of jobs
    it submits to the name of the current user. It now leaves this attribute up
    to the *condor_schedd* to set.  This change was made because the *condor_schedd*
