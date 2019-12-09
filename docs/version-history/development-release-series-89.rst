@@ -15,7 +15,11 @@ Release Notes:
 
 New Features:
 
--  None.
+- Added ``GOMAXPROCS`` to the default list of environment variables that are
+  set to the number of CPU cores allocated to the job.
+  :ticket:`7418`
+
+Bugs Fixed:
 
 Bugs Fixed:
 
@@ -390,7 +394,7 @@ New Features:
 
 - HTCondor now sets numerous environment variables 
   to tell the job (or libraries being used by the job) how many CPU cores
-  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
+  have been provisioned.  Also added the configuration knob ``STARTER_NUM_THREADS_ENV_VARS``
   to allow the administrator to customize this set of environment 
   variables.
   :ticket:`7296`
@@ -602,7 +606,7 @@ New Features:
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 
--  Added a new config knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
+-  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
 
