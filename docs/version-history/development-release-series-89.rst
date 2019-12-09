@@ -61,6 +61,10 @@ Bugs Fixed:
    :class:`~classad.ExprTree`.
    :ticket:`7372`
 
+-  Fixed a bug that caused jobs running with cgroup support to 
+   not be held with an out of memory error.
+   :ticket:`7367`
+
 -  condor_submit -i now works with Docker universe jobs.
    :ticket:`7394`
 
