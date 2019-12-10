@@ -64,7 +64,7 @@ static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 
-static int jobsInSlot(ClassAd &job, ClassAd &offer, int cost);
+static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
 // possible outcomes of negotiating with a schedd
 enum { MM_ERROR, MM_DONE, MM_RESUME };
@@ -4810,7 +4810,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         dprintf(D_FULLDEBUG, "Match completed, match cost= %g\n", match_cost);
 
 		if (param_boolean("NEGOTIATOR_DEPTH_FIRST", false)) {
-			schedd_will_match = jobsInSlot(request, *offer, match_cost);
+			schedd_will_match = jobsInSlot(request, *offer);
 		}
 
 		limitUsed += match_cost;
@@ -7164,14 +7164,19 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 	return false;
 }
 
-	// for CMS demo, just assume SLOT_WEIGHT = cpus
-static int jobsInSlot(ClassAd &request, ClassAd &offer, int match_cost) {
+static int jobsInSlot(ClassAd &request, ClassAd &offer) {
 	int requestCpus = 1;
-	if (match_cost < 1) match_cost = 1;
-	
-	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
+	int requestMemory = 1;
+	int availCpus = 1;
+	int availMemory = 1;
 
-	return ceil((double)match_cost / (double)requestCpus);
+	offer.LookupInteger(ATTR_CPUS, availCpus);
+	offer.LookupInteger(ATTR_MEMORY, availMemory);
+	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
+	EvalInteger(ATTR_REQUEST_MEMORY, &request, &offer, requestMemory);
+
+	return MIN( availCpus / requestCpus,
+	            availMemory / requestMemory );
 }
 
 GCC_DIAG_ON(float-equal)
