@@ -48,6 +48,13 @@ Bugs Fixed:
    proxy file disappears.
    :ticket:`7409`
 
+-  Fixed a bug that could cause the *condor_negotiator* to incorrectly
+   count the number of jobs that will fit in a partitionable slot when
+   ``NEGOTIATOR_DEPTH_FIRST`` is set to ``True``.
+   The incorrect count was especially bad when ``SLOT_WEIGHT`` was set
+   to a value other than the default of ``Cpus``.
+   :ticket:`7422`
+
 Version 8.8.6
 -------------
 
