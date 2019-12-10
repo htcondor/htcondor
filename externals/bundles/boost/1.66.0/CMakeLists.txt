@@ -58,7 +58,7 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	set (Boost_DEBUG TRUE)
+    # set (Boost_DEBUG TRUE)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 
     message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
@@ -84,7 +84,7 @@ else (WINDOWS)
         endif()
     endif()
 
-	find_package( Boost 1.66 COMPONENTS ${BOOST_COMPONENTS} )
+	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)

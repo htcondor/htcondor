@@ -6094,6 +6094,10 @@ do not specify their own with:
     functions identically to ``SUBMIT_ATTRS``. It may be removed in the
     future, so use ``SUBMIT_ATTRS``.
 
+:macro-def:`SUBMIT_ALLOW_GETENV`
+    A boolean attribute which defaults to true. If set to false, the
+    submit command getenv becomes and error.
+
 :macro-def:`LOG_ON_NFS_IS_ERROR`
     A boolean value that controls whether *condor_submit* prohibits job
     submit description files with job event log files on NFS. If

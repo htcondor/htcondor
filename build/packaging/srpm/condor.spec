@@ -377,8 +377,12 @@ Requires: blahp >= 1.16.1
 Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
-# Box and Google Drive file transfer plugins require python-requests
+%if 0%{?rhel} <= 7
 Requires: python-requests
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-requests
+%endif
 
 Requires: initscripts
 
