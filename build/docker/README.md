@@ -50,7 +50,7 @@ bind-mount it into the container and build from it.
 To do so, use a `docker run` command that looks like this, from the root of your
 local HTCondor repository:
 ```shell
-docker run -it --rm --mount type=bind,source="$pwd",target=/home/build/htcondor,readonly htcondor/build-centos7
+docker run -it --rm --mount type=bind,source="$PWD",target=/home/build/htcondor,readonly htcondor/build-centos7
 ```
 This will leave you in the container, sitting above the HTCondor source.
 From there you can configure and run the build as normal.
