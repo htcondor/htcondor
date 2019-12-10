@@ -1802,8 +1802,6 @@ void CollectorDaemon::Config()
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
 	Sinful mySinful( myself );
-	Sinful mySharedPortDaemonSinful = mySinful;
-	mySharedPortDaemonSinful.setSharedPortID( NULL );
 	while( collectorsToUpdate->next( daemon ) ) {
 		const char * current = daemon->addr();
 		if( current == NULL ) { continue; }
@@ -1812,28 +1810,6 @@ void CollectorDaemon::Config()
 		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
 			continue;
-		}
-
-		// addressPointsToMe() doesn't know that the shared port daemon
-		// forwards connections that otherwise don't ask to be forwarded
-		// to the collector.  This means that COLLECTOR_HOST doesn't need
-		// to include ?sock=collector, but also that mySinful has a
-		// shared port address and currentSinful may not.  Since we know
-		// that we're trying to contact the collector here -- that is, we
-		// can tell we're not contacting the shared port daemon in the
-		// process of doing something else -- we can safely assume that
-		// any currentSinful without a shared port ID intends to connect
-		// to the default collector.
-		dprintf( D_FULLDEBUG, "checking for self: '%s', '%s, '%s'\n", mySinful.getSharedPortID(), mySharedPortDaemonSinful.getSinful(), currentSinful.getSinful() );
-		if( mySinful.getSharedPortID() != NULL && mySharedPortDaemonSinful.addressPointsToMe( currentSinful ) ) {
-			// Check to see if I'm the default collector.
-			std::string collectorSPID;
-			param( collectorSPID, "SHARED_PORT_DEFAULT_ID" );
-			if(! collectorSPID.size()) { collectorSPID = "collector"; }
-			if( strcmp( mySinful.getSharedPortID(), collectorSPID.c_str() ) == 0 ) {
-				dprintf( D_FULLDEBUG, "Skipping sending update to myself via my shared port daemon.\n" );
-				collectorsToUpdate->deleteCurrent();
-			}
 		}
 	}
 
