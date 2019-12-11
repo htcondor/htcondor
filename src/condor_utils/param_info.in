@@ -1422,6 +1422,22 @@ default=
 type=string
 tags=collector
 
+[COLLECTOR_FORWARD_WATCH_LIST]
+default=State,Cpus,Memory,IdleJobs,ClaimId,Capability,ClaimIdList,ChildClaimIds
+type=string
+
+[COLLECTOR_FORWARD_FILTERING]
+default=false
+type=bool
+
+[COLLECTOR_FORWARD_INTERVAL]
+default=$(CLASSAD_LIFETIME) / 3
+type=string
+
+[COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS]
+default=$(NEGOTIATOR_CONSIDER_PREEMPTION)
+type=string
+
 [COLLECTOR_STATS_SWEEP]
 default=14400
 type=int
