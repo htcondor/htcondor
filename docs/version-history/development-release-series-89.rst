@@ -21,9 +21,11 @@ New Features:
 
 Bugs Fixed:
 
-Bugs Fixed:
-
--  None.
+- To work around an issue where long-running *gce_gahp* process enter a state
+  where they can no longer authenticate with GCE, the daemon now restarts once
+  every 24 hours.  This does not affect the jobs themselves.
+  See :ref:`gce_configuration_variables`.
+  :ticket:`7401`
 
 Version 8.9.5
 -------------
