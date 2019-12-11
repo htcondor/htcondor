@@ -2167,6 +2167,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
+		if (pvtAd && !param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true)){
+			std::string state;
+			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
+				pvtAd = NULL;
+			}
+		}
 	}
 
 	bool should_forward = true;
