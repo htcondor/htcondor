@@ -5459,7 +5459,7 @@ default=/tmp/GceGahpLog.$(USERNAME)
 win32_default=NUL
 
 [GCE_GAHP_LIFETIME]
-default=0
+default=86400
 type=int
 
 [ANNEX_GAHP]
