@@ -43,6 +43,18 @@ Bugs Fixed:
    IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
    :ticket:`7397`
 
+-  Fixed a bug that can cause the *condor_gridmanager* to exit and
+   restart repeatedly if a Condor-C (i.e. grid-type *condor*) job's
+   proxy file disappears.
+   :ticket:`7409`
+
+-  Fixed a bug that could cause the *condor_negotiator* to incorrectly
+   count the number of jobs that will fit in a partitionable slot when
+   ``NEGOTIATOR_DEPTH_FIRST`` is set to ``True``.
+   The incorrect count was especially bad when ``SLOT_WEIGHT`` was set
+   to a value other than the default of ``Cpus``.
+   :ticket:`7422`
+
 Version 8.8.6
 -------------
 
@@ -122,10 +134,12 @@ Bugs Fixed:
    value when passed a string.
    :ticket:`7253`
 
--  *condor_preen* will no longer query the *condor_schedd* the whole time it is
-   preening the spool directory.  Instead, it now builds a list of potentially
-   obsolete files and then queries the *condor_schedd* once to find out which of
-   these files are associated with jobs still in the Schedd.
+-  Fixed a bug where *condor_preen* may mistakenly remove files from the
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   :ticket:`7320`
+
+-  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day
+   for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
 -  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
