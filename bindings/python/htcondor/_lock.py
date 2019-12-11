@@ -41,36 +41,31 @@ DO_NOT_LOCK = {
 }
 
 
-def add_locks_to_module(mod, skip=None):
+def add_locks(namespace, skip=None):
     skip = skip or set()
 
-    for name, obj in vars(mod).items():
-        if obj in skip:
-            continue
+    for name, obj in vars(namespace).items():
+        # skip cannot be pulled out as a guard, because we need to pre-filter down to
+        # things we might actually want to lock (other types may not be hashable)
 
-        # "recurse" down into classes, but actually use a different function
-        if inspect.isclass(obj):
-            setattr(mod, name, add_locks_to_class_methods(obj, skip = skip))
-        # functions defined by boost look like builtins, not functions
-        elif inspect.isbuiltin(obj):
-            setattr(mod, name, add_lock(obj))
+        # recurse down into classes
+        if inspect.isclass(obj) and obj not in skip:
+            add_locks(obj, skip=skip)
 
+        elif is_lockable(obj) and obj not in skip:
+            setattr(namespace, name, add_lock(obj))
 
-def add_locks_to_class_methods(cls, skip=None):
-    skip = skip or set()
-
-    for name, obj in vars(cls).items():
-        if obj in skip:
-            continue
-
-        # functions defined by boost look like builtins, not functions
-        if inspect.isbuiltin(obj):
-            setattr(cls, name, add_lock(obj))
-    return cls
+    return namespace
 
 
 def add_lock(func):
-    @functools.wraps(func)
+    # assigned protects us from accessing attributes of the function object that
+    # may not exist inside functools.wraps, which can fail on 2.7
+    # Compare https://github.com/python/cpython/blob/2.7/Lib/functools.py#L33 to
+    # https://github.com/python/cpython/blob/3.7/Lib/functools.py#L53
+    assigned = (a for a in functools.WRAPPER_ASSIGNMENTS if hasattr(func, a))
+
+    @functools.wraps(func, assigned=assigned)
     def wrapper(*args, **kwargs):
         acquired = False
         is_cm = False
@@ -110,6 +105,16 @@ class LockedContext:
             # we don't need to check if the lock was acquired here
             # we are guaranteed to have it, because it was passed to us already-acquired
             self.lock.release()
+
+
+def is_lockable(obj):
+    """
+    We can lock "builtins", which are what functions/methods defined by boost look like,
+    or any actual function or method.
+    """
+    return any(
+        f(obj) for f in (inspect.isbuiltin, inspect.isfunction, inspect.ismethod)
+    )
 
 
 def is_context_manager(obj):
