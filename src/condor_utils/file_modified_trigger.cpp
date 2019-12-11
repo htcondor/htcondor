@@ -21,6 +21,8 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
+#include "utc_time.h"
+
 #include "file_modified_trigger.h"
 
 #if defined( LINUX )
@@ -29,8 +31,15 @@
 #include <poll.h>
 
 FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
-	filename( f ), initialized( false ), inotify_fd( -1 )
+	filename( f ), initialized( false ), inotify_fd( -1 ),
+	statfd( -1 ), lastSize( 0 )
 {
+	statfd = open( filename.c_str(), O_RDONLY );
+	if( statfd == -1 ) {
+		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): open() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
+		return;
+	}
+
 	inotify_fd = inotify_init1( IN_NONBLOCK );
 	if( inotify_fd == -1 ) {
 		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_init() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
@@ -97,29 +106,67 @@ FileModifiedTrigger::wait( int timeout ) {
 		return -1;
 	}
 
-	struct pollfd pollfds[1];
+	struct timeval deadline;
+	condor_gettimestamp( deadline );
 
+	deadline.tv_sec += timeout / 1000;
+	deadline.tv_usec += (timeout % 1000) * 1000;
+	deadline.tv_usec = deadline.tv_usec % 1000000;
+
+	//
+	// Network file systems don't trigger inotify.  Rather than try to
+	// determine if the log is on one and fall back to a polling-based
+	// solution, always use the polling-based solution, but poll() the
+	// inotify FD instead of sleep.
+	//
+
+	struct pollfd pollfds[1];
 	pollfds[0].fd = inotify_fd;
 	pollfds[0].events = POLLIN;
 	pollfds[0].revents = 0;
 
-	int events = poll( pollfds, 1, timeout );
-	switch( events ) {
-		case -1:
+	while( true ) {
+		struct stat statbuf;
+		int rv = fstat( statfd, & statbuf );
+		if( rv != 0 ) {
+			dprintf( D_ALWAYS, "FileModifiedTrigger::wait(): fstat() failure on previously-valid fd: %s (%d).\n", strerror(errno), errno );
 			return -1;
+		}
 
-		case 0:
-			return 0;
+		bool changed = statbuf.st_size != lastSize;
+		lastSize = statbuf.st_size;
+		if( changed ) { return 1; }
 
-		default:
-			if( pollfds[0].revents & POLLIN ) {
-				return read_inotify_events();
-			} else {
-				dprintf( D_ALWAYS, "FileModifiedTrigger::wait(): poll() returned an event I didn't ask for.\n" );
+		struct timeval now;
+		condor_gettimestamp( now );
+
+		if( deadline.tv_sec < now.tv_sec ) { return 0; }
+		else if( deadline.tv_sec == now.tv_sec &&
+			deadline.tv_usec < now.tv_usec ) { return 0; }
+
+		int waitfor = ((deadline.tv_sec - now.tv_sec) * 1000) +
+						((deadline.tv_usec - now.tv_usec) / 1000);
+		if( waitfor > 5000 ) { waitfor = 5000; }
+
+		int events = poll( pollfds, 1, waitfor );
+		switch( events ) {
+			case -1:
 				return -1;
-			}
-		break;
+
+			case 0:
+				continue;
+
+			default:
+				if( pollfds[0].revents & POLLIN ) {
+					return read_inotify_events();
+				} else {
+					dprintf( D_ALWAYS, "FileModifiedTrigger::wait(): inotify returned an event I didn't ask for.\n" );
+					return -1;
+				}
+			break;
+		}
 	}
+
 }
 
 #else
@@ -133,8 +180,6 @@ FileModifiedTrigger::wait( int timeout ) {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#include "utc_time.h"
 
 #if defined(WINDOWS)
 void usleep( long long microseconds ) {
@@ -164,7 +209,7 @@ FileModifiedTrigger::~FileModifiedTrigger() {
 
 
 //
-// Polling is the best we can do.  Use condor_gettimestemp() and not
+// Polling is the best we can do.  Use condor_gettimestamp() and not
 // clock_gettime(), despite the latter being monotonic, because it's
 // on Mac OS X until 10.12, and not available on Windows at all.
 //

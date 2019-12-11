@@ -42,10 +42,9 @@ class FileModifiedTrigger {
 #if defined( LINUX )
 		int read_inotify_events( void );
 		int inotify_fd;
-#else
+#endif
 		int statfd;
 		off_t lastSize;
-#endif
 };
 
 #endif

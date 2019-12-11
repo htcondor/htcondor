@@ -304,7 +304,7 @@ int main( int argc, char *argv[] )
 			if (dont_wait) {
 				EXIT_SUCCESS;
 			}
-	} else if( outcome == ULOG_RD_ERROR ) {
+		} else if( outcome == ULOG_RD_ERROR ) {
 			dprintf( D_FULLDEBUG, "Got ULOG_RD_ERROR, done.\n" );
 			EXIT_FAILURE;
 		} else if( outcome == ULOG_MISSED_EVENT ) {

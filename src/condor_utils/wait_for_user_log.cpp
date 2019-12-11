@@ -27,7 +27,7 @@
 #include "utc_time.h"
 
 WaitForUserLog::WaitForUserLog( const std::string & f ) :
-	filename( f ), reader( f.c_str() ), trigger( f ) { };
+	filename( f ), reader( f.c_str(), true ), trigger( f ) { };
 
 WaitForUserLog::~WaitForUserLog() { }
 
