@@ -73,6 +73,7 @@ Command Reference Manual (man pages)
    condor_token_request
    condor_token_request_approve
    condor_token_request_auto_approve
+   condor_token_request_list
    condor_top
    condor_transfer_data
    condor_transform_ads
