@@ -202,6 +202,7 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
 void
 enable_debug()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 }
 
@@ -209,6 +210,7 @@ enable_debug()
 void
 enable_log()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_config(get_mySubSystem()->getName());
 }
 

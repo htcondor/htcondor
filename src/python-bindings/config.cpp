@@ -633,6 +633,7 @@ void configWrapper() {
 
 void export_config()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     config_ex(CONFIG_OPT_NO_EXIT | CONFIG_OPT_WANT_META);
     param_insert("ENABLE_CLASSAD_CACHING", "false");
     classad::ClassAdSetExpressionCaching(false);
