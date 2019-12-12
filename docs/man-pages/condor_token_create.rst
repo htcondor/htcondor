@@ -9,7 +9,7 @@ given a password file, create an authentication token for the TOKEN authenticati
 Synopsis
 --------
 
-**condor_token_create** **-identity** *user@domain* [**-keyid** *keyid*]
+**condor_token_create** **-identity** *user@domain* [**-key** *keyid*]
 [**-authz** *authz* ...] [**-lifetime** *value*]
 [**-token** *filename*] [**-debug**]
 
@@ -30,9 +30,15 @@ resulting identity at the remote HTCondor server.
 If the **-lifetime** or (one or more) **-authz** options are specified,
 the token will contain additional restrictions that limit what the
 client will be authorized to do.
+If an attacker is able to access the token, they will be able to authenticate
+with the identity listed in the token (subject to the restrictions above).
 
 If successful, the resulting token will be sent to ``stdout``; by specifying
 the **-token** option, it will instead be written to the user's token directory.
+If written to to *SEC_TOKEN_SYSTEM_DIRECTORY* (default ``/etc/condor/tokens.d``),
+then the token can be used for daemon-to-daemon authentication.
+
+*condor_token_create* is only currently supported on Unix platforms.
 
 Options
 -------
@@ -56,7 +62,7 @@ Options
  **-identity** *user@domain*
     Set a specific client identity to be written into the token; a client
     will authenticate as this identity with a remote server.
- **-keyid** *keyid*
+ **-key** *keyid*
     Specify a specific key to use in the directory specified by the
     *SEC_PASSWORD_DIRECTORY* configuration variable. The key name must
     match a file in the password directory; the file's contents must
@@ -100,6 +106,27 @@ and then to save it to ``~/.condor/tokens.d/friend``:
 ::
 
     % condor_token_create -identity friend@cs.wisc.edu -lifetime 600 -token friend
+
+If the administrator would like to create a specific key for signing tokens, ``token_key``,
+distinct from the default pool password, they would first use *condor_store_cred*
+to create the key:
+
+::
+
+    % openssl rand -base64 32 | condor_store_cred -f /etc/condor/passwords.d/token_key
+
+Note, in this case, we created a random 32 character key using SSL instead of providing
+a human-friendly password.
+
+Next, the administrator would run run *condor_token_create*:
+
+::
+
+    % condor_token_create -identity frida@cs.wisc.edu -key token_key
+    eyJhbGciOiJIUzI1NiIsImtpZCI6I.....eyJpYXQiOUzlN6QA
+
+If the ``token_key`` file is deleted from the *SEC_PASSWORD_DIRECTORY*, then all of
+the tokens issued with that key will be invalidated.
 
 Exit Status
 -----------

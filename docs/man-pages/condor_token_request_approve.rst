@@ -13,7 +13,7 @@ Synopsis
 [**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
 [**-debug**]
 
-**condor_token_request** [**-help** ]
+**condor_token_request_approve** [**-help** ]
 
 Description
 -----------
@@ -23,9 +23,11 @@ queued at a remote daemon.  Once approved, the requester will be able to fetch a
 fully signed token from the daemon and use it to authenticate with the TOKEN method.
 
 **NOTE** that any user can request a very powerful token, even allowing them to be
-the HTCondor administrator.  Review token requests carefully to ensure you understand
-what authorization you are approving.  The only safe way to approve a request is to
-have the request ID communicated out-of-band, ensuring the request's authenticity.
+the HTCondor administrator; such requests can only be approved by an administrator.
+Review token requests carefully to ensure you understand
+what identity you are approving.  The only safe way to approve a request is to
+have the request ID communicated out-of-band and verify it matches the expected,
+request contents, ensuring the request's authenticity.
 
 By default, users can only approve requests for their own identity (that is, a user
 authenticating as ``bucky@cs.wisc.edu`` can only approve token requests for the identity
@@ -52,11 +54,9 @@ Options
     the locally-running daemons will be used.
  **-pool** *pool_name*
     Request a token from a daemon in a non-default pool *pool_name*.
- **-token** *filename*
-    Specifies a filename, relative to the directory in the *SEC_TOKEN_DIRECTORY*
-    configuration variable (defaulting to ``~/.condor/tokens.d``), where
-    the resulting token is stored.  If not specified, the token will be
-    sent to ``stdout``.
+ **-reqid** *val*
+    Provides the specific request ID to approve.  Request IDs should be communicated
+    out of band to the administrator through a trusted channel.
  **-type** *type*
     Request a token from a specific daemon type *type*.  If not given, a
     *condor_collector* is used.
@@ -70,7 +70,7 @@ To approve the tokens at the default *condor_collector*, one-by-one:
 
     % condor_token_request_approve                                                                                               
     RequestedIdentity = "bucky@cs.wisc.edu"
-    AuthenticatedIdentity = "frida@chtc.wisc.edu"
+    AuthenticatedIdentity = "anonymous@ssl"
     PeerLocation = "10.0.0.42"
     ClientId = "bird.cs.wisc.edu-516"
     RequestId = "8414912"
@@ -82,7 +82,9 @@ To approve the tokens at the default *condor_collector*, one-by-one:
 When a token is approved, the corresponding *condor_token_request* process
 will complete.  Note the printed request includes both the requested identity
 (which will be written into the issued token) and the authenticated identity
-of the token requester (``frida@chtc.wisc.edu``).
+of the token requester.  In this case, ``anonymous@ssl`` indicates the connection
+was established successfully over SSL but the remote side is anonymous (did not
+contain a client SSL certificate).
 
 Exit Status
 -----------
