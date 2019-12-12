@@ -1,7 +1,7 @@
 
 
 *condor_token_request_auto_approve*
-======================
+===================================
 
 generate a new rule to automatically approve token requests
 :index:`condor_token_request_auto_approve<single: condor_token_request_auto_approve; HTCondor commands>`\ :index:`condor_token_request_auto_approve command`

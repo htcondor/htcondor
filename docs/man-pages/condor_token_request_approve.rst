@@ -1,7 +1,7 @@
 
 
 *condor_token_request_approve*
-======================
+==============================
 
 approve a token request at a remote daemon
 :index:`condor_token_request_approve<single: condor_token_request_approve; HTCondor commands>`\ :index:`condor_token_request_approve command`
