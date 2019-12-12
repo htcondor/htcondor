@@ -211,6 +211,7 @@ FileModifiedTrigger::wait( int timeout ) {
 		if( waitfor > 5000 ) { waitfor = 5000; }
 
 		int events = notify_or_sleep( waitfor );
+		if( events == 1 ) { return 1; }
 		if( events == 0 ) { continue; }
 		return -1;
 	}
