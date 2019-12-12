@@ -78,6 +78,8 @@ FileModifiedTrigger::releaseResources() {
 		inotify_fd = -1;
 	}
 #endif /* defined( LINUX ) */
+
+	initialized = false;
 }
 
 //
@@ -134,11 +136,6 @@ FileModifiedTrigger::read_inotify_events( void ) {
 }
 
 int
-FileModifiedTrigger::wait( int timeout ) {
-	if(! initialized) {
-		return -1; // FIXME: return ULOG_INVALID -ish instead
-	}
-
 FileModifiedTrigger::notify_or_sleep( int waitfor ) {
 	struct pollfd pollfds[1];
 	pollfds[0].fd = inotify_fd;
@@ -148,7 +145,7 @@ FileModifiedTrigger::notify_or_sleep( int waitfor ) {
 	int events = poll( pollfds, 1, waitfor );
 	switch( events ) {
 		case -1:
-			return -1; // FIXME: return ULOG_RD_ERROR -ish instead
+			return -1;
 
 		case 0:
 			return 0;
