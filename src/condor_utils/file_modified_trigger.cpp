@@ -156,13 +156,14 @@ FileModifiedTrigger::notify_or_sleep( int waitfor ) {
 #else
 
 #if defined(WINDOWS)
-void usleep( long long microseconds ) {
+int usleep( long long microseconds ) {
 	HANDLE timer;
 	LARGE_INTEGER timerIntervals = { microseconds * -10 };
 	timer = CreateWaitableTimer( NULL, true, NULL );
 	SetWaitableTimer( timer, & timerIntervals, 0, NULL, NULL, false );
 	WaitForSingleObject( timer, INFINITE );
 	CloseHandle( timer );
+	return 0;
 }
 #endif /* defined(WINDOWS) */
 
