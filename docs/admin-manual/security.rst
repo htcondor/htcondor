@@ -1316,6 +1316,7 @@ without a client certificate; configure the collector using a host certificate.
 Using the SSL authentication, the client can request a new authentication token:
 
 ::
+
     # condor_token_request
     Token request enqueued.  Ask an administrator to please approve request 9235785.
 
