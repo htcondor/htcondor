@@ -31,6 +31,12 @@ New Features:
 
 Bugs Fixed:
 
+-  The *condor_wait* command will now function properly when reading a
+   file on AFS that a process on another machine is writing.  This bug
+   may have manifested as the machine running *condor_wait* not seeing
+   writes to the log file.
+   :ticket:`7373`
+
 -  Fixed a bug that caused *condor_submit* to fail when the remote option
    was used and the remote Schedd was using a mapfile.
    :ticket:`7353`

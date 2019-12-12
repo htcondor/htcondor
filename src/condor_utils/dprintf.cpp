@@ -71,6 +71,17 @@
 
 #include <sstream>
 
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+#ifdef WIN32
+static bool _dprintf_expect_threads = true;
+#else
+static bool _dprintf_expect_threads = false;
+#endif
+void dprintf_make_thread_safe() {
+	_dprintf_expect_threads = true;
+}
+
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
 // machine in order
@@ -875,7 +886,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
 	 * if we are running w/ threads.
 	 */
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_lock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -1002,7 +1013,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_unlock(&_condor_dprintf_critsec);
 	}
 #endif

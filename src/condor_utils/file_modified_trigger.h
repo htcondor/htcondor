@@ -40,13 +40,15 @@ class FileModifiedTrigger {
 		FileModifiedTrigger( const FileModifiedTrigger & fmt );
 		FileModifiedTrigger & operator =( const FileModifiedTrigger & fmt );
 
+		// Timeout is in milliseconds.  Return values like poll().
+		int notify_or_sleep( int timeout );
+
 #if defined( LINUX )
 		int read_inotify_events( void );
 		int inotify_fd;
-#else
+#endif
 		int statfd;
 		off_t lastSize;
-#endif
 };
 
 #endif
