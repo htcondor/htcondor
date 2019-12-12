@@ -126,7 +126,7 @@ fails to request or recieve the token.  Otherwise, it will exit 0.
 See also
 --------
 
-:manpage:`condor_token_create(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request_approve(1)`
+:manpage:`condor_token_create(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request_approve(1)`, :manpage:`condor_token_request_auto_approve(1)`, :manpage:`condor_token_list(1)`
 
 Author
 ------

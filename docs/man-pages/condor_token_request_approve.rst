@@ -93,7 +93,7 @@ fails to communicate with the remote daemon.  Otherwise, it will exit 0.
 See also
 --------
 
-:manpage:`condor_token_request(1)`, :manpage:`condor_token_fetch(1)`
+:manpage:`condor_token_request(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request_auto_approve(1)`
 
 Author
 ------

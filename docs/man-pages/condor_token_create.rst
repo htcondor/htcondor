@@ -111,7 +111,7 @@ experiences some other error.  Otherwise, it will exit 0.
 See also
 --------
 
-:manpage:`condor_store_cred(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request(1)`
+:manpage:`condor_store_cred(1)`, :manpage:`condor_token_fetch(1)`, :manpage:`condor_token_request(1)`, :manpage:`condor_token_list(1)`
 
 Author
 ------

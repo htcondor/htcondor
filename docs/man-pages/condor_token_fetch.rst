@@ -113,7 +113,7 @@ fails to request or read the token.  Otherwise, it will exit 0.
 See also
 --------
 
-:manpage:`condor_token_create(1)`, :manpage:`condor_token_request(1)`
+:manpage:`condor_token_create(1)`, :manpage:`condor_token_request(1)`, :manpage:`condor_token_list(1)`
 
 Author
 ------
