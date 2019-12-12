@@ -574,8 +574,8 @@ FileLock::obtain( LOCK_TYPE t )
 		
 		if (m_fp)
 		{
-			// restore their FILE*-position
-			fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
+			// restore their FILE*-position, if ftell didn't return an error
+			if (lPosBeforeLock >= 0) fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
 		}
 
 #ifndef WIN32		
