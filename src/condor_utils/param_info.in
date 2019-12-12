@@ -1430,10 +1430,6 @@ type=string
 default=false
 type=bool
 
-[COLLECTOR_FORWARD_INTERVAL]
-default=$(CLASSAD_LIFETIME) / 3
-type=string
-
 [COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS]
 default=$(NEGOTIATOR_CONSIDER_PREEMPTION)
 type=string
