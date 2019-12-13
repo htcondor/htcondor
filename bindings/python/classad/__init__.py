@@ -21,4 +21,5 @@ _logger.setLevel(_logging.DEBUG)
 _logger.addHandler(_logging.NullHandler())
 
 from .classad import *
+
 __version__ = version()

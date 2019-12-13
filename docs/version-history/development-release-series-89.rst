@@ -27,6 +27,12 @@ Bugs Fixed:
   See :ref:`gce_configuration_variables`.
   :ticket:`7401`
 
+-  It is now safe to call functions from the Python bindings ``htcondor`` module
+   on multiple threads simultaneously. See the
+   :ref:`python-bindings-thread-safety` section in the
+   Python bindings documentation for more details.
+   :ticket:`7359`
+
 Version 8.9.5
 -------------
 
@@ -84,7 +90,7 @@ Bugs Fixed:
    :class:`~classad.ExprTree`.
    :ticket:`7372`
 
--  Fixed a bug that caused jobs running with cgroup support to 
+-  Fixed a bug that caused jobs running with cgroup support to
    not be held with an out of memory error.
    :ticket:`7367`
 
@@ -256,7 +262,7 @@ Bugs Fixed:
   :ticket:`7261`
 
 - In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
-  which return an HTTP 301 or 302 redirection but do not include a Location 
+  which return an HTTP 301 or 302 redirection but do not include a Location
   header. These were previously considered successful transfers. We've fixed
   this so they are now considered failures, and the jobs go on hold.
   :ticket:`7292`
@@ -336,16 +342,16 @@ New Features:
   :ticket:`7085`
 
 - Added a Python binding for *condor_submit_dag*. A new method,
-  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
+  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
-  
+
   ::
 
     dag_args = { "maxidle": 10, "maxpost": 5 }
     dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
-  monitored just like any other Submit description object in the Python bindings.  
+  monitored just like any other Submit description object in the Python bindings.
   :ticket:`6275`
 
 - The Python binding's ``JobEventLog`` can now be pickled and unpickled,
@@ -367,8 +373,8 @@ New Features:
   in a ``RuntimeError`` exception.  :ticket:`7109`
 
 - Improved the speed of matchmaking in pools with partitionable slots
-  by simplifying the slot's WithinResourceLimits expression.  This new 
-  definition for this expression now ignores the job's 
+  by simplifying the slot's WithinResourceLimits expression.  This new
+  definition for this expression now ignores the job's
   _condor_RequestXXX attributes, which were never set.
   In pools with simple start expressions, this can double the speed of
   matchmaking.
@@ -379,7 +385,7 @@ New Features:
   expressions in the slot START expression.
   :ticket:`7123`
 
-- Reduced DAGMan's memory footprint when running DAGs with nodes 
+- Reduced DAGMan's memory footprint when running DAGs with nodes
   that use the same submit file and/or current working directory.
   :ticket:`7121`
 
@@ -417,10 +423,10 @@ New Features:
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
 
-- HTCondor now sets numerous environment variables 
+- HTCondor now sets numerous environment variables
   to tell the job (or libraries being used by the job) how many CPU cores
   have been provisioned.  Also added the configuration knob ``STARTER_NUM_THREADS_ENV_VARS``
-  to allow the administrator to customize this set of environment 
+  to allow the administrator to customize this set of environment
   variables.
   :ticket:`7296`
 

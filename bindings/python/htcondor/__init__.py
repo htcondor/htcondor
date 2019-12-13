@@ -15,42 +15,54 @@
 
 import logging as _logging
 
+import platform as _platform
+import warnings as _warnings
+import os as _os
+from os import path as _path
+import re as _re
+
 # SET UP NULL LOG HANDLER
 _logger = _logging.getLogger(__name__)
 _logger.setLevel(_logging.DEBUG)
 _logger.addHandler(_logging.NullHandler())
 
-import platform
-import warnings
-import os.path
 
-# check for condor_config
-if "CONDOR_CONFIG" in os.environ:
-    pass
+def _check_for_config():
+    """
+    Check for CONDOR_CONFIG.
+
+    If CONDOR_CONFIG does not exist on Linux, explicitly use /dev/null instead.
+    """
+    if "CONDOR_CONFIG" in _os.environ:
+        return
+
+    if _platform.system() in ["Linux", "Darwin"]:
+        condor_config_paths = (
+            "/etc/condor/condor_config",
+            "/usr/local/etc/condor_config",
+            _path.expanduser("~condor/condor_config"),
+        )
+
+        if not any(_path.isfile(path) for path in condor_config_paths):
+            message = "Neither the environment variable CONDOR_CONFIG, /etc/condor/, /usr/local/etc/, nor ~condor/ contain a condor_config source. Therefore, we are using a null condor_config."
+            _warnings.warn(message)
+            _os.environ["CONDOR_CONFIG"] = "/dev/null"
 
 
-# if condor_config does not exist on Linux, use /dev/null
-elif platform.system() in ["Linux", "Darwin"]:
-    condor_config_paths = [
-        "/etc/condor/condor_config",
-        "/usr/local/etc/condor_config",
-        os.path.expanduser("~condor/condor_config"),
-    ]
+_check_for_config()
 
-    if not (True in [os.path.isfile(path) for path in condor_config_paths]):
-        os.environ["CONDOR_CONFIG"] = "/dev/null"
-        message = """
-Using a null condor_config.
-Neither the environment variable CONDOR_CONFIG, /etc/condor/,
-/usr/local/etc/, nor ~condor/ contain a condor_config source."""
-        warnings.warn(message)
-
-from .htcondor import *
-from .htcondor import _Param
+from . import htcondor, _lock
 
 # get the version using regexp ideally, and fall back to basic string parsing
-import re as _re
 try:
-    __version__ = _re.match('^.*(\d+\.\d+\.\d+)', version()).group(1)
+    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor.version()).group(1)
 except (AttributeError, IndexError):
-    __version__ = version().split()[1]
+    __version__ = htcondor.version().split()[1]
+
+# add locks in-place
+_lock.add_locks(htcondor, skip=_lock.DO_NOT_LOCK)
+
+# re-import htcondor with a splat to get it into our namespace
+# because of import caching, this respects the mutation we did above
+from .htcondor import *
+from .htcondor import _Param
