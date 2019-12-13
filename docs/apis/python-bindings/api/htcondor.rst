@@ -224,3 +224,21 @@ Esoteric Functionality
 .. .. autoclass:: FileLock
 .. .. autoclass:: LockType
 
+.. _python-bindings-thread-safety:
+
+Thread Safety
+-------------
+
+Most of the ``htcondor`` module is protected by a lock that prevents multiple
+threads from executing locked functions at the same time.
+When two threads both want to call locked functions or methods, they will wait
+in line to execute them one at a time
+(the ordering between threads is not guaranteed beyond "first come first serve").
+Examples of locked functions include:
+:meth:`Schedd.query`, :meth:`Submit.queue`, and :meth:`Schedd.edit`.
+
+Threads that are not trying to execute locked ``htcondor`` functions will
+be allowed to proceed normally.
+
+This locking may cause unexpected slowdowns when using ``htcondor`` from
+multiple threads simultaneously.
