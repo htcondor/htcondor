@@ -36,7 +36,7 @@
 
 FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 	filename( f ), initialized( false ),
-	statfd( -1 ), lastSize( 0 )
+	inotify_fd(-1), statfd( -1 ), lastSize( 0 )
 {
 	statfd = open( filename.c_str(), O_RDONLY );
 	if( statfd == -1 ) {
