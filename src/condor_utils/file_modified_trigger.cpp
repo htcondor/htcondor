@@ -136,13 +136,13 @@ FileModifiedTrigger::read_inotify_events( void ) {
 }
 
 int
-FileModifiedTrigger::notify_or_sleep( int waitfor ) {
+FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
 	struct pollfd pollfds[1];
 	pollfds[0].fd = inotify_fd;
 	pollfds[0].events = POLLIN;
 	pollfds[0].revents = 0;
 
-	int events = poll( pollfds, 1, waitfor );
+	int events = poll( pollfds, 1, timeout_in_ms );
 	switch( events ) {
 		case -1:
 			return -1;
@@ -175,14 +175,14 @@ int usleep( long long microseconds ) {
 #endif /* defined(WINDOWS) */
 
 int
-FileModifiedTrigger::notify_or_sleep( int waitfor ) {
-	return usleep( waitfor * 1000 );
+FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
+	return usleep( timeout_in_ms * 1000 );
 }
 
 #endif /* defined( LINUX ) */
 
 int
-FileModifiedTrigger::wait( int timeout ) {
+FileModifiedTrigger::wait( int timeout_in_ms ) {
 	if(! initialized) {
 		return -1;
 	}
@@ -190,8 +190,8 @@ FileModifiedTrigger::wait( int timeout ) {
 	struct timeval deadline;
 	condor_gettimestamp( deadline );
 
-	deadline.tv_sec += timeout / 1000;
-	deadline.tv_usec += (timeout % 1000) * 1000;
+	deadline.tv_sec += timeout_in_ms / 1000;
+	deadline.tv_usec += (timeout_in_ms % 1000) * 1000;
 	deadline.tv_usec = deadline.tv_usec % 1000000;
 
 	while( true ) {
