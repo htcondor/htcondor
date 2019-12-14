@@ -13,7 +13,7 @@ Synopsis
 [**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
 [**-debug**]
 
-**condor_token_request** [**-help** ]
+**condor_token_request_list** [**-help** ]
 
 Description
 -----------

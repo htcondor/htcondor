@@ -11,7 +11,7 @@ Synopsis
 
 **condor_token_list**
 
-**condor_token_create** **-help**
+**condor_token_list** **-help**
 
 Description
 -----------
@@ -23,7 +23,7 @@ The tokens are stored in files in the directory referenced by
 *SEC_TOKEN_DIRECTORY*; multiple tokens may be saved in each file (one per
 line).
 
-The output format is simply a dump of the JSON Web Token contents, one per
+The output format is a list of the deserialized contents of each token, along with the file name containing the token, one per
 line.  It should not be considered machine readable and will be subject to
 change in future release of HTCondor.
 

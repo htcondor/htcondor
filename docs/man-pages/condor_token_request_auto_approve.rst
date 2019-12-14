@@ -13,12 +13,12 @@ Synopsis
 [**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
 [**-debug**]
 
-**condor_token_request** [**-help** ]
+**condor_token_request_auto_approve** [**-help** ]
 
 Description
 -----------
 
-*condor_token_request_auto_approve* will install an auto-approval rule for token requests.
+*condor_token_request_auto_approve* will install a temporary auto-approval rule for token requests.
 Any token request matching the auto-approval rule will be immediately approved instead
 of requiring administrator approval
 
@@ -33,7 +33,7 @@ the last two conditions.
 It is not safe to enable auto-approval when users have access to any of the involved hosts
 or networks.
 
-To remove auto-approval rules, simply run ``condor_reconfig`` against the remote daemon.:
+To remove auto-approval rules, run ``condor_reconfig`` against the remote daemon.:
 
 By default, *condor_token_request_auto_approve* will install rules at the local *condor_collector*;
 by specifying a combination of **-pool**, **-name**, or **-type**, the tool can

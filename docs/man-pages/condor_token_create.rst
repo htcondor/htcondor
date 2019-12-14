@@ -35,7 +35,7 @@ with the identity listed in the token (subject to the restrictions above).
 
 If successful, the resulting token will be sent to ``stdout``; by specifying
 the **-token** option, it will instead be written to the user's token directory.
-If written to to *SEC_TOKEN_SYSTEM_DIRECTORY* (default ``/etc/condor/tokens.d``),
+If written to *SEC_TOKEN_SYSTEM_DIRECTORY* (default ``/etc/condor/tokens.d``),
 then the token can be used for daemon-to-daemon authentication.
 
 *condor_token_create* is only currently supported on Unix platforms.
@@ -63,11 +63,11 @@ Options
     Set a specific client identity to be written into the token; a client
     will authenticate as this identity with a remote server.
  **-key** *keyid*
-    Specify a specific key to use in the directory specified by the
+    Specify a key file to use under the directory specified by the
     *SEC_PASSWORD_DIRECTORY* configuration variable. The key name must
     match a file in the password directory; the file's contents must
     be created with *condor_store_cred* and will be used to sign the
-    resulting token.  If **-keyid** is not set, then the default pool
+    resulting token.  If **-key** is not set, then the default pool
     password will be used.
  **-lifetime** *value*
     Specify the lifetime, in seconds, for the token to be valid (the
