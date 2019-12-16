@@ -50,6 +50,13 @@ New Features:
    then be updated in the running workflow.
    :ticket:`7236`
 
+-  Implemented a *dataflow* mode for jobs. When enabled, a job whose
+   1) pre-declared output files already exist, and 2) output files are
+   more recent than its input files, is considered a dataflow job and
+   gets skipped. This feature can be enabled by setting the 
+   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to True.
+   :ticket:`7231` 
+
 Bugs Fixed:
 
 -  The Python 3 bindings no longer segfault when putting a
