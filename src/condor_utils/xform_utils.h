@@ -86,7 +86,11 @@ public:
 	//   > 0 = number of statements in MacroStreamCharSource, outmsg is TRANSFORM statement or empty
 	// 
 	int load(FILE* fp, MACRO_SOURCE & source, std::string & errmsg);
+	int open(const char * statements, int & offset, std::string & errmsg);
+private:
 	int open(StringList & statements, const MACRO_SOURCE & source, std::string & errmsg);
+public:
+
 	//bool open(const char * src_string, const MACRO_SOURCE & source); // this is the base class method...
 
 	bool matches(ClassAd * candidate_ad);
@@ -149,7 +153,7 @@ protected:
 //
 class XFormHash {
 public:
-	XFormHash();
+	XFormHash(int options = 0);
 	~XFormHash();
 
 	void init();

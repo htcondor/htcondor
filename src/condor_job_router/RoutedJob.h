@@ -23,7 +23,7 @@
 //#include "condor_common.h"
 
 //uncomment this to have the job router use the XFORM_UTILS library (i.e. the same code as schedd's job transforms)
-//#define USE_XFORM_UTILS 1
+#define USE_XFORM_UTILS 1
 #ifdef USE_XFORM_UTILS
 #include <xform_utils.h>
 #endif
@@ -109,6 +109,8 @@ class JobRoute {
 #endif
 	char const *Name() {return m_name.c_str();}
 	char const *Source() {return m_source.c_str(); } // where the route was sourced, i.e. CMD, FILE or ROUTE
+	bool FromClassadSyntax() { return m_route_from_classad; }
+	bool UsePreRouteTransform() { return m_use_pre_route_transform; }
 	int MaxJobs() {return m_max_jobs;}
 	int MaxIdleJobs() {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() {return m_num_jobs;}
@@ -117,6 +119,7 @@ class JobRoute {
 #ifdef USE_XFORM_UTILS
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
+	bool UsesPreRouteTransform() { return m_use_pre_route_transform; }
 	std::string RouteString() {
 		std::string str;
 		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }
@@ -144,7 +147,13 @@ class JobRoute {
 	void CopyState(JobRoute *route);
 
 #ifdef USE_XFORM_UTILS
-	bool ParseNext(const std::string & routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
+	bool ParseNext(
+		const std::string & routing_string,
+		int &offset,
+		classad::ClassAd const *router_defaults_ad,
+		bool allow_empty_requirements,
+		const char * config_name,
+		std::string & errmsg);
 #else
 	bool ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
 #endif
@@ -153,7 +162,14 @@ class JobRoute {
 	// resubmitting it.  It does so by having attributes of the following form:
 	//   set_XXX = Value   (assigns XXX = Value in job ad, replace existing)
 	//   copy_XXX = YYY    (copies value of XXX to attribute YYY in job ad)
+#ifdef USE_XFORM_UTILS
+	bool ApplyRoutingJobEdits(
+		ClassAd *src_ad,
+		SimpleList<MacroStreamXFormSource*>& pre_route_xfms,
+		SimpleList<MacroStreamXFormSource*>& post_route_xfms);
+#else
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
+#endif
 
 	bool AcceptingMoreJobs();
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
@@ -193,6 +209,8 @@ class JobRoute {
 
 #ifdef USE_XFORM_UTILS
 	MacroStreamXFormSource m_route;
+	bool m_route_from_classad;
+	bool m_use_pre_route_transform;
 #else
 	classad::ClassAd m_route_ad;   // ClassAd describing the route
 #endif
