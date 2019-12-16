@@ -90,13 +90,15 @@ def add_lock(func):
     return wrapper
 
 
-class LockedContext:
+class LockedContext(object):
     def __init__(self, cm, lock):
         self.cm = cm
         self.lock = lock
 
     def __enter__(self):
-        return self.cm.__enter__()
+        # TODO: when Transaction.__enter__ gets the correct self on Python 2, return rv instead
+        rv = self.cm.__enter__()
+        return self.cm
 
     def __exit__(self, *args, **kwargs):
         try:
