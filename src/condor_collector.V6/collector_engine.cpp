@@ -587,7 +587,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			{
 				EXCEPT ("Memory error!");
 			}
-			if( !getClassAd(sock, *pvtAd) )
+			if( !getClassAdEx(sock, *pvtAd, m_get_ad_options) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
 				delete pvtAd;
