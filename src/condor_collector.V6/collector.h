@@ -211,6 +211,7 @@ protected:
 	static class CCBServer *m_ccb_server;
 
 	static bool filterAbsentAds;
+	static bool forwardClaimedPrivateAds;
 
 private:
 

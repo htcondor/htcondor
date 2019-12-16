@@ -102,6 +102,7 @@ StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
+bool CollectorDaemon::forwardClaimedPrivateAds = true;
 
 Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
 Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
@@ -1967,6 +1968,7 @@ void CollectorDaemon::Config()
 		filterAbsentAds = false;
 	}
 
+	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
 	return;
 }
 
@@ -2167,7 +2169,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
-		if (pvtAd && !param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true)){
+		if (pvtAd && !forwardClaimedPrivateAds){
 			std::string state;
 			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
 				pvtAd = NULL;
