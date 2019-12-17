@@ -87,6 +87,10 @@ Bugs Fixed:
 -  SciTokens support is now available on all linux and macOS platforms.
    :ticket:`7406`
 
+-  Fixed a bug that caused the Python bindings included in the tarball
+   package to fail due to a missing library dependency.
+   :ticket:`7435`
+
 Version 8.9.4
 -------------
 
