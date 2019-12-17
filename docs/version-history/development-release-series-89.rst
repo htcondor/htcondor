@@ -84,6 +84,9 @@ Bugs Fixed:
    character, the error message will now be propagated to the job's hold message.
    :ticket:`7395`
 
+-  SciTokens support is now available on all linux and macOS platforms.
+   :ticket:`7406`
+
 Version 8.9.4
 -------------
 
