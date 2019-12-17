@@ -3,7 +3,7 @@ index 8bc762a9cd..cf96a1af15 100755
 --- a/externals/bundles/blahp/1.16.5.1/pbs_status.py
 +++ b/externals/bundles/blahp/1.16.5.1/pbs_status.py
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  
  #  File:     pbs_status.py
@@ -13,7 +13,7 @@ index a0fa5917c8..bef5a334a4 100644
 --- a/src/azure_gahp/AzureGAHPServer.py
 +++ b/src/azure_gahp/AzureGAHPServer.py
 @@ -1,4 +1,4 @@
--#!/usr/bin/env python2 -u
+-#!/usr/bin/env python -u
 +#!/usr/bin/env python3 -u
  
  from __future__ import print_function
@@ -23,7 +23,7 @@ index 66c75ce31f..b66dd59879 100755
 --- a/src/condor_contrib/bosco/bosco_findplatform
 +++ b/src/condor_contrib/bosco/bosco_findplatform
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  #Marco Mambelli - first version 10/8/2012 
  
@@ -33,7 +33,7 @@ index 6848fa91e5..2e514393b3 100755
 --- a/src/condor_contrib/bosco/bosco_ssh_start
 +++ b/src/condor_contrib/bosco/bosco_ssh_start
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  
  from __future__ import print_function
@@ -43,7 +43,7 @@ index 536b1aa567..cde2f5ffb6 100755
 --- a/src/condor_contrib/bosco/htsub
 +++ b/src/condor_contrib/bosco/htsub
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  """
  htsub command to submit high throughput jobs via BOSCO/HTCondor:
@@ -53,7 +53,7 @@ index 674521062e..8067a71af9 100755
 --- a/src/condor_contrib/campus_factory/bin/glidein_creation
 +++ b/src/condor_contrib/campus_factory/bin/glidein_creation
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  
  import warnings
@@ -63,7 +63,7 @@ index 2efe1683aa..3af42cfbaa 100755
 --- a/src/condor_contrib/campus_factory/bin/runfactory
 +++ b/src/condor_contrib/campus_factory/bin/runfactory
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  from optparse import OptionParser
  
@@ -73,7 +73,7 @@ index 49f6ef696d..0d1b6933b6 100755
 --- a/src/condor_gridmanager/slurm_status.py
 +++ b/src/condor_gridmanager/slurm_status.py
 @@ -1,4 +1,4 @@
--#!/usr/bin/python2
+-#!/usr/bin/python
 +#!/usr/bin/python3
  
  #  File:     slurm_status.py
@@ -83,7 +83,7 @@ index 452f0b6aca..2e49cd9b54 100755
 --- a/src/condor_job_router/condor_router_history
 +++ b/src/condor_job_router/condor_router_history
 @@ -1,4 +1,4 @@
--#!/usr/bin/env python2
+-#!/usr/bin/env python
 +#!/usr/bin/env python3
  ##**************************************************************
  ##
@@ -103,7 +103,7 @@ index 4fab810e5c..9c838c76e1 100755
 --- a/src/condor_scripts/condor_top
 +++ b/src/condor_scripts/condor_top
 @@ -1,4 +1,4 @@
--#!/usr/bin/env python2
+-#!/usr/bin/env python
 +#!/usr/bin/env python3
  
  import htcondor
