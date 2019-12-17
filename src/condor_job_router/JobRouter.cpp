@@ -466,6 +466,7 @@ JobRouter::config() {
 			if (xfm->open(xfm_text, offset, errmsg) < 0) {
 				dprintf( D_ALWAYS, "%s load error: %s\n", xfm_param.c_str(), errmsg.c_str());
 				m_enable_job_routing = false;
+				delete xfm;
 			} else {
 				m_pre_route_xfms.Append(xfm);
 			}
