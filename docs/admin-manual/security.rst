@@ -716,7 +716,7 @@ GSI Authentication
 The GSI (Grid Security Infrastructure) protocol provides an avenue for
 HTCondor to do PKI-based (Public Key Infrastructure) authentication
 using X.509 certificates. The basics of GSI are well-documented
-elsewhere, such as `http://www.globus.org/ <http://www.globus.org/>`_.
+elsewhere, such as `https://gridcf.org/gct-docs/latest/gsic/key/index.html <https://gridcf.org/gct-docs/latest/gsic/key/index.html>`_.
 
 A simple introduction to this type of authentication defines HTCondor's
 use of terminology, and it illuminates the needed items that HTCondor
