@@ -15,6 +15,14 @@ Release Notes:
 
 New Features:
 
+-  Jobs which must use temporary credentials for S3 access may now specify
+   the "session token" in their submit files.  Set ``+EC2SessionToken``
+   to the name of a file whose only content is the session token.  Temporary
+   credentials have a limited lifetime, which HTCondor does not help you
+   manage; as a result, file transfers may fail because the temporary
+   credentials expired.
+   :ticket:`7407`
+
 -  You may now specify ports to forward into your Docker container.  See
    :ref:`Docker and Networking` for details.
    :ticket:`7322`
