@@ -8,6 +8,23 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.8
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.8 not yet released.
+
+.. HTCondor version 8.8.8 released on Month Date, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 Version 8.8.7
 -------------
 
@@ -28,6 +45,13 @@ New Features:
 
 -  Added a python enum for DaemonOn and DaemonsOn
    :ticket:`7380`
+
+-  Reverted an earlier change which prohibited certain characters in
+   DAGMan node names. The period (.) character is now allowed again.
+   We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
+   configuration option, which, when sent to true, allow any characters 
+   (even illegal ones) to be allowed in node names.
+   :ticket:`7403`
 
 Bugs Fixed:
 
