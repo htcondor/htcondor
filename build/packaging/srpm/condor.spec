@@ -64,6 +64,10 @@
 %endif
 %endif
 
+%if 0%{?osg} && 0%{?rhel} == 7
+%define cream 0
+%endif
+
 # cream support is going away, skip for EL8
 %if 0%{?rhel} >= 8
 %define cream 0
@@ -278,6 +282,7 @@ BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
 BuildRequires: munge-devel
+BuildRequires: scitokens-cpp-devel
 BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
@@ -414,6 +419,10 @@ Requires(post): selinux-policy-targeted
 #Provides: group(condor) = 43
 
 Obsoletes: condor-static < 7.2.0
+
+%if ! %cream
+Obsoletes: condor-cream-gahp <= %{version}
+%endif
 
 %description
 HTCondor is a specialized workload management system for
@@ -1370,6 +1379,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_token_create.1.gz
+%_mandir/man1/condor_token_fetch.1.gz
+%_mandir/man1/condor_token_list.1.gz
+%_mandir/man1/condor_token_request.1.gz
+%_mandir/man1/condor_token_request_approve.1.gz
+%_mandir/man1/condor_token_request_auto_approve.1.gz
+%_mandir/man1/condor_token_request_list.1.gz
 %_mandir/man1/condor_top.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz

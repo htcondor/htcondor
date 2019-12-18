@@ -79,6 +79,13 @@ New Features:
    then be updated in the running workflow.
    :ticket:`7236`
 
+-  Implemented a *dataflow* mode for jobs. When enabled, a job whose
+   1) pre-declared output files already exist, and 2) output files are
+   more recent than its input files, is considered a dataflow job and
+   gets skipped. This feature can be enabled by setting the 
+   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to True.
+   :ticket:`7231` 
+
 Bugs Fixed:
 
 -  The Python 3 bindings no longer segfault when putting a
@@ -105,6 +112,13 @@ Bugs Fixed:
 -  When file transfers fail with an error message containing a newline (``\n``)
    character, the error message will now be propagated to the job's hold message.
    :ticket:`7395`
+
+-  SciTokens support is now available on all linux and macOS platforms.
+   :ticket:`7406`
+
+-  Fixed a bug that caused the Python bindings included in the tarball
+   package to fail due to a missing library dependency.
+   :ticket:`7435`
 
 Version 8.9.4
 -------------
