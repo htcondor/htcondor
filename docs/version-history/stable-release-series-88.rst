@@ -38,6 +38,10 @@ New Features:
 
 Bugs Fixed:
 
+-  The *condor_update_machine_ad* tool now respects the ``-pool`` and
+   ``-name`` options.
+   :ticket:`7378`
+
 -  The *condor_wait* command will now function properly when reading a
    file on AFS that a process on another machine is writing.  This bug
    may have manifested as the machine running *condor_wait* not seeing
