@@ -12,7 +12,7 @@ fi
 if [[ -n $DOCKER_IMAGE ]]; then
     BUILD_TESTING=TRUE
 else
-    BUILD_TESTING=FALSE
+    BUILD_TESTING=TRUE
 fi
 
 cat > "$progdir/env.sh" <<__END__
@@ -89,8 +89,13 @@ export RPM_DEPENDENCIES=(
 )
 
 export DOCKER_IMAGE=$DOCKER_IMAGE
+
+export CONDOR_SRC=${PWD}
+
+export BUILD_UID=$(id -u)
+export BUILD_GID=$(id -g)
 __END__
-trap 'rm -f "$progdir/env.sh"' ERR EXIT
+trap 'rm -f "$progdir/env.sh" && rm -f "$progdir/cmake_driver_script.sh"' ERR EXIT
 source "$progdir/env.sh"
 
 
@@ -109,7 +114,7 @@ quiet_make () {
 set -eu
 
 if [[ -z $DOCKER_IMAGE ]]; then
-    time cmake "${CMAKE_OPTIONS[@]}"
+    time cmake "${CMAKE_OPTIONS[@]}" "-DCMAKE_INSTALL_PREFIX=${PWD}/release_dir"
     if [[ $PROPER == OFF ]]; then
         if [[ $GLOBUS == ON ]]; then
             quiet_make globus
@@ -117,7 +122,7 @@ if [[ -z $DOCKER_IMAGE ]]; then
         quiet_make boost
         time make -j2 externals
     fi
-    time make -j2
+    time make -j2 install && (time ctest -j8 -L travis || cat Testing/Temporary/LastTest.log)
 else
     touch bld_external_rhel bld_external
     sudo docker run --rm=true -w "`pwd`" -v "`pwd`:`pwd`" $DOCKER_IMAGE /bin/bash -x "$progdir/build_inside_docker.sh"
