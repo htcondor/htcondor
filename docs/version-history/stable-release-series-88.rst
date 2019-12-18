@@ -46,6 +46,13 @@ New Features:
 -  Added a python enum for DaemonOn and DaemonsOn
    :ticket:`7380`
 
+-  Reverted an earlier change which prohibited certain characters in
+   DAGMan node names. The period (.) character is now allowed again.
+   We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
+   configuration option, which, when sent to true, allow any characters 
+   (even illegal ones) to be allowed in node names.
+   :ticket:`7403`
+
 Bugs Fixed:
 
 -  The *condor_wait* command will now function properly when reading a

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 """
 htsub command to submit high throughput jobs via BOSCO/HTCondor:
 http://jira.opensciencegrid.org/browse/CAMPUS-54

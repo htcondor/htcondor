@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 #Marco Mambelli - first version 10/8/2012 
 
 from __future__ import print_function

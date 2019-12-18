@@ -8681,6 +8681,12 @@ Log files
     initialization process. If not defined,
     ``DAGMAN_LOG_ON_NFS_IS_ERROR`` defaults to ``False``.
 
+``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS`` :index:`DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS`
+    Allows any characters to be used in DAGMan node names, even
+    characters that are considered illegal because they are used internally
+    as separators. Turning this feature on could lead to instability when
+    using splices or munged node names. The default value is ``False``.
+
 ``DAGMAN_ALLOW_EVENTS`` :index:`DAGMAN_ALLOW_EVENTS`
     An integer that controls which bad events are considered fatal
     errors by *condor_dagman*. This macro replaces and expands upon the
