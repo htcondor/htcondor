@@ -525,7 +525,7 @@ export_classad()
             R"C0ND0R(
             As :meth:`dict.values`.
             )C0ND0R")
-        .def("items", boost::python::range(&ClassAdWrapper::beginItems, &ClassAdWrapper::endItems),
+        .def("items", &ClassAdWrapper::items, with_custodian_and_ward_postcall<0, 1>(),
             R"C0ND0R(
             As :meth:`dict.items`.
             )C0ND0R")
