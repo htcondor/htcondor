@@ -1330,11 +1330,6 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 }
 
 
-static volatile bool ClassAdExprFPE = false;
-#ifndef WIN32
-void ClassAd_SIGFPE_handler (int) { ClassAdExprFPE = true; }
-#endif
-
 int Operation::
 doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
@@ -1348,20 +1343,6 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	v1.IsRealValue (r1);
 	v2.IsRealValue (r2);
 
-#if 0
-#ifndef WIN32
-    struct sigaction sa1, sa2;
-    sa1.sa_handler = ClassAd_SIGFPE_handler;
-    sigemptyset (&(sa1.sa_mask));
-    sa1.sa_flags = 0;
-    if (sigaction (SIGFPE, &sa1, &sa2)) {
-       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
-			errno);
-    }
-#endif
-#endif
-
-	ClassAdExprFPE = false;
 	errno = 0;
 	switch (op) {
 		case ADDITION_OP:       comp = r1+r2;  break;
@@ -1377,20 +1358,11 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	}
 
 	// check if anything bad happened
-	if (ClassAdExprFPE==true || errno==EDOM || errno==ERANGE || comp==HUGE_VAL)
+	if (errno==EDOM || errno==ERANGE || comp==HUGE_VAL)
 		result.SetErrorValue ();
 	else
 		result.SetRealValue (comp);
 
-	// restore the state
-#if 0
-#ifndef WIN32 
-    if (sigaction (SIGFPE, &sa2, &sa1)) {
-        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
-			errno);
-    }
-#endif
-#endif
 	return( SIG_CHLD1 | SIG_CHLD2 );
 }
 
