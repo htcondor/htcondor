@@ -79,7 +79,7 @@ if (DARWIN)
 endif()
 
 condor_shared_lib( condor_utils "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
-add_dependencies(condor_utils utils_genparams syscall_numbers )
+add_dependencies(condor_utils utils_genparams )
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 else()
@@ -94,7 +94,7 @@ endif()
 #
 if (LINUX OR DARWIN)
    condor_static_lib( condor_utils_s "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
-   add_dependencies( condor_utils_s utils_genparams syscall_numbers )
+   add_dependencies( condor_utils_s utils_genparams )
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
    if (HAVE_GNU_LD)
 	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
@@ -135,7 +135,7 @@ if ( DARWIN )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${UTILS_LIB_NAME}.dylib)" )
 endif()
-add_dependencies(condor_utils utils_genparams syscall_numbers )
+add_dependencies(condor_utils utils_genparams )
 
 ##################################################
 # condorapi & tests

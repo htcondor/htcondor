@@ -244,27 +244,8 @@ Stream::~Stream(){};
 	int Stream::code_bytes(void *, int ){ return not_impl(); }
 	int Stream::code_bytes_bool(void *, int ){ return not_impl(); }
 	int Stream::code(PROC_ID &){ return not_impl(); }
-	int Stream::code(STARTUP_INFO &){ return not_impl(); }
-	int Stream::code(PORTS &){ return not_impl(); }
-	int Stream::code(StartdRec &){ return not_impl(); }
 	int Stream::code(open_flags_t &){ return not_impl(); }
-	int Stream::code(struct stat &){ return not_impl(); }
 	int Stream::code(condor_errno_t &){ return not_impl(); }
-#if !defined(WIN32)
-	int Stream::code(condor_signal_t &){ return not_impl(); }
-	int Stream::code(fcntl_cmd_t &){ return not_impl(); }
-	int Stream::code(struct rusage &){ return not_impl(); }
-	int Stream::code(struct statfs &){ return not_impl(); }
-	int Stream::code(struct timezone &){ return not_impl(); }
-	int Stream::code(struct timeval &){ return not_impl(); }
-	int Stream::code(struct utimbuf &){ return not_impl(); }
-	int Stream::code(struct rlimit &){ return not_impl(); }
-	int Stream::code_array(gid_t *&, int &){ return not_impl(); }
-#endif // !defined(WIN32)
-#if HAS_64BIT_STRUCTS
-	int Stream::code(struct stat64 &){ return not_impl(); }
-	int Stream::code(struct rlimit64 &){ return not_impl(); }
-#endif
 void Stream::allow_one_empty_message() { not_impl(); }
 int Stream::put(char const *){ return not_impl(); }
 int Stream::put(char const *, int){ return not_impl(); }
