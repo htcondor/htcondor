@@ -503,7 +503,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// with a more foolproof method.
 	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp ) {
+	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
 			// TODO Should we be ignoring the return value of condor_read?
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
