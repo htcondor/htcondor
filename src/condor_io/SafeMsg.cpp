@@ -368,21 +368,21 @@ int _condorPacket::getn(char* dta, const int size)
  */
 int _condorPacket::getPtr(void *&ptr, const char delim)
 {
-	int temp;
-	int size =  1;
-
-	temp = curIndex;
-	while(temp < length && data[temp] != delim) {
-		temp++;
-		size++;
-	}
-
-	if(temp == length) // not found
+	if(curIndex >= length) {
 		return -1;
-	// found
+	}
+	char *msgbuf = &data[curIndex];
+	size_t msgbufsize = length - curIndex;
+	char *delim_ptr = (char *)memchr(msgbuf, delim, msgbufsize);
+
+	if(delim_ptr == NULL) {
+		return -1;
+	}
+	// read past the delimiter
+	delim_ptr++;
 	ptr = &data[curIndex];
-	curIndex += size;
-	return size;
+	curIndex = delim_ptr - data;
+	return delim_ptr - msgbuf;
 }
 
 
