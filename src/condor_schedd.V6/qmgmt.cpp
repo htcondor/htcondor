@@ -3827,6 +3827,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
+		if (MATCH == strcmp(owner, "root") || MATCH == strcmp(owner, "LOCAL_SYSTEM")) {
+			// Never allow the owner to be "root" (Linux) or "LOCAL_SYSTEM" (Windows).
+			// Because we run cross-platform, we never allow either name on all platforms
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting owner to %s is not permitted\n", attr_value);
+			errno = EACCES;
+			return -1;
+		}
+
 		MyString orig_owner;
 		if( GetAttributeString(cluster_id,proc_id,ATTR_OWNER,orig_owner) >= 0
 			&& orig_owner != owner
