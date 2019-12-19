@@ -34,7 +34,7 @@
 // Forward dec'l
 class ReliSock;
 
-void AttrList_setPublishServerTimeMangled( bool publish);
+void AttrList_setPublishServerTime(bool publish);
 
 namespace compat_classad { class ClassAd; } //forward declaration
 compat_classad::ClassAd* getClassAd( Stream *sock );
@@ -95,11 +95,4 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options,
 //  > 0 if valid, non-empty projection
 int mergeProjectionFromQueryAd(classad::ClassAd & queryAd, const char * attr_projection, classad::References & projection, bool allow_list = false);
 
-
-//this is a shorthand version of EvalTree w/o a target ad.
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v);
-
-// this will return false when `mine` doesn't exist, or if one of the inner
-// calls to Evaluate fails.
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v);
 #endif
