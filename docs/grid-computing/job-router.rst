@@ -227,6 +227,9 @@ multi-line values, as shown in the example below (see the
 :ref:`admin-manual/introduction-to-configuration:multi-line values` section
 for more details).
 
+As of version 8.8.7, the order in which routes are considered can be
+configured by specifying `JOB_ROUTER_ROUTE_NAMES`. 
+
 ::
 
 
@@ -252,18 +255,21 @@ for more details).
     # Now we define each of the routes to send jobs on
     JOB_ROUTER_ENTRIES @=jre
       [ GridResource = "gt2 site1.edu/jobmanager-condor";
-        name = "Site 1";
+        name = "Site_1";
       ]
       [ GridResource = "gt2 site2.edu/jobmanager-pbs";
-        name = "Site 2";
+        name = "Site_2";
         set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)";
       ]
       [ GridResource = "condor submit.site3.edu condor.site3.edu";
-        name = "Site 3";
+        name = "Site_3";
         set_remote_jobuniverse = 5;
       ]
       @jre
 
+    # Optionally define the order that routes should be considered
+    # uncomment this line to declare the order 
+    #JOB_ROUTER_ROUTE_NAMES = Site_1 Site_2 Site_3
 
     # Reminder: you must restart HTCondor for changes to DAEMON_LIST to take effect.
     DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER
