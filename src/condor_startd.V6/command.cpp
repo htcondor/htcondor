@@ -34,8 +34,6 @@ using std::map;
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
-
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
 
 int

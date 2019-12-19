@@ -1269,7 +1269,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// fill in the values we got from the kernel
 		// CPU times are given in nanoseconds.
-		procRaw.imgsize = (u_long)ru.ri_phys_footprint;
+		procRaw.imgsize = (unsigned long)ru.ri_phys_footprint;
 		procRaw.rssize = ru.ri_resident_size;
 		procRaw.user_time_1 = ru.ri_user_time / 1000000000;
 		procRaw.user_time_2 = ru.ri_user_time % 1000000000;
@@ -1343,7 +1343,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			}
 
 			// fill in the values we got from the kernel
-			procRaw.imgsize = (u_long)ti.virtual_size;
+			procRaw.imgsize = (unsigned long)ti.virtual_size;
 			procRaw.rssize = ti.resident_size;
 			procRaw.user_time_1 = ti.user_time.seconds;
 			procRaw.user_time_2 = 0;

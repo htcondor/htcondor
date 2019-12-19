@@ -27,7 +27,6 @@
 #include "status_types.h"
 #include "totals.h"
 
-#include "condor_collector.h"
 #include "collector_engine.h"
 #include "hashkey.h"
 

@@ -26,8 +26,6 @@
 
 #include "condor_common.h"
 
-#include "condor_socket_types.h"
-
 #if HAVE_CLONE
 #include <sched.h>
 #include <sys/syscall.h>

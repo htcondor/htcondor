@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_network.h"
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"

@@ -28,7 +28,6 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "condor_network.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
@@ -1122,7 +1121,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int previous_size = 0;
 	int attempt_size = 0;
 	int command;
-	SOCKET_LENGTH_TYPE temp;
+	socklen_t temp;
 
 	ASSERT(_state != sock_virgin); 
 
@@ -1135,7 +1134,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
 	::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,(socklen_t*)&temp);
+			(char*)&current_size,&temp);
 	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
 		current_size / 1024);
 	current_size = 0;
@@ -1165,7 +1164,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		previous_size = current_size;
 		temp = sizeof(int);
 		::getsockopt( _sock, SOL_SOCKET, command,
- 					  (char*)&current_size, (socklen_t*)&temp );
+					  (char*)&current_size, &temp );
 
 	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
 			  (attempt_size < desired_size) );
@@ -1870,8 +1869,8 @@ bool Sock::test_connection()
     // that way. --Sonny 7/16/2003
 
 	int error;
-    SOCKET_LENGTH_TYPE len = sizeof(error);
-    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, (socklen_t*)&len) < 0) {
+    socklen_t len = sizeof(error);
+    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {
 		connect_state.connect_failed = true;
 #if defined(WIN32)
 		setConnectFailureErrno(WSAGetLastError(),"getsockopt");
@@ -2567,7 +2566,7 @@ Sock::peer_is_local() const
     mySockAddr.sin_port = htons( 0 );
 		// invoke OS bind, not cedar bind - cedar bind does not allow us
 		// to specify the local address.
-	if ( ::bind(sock, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE) &mySockAddr, 
+	if ( ::bind(sock, (const struct sockaddr*) &mySockAddr,
 		        sizeof(mySockAddr)) < 0 ) 
 	{
 		// failed to bind.  assume we failed  because the peer address is

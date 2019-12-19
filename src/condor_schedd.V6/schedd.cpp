@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
-#include "condor_collector.h"
 #include "scheduler.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"

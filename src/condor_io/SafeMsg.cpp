@@ -556,22 +556,22 @@ void _condorPacket::makeHeader(bool last, int seqNo,
 	memcpy(dataGram, SAFE_MSG_MAGIC, 8);
 
 	dataGram[8] = (char) last;
-	stemp = htons((u_short)seqNo);
+	stemp = htons((unsigned short)seqNo);
 	memcpy(&dataGram[9], &stemp, 2);
 
-	stemp = htons((u_short)length);
+	stemp = htons((unsigned short)length);
 	memcpy(&dataGram[11], &stemp, 2);
 
-	ltemp = htonl((u_long)msgID.ip_addr);
+	ltemp = htonl((unsigned long)msgID.ip_addr);
 	memcpy(&dataGram[13], &ltemp, 4);
 
-	stemp = htons((u_short)msgID.pid);
+	stemp = htons((unsigned short)msgID.pid);
 	memcpy(&dataGram[17], &stemp, 2);
 
-	ltemp = htonl((u_long)msgID.time);
+	ltemp = htonl((unsigned long)msgID.time);
 	memcpy(&dataGram[19], &ltemp, 4);
 
-	stemp = htons((u_short)msgID.msgNo);
+	stemp = htons((unsigned short)msgID.msgNo);
 	memcpy(&dataGram[23], &stemp, 2);
 
     // Above is the end of the regular 6.2 version header
@@ -589,13 +589,13 @@ void _condorPacket::makeHeader(bool last, int seqNo,
         // First, set our special handshake code
         memcpy(&dataGram[25], THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4);
 
-        stemp = htons((u_short)flags);
+        stemp = htons((unsigned short)flags);
         memcpy(&dataGram[29], &stemp, 2);
         // how long is the outgoing MD key?
-        stemp = htons((u_short) outgoingMdLen_);
+        stemp = htons((unsigned short) outgoingMdLen_);
         memcpy(&dataGram[31], &stemp, 2);
         // Maybe one for encryption as well
-        stemp = htons((u_short) outgoingEidLen_);
+        stemp = htons((unsigned short) outgoingEidLen_);
         memcpy(&dataGram[33], &stemp, 2);
 
         addExtendedHeader(mac);   // Add encryption id if necessary

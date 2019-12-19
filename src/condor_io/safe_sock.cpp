@@ -27,7 +27,6 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
-#include "condor_socket_types.h"
 #include "condor_config.h"
 #include "condor_netdb.h"
 #include "selector.h"
@@ -541,12 +540,6 @@ int SafeSock::peek(char &c)
 int SafeSock::handle_incoming_packet()
 {
 
-//#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-	/* SOCKET_ALTERNATE_LENGTH_TYPE is void on this platform, and
-		since noone knows what that void* is supposed to point to
-		in recvfrom, I'm going to predict the "fromlen" variable
-		the recvfrom uses is a size_t sized quantity since
-		size_t is how you count bytes right?  Stupid Solaris. */
 	bool last;
 	int seqNo, length;
 	_condorMsgID mID;

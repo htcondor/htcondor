@@ -85,39 +85,6 @@
 ** Clean-up, default definitions, etc.
 **********************************************************************/
 
-#if !defined(HAS_U_TYPES)
-    typedef unsigned int	u_int;
-    typedef unsigned char	u_char;
-    typedef unsigned short	u_short;
-    typedef unsigned long	u_long;
-#endif
-
-#if !defined(NO_VOID_SIGNAL_RETURN)
-#	define VOID_SIGNAL_RETURN	1
-#endif
-
-#if !defined(SIGISMEMBER_IS_BROKEN)
-#	define SIGISMEMBER_IS_BROKEN 0
-#endif
-
-#if !defined(HAS_F_DUP2FD)
-#	define HAS_F_DUP2FD 0
-#endif
-
-#if !defined(NBBY)
-#	define NBBY 8
-#endif
-
-#if !defined(NFDS)
-#	define NFDS(x) (x)
-#endif
-
-
-/* If WCOREFLAG is defined but WCOREFLG is not, define WCOREFLG since
-   that's what we use in our code. */
-#if defined(WCOREFLAG) && !defined(WCOREFLG)
-#	define WCOREFLG WCOREFLAG
-#endif
 
 #ifndef _POSIX_PATH_MAX
 #	define _POSIX_PATH_MAX 255

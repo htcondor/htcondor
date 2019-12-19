@@ -22,7 +22,6 @@
 #define SOCK_H
 
 #include "condor_common.h"
-#include "condor_socket_types.h"
 #include "stream.h"
 #include "CondorError.h"
 #include "condor_perms.h"
