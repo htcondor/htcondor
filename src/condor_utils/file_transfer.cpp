@@ -1890,7 +1890,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// make a pipe to communicate with our thread
 		if (!daemonCore->Create_Pipe(TransferPipe,true)) {
 			dprintf(D_ALWAYS, "Create_Pipe failed in "
-					"FileTransfer::Upload\n");
+					"FileTransfer::Download\n");
 			return FALSE;
 		}
 
@@ -1899,7 +1899,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 											(PipeHandlercpp)&FileTransfer::TransferPipeHandler,
 											"TransferPipeHandler",
 											this)) {
-			dprintf(D_ALWAYS,"FileTransfer::Upload() failed to register pipe.\n");
+			dprintf(D_ALWAYS,"FileTransfer::Download() failed to register pipe.\n");
 			return FALSE;
 		}
 		else {
