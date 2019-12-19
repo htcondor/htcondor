@@ -501,6 +501,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
+		// Note: We no longer support soap, but this peek is part of the
+		//   code below that checks if this is a command that shared port
+		//   should transparently hand off to the collector.
 	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
