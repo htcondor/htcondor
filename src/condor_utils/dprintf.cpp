@@ -809,7 +809,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	//time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
-	mode_t		old_umask;
 #endif
 	int saved_errno;
 	priv_state	priv;
@@ -848,7 +847,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	art.is_enabled = true;
 #endif
 
-#if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
+#if !defined(WIN32) /* signals don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
@@ -860,11 +859,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
-
-		/* Make sure our umask is reasonable, in case we're the shadow
-		   and the remote job has tried to set its umask or
-		   something.  -Derek Wright 6/11/98 */
-	old_umask = umask( 022 );
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -903,7 +897,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   log anything when we're in PRIV_USER_FINAL, to avoid
 		   exit(DPRINTF_ERROR). */
 	if (get_priv() == PRIV_USER_FINAL) {
-		/* Ensure to undo the signal blocking/umask code for unix and
+		/* Ensure to undo the signal blocking code for unix and
 			leave the critical section for windows. */
 		goto cleanup;
 	}
@@ -1003,11 +997,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	cleanup:
 
 	errno = saved_errno;
-
-#if !defined(WIN32) // umasks don't exist in WIN32
-		/* restore umask */
-	(void)umask( old_umask );
-#endif
 
 	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
