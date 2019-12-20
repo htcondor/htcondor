@@ -21,7 +21,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sysapi.h"
-#include <sys/sysinfo.h>
+
+#if defined(LINUX)
+#  include <sys/sysinfo.h>
+#endif
 
 /*
 ** Try to determine the swap space available on our own machine.  The answer
