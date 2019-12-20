@@ -170,8 +170,13 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			}
 
 			listen_sock = std::shared_ptr<ReliSock>( new ReliSock() );
+
 			// Should bind() should accept a condor_sockaddr directly?
-			listen_sock->bind( ccbSA.get_protocol(), false, 0, false );
+			if (!listen_sock->bind( ccbSA.get_protocol(), false, 0, false )) {
+				dprintf(D_ALWAYS,"CCBClient: can't bind listen socket\n");
+				return false;
+			}
+
 			if( ! listen_sock->listen() ) {
 				MyString errmsg;
 				errmsg.formatstr( "Failed to listen for reversed connection from %s.",
