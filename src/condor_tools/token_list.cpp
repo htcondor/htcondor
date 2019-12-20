@@ -118,7 +118,7 @@ bool printToken(const std::string &tokenfilename) {
 			printf("Header: %s Payload: %s File: %s\n", decoded_jwt.get_header().c_str(),
 				decoded_jwt.get_payload().c_str(),
 				tokenfilename.c_str());
-		} catch (std::exception) {
+		} catch (...) {
 			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
 		}
 #endif
