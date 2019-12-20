@@ -1122,6 +1122,18 @@ FILE TRANSFER COMMANDS
         # If necessary
         aws_region = <region>
 
+    If you must access S3 using temporary credentials, you may specify the
+    temporary credentials using ``aws_access_key_id_file`` and
+    ``aws_secret_access_key_file`` for the files containing the corresponding
+    temporary token, and ``+EC2SessionToken`` for the file containing the
+    session token.
+
+    Temporary credentials have a limited lifetime.  If you are using S3 only
+    to download input files, the job must start before the credentials
+    expire.  If you are using S3 to upload output files, the job must finish
+    before the credentials expire.  HTCondor does not know when the credentials
+    will expire; if they do so before they are needed, file transfer will fail.
+
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
  transfer_output_files = < file1,file2,file... >
