@@ -260,11 +260,7 @@ double _condor_debug_get_time_double()
 {
 #if defined(HAVE_CLOCK_GETTIME)
 	struct timespec tm;
-	#ifdef HAVE_CLOCK_MONOTONIC_RAW
-	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
-	#else
 	clock_gettime(CLOCK_MONOTONIC, &tm);
-	#endif
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
 #elif defined(WIN32)
 	LARGE_INTEGER li;

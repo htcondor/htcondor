@@ -486,8 +486,6 @@ if( NOT WINDOWS)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
-	check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
-	check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
 	check_function_exists("access" HAVE_ACCESS)
