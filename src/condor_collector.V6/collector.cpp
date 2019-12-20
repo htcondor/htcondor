@@ -1211,18 +1211,22 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 
 collector_runtime_probe CollectorEngine_receive_update_runtime;
+#ifdef PROFILE_RECEIVE_UPDATE
 collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_plugins_runtime;
 collector_runtime_probe CollectorEngine_ru_forward_runtime;
 collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+#endif
 
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+#ifdef PROFILE_RECEIVE_UPDATE
 	double rt_last = rt.begin;
+#endif
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -1232,7 +1236,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
+#endif
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -1264,7 +1270,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		return FALSE;
 
 	}
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
+#endif
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -1273,7 +1281,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
+#endif
 
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
@@ -1283,12 +1293,16 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+#endif
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
 		int rv = stashSocket( (ReliSock *)sock );
+#ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+#endif
 		return rv;
 	}
 

@@ -28,6 +28,10 @@
 #include "subsystem_info.h"
 #endif
 
+// Enable a series of fine-grained timing probes of the details of the
+// receive_update() CEDAR command handler.
+//#define PROFILE_RECEIVE_UPDATE 1
+
 #define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*4)
 
 // probes for doing timing analysis, enable one, the probe is more detailed.
