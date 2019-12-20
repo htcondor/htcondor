@@ -84,6 +84,11 @@ Bugs Fixed:
    to a value other than the default of ``Cpus``.
    :ticket:`7422`
 
+-  Python scripts included in the HTCondor release (e.g. *condor_top*)
+   work again on systems that don't have *python2* in their ``PATH``.
+   This was broken in HTCondor 8.8.6 and primarily affected macOS.
+   :ticket:`7436`
+
 Version 8.8.6
 -------------
 
