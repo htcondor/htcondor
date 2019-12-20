@@ -24,6 +24,14 @@ Release Notes:
    are available.
    :ticket:`7400`
 
+-  Fixed a bug in the python bindings that could result in valid code to submit a job failing and reporting that
+   the submit transaction was no long active.
+   :ticket:`7417`
+
+-  Fixed a bug in the python bindings that could result in incorrect messages if a multithreaded python program enabled
+   the HTCondor debug log
+   :ticket:`7429`
+
 New Features:
 
 -  Added a python enum for DaemonOn and DaemonsOn
@@ -36,7 +44,15 @@ New Features:
    (even illegal ones) to be allowed in node names.
    :ticket:`7403`
 
+-  The *condor_job_router* now applies routes in the order specified by the
+   configuration variable ``JOB_ROUTER_ROUTE_NAMES`` if it is defined.
+   :ticket:`7284`
+
 Bugs Fixed:
+
+-  The *condor_update_machine_ad* tool now respects the ``-pool`` and
+   ``-name`` options.
+   :ticket:`7378`
 
 -  The *condor_wait* command will now function properly when reading a
    file on AFS that a process on another machine is writing.  This bug
