@@ -660,7 +660,11 @@ the ClassAd library and HTCondor from python
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
 Url: https://osg-bosco.github.io/docs/
 Group: Applications/System
+%if 0%{?rhel} >= 8
+Requires: python3
+%else
 Requires: python >= 2.2
+%endif
 Requires: %name = %version-%release
 Requires: rsync
 
@@ -1192,9 +1196,15 @@ rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_undertaker.1*
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
 # Install BOSCO
+%if 0%{?rhel} >= 8
+mkdir -p %{buildroot}%{python3_sitelib}
+mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
+mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python3_sitelib}
+%else
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
+%endif
 %if 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
 %endif
@@ -1710,8 +1720,13 @@ rm -rf %{buildroot}
 %_bindir/htsub
 %_sbindir/glidein_creation
 %_datadir/condor/campus_factory
+%if 0%{?rhel} >= 8
+%{python3_sitelib}/GlideinWMS
+%{python3_sitelib}/campus_factory
+%else
 %{python_sitelib}/GlideinWMS
 %{python_sitelib}/campus_factory
+%endif
 %_mandir/man1/bosco_cluster.1.gz
 %_mandir/man1/bosco_findplatform.1.gz
 %_mandir/man1/bosco_install.1.gz

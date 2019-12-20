@@ -7573,6 +7573,14 @@ These macros affect the *condor_job_router* daemon.
     that attribute value takes precedence. The enclosing square brackets
     are optional.
 
+:macro-def:`JOB_ROUTER_ROUTE_NAMES`
+    An ordered list of the names of enabled routes.  If configured, routes 
+    specifed in `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE` and `JOB_ROUTER_ENTRIES_CMD`
+    will be matched to jobs in the order their names are declared in this list.  Routes not
+    declared in this list will be disabled.  If this list is empty, then all routes
+    will be enabled, and the order in which routes are considered will be the order in
+    which their names hash.
+
 :macro-def:`JOB_ROUTER_ENTRIES`
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
