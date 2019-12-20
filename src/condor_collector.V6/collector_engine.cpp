@@ -1007,7 +1007,6 @@ updateClassAd (CollectorHashTable &hashTable,
 			   const condor_sockaddr& /*from*/ )
 {
 	ClassAd		*old_ad, *new_ad;
-	MyString	buf;
 	time_t		now;
 
 		// NOTE: LastHeardFrom will already be in ad if we are loading
@@ -1019,8 +1018,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error reading system time!");
 		}	
-		buf.formatstr( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-		ad->Insert ( buf.Value() );
+		ad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
 	}
 
 	// this time stamped ad is the new ad
