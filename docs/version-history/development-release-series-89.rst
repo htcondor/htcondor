@@ -96,6 +96,12 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug that happened on Linux startds running as root where if
+   a running job got close to the RequestMemory, it could get "stuck", 
+   and neither get held with an out of memory error, nor killed, nor allowed
+   to run.
+   :ticket:`7367`
+
 -  The Python 3 bindings no longer segfault when putting a
    :class:`~classad.ClassAd` constructed from a Python dictionary into another
    :class:`~classad.ClassAd`.
