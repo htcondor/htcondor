@@ -138,7 +138,7 @@ DataReuseDirectory::LockLog(CondorError &err)
 	if (!sentry.acquired()) {
 		err.push("DataReuse", 3, "Failed to acquire data reuse directory lockfile.");
 	}
-	return std::move(sentry);
+	return sentry;
 }
 
 
