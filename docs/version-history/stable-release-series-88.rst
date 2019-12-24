@@ -30,9 +30,7 @@ Version 8.8.7
 
 Release Notes:
 
--  HTCondor version 8.8.7 not yet released.
-
-.. HTCondor version 8.8.7 released on Month Date, 2019.
+-  HTCondor version 8.8.7 released on December 26, 2019.
 
 -  For *condor_annex* users: Amazon Web Services is deprecating support for
    the Node.js 8.10 runtime used by *condor_annex*.  If you ran the *condor_annex*
@@ -41,18 +39,28 @@ Release Notes:
    are available.
    :ticket:`7400`
 
--  Fixed a bug in the python bindings that could result in valid code to submit a job failing and reporting that
-   the submit transaction was no long active.
-   :ticket:`7417`
-
--  Fixed a bug in the python bindings that could result in incorrect messages if a multithreaded python program enabled
-   the HTCondor debug log
-   :ticket:`7429`
-
 New Features:
 
--  Added a python enum for DaemonOn and DaemonsOn
-   :ticket:`7380`
+-  The *condor_job_router* now applies routes in the order specified by the
+   configuration variable ``JOB_ROUTER_ROUTE_NAMES`` if it is defined.
+   :ticket:`7284`
+
+Bugs Fixed:
+
+-  Fixed a bug that caused *condor_submit* to fail when the remote option
+   was used and the remote *condor_schedd*  was using a map file.
+   :ticket:`7353`
+
+-  The *condor_wait* command will now function properly when reading a
+   file on AFS that a process on another machine is writing.  This bug
+   may have manifested as the machine running *condor_wait* not seeing
+   writes to the log file.
+   :ticket:`7373`
+
+-  Fixed a packaging problem where the ``condor-bosco`` RPM
+   (which is required by the ``condor-all`` RPM)
+   could not installed on CentOS 8.
+   :ticket:`7426`
 
 -  Reverted an earlier change which prohibited certain characters in
    DAGMan node names. The period (.) character is now allowed again.
@@ -61,25 +69,22 @@ New Features:
    (even illegal ones) to be allowed in node names.
    :ticket:`7403`
 
--  The *condor_job_router* now applies routes in the order specified by the
-   configuration variable ``JOB_ROUTER_ROUTE_NAMES`` if it is defined.
-   :ticket:`7284`
+-  Fixed a bug in the Python bindings where the user could not turn on
+   HTCondor daemons. We added ``DaemonsOn`` and ``DaemonOn`` to the
+   ``DaemonCommands`` enumeration.
+   :ticket:`7380`
 
-Bugs Fixed:
+-  Fixed a bug in the Python bindings that could result in a job submission
+   failure with the report that there is no active transaction.
+   :ticket:`7417`
+
+-  Fixed a bug in the Python bindings that could result in intermingled messages if a multi-threaded Python program enabled
+   the HTCondor debug log.
+   :ticket:`7429`
 
 -  The *condor_update_machine_ad* tool now respects the ``-pool`` and
    ``-name`` options.
    :ticket:`7378`
-
--  The *condor_wait* command will now function properly when reading a
-   file on AFS that a process on another machine is writing.  This bug
-   may have manifested as the machine running *condor_wait* not seeing
-   writes to the log file.
-   :ticket:`7373`
-
--  Fixed a bug that caused *condor_submit* to fail when the remote option
-   was used and the remote Schedd was using a mapfile.
-   :ticket:`7353`
 
 -  Fixed potential authentication failures between the *condor_schedd*
    and *condor_startd* when multiple *condor_startd* s are using the
@@ -361,11 +366,11 @@ New Features:
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
 
--  Dagman can now submit directly to the Schedd without using *condor_submit*
+-  Dagman can now submit directly to the *condor_schedd*  without using *condor_submit*
    This provides a workaround for slow submission rates for very large DAGs.
    This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
    which defaults to ``True``.  When it is ``False``, Dagman will contact the
-   local Schedd directly to submit jobs. :ticket:`6974`
+   local *condor_schedd*  directly to submit jobs. :ticket:`6974`
 
 -  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
    pools with 8.8.4 (and later) stable-series startds can run jobs submitted
