@@ -1,3 +1,14 @@
+condor (8.8.7-1) stable; urgency=medium
+
+  * Updated condor_annex to work with upcoming AWS Lambda function changes
+  * Added the ability to specify the order that job routes are applied
+  * Fixed a bug that could cause remote condor submits to fail
+  * Fixed condor_wait to work when the job event log is on AFS
+  * Fixed RPM packaging to be able to install condor-all on CentOS 8
+  * Period ('.') is allowed again in DAGMan node names
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Dec 2019 08:03:51 -0600
+
 condor (8.9.4-1) unstable; urgency=medium
 
   * Amazon S3 file transfers using pre-signed URLs
