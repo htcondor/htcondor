@@ -89,6 +89,11 @@ Bugs Fixed:
    This was broken in HTCondor 8.8.6 and primarily affected macOS.
    :ticket:`7436`
 
+-  Fixed a packaging problem where the ``condor-bosco`` RPM
+   (which is required by the ``condor-all`` RPM)
+   was not installable on CentOS 8.
+   :ticket:`7426`
+
 Version 8.8.6
 -------------
 
