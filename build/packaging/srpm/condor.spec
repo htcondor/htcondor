@@ -1926,6 +1926,14 @@ fi
 %endif
 
 %changelog
+* Thu Dec 26 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.7-1
+- Updated condor_annex to work with upcoming AWS Lambda function changes
+- Added the ability to specify the order that job routes are applied
+- Fixed a bug that could cause remote condor submits to fail
+- Fixed condor_wait to work when the job event log is on AFS
+- Fixed RPM packaging to be able to install condor-all on CentOS 8
+- Period ('.') is allowed again in DAGMan node names
+
 * Tue Nov 19 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.4-1
 - Amazon S3 file transfers using pre-signed URLs
 - Further reductions in DAGMan memory usage
