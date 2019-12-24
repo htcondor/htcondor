@@ -1829,7 +1829,7 @@ dprintf_touch_log()
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( it->logPath.c_str(), 0644);
+			(void) chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}
