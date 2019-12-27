@@ -91,7 +91,7 @@ class CondorTest(object):
     # Exit handling.
     #
 
-    _exit_code = 0
+    _exit_code = TEST_FAILURE
 
     @staticmethod
     def ExitHandler():
