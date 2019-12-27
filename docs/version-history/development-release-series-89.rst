@@ -134,6 +134,11 @@ Bugs Fixed:
    package to fail due to a missing library dependency.
    :ticket:`7435`
 
+-  Fixed a bug where the library that is pre-loaded to provide a sane passwd
+   entry when using ``condor_ssh_to_job`` was placed in the wrong directory
+   in the RPM packaging.
+   :ticket:`7408`
+
 Version 8.9.4
 -------------
 
