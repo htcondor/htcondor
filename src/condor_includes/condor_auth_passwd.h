@@ -142,9 +142,11 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	*/    
 	int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
-	/** Generate a token */
+	/** Generate a token.  Note the "ident" should be a unique ID for use in the audit
+	    log trail; typically, this is something like Sock::getUniqueId() */
 	static bool generate_token(const std::string &id, const std::string &key_id,
-		const std::vector<std::string> &authz_list, long lifetime, std::string &token, CondorError *err);
+		const std::vector<std::string> &authz_list, long lifetime, std::string &token,
+		int ident, CondorError *err);
 
 	/** Metadata needed prior to starting authorization */
 	static bool preauth_metadata(classad::ClassAd &ad);

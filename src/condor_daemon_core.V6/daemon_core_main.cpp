@@ -1958,6 +1958,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 				token_request.getBoundingSet(),
 				token_request.getLifetime(),
 				token,
+				static_cast<Sock*>(stream)->getUniqueId(),
 				&err))
 			{
 				result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
@@ -2307,6 +2308,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 			token_request.getBoundingSet(),
 			token_request.getLifetime(),
 			token,
+			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
 		{
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
@@ -2386,6 +2388,7 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 				token_request.getBoundingSet(),
 				token_request.getLifetime(),
 				token,
+				static_cast<Sock*>(stream)->getUniqueId(),
 				&err))
 			{
 				error_string = err.getFullText();
@@ -2453,7 +2456,7 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 		std::string key_name;
 		auto map_file = Authentication::getGlobalMapFile();
 		std::string identity;
-		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, err))
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, static_cast<Sock*>(stream)->getUniqueId(), err))
 		{
 			error_code = err.code();
 			error_string = err.getFullText();
@@ -2472,7 +2475,7 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 			if (lifetime < 0) {lifetime = 0;}
 
 			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
-				lifetime, result_token, &err))
+				lifetime, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
 			{
 				error_code = err.code();
 				error_string = err.getFullText();
@@ -2606,6 +2609,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 			authz_list,
 			requested_lifetime,
 			token,
+			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
 		{
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());

@@ -1026,7 +1026,7 @@ Condor_Auth_SSL::server_verify_scitoken()
 	long long expiry;
 	std::vector<std::string> bounding_set;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, err))
+		bounding_set, mySock_->getUniqueId(), err))
 	{
 		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
 		return false;

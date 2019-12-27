@@ -10,6 +10,12 @@
 
 #include "condor_scitokens.h"
 
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
+
 #ifdef HAVE_EXT_SCITOKENS
 #include <scitokens/scitokens.h>
 #else
@@ -77,10 +83,15 @@ init_scitokens(CondorError &err)
 
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-	long long &expiry, std::vector<std::string> &bounding_set, CondorError &err)
+	long long &expiry, std::vector<std::string> &bounding_set, int ident, CondorError &err)
 {
 	if (!init_scitokens(err)) {
 		return false;
+	}
+
+	if (ident && IsDebugCategory(D_AUDIT)) {
+		auto jwt = jwt::decode(scitoken_str);
+		dprintf(D_AUDIT, ident, "Examining SciToken with payload %s.\n", jwt.get_payload().c_str());
 	}
 
 	SciToken token = nullptr;

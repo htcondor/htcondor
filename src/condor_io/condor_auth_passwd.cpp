@@ -557,8 +557,10 @@ Condor_Auth_Passwd::fetchLogin()
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
 					std::string local_token;
+						// Note we don't log the token generation here as it is an ephemeral token
+						// used server-side to complete the secret generation process.
 					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
-						authz_list, lifetime, local_token, &err))
+						authz_list, lifetime, local_token, 0, &err))
 					{
 						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
 							err.getFullText().c_str());
@@ -887,6 +889,13 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 					free(seed_kb);
 					return false;
 				}
+			}
+			if (jwt.has_id()) {
+				dprintf(D_AUDIT, mySock_->getUniqueId(),
+					"Remote entity presented token with ID %s\n", jwt.get_id().c_str());
+			} else {
+				dprintf(D_AUDIT, mySock_->getUniqueId(),
+					"Remote entity presented token with payload %s.\n", jwt.get_payload().c_str());
 			}
 
 			const std::string& algo = jwt.get_algorithm();
@@ -1513,6 +1522,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	const std::vector<std::string> &authz_list,
 	long lifetime,
 	std::string &token,
+	int ident,
 	CondorError *err)
 {
 	std::string example_username(POOL_PASSWORD_USERNAME);
@@ -1570,12 +1580,22 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
+		// Set a unique JTI so we can identify the token we issued later on.
+	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	if (hexkey) {
+		jwt_builder.set_id(hexkey.get());
+	}
 
 	try {
 		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 		token = jwt_token;
 	} catch (...) {
 		return false;
+	}
+	if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+		auto decoded_jwt = jwt::decode(token);
+		dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
 	}
 	return true;
 }
