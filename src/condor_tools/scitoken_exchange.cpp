@@ -31,13 +31,12 @@
 #include "token_utils.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-remote] [-pool POOL] -scitoken FILENAME [-token NAME]\n\n"
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] -scitoken FILENAME [-token NAME]\n\n"
 		"Exchanges a SciToken from a remote daemon and prints its contents to stdout.\n"
 		"\nToken options:\n"
 		"    -scitoken <val>                 File containing SciToken to exchange\n"
 		"Specifying target options:\n"
 		"    -pool    <host>                 Query this collector\n"
-		"    -remote                         Have collector fetch token remotely\n"
 		"    -name    <name>                 Find a daemon with this name\n"
 		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
 		"\nOther options:\n"
