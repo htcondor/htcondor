@@ -242,7 +242,7 @@ public:
 		}
 			// Only auto-approve requests that ask for schedds or startds.
 		for (const auto &authz : token_request.getBoundingSet()) {
-			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD")) {
+			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD") && (authz != "ADVERTISE_MASTER")) {
 				return false;
 			}
 		}

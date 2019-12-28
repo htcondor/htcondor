@@ -1855,6 +1855,7 @@ daemon::DeregisterControllee( class daemon *controllee )
 ///////////////////////////////////////////////////////////////////////////
 
 Daemons::Daemons()
+	: m_token_requester(&Daemons::token_request_callback, this)
 {
 	check_new_exec_tid = -1;
 	update_tid = -1;
@@ -3276,7 +3277,8 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
-	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
+	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_MASTER");
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -3338,4 +3340,16 @@ Daemons::CancelRestartTimers( void )
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->CancelRestartTimers();
 	}
+}
+
+void
+Daemons::token_request_callback(bool success, void *miscdata)
+{
+	auto self = reinterpret_cast<Daemons *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->update_tid != -1)) {
+		daemonCore->Reset_Timer( self->update_tid, 0,
+		update_interval );
+}
 }
