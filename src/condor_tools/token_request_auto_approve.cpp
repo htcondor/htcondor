@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
 
 #include "condor_auth_passwd.h"
 #include "match_prefix.h"
@@ -117,6 +118,10 @@ void printRemainingRequests(std::unique_ptr<Daemon> daemon) {
 
 int main(int argc, char *argv[]) {
 
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
+
 	daemon_t dtype = DT_COLLECTOR;
 	std::string pool;
 	std::string name;
@@ -180,8 +185,6 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
-
-	config();
 
 	if (netblock.empty()) {
 		fprintf(stderr, "%s: -netblock argument is required.\n"
