@@ -28,6 +28,8 @@
 #include "reli_sock.h"
 #include "command_strings.h"
 #include "condor_distribution.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
 
 int handleHistoryDir(ReliSock *);
 
@@ -152,7 +154,23 @@ int main( int argc, char *argv[] )
 	}
 
 	dprintf(D_FULLDEBUG,"Daemon %s is %s\n",daemon->hostname(),daemon->addr());
-	
+
+	std::string capability;
+	if (daemon->getCapability(capability)) {
+		ClaimIdParser cidp(capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability.c_str());
+		daemon->getSecMan().CreateNonNegotiatedSecuritySession(
+			CLIENT_PERM,
+			cidp.secSessionId(),
+			cidp.secSessionKey(),
+			cidp.secSessionInfo(),
+			COLLECTOR_SIDE_MATCHSESSION_FQU,
+			daemon->addr(),
+			1200,
+			nullptr
+		);
+	}
+
 	sock = (ReliSock*)daemon->startCommand( DC_FETCH_LOG, Sock::reli_sock, 1200);
 
 	if(!sock) {

@@ -1984,6 +1984,11 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 	initStringFromAd( ad, ATTR_PLATFORM, &_platform );
 
+	std::string capability;
+	if (ad->EvaluateAttrString(ATTR_CAPABILITY, capability)) {
+		m_capability = capability;
+	}
+
 	if( initStringFromAd( ad, ATTR_MACHINE, &_full_hostname ) ) {
 		initHostnameFromFull();
 		_tried_init_hostname = false;

@@ -657,6 +657,12 @@ public:
 	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
 	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
 
+		// Returns true if there's a capability found for the remote daemon.
+	bool getCapability(std::string &capability) { if (!m_capability.empty()) {capability = m_capability;} return !m_capability.empty(); }
+
+		// Returns the SecMan object in use by this daemon.
+	SecMan & getSecMan() {return _sec_man;}
+
 protected:
 	// Data members
 	char* _name;
@@ -936,6 +942,9 @@ private:
 	// unless they use DaemonAllowLocateFull::locate().
 
 	ClassAd *m_daemon_ad_ptr;
+
+		// If the locate method found a capability, it is stored here.
+	std::string m_capability;
 
 	std::string m_trust_domain;
 
