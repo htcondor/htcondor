@@ -835,24 +835,28 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
-		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
-		// trust it to handle our capabilities.
-	bool filter_private_ads = true;
-	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
-		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
-			// Given failure here is non-fatal, do not log at D_ALWAYS.
-		if (static_cast<Sock*>(sock)->isAuthorizationInBoundingSet("NEGOTIATOR") &&
-			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser(), D_SECURITY|D_FULLDEBUG))) {
-			filter_private_ads = false;
-		}
-	}
-
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
 	ClassAd *cad = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
 	AdTypes whichAds = query_entry->whichAds;
+
+		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
+		// trust it to handle our capabilities.
+	bool filter_private_ads = true;
+	auto *verinfo = sock->get_peer_version();
+	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
+			// Given failure here is non-fatal, do not log at D_ALWAYS.
+		if (USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)) {
+			filter_private_ads = false;
+		}
+			// If we are querying for master ads and this is the administrator, then we release the capability.
+		if ((whichAds == MASTER_AD) &&
+			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG))) {
+			filter_private_ads = false;
+		}
+
+	}
 
 		// Always send private attributes in private ads.
 	if (whichAds == STARTD_PVT_AD) {

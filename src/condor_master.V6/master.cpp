@@ -745,6 +745,12 @@ main_init( int argc, char* argv[] )
 	}
 #endif
 
+		// Determine if we should allow remote administration by the collector
+	bool remote_admin = param_boolean("SEC_ENABLE_REMOTE_ADMINISTRATION", false);
+	daemons.SetRemoteAdmin(remote_admin);
+	if (remote_admin)
+		dprintf(D_ALWAYS, "Remote administration by pool collector is enabled.\n");
+
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
 	}
@@ -1467,6 +1473,13 @@ main_config()
 	} else {
 		daemons.DaemonsOff();
 	}
+
+		// Determine if we should allow remote administration by the collector
+	bool remote_admin = param_boolean("SEC_ENABLE_REMOTE_ADMINISTRATION", false);
+	daemons.SetRemoteAdmin(remote_admin);
+	if (remote_admin)
+		dprintf(D_ALWAYS, "Remote administration by pool collector is enabled.\n");
+
     // Invalide session if necessary
     daemonCore->invalidateSessionCache();
 		// Re-register our timers, since their intervals might have

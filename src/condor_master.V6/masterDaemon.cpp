@@ -41,6 +41,7 @@
 #include "ipv6_hostname.h"
 #include "setenv.h"
 #include "systemd_manager.h"
+#include "authentication.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -105,6 +106,9 @@ extern int			StartDaemons;
 extern int			GotDaemonsOff;
 extern int			MasterShuttingDown;
 extern char*		MasterName;
+
+unsigned Daemons::m_master_admin_seq = 0;
+time_t Daemons::m_master_startup = time(NULL);
 
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
@@ -493,6 +497,7 @@ daemon::DoConfig( bool init )
 			// other daemons until the collector has written this file
 		param(m_after_startup_wait_for_file,"COLLECTOR_ADDRESS_FILE");
 	}
+
 }
 
 void
@@ -3276,6 +3281,11 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
+	std::string capability;
+	if (SetupAdministratorSession(update_interval*3, capability)) {
+		ad->InsertAttr(ATTR_CAPABILITY, capability);
+	}
+
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
@@ -3338,4 +3348,84 @@ Daemons::CancelRestartTimers( void )
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->CancelRestartTimers();
 	}
+}
+
+
+bool
+Daemons::SetupAdministratorSession(unsigned duration, std::string &capability)
+{
+	if (!m_remoteAdmin) {
+		return false;
+	}
+
+	m_master_admin_seq++;
+
+	std::string id;
+	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+		m_master_startup, (long unsigned)m_master_admin_seq);
+
+		// A keylength of 32 bytes = 256 bits.
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+	Condor_Crypt_Base::randomHexKey(keylen),
+		free
+		};
+	if (!keybuf) {
+		return false;
+	}
+
+		// What should the collector admin be able to do to this master?
+		// - 453: RESTART
+		// - 454: DAEMONS_OFF
+		// - 455: DAEMONS_ON
+		// - 456: MASTER_OFF
+		// - 461: DAEMONS_OFF_FAST
+		// - 462: MASTER_OFF_FAST
+		// - 467: DAEMON_OFF
+		// - 468: DAEMON_OFF_FAST
+		// - 469: DAEMON_ON
+		// - 483: DAEMON_OFF_PEACEFUL
+		// - 484: DAEMONS_OFF_PEACEFUL
+		// - 485: RESTART_PEACEFUL
+		// - 60013: DC_FETCH_LOG
+		// - 60018: DC_PURGE_LOG
+		// - 60006: DC_OFF_FAST
+		// - 60005: DC_OFF_GRACEFUL
+		// - 60042: DC_OFF_FORCE
+		// - 60015: DC_OFF_PEACEFUL
+		// - 60016: DC_SET_PEACEFUL_SHUTDOWN
+		// - 60041: DC_SET_FORCE_SHUTDOWN
+
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
+	classad::ClassAd policy_ad;
+
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		ADMINISTRATOR,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		COLLECTOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration,
+		nullptr
+	);
+	if (retval) {
+		capability = id + "#" + session_info + keybuf.get();
+	}
+	return retval;
+}
+
+
+void
+Daemons::SetRemoteAdmin(bool remote_admin)
+{
+	if (remote_admin != m_remoteAdmin) {
+                IpVerify* ipv = daemonCore->getIpVerify();
+		if (remote_admin) {
+			ipv->PunchHole( ADMINISTRATOR, COLLECTOR_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( ADMINISTRATOR, COLLECTOR_SIDE_MATCHSESSION_FQU );
+		}
+	}
+	m_remoteAdmin = remote_admin;
 }

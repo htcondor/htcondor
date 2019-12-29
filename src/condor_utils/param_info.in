@@ -947,6 +947,12 @@ default=true
 type=bool
 tags=shadow,remoteresource
 
+[SEC_ENABLE_REMOTE_ADMINISTRATION]
+default=false
+type=bool
+tags=master
+usage=Set to true to allow the collector administrator to manage the condor_master
+
 [SEC_ENABLE_IMPERSONATION_TOKENS]
 default=false
 type=bool

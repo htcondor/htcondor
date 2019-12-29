@@ -212,6 +212,7 @@ public:
 	int		DefaultReaper(int, int);
 	void	SetAllReaper(bool fStartdsFirst=false);
 	void	SetDefaultReaper();
+	void    SetRemoteAdmin(bool remote_admin);
 
 	void	AllDaemonsGone();
 	void	SetAllGoneAction( AllGoneT a ) {all_daemons_gone_action=a;};
@@ -250,6 +251,9 @@ private:
 	int m_retry_start_all_daemons_tid;
 	int m_deferred_query_ready_tid;
 	std::list<DeferredQuery*> deferred_queries;
+	bool m_remoteAdmin{false};
+	static unsigned m_master_admin_seq;
+	static time_t m_master_startup;
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
@@ -259,6 +263,10 @@ private:
 	//bool GetDaemonReadyStates(std::string & ready);
 	int  SendSetPeacefulShutdown(class daemon*, int timeout);
 	void DoPeacefulShutdown(int timeout, void (Daemons::*pfn)(void), const char * lbl);
+
+		// Create a new pre-negotiated security session so the collector admin
+		// can be the administrator of this host.
+	bool SetupAdministratorSession(unsigned duration, std::string &capability);
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();
