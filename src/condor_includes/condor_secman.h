@@ -257,6 +257,11 @@ public:
 	static IpVerify *getIpVerify();
 	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason=NULL, MyString *deny_reason=NULL );
 
+		// Check to see if the authentication that was performed on the socket
+		// (if any at all!) is sufficient to have the socket authorized at a given
+		// permission level.
+	bool IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorError &err);
+
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 
 		// Create a security session from scratch (without doing any

@@ -359,6 +359,20 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level=D_ALWAYS);
+
+	/** Given a socket, check to see whether it has a given permission.
+	    This checks:
+	    - the authentication was done with an appropriate settings and methods.
+	    - any permission limits on the authentication (such as used with fine-grained tokens)
+	      are applied correctly.
+	    - the user / IP address has authorization (e.g., applies ALLOW_* / DENY_* from the IpVerify
+	      class).
+
+	    The `command_descrip` is used to generate a useful logging message on an authorization allowed
+	    or denied; log_level controls how "loud" the log message is.
+	 */
+    int Verify (char const *command_descrip, DCpermission perm, const Sock &sock, int log_level=D_ALWAYS);
+
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 

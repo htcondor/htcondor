@@ -374,7 +374,7 @@ public:
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName() const;
 
-	bool isAuthorizationInBoundingSet(const std::string &);
+	bool isAuthorizationInBoundingSet(const std::string &) const;
 
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed() const;

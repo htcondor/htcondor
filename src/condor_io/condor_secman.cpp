@@ -2948,6 +2948,54 @@ SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu,
 
 
 bool
+SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorError &err)
+{
+
+	auto sec_authentication = sec_req_param("SEC_%s_AUTHENTICATION", perm, SEC_REQ_OPTIONAL);
+	auto authentication_method = sock.getAuthenticationMethodUsed();
+	if (sec_authentication == SEC_REQ_REQUIRED && !authentication_method) {
+		err.push("SECMAN", 76, "Authentication is required for this authorization but it was not used");
+		return false;
+	}
+
+	auto sec_encryption = sec_req_param("SEC_%s_ENCRYPTION", perm, SEC_REQ_OPTIONAL);
+	if (sec_encryption == SEC_REQ_REQUIRED && !sock.get_encryption()) {
+		err.push("SECMAN", 77, "Encryption is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	auto sec_integrity = sec_req_param("SEC_%s_INTEGRITY", perm, SEC_REQ_OPTIONAL);
+	if (sec_integrity == SEC_REQ_REQUIRED && !sock.isOutgoing_Hash_on()) {
+		err.push("SECMAN", 78, "Integrity is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	MyString methods;
+	getAuthenticationMethods(perm, &methods);
+	StringList meth_iter(methods.c_str());
+	meth_iter.rewind();
+	const char *potential_method = nullptr;
+	bool allowed_method = false;
+	while ( (potential_method = meth_iter.next()) ) {
+		if (!strcmp(sock.getAuthenticationMethodUsed(), potential_method)) {
+			allowed_method = true;
+			break;
+		}
+	}
+	if (!allowed_method) {
+		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
+			sock.getAuthenticationMethodUsed(), PermString(perm));
+		return false;
+	}
+
+	if (!sock.isAuthorizationInBoundingSet(PermString(perm))) {
+		err.pushf("SECMAN", 79, "The %s permission is not included in the authentication bounding set", PermString(perm));
+		return false;
+	}
+	return true;
+}
+
+bool
 SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const char* attr ) {
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {

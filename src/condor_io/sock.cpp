@@ -313,7 +313,7 @@ Sock::getPolicyAd(classad::ClassAd &ad) const
 
 
 bool
-Sock::isAuthorizationInBoundingSet(const std::string &authz)
+Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 {
 		// Cache the bounding set on first access.
 	if (m_authz_bound.empty())
@@ -327,7 +327,7 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz)
 				const char *authz_name;
 				while ( (authz_name = authz_policy_list.next()) ) {
 					if (authz_name[0]) {
-						m_authz_bound.insert(authz_name);
+						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
 					}
 				}
 			}
@@ -335,7 +335,7 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz)
 		if (m_authz_bound.empty()) {
 				// Put in a nonsense authz level to prevent re-parsing;
 				// an empty bounding set is interpretted as no bounding set at all.
-			m_authz_bound.insert("ALL_PERMISSIONS");
+			const_cast<Sock*>(this)->m_authz_bound.insert("ALL_PERMISSIONS");
 		}
 	}
 	return (m_authz_bound.find(authz) != m_authz_bound.end()) ||

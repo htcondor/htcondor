@@ -3220,6 +3220,31 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 	return result;
 }
 
+int
+DaemonCore::Verify(char const *command_descrip, DCpermission perm, const Sock &sock, int log_level)
+{
+	auto fqu = sock.getFullyQualifiedUser();
+
+	CondorError err;
+	if (!getSecMan()->IsAuthenticationSufficient(perm, sock, err))
+	{
+		char ipstr[IP_STRING_BUF_SIZE];
+		strcpy(ipstr, "(unknown)");
+		sock.peer_addr().to_ip_string(ipstr, sizeof(ipstr));
+
+		dprintf(log_level,
+			"PERMISSION DENIED to %s from host %s for %s, "
+			"access level %s: reason: %s.\n",
+			(fqu && *fqu) ? fqu : "unauthenticated user",
+			ipstr,
+			command_descrip ? command_descrip : "unspecified operation",
+			PermString(perm),
+			err.message());
+		return USER_AUTH_FAILURE;
+	}
+	return Verify(command_descrip, perm, sock.peer_addr(), fqu, log_level);
+}
+
 bool
 DaemonCore::Wake_up_select()
 {
