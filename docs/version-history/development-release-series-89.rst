@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+-  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
+   the context of ClassAd attributes, and print the result in ClassAd format.
+   :ticket:`7339`
+
 -  Jobs which must use temporary credentials for S3 access may now specify
    the "session token" in their submit files.  Set ``+EC2SessionToken``
    to the name of a file whose only content is the session token.  Temporary
