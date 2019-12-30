@@ -9,22 +9,39 @@ Job Priority
 
 :index:`priority<single: priority; job>` :index:`of a job<single: of a job; priority>`
 
-Job priorities allow a user to assign a priority level to each of their
-own submitted HTCondor jobs, in order to control the order of job
-execution. This handles the situation in which a user has more jobs
-queued, waiting to be executed, than there are machines available.
-Setting a job priority identifies the ordering in which that user's jobs
-are executed; a higher job priority job is matched and executed before a
-lower priority job. A job priority can be any integer, and larger values
-are of higher priority. So, 0 is a higher job priority than -3, and 6 is
-a higher job priority than 5.
-:index:`condor_prio<single: condor_prio; HTCondor commands>`
+The HTCondor system decides a "fair share" of machine slots each user deserves.
+Whether each user can use all of these slots depends on a number of factors. For example,
+if the user's jobs only match to a small number of machines, perhaps
+the user will be running fewer jobs than deserved.
 
-For the simple case, each job can be given a distinct priority. For an
-already queued job, its priority may be set with the *condor_prio*
+Job priorities allow a user to sort their own jobs to determine which are
+tried to be run first, when there are more jobs than available slots.  
+A job priority can be any integer: larger values denote better priority. 
+So, 0 is a better job priority than -3, and 6 is a better than 5.
+:index:`condor_prio<single: condor_prio; HTCondor commands>`
+Note that job priorities are computed per user, so that whatever job priorities
+one user sets has no impact at all on any other user, in terms of how many jobs
+users can run or in what order.  Also, unmatchable high priority jobs do not block
+lower priority jobs.  That is, a priority 10 job will try to be matched before 
+a priority 5 job, but if the priority 10 job doesn't match any slots, HTCondor 
+will keep going, and try the priority 5 job next.
+
+The job priority may be specified in the submit description file by setting
+
+::
+
+       priority = 15
+
+See the Dagman section for ways that dagman
+can automatically set the priority of any or all jobs in a dag.
+
+Each job can be given a distinct priority. For an
+already queued job, its priority may be changed with the *condor_prio*
 command; see the example in the :doc:`/users-manual/managing-a-job` section, or
 the :doc:`/man-pages/condor_prio` manual page for details. This sets the value
-of job ClassAd attribute ``JobPrio``.
+of job ClassAd attribute ``JobPrio``.  *condor_prio* can be called on a running
+job, but lowering a job priority generally will not trigger eviction of the running 
+job.  *condor_vacate_job* can preempt a running job.
 
 A fine-grained categorization of jobs and their ordering is available
 for experts by using the job ClassAd attributes: ``PreJobPrio1``,
