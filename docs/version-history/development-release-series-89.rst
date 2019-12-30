@@ -9,15 +9,31 @@ Version 8.9.5
 
 Release Notes:
 
--  HTCondor version 8.9.5 not yet released.
 
-.. HTCondor version 8.9.5 released on Month Date, 2019.
+-  HTCondor version 8.9.5 released on January 2, 2020.
 
 New Features:
+
+-  Implemented a *dataflow* mode for jobs. When enabled, a job whose
+   1) pre-declared output files already exist, and 2) output files are
+   more recent than its input files, is considered a dataflow job and
+   gets skipped. This feature can be enabled by setting the 
+   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to ``True``.
+   :ticket:`7231` 
 
 -  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
    the context of ClassAd attributes, and print the result in ClassAd format.
    :ticket:`7339`
+
+-  You may now specify ports to forward into your Docker container.  See
+   :ref:`Docker and Networking` for details.
+   :ticket:`7322`
+
+-  Added the ability to edit certain properties of a running *condor_dagman*
+   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**.
+   A user can call *condor_qedit* to set new values in the job ad, which will
+   then be updated in the running workflow.
+   :ticket:`7236`
 
 -  Jobs which must use temporary credentials for S3 access may now specify
    the "session token" in their submit files.  Set ``+EC2SessionToken``
@@ -27,47 +43,32 @@ New Features:
    credentials expired.
    :ticket:`7407`
 
--  You may now specify ports to forward into your Docker container.  See
-   :ref:`Docker and Networking` for details.
-   :ticket:`7322`
+-  Improved the performance of the negotiator by simplifying the definition of
+   the *condor_startd*'s ``WithinResourceLimits`` attribute when custom
+   resources are defined.
+   :ticket:`7323`
 
--  If you define a startd with different SLOT_TYPEs, you can use the SLOT_TYPE as
-   a prefix for configuration entries.  This can be useful to set different BASE_GROUPs
-   for different slot types within the same startd. For example,
+-  If you configure a *condor_startd* with different SLOT_TYPEs,
+   you can use the SLOT_TYPE as a prefix for configuration entries.
+   This can be useful to set different BASE_GROUPs
+   for different slot types within the same *condor_startd*. For example,
    SLOT_TYPE_1.BASE_CGROUP = hi_prio
    :ticket:`7390`
 
--  Improved the performance of the negotiatior by simplifying the definition of
-   the startd's WithinResourceLimits attribute when custom resources are defined.
-   :ticket:`7323`
-
--  Added a new knob SUBMIT_ALLOW_GETENV.  This defaults to true.  When set to
-   false, a submit file with getenv = true will become an error.  Admins may
-   want to set this to false to prevent users from submitting jobs that depend
-   on the local environment of the submit machine.
+-  Added a new knob ``SUBMIT_ALLOW_GETENV``. This defaults to ``true``. When
+   set to ``false``, a submit file with `getenv = true` will become an error.
+   Administrators may want to set this to ``false`` to prevent users from 
+   submitting jobs that depend on the local environment of the submit machine.
    :ticket:`7383`
 
 -  *condor_submit* will no longer set the ``Owner`` attribute of jobs
    it submits to the name of the current user. It now leaves this attribute up
-   to the *condor_schedd* to set.  This change was made because the *condor_schedd*
-   will reject the submission if the ``Owner`` attribute is set but does not
-   match the name of the mapped authenticated user submitting the job, and it is
-   difficult for *condor_submit* to know what the mapped name is when there is a mapfile
-   configured.
+   to the *condor_schedd* to set.  This change was made because the
+   *condor_schedd* will reject the submission if the ``Owner`` attribute is set
+   but does not match the name of the mapped authenticated user submitting the
+   job, and it is difficult for *condor_submit* to know what the mapped name is
+   when there is a map file configured.
    :ticket:`7355`
-
--  Added the ability to edit certain properties of a running *condor_dagman*
-   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**.
-   A user can call *condor_qedit* to set new values in the job ad, which will
-   then be updated in the running workflow.
-   :ticket:`7236`
-
--  Implemented a *dataflow* mode for jobs. When enabled, a job whose
-   1) pre-declared output files already exist, and 2) output files are
-   more recent than its input files, is considered a dataflow job and
-   gets skipped. This feature can be enabled by setting the 
-   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to True.
-   :ticket:`7231` 
 
 -  Added ability for a *condor_startd* to log the state of Ads when shutting
    down using ``STARTD_PRINT_ADS_ON_SHUTDOWN`` and ``STARTD_PRINT_ADS_FILTER``.
@@ -75,8 +76,11 @@ New Features:
 
 Bugs Fixed:
 
--  Fixed a bug that happened on Linux startds running as root where if
-   a running job got close to the RequestMemory, it could get "stuck", 
+-  ``condor_submit -i`` now works with Docker universe jobs.
+   :ticket:`7394`
+
+-  Fixed a bug that happened on a Linux *condor_startd* running as root where
+   a running job getting close to the ``RequestMemory`` limit, could get stuck, 
    and neither get held with an out of memory error, nor killed, nor allowed
    to run.
    :ticket:`7367`
@@ -90,23 +94,17 @@ Bugs Fixed:
    :class:`~classad.ExprTree`.
    :ticket:`7372`
 
--  Fixed a bug that caused jobs running with cgroup support to 
-   not be held with an out of memory error.
-   :ticket:`7367`
-
--  condor_submit -i now works with Docker universe jobs.
-   :ticket:`7394`
-
 -  When calling :meth:`classad.ClassAd.setdefault` without a default, or
    with a default of None, if the default is used, it is now treated as the
    :attr:`classad.Value.Undefined` ClassAd value.
    :ticket:`7370`
 
--  When file transfers fail with an error message containing a newline (``\n``)
-   character, the error message will now be propagated to the job's hold message.
+-  Fixed a bug where when file transfers fail with an error message containing
+   a newline (``\n``) character, the error message would not be propagated to
+   the job's hold message.
    :ticket:`7395`
 
--  SciTokens support is now available on all linux and macOS platforms.
+-  SciTokens support is now available on all Linux and MacOS platforms.
    :ticket:`7406`
 
 -  Fixed a bug that caused the Python bindings included in the tarball
@@ -141,8 +139,8 @@ New Features:
   the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
   :ticket:`7289`
 
-- Reduced the memory needed for *condor_dagman* to load a DAG that has a large number
-  of PARENT and CHILD statements.
+- Reduced the memory needed for *condor_dagman* to load a DAG that has
+  a large number of PARENT and CHILD statements.
   :ticket:`7170`
 
 - Optimized *condor_dagman* startup speed by removing unnecessary 3-second
@@ -164,7 +162,7 @@ New Features:
   :ticket:`7038`
 
 - Added ``erase_output_and_error_on_restart`` as a new submit command.  It
-  defaults to true; if set to false, and ``when_to_transfer_output`` is
+  defaults to ``true``; if set to ``false``, and ``when_to_transfer_output`` is
   ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
   when the job restarts, instead of erasing them (and starting the logs
   over).  This may make the output and error logs more useful when the
@@ -183,12 +181,12 @@ New Features:
   :ticket:`7201`
 
 - Added new configuration parameter for execute machines,
-  CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
-  condor LD_PRELOADs into unprivileged sshd it *condor_startd* a special version of
-  the Linux getpwnam() library call, which forces the user's shell to
-  /bin/bash and the home directory to the scratch directory.  This allows
-  condor_ssh_to_job to work on sites that don't create login shells for
-  slots users, or who want to run as nobody.
+  ``CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY``, which defaults to ``false``.
+  When ``true``, condor LD_PRELOADs into unprivileged sshd it *condor_startd*
+  a special version of the Linux getpwnam() library call, which forces
+  the user's shell to /bin/bash and the home directory to the scratch directory.
+  This allows *condor_ssh_to_job* to work on sites that don't create
+  login shells for slots users, or who want to run as nobody.
   :ticket:`7260`
 
 - The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
