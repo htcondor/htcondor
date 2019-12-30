@@ -9,7 +9,7 @@ Job Priority
 
 :index:`priority<single: priority; job>` :index:`of a job<single: of a job; priority>`
 
-The HTCondor system decides the maximum amount of machine slots each user deserves.
+The HTCondor system decides a "fair share" of machine slots each user deserves.
 Whether each user can use all of these slots depends on a number of factors. For example,
 if the user's jobs only match to a small number of machines, perhaps
 the user will be running fewer jobs than deserved.
@@ -21,18 +21,18 @@ So, 0 is a better job priority than -3, and 6 is a better than 5.
 :index:`condor_prio<single: condor_prio; HTCondor commands>`
 Note that job priorities are computed per user, so that whatever job priorities
 one user sets has no impact at all on any other user, in terms of how many jobs
-users can run or in what other.  Also, unmatchable high priority jobs do not block
+users can run or in what order.  Also, unmatchable high priority jobs do not block
 lower priority jobs.  That is, a priority 10 job will try to be matched before 
 a priority 5 job, but if the priority 10 job doesn't match any slots, HTCondor 
 will keep going, and try the priority 5 job next.
 
-The job priority may be specified in the submit file by setting
+The job priority may be specified in the submit description file by setting
 
 ::
 
        priority = 15
 
-in the condor submit file.  See the Dagman section for ways that dagman
+See the Dagman section for ways that dagman
 can automatically set the priority of any or all jobs in a dag.
 
 Each job can be given a distinct priority. For an
