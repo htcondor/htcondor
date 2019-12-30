@@ -9,7 +9,7 @@ Job Priority
 
 :index:`priority<single: priority; job>` :index:`of a job<single: of a job; priority>`
 
-The HTCondor system decides a "fair share" of machine slots each user deserves.
+The HTCondor system decides a "fair share" of machine slots to give to each user.
 Whether each user can use all of these slots depends on a number of factors. For example,
 if the user's jobs only match to a small number of machines, perhaps
 the user will be running fewer jobs than deserved.
@@ -32,7 +32,7 @@ The job priority may be specified in the submit description file by setting
 
        priority = 15
 
-See the Dagman section for ways that dagman
+If no priority is set, the default is 0. See the Dagman section for ways that dagman
 can automatically set the priority of any or all jobs in a dag.
 
 Each job can be given a distinct priority. For an
