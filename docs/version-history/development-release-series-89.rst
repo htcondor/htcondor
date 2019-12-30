@@ -65,6 +65,10 @@ New Features:
    ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to True.
    :ticket:`7231` 
 
+-  Added ability for a *condor_startd* to log the state of Ads when shutting
+   down using ``STARTD_PRINT_ADS_ON_SHUTDOWN`` and ``STARTD_PRINT_ADS_FILTER``.
+   :ticket:`7328`
+
 Bugs Fixed:
 
 -  Fixed a bug that happened on Linux startds running as root where if

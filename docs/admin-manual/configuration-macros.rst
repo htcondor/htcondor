@@ -3293,6 +3293,18 @@ section.
     you should provide a full path, and HTCondor will automatically
     append the .slotX portion of the file name.
 
+:macro-def:`STARTD_PRINT_ADS_ON_SHUTDOWN`
+    The *condor_startd* can be configured to write out the slot ads into
+    the daemon's log file as it is shutting down.  This is a boolean and the
+    default value is ``False``.
+
+:macro-def:`STARTD_PRINT_ADS_FILTER`
+    When ``STARTD_PRINT_ADS_ON_SHUTDOWN`` above is set to ``True``, this
+    macro can list which specific types of ads will get written to the log.
+    The possible values are ``static```, ``partitionable``, and ``dynamic``.
+    The list is comma separated and the default is to print all three types of
+    ads.
+
 :macro-def:`NUM_CPUS`
     An integer value, which can be used to lie to the *condor_startd*
     daemon about how many CPUs a machine has. When set, it overrides the
