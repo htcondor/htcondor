@@ -9,10 +9,10 @@ Submitting Jobs Without a Shared File System: HTCondor's File Transfer Mechanism
 HTCondor works well without a shared file system between the submit
 machines and the worker nodes. The HTCondor file
 transfer mechanism allows the user to explicitly select which input files are
-transferred from the submit machine to the worker node. Before the
-job starts, HTCondor will transfer these files, potentially 
+transferred to the worker node before the
+job starts. HTCondor will transfer these files, potentially 
 delaying this transfer request, if starting the transfer right away
-would overload the submit machine.  Delaying requests like this prevents
+would overload the submit machine.  Queueing requests like this prevents
 the crashes so common with too-busy shared file servers. These input files are placed
 into a scratch directory on the worker node, which is the starting current 
 directory of the job.  When the job completes, by default, HTCondor detects any
@@ -111,7 +111,7 @@ sandbox:
 If the job requires other input files, the submit description file
 should have the
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
-command. This comma-separated list specifies any other files or
+command. This comma-separated list specifies any other files, URLs, or
 directories that HTCondor is to transfer to the remote scratch
 directory, to set up the execution environment for the job before it is
 run. These files are placed in the same directory as the job's
@@ -220,10 +220,10 @@ file specified with ``d1/o3``.
 File Paths for File Transfer
 ''''''''''''''''''''''''''''
 
-The file transfer mechanism specifies file names on both
-the file system of the submit machine and on the file system of the
+The file transfer mechanism specifies file names or URLs on 
+the file system of the submit machine and file names on the
 execute machine. Care must be taken to know which machine, submit or
-execute, is referencing the file name.
+execute, is referencing the file.
 
 Files in the
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
@@ -231,7 +231,7 @@ command are specified as they are accessed on the submit machine. The
 job, as it executes, accesses files as they are found on the execute
 machine.
 
-There are three ways to specify files and paths for
+There are four ways to specify files and paths for
 **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`:
 
 #. Relative to the current working directory as the job is submitted, if
@@ -241,7 +241,8 @@ There are three ways to specify files and paths for
 #. Relative to the initial directory, if the submit command
    **initialdir** :index:`initialdir<single: initialdir; submit commands>` is
    specified.
-#. Absolute.
+#. Absolute file paths.
+#. As an URL, which should be accessible by the execute machine.
 
 Before executing the program, HTCondor copies the input sandbox
 into a remote scratch directory on the
@@ -673,60 +674,3 @@ command may also be used to specify a region for S3 URLs which don't
 include one (even for non-AWS services).
 
 You may also use S3 URLs in ``transfer_output_remaps``.
-
-Requirements and Rank for File Transfer
-'''''''''''''''''''''''''''''''''''''''
-
-:index:`requirements<single: requirements; submit commands>`
-
-The ``requirements`` expression for a job must depend on the
-should_transfer_files command. The job must specify the correct logic
-to ensure that the job is matched with a resource that meets the file
-transfer needs. If no ``requirements`` expression is in the submit
-description file, or if the expression specified does not refer to the
-attributes listed below, *condor_submit* adds an appropriate clause to
-the ``requirements`` expression for the job. *condor_submit* appends
-these clauses with a logical AND, &&, to ensure that the proper
-conditions are met. Here are the default clauses corresponding to the
-different values of should_transfer_files:
-
-#. should_transfer_files = YES
-
-   results in the addition of the clause (HasFileTransfer). If the job
-   is always going to transfer files, it is required to match with a
-   machine that has the capability to transfer files.
-
-#. should_transfer_files = NO
-
-   results in the addition of
-   (TARGET.FileSystemDomain == MY.FileSystemDomain). In addition,
-   HTCondor automatically adds the ``FileSystemDomain`` attribute to the
-   job ClassAd, with whatever string is defined for the *condor_schedd*
-   to which the job is submitted. If the job is not using the file
-   transfer mechanism, HTCondor assumes it will need a shared file
-   system, and therefore, a machine in the same ``FileSystemDomain`` as
-   the submit machine.
-
-#. should_transfer_files = IF_NEEDED results in the addition of
-
-   ::
-
-         (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
-
-   If HTCondor will optionally transfer files, it must require that the
-   machine is either capable of transferring files or in the same file
-   system domain.
-
-To ensure that the job is matched to a machine with enough local disk
-space to hold all the transferred files, HTCondor automatically adds the
-``DiskUsage`` job attribute. This attribute includes the total size of
-the job's executable and all input files to be transferred. HTCondor
-then adds an additional clause to the ``Requirements`` expression that
-states that the remote machine must have at least enough available disk
-space to hold all these files:
-
-::
-
-      && (Disk >= DiskUsage)
-
-
