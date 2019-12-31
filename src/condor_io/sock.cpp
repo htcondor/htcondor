@@ -315,6 +315,11 @@ Sock::getPolicyAd(classad::ClassAd &ad) const
 bool
 Sock::isAuthorizationInBoundingSet(const std::string &authz)
 {
+		// Short-circuit: ALLOW is implicitly in the bounding set.
+	if (authz == "ALLOW") {
+		return true;
+	}
+
 		// Cache the bounding set on first access.
 	if (m_authz_bound.empty())
 	{
