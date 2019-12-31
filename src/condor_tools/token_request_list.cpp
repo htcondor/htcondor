@@ -136,6 +136,13 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
+		} else if (is_dash_arg_prefix(argv[i], "reqid", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -reqid requires a request ID argument.\n", argv[0]);
+				exit(1);
+			}
+			reqid = argv[i];
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
