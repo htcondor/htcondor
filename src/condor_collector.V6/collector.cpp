@@ -236,7 +236,7 @@ CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
 		error_code = 4;
 		error_string = "Failed to walk the schedd table.";
 	}
-	if (schedd_addr.empty()) {
+	if (!error_code && schedd_addr.empty()) {
 		error_code = 5;
 		formatstr(error_string, "Schedd %s is not known to the collector.",
 			schedd_name.c_str());
