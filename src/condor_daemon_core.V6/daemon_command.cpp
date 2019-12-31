@@ -1392,14 +1392,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						break;
 					}
 				}
+				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
 					// If there was no match, iterate through the alternates table.
 				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
 					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
 						auto perm_cstr = PermString(perm);
 						const char *authz_name;
 						authz_limits.rewind();
+						has_allow_perm |= !strcmp(perm_cstr, "ALLOW");
 						while ( (authz_name = authz_limits.next()) ) {
-							dprintf(D_ALWAYS, "Checking token limit %s\n", perm_cstr);
+							dprintf(D_SECURITY, "Checking limit in token (%s) for permission %s\n", authz_name, perm_cstr);
 							if (!strcmp(perm_cstr, authz_name)) {
 								found_limit = true;
 								break;
@@ -1408,7 +1410,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						if (found_limit) {break;}
 					}
 				}
-				if (!found_limit && strcmp(perm_cstr, "ALLOW")) {
+				if (!found_limit && !has_allow_perm) {
 					can_attempt = false;
 				}
 			}
