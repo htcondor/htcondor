@@ -1883,6 +1883,17 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 	const char *peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 
+        std::set<std::string> config_bounding_set;
+        std::string config_bounding_set_str;
+        if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
+                StringList config_bounding_set_list(config_bounding_set_str.c_str());
+                config_bounding_set_list.rewind();
+                const char *authz;
+                while ( (authz = config_bounding_set_list.next()) ) {
+                        config_bounding_set.insert(authz);
+                }
+        }
+
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
@@ -1890,7 +1901,20 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		authz_str_list.rewind();
 		const char *authz;
 		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
+			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
+				authz_list.emplace_back(authz);
+			}
+		}
+			// If all potential bounds were removed by the set intersection,
+			// throw an error instead of generating an "all powerful" token.
+		if (!config_bounding_set.empty() && authz_list.empty()) {
+			error_code = 3;
+			error_string = "All requested authorizations were eliminated by the"
+				" SEC_TOKEN_REQUEST_LIMITS setting";
+		}
+	} else if (!config_bounding_set.empty()) {
+		for (const auto &authz : config_bounding_set) {
+			authz_list.push_back(authz);
 		}
 	}
 
