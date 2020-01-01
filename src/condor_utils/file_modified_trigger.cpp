@@ -181,7 +181,7 @@ FileModifiedTrigger::notify_or_sleep( int waitfor ) {
 #endif /* defined( LINUX ) */
 
 int
-FileModifiedTrigger::wait( int timeout ) {
+FileModifiedTrigger::wait( int timeout_in_ms ) {
 	if(! initialized) {
 		return -1;
 	}
@@ -189,9 +189,12 @@ FileModifiedTrigger::wait( int timeout ) {
 	struct timeval deadline;
 	condor_gettimestamp( deadline );
 
-	deadline.tv_sec += timeout / 1000;
-	deadline.tv_usec += (timeout % 1000) * 1000;
-	deadline.tv_usec = deadline.tv_usec % 1000000;
+	deadline.tv_sec += timeout_in_ms / 1000;
+	deadline.tv_usec += (timeout_in_ms % 1000) * 1000;
+	if( deadline.tv_usec >= 1000000 ) {
+		deadline.tv_sec += 1;
+		deadline.tv_usec = deadline.tv_usec % 1000000;
+	}
 
 	while( true ) {
 		struct stat statbuf;
@@ -205,16 +208,18 @@ FileModifiedTrigger::wait( int timeout ) {
 		lastSize = statbuf.st_size;
 		if( changed ) { return 1; }
 
-		struct timeval now;
-		condor_gettimestamp( now );
+		int waitfor = 5000;
+		if( timeout_in_ms >= 0 ) {
+			struct timeval now;
+			condor_gettimestamp( now );
 
-		if( deadline.tv_sec < now.tv_sec ) { return 0; }
-		else if( deadline.tv_sec == now.tv_sec &&
-			deadline.tv_usec < now.tv_usec ) { return 0; }
-
-		int waitfor = ((deadline.tv_sec - now.tv_sec) * 1000) +
+			if( deadline.tv_sec < now.tv_sec ) { return 0; }
+			else if( deadline.tv_sec == now.tv_sec &&
+				deadline.tv_usec < now.tv_usec ) { return 0; }
+			waitfor = ((deadline.tv_sec - now.tv_sec) * 1000) +
 						((deadline.tv_usec - now.tv_usec) / 1000);
-		if( waitfor > 5000 ) { waitfor = 5000; }
+			if( waitfor > 5000 ) { waitfor = 5000; }
+		}
 
 		int events = notify_or_sleep( waitfor );
 		if( events == 1 ) { return 1; }

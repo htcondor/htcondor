@@ -224,8 +224,8 @@ int main( int argc, char *argv[] )
 	}
 
 	while( 1 ) {
-		int timeout_ms = 0;
-		if ( ! dont_wait) {
+		int timeout_ms = -1;
+		if(! dont_wait) {
 			int now = time(NULL);
 			if( stoptime && now > stoptime ) {
 				printf( "Time expired.\n" );
