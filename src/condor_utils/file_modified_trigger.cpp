@@ -48,7 +48,13 @@ FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 	}
 
 #if defined( LINUX )
+#if defined( IN_NONBLOCK )
 	inotify_fd = inotify_init1( IN_NONBLOCK );
+#else
+	inotify_fd = inotify_init();
+	int flags = fcntl(inotify_fd, F_GETFL, 0);
+	fcntl(inotify_fd, F_SETFL, flags | O_NONBLOCK);
+#endif /* defined( IN_NONBLOCK ) */
 	if( inotify_fd == -1 ) {
 		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_init() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
 		return;
