@@ -20,17 +20,17 @@ _long_type = int if sys.version_info > (3,) else long
 
 def assertIs(val1, val2, subtest, msg=""):
     if val1 is val2:
-        CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are equal, as expected")
+        CondorTest.RegisterSuccess(subtest, "Value " + str(val1) + " is " + str(val2) + ", as expected")
     else:
-        failureMessage = "Values " + str(val1) + " and " + str(val2) + " not equal"
+        failureMessage = "Value " + str(val1) + " is not " + str(val2)
         if msg != "": failureMessage = msg
         CondorTest.RegisterFailure(subtest, failureMessage)
 
 def assertIsNot(val1, val2, subtest, msg=""):
     if val1 is not val2:
-        CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are equal, as expected")
+        CondorTest.RegisterSuccess(subtest, "Value " + str(val1) + " is not " + str(val2) + ", as expected")
     else:
-        failureMessage = "Values " + str(val1) + " and " + str(val2) + " not equal"
+        failureMessage = "Value " + str(val1) + " is " + str(val2)
         if msg != "": failureMessage = msg
         CondorTest.RegisterFailure(subtest, failureMessage)
 
