@@ -5342,11 +5342,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	if (!m_job_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 	}
 	if (!m_machine_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad.c_str(), m_machine_ad.c_str());
 	}
-	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 
 	// prepare args for the plugin
 	ArgList plugin_args;
@@ -5449,11 +5450,12 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	if (!m_job_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 	}
 	if (!m_machine_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 	}
-	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 
 
 	// Determine if we want to run the plugin with root priv (if available).

@@ -109,7 +109,6 @@ GetToken(const std::string & cred_name, std::string & token) {
 MultiFileCurlPlugin::MultiFileCurlPlugin( bool diagnostic ) :
     _diagnostic ( diagnostic )
 {
-    ParseAds();
 }
 
 MultiFileCurlPlugin::~MultiFileCurlPlugin() {
@@ -119,6 +118,8 @@ MultiFileCurlPlugin::~MultiFileCurlPlugin() {
 
 int
 MultiFileCurlPlugin::InitializeCurl() {
+    ParseAds();
+
     // Initialize win32 + SSL socket libraries.
     // Do not initialize these separately! Doing so causes https:// transfers
     // to segfault.
@@ -834,48 +835,48 @@ MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, 
 
 void
 MultiFileCurlPlugin::ParseAds() {
-    const char *job_ad = getenv("_CONDOR_JOB_AD");
-    const char *machine_ad = getenv("_CONDOR_MACHINE_AD");
-    FILE *fp = nullptr;
-    classad::ClassAd *ad = nullptr;
-    int error;
-    bool is_eof;
-    if (job_ad && (fp = fopen(job_ad, "r"))) {
-        ad = new classad::ClassAd();
-        if (InsertFromFile(fp, *ad, is_eof, error) < 0) {
-            delete ad;
-            ad = nullptr;
-        }
-    }
-    if (fp) {fclose(fp); fp = nullptr;}
-    classad::ClassAd *ad2 = nullptr;
-    if (machine_ad && (fp = fopen(machine_ad, "r"))) {
-        ad2 = new classad::ClassAd();
-        if (InsertFromFile(fp, *ad2, is_eof, error) < 0) {
-            delete ad2;
-            ad2 = nullptr;
-        }
-    }
-    if (fp) {fclose(fp); fp = nullptr;}
-    if (!ad) {
-        delete ad2;
+        // Look in the job ad for speed limits; job ad is mandatory
+    const char *job_ad_env = getenv("_CONDOR_JOB_AD");
+    if (!job_ad_env) {
         return;
     }
-    if (ad2) ad->ChainToAd(ad2);
+        // If not present in the job ad, the machine ad can also contain
+        // default limits; machine ad is optional.
+    const char *machine_ad_env = getenv("_CONDOR_MACHINE_AD");
 
-    classad::ClassAdUnParser unp;
-    std::string val;
-    unp.Unparse(val, ad);
+    std::unique_ptr<FILE,decltype(&fclose)> fp(nullptr, fclose);
+    fp.reset(safe_fopen_wrapper(job_ad_env, "r"));
+    if (!fp) {
+        return;
+    }
+
+    int error;
+    bool is_eof;
+    classad::ClassAd job_ad;
+    if (InsertFromFile(fp.get(), job_ad, is_eof, error) < 0) {
+        return;
+    }
+
+    classad::ClassAd machine_ad;
+    if (machine_ad_env) {
+        fp.reset(safe_fopen_wrapper(machine_ad_env, "r"));
+        if (fp) {
+                // Note we ignore errors; failure to parse machine ad
+                // is not fatal.
+            InsertFromFile(fp.get(), machine_ad, is_eof, error);
+        }
+    }
+
+    job_ad.ChainToAd(&machine_ad);
+
     int speed_limit;
-    if (ad->EvaluateAttrInt("LowSpeedLimit", speed_limit)) {
+    if (job_ad.EvaluateAttrInt("LowSpeedLimit", speed_limit)) {
         m_speed_limit = speed_limit;
     }
     int speed_time;
-    if (ad->EvaluateAttrInt("LowSpeedTime", speed_time)) {
+    if (job_ad.EvaluateAttrInt("LowSpeedTime", speed_time)) {
         m_speed_time = speed_time;
     }
-    if (ad2) {ad->Unchain(); delete ad2;}
-    delete ad;
 }
 
 
