@@ -516,7 +516,7 @@ class FileTransfer final: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list );
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.
@@ -526,7 +526,7 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 
 		// Returns true if path is a legal path for our peer to tell us it
