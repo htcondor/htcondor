@@ -815,12 +815,15 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
-			if (mkdir_and_parents_if_needed( hostDir, S_IRWXU, PRIV_USER )) {
+			
+			mode_t old_mask = umask(000);
+			if (mkdir_and_parents_if_needed( hostDir, 01777, PRIV_USER )) {
 				extras.push_back(volumePath);
 				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount under scratch\n", volumePath.c_str());
 			} else {
 				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", hostDir);
 			}
+			umask(old_mask);
 		}
 	}
 
