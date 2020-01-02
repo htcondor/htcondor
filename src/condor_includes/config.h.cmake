@@ -114,9 +114,6 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
-/* Define if doing a clipped build (USED)*/
-#cmakedefine CLIPPED 1
-
 /* Define if enabling KBDD (USED)*/
 #cmakedefine NEEDS_KBDD 1
 // configurable options.

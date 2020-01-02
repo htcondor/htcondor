@@ -805,22 +805,10 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
-  # so the clipped detection will try to match glibc vers and if it fails will disable
-  if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" ON)
-  else()
-	option(CLIPPED "enable/disable the standard universe" ON)
-  endif()
-
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "disable the standard universe" ON)
-endif()
-
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
 endif()
 
 #####################################

@@ -45,10 +45,6 @@
 #include <string>
 #include <set>
 
-#ifdef WIN32
-#define CLIPPED 1
-#endif
-
 // values for hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
 static char OneString[] = "1", ZeroString[] = "0";
 //static char ParallelNodeString[] = "#pArAlLeLnOdE#";
