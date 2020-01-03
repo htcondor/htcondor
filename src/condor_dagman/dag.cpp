@@ -351,7 +351,7 @@ bool Dag::Bootstrap (bool recovery)
 		_jobstateLog.WriteRecoveryFinished();
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
-		update_status();
+		print_status();
 
 		_recovery = false;
     }
