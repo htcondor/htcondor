@@ -3764,7 +3764,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
-				local_output_url += '/';
+				if(! ends_with(local_output_url, "/")) {
+				    local_output_url += '/';
+				}
 				local_output_url += fileitem.srcName();
 			}
 			else {
@@ -4012,15 +4014,21 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				dest_filename.formatstr("%s%c",dest_dir.c_str(),DIR_DELIM_CHAR);
 			}
 
+			//
+			// If we're sending files from the sandbox to a URL, this code
+			// does nothing.  (The remote side ignores the destination
+			// filename.)  If we're commanding the sandbox to download a
+			// file from a URL, we need to use the basename because we
+			// don't know where in the URL the relative path starts (and
+			// we don't want to write the URL to a file with the whole
+			// URL as its name).
+			//
 			if( IsUrl( filename.c_str() ) ) {
 				// If we signed the URL, we added a bunch of garbage to the
 				// query string.  Strip it out to get better base name.
 				auto idx = filename.find("?");
 				std::string tmp_filename = filename.substr(0, idx);
-
-				// FIXME: We want to preserve the relative paths of files
-				// that are getting uploaded to URLs.
-				dest_filename.formatstr_cat( "%s", tmp_filename.c_str() );
+				dest_filename.formatstr_cat( "%s", condor_basename(tmp_filename.c_str()) );
 			} else {
 				// Strip any path information; if we wanted to keep it, it
 				// would have been set in dest_dir.
