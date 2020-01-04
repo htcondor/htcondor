@@ -6015,6 +6015,8 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	ASSERT( dest_dir );
 	ASSERT( iwd );
 
+dprintf( D_ALWAYS, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, iwd, max_depth, preserveRelativePaths );
+
 		// To simplify error handling, we always want to include an
 		// entry for the specified path, except two cases which are
 		// handled later on by removing the entry we add here.
@@ -6037,6 +6039,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 	full_src_path += src_path;
 
+dprintf( D_ALWAYS, ">>> Calling stat(%s)\n", full_src_path.c_str() );
 	StatInfo st( full_src_path.c_str() );
 	if( st.Error() != 0 ) {
 		return false;
@@ -6075,13 +6078,9 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 			free( dirname );
 		}
 
+dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
 		return true;
 	}
-
-	//
-	// FIXME: I'm not at all sure that this code properly handles entries
-	// like 'subdirectory1/subdirectory2'.
-	//
 
 		// do not follow symlinks to directories unless we are just
 		// fetching the contents of the directory
@@ -6098,30 +6097,88 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		max_depth--;
 	}
 
-	std::string dest_dir_buf;
+	//
+	// We're going to transfer the contents of the directory named by src_path.
+	//
+	// If that name has a trailing slash, we don't transfer the directory, and
+	// its contents will go where the directory would have.
+	//
+	// Otherwise, we transfer the directory, and its contents go in it, but we
+	// only transfer its parent directories if we're preserving relative paths.
+	//
+	// Determine where the contents of the directory will be going, and make
+	// sure that the directories in that path have been added as file transfer
+	// items (otherwise, the remote side won't know what permissions to set).
+	//
+
+dprintf( D_ALWAYS, ">>> transferring contents of directory %s\n", src_path );
+	std::string destination = dest_dir;
+
 	if( trailing_slash ) {
-			// If there is a trailing slash and we didn't hit an error,
-			// then we only want to transfer the contents of the
-			// directory into dest_dir.  We don't want to transfer the
-			// directory.
+dprintf( D_ALWAYS, ">>> detected trailing slash.\n" );
 		expanded_list.pop_back();
-			// NOTE: do NOT reference file_xfer_item from here on!
-	}
-	else {
-		dest_dir_buf = dest_dir;
-		if( dest_dir_buf.length() > 0 ) {
-			dest_dir_buf += DIR_DELIM_CHAR;
+	} else {
+		if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
+
+		if(! preserveRelativePaths) {
+dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
+			destination += condor_basename(src_path);
+		} else {
+dprintf( D_ALWAYS, ">>> preserving relative path.\n" );
+			destination += src_path;
+
+			// We'll add this back in again after its parents.
+			expanded_list.pop_back();
+
+			// Fill a stack with path components from right to left.
+			std::string dir, file;
+			std::string path( src_path );
+			std::vector< std::string > splitPath;
+dprintf( D_ALWAYS, ">>> initial path-to-preserve = %s\n", path.c_str() );
+			while( filename_split( path.c_str(), dir, file ) ) {
+dprintf( D_ALWAYS, ">>> found trailing path-component %s\n", file.c_str() );
+				splitPath.emplace_back( file );
+				path = path.substr( 0, path.length() - file.length() - 1 );
+dprintf( D_ALWAYS, ">>> proceeding with path-to-preserve = %s\n", path.c_str() );
+			}
+dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
+			splitPath.emplace_back( file );
+
+			// Empty the stack to add directories from the root down.  Note
+			// that the "parent" directory is always empty, because src_path
+			// is relative to iwd, not dest_dir.  In the usual case, dest_dir
+			// will only be set if we're already recursing, so these parent
+			// directory entries will be redundant, but we can optimize them
+			// out later if we need to.  (Either by adjusting the external
+			// API to remove dest_dir -- nobody uses it -- or by checking the
+			// existing transfer list for duplicates.  Arguably, the transfer
+			// list should be an insertion-time-ordered set anyway....)
+			std::string parent;
+			while( splitPath.size() != 0 ) {
+				std::string partialPath = parent;
+				if( partialPath.length() > 0 ) {
+					partialPath += DIR_DELIM_CHAR;
+				}
+				partialPath += splitPath.back(); splitPath.pop_back();
+				if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
+					return false;
+				}
+				parent = partialPath;
+			}
 		}
-		dest_dir_buf += condor_basename(src_path);
-		dest_dir_buf += src_path;
-		dest_dir = dest_dir_buf.c_str();
 	}
+
+	//
+	// Transfer the contents of the directory.
+	//
+dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
 
 	Directory dir( &st );
 	dir.Rewind();
 
 	bool rc = true;
 	char const *file_in_dir;
+
 	while( (file_in_dir=dir.Next()) != NULL ) {
 
 		std::string file_full_path = src_path;
@@ -6130,7 +6187,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
-		if( !ExpandFileTransferList( file_full_path.c_str(), dest_dir, iwd, max_depth, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths ) ) {
 			rc = false;
 		}
 	}
