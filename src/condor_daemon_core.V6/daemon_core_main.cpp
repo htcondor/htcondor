@@ -1931,7 +1931,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
 		}
 		std::string request_id_str;
-		formatstr(request_id_str, "%d", request_id);
+		formatstr(request_id_str, "%07d", request_id);
 			// Note we currently store this as a string; this way we can come back later
 			// and introduce alphanumeric characters if we so wish.
 		result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str);
