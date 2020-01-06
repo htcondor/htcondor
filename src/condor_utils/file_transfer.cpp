@@ -2757,16 +2757,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 		} else if ( TransferFilePermissions ) {
-			// We don't want ReliSock::get_file() to create non-existent
-			// directories; other parts of HTCondor might expect or depend
-			// on the behavior that it doesn't.
-			//
-			// Instead, go ahead and create directories that don't exist;
-			// we've already verified that the path we've been given was
-			// either relative or in the sandbox (LegalPathInSandbox()).
-			char * dn = condor_dirname( fullname.Value() );
-			mkdir_and_parents_if_needed( dn, 0700 );
-			free(dn);
+			// We could create the target's parent directories, but since
+			// we need to have sent them along as explicit transfer items
+			// to preserve their permissions, let's just let this transfer
+			// fail if the remote side screwed up.
 			rc = s->get_file_with_permissions( &bytes, fullname.Value(), false, this_file_max_bytes, &xfer_queue );
 			CondorError err;
 			if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
@@ -2780,9 +2774,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 		} else {
-			char * dn = condor_dirname( fullname.Value() );
-			mkdir_and_parents_if_needed( dn, 0700 );
-			free(dn);
+			// See comment about directory creation above.
 			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes, &xfer_queue );
 		}
 
@@ -6009,13 +6001,50 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 }
 
 bool
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list ) {
+	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
+
+	// Fill a stack with path components from right to left.
+	std::string dir, file;
+	std::string path( src_path );
+	std::vector< std::string > splitPath;
+	// dprintf( D_ALWAYS, ">>> initial path-to-preserve = %s\n", path.c_str() );
+	while( filename_split( path.c_str(), dir, file ) ) {
+		// dprintf( D_ALWAYS, ">>> found trailing path-component %s\n", file.c_str() );
+		splitPath.emplace_back( file );
+		path = path.substr( 0, path.length() - file.length() - 1 );
+		// dprintf( D_ALWAYS, ">>> proceeding with path-to-preserve = %s\n", path.c_str() );
+	}
+	// dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
+	splitPath.emplace_back( file );
+
+	// Empty the stack to add directories from the root down.  Note
+	// that the "parent" directory is always empty, because src_path
+	// is relative to iwd, not dest_dir.
+	std::string parent;
+	while( splitPath.size() != 0 ) {
+		std::string partialPath = parent;
+		if( partialPath.length() > 0 ) {
+			partialPath += DIR_DELIM_CHAR;
+		}
+		partialPath += splitPath.back(); splitPath.pop_back();
+		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
+			return false;
+		}
+		parent = partialPath;
+	}
+
+	return true;
+}
+
+bool
 FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths )
 {
 	ASSERT( src_path );
 	ASSERT( dest_dir );
 	ASSERT( iwd );
 
-dprintf( D_ALWAYS, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, iwd, max_depth, preserveRelativePaths );
+	// dprintf( D_ALWAYS, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, iwd, max_depth, preserveRelativePaths );
 
 		// To simplify error handling, we always want to include an
 		// entry for the specified path, except two cases which are
@@ -6039,7 +6068,7 @@ dprintf( D_ALWAYS, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, 
 	}
 	full_src_path += src_path;
 
-dprintf( D_ALWAYS, ">>> Calling stat(%s)\n", full_src_path.c_str() );
+	// dprintf( D_ALWAYS, ">>> Calling stat(%s)\n", full_src_path.c_str() );
 	StatInfo st( full_src_path.c_str() );
 	if( st.Error() != 0 ) {
 		return false;
@@ -6070,15 +6099,27 @@ dprintf( D_ALWAYS, ">>> Calling stat(%s)\n", full_src_path.c_str() );
 	if( !file_xfer_item.isDirectory() ) {
 		file_xfer_item.setFileSize(st.GetFileSize());
 
-		if( preserveRelativePaths ) {
+		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
 			char * dirname = condor_dirname( file_xfer_item.srcName().c_str() );
 			if( strcmp( dirname, "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );
+
+				// ExpandParentDirectories() adds this back in the correct place.
+				expanded_list.pop_back();
+
+				// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", src_path );
+				// N.B.: This isn't an infinite loop because
+				// ExpandParentDirectories() calls ExpandFileTransferList()
+				// with preserveRelativePaths turned off -- the whole point
+				// of it being to generate paths one level at a time.
+				if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
+					return false;
+				}
 			}
 			free( dirname );
 		}
 
-dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
+		// dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
 		return true;
 	}
 
@@ -6111,59 +6152,28 @@ dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(
 	// items (otherwise, the remote side won't know what permissions to set).
 	//
 
-dprintf( D_ALWAYS, ">>> transferring contents of directory %s\n", src_path );
+	// dprintf( D_ALWAYS, ">>> transferring contents of directory %s\n", src_path );
 	std::string destination = dest_dir;
 
 	if( trailing_slash ) {
-dprintf( D_ALWAYS, ">>> detected trailing slash.\n" );
+		// dprintf( D_ALWAYS, ">>> detected trailing slash.\n" );
 		expanded_list.pop_back();
 	} else {
 		if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
 
 		if(! preserveRelativePaths) {
-dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
+			// dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
 			destination += condor_basename(src_path);
 		} else {
-dprintf( D_ALWAYS, ">>> preserving relative path.\n" );
+			// dprintf( D_ALWAYS, ">>> preserving relative path.\n" );
 			destination += src_path;
 
-			// We'll add this back in again after its parents.
+			// ExpandParentDirectories() adds this back in the correct place.
 			expanded_list.pop_back();
 
-			// Fill a stack with path components from right to left.
-			std::string dir, file;
-			std::string path( src_path );
-			std::vector< std::string > splitPath;
-dprintf( D_ALWAYS, ">>> initial path-to-preserve = %s\n", path.c_str() );
-			while( filename_split( path.c_str(), dir, file ) ) {
-dprintf( D_ALWAYS, ">>> found trailing path-component %s\n", file.c_str() );
-				splitPath.emplace_back( file );
-				path = path.substr( 0, path.length() - file.length() - 1 );
-dprintf( D_ALWAYS, ">>> proceeding with path-to-preserve = %s\n", path.c_str() );
-			}
-dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
-			splitPath.emplace_back( file );
-
-			// Empty the stack to add directories from the root down.  Note
-			// that the "parent" directory is always empty, because src_path
-			// is relative to iwd, not dest_dir.  In the usual case, dest_dir
-			// will only be set if we're already recursing, so these parent
-			// directory entries will be redundant, but we can optimize them
-			// out later if we need to.  (Either by adjusting the external
-			// API to remove dest_dir -- nobody uses it -- or by checking the
-			// existing transfer list for duplicates.  Arguably, the transfer
-			// list should be an insertion-time-ordered set anyway....)
-			std::string parent;
-			while( splitPath.size() != 0 ) {
-				std::string partialPath = parent;
-				if( partialPath.length() > 0 ) {
-					partialPath += DIR_DELIM_CHAR;
-				}
-				partialPath += splitPath.back(); splitPath.pop_back();
-				if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
-					return false;
-				}
-				parent = partialPath;
+			// dprintf( D_ALWAYS, ">>> expanding parent directories of named directory %s\n", src_path );
+			if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
+				return false;
 			}
 		}
 	}
@@ -6171,7 +6181,7 @@ dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
 	//
 	// Transfer the contents of the directory.
 	//
-dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
+	// dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
 
 	Directory dir( &st );
 	dir.Rewind();
