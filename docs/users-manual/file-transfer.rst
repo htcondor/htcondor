@@ -662,9 +662,9 @@ key (and nothing else), and one or more S3 URLs in one of three forms:
     # For old, non-region-specific buckets.
     transfer_input_files = s3://<bucket-name>/<key-name>,
     # or, for new, region-specific buckets:
-    transfer_input_files = https://<bucket-name>.s3-<region>.amazonaws.com/<key>
+    transfer_input_files = s3://<bucket-name>.s3-<region>.amazonaws.com/<key>
     # or, for non-AWS services with an S3 API; <host> must contain a dot:
-    transfer_input_files = https://<host>/<key>
+    transfer_input_files = s3://<host>/<key>
     # Optionally, specify a region for S3 URLs which don't include one:
     aws_region = <region>
 
