@@ -3256,7 +3256,7 @@ JobRoute::ParseNext(
 		ClassAd dummy;
 		StringList statements;
 		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
+		int rval = ConvertClassadJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
 		if (rval < 0 || statements.isEmpty()) {
 			return false;
 		}
@@ -3282,7 +3282,7 @@ JobRoute::ParseNext(
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
 		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
+		int rval = ConvertClassadJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
 		if (rval < 0) {
 			return false;
 		}

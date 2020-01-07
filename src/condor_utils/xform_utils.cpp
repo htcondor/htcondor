@@ -1927,7 +1927,7 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 #define XForm_ConvertJobRouter_Remove_InputRSL 0x00001
 #define XForm_ConvertJobRouter_Fix_EvalSet     0x00002
 
-int ConvertJobRouterRouteToXForm (
+int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
 	const char * config_name, // name from config
 	const std::string & routing_string,
@@ -2237,7 +2237,7 @@ int ConvertJobRouterRouteToXForm (
 	return 1;
 }
 
-int XFormLoadFromJobRouterRoute (
+int XFormLoadFromClassadJobRouterRoute (
 	MacroStreamXFormSource & xform,
 	const std::string & routing_string,
 	int & offset,
@@ -2245,12 +2245,12 @@ int XFormLoadFromJobRouterRoute (
 	int options)
 {
 	StringList statements;
-	int rval = ConvertJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
+	int rval = ConvertClassadJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
 		std::string errmsg;
 		auto_free_ptr xform_text(statements.print_to_delimed_string("\n"));
 		int offset = 0;
-		xform.open(xform_text, offset, errmsg);
+		rval = xform.open(xform_text, offset, errmsg);
 	}
 	return rval;
 }
