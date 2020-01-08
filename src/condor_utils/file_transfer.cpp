@@ -5997,6 +5997,25 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 			}
 		}
 	}
+
+    // Remove duplicate directory-creation entries.
+    std::string dir;
+    std::set< std::string > dirs;
+    for( size_t i = 0; i < expanded_list.size(); ++i ) {
+        FileTransferItem fti = expanded_list[i];
+        if( fti.isDirectory() ) {
+            dir = fti.destDir();
+            if(! dir.empty()) { dir += DIR_DELIM_CHAR; }
+            dir += condor_basename( fti.srcName().c_str() );
+
+            if( dirs.find( dir ) != dirs.end() ) {
+                expanded_list.erase(expanded_list.begin() + i); --i;
+            } else {
+                dirs.insert( dir );
+            }
+        }
+    }
+
 	return rc;
 }
 
