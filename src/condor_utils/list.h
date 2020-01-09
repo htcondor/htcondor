@@ -317,6 +317,7 @@ List<ObjType>::operator=(List<ObjType> &&rhs)
 
 	// Now move the rhs list over...
 	this->dummy = rhs.dummy;
+	this->current = rhs.current;
 	this->num_elem = rhs.num_elem;
 
 	// and make the old rhs destroyable
