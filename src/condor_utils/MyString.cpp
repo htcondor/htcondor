@@ -138,6 +138,7 @@ operator=(const MyString& S)
 /** Destructively moves a MyString guts from rhs to this */
 MyString& 
 MyString::operator=(MyString &&rhs) {
+	delete Data;
 	this->Data     = rhs.Data;
 	this->Len      = rhs.Len;
 	this->capacity = rhs.capacity;
@@ -1080,6 +1081,7 @@ MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
 
 MyStringTokener &
 MyStringTokener::operator=(MyStringTokener &&rhs) {
+	free(tokenBuf);
 	this->tokenBuf = rhs.tokenBuf;
 	this->nextToken = rhs.nextToken;
 	rhs.tokenBuf = nullptr;

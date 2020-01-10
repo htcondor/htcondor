@@ -33,6 +33,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
+#include <queue>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -44,7 +45,6 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "list.h"
-#include "Queue.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "shadow_mgr.h"
@@ -925,7 +925,7 @@ private:
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
-	Queue<shadow_rec*> RunnableJobQueue;
+	std::queue<shadow_rec*> RunnableJobQueue;
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
@@ -937,7 +937,7 @@ private:
 
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
-	Queue<ContactStartdArgs*> startdContactQueue;
+	std::queue<ContactStartdArgs*> startdContactQueue;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	int num_pending_startd_contacts;
 	int max_pending_startd_contacts;
@@ -1057,7 +1057,7 @@ private:
 		// CronTab execution scheduling
 		// This is used by processCronTabClusterIds()
 		//
-	Queue<int> cronTabClusterIds;
+	std::set<int> cronTabClusterIds;
 	// -----------------------------------------------
 
 		/** We begin the process of opening a non-blocking ReliSock

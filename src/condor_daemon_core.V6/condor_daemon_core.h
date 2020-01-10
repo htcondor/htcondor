@@ -43,7 +43,6 @@
 #include "KeyCache.h"
 #include "list.h"
 #include "extArray.h"
-#include "Queue.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -64,6 +63,7 @@
 
 #include <vector>
 #include <memory>
+#include <deque>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -2069,7 +2069,7 @@ class DaemonCore : public Service
 
 	};
 	typedef struct WaitpidEntry_s WaitpidEntry;
-	Queue<WaitpidEntry> WaitpidQueue;
+	std::deque<WaitpidEntry> WaitpidQueue;
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 

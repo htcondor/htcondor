@@ -160,7 +160,9 @@ vmapi_is_my_machine(char *h1)
 	if( !strcmp(h1, get_local_fqdn().Value()) )
 		return TRUE;
 
-	if( !strcmp(h1, my_ip_string()) )
+	// TODO: Picking IPv4 arbitrarily.
+	MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+	if( !strcmp(h1, my_ip.Value()) )
 		return TRUE;
 
 	return FALSE;

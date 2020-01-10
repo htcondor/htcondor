@@ -132,6 +132,8 @@ public:
 	const char *getDelimiters(void) const { return m_delimiters; };
 
 	StringList &operator=(StringList &&rhs) {
+		clearAll();
+		free(m_delimiters);
 		this->m_strings = std::move(rhs.m_strings);
 		this->m_delimiters = rhs.m_delimiters;
 		rhs.m_delimiters = nullptr;
