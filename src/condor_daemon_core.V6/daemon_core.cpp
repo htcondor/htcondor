@@ -4854,7 +4854,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// sanity check on the pid.  we don't want to do something silly like
 	// kill pid -1 because the pid has not been initialized yet.
 	int signed_pid = (int) pid;
-	if (signed_pid > -10) {
+	if ((signed_pid > -10) && (signed_pid < 0)){ 
 		EXCEPT("Send_Signal: sent unsafe pid (%d)",signed_pid);
 	}
 
