@@ -16,6 +16,41 @@
 
 #define MAX_RETRY_ATTEMPTS 20
 
+// Setup a transfer progress callback. We'll use this to manually timeout 
+// any transfers that are not making forward progress.
+
+struct xferProgress {
+    double lastRunTime;
+    CURL *curl;
+};
+struct xferProgress myProgress;
+
+static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    struct xferProgress *progress = (struct xferProgress *)p;
+    CURL *curl = progress->curl;
+    double curTime = 0;
+    
+    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curTime);
+
+    // After 30 seconds, check if we're making forward progress (> 1 byte/s)
+    if (curTime > 30) {
+
+        // If this is a download and not making progress, abort
+        if (dltotal > 0 && curTime > dlnow) return 1;
+
+        // If this is an upload and not making progress, abort
+        if (ultotal > 0 && curTime > ulnow) return 1;
+
+        // Sometimes a misconfigured proxy will report 0 bytes available. Abort.
+        if (dltotal <= 0 && ultotal <= 0) return 1;
+    }
+
+    // All good. Return success.
+    return 0;
+}
+
+
 namespace {
 
 bool
@@ -53,7 +88,6 @@ CurlWriteCallback(char *buffer, size_t size, size_t nitems, void *userdata) {
     }
     return fwrite(buffer, size, nitems, static_cast<FILE*>(userdata));
 }
-
 
 void
 GetToken(const std::string & cred_name, std::string & token) {
@@ -147,24 +181,6 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 		fprintf(stderr, "Can't setopt CONNECTIMEOUT\n");
 	}
 
-    curl_version_info_data *libcurl_version = curl_version_info(CURLVERSION_NOW);
-    if (libcurl_version) {
-        if (libcurl_version->age > 0 && libcurl_version->version_num >= 0x072600) {
-            if (m_speed_limit > 0) {
-                r = curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
-				if (r != CURLE_OK) {
-					fprintf(stderr, "Can't setopt LOW_SPEED_LIMIT\n");
-				}
-            }
-            if (m_speed_time > 0) {
-                r = curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
-				if (r != CURLE_OK) {
-					fprintf(stderr, "Can't setopt LOW_SPEED_TIME\n");
-				}
-            }
-        }
-    }
-
     // Provide default read / write callback functions; note these
     // don't segfault if a nullptr is given as the read/write data.
     r = curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
@@ -242,6 +258,14 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt ERRORBUFFER\n");
 	}
+
+    // Setup a transfer progress callback. We'll use this to determine if a 
+    // transfer is not making progress, and if not then abort it.
+    myProgress.curl = _handle;
+    myProgress.lastRunTime = 0;
+    curl_easy_setopt(_handle, CURLOPT_PROGRESSFUNCTION, xferInfo);
+    curl_easy_setopt(_handle, CURLOPT_PROGRESSDATA, &myProgress);
+    curl_easy_setopt(_handle, CURLOPT_NOPROGRESS, 0L);
 }
 
 FILE *
