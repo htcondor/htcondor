@@ -1063,8 +1063,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].dprintf_flag = dprintf_flag;
 	comTable[i].wait_for_payload = wait_for_payload;
 	if (alternate_perm) {
-		comTable[i].alternate_perm = new std::vector<DCpermission>();
-		*(comTable[i].alternate_perm) = *alternate_perm;
+		comTable[i].alternate_perm = new std::vector<DCpermission>(*alternate_perm);
 	}
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
@@ -1104,13 +1103,12 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].command_descrip = NULL;
 			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
+			delete comTable[i].alternate_perm;
+			comTable[i].alternate_perm = NULL;
 			while ( nCommand > 0 && comTable[nCommand - 1].num == 0 &&
 					comTable[nCommand - 1].handler == NULL &&
 					comTable[nCommand - 1].handlercpp == NULL ) {
 				nCommand--;
-			}
-			if (comTable[i].alternate_perm) {
-				delete comTable[i].alternate_perm;
 			}
 			return TRUE;
 		}
