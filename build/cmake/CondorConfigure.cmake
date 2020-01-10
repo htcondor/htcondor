@@ -527,7 +527,6 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
-	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
