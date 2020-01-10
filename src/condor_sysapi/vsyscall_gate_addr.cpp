@@ -57,6 +57,9 @@ sysapi_vsyscall_gate_addr_raw(void)
 	if (strcmp(_sysapi_vsyscall_gate_addr, "N/A") == MATCH) {
 
 		/* get the probe process executable */
+		/* TODO The probe was removed with the standard universe.
+		 *   All of this code should probably be jetisoned.
+		 */
 		tmp = find_ckpt_probe();
 		if (tmp == NULL) {
 			/* Can't find it at all, so bail */

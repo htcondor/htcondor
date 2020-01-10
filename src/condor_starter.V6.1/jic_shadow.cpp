@@ -996,12 +996,6 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Assign( ATTR_OPSYS, tmp_val );
 	free( tmp_val );
 
-	tmp_val = param( "CKPT_SERVER_HOST" );
-	if( tmp_val ) {
-		ad->Assign( ATTR_CKPT_SERVER, tmp_val );
-		free( tmp_val );
-	}
-
 	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.

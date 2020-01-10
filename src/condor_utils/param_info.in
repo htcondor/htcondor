@@ -416,21 +416,11 @@ tags=starter
 default=true
 type=bool
 
-[STARTER_LOCAL_LOGGING]
-default=
-type=string
-tags=starter
-
 [FILESYSTEM_DOMAIN]
 default=$(FULL_HOSTNAME)
 type=string
 usage=Used to indicate a shared file system, or to specify that each machine has its own file system.
 tags=schedd,starter
-
-[CKPT_SERVER_HOST]
-default=
-type=string
-tags=starter
 
 [ARCH]
 default=
@@ -795,61 +785,6 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
-[CKPT_SERVER_DIR]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_REPLICATION_LEVEL]
-default=0
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_INTERVAL]
-default=300
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CLASSAD_FILE]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_CLEAN_INTERVAL]
-default=86400
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CHECK_PARENT_INTERVAL]
-default=120
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_SOCKET_BUFSIZE]
-default=65536
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_STORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_RESTORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_HOSTS]
-default=
-type=string
-tags=ckpt_server
-
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -973,17 +908,6 @@ tags=shadow,pseudo_ops
 default=
 type=string
 tags=shadow,pseudo_ops
-
-[USE_CKPT_SERVER]
-default=
-type=string
-tags=shadow,baseshadow
-
-[ALWAYS_USE_LOCAL_CKPT_SERVER]
-default=false
-type=bool
-tags=shadow,baseshadow
-restart=true
 
 [RECONNECT_BACKOFF_CEILING]
 default=300
@@ -2996,41 +2920,6 @@ tags=tools,version
 default=
 type=string
 tags=tools,store_cred_main
-
-[STARTER_CHOOSES_CKPT_SERVER]
-default=
-type=string
-tags=shadow,shadow
-
-[MAX_DISCARDED_RUN_TIME]
-default=3600
-type=int
-tags=shadow,shadow
-
-[COMPRESS_PERIODIC_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[PERIODIC_MEMORY_SYNC]
-default=false
-type=bool
-tags=shadow,shadow
-
-[COMPRESS_VACATE_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[SLOW_CKPT_SPEED]
-default=0
-type=int
-tags=shadow,shadow
-
-[SHADOW_ALLOW_UNSAFE_REMOTE_EXEC]
-default=
-type=string
-tags=shadow,pseudo_ops
 
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
@@ -5232,12 +5121,6 @@ win32_default=$(SBIN)\condor_collector.exe
 description=Path to Collector daemon binary
 type=path
 
-[CKPT_SERVER]
-default=$(SBIN)/condor_ckpt_server
-win32_default=$(SBIN)\condor_ckpt_server.exe
-description=Path to Checkpoint server binary
-type=path
-
 [JOB_ROUTER]
 default=$(LIBEXEC)/condor_job_router
 win32_default=$(LIBEXEC)\condor_job_router.exe
@@ -6027,13 +5910,6 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
 
-[$ROLE.Checkpoint]
-friendly_name=Settings for HTCondor Checkpoint Server
-default : @end
-	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
-@end
-review=?
-
 # default security policy
 [$SECURITY.HOST_BASED]
 description=Default (host based) Authorization policy based on IPs and DNS names
@@ -6391,11 +6267,7 @@ win32_default : @end
 	UNICORE_GAHP
 	NORDUGRID_GAHP
 	CREAM_GAHP
-	DELTACLOUD_GAHP
 	LIBVIRT_XML_SCRIPT
-	STARTER_STANDARD
-	SHADOW_STANDARD
-	CKPT_PROBE
 @end
 
 # use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0

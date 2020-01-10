@@ -119,9 +119,7 @@ class BaseShadow : public Service
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
 
-		/** Here, we param for lots of stuff in the config file.  Things
-			param'ed for are: SPOOL, FILESYSTEM_DOMAIN, UID_DOMAIN, 
-			USE_AFS, USE_NFS, and CKPT_SERVER_HOST.
+		/** Here, we param for lots of stuff in the config file.
 		*/
 	virtual void config();
 
