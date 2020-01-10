@@ -153,10 +153,6 @@ const char* sysapi_kernel_version( void );
 const char* sysapi_kernel_memory_model_raw( void );
 const char* sysapi_kernel_memory_model( void );
 
-/* determine a checkpointing signature for a particular platform */
-const char* sysapi_ckptpltfrm_raw( void );
-const char* sysapi_ckptpltfrm( void );
-
 /* determine the instruction set extensions on x86 machines */
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
@@ -173,10 +169,6 @@ struct sysapi_cpuinfo {
 
 const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void );
 const struct sysapi_cpuinfo *sysapi_processor_flags( void );
-
-/* determine the syscall gate address on machines where that makes sense */
-const char * sysapi_vsyscall_gate_addr_raw( void );
-const char * sysapi_vsyscall_gate_addr( void );
 
 /* Produce a unique identifier for the disk partition containing the
    specified path.  Caller should free result.  The caller could use

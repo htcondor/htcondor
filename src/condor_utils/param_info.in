@@ -1004,11 +1004,6 @@ default=false
 type=bool
 tags=sysapi,reconfig
 
-[CHECKPOINT_PLATFORM]
-default=
-type=string
-tags=sysapi,reconfig
-
 [SYSAPI_GET_LOADAVG]
 default=1
 type=int
@@ -1938,11 +1933,6 @@ tags=startd,claim
 
 [START]
 default=True
-type=string
-tags=startd,Reqexp
-
-[IS_VALID_CHECKPOINT_PLATFORM]
-default=
 type=string
 tags=startd,Reqexp
 
