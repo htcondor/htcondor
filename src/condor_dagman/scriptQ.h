@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "HashTable.h"
-#include "Queue.h"
+#include <queue>
 
 #include "condor_daemon_core.h"
 
@@ -77,7 +77,7 @@ class ScriptQ : public Service {
 	HashTable<int, Script*> *_scriptPidTable;
 
 	// queue of scripts waiting to be run
-	Queue<Script*> *_waitingQueue;
+	std::queue<Script*> *_waitingQueue;
 
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;
