@@ -3177,7 +3177,6 @@ JobRoute::ApplyRoutingJobEdits(
 	//mset.init();
 	mset.macros().apool.reserve(0x10000); // allocate workspace. TODO: keep track of route workspace size.
 	mset.macros().sources.push_back(this->Name());
-	PRAGMA_REMIND("tj: figure out who frees the mset memory...")
 
 	std::string errmsg;
 	int rval = 0;

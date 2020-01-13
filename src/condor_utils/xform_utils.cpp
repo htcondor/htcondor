@@ -289,8 +289,14 @@ bool XFormHash::rewind_to_state(MACRO_SET_CHECKPOINT_HDR * chkhdr, bool and_dele
 
 XFormHash::~XFormHash()
 {
-	if (LocalMacroSet.errors) delete LocalMacroSet.errors;
+	delete LocalMacroSet.errors;
 	LocalMacroSet.errors = NULL;
+	delete LocalMacroSet.table;
+	LocalMacroSet.table = NULL;
+	delete LocalMacroSet.metat;
+	LocalMacroSet.metat = NULL;
+	LocalMacroSet.sources.clear();
+	LocalMacroSet.apool.clear();
 }
 
 void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
@@ -746,7 +752,7 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 {
 	const char * statements = statements_in + offset;
 	size_t cb = strlen(statements);
-	char * buf = (char*)malloc(cb + 1);
+	char * buf = (char*)malloc(cb + 2);
 	file_string.set(buf);
 	StringTokenIterator lines(statements, 0, "\r\n");
 	int start, length, linecount = 0;
