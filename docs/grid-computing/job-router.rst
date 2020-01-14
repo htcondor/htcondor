@@ -288,7 +288,7 @@ will be considered in the order given by this configuration variable.
     MAX_HISTORY_ROTATIONS = 20
 
 Routing Table Entry Commands and Macro values
---------------------------------------
+-----------------------------------------------
 
 A route consists of a sequence of Macro values and commands which are applied
 in order to produce the routed job ClassAd.  Certain macro names have special meaning
@@ -441,10 +441,13 @@ may appear in a Routing Table entry.
 ``DEFAULT <ATTR>``
     Sets the value of ``<ATTR>`` if the value is currently missing or undefined.
     This is equivalent to
-::
-    if ! defined MY.<Attr>
-      SET <Attr> <value>
-    endif
+
+    ::
+
+      if ! defined MY.<Attr>
+        SET <Attr> <value>
+      endif
+
 
 :index:`EVALSET <ATTR><single: EVALSET <ATTR>; Job Router Routing Table command>`
 
@@ -545,7 +548,7 @@ table.
 
 
 Deprecated router configuration
-------------------------
+---------------------------------------
 
 Prior to version 8.9.6 the *condor_job_router* used a list of ClassAds
 to configure the routes. This form of configuration is still supported.
@@ -622,7 +625,7 @@ so routes were normally given mutually exclusive requirements.
     #JOB_ROUTER_ROUTE_NAMES = Site_1 Site_2 Site_3
 
 Deprecated Routing Table Entry ClassAd Attributes
---------------------------------------
+------------------------------------------------------
 
 In the deprecated *condor_job_router* configuration, each route is the
 result of merging the `JOB_ROUTER_DEFAULTS` ClassAd with one of the
