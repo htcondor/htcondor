@@ -1,4 +1,4 @@
-Logging in HTCondor
+ClassAd Transforms
 ===================
 
 :index:`transforms`
@@ -79,10 +79,11 @@ Transform Commands
     Sets the ClassAd value of ``<attr>`` to ``<expr>`` in the ClassAd being tranformed if
     that ClassAd does not currently have ``<attr>`` or if it is currently set to ``undefined``.  This
     is equivalent to
-::
-    if ! defined MY.<Attr>
-      SET <Attr> <value>
-    endif
+
+    ::
+      if ! defined MY.<Attr>
+        SET <Attr> <value>
+      endif
 
 ``EVALSET <attr> <expr>``
     Evaluate ``<expr>`` and set the ClassAd value of ``<attr>`` to the result of the evaluation.
@@ -104,9 +105,10 @@ Transform Commands
     The new attribute names are defined by ``<attrpat>`` which may have regular expression capture groups to substitute
     portions of the original attribute name. ``\0`` Is the entire attribute name, and ``\1`` is the first capture, etc.
     For example
-::
-    # copy all attributes whose names begin with Request to new attribute with names that begin with OriginalRequest
-    COPY /Resource(.+)/ OriginalResource\1
+
+    ::
+      # copy all attributes whose names begin with Resource to new attribute with names that begin with OriginalResource
+      COPY /Resource(.+)/ OriginalResource\1
 
 ``RENAME <attr> <newattr>``
     Renames the attribute ``<attr>`` to a new attribute name ``<newattr>``. This is the eqivalent of 
