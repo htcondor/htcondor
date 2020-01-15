@@ -504,6 +504,12 @@ type=string
 tags=dagman,condor_submit_dag
 restart=never
 
+[DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE]
+default=false
+type=bool
+tags=dagman
+restart=never
+
 [DAGMAN_CONFIG_FILE]
 default=
 type=path

@@ -540,6 +540,8 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	bool _removeJobsAfterLimitChange = false;
+
 #if 0
 	bool RemoveNode( const char *name, MyString &whynot );
 #endif
@@ -659,7 +661,7 @@ class Dag {
 	int MaxPostScripts(void) { return _maxPostScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
-	void SetMaxJobsSubmitted(int maxJobs) { _maxJobsSubmitted = maxJobs; };
+	void SetMaxJobsSubmitted(int maxJobs);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
@@ -1088,6 +1090,9 @@ private:
 		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
     int _maxIdleJobProcs;
+
+		// Policy for how we respond to DAG edits.
+	std::string _editPolicy;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
