@@ -40,7 +40,7 @@ void print_usage(const char *argv0) {
 		"    -name    <name>                 Find a daemon with this name\n"
 		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
 		"\nOther options:\n"
-		"    -token    <NAME>                 Name of token file\n", argv0);
+		"    -token    <NAME>                Name of token file\n", argv0);
 	exit(1);
 }
 
