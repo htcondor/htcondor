@@ -29,7 +29,6 @@
 # See the License for the specific language governing permissions and 
 # limitations under the License.
 #
-echo submit $* >>/tmp/k8s.log
 
 . `dirname $0`/blah_load_config.sh
 
@@ -125,6 +124,37 @@ if [ "x$workdir" != "x" ]; then
     fi
 fi
 
+# These are the extra, k8s specific parameters
+if [ -r "$req_file" ]; then
+	k8s_image=$(awk -F= '{if ($1 == "k8s_image") {print $2}}' $req_file | tr -d "'\"")
+	k8s_cpus=$(awk -F= '{if ($1 == "RequestCpus") {print $2}}' $req_file | tr -d "'\"")
+	k8s_memory=$(awk -F= '{if ($1 == "RequestMemory") {print $2}}' $req_file | tr -d "'\"")
+	k8s_disk=$(awk -F= '{if ($1 == "RequestDisk") {print $2}}' $req_file | tr -d "'\"")
+	k8s_namespace=$(awk -F= '{if ($1 == "k8s_namespace") {print $2}}' $req_file | tr -d "'\"")
+fi
+
+if [ -z "${k8s_image}" ]; then
+	echo "No k8s_image in submit file" >&2
+	echo Error
+	exit 1
+fi
+
+if [ -z "${k8s_cpus}" ]; then
+	k8s_cpus=1
+fi
+
+if [ -z "${k8s_memory}" ]; then
+	k8s_memory=1024
+fi
+
+if [ -z "${k8s_disk}" ]; then
+	k8s_disk=1024
+fi
+
+if [ -z "${k8s_namespace}" ]; then
+	k8s_namespace=default
+fi
+
 ##############################################################
 # Create submit file
 ###############################################################
@@ -145,9 +175,7 @@ if [ $? -ne 0 ]; then
 fi
 
 #  Remove any preexisting submit file
-if [ -f $submit_file ] ; then
-	rm -f $submit_file
-fi
+rm -f $submit_file
 
 if [ ! -z "$inputflstring" ] ; then
     i=0
@@ -242,9 +270,9 @@ fi
 # TODO This needs works, particularly for the new-style escaping
 if echo $arguments | grep -q '^".*"$' ; then
   arguments=$(echo $arguments | sed -e "s/\" \"/', '/g")
-  arguments=", '${arguments:1:$((${#arguments}-2))}'"
+  arguments="'${arguments:1:$((${#arguments}-2))}'"
 elif [ "$arguments" != "" ] ; then
-  arguments=", '"$(echo $arguments | sed -e "s/ /', '/g")"'"
+  arguments="'"$(echo $arguments | sed -e "s/ /', '/g")"'"
 fi
 
 #if [ "x$proxy_file" != "x" ]
@@ -272,21 +300,34 @@ apiVersion: v1
 kind: Pod
 metadata:
  name: ${pod_name}
+ namespace: ${k8s_namespace}
 spec:
  restartPolicy: Never
+ volumes:
+ - name: glidein-wn
+   configMap:
+     name: glidein-wn
  containers:
   - name: myapp-container
-    image: centos:7
+    image: ${k8s_image}
+    command: [ "${command}" ]
+    args: [ $arguments ]
     resources:
       limits:
-        cpu: "${mpinodes}"
-        memory: "2G"
-        ephemeral-storage: "10G"
+        cpu: ${k8s_cpus}
+        memory: ${k8s_memory}M
+        ephemeral-storage: ${k8s_disk}M
       requests:
-        cpu: "${mpinodes}"
-        memory: "1G"
-        ephemeral-storage: "10G"
-    command: ['/bin/sleep' ${arguments}]
+        cpu: ${k8s_cpus}
+        memory: ${k8s_memory}M
+        ephemeral-storage: ${k8s_disk}M
+    volumeMounts:
+    - name: glidein-wn
+      mountPath: /root/config/10-security.cfg
+      subPath: 10-security.cfg
+    env:
+    - name: CONDOR_HOST
+      value: glidein2.chtc.wisc.edu
 EOF
 
 

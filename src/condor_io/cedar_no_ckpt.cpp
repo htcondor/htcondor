@@ -926,8 +926,11 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 			sinful.getPort() && strcmp(sinful.getPort(),"0")==0;
 
 		bool same_host = false;
-		char const *my_ip = my_ip_string();
-		if( my_ip && sinful.getHost() && strcmp(my_ip,sinful.getHost())==0 ) {
+		// TODO: Picking IPv4 arbitrarily.
+		//   We should do a better job of detecting whether sinful
+		//   points to a local interface.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		if( sinful.getHost() && strcmp(my_ip.Value(),sinful.getHost())==0 ) {
 			same_host = true;
 		}
 

@@ -112,7 +112,7 @@ JobTransforms::initAndReconfig()
 			ClassAd transformAd;
 			rval = 0;
 			if ( (!parser.ParseClassAd(transform, transformAd, offset)) ||
-				 ((rval=XFormLoadFromJobRouterRoute(*xfm,empty,offset,transformAd,0)) < 0) )
+				 ((rval=XFormLoadFromClassadJobRouterRoute(*xfm,empty,offset,transformAd,0)) < 0) )
 			{
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s classad malformed, ignoring. (err=%d)\n",
 					name, rval );

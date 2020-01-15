@@ -38,7 +38,8 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
 void main_shutdown_logerror( void );
-void update_status( bool forceScheddUpdate = false );
+void print_status( bool forceScheddUpdate = false );
+void jobad_update();
 
 class Dagman {
   public:

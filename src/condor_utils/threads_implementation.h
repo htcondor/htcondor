@@ -104,7 +104,7 @@ public:
 	int num_threads_ , num_threads_busy_;	
 	pthread_cond_t workers_avail_cond;  // signalled when workers are available
 	pthread_cond_t work_queue_cond;	    // signalled when work queue is not empty
-	Queue<WorkerThreadPtr_t> work_queue;
+	std::queue<WorkerThreadPtr_t> work_queue;
 	int next_tid_;
 };
 

@@ -115,7 +115,9 @@ XInterface::TryUser(const char *user)
 	if (strcmp(user, "root") == 0) {
 		set_root_priv();
 	} else {
-		init_user_ids( user, NULL );
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
 		set_user_priv();
 		need_uninit = true;
 	}

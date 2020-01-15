@@ -29,7 +29,7 @@
 #include "condor_distribution.h"
 #include "daemon_list.h"
 #include "dc_collector.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 
 #include <algorithm>
 
@@ -314,7 +314,9 @@ int main( int argc, char *argv[] )
 				// If there's no "MyAddress", generate one..
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
 				std::string tmp;
-				formatstr( tmp, "<%s:0>", my_ip_string() );
+				// TODO: Picking IPv4 arbitrarily.
+				MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+				formatstr( tmp, "<%s:0>", my_ip.Value() );
 				ad->Assign( ATTR_MY_ADDRESS, tmp );
 			}
 
