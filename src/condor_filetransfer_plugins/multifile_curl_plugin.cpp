@@ -263,9 +263,18 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     // transfer is not making progress, and if not then abort it.
     myProgress.curl = _handle;
     myProgress.lastRunTime = 0;
-    curl_easy_setopt(_handle, CURLOPT_PROGRESSFUNCTION, xferInfo);
-    curl_easy_setopt(_handle, CURLOPT_PROGRESSDATA, &myProgress);
-    curl_easy_setopt(_handle, CURLOPT_NOPROGRESS, 0L);
+    r = curl_easy_setopt(_handle, CURLOPT_PROGRESSFUNCTION, xferInfo);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt PROGRESSFUNCTION\n");
+	}
+    r = curl_easy_setopt(_handle, CURLOPT_PROGRESSDATA, &myProgress);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt PROGRESSDATA\n");
+	}
+    r = curl_easy_setopt(_handle, CURLOPT_NOPROGRESS, 0L);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt NOPROGRESS\n");
+	}
 }
 
 FILE *
