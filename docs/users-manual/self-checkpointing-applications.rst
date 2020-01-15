@@ -15,8 +15,8 @@ How To Run Self-Checkpointing Jobs
 ----------------------------------
 
 The best way to run self-checkpointing code is to set
-``CheckpointExitCode`` in your submit file. If the ``executable`` exits
-with ``CheckpointExitCode``, HTCondor will transfer the checkpoint to
+``checkpoint_exit_code`` in your submit file. If the ``executable`` exits
+with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
 the submit node, and then immediately restart the ``executable`` in the
 same sandbox on the same machine, with same the ``arguments``. This
 immediate transfer makes the checkpoint available for continuing the job
@@ -24,7 +24,7 @@ even if the job is interrupted in a way that doesn't allow for files to
 be transferred (e.g., power failure), or if the file transfer doesn't
 complete in the time allowed.
 
-For a job to use ``CheckpointExitCode`` successfully, its ``executable``
+For a job to use ``checkpoint_exit_code`` successfully, its ``executable``
 must meet a number of requirements.
 
 Requirements
@@ -61,8 +61,8 @@ Assumptions`_ and/or the `Other Options`_.
       slow, your job may not run efficiently enough to be useful,
       depending on the frequency of checkpoints and interruptions.
 
-Using CheckpointExitCode
-------------------------
+Using checkpoint_exit_code
+--------------------------
 
 The following Python script (``77.py``) is a toy example of code that
 checkpoints itself. It counts from 0 to 10 (exclusive), sleeping for 10
@@ -106,7 +106,7 @@ checkpoints. Note that you *must* include your checkpoint file(s) in
 
 ::
 
-    CheckpointExitCode          = 77
+    checkpoint_exit_code        = 77
     transfer_output_files       = 77.checkpoint
     should_transfer_files       = yes
 
@@ -222,11 +222,11 @@ even if the code does not.
       so, the wrapper script will have to exit with a unique code. If
       the code could usefully exit with any code, and the wrapper script
       therefore can not exit with a unique code, you can instead
-      instruct HTCondor to consider being kill by a particular signal as
+      instruct HTCondor to consider being killed by a particular signal as
       a sign of successful checkpoint; set
       ``+SuccessCheckpointExitBySignal`` to ``TRUE`` and
       ``+SuccessCheckpointExitSignal`` to the particular signal. (If you
-      do not set ``CheckpointExitCode``, you must set
+      do not set ``checkpoint_exit_code``, you must set
       ``+WantFTOnCheckpoint``.)
    -  If your code does not exit when it takes a checkpoint, the wrapper
       script will have to determine when a checkpoint has been made,
@@ -274,7 +274,7 @@ not want it to exit after it writes a checkpoint; otherwise, the wrapper
 script could restart the code as necessary.
 
 To use this method, set ``when_to_transfer_output`` to
-``ON_EXIT_OR_EVICT`` instead of setting ``CheckpointExitCode``. This
+``ON_EXIT_OR_EVICT`` instead of setting ``checkpoint_exit_code``. This
 will cause HTCondor to transfer your checkpoint file(s) (which you
 listed in ``transfer_output_files``, as noted above) when the job is
 evicted. Of course, since this is the only time your checkpoint file(s)
@@ -306,7 +306,7 @@ Manual Transfers
 ~~~~~~~~~~~~~~~~
 
 If you're comfortable with programming, instead of running a job with
-``CheckpointExitCode``, you could use ``condor_chirp``, or other tools,
+``checkpoint_exit_code``, you could use ``condor_chirp``, or other tools,
 to manage your checkpoint file(s). Your ``executable`` would be
 responsible for downloading the checkpoint file(s) on start-up, and
 periodically uploading the checkpoint file(s) during execution. We don't
@@ -340,11 +340,11 @@ HTCondor supports transferring checkpoint file(s) for
 then exits in a unique way. Set ``+WantCheckpointSignal`` to ``TRUE`` to
 periodically receive checkpoint signals, and ``+CheckpointSig`` to
 specify which one. (The interval is specified by the administrator of
-the execute machine.) The unique way be a specific exit code, for which
-you would set ``CheckpointExitCode``, or a signal, for which you would
+the execute machine.) The unique way may be a specific exit code, for which
+you would set ``checkpoint_exit_code``, or a signal, for which you would
 set ``+SuccessCheckpointExitBySignal`` to ``TRUE`` and
 ``+SuccessCheckpointExitSignal`` to the particular signal. (If you do
-not set ``CheckpointExitCode``, you must set ``+WantFTOnCheckpoint``.)
+not set ``checkpoint_exit_code``, you must set ``+WantFTOnCheckpoint``.)
 
 Delayed Transfer with Signals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

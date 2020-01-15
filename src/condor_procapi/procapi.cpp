@@ -1053,31 +1053,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		// convert the number of page faults into a rate
 	do_usage_sampling(pi, cpu_time, procRaw.majfault, procRaw.minfault);
 
-	/* Byzantine kernel. :(
-		It turns out that even though a non-root process
-		may have the ability to call task_for_pid (either
-		through configuration by the admin or default
-		behavior) the kernel simply gives back very wrong
-		information. This has been seen with the image size
-		value and its relation with the rsssize. So for
-		now, those are just plainly set to zero until a
-		better solution comes along. If the process is root,
-		and the kernel lied, then we'll believe it since
-		this is the behavior I've seen. If sometimes this
-		policy is wrong and the rootly process gets a Byzantine
-		failure from the kernel, then it is simply wrong.
-
-		This seems to only happen for ppc macosx 10.4 kernels,
-		so that is where we make this policy. 
-
-	*/
-#if defined(PPC) && defined(Darwin_10_4)
-	if (getuid() != 0) {
-		pi->imgsize = 0;
-		pi->rssize = 0;
-	}
-#endif
-
 	return PROCAPI_SUCCESS;
 }
 
@@ -1119,65 +1094,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	int mib[4];
 	struct kinfo_proc *kp, *kprocbuf;
 	size_t bufSize = 0;
-	task_port_t task;
-	task_basic_info 	ti;
-	unsigned int 		count;	
-
-	/*
-		Depending upon how the user machine is configured, task_for_pid() could
-		work or not work when a process is not running as root. As of macos
-		10.4, the default is 0. However, since an admin may configure their
-		machine to have a process utilize task_for_pid when it isn't running
-		as root, we allow the admin to tell Condor about this.
-
-		As for 09/05/2007 for macosx 10.3 & 10.4, these are the 
-		applicable values.
-
-		Old policy is:
-			- the caller is running as root (EUID 0)
-			- if the caller is running as the
-				same UID as the target (and the target's
-				EUID matches its RUID, that is, it's not
-				running a setuid binary)
-		New policy is:
-			- if the caller was running as root (EUID 0)
-			- if the pid is that of the caller
-			- if the caller is running as the same UID
-				as the target and the target's EUID matches
-				its RUID, that is, it's not a setuid binary
-				AND the caller is in group "procmod" or
-				"procview"
-
-				The long term goal of having both "procmod"
-				and "procview" is that task_for_pid would
-				return a send right for the task control
-				port only to those processes in "procmod";
-				the callers in "procview" would only get a
-				send right to a task inspection port.  This
-				distinction is not currently implemented.
-
-		To actually set the policy, do this:
-
-		$ sudo sysctl -w kern.tfp.policy=1 #set old policy
-		$ sudo sysctl -w kern.tfp.policy=2 #set new policy
-		$ sudo sysctl -w kern.tfp.policy=0 #disable task_for_pid except for root
-
-		Since I can't seem to find a man page for task_for_pid() *anywhere*,
-		which is odd, I'm going to declare that if it comes back not a 
-		KERN_SUCCESS, then I don't have permission to see the pid. Sadly,
-		I can't tell if a pid is not there, or I don't have a permission
-		to see it using this method.
-	*/
-	/*
-	 * Mac OS X 10.9 introduced a better alternative to task_for_pid()
-	 * for the data we need: proc_pid_rusage()
-	 * It can be used by non-root processes to query processes owned by
-	 * the same UID.
-	 * It can be used to query SIP-protected processes (starting in
-	 * Mac OS X 10.11, not even root can use task_for_pid() on these
-	 * processes, and trying to do so floods the system logs with
-	 * errors).
-	 */
 
 		// assume success
 	status = PROCAPI_OK;
@@ -1247,113 +1163,28 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 	// figure out the image,rss size and the sys/usr time for the process.
 
-	// If proc_pid_rusage() is available at both build time and run time,
-	// then use it. Otherwise, fall back to task_for_pid().
-#if defined(HAVE_PROC_PID_RUSAGE)
-	// proc_pid_rusage() may be on the build machine but not the runtime
-	// machine...
-	if ( proc_pid_rusage ) {
-		struct rusage_info_v0 ru;
-		if ( proc_pid_rusage( pid, RUSAGE_INFO_V0,
-							  reinterpret_cast<rusage_info_t*>(&ru) ) < 0 ) {
-			// If this call fails, set all values to zero.
-			// Failure is unexpected if we're root (since sysctl() succeeded),
-			// so that's worth a minor log entry.
-			if (getuid() == 0 || geteuid() == 0) {
-				dprintf( D_FULLDEBUG,
-					"ProcAPI: proc_pid_rusage() on pid %d failed with %d(%s)\n",
-					pid, errno, strerror(errno) );
-			}
-			memset(&ru, 0, sizeof(ru));
+	struct rusage_info_v0 ru;
+	if ( proc_pid_rusage( pid, RUSAGE_INFO_V0,
+						  reinterpret_cast<rusage_info_t*>(&ru) ) < 0 ) {
+		// If this call fails, set all values to zero.
+		// Failure is unexpected if we're root (since sysctl() succeeded),
+		// so that's worth a minor log entry.
+		if (getuid() == 0 || geteuid() == 0) {
+			dprintf( D_FULLDEBUG,
+				"ProcAPI: proc_pid_rusage() on pid %d failed with %d(%s)\n",
+				pid, errno, strerror(errno) );
 		}
-
-		// fill in the values we got from the kernel
-		// CPU times are given in nanoseconds.
-		procRaw.imgsize = (unsigned long)ru.ri_phys_footprint;
-		procRaw.rssize = ru.ri_resident_size;
-		procRaw.user_time_1 = ru.ri_user_time / 1000000000;
-		procRaw.user_time_2 = ru.ri_user_time % 1000000000;
-		procRaw.sys_time_1 = ru.ri_system_time / 1000000000;
-		procRaw.sys_time_2 = ru.ri_system_time % 1000000000;
-	} else
-#endif
-	{
-		kern_return_t results;
-		results = task_for_pid(mach_task_self(), pid, &task);
-		if(results != KERN_SUCCESS) {
-			// Since we weren't able to get a mach port, we're going to assume that
-			// we don't have permission to attach to the pid.  (I can't seem to
-			// find a man page for this function in the vast wasteland of the
-			// internet or on any machine on which I have access. So, I'm also
-			// going to mash the no such process error into this case, which is
-			// slightly wrong, but that should have already been caught above with
-			// sysctl())--except for the race where the sysctl can succeed, then the
-			// process exit, then the tfp() call happens.
-			// XXX I'm sure this function call has all sorts of error edge cases I
-			// am not handling due to the opaqueness of this function. :(
-
-			// If root, then give a warning about it, but continue anyway. I've
-			// seen this function fail due to the pid not being present on the
-			// machine and sometimes "just because".  Also, there isn't a
-			// difference when a non-root user may not call task_for_pid() and when
-			// they may, but the pid isn't actually there.
-			if (getuid() == 0 || geteuid() == 0) { 
-				dprintf( D_FULLDEBUG, 
-					"ProcAPI: task_port_pid() on pid %d failed with "
-					"%d(%s), Marking imgsize, rsssize, cpu/sys time as zero for "
-					"the pid.\n", pid, results, mach_error_string(results) );
-			}
-
-			// This will be set to zero at this time due to there being a LOT of
-			// code change for a stable series to make it efficient when we invoke
-			// /bin/ps to get this information. But if a better way to call ps is
-			// created, the function call to fill this stuff in goes right here.
-
-			procRaw.imgsize = 0;
-			procRaw.rssize = 0;
-
-			// XXX This sucks, but there is *no* method to get this which doesn't
-			// involve a privledge escalation or hacky and not recommended dynamic
-			// library injection in the program being tracked. Either this process
-			// must be escalated or another escalated program invoked which gets
-			// this for me.
-
-			procRaw.user_time_1 = 0;
-			procRaw.user_time_2 = 0;
-			procRaw.sys_time_1 = 0;
-			procRaw.sys_time_2 = 0;
-
-		} else {
-
-			/* We successfully got a mach port... */
-
-			count = TASK_BASIC_INFO_COUNT;	
-			results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti,&count);  
-			if(results != KERN_SUCCESS) {
-				status = PROCAPI_UNSPECIFIED;
-
-				dprintf( D_FULLDEBUG, 
-					"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
-					pid, results, mach_error_string(results) );
-
-				mach_port_deallocate(mach_task_self(), task);
-				free(kp);
-
-				return PROCAPI_FAILURE;
-			}
-
-			// fill in the values we got from the kernel
-			procRaw.imgsize = (unsigned long)ti.virtual_size;
-			procRaw.rssize = ti.resident_size;
-			procRaw.user_time_1 = ti.user_time.seconds;
-			procRaw.user_time_2 = 0;
-			procRaw.sys_time_1 = ti.system_time.seconds;
-			procRaw.sys_time_2 = 0;
-
-			// clean up our port
-			mach_port_deallocate(mach_task_self(), task);
-		}
+		memset(&ru, 0, sizeof(ru));
 	}
+
+	// fill in the values we got from the kernel
+	// CPU times are given in nanoseconds.
+	procRaw.imgsize = (unsigned long)ru.ri_phys_footprint;
+	procRaw.rssize = ru.ri_resident_size;
+	procRaw.user_time_1 = ru.ri_user_time / 1000000000;
+	procRaw.user_time_2 = ru.ri_user_time % 1000000000;
+	procRaw.sys_time_1 = ru.ri_system_time / 1000000000;
+	procRaw.sys_time_2 = ru.ri_system_time % 1000000000;
 
 	// add in the rest
 	procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;

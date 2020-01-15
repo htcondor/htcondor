@@ -49,7 +49,7 @@ Load a transform source
   MacroStreamXFormSource xfm;
   xfm.load(FILE*, source)
 or
-  xfm.open(StringList & statements, source) (or XFormLoadFromJobRouterRoute() which calls this)
+  xfm.open(StringList & statements, source) (or XFormLoadFromClassadJobRouterRoute() which calls this)
  
 Save the hashtable state (so we can revert changes before each time we transform)
   chkpt = mset.save_state();
@@ -229,18 +229,21 @@ bool ValidateXForm (
 	XFormHash & mset,              // the hashtable used as temporary storage
 	std::string & errmsg);          // holds parse errors on failure
 
-// load a MacroStreamXFormSource from a jobrouter style route.
-int XFormLoadFromJobRouterRoute (
+// load a MacroStreamXFormSource from a jobrouter classad style route.
+// returns < 0 on failure, >= 0 on success (positive values are number of statements in the route)
+int XFormLoadFromClassadJobRouterRoute (
 	MacroStreamXFormSource & xform,
 	const std::string & routing_string,
 	int & offset,
 	const classad::ClassAd & base_route_ad,
 	int options);
 
-// load a MacroStreamXFormSource statements  from a jobrouter style route
+// load a MacroStreamXFormSource statements  from a jobrouter classad style route
 // use this function rather than the one above if you want to ammend the
 // statements before initializing the xform with them.
-int ConvertJobRouterRouteToXForm (
+// reads a new-classad style ad from routing_string starting at offset, and updates offset
+// returns 0 if the routing_string does not parse, 1 if it does
+int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
 	const char * config_name, // name from config
 	const std::string & routing_string,

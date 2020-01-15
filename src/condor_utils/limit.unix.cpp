@@ -163,7 +163,7 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 			/* if this is something other than a permission problem
 				given the legal use of the setrlimit() interface */
 
-			EXCEPT( "Failed to set %s limits for %s. "
+			dprintf(D_ALWAYS, "Failed to set %s limits for %s. "
 			"setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
 			"old = [rlim_cur = %lu, rlim_max = %lu], errno: %d(%s). \n",
 			kind_str,

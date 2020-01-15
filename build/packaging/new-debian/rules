@@ -19,7 +19,6 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
 		-DPROPER:BOOL=ON \
-		-DCLIPPED:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="Debian-$(debver)"\

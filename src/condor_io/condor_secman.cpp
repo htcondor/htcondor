@@ -2877,7 +2877,6 @@ SecMan::SecMan() :
 
 	// the list of ClassAd attributes we need to resume a session
 	if (m_resume_proj.empty()) {
-		dprintf(D_ALWAYS, "ZKM: buidling projection.\n");
 		m_resume_proj.insert(ATTR_SEC_USE_SESSION);
 		m_resume_proj.insert(ATTR_SEC_SID);
 		m_resume_proj.insert(ATTR_SEC_COMMAND);

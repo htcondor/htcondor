@@ -137,9 +137,7 @@ MyString
 token_cache::cacheToString() {
 	token_cache_entry *ent = NULL;
 	MyString index;
-	static MyString cache_string;
-
-	cache_string = "";
+	MyString cache_string;
 
 	TokenTable->startIterations();
 	while ( TokenTable->iterate(index, ent) ) {

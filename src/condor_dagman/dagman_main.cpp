@@ -501,7 +501,7 @@ main_shutdown_fast()
 // shutdown gracefully; this also gets called if condor_hold is done
 // on the DAGMan job
 void main_shutdown_graceful() {
-	update_status( true );
+	print_status( true );
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
 	// Don't report metrics here because we should restart.
@@ -511,7 +511,7 @@ void main_shutdown_graceful() {
 
 // Special case shutdown when the log file gets corrupted
 void main_shutdown_logerror() {
-	update_status();
+	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ABORT );
 	if (dagman.dag) dagman.dag->ReportMetrics( EXIT_ABORT );
@@ -576,7 +576,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			inShutdownRescue = false;
 			return;
 		}
-		update_status( true );
+		print_status( true );
 		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
 		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
@@ -602,7 +602,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
-	update_status( true );
+	print_status( true );
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
@@ -896,6 +896,9 @@ void main_init (int argc, char ** const argv) {
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
+
+	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
+				dagman.maxPreScripts, dagman.maxPostScripts );
 
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );
@@ -1375,7 +1378,7 @@ void main_init (int argc, char ** const argv) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
-		update_status();
+		print_status();
     }
 
     debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );
@@ -1524,7 +1527,7 @@ Dagman::PublishStats() {
 }
 
 void
-update_status( bool forceScheddUpdate ) {
+print_status( bool forceScheddUpdate ) {
 	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
 				dagman.dag->_dagStatus,
 				dagman.dag->GetStatusName() );
@@ -1552,32 +1555,44 @@ update_status( bool forceScheddUpdate ) {
 
 	dagman.PublishStats();
 
-	// Set up a static double to track the last schedd update time. On the first
-	// iteration we'll set it to the current time. On subsequent iterations it 
-	// will only be updated when we call a schedd update.
-	double currentTime = condor_gettimestamp_double();
-	static double scheddLastUpdateTime = 0.0;
-	if ( scheddLastUpdateTime <= 0.0 ) {
-		scheddLastUpdateTime = currentTime;
+	if (forceScheddUpdate) {
+		jobad_update();
 	}
-	
-	if( forceScheddUpdate || ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
-		if ( dagman._dagmanClassad ) {
-			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-						ready, failed, unready, dagman.dag->_dagStatus,
-						dagman.dag->Recovery(), dagman._dagmanStats,
-						dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts, 
-						dagman.maxPostScripts );
 
-			// It's possible that certain DAGMan attributes were changed in the job ad.
-			// If this happened, update the internal values in our dagman data structure.
-			dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
-			dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
-			dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
-			dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
-		}
-		scheddLastUpdateTime = currentTime;
+}
+
+/**
+	Two-way job ad update.
+	First, update the job ad with new information from local dagman
+	Next, update local dagman with any new information from the job ad
+*/
+void
+jobad_update() {
+
+	int total = dagman.dag->NumNodes( true );
+	int done = dagman.dag->NumNodesDone( true );
+	int pre = dagman.dag->PreRunNodeCount();
+	int submitted = dagman.dag->NumJobsSubmitted();
+	int post = dagman.dag->PostRunNodeCount();
+	int ready =  dagman.dag->NumNodesReady();
+	int failed = dagman.dag->NumNodesFailed();
+	int unready = dagman.dag->NumNodesUnready( true );
+
+	if ( dagman._dagmanClassad ) {
+		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+					ready, failed, unready, dagman.dag->_dagStatus,
+					dagman.dag->Recovery(), dagman._dagmanStats,
+					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
+					dagman.maxPostScripts );
+
+		// It's possible that certain DAGMan attributes were changed in the job ad.
+		// If this happened, update the internal values in our dagman data structure.
+		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
+		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
+		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
+		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
 	}
+
 }
 
 void condor_event_timer () {
@@ -1673,7 +1688,7 @@ void condor_event_timer () {
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
-		update_status();
+		print_status();
 
         prevJobsDone = dagman.dag->NumNodesDone( true );
         prevJobs = dagman.dag->NumNodes( true );
@@ -1686,6 +1701,17 @@ void condor_event_timer () {
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();
 		}
+	}
+
+	// Periodically perform a two-way update with the job ad
+	double currentTime = condor_gettimestamp_double();
+	static double scheddLastUpdateTime = 0.0;
+	if ( scheddLastUpdateTime <= 0.0 ) {
+		scheddLastUpdateTime = currentTime;
+	}
+	if( ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
+		jobad_update();
+		scheddLastUpdateTime = currentTime;
 	}
 
 	dagman.dag->DumpNodeStatus( false, false );

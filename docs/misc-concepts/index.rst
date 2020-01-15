@@ -18,6 +18,7 @@ The many varieties of logs used by HTCondor are listed and described.
    :glob:
 
    classad-mechanism
-   computing-on-demand
+   transforms
    hooks
    logging
+   computing-on-demand

@@ -279,9 +279,6 @@ CondorQuery::CondorQuery(AdTypes ) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
-const char*
-my_ip_string() {not_impl(); return 0;}
-
 #include "Regex.h"
 
 Regex::Regex() {not_impl();}
