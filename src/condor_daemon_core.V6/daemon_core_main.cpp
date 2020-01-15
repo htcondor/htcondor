@@ -240,7 +240,7 @@ public:
 		if (!token_request.getBoundingSet().size()) {
 			return false;
 		}
-			// Only auto-approve requests that ask for schedds or startds.
+			// Only auto-approve requests from daemons that automatically ask for one.
 		for (const auto &authz : token_request.getBoundingSet()) {
 			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD") && (authz != "ADVERTISE_MASTER")) {
 				return false;
