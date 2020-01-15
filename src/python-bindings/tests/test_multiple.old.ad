@@ -1,6 +1,0 @@
-MaxHosts = 1
-Managed = "Schedd"
-
-User = "bbockelm@users.opensciencegrid.org"
-SUBMIT_x509userproxy = "/tmp/x509up_u1221"
-

@@ -495,7 +495,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 			continue;
 		}
 		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr) { 
+		if( !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}

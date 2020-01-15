@@ -209,7 +209,11 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	std::vector<ClassAd> requests;
 	requests.resize(numads);
 	for(int i=0; i<numads; i++) {
-		getClassAd(r, requests[i]);
+		if (!getClassAd(r, requests[i])) {
+			dprintf(D_ALWAYS, "zkm_query_creds: cannot read classad off wire\n");
+			r->end_of_message();
+			return CLOSE_STREAM;
+		}
 	}
 	r->end_of_message();
 

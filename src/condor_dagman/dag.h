@@ -38,6 +38,8 @@
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 
+#include <queue>
+
 // Which layer of splices do we want to lift?
 enum SpliceLayer {
 	SELF,
@@ -1109,7 +1111,7 @@ private:
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log
-    Queue<Job*>* _submitQ;
+	std::queue<Job*>* _submitQ;
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
