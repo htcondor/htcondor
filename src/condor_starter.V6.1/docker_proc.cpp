@@ -853,6 +853,14 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		param(scratchNames, "MOUNT_UNDER_SCRATCH");
 	} 
 
+#ifdef DOCKER_ALLOW_RUN_AS_ROOT
+		// If docker is allowing the user to be root, don't mount anything
+		// so that we can't create rootly files in shared places.
+	if (param_boolean("DOCKER_RUN_AS_ROOT", false)) {
+		return;
+	}
+#endif
+
 	if (scratchNames.length() > 0) {
 		std::string workingDir = Starter->GetWorkingDir();
 		StringList sl(scratchNames.c_str());

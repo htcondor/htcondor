@@ -103,8 +103,8 @@ CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
 bool CollectorDaemon::forwardClaimedPrivateAds = true;
 
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
 int CollectorDaemon::ReaperId = -1;
 int CollectorDaemon::max_query_workers = 4;
 int CollectorDaemon::reserved_for_highprio_query_workers = 1;
@@ -236,7 +236,7 @@ CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
 		error_code = 4;
 		error_string = "Failed to walk the schedd table.";
 	}
-	if (schedd_addr.empty()) {
+	if (!error_code && schedd_addr.empty()) {
 		error_code = 5;
 		formatstr(error_string, "Schedd %s is not known to the collector.",
 			schedd_name.c_str());
@@ -645,13 +645,13 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			  (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers - reserved_for_highprio_query_workers))
 			 ||
 			 ((high_prio_query==true) &&
-			  (active_query_workers - reserved_for_highprio_query_workers + query_queue_high_prio.Length() <  max_query_workers + max_pending_query_workers))
+			  (active_query_workers - reserved_for_highprio_query_workers + (int)query_queue_high_prio.size() <  max_query_workers + max_pending_query_workers))
 		   )
 		{
 			if ( high_prio_query ) {
-				query_queue_high_prio.enqueue( query_entry );
+				query_queue_high_prio.push( query_entry );
 			} else {
-				query_queue_low_prio.enqueue( query_entry );
+				query_queue_low_prio.push( query_entry );
 			}
 			did_we_fork = QueryReaper(NULL, -1, -1);
 			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
@@ -717,24 +717,25 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		// Pull of an entry from our high_prio queue; if nothing there, grab
 		// one from our low prio queue.  Ignore "stale" (old) requests.
 
-		high_prio_query = query_queue_high_prio.Length() > 0;
+		high_prio_query = query_queue_high_prio.size() > 0;
 
 		// Dequeue a high priority entry if worker slots available.
+		// If high priority queue is empty, dequeue a low priority entry
+		// if a worker slot (minus those reserved only for high prioirty) is available.
 		if ( active_query_workers < max_query_workers ) {
-			query_queue_high_prio.dequeue(query_entry);
-			// If high priority queue is empty, dequeue a low priority entry
-			// if a worker slot (minus those reserved only for high prioirty) is available.
-			if ((query_entry == NULL) &&
-			    (active_query_workers < (max_query_workers - reserved_for_highprio_query_workers)))
-			{
-				query_queue_low_prio.dequeue(query_entry);
+			if ( !query_queue_high_prio.empty() ) {
+				query_entry = query_queue_high_prio.front();
+				query_queue_high_prio.pop();
+			} else if ( !query_queue_low_prio.empty() && active_query_workers < (max_query_workers - reserved_for_highprio_query_workers) ) {
+				query_entry = query_queue_low_prio.front();
+				query_queue_low_prio.pop();
 			}
 		}
 
 		// Update our pending stats counters.  Note we need to do this regardless
 		// of if query_entry==NULL, since we may be here because something was either
 		// recently added into the queue, or recently removed from the queue.
-		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		pending_query_workers = query_queue_high_prio.size() + query_queue_low_prio.size();
 		collectorStats.global.PendingQueries = pending_query_workers;
 
 		// If query_entry==NULL, we are not forking anything now, so we're done for now

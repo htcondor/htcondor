@@ -480,7 +480,7 @@ sub load_test_requirements
                 next;
             }
 
-            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+            if($line =~ /<<['"]?CONDOR_TESTREQ_CONFIG/) {
                 $record = 1;
                 if ($line =~ /"""/) { $triplequote = 1; }
                 next;

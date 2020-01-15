@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import atexit
 import sys
 import time
+import traceback
 
 from .Globals import *
 from .Utils import Utils
@@ -26,6 +27,17 @@ class CondorTest(object):
     # Exit code defaults to false, until proven successful
     #
     _exit_code = TEST_FAILURE
+
+    #
+    # Any exception in the Python runtime should be considered a test failure.
+    # Register an exception catch, however this should not exit immediately.
+    # Instead, keep track of it and handle later in the ExitHandler() function.
+    #
+    _is_exception = False
+    def excepthook(exctype, value, tb):
+        traceback.print_exception(exctype, value, tb)
+        CondorTest._is_exception = True
+    sys.excepthook = excepthook
 
     # @return A PersonalCondor object.  The corresponding master daemon
     # has been started.
@@ -102,7 +114,7 @@ class CondorTest(object):
         for name, pc in CondorTest._personal_condors.items():
             pc.BeginStopping()
 
-        # The reporting here is a trifle simplicistic.
+        # Check for any failed tests
         tests_failed = False
         for subtest in CondorTest._tests.keys():
             record = CondorTest._tests[subtest]
@@ -110,7 +122,7 @@ class CondorTest(object):
                 Utils.TLog( "[" + subtest + "] did not succeed, failing test!" )
                 tests_failed = True
 
-        if tests_failed is False:
+        if tests_failed is False and CondorTest._is_exception is False:
             CondorTest._exit_code = TEST_SUCCESS
 
         # Make sure the PCs are really gone.

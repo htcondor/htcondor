@@ -3105,6 +3105,18 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				submitterPrio,
 				submitterPrioFactor);
 
+				if (spin_pie == 1) {
+					std::string key("Customer.");  // hashkey is "Customer" followed by name
+					key += submitterName;
+
+					// Save away the submitter share on the first pie spin to put in 
+					// the accounting ad to publish to the AccountingAd.  
+					ClassAd *accountingAd = accountant.GetClassAd(key);
+					if (accountingAd) {
+						accountingAd->Assign("SubmitterShare", submitterShare);
+					}
+				}
+
 			double submitterLimitStarved = 0;
 			if( submitterLimit > pieLeft ) {
 				// Somebody must have taken more than their fair share,

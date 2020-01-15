@@ -22,10 +22,10 @@
 #include "condor_threads.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "Queue.h"
 #include "HashTable.h"
 #include "dc_service.h"		// for class Service
 #include "subsystem_info.h"
+#include <queue>
 
 /**********************************************************************/
 /**********************************************************************/
@@ -576,10 +576,10 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 
 	// If we are out of threads, yield here until some are available.
 	dprintf(D_THREADS,"Queing work to thread pool - w=%d tbusy=%d tmax=%d\n",
-			work_queue.Length(),num_threads_busy_,num_threads_);
+			(int)work_queue.size(),num_threads_busy_,num_threads_);
 	while ( num_threads_busy_ >= num_threads_ ) {
 		dprintf(D_ALWAYS,"WARNING: thread pool full - w=%d tbusy=%d tmax=%d\n",
-			work_queue.Length(),num_threads_busy_,num_threads_);
+			(int)work_queue.size(),num_threads_busy_,num_threads_);
 		pthread_cond_wait(&workers_avail_cond,&big_lock);
 	}
 
@@ -604,7 +604,7 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 	}
 
 	// Queue up the work
-	work_queue.enqueue(newthread);
+	work_queue.push(newthread);
 
 	dprintf(D_THREADS,"Thread %s tid=%d status set to %s\n",
 		newthread->get_name(), newthread->get_tid(), 
@@ -612,7 +612,7 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 
 
 	// If the queue length is 1, signal to let our workers work is available
-	if ( work_queue.Length() == 1 ) {
+	if ( work_queue.size() == 1 ) {
 		pthread_cond_broadcast(&work_queue_cond);
 	}	
 
@@ -724,13 +724,14 @@ ThreadImplementation::threadStart(void *)
 	mutex_biglock_lock();
 	
 	for (;;) {				
-		while ( TI->work_queue.IsEmpty() ) {
+		while ( TI->work_queue.empty() ) {
 			// we are out of work; yield this thread until something to do
 			pthread_cond_wait(&(TI->work_queue_cond),&(TI->big_lock));
 		}
 		
 		// grab next work item
-		TI->work_queue.dequeue(item);
+		item = TI->work_queue.front();
+		TI->work_queue.pop();
 
 		// stash our current tid for speedy lookup 
 		TI->setCurrentTid( item->get_tid() );

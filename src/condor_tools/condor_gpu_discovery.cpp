@@ -740,7 +740,7 @@ int ocl_Init(void) {
 		for (unsigned int ii = 0; ii < cPlatforms; ++ii) {
 			cl_platforms.push_back(NULL);
 		}
-		clr = ocl.GetPlatformIDs(cPlatforms, &cl_platforms[0], &cPlatforms);
+		ocl.GetPlatformIDs(cPlatforms, &cl_platforms[0], &cPlatforms);
 	}
 
 	// enable logging in oclGetInfo if verbose

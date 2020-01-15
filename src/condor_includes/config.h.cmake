@@ -114,9 +114,6 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
-/* Define if doing a clipped build (USED)*/
-#cmakedefine CLIPPED 1
-
 /* Define if enabling KBDD (USED)*/
 #cmakedefine NEEDS_KBDD 1
 // configurable options.
@@ -568,9 +565,6 @@
 
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
-
-/* Define to 1 if proc_pid_rusage() exists (Darwin function) */
-#cmakedefine HAVE_PROC_PID_RUSAGE
 
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"

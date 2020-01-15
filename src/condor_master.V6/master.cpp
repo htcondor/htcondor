@@ -1797,10 +1797,13 @@ bool main_has_console()
 int
 main( int argc, char **argv )
 {
+    // as of 8.9.6 daemon core defaults to foreground
+    // for the master (and only the master) we change it to default to background
+    dc_args_default_to_background(true);
+
     // parse args to see if we have been asked to run as a service.
     // services are started without a console, so if we have one
     // we can't possibly run as a service.
-    //
 #ifdef WIN32
     bool has_console = main_has_console();
     bool is_daemon = dc_args_is_background(argc, argv);

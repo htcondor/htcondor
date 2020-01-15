@@ -25,6 +25,7 @@
 #include <memory>
 #include "basename.h"
 #include "utc_time.h"
+#include "ipv6_hostname.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -1010,7 +1011,9 @@ SharedPortEndpoint::GetMyLocalAddress()
 			// and daemons who can then form a connection to us via
 			// direct access to our named socket.
 		sinful.setPort("0");
-		sinful.setHost(my_ip_string());
+		// TODO: Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		sinful.setHost(my_ip.Value());
 		sinful.setSharedPortID( m_local_id.Value() );
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

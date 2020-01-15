@@ -91,7 +91,7 @@ int handle_fetch_log_history_dir(ReliSock *s, char *name);
 int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
-int		Foreground = 0;		// run in background by default
+int		Foreground = 1;		// run in foreground by default (condor_master will change this before calling dc_main)
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
 DaemonCore*	daemonCore;
 
@@ -240,9 +240,9 @@ public:
 		if (!token_request.getBoundingSet().size()) {
 			return false;
 		}
-			// Only auto-approve requests that ask for schedds or startds.
+			// Only auto-approve requests from daemons that automatically ask for one.
 		for (const auto &authz : token_request.getBoundingSet()) {
-			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD")) {
+			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD") && (authz != "ADVERTISE_MASTER")) {
 				return false;
 			}
 		}
@@ -1883,6 +1883,17 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 	const char *peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 
+        std::set<std::string> config_bounding_set;
+        std::string config_bounding_set_str;
+        if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
+                StringList config_bounding_set_list(config_bounding_set_str.c_str());
+                config_bounding_set_list.rewind();
+                const char *authz;
+                while ( (authz = config_bounding_set_list.next()) ) {
+                        config_bounding_set.insert(authz);
+                }
+        }
+
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
@@ -1890,7 +1901,20 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 		authz_str_list.rewind();
 		const char *authz;
 		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
+			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
+				authz_list.emplace_back(authz);
+			}
+		}
+			// If all potential bounds were removed by the set intersection,
+			// throw an error instead of generating an "all powerful" token.
+		if (!config_bounding_set.empty() && authz_list.empty()) {
+			error_code = 3;
+			error_string = "All requested authorizations were eliminated by the"
+				" SEC_TOKEN_REQUEST_LIMITS setting";
+		}
+	} else if (!config_bounding_set.empty()) {
+		for (const auto &authz : config_bounding_set) {
+			authz_list.push_back(authz);
 		}
 	}
 
@@ -1931,7 +1955,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
 		}
 		std::string request_id_str;
-		formatstr(request_id_str, "%d", request_id);
+		formatstr(request_id_str, "%07d", request_id);
 			// Note we currently store this as a string; this way we can come back later
 			// and introduce alphanumeric characters if we so wish.
 		result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str);
@@ -3392,7 +3416,7 @@ int dc_main( int argc, char** argv )
 				exit( 1 );
 			}
 			break;
-		case 'b':		// run in Background (default)
+		case 'b':		// run in Background (default for condor_master)
 			Foreground = 0;
 			dcargs++;
 			break;
@@ -3420,7 +3444,7 @@ int dc_main( int argc, char** argv )
 			DynamicDirs = true;
 			dcargs++;
 			break;
-		case 'f':		// run in Foreground
+		case 'f':		// run in Foreground (default for all daemons other than condor_master)
 			Foreground = 1;
 			dcargs++;
 			break;
@@ -4235,13 +4259,22 @@ int dc_main( int argc, char** argv )
 	return FALSE;
 }	
 
+// set the default for -f / -b flag for this daemon
+// used by the master to default to backround, all other daemons default to foreground.
+bool dc_args_default_to_background(bool background)
+{
+	bool ret = ! Foreground;
+	Foreground = ! background;
+	return ret;
+}
+
 // Parse argv enough to decide if we are starting as foreground or as background
 // We need this for windows because when starting as background, we need to actually
 // start via the Service Control Manager rather than calling dc_main directly.
 //
 bool dc_args_is_background(int argc, char** argv)
 {
-    bool ForegroundFlag = false; // default to background
+    bool ForegroundFlag = Foreground; // default to foreground
 
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
 	// or a "-v", then we want to register as an NT Service.

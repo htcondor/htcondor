@@ -5,6 +5,22 @@ Running a Job: the Steps To Take
 
 Here are the basic steps to run a job with HTCondor.
 
+ Work Decomposition
+    Typically, users want High Throughput computing systems when they have
+    more work than can reasonably run on a single machine.  Therefore, the
+    computation must run concurrently on multiple machines.  HTCondor itself
+    does not help with breaking up a large amount of work to run independently
+    on many machines.  In many cases, such as Monte Carlo simulations, this
+    may be trivial to do.  In other situations, the code must be refactored 
+    or code loops may need to be broken into separate work steps in order to be
+    suitable for High Throughput computing. Work must be broken down into
+    a set of *jobs* whose runtime is neither too short nor too long.  HTCondor
+    is most efficient when running jobs whose runtime is measured in minutes
+    or hours.  There is overhead in scheduling each job, which is why very short
+    jobs (measured in seconds) do not work well.  On the other hand, if a job
+    takes many days to run, there is the threat of losing work in progress should
+    the job or the server it runs on crashes.
+
  Prepare the job for batch execution.
     To run under HTCondor a job must be able to run as a background batch
     job. :index:`batch ready<single: batch ready; job>` HTCondor runs the program
