@@ -22,7 +22,7 @@ if (WINDOWS)
 	if (BOOST_DOWNLOAD_WIN)
 		set (BOOST_CONFIGURE echo "Nothing to configure")
 		set (BOOST_MAKE echo "No make necessary")
-		set (BOOST_INSTALL tar -pczf boost.tar.gz boost/ && tar -zxvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
+		set (BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
  
 		ExternalProject_Add(boost
 			#-- Download Step ----------

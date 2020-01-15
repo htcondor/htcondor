@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "Queue.h"
 #include "TimeSensitiveQueue.h"
 
 //

@@ -22,6 +22,7 @@
 
 #include "condor_common.h"
 #include "linebuffer.h"
+#include <queue>
 
 // Pre-declare the CronJob class
 class CronJob;
@@ -50,7 +51,7 @@ class CronJobOut : public CronJobIO
 	char *GetLineFromQueue( void );
 	int FlushQueue( void );
   private:
-	Queue<char *>	 m_lineq;
+	std::queue<char *> m_lineq;
 	MyString m_q_sep; // when record separator '-' is read from the stream, this holds that line with the '-'
 };
 
