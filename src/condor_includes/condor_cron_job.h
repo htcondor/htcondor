@@ -21,7 +21,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "Queue.h"
 #include "env.h"
 
 #include "condor_cron_job_params.h"

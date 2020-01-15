@@ -1,7 +1,0 @@
-[
-KeepClaimIdle = 10;
-Err = "tests_tmp/test.err";
-Out = "tests_tmp/test.out";
-Cmd = "tests/delayed_update.py";
-Arguments = "1";
-]

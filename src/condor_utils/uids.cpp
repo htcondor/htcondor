@@ -807,7 +807,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			if ( dologging ) {
+			if ( dologging && IsFulldebug(D_FULLDEBUG) ) {
 				dprintf(D_FULLDEBUG, 
 						"TokenCache contents: \n%s", 
 						cached_tokens.cacheToString().Value());

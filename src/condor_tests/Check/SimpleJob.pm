@@ -43,7 +43,9 @@ $timed_callback = sub
 
 $submitted = sub
 {
-	CondorTest::debug("Job submitted\n",1);
+	my %info = @_;
+	my $jobid = $info{'cluster'} . '.' . $info{'job'};
+	CondorTest::debug("$jobid Job submitted\n",1);
 };
 
 $aborted = sub 
@@ -56,7 +58,9 @@ $dummy = sub
 };
 
 $ExitSuccess = sub {
-	CondorTest::debug("Job completed\n",1);
+	my %info = @_;
+	my $jobid = $info{'cluster'} . '.' . $info{'job'};
+	CondorTest::debug("$jobid Job completed successfully\n",1);
 };
 
 my %defaultcallbacks = (
@@ -393,10 +397,11 @@ sub RunCheck
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
-    print SUBMIT "queue $queuesz\n";
+    print SUBMIT "queue $queuesz";
 	if($multi_queue ne "") {
-        print SUBMIT "\n" . $multi_queue . "\n";
+        print SUBMIT " " . $multi_queue;
 	}
+	print SUBMIT "\n";
     close( SUBMIT );
 
 	if ($submit_only) {
