@@ -29,13 +29,6 @@
 #include "condor_sinful.h"
 #include "CondorError.h"
 
-const char* my_ip_string() {
-    static MyString __my_ip_string;
-	// TODO: Picking IPv4 arbitrarily.
-    __my_ip_string = get_local_ipaddr(CP_IPV4).to_ip_string();
-    return __my_ip_string.Value();
-}
-
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
 {

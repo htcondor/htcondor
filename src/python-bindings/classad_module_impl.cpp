@@ -265,7 +265,7 @@ export_classad()
 {
     using namespace boost::python;
 
-    boost::python::scope().attr("_registered_functions") = boost::python::dict();
+    py_import("classad").attr("_registered_functions") = boost::python::dict();
 
     def("version", ClassadLibraryVersion,
         R"C0ND0R(

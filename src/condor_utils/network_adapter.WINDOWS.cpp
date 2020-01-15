@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "network_adapter.WINDOWS.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 
 #include <iphlpapi.h>
 
@@ -57,7 +57,9 @@ CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f,
 
 WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw ()
 : _exists ( false ) {
-    strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
+    // TODO: Picking IPv4 arbitrarily.
+    MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+    strncpy ( _ip_address, my_ip.Value(), IP_STRING_BUF_SIZE );
     _description[0] = '\0';
 }
 

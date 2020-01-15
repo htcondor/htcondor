@@ -28,9 +28,7 @@ Description
 transforms them according to rules defined in a rules file, and outputs
 the resulting transformed ClassAds.
 
-See
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage>`_
-for a description of the transform language.
+See the :ref:`misc-concepts/transforms:Classad Transforms` section for a description of the transform language.
 
 Options
 -------

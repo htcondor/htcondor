@@ -2522,6 +2522,18 @@ description=Maximum age of accepted tokens.
 type=int
 tags=condor_auth_passwd
 
+[SEC_TOKEN_REQUEST_LIMITS]
+default=
+description=Authorization limits for token requests
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_BLACKLIST_EXPR]
+default=
+description=Expression describing token blacklist.
+type=string
+tags=condor_auth_passwd
+
 [SEC_ISSUED_TOKEN_EXPIRATION]
 default=
 description=Default max expiration time of issued session tokens.

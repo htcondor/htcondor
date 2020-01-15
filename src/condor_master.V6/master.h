@@ -250,6 +250,7 @@ private:
 	int m_retry_start_all_daemons_tid;
 	int m_deferred_query_ready_tid;
 	std::list<DeferredQuery*> deferred_queries;
+	DCTokenRequester m_token_requester;
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
@@ -264,6 +265,8 @@ private:
 	bool StopDaemonsBeforeMasterStops();
 
 	static void ProcdStopped(void*, int pid, int status);
+
+	static void token_request_callback(bool success, void *miscdata);
 };
 
 #endif /* _CONDOR_MASTER_H */

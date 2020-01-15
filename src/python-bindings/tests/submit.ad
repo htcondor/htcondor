@@ -1,6 +1,0 @@
-[
-Err = "tests_tmp/test.err";
-Out = "tests_tmp/test.out";
-Cmd = "/bin/echo";
-Arguments = "hello world";
-]
