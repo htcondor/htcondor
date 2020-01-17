@@ -168,6 +168,9 @@ int dprintf_config(
 int dprintf_config_tool(const char* subsys = NULL, int flags = 0, const char * logfile = NULL);
 int dprintf_config_tool_on_error(int flags = 0);
 
+// parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)
+bool dprintf_parse_log_size(const char * input, long long  & value, bool & is_time);
+
 // call when you want to insure that dprintfs are thread safe on Linux regardless of
 // wether daemon core threads are enabled. thread safety cannot be disabled once enabled
 // note that this is always implicitly called on Windows
