@@ -4161,10 +4161,9 @@ default=
 type=string
 tags=rooster
 
-# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
 default=1000000
-description=Max Procd Log (size rotation only, no scale suffix)
+description=Max Procd Log (size rotation only)
 tags=procd
 
 [SHADOW_WORKLIFE]
