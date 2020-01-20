@@ -176,6 +176,9 @@ class FileTransfer final: public Service {
 	/** @return 1 on success, 0 on failure */
 	int UploadFiles(bool blocking=true, bool final_transfer=true);
 
+	/** @return 1 on success, 0 on failure */
+	int UploadCheckpointFiles( bool blocking = true );
+
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
 			handler can call FileTransfer::GetInfo() for statistics on the
@@ -383,7 +386,10 @@ class FileTransfer final: public Service {
 	double downloadStartTime{-1}, downloadEndTime{-1};
 
 	void CommitFiles();
-	void ComputeFilesToSend();
+
+	void FindChangedFiles();
+	void DetermineWhichFilesToSend();
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
@@ -392,6 +398,7 @@ class FileTransfer final: public Service {
 
   private:
 
+	bool uploadCheckpointFiles{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};
@@ -412,6 +419,11 @@ class FileTransfer final: public Service {
 	StringList* FilesToSend{nullptr};
 	StringList* EncryptFiles{nullptr};
 	StringList* DontEncryptFiles{nullptr};
+
+	StringList* CheckpointFiles{nullptr};
+	StringList* EncryptCheckpointFiles{nullptr};
+	StringList* DontEncryptCheckpointFiles{nullptr};
+
 	char* OutputDestination{nullptr};
 	char* SpooledIntermediateFiles{nullptr};
 	char* ExecFile{nullptr};
@@ -445,7 +457,7 @@ class FileTransfer final: public Service {
 	bool multifile_plugins_enabled{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
-#endif		
+#endif
 	priv_state desired_priv_state{PRIV_UNKNOWN};
 	bool want_priv_change{false};
 	static TranskeyHashTable* TranskeyTable;

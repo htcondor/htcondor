@@ -868,7 +868,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// and then add the running total to the current when we publish the
 	// update ad.  FIXME (#4971)
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try

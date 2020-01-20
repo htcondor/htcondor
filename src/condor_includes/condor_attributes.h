@@ -802,6 +802,9 @@
 #define ATTR_ENCRYPT_OUTPUT_FILES  "EncryptOutputFiles"
 #define ATTR_DONT_ENCRYPT_INPUT_FILES  "DontEncryptInputFiles"
 #define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
+
+#define ATTR_CHECKPOINT_LIST "CheckpointList"
+
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
 #define ATTR_SHADOW_BIRTHDATE  "ShadowBday"

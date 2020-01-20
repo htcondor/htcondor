@@ -1137,170 +1137,236 @@ FileTransfer::DownloadFiles(bool blocking)
 
 
 void
-FileTransfer::ComputeFilesToSend()
+FileTransfer::FindChangedFiles()
 {
 	StringList final_files_to_send(NULL,",");
-	if (IntermediateFiles) delete(IntermediateFiles);
-	IntermediateFiles = NULL;
-	FilesToSend = NULL;
-	EncryptFiles = NULL;
-	DontEncryptFiles = NULL;
 
-	if ( upload_changed_files && last_download_time > 0 ) {
-		// Here we will upload only files in the Iwd which have changed
-		// since we downloaded last.  We only do this if
-		// upload_changed_files it true, and if last_download_time > 0
-		// which means we have already downloaded something.
+	// Here we will upload only files in the Iwd which have changed
+	// since we downloaded last.  We only do this if
+	// upload_changed_files it true, and if last_download_time > 0
+	// which means we have already downloaded something.
 
-		// If this is the final transfer, be certain to send back
-		// not only the files which have been modified during this run,
-		// but also the files which have been modified during
-		// previous runs (i.e. the SpooledIntermediateFiles).
-		if ( m_final_transfer_flag && SpooledIntermediateFiles ) {
-			final_files_to_send.initializeFromString(SpooledIntermediateFiles);
+	// If this is the final transfer, be certain to send back
+	// not only the files which have been modified during this run,
+	// but also the files which have been modified during
+	// previous runs (i.e. the SpooledIntermediateFiles).
+	if ( m_final_transfer_flag && SpooledIntermediateFiles ) {
+		final_files_to_send.initializeFromString(SpooledIntermediateFiles);
+	}
+
+		// if desired_priv_state is PRIV_UNKNOWN, the Directory
+		// object treats that just like we do: don't switch...
+	Directory dir( Iwd, desired_priv_state );
+
+	const char *proxy_file = NULL;
+	std::string proxy_file_buf;
+	if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {
+		proxy_file = condor_basename(proxy_file_buf.c_str());
+	}
+
+	const char *f;
+	while( (f=dir.Next()) ) {
+		// don't send back condor_exec.*
+		if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+			dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
+			continue;
+		}
+		if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
+			dprintf( D_FULLDEBUG, "Skipping %s\n", f );
+			continue;
 		}
 
-			// if desired_priv_state is PRIV_UNKNOWN, the Directory
-			// object treats that just like we do: don't switch...
-		Directory dir( Iwd, desired_priv_state );
-
-		const char *proxy_file = NULL;
-		std::string proxy_file_buf;
-		if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {
-			proxy_file = condor_basename(proxy_file_buf.c_str());
+		// for now, skip all subdirectory names until we add
+		// subdirectory support into FileTransfer.
+		if ( dir.IsDirectory() ) {
+			dprintf( D_FULLDEBUG, "Skipping dir %s\n", f );
+			continue;
 		}
 
-		const char *f;
-		while( (f=dir.Next()) ) {
-			// don't send back condor_exec.*
-			if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
-				dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
-				continue;
-			}
-			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
-				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
-				continue;
-			}
+		// if this file is has been modified since last download,
+		// add it to the list of files to transfer.
+		bool send_it = false;
 
-			// for now, skip all subdirectory names until we add
-			// subdirectory support into FileTransfer.
-			if ( dir.IsDirectory() ) {
-				dprintf( D_FULLDEBUG, "Skipping dir %s\n", f );
+		// look up the file name in the catalog.  if it does not exist, it
+		// is a new file, and is always transfered back.  if it the
+		// filename does already exist in the catalog, then the
+		// modification date and filesize parameters are filled in.
+		// if either has changed, transfer the file.
+
+		filesize_t filesize;
+		time_t modification_time;
+		if ( ExceptionFiles && ExceptionFiles->file_contains(f) ) {
+			dprintf (
+				D_FULLDEBUG,
+				"Skipping file in exception list: %s\n",
+				f );
+			continue;
+		} else if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
+			// file was not found.  send it.
+			dprintf( D_FULLDEBUG,
+					"Sending new file %s, time==%ld, size==%ld\n",
+					f, dir.GetModifyTime(), (long) dir.GetFileSize() );
+			send_it = true;
+		}
+		else if (final_files_to_send.file_contains(f)) {
+			dprintf( D_FULLDEBUG,
+					"Sending previously changed file %s\n", f);
+			send_it = true;
+		}
+		else if (OutputFiles && OutputFiles->file_contains(f)) {
+			dprintf(D_FULLDEBUG,
+				    "Sending dynamically added output file %s\n",
+				    f);
+			send_it = true;
+		}
+		else if (filesize == -1) {
+			// this is a special block of code that should eventually go
+			// away.  essentially, setting the filesize to -1 means that
+			// we only transfer the file if the timestamp is newer than
+			// the spool date stored in the job ad (how it's always worked
+			// in the past).  once the FileCatalog is stored persistently
+			// somewhere, this mode of operation can go away.
+			if (dir.GetModifyTime() > modification_time) {
+				// include the file if the time stamp is greater than
+				// the spool date (stored in modification_time).
+				dprintf( D_FULLDEBUG,
+					"Sending changed file %s, t: %ld, %ld, "
+					"s: " FILESIZE_T_FORMAT ", N/A\n",
+					f, dir.GetModifyTime(), modification_time,
+					dir.GetFileSize());
+				send_it = true;
+			} else {
+				// if filesize was -1 but the timestamp was earlier than
+				// modification_time, do NOT include the file.
+				dprintf( D_FULLDEBUG,
+					"Skipping file %s, t: %ld<=%ld, s: N/A\n",
+					f, dir.GetModifyTime(), modification_time);
 				continue;
 			}
-
-			// if this file is has been modified since last download,
-			// add it to the list of files to transfer.
-			bool send_it = false;
-
-			// look up the file name in the catalog.  if it does not exist, it
-			// is a new file, and is always transfered back.  if it the
-			// filename does already exist in the catalog, then the
-			// modification date and filesize parameters are filled in.
-			// if either has changed, transfer the file.
-
-			filesize_t filesize;
-			time_t modification_time;
-			if ( ExceptionFiles && ExceptionFiles->file_contains(f) ) {
-				dprintf (
-					D_FULLDEBUG,
-					"Skipping file in exception list: %s\n",
-					f );
-				continue;
-			} else if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
-				// file was not found.  send it.
-				dprintf( D_FULLDEBUG,
-						 "Sending new file %s, time==%ld, size==%ld\n",
-						 f, dir.GetModifyTime(), (long) dir.GetFileSize() );
-				send_it = true;
+		}
+		else if ((filesize != dir.GetFileSize()) ||
+				(modification_time != dir.GetModifyTime()) ) {
+			// file has changed in size or modification time.  this
+			// doesn't catch the case where the file was modified
+			// without changing size and is then back-dated.  use a hash
+			// or something if that's truly needed, and compare the
+			// checksums.
+			dprintf( D_FULLDEBUG,
+				"Sending changed file %s, t: %ld, %ld, "
+				"s: " FILESIZE_T_FORMAT ", " FILESIZE_T_FORMAT "\n",
+				f, dir.GetModifyTime(), modification_time,
+				dir.GetFileSize(), filesize );
+			send_it = true;
+		}
+		else {
+			dprintf( D_FULLDEBUG,
+					"Skipping file %s, t: %" PRIi64"==%" PRIi64
+					", s: %" PRIi64"==%" PRIi64"\n",
+					f,
+					(PRIi64_t)dir.GetModifyTime(),
+					(PRIi64_t)modification_time,
+					(PRIi64_t)dir.GetFileSize(),
+					(PRIi64_t)filesize );
+			continue;
+		}
+		if(send_it) {
+			if (!IntermediateFiles) {
+				// Initialize it with intermediate files
+				// which we already have spooled.  We want to send
+				// back these files + any that have changed this time.
+				IntermediateFiles = new StringList(NULL,",");
+				FilesToSend = IntermediateFiles;
+				EncryptFiles = EncryptOutputFiles;
+				DontEncryptFiles = DontEncryptOutputFiles;
 			}
-			else if (final_files_to_send.file_contains(f)) {
-				dprintf( D_FULLDEBUG,
-						 "Sending previously changed file %s\n", f);
-				send_it = true;
-			}
-			else if (OutputFiles && OutputFiles->file_contains(f)) {
-				dprintf(D_FULLDEBUG,
-				        "Sending dynamically added output file %s\n",
-				        f);
-				send_it = true;
-			}
-			else if (filesize == -1) {
-				// this is a special block of code that should eventually go
-				// away.  essentially, setting the filesize to -1 means that
-				// we only transfer the file if the timestamp is newer than
-				// the spool date stored in the job ad (how it's always worked
-				// in the past).  once the FileCatalog is stored persistently
-				// somewhere, this mode of operation can go away.
-				if (dir.GetModifyTime() > modification_time) {
-					// include the file if the time stamp is greater than
-					// the spool date (stored in modification_time).
-					dprintf( D_FULLDEBUG,
-						 "Sending changed file %s, t: %ld, %ld, "
-						 "s: " FILESIZE_T_FORMAT ", N/A\n",
-						 f, dir.GetModifyTime(), modification_time,
-						 dir.GetFileSize());
-					send_it = true;
-				} else {
-					// if filesize was -1 but the timestamp was earlier than
-					// modification_time, do NOT include the file.
-					dprintf( D_FULLDEBUG,
-					 	"Skipping file %s, t: %ld<=%ld, s: N/A\n",
-					 	f, dir.GetModifyTime(), modification_time);
-					continue;
-				}
-			}
-			else if ((filesize != dir.GetFileSize()) ||
-					(modification_time != dir.GetModifyTime()) ) {
-				// file has changed in size or modification time.  this
-				// doesn't catch the case where the file was modified
-				// without changing size and is then back-dated.  use a hash
-				// or something if that's truly needed, and compare the
-				// checksums.
-				dprintf( D_FULLDEBUG,
-					 "Sending changed file %s, t: %ld, %ld, "
-					 "s: " FILESIZE_T_FORMAT ", " FILESIZE_T_FORMAT "\n",
-					 f, dir.GetModifyTime(), modification_time,
-					 dir.GetFileSize(), filesize );
-				send_it = true;
-			}
-			else {
-				dprintf( D_FULLDEBUG,
-						 "Skipping file %s, t: %" PRIi64"==%" PRIi64
-						 ", s: %" PRIi64"==%" PRIi64"\n",
-						 f,
-						 (PRIi64_t)dir.GetModifyTime(),
-						 (PRIi64_t)modification_time,
-						 (PRIi64_t)dir.GetFileSize(),
-						 (PRIi64_t)filesize );
-				continue;
-			}
-			if(send_it) {
-				if (!IntermediateFiles) {
-					// Initialize it with intermediate files
-					// which we already have spooled.  We want to send
-					// back these files + any that have changed this time.
-					IntermediateFiles = new StringList(NULL,",");
-					FilesToSend = IntermediateFiles;
-					EncryptFiles = EncryptOutputFiles;
-					DontEncryptFiles = DontEncryptOutputFiles;
-				}
-				// now append changed file to list only if not already there
-				if ( IntermediateFiles->file_contains(f) == FALSE ) {
-					IntermediateFiles->append(f);
-				}
+			// now append changed file to list only if not already there
+			if ( IntermediateFiles->file_contains(f) == FALSE ) {
+				IntermediateFiles->append(f);
 			}
 		}
 	}
 }
 
 int
+FileTransfer::UploadCheckpointFiles( bool blocking ) {
+	// This is where we really want to separate "I understand the job ad"
+	// from "I can operate the protocol".  Until then, just set a member
+	// variable so that DetermineWhichFilesToSend() can know what to do.
+	uploadCheckpointFiles = true;
+	int rv = UploadFiles( blocking, false );
+	uploadCheckpointFiles = false;
+	return rv;
+}
+
+void
+FileTransfer::DetermineWhichFilesToSend() {
+	// IntermediateFiles is dynamically allocated (some jobs never use it).
+	if (IntermediateFiles) delete(IntermediateFiles);
+	IntermediateFiles = NULL;
+
+	// These are always pointers to StringLists owned by this object.
+	FilesToSend = NULL;
+	EncryptFiles = NULL;
+	DontEncryptFiles = NULL;
+
+	// We're doing this allocation on the fly because we expect most jobs
+	// won't specify a checkpoint list.
+	if( uploadCheckpointFiles ) {
+		std::string checkpointList;
+		if( jobAd.LookupString( ATTR_CHECKPOINT_LIST, checkpointList ) ) {
+			if( CheckpointFiles ) { delete CheckpointFiles; }
+			CheckpointFiles = new StringList( checkpointList.c_str(), "," );
+
+			// This should Just Work(TM), but I haven't tested it yet and
+			// I don't know that anybody will every actually use it.
+			EncryptCheckpointFiles = new StringList( NULL, "," );
+			DontEncryptCheckpointFiles = new StringList( NULL, "," );
+
+			// Yes, this is stupid, but it'd be a big change to fix.
+			FilesToSend = CheckpointFiles;
+			EncryptFiles = EncryptCheckpointFiles;
+			DontEncryptFiles = DontEncryptCheckpointFiles;
+		}
+		return;
+	}
+
+	if ( upload_changed_files && last_download_time > 0 ) {
+		FindChangedFiles();
+	}
+
+	// if FilesToSend is still NULL, then the user did not
+	// want anything sent back via modification date.  so
+	// send the input or output sandbox, depending what
+	// direction we are going.
+	if ( FilesToSend == NULL ) {
+		if ( simple_init ) {
+			if ( IsClient() ) {
+				// condor_submit sending to the schedd
+				FilesToSend = InputFiles;
+				EncryptFiles = EncryptInputFiles;
+				DontEncryptFiles = DontEncryptInputFiles;
+			} else {
+				// schedd sending to condor_transfer_data
+				FilesToSend = OutputFiles;
+				EncryptFiles = EncryptOutputFiles;
+				DontEncryptFiles = DontEncryptOutputFiles;
+			}
+		} else {
+			// starter sending back to the shadow
+			FilesToSend = OutputFiles;
+			EncryptFiles = EncryptOutputFiles;
+			DontEncryptFiles = DontEncryptOutputFiles;
+		}
+
+	}
+}
+
+
+int
 FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
-    ReliSock sock;
+	ReliSock sock;
 	ReliSock *sock_to_use;
-
-	StringList changed_files(NULL,",");
 
 	dprintf(D_FULLDEBUG,
 		"entering FileTransfer::UploadFiles (final_transfer=%d)\n",
@@ -1331,34 +1397,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	// set flag saying if this is the last upload (i.e. job exited)
 	m_final_transfer_flag = final_transfer ? 1 : 0;
 
-	// figure out what to send based upon modification date
-	ComputeFilesToSend();
-
-	// if FilesToSend is still NULL, then the user did not
-	// want anything sent back via modification date.  so
-	// send the input or output sandbox, depending what
-	// direction we are going.
-	if ( FilesToSend == NULL ) {
-		if ( simple_init ) {
-			if ( IsClient() ) {
-				// condor_submit sending to the schedd
-				FilesToSend = InputFiles;
-				EncryptFiles = EncryptInputFiles;
-				DontEncryptFiles = DontEncryptInputFiles;
-			} else {
-				// schedd sending to condor_transfer_data
-				FilesToSend = OutputFiles;
-				EncryptFiles = EncryptOutputFiles;
-				DontEncryptFiles = DontEncryptOutputFiles;
-			}
-		} else {
-			// starter sending back to the shadow
-			FilesToSend = OutputFiles;
-			EncryptFiles = EncryptOutputFiles;
-			DontEncryptFiles = DontEncryptOutputFiles;
-		}
-
-	}
+	DetermineWhichFilesToSend();
 
 	if ( !simple_init ) {
 		// Optimization: files_to_send now contains the files to upload.
@@ -5242,7 +5281,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// nor filesize change in that case.
 	//
 	// furthermore, if spool_time was specified, we set filesize to -1 as a
-	// flag for special behavior in ComputeFilesToSend and set all file
+	// flag for special behavior in FindChangedFiles and set all file
 	// modification times to spool_time.  this essentially builds a catalog
 	// that mimics old behavior.
 	//
@@ -5259,7 +5298,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 				// -1 for filesize is a special flag for old behavior.
 				// when checking a file to see if it is new, if the filesize
 				// is -1 then the file date must be newer (not just different)
-				// than the stored modification date. (see ComputeFilesToSend)
+				// than the stored modification date. (see FindChangedFiles)
 				tmpentry->modification_time = spool_time;
 				tmpentry->filesize = -1;
 			} else {
