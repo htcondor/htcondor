@@ -33,6 +33,10 @@ Bugs Fixed:
    Python bindings documentation for more details.
    :ticket:`7359`
 
+- The RPM packaging now obsoletes the standard universe package so that it will
+  deleted upon upgrade.
+  :ticker:`7444`
+
 Version 8.9.5
 -------------
 
