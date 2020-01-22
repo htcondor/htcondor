@@ -8137,6 +8137,11 @@ Throttling
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
 
+:macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
+    A boolean that determines if after changing some of these throttle limits,
+    *condor_dagman* should forceably remove jobs to meet the new limit.
+    Defaults to ``False``.
+
 Priority, node semantics
 ''''''''''''''''''''''''
 

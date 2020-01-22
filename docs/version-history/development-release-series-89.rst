@@ -19,6 +19,12 @@ New Features:
   set to the number of CPU cores allocated to the job.
   :ticket:`7418`
 
+- Added the option for *condor_dagman* to remove jobs after reducing
+  MaxJobs to a value lower than the number of currently running jobs. This
+  behavior is controlled by the 
+  :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
+  :ticket:`7368`
+
 Bugs Fixed:
 
 - To work around an issue where long-running *gce_gahp* process enter a state

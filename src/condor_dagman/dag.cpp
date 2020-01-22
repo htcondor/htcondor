@@ -3351,13 +3351,13 @@ Dag::GetReject( MyString &firstLocation )
 
 //-------------------------------------------------------------------------
 void 
-Dag::SetMaxJobsSubmitted(int maxJobs) {
+Dag::SetMaxJobsSubmitted(int newMax) {
 
-	bool isChanged = (maxJobs != _maxJobsSubmitted);
+	bool isChanged = (newMax != _maxJobsSubmitted);
 	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
 
 	// Update our internal max jobs count
-	_maxJobsSubmitted = maxJobs;
+	_maxJobsSubmitted = newMax;
 
 	// If maxJobs is set to 0, that means no maximum limit. Exit now.
 	if (_maxJobsSubmitted == 0) return;

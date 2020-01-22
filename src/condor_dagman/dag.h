@@ -661,7 +661,7 @@ class Dag {
 	int MaxPostScripts(void) { return _maxPostScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
-	void SetMaxJobsSubmitted(int maxJobs);
+	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
