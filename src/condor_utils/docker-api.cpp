@@ -212,7 +212,9 @@ int DockerAPI::createContainer(
 	// on Windows because...
 #ifndef WIN32
 	uid = get_user_uid();
+	if ((signed) uid < 0) uid = getuid();
 	gid = get_user_gid();
+	if ((signed) gid < 0) gid = getgid();
 #endif
 
 	if ((uid == 0) || (gid == 0)) {
