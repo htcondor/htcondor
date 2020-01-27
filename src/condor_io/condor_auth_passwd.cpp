@@ -963,29 +963,36 @@ Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
 	classad::ClassAd ad;
 	auto claims = jwt.get_payload_claims();
 	for (const auto &pair : claims) {
+		bool inserted = true;
 		const auto &claim = pair.second;
 		switch (claim.get_type()) {
 		case jwt::claim::type::null:
-			ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
 			break;
 		case jwt::claim::type::boolean:
-			ad.InsertAttr(pair.first, pair.second.as_bool());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
 			break;
 		case jwt::claim::type::int64:
-			ad.InsertAttr(pair.first, pair.second.as_int());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
 			break;
 		case jwt::claim::type::number:
-			ad.InsertAttr(pair.first, pair.second.as_number());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
 			break;
 		case jwt::claim::type::string:
-			ad.InsertAttr(pair.first, pair.second.as_string());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
 			break;
 		// TODO: these are not currently supported
 		case jwt::claim::type::array: // fallthrough
 		case jwt::claim::type::object: // fallthrough
 		default:
 			break;
-		};
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
 	}
 
 	classad::EvalState state;
