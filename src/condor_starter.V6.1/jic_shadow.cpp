@@ -2056,6 +2056,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	m_delayed_updates.Clear();
 
 	filesize_t execsz = 0;
+	time_t begin_time = time(NULL);
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
@@ -2065,8 +2066,15 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-		execsz = starter_dir.GetDirectorySize();
-		ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
+		size_t file_count = 0;
+		execsz = starter_dir.GetDirectorySize(&file_count);
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+		time_t scan_time = (time(NULL) - begin_time);
+		if (scan_time > 10) {
+			dprintf(D_ALWAYS, "It took %d seconds to determine DiskUsage: %lld for %lld dirs+files\n",
+				(int)(scan_time), (long long)execsz, (long long)file_count);
+		}
 	}
 
 	std::string spooled_files;
@@ -2104,6 +2112,7 @@ bool
 JICShadow::publishJobExitAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
+	time_t begin_time = time(NULL);
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
@@ -2113,10 +2122,17 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-		execsz = starter_dir.GetDirectorySize();
-		ad->Assign( ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) );
-
+		size_t file_count = 0;
+		execsz = starter_dir.GetDirectorySize(&file_count);
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+		time_t scan_time = (time(NULL) - begin_time);
+		if (scan_time > 10) {
+			dprintf(D_ALWAYS, "It took %d seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
+				(int)(scan_time), (long long)execsz, (long long)file_count);
+		}
 	}
+
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
 	{

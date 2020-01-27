@@ -172,6 +172,7 @@
 #define ATTR_DESTINATION  "Destination"
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
+#define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"
 #define ATTR_DOCKER_IMAGE "DockerImage"
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
 #define ATTR_DOCKER_VOLUMES "DockerVolumes"
