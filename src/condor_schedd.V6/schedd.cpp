@@ -9706,7 +9706,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// handler is now alive and can read from the pipe.
 		ASSERT( job_ad );
 		MyString ad_str;
-		sPrintAd(ad_str, *job_ad);
+		sPrintAdWithSecrets(ad_str, *job_ad);
 		const char* ptr = ad_str.Value();
 		int len = ad_str.Length();
 		while (len) {
