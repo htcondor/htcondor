@@ -1193,12 +1193,10 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
-	if (viewCollectorTypes) {
+	if (viewCollectorTypes || command == INVALIDATE_STARTD_ADS || command == INVALIDATE_SUBMITTOR_ADS) {
 		forward_classad_to_view_collector(command,
 										  ATTR_TARGET_TYPE,
 										  &cad);
-	} else if ((command == INVALIDATE_STARTD_ADS) || (command == INVALIDATE_SUBMITTOR_ADS)) {
-		send_classad_to_sock(command, &cad);
     }
 
 	if( sock->type() == Stream::reli_sock ) {
@@ -1286,12 +1284,10 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
 #endif
 
-	if (viewCollectorTypes) {
+	if (viewCollectorTypes || command == UPDATE_STARTD_AD || command == UPDATE_SUBMITTOR_AD) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  cad);
-	} else if ((command == UPDATE_STARTD_AD) || (command == UPDATE_SUBMITTOR_AD)) {
-        send_classad_to_sock(command, cad);
 	}
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -1425,12 +1421,10 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     CollectorPluginManager::Update ( command, *cad );
 #endif
 
-	if (viewCollectorTypes) {
+	if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  cad);
-	} else if (UPDATE_STARTD_AD_WITH_ACK == command) {
-		send_classad_to_sock(command, cad);
 	}
 
 	// let daemon core clean up the socket
@@ -2143,36 +2137,28 @@ void CollectorDaemon::init_classad(int interval)
 void
 CollectorDaemon::forward_classad_to_view_collector(int cmd,
 										   const char *filterAttr,
-										   ClassAd *ad_to_forward)
+										   ClassAd *theAd)
 {
 	if (vc_list.empty()) return;
 
-	if (!filterAttr) {
-		send_classad_to_sock(cmd, ad_to_forward);
+	if (!theAd) {
+		dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL\n");
 		return;
 	}
 
-	std::string type;
-	if (!ad_to_forward->EvaluateAttrString(std::string(filterAttr), type)) {
-		dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
-		return;
-	}
+	if (filterAttr && viewCollectorTypes) {
+		std::string type;
+		if (!theAd->EvaluateAttrString(std::string(filterAttr), type)) {
+			dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
+			return;
+		}
 
-	if (viewCollectorTypes->contains_anycase(type.c_str())) {
+		if (!viewCollectorTypes->contains_anycase(type.c_str())) {
+			return;
+		}
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
 				type.c_str(), getCommandString(cmd));
-		send_classad_to_sock(cmd, ad_to_forward);
 	}
-}
-
-
-void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
-    if (vc_list.empty()) return;
-
-    if (!theAd) {
-        dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL\n");
-        return;
-    }
 
 	ClassAd *pvtAd = NULL;
 	if (cmd == UPDATE_STARTD_AD) {
