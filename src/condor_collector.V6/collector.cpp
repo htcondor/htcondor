@@ -68,6 +68,8 @@ int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName = NULL;
 Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
+bool CollectorDaemon::update_vc_nonblocking = false;
+int CollectorDaemon::update_vc_max_backlog = 1000;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
@@ -1864,6 +1866,9 @@ void CollectorDaemon::Config()
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
     for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+        if (e->backlog) {
+            daemonCore->Cancel_Socket(e->sock);
+        }
         delete e->collector;
         delete e->sock;
     }
@@ -1919,6 +1924,8 @@ void CollectorDaemon::Config()
 			free(tmp);
 		}
 	}
+	update_vc_nonblocking = param_boolean("UPDATE_VIEW_COLLECTOR_NONBLOCKING", false);
+	update_vc_max_backlog = param_integer("UPDATE_VIEW_COLLECTOR_MAX_BACKLOG", 1000);
 
 	int history_size = 1024;
 
@@ -2145,6 +2152,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL\n");
 		return;
 	}
+dprintf(D_FULLDEBUG,"JEF forward_classad(): something to do\n");
 
 	if (filterAttr && viewCollectorTypes) {
 		std::string type;
@@ -2227,51 +2235,142 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
             raw_command = true;
         }
 
-        // Run timeslice timer if raw_command is false, since this means 
-        // startCommand() may need to initiate an authentication round trip 
-        // and thus could block if the remote view collector is unresponsive.
-        if ( raw_command == false ) {
-	        view_sock_timeslice.setStartTimeNow();
-        }
-        bool start_command_result = 
-			view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command);
-        if ( raw_command == false ) {
-	        view_sock_timeslice.setFinishTimeNow();
-        }
+		if (e->backlog) {
+			if (e->pending_updates.size() >= update_vc_max_backlog) {
+				dprintf(D_FULLDEBUG,"JEF dropping view update due to full backlog\n");
+			} else {
+dprintf(D_FULLDEBUG,"JEF forward_classad(): already backlogged, adding update to pending list\n");
+				e->pending_updates.emplace_back(update_entry(cmd, new ClassAd(*theAd), pvtAd?new ClassAd(*pvtAd):nullptr));
+			}
+			continue;
+		}
 
-        if (! start_command_result ) {
-            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", 
-					cmd, view_name);
-            view_sock->end_of_message();
-            view_sock->close();
-            continue;
-        }
+		finish_forward_classad(*e, cmd, theAd, pvtAd, raw_command);
 
-        if (theAd) {
-            if (!putClassAd(view_sock, *theAd)) {
-                dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
-                view_sock->end_of_message();
-                view_sock->close();
-                continue;
-            }
-        }
-
-        // If there's a private startd ad, send that as well.
-        if (pvtAd) {
-            if (!putClassAd(view_sock, *pvtAd)) {
-                dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
-                view_sock->end_of_message();
-                view_sock->close();
-                continue;
-            }
-        }
-
-        if (!view_sock->end_of_message()) {
-            dprintf(D_ALWAYS, "Can't send end_of_message to View Collector %s\n", view_name);
-            view_sock->close();
-            continue;
-        }
+		if (e->backlog) {
+dprintf(D_FULLDEBUG,"JEF forward_classad(): now backlogged, registering socket\n");
+			int retval = daemonCore->Register_Socket(view_sock, "View Collector socket",
+				&CollectorDaemon::forward_classad_callback,
+				"View Collector update", NULL, ALLOW, HANDLE_WRITE);
+			if (retval < 0) {
+				// TODO Handle this more gracefully
+				EXCEPT("Failed to register socket for async write to view collector!");
+			}
+		}
     }
+}
+
+int
+CollectorDaemon::finish_forward_classad(vc_entry &vc, int cmd, const ClassAd *theAd, const ClassAd *pvtAd, bool raw_command)
+{
+	bool do_nonblocking = raw_command && vc.sock->type() == Stream::reli_sock && update_vc_nonblocking;
+	std::unique_ptr<BlockingModeGuard> nb_guard;
+	ReliSock *rsock = NULL;
+	if ( do_nonblocking ) {
+dprintf(D_FULLDEBUG,"JEF finish_forward_classad(): nonblocking\n");
+		// TODO better test for whether sock is a ReliSock?
+		rsock = (ReliSock*)vc.sock;
+		nb_guard.reset( new BlockingModeGuard( rsock, true ) );
+	}
+
+	// Run timeslice timer if raw_command is false, since this means 
+	// startCommand() may need to initiate an authentication round trip 
+	// and thus could block if the remote view collector is unresponsive.
+	if ( raw_command == false ) {
+		view_sock_timeslice.setStartTimeNow();
+	}
+	bool start_command_result = 
+		vc.collector->startCommand(cmd, vc.sock, 20, NULL, NULL, raw_command);
+	if ( raw_command == false ) {
+		view_sock_timeslice.setFinishTimeNow();
+	}
+
+	if (! start_command_result ) {
+		dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", 
+				 cmd, vc.name.c_str());
+		vc.sock->end_of_message();
+		goto error_exit;
+	}
+
+	if (theAd) {
+		if (!putClassAd(vc.sock, *theAd)) {
+			dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", vc.name.c_str());
+			vc.sock->end_of_message();
+			goto error_exit;
+		}
+	}
+
+	// If there's a private startd ad, send that as well.
+	if (pvtAd) {
+		if (!putClassAd(vc.sock, *pvtAd)) {
+			dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", vc.name.c_str());
+			vc.sock->end_of_message();
+			goto error_exit;
+		}
+	}
+
+	int retval;
+	if (do_nonblocking) {
+		retval = rsock->end_of_message_nonblocking();
+		vc.backlog = rsock->clear_backlog_flag();
+	} else {
+		retval = vc.sock->end_of_message();
+	}
+	if (!retval) {
+		dprintf(D_ALWAYS, "Can't send end_of_message to View Collector %s\n", vc.name.c_str());
+		goto error_exit;
+	}
+	return TRUE;
+
+ error_exit:
+	vc.sock->close();
+	vc.backlog = false;
+	vc.pending_updates.clear();
+	return FALSE;
+}
+
+int
+CollectorDaemon::forward_classad_callback(Service *data, Stream *sock)
+{
+dprintf(D_FULLDEBUG,"JEF forward_classad_callback() called\n");
+	ReliSock *rsock = (ReliSock *)sock;
+	auto vc = vc_list.begin();
+	while (vc != vc_list.end() && vc->sock != rsock ) {
+	}
+	if (vc == vc_list.end()) {
+		dprintf(D_ALWAYS, "Failed to find vc_list entry for nonblocking TCP callback\n");
+		return 0;
+	}
+
+	int retval = rsock->finish_end_of_message();
+	vc->backlog = rsock->clear_backlog_flag();
+	if ( !retval ) {
+		dprintf( D_ALWAYS, "Can't send finish_end_of_message to View Collector %s\n", vc->name.c_str() );
+		vc->sock->close();
+		vc->backlog = false;
+		vc->pending_updates.clear();
+		return 0;
+	}
+	if ( vc->backlog ) {
+dprintf(D_FULLDEBUG,"JEF forward_classad_callback(): still backlogged\n");
+		return KEEP_STREAM;
+	}
+
+	while ( !vc->pending_updates.empty() ) {
+dprintf(D_FULLDEBUG,"JEF forward_classad_callback(): sending delayed update\n");
+		update_entry &ue = vc->pending_updates.front();
+		finish_forward_classad( *vc, ue.cmd, ue.ad1.get(), ue.ad2.get(), true );
+		vc->pending_updates.pop_front();
+
+		if ( vc->backlog ) {
+dprintf(D_FULLDEBUG,"JEF forward_classad_callback(): backlogged again\n");
+			return KEEP_STREAM;
+		}
+	}
+	vc->backlog = false;
+	daemonCore->Cancel_Socket( vc->sock );
+dprintf(D_FULLDEBUG,"JEF forward_classad_callback(): no longer backlogged\n");
+	return KEEP_STREAM;
 }
 
 //  Collector stats on universes

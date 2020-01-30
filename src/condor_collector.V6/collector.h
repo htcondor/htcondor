@@ -122,7 +122,26 @@ public:
 	static void init_classad(int interval);
 	static void sendCollectorAd();
 
-	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
+	// data for a pending forwarded update over TCP
+	struct update_entry {
+		update_entry(int _cmd, ClassAd *_ad1, ClassAd *_ad2) : cmd(_cmd), ad1(_ad1), ad2(_ad2) {}
+		int cmd;
+		std::unique_ptr<ClassAd> ad1;
+		std::unique_ptr<ClassAd> ad2;
+	};
+
+    // data pertaining to each view collector entry
+    struct vc_entry {
+        std::string name;
+        DCCollector* collector;
+        Sock* sock;
+        bool backlog = false;
+        std::deque<update_entry> pending_updates;
+    };
+
+	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *theAd);
+	static int finish_forward_classad(vc_entry &vc, int cmd, const ClassAd *theAd, const ClassAd *pvtAd, bool raw_command);
+	static int forward_classad_callback(Service *data, Stream *sock);
 
 		// Take an incoming session and forward a token request to the schedd.
 	static int schedd_token_request(Service *, int, Stream *stream);
@@ -130,13 +149,6 @@ public:
 
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
-
-    // data pertaining to each view collector entry
-    struct vc_entry {
-        std::string name;
-        DCCollector* collector;
-        Sock* sock;
-    };
 
     static OfflineCollectorPlugin offline_plugin_;
 
@@ -176,6 +188,8 @@ protected:
 	static CollectorEngine collector;
 	static Timeslice view_sock_timeslice;
     static std::vector<vc_entry> vc_list;
+	static bool update_vc_nonblocking;
+	static int update_vc_max_backlog;
 
 	static int HandleQueryInProcPolicy;	// one of above HandleQueryInProc* constants
 	static int ClientTimeout;
