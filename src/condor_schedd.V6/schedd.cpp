@@ -2692,7 +2692,7 @@ Scheduler::guessJobSlotWeight(JobQueueJob * job)
 			ad->Assign(ATTR_MEMORY, 1024);
 			ad->Assign(ATTR_DISK, 1024);
 			dprintf(D_ALWAYS, "Creating slotWeightGuessAd as:\n");
-			dPrintAd(D_ALWAYS, *ad, false);
+			dPrintAd(D_ALWAYS, *ad);
 		}
 	}
 
@@ -10340,7 +10340,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
 			} else {
 				// fPrindAd does not have any usable error reporting.
-				fPrintAd(job_ad_fp, *userJob, true);
+				fPrintAd(job_ad_fp, *userJob);
 				wrote_job_ad = true;
 				fclose(job_ad_fp);
 			}

@@ -1740,7 +1740,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 	classad::References attrs;
 	classad::References *print_order = NULL;
 	if ( ! hash_order || whitelist) {
-		sGetAdAttrs(attrs, ad, false, whitelist);
+		sGetAdAttrs(attrs, ad, true, whitelist);
 		print_order = &attrs;
 	}
 

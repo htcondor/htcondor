@@ -3755,7 +3755,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3780,7 +3780,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
