@@ -167,7 +167,7 @@ public:
 
     bool usingPythonBindings = false;
 
-    void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
+    bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
         /* const */ StringList &dagFileAttrLines );
     
@@ -189,7 +189,7 @@ public:
 
     bool fileExists(const MyString &strFile);
 
-    void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
+    bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts);
 
     MyString RescueDagName(const char *primaryDagFile,
