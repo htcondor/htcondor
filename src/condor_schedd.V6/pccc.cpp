@@ -409,7 +409,7 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 			}
 
 			// dprintf( D_FULLDEBUG, "pcccStopCallback::dcMessageCallback( %d.%d ): coalesce command returned the following slot ad:\n", nowJob.cluster, nowJob.proc );
-			// dPrintAd( D_FULLDEBUG, slotAd, false );
+			// dPrintAd( D_FULLDEBUG, slotAd );
 
 			std::string claimID;
 			if((! reply.LookupString( ATTR_CLAIM_ID, claimID )) || claimID.empty() ) {
