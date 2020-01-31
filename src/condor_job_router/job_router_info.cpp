@@ -570,7 +570,7 @@ bool submit_job( const std::string & owner, const std::string & domain, ClassAd 
 		pool_name ? pool_name : "local",
 		is_sandboxed ? " (sandboxed)" : "");
 	if (submitted_jobs_fh) {
-		fPrintAd(submitted_jobs_fh, src, false);
+		fPrintAd(submitted_jobs_fh, src);
 		fprintf(submitted_jobs_fh, "\n");
 	}
 	return true;
