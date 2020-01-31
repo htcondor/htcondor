@@ -19,6 +19,8 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
+#include "compat_classad.h"
 
 #include "condor_auth_passwd.h"
 #include "match_prefix.h"
@@ -28,10 +30,12 @@
 #include "directory.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-reqid ID]\n\n"
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-reqid ID] [-json]\n\n"
 		"Generates a token from a remote daemon and prints its contents to stdout.\n"
 		"\nToken options:\n"
 		"    -reqid <val>                    Token request identity\n"
+                "\nOutput options:\n"
+                "    -json                           Print out tokens as JSON, line-delimited (RFC 7464)"
 		"Specifying target options:\n"
 		"    -pool    <host>                 Query this collector\n"
 		"    -name    <name>                 Find a daemon with this name\n"
@@ -43,7 +47,7 @@ void print_usage(const char *argv0) {
 }
 
 int
-list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, std::string request_id)
+list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, std::string request_id, bool list_json)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -86,20 +90,26 @@ list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, st
 		return 0;
 	}
 
+	CondorClassAdFileParseHelper::ParseType kind = list_json ?
+		CondorClassAdFileParseHelper::Parse_json :
+		CondorClassAdFileParseHelper::Parse_long;
+	CondorClassAdListWriter output_writer(kind);
 	for (const auto &request_ad : results) {
-		classad::ClassAdUnParser unp;
-		std::string req_contents_str;
-		unp.SetOldClassAd(true);
-		unp.Unparse(req_contents_str, &request_ad);
-
-		printf("%s\n", req_contents_str.c_str());
+		output_writer.writeAd(request_ad, stdout);
+	}
+	if (output_writer.needsFooter()) {
+		output_writer.writeFooter(stdout);
 	}
 
 	return 0;
 }
 
 int main(int argc, char *argv[]) {
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
 
+	bool list_json = false;
 	daemon_t dtype = DT_COLLECTOR;
 	std::string pool;
 	std::string name;
@@ -131,9 +141,18 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
+		} else if (is_dash_arg_prefix(argv[i], "reqid", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -reqid requires a request ID argument.\n", argv[0]);
+				exit(1);
+			}
+			reqid = argv[i];
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
+		} else if (!strcmp(argv[i], "-json")) {
+			list_json = true;
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(argv[0]);
 			exit(1);
@@ -146,5 +165,5 @@ int main(int argc, char *argv[]) {
 
 	config();
 
-	return list_tokens(pool, name, dtype, reqid);
+	return list_tokens(pool, name, dtype, reqid, list_json);
 }

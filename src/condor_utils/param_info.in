@@ -494,6 +494,12 @@ type=string
 tags=dagman,condor_submit_dag
 restart=never
 
+[DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE]
+default=false
+type=bool
+tags=dagman
+restart=never
+
 [DAGMAN_CONFIG_FILE]
 default=
 type=path
@@ -1858,7 +1864,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -2434,6 +2440,18 @@ tags=condor_auth_passwd
 default=
 description=Maximum age of accepted tokens.
 type=int
+tags=condor_auth_passwd
+
+[SEC_TOKEN_REQUEST_LIMITS]
+default=
+description=Authorization limits for token requests
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_BLACKLIST_EXPR]
+default=
+description=Expression describing token blacklist.
+type=string
 tags=condor_auth_passwd
 
 [SEC_ISSUED_TOKEN_EXPIRATION]
@@ -4022,10 +4040,9 @@ default=
 type=string
 tags=rooster
 
-# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
 default=1000000
-description=Max Procd Log (size rotation only, no scale suffix)
+description=Max Procd Log (size rotation only)
 tags=procd
 
 [SHADOW_WORKLIFE]

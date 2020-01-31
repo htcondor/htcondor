@@ -49,10 +49,15 @@ const char ADD_CREDENTIAL[] = "add";
 const char DELETE_CREDENTIAL[] = "delete";
 const char QUERY_CREDENTIAL[] = "query";
 
+const int STORE_CRED_FIRST_MODE = ADD_MODE;
+
 // config mode for debugging
 #if defined(WIN32)
 const int CONFIG_MODE = 103;
 const char CONFIG_CREDENTIAL[] = "config";
+const int STORE_CRED_LAST_MODE = CONFIG_MODE;
+#else
+const int STORE_CRED_LAST_MODE = QUERY_MODE;
 #endif
 
 #define POOL_PASSWORD_USERNAME "condor_pool"

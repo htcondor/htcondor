@@ -46,7 +46,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
     return IsSafeEnvV2Value( val.Value() );
 }
 
-void 
+bool 
 DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
             /* const */ SubmitDagShallowOptions &shallowOpts,
             /* const */ StringList &dagFileAttrLines )
@@ -56,7 +56,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     {
         fprintf( stderr, "ERROR: unable to create submit file %s\n",
                  shallowOpts.strSubFile.Value() );
-        exit( 1 );
+        return false;
     }
 
     const char *executable = NULL;
@@ -66,7 +66,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         if ( valgrindPath == "" ) {
             fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
                          valgrind_exe );
-            exit( 1 );
+            return false;
         } else {
             executable = valgrindPath.Value();
         }
@@ -287,7 +287,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
             fprintf( stderr, "ERROR: unable to read config file %s "
                         "(error %d, %s)\n",
                         shallowOpts.strConfigFile.Value(), errno, strerror(errno) );
-            exit(1);
+            return false;
         }
         env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", shallowOpts.strConfigFile.Value());
     }
@@ -297,7 +297,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     if ( !env.getDelimitedStringV1RawOrV2Quoted( &env_str, &env_errors ) ) {
         fprintf( stderr,"Failed to insert environment: %s",
                     env_errors.Value() );
-        exit(1);
+        return false;
     }
     fprintf(pSubFile, "environment\t= %s\n",env_str.Value());
 
@@ -315,7 +315,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         if ( !aFile ) {
             fprintf( stderr, "ERROR: unable to read submit append file (%s)\n",
                      shallowOpts.appendFile.Value() );
-            exit( 1 );
+            return false;
         }
 
         char *line;
@@ -346,6 +346,8 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     fprintf(pSubFile, "queue\n");
 
     fclose(pSubFile);
+
+    return true;
 }
 
 /** Run condor_submit_dag on the given DAG file.
@@ -873,7 +875,7 @@ DagmanUtils::fileExists(const MyString &strFile)
 }
 
 //---------------------------------------------------------------------------
-void 
+bool 
 DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
             SubmitDagShallowOptions &shallowOpts)
 {
@@ -889,7 +891,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
             fprintf( stderr, "-dorescuefrom %d specified, but rescue "
                         "DAG file %s does not exist!\n", deepOpts.doRescueFrom,
                         rescueDagName.Value() );
-            exit( 1 );
+            return false;
         }
     }
 
@@ -980,7 +982,9 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
             fprintf( stderr, "Either rename them,\nor set the { \"force\" : 1 }"
                 " option to force them to be overwritten.\n" );
         }
-        exit( 1 );
+        return false;
     }
+
+    return true;
 }
 

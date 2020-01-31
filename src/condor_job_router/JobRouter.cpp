@@ -3177,7 +3177,6 @@ JobRoute::ApplyRoutingJobEdits(
 	//mset.init();
 	mset.macros().apool.reserve(0x10000); // allocate workspace. TODO: keep track of route workspace size.
 	mset.macros().sources.push_back(this->Name());
-	PRAGMA_REMIND("tj: figure out who frees the mset memory...")
 
 	std::string errmsg;
 	int rval = 0;
@@ -3351,8 +3350,15 @@ JobRoute::ParseNext(
 	m_UseSharedX509UserProxy.set(mset.local_param(JR_ATTR_USE_SHARED_X509_USER_PROXY, m_route.context()));
 	m_SharedX509UserProxy.set(mset.local_param(JR_ATTR_SHARED_X509_USER_PROXY, m_route.context()));
 
-	m_max_jobs = mset.local_param_int(JR_ATTR_MAX_JOBS, 100, m_route.context());
-	m_max_idle_jobs = mset.local_param_int(JR_ATTR_MAX_IDLE_JOBS, 50, m_route.context());
+	bool knob_exists = false;
+	m_max_jobs = mset.local_param_int(JR_ATTR_MAX_JOBS, 100, m_route.context(), &knob_exists);
+	if ( ! knob_exists) {
+		m_max_jobs = param_integer("JOB_ROUTER_DEFAULT_MAX_JOBS_PER_ROUTE", m_max_jobs);
+	}
+	m_max_idle_jobs = mset.local_param_int(JR_ATTR_MAX_IDLE_JOBS, 50, m_route.context(), &knob_exists);
+	if ( ! knob_exists) {
+		m_max_idle_jobs = param_integer("JOB_ROUTER_DEFAULT_MAX_IDLE_JOBS_PER_ROUTE", m_max_idle_jobs);
+	}
 	m_failure_rate_threshold = mset.local_param_double(JR_ATTR_FAILURE_RATE_THRESHOLD, 0.03, m_route.context());
 	m_target_universe = m_route.getUniverse();
 	if ( ! m_target_universe) {

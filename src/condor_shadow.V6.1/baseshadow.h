@@ -336,7 +336,7 @@ class BaseShadow : public Service
 
 	virtual int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss ) = 0;
 
-	virtual int getDiskUsage( void ) = 0;
+	virtual int64_t getDiskUsage( void ) = 0;
 
 	virtual struct rusage getRUsage( void ) = 0;
 

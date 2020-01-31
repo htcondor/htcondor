@@ -7578,22 +7578,49 @@ condor_job_router Configuration File Entries
 
 These macros affect the *condor_job_router* daemon.
 
-:macro-def:`JOB_ROUTER_DEFAULTS`
-    Defined by a single ClassAd in New ClassAd syntax, used to provide
-    default values for all routes in the *condor_job_router* daemon's
-    routing table. Where an attribute is set outside of these defaults,
-    that attribute value takes precedence. The enclosing square brackets
-    are optional.
 
 :macro-def:`JOB_ROUTER_ROUTE_NAMES`
-    An ordered list of the names of enabled routes.  If configured, routes 
-    specifed in `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE` and `JOB_ROUTER_ENTRIES_CMD`
-    will be matched to jobs in the order their names are declared in this list.  Routes not
-    declared in this list will be disabled.  If this list is empty, then all routes
-    will be enabled, and the order in which routes are considered will be the order in
+    An ordered list of the names of enabled routes.  In version 8.9.6 or later,
+    routes whose names are listed here should each have a ``JOB_ROUTER_ROUTE_<NAME>``
+    configuration variable that specifies the route.
+
+    Routes will be matched to jobs in the order their names are declared in this list.  Routes not
+    declared in this list will be disabled.  
+
+    If routes are specifed in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
+    and `JOB_ROUTER_ENTRIES_CMD` configuration variables, then ``JOB_ROUTER_ROUTE_NAMES`` is optional.
+    if it is empty, the order in which routes are considered will be the order in
     which their names hash.
 
+:macro-def:`JOB_ROUTER_ROUTE_<NAME>`
+    Specification of a single route in transform syntax.  ``<NAME>`` should be one of the
+    route names specified in ``JOB_ROUTER_ROUTE_NAMES``. The transform syntax is specified
+    in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+
+:macro-def:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`
+    An ordered list of the names of transforms that should be applied when a job is being
+    routed before the route transform is applied.  Each transform name listed here should
+    have a corresponding ``JOB_ROUTER_TRANSFORM_<NAME>`` configuration variable.
+
+:macro-def:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`
+    An ordered list of the names of transforms that should be applied when a job is being
+    routed after the route transform is applied.  Each transform name listed here should
+    have a corresponding ``JOB_ROUTER_TRANSFORM_<NAME>`` configuration variable.
+
+:macro-def:`JOB_ROUTER_TRANSFORM_<NAME>`
+    Specification of a single pre-route or post-route transform.  ``<NAME>`` should be one of the
+    route names specified in ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` or in ``JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES``.
+    The transform syntax is specified in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+
+:macro-def:`JOB_ROUTER_DEFAULTS`
+    Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
+    Defined by a single ClassAd in New ClassAd syntax, used to provide
+    default values for routes in the *condor_job_router* daemon's
+    routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
+    The enclosing square brackets are optional.
+
 :macro-def:`JOB_ROUTER_ENTRIES`
+    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
     Specification of the job routing table. It is a list of ClassAds, in
     New ClassAd syntax, where each individual ClassAd is surrounded by
     square brackets, and the ClassAds are separated from each other by
@@ -7612,13 +7639,18 @@ These macros affect the *condor_job_router* daemon.
     external program via the ``JOB_ROUTER_ENTRIES_CMD`` configuration
     variable.
 
+    Routes specified by any of these 3 configuration variables are merged
+    with the ``JOB_ROUTER_DEFAULTS`` before being used.
+
 :macro-def:`JOB_ROUTER_ENTRIES_FILE`
+    Deprecated, use ``JOB_ROUTER_ROUTE_<NAME>`` instead.
     A path and file name of a file that contains the ClassAds, in New
     ClassAd syntax, describing the routing table. The specified file is
     periodically reread to check for new information. This occurs every
     ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
 
 :macro-def:`JOB_ROUTER_ENTRIES_CMD`
+    Deprecated, use ``JOB_ROUTER_ENTRIES_<NAME)`` instead.
     Specifies the command line of an external program to run. The output
     of the program defines or updates the routing table, and the output
     must be given in New ClassAd syntax. The specified command is
@@ -7662,6 +7694,18 @@ These macros affect the *condor_job_router* daemon.
     An integer value representing the maximum number of jobs that may be
     routed, summed over all routes. The default value is -1, which means
     an unlimited number of jobs may be routed.
+
+:macro-def:`JOB_ROUTER_DEFAULT_MAX_JOBS_PER_ROUTE`
+    An iteger value representing the maximum number of jobs that may be
+    routed to a single route when the route does not specify a ``MaxJobs``
+    value. The default value is 100.
+
+:macro-def:`JOB_ROUTER_DEFAULT_MAX_IDLE_JOBS_PER_ROUTE`
+    An iteger value representing the maximum number of jobs in a single
+    route that may be in the idle state.  When the number of jobs routed
+    to that site exceeds this number, no more jobs will be routed to it. 
+    A route may specify ``MaxIdleJobs`` to override this number.
+    The default value is 50.
 
 :macro-def:`MAX_JOB_MIRROR_UPDATE_LAG`
     An integer value that administrators will rarely consider changing,
@@ -8092,6 +8136,11 @@ Throttling
     is 20. Note that the ``DAGMAN_MAX_POST_SCRIPTS`` value can be
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
+
+:macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
+    A boolean that determines if after changing some of these throttle limits,
+    *condor_dagman* should forceably remove jobs to meet the new limit.
+    Defaults to ``False``.
 
 Priority, node semantics
 ''''''''''''''''''''''''

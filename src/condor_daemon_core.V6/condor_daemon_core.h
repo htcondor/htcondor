@@ -101,6 +101,8 @@ static const int DC_STD_FD_NOPIPE = -1;
 
 int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
+// set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
+bool dc_args_default_to_background(bool background);
 
 
 // External protos

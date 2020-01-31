@@ -2582,12 +2582,16 @@ public:
         SetDagOptions(opts, shallow_opts, deep_opts);
 
         // Make sure we can actually submit this DAG with the given options.
-        // If we can't, ensureOutputFilesExist() will abort and exit.
-        dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts);
+        // If we can't, throw an exception and exit.
+        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+            THROW_EX(RuntimeError, "Unable to write condor_dagman output files");
+        }
 
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines);
+        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+            THROW_EX(RuntimeError, "Unable to write condor_dagman submit file");
+        }
 
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");

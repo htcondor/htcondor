@@ -213,6 +213,8 @@ parse_command_line(int argc, char* argv[])
 				}
 				index++;
 				log_size = atoi(argv[index]);
+				// set a 64k floor on the log size, to avoid excessive rotation
+				if (log_size > 0) { log_size = MAX(log_size, 65536); }
 				break;
 				
 			// maximum snapshot interval
