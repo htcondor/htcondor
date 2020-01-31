@@ -7115,19 +7115,6 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 } /* should match the extern "C" */
 
 
-void
-PrintQ()
-{
-	ClassAd		*ad=NULL;
-
-	dprintf(D_ALWAYS, "*******Job Queue*********\n");
-	JobQueue->StartIterateAllClassAds();
-	while(JobQueue->IterateAllClassAds(ad)) {
-		fPrintAd(stdout, *ad);
-	}
-	dprintf(D_ALWAYS, "****End of Queue*********\n");
-}
-
 // probes for timing the autoclustering code
 schedd_runtime_probe GetAutoCluster_runtime;
 schedd_runtime_probe GetAutoCluster_hit_runtime;

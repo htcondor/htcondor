@@ -37,7 +37,6 @@ GCC_DIAG_OFF(invalid-offsetof)
 #error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
 #endif
 
-void PrintQ();
 class Service;
 
 class QmgmtPeer {
