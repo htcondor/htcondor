@@ -45,6 +45,8 @@
 #include "subsystem_info.h"
 #include "secure_file.h"
 #include "condor_secman.h"
+#include "compat_classad_util.h"
+#include "classad/exprTree.h"
 
 #include "condor_auth_passwd.h"
 
@@ -395,6 +397,15 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     m_k_prime_len(0),
 	m_state(ServerRec1)
 {
+	if (m_version == 2) {
+		std::string blacklist_param;
+		classad::ExprTree *expr = nullptr;
+		if (param(blacklist_param, "SEC_TOKEN_BLACKLIST_EXPR") &&
+			!ParseClassAdRvalExpr(blacklist_param.c_str(), expr))
+		{
+			m_token_blacklist_expr.reset(expr);
+		}
+	}
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
@@ -890,12 +901,16 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 					return false;
 				}
 			}
-			if (jwt.has_id()) {
-				dprintf(D_AUDIT, mySock_->getUniqueId(),
-					"Remote entity presented token with ID %s\n", jwt.get_id().c_str());
-			} else {
-				dprintf(D_AUDIT, mySock_->getUniqueId(),
-					"Remote entity presented token with payload %s.\n", jwt.get_payload().c_str());
+			dprintf(D_AUDIT, mySock_->getUniqueId(),
+				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
+			if (isTokenBlacklisted(jwt)) {
+				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
+				free(ka);
+				free(kb);
+				free(seed_ka);
+				free(seed_kb);
+				return false;
 			}
 
 			const std::string& algo = jwt.get_algorithm();
@@ -942,6 +957,63 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
     return true;
 }
+
+
+bool
+Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
+{
+	if (!m_token_blacklist_expr) {
+		return false;
+	}
+	classad::ClassAd ad;
+	auto claims = jwt.get_payload_claims();
+	for (const auto &pair : claims) {
+		bool inserted = true;
+		const auto &claim = pair.second;
+		switch (claim.get_type()) {
+		case jwt::claim::type::null:
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			break;
+		case jwt::claim::type::boolean:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
+			break;
+		case jwt::claim::type::int64:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
+			break;
+		case jwt::claim::type::number:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
+			break;
+		case jwt::claim::type::string:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
+			break;
+		// TODO: these are not currently supported
+		case jwt::claim::type::array: // fallthrough
+		case jwt::claim::type::object: // fallthrough
+		default:
+			break;
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
+	}
+
+	classad::EvalState state;
+	state.SetScopes(&ad);
+	classad::Value val;
+	bool blacklisted = true;
+		// Out of an abundance of caution, if we fail to evaluate the
+		// expression or it doesn't evaluate to something boolean-like,
+		// we consider the token potentially suspect.
+	if (!m_token_blacklist_expr->Evaluate(state, val) ||
+		!val.IsBooleanValueEquiv(blacklisted)) {
+		return true;
+	}
+	return blacklisted;
+}
+
 
 void
 Condor_Auth_Passwd::setup_seed(unsigned char *ka, unsigned char *kb) 

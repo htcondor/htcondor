@@ -1475,12 +1475,6 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 				PrettyPrintExprTree(tree, pretty_req, 4, console_width);
 				inline_attrs.insert(ATTR_START);
 			}
-			tree = slot->LookupExpr(ATTR_IS_VALID_CHECKPOINT_PLATFORM);
-			if (tree) {
-				pretty_req += "\n\n  " ATTR_IS_VALID_CHECKPOINT_PLATFORM " is\n    ";
-				PrettyPrintExprTree(tree, pretty_req, 4, console_width);
-				inline_attrs.insert(ATTR_IS_VALID_CHECKPOINT_PLATFORM);
-			}
 			tree = slot->LookupExpr(ATTR_WITHIN_RESOURCE_LIMITS);
 			if (tree) {
 				pretty_req += "\n\n  " ATTR_WITHIN_RESOURCE_LIMITS " is\n    ";

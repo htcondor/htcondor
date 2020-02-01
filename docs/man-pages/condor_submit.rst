@@ -1206,6 +1206,11 @@ FILE TRANSFER COMMANDS
     semicolon. If you wish to remap file names that contain equals signs
     or semicolons, these special characters may be escaped with a
     backslash. You cannot specify directories to be remapped.
+
+    Note that whether an output file is transferred is controlled by
+    **transfer_output_files**. Listing a file in
+    **transfer_output_remaps** is not sufficient to cause it to be
+    transferred.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
@@ -1281,12 +1286,14 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
     to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
     **Note: non-zero values of success_exit_code should generally not be
     used for DAG node jobs.**
+
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if
     **success_exit_code** is set to a non-zero value, *condor_dagman*
@@ -1295,6 +1302,13 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     script that takes into account the value of **success_exit_code**
     (although this is not recommended). For multi-proc DAG node jobs,
     there is currently no way to overcome this limitation.
+    :index:`checkpoint_exit_code<single: checkpoint_exit_code; submit commands>`
+
+ checkpoint_exit_code = <integer>
+    The exit code which indicates that the executable has exited after
+    successfully taking a checkpoint.  The checkpoint will transferred
+    and the executable restarted.  See
+    :ref:`users-manual/self-checkpointing-applications:Self-Checkpointing Applications` for details.
     :index:`hold<single: hold; submit commands>`
 
  hold = <True | False>

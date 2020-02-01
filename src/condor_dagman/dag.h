@@ -38,6 +38,8 @@
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 
+#include <queue>
+
 // Which layer of splices do we want to lift?
 enum SpliceLayer {
 	SELF,
@@ -538,6 +540,8 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	bool _removeJobsAfterLimitChange = false;
+
 #if 0
 	bool RemoveNode( const char *name, MyString &whynot );
 #endif
@@ -657,7 +661,7 @@ class Dag {
 	int MaxPostScripts(void) { return _maxPostScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
-	void SetMaxJobsSubmitted(int maxJobs) { _maxJobsSubmitted = maxJobs; };
+	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
@@ -1087,6 +1091,9 @@ private:
 		// means unlimited.
     int _maxIdleJobProcs;
 
+		// Policy for how we respond to DAG edits.
+	std::string _editPolicy;
+
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
 		// a node at the back of the ready queue.  (Default is true.)
@@ -1109,7 +1116,7 @@ private:
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log
-    Queue<Job*>* _submitQ;
+	std::queue<Job*>* _submitQ;
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;

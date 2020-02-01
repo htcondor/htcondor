@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  The *condor_wait* tool is again as efficient when waiting forever as when
+   given a deadline on the command line.
+   :ticket:`7458`
 
 Version 8.8.7
 -------------

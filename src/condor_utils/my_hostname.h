@@ -20,9 +20,6 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
-// use get_local_ipaddr().to_ip_string() instead
-extern	const char*	my_ip_string( void );
-
 #include "stream.h"
 #include <string>
 #include <set>

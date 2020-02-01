@@ -19,7 +19,7 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
-
+#include "classad_expr_return_policy.h"
 
 void
 ExprTreeHolder::init()
@@ -1028,6 +1028,11 @@ AttrItemIter ClassAdWrapper::endItems()
     return AttrItemIter(end());
 }
 
+
+boost::python::object ClassAdWrapper::items(boost::shared_ptr<ClassAdWrapper> ad)
+{
+    return boost::python::range<condor::tuple_classad_value_return_policy<boost::python::objects::default_iterator_call_policies>>(&ClassAdWrapper::beginItems, &ClassAdWrapper::endItems)(ad);
+}
 
 ClassAdWrapper::ClassAdWrapper() : classad::ClassAd() {}
 

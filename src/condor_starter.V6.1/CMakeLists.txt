@@ -47,3 +47,7 @@ endif(HAVE_SSH_TO_JOB)
 if (LINUX)
 	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
+if (DOCKER_ALLOW_RUN_AS_ROOT)
+	set_source_files_properties(docker_proc.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
+endif()
+

@@ -53,7 +53,6 @@ MachAttributes::MachAttributes()
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
-	m_ckptpltfrm = NULL;
 
 	m_clock_day = -1;
 	m_clock_min = -1;
@@ -90,9 +89,6 @@ MachAttributes::MachAttributes()
 	}
 
 	dprintf( D_FULLDEBUG, "Memory: Detected %d megs RAM\n", m_phys_mem );
-
-	// identification of the checkpointing platform signature
-	m_ckptpltfrm = strdup( sysapi_ckptpltfrm() );
 
 	// temporary attributes for raw utsname info
 	m_utsname_sysname = NULL;
@@ -138,7 +134,6 @@ MachAttributes::~MachAttributes()
 	if( m_opsys_legacy ) free( m_opsys_legacy );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
-	if( m_ckptpltfrm ) free( m_ckptpltfrm );
 
 	if( m_utsname_sysname ) free( m_utsname_sysname );
 	if( m_utsname_nodename ) free( m_utsname_nodename );
@@ -422,13 +417,6 @@ MachAttributes::compute( amask_t how_much )
 				 m_filesystem_domain );
 
 		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
-
-		// checkpoint platform signature
-		if (m_ckptpltfrm) {
-			free(m_ckptpltfrm);
-		}
-
-		m_ckptpltfrm = strdup( sysapi_ckptpltfrm() );
 
 		pair_strings_vector root_dirs = root_dir_list();
 		std::stringstream result;
@@ -857,8 +845,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		cp->Assign( ATTR_FILE_SYSTEM_DOMAIN, m_filesystem_domain );
 
 		cp->Assign( ATTR_HAS_IO_PROXY, true );
-
-		cp->Assign( ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
 
 #if defined ( WIN32 )
 		// publish the Windows version information

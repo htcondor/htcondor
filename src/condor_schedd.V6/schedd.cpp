@@ -1541,8 +1541,8 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
-	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.Length());
-	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.Length() + num_pending_startd_contacts);
+	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.size());
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.size() + num_pending_startd_contacts);
 
 	m_xfer_queue_mgr.publish(cad);
 
@@ -6784,7 +6784,7 @@ Scheduler::shadowsSpawnLimit()
 		return 0;
 	}
 
-	int shadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
+	int shadows = numShadows + RunnableJobQueue.size() + num_pending_startd_contacts + startdContactQueue.size();
 
 	return std::max(MaxJobsRunning - shadows, 0);
 }
@@ -6798,7 +6798,7 @@ Scheduler::shadowsSpawnLimit()
 bool
 Scheduler::canSpawnShadow()
 {
-	int shadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
+	int shadows = numShadows + RunnableJobQueue.size() + num_pending_startd_contacts + startdContactQueue.size();
 
 		// First, check if we have reached our maximum # of shadows 
 	if( shadows >= MaxJobsRunning ) {
@@ -7997,11 +7997,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 bool
 Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 {
-	 if( startdContactQueue.enqueue(args) < 0 ) {
-		 dprintf( D_ALWAYS, "Failed to enqueue contactStartd "
-				  "startd=%s\n", args->sinful() );
-		 return false;
-	 }
+	 startdContactQueue.push(args);
 	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
 			  args->sinful() );  
 
@@ -8014,7 +8010,7 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 void
 Scheduler::rescheduleContactQueue()
 {
-	if( startdContactQueue.IsEmpty() ) {
+	if( startdContactQueue.empty() ) {
 		return; // nothing to do
 	}
 		 /*
@@ -8049,10 +8045,11 @@ Scheduler::checkContactQueue()
 	while( !daemonCore->TooManyRegisteredSockets() &&
 		   (num_pending_startd_contacts < max_pending_startd_contacts
             || max_pending_startd_contacts <= 0) &&
-		   (!startdContactQueue.IsEmpty()) ) {
+		   (!startdContactQueue.empty()) ) {
 			// there's a pending registration in the queue:
 
-		startdContactQueue.dequeue ( args );
+		args = startdContactQueue.front();
+		startdContactQueue.pop();
 		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %p, "
 				 "host=%s\n", args, args->sinful() ); 
 		contactStartd( args );
@@ -8976,10 +8973,12 @@ Scheduler::StartJobHandler()
 
 	// get job from runnable job queue
 	while( 1 ) {	
-		if( RunnableJobQueue.dequeue(srec) < 0 ) {
+		if( RunnableJobQueue.empty() ) {
 				// our queue is empty, we're done.
 			return;
 		}
+		srec = RunnableJobQueue.front();
+		RunnableJobQueue.pop();
 
 		// Check to see if job ad is still around; it may have been
 		// removed while we were waiting in RunnableJobQueue
@@ -9683,7 +9682,7 @@ void
 Scheduler::tryNextJob()
 {
 		// Re-set timer if there are any jobs left in the queue
-	if( !RunnableJobQueue.IsEmpty() ) {
+	if( !RunnableJobQueue.empty() ) {
 		StartJobTimer = daemonCore->
 		// Queue the next job start via the daemoncore timer.  jobThrottle()
 		// implements job bursting, and returns the proper delay for the timer.
@@ -10038,9 +10037,7 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 	dprintf( D_FULLDEBUG, "Queueing job %d.%d in runnable job queue\n",
 			 srec->job_id.cluster, srec->job_id.proc );
 
-	if( RunnableJobQueue.enqueue(srec) ) {
-		EXCEPT( "Cannot put job into run queue" );
-	}
+	RunnableJobQueue.push(srec);
 
 	if( StartJobTimer<0 ) {
 		// Queue the next job start via the daemoncore timer.
@@ -16520,13 +16517,9 @@ Scheduler::addCronTabClassAd( JobQueueJob *jobAd )
 void
 Scheduler::addCronTabClusterId( int cluster_id )
 {
-	if ( cluster_id < 0 ||
-		 this->cronTabClusterIds.IsMember( cluster_id ) ) return;
-	if ( this->cronTabClusterIds.enqueue( cluster_id ) < 0 ) {
-		dprintf( D_FULLDEBUG,
-				 "Failed to add cluster %d to the cron jobs list\n", cluster_id );
+	if ( cluster_id >= 0 ) {
+		cronTabClusterIds.insert( cluster_id );
 	}
-	return;
 }
 
 /**
@@ -16548,7 +16541,9 @@ Scheduler::processCronTabClusterIds( )
 		// For each cluster, we will inspect the job ads of all its
 		// procs to see if they have defined crontab information
 		//
-	while ( this->cronTabClusterIds.dequeue( cluster_id ) >= 0 ) {
+	for ( auto itr = cronTabClusterIds.begin(); itr != cronTabClusterIds.end(); itr++ ) {
+		cluster_id = *itr;
+
 		int init = 1;
 		while ( ( jobAd = GetNextJobByCluster( cluster_id, init ) ) ) {
 			PROC_ID id;
@@ -16569,7 +16564,7 @@ Scheduler::processCronTabClusterIds( )
 			init = 0;
 		} // WHILE
 	} // WHILE
-	return;
+	cronTabClusterIds.clear();
 }
 
 /**

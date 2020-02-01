@@ -420,6 +420,9 @@ Requires(post): selinux-policy-targeted
 
 Obsoletes: condor-static < 7.2.0
 
+# Standard Universe discontinued as of 8.9.0
+Obsoletes: condor-std-universe
+
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
 %endif
@@ -1926,6 +1929,16 @@ fi
 %endif
 
 %changelog
+* Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
+- Added a new mode that skips jobs whose outputs are newer than their inputs
+- Added command line tool to help debug ClassAd expressions
+- Added port forwarding to Docker containers
+- You may now change some DAGMan throttles while the DAG is running
+- Added support for session tokens for pre-signed S3 URLs
+- Improved the speed of the negotiator when custom resources are defined
+- Fixed interactive submission of Docker jobs
+- Fixed a bug where jobs wouldn't be killed when getting an OOM notification
+
 * Thu Dec 26 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.7-1
 - Updated condor_annex to work with upcoming AWS Lambda function changes
 - Added the ability to specify the order that job routes are applied

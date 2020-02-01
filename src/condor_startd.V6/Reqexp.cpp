@@ -34,23 +34,17 @@ using std::set;
 Reqexp::Reqexp( Resource* res_ip )
 {
 	this->rip = res_ip;
-	MyString tmp;
+	std::string tmp;
 
-	if (resmgr->starter_mgr.haveStandardUni()) {
-		tmp.formatstr("%s = (%s) && (%s)", 
-			ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
-	} else {
-		tmp.formatstr("%s = START", ATTR_REQUIREMENTS);
-	}
+	formatstr(tmp, "%s = START", ATTR_REQUIREMENTS);
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
-		tmp.formatstr_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+		formatstr_cat( tmp, " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
 	}
 
-	origreqexp = strdup( tmp.Value() );
+	origreqexp = strdup( tmp.c_str() );
 	origstart = NULL;
 	rstate = ORIG_REQ;
-	m_origvalidckptpltfrm = NULL;
 	m_within_resource_limits_expr = NULL;
 	drainingStartExpr = NULL;
 }
@@ -83,58 +77,6 @@ Reqexp::compute( amask_t how_much )
 	}
 
 	if( IS_STATIC(how_much) ) {
-
-		if (m_origvalidckptpltfrm != NULL) {
-			free(m_origvalidckptpltfrm);
-			m_origvalidckptpltfrm = NULL;
-		}
-
-		char *vcp = param( "IS_VALID_CHECKPOINT_PLATFORM" );
-		if (vcp != NULL) {
-			/* Use whatever the config file says */
-
-			str.formatstr("%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, vcp);
-
-			m_origvalidckptpltfrm = strdup( str.Value() );
-
-			free(vcp);
-
-		} else {
-
-			/* default to a simple policy of only resuming checkpoints
-				which came from a machine like we are running on:
-			
-				Consider the checkpoint platforms to match IF
-				0. If it is a non standard universe job (consider the "match"
-					successful) OR
-				1. If it is a standard universe AND
-				2. There exists CheckpointPlatform in the machine ad AND
-				3a.  the job's last checkpoint matches the machine's checkpoint 
-					platform
-				3b.  OR NumCkpts == 0
-
-				Some assumptions I'm making are that 
-				TARGET.LastCheckpointPlatform must NOT be present and is
-				ignored if it is in the jobad when TARGET.NumCkpts is zero.
-
-			*/
-			const char *default_vcp_expr = 
-			"("
-			  "TARGET.JobUniverse =!= 1 || "
-			  "("
-			    "(MY.CheckpointPlatform =!= UNDEFINED) &&"
-			    "("
-			      "(TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||"
-			      "(TARGET.NumCkpts == 0)"
-			    ")"
-			  ")"
-			")";
-			
-			str.formatstr( "%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, 
-				default_vcp_expr);
-
-			m_origvalidckptpltfrm = strdup( str.Value() );
-		}
 
 		if( m_within_resource_limits_expr != NULL ) {
 			free(m_within_resource_limits_expr);
@@ -269,7 +211,6 @@ Reqexp::~Reqexp()
 {
 	if( origreqexp ) free( origreqexp );
 	if( origstart ) free( origstart );
-	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
 	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
 	if( drainingStartExpr ) { delete drainingStartExpr; }
 }
@@ -336,8 +277,6 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		ca->Insert( origstart );
 		tmp.formatstr( "%s", origreqexp );
 		ca->Insert( tmp.Value() );
-		tmp.formatstr( "%s", m_origvalidckptpltfrm );
-		ca->Insert( tmp.Value() );
 		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 							m_within_resource_limits_expr );
@@ -352,7 +291,6 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 			ca->Insert( ATTR_START, sacrifice );
 
 			ca->Insert( origreqexp );
-			ca->Insert( m_origvalidckptpltfrm );
 			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 								m_within_resource_limits_expr );
