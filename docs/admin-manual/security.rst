@@ -753,7 +753,7 @@ GSI Authentication
 The GSI (Grid Security Infrastructure) protocol provides an avenue for
 HTCondor to do PKI-based (Public Key Infrastructure) authentication
 using X.509 certificates. The basics of GSI are well-documented
-elsewhere, such as `http://www.globus.org/ <http://www.globus.org/>`_.
+elsewhere, such as `https://gridcf.org/gct-docs/latest/gsic/key/index.html <https://gridcf.org/gct-docs/latest/gsic/key/index.html>`_.
 
 A simple introduction to this type of authentication defines HTCondor's
 use of terminology, and it illuminates the needed items that HTCondor
@@ -1316,6 +1316,7 @@ without a client certificate; configure the collector using a host certificate.
 Using the SSL authentication, the client can request a new authentication token:
 
 ::
+
     # condor_token_request
     Token request enqueued.  Ask an administrator to please approve request 9235785.
 

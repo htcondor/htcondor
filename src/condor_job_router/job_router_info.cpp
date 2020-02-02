@@ -46,6 +46,7 @@
 //-------------------------------------------------------------
 const char * MyName = NULL;
 classad::ClassAdCollection * g_jobs = NULL;
+FILE * submitted_jobs_fh = NULL;
 
 static bool read_classad_file(const char *filename, classad::ClassAdCollection &classads, const char * constr);
 
@@ -67,6 +68,7 @@ usage(int retval = 1)
 		"\t-version\tPrint HTCondor version and exit\n"
 		"\t-config\t\tPrint configured routes\n"
 		"\t-match-jobs\tMatch jobs to routes and print the first match\n"
+		"\t-route-jobs\tMatch jobs to routes and print the routed jobs\n"
 		"\t-ignore-prior-routing\tRemove routing attributes from the job ClassAd and set JobStatus to IDLE before matching\n"
 		"\t-jobads <file>\tWhen operation requires job ClassAds, Read them from <file>\n\t\t\tIf <file> is -, read from stdin\n"
 		"\n"
@@ -77,7 +79,10 @@ usage(int retval = 1)
 static const char * use_next_arg(const char * arg, const char * argv[], int & i)
 {
 	if (argv[i+1]) {
-		return argv[++i];
+		const char * p = argv[i + 1];
+		if (*p != '-' || MATCH == strcmp(p, "-") || MATCH == strcmp(p, "-2")) {
+			return argv[++i];
+		}
 	}
 
 	fprintf(stderr, "-%s requires an argument\n", arg);
@@ -153,9 +158,12 @@ int main(int argc, const char *argv[])
 	StringList job_files;
 	bool dash_config = false;
 	bool dash_match_jobs = false;
-	bool dash_diagnostic = false;
+	bool dash_route_jobs = false;
+	int  dash_diagnostic = 0;
+	bool dash_d_always = true;
 	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
+	const char * route_jobs_filename = NULL;
 
 	g_jobs = new classad::ClassAdCollection();
 
@@ -172,11 +180,23 @@ int main(int argc, const char *argv[])
 				//dash_d_fulldebug = true;
 			}
 		} else if (is_dash_arg_colon_prefix(argv[i], "diagnostic", &pcolon, 4)) {
-			dash_diagnostic = true;
+			dash_diagnostic = JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC;
+			if (pcolon) {
+				StringTokenIterator it(++pcolon,40,",");
+				for (const char * opt = it.first(); opt; opt = it.next()) {
+					if (is_arg_prefix(opt, "match")) {
+						dash_diagnostic |= JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA;
+					}
+				}
+			}
 		} else if (is_dash_arg_prefix(argv[i], "config", 2)) {
 			dash_config = true;
 		} else if (is_dash_arg_prefix(argv[i], "match-jobs", 2)) {
 			dash_match_jobs = true;
+		} else if (is_dash_arg_prefix(argv[i], "route-jobs", 5)) {
+			dash_match_jobs = true;
+			dash_route_jobs = true;
+			route_jobs_filename = use_next_arg("route-jobs", argv, i);
 		} else if (is_dash_arg_prefix(argv[i], "ignore-prior-routing", 2)) {
 			dash_ignore_prior_routing = true;
 		} else if (is_dash_arg_prefix(argv[i], "jobads", 1)) {
@@ -212,7 +232,15 @@ int main(int argc, const char *argv[])
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
-	JobRouter job_router(true);
+	unsigned int tool_flags = JOB_ROUTER_TOOL_FLAG_AS_TOOL;
+#ifdef WIN32
+	// non-windows tools can just run as root.  but on Windows tools cannot run as LOCAL_SYSTEM so we fake it.
+	tool_flags |= JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS;
+#endif
+	if (dash_diagnostic) {
+		tool_flags |= dash_diagnostic;
+	}
+	JobRouter job_router(tool_flags);
 	job_router.set_schedds(schedd, schedd2);
 	job_router.init();
 	g_silence_dprintf = false;
@@ -259,6 +287,30 @@ int main(int argc, const char *argv[])
 		const classad::View *root_view = g_jobs->GetView("root");
 		if (root_view && (root_view->begin() != root_view->end())) {
 			job_router.GetCandidateJobs();
+			if (dash_route_jobs) {
+				bool close_file = true;
+				if (*route_jobs_filename == '-') {
+					close_file = false;
+					if (route_jobs_filename[1]=='2') {
+						submitted_jobs_fh = stderr;
+					} else {
+						submitted_jobs_fh = stdout;
+					}
+				} else {
+					submitted_jobs_fh = safe_fopen_wrapper_follow(route_jobs_filename, "wb");
+					if ( ! submitted_jobs_fh) {
+						fprintf(stderr, "could not open %s\n", route_jobs_filename);
+						my_exit(1);
+					}
+				}
+				// now claim and route the jobs
+				job_router.SimulateRouting();
+				// close the 
+				if (close_file) {
+					fclose(submitted_jobs_fh);
+				}
+				submitted_jobs_fh = NULL;
+			}
 		} else {
 			fprintf(stdout, "There are no jobs to match\n");
 		}
@@ -382,7 +434,7 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 				int cluster, proc = -1;
 				if (classad->LookupInteger(ATTR_CLUSTER_ID, cluster) && classad->LookupInteger(ATTR_PROC_ID, proc)) {
 					std::string key;
-					formatstr(key, "%d,%d", cluster, proc);
+					formatstr(key, "%d.%d", cluster, proc);
 					if (classads.AddClassAd(key, classad)) {
 						classad = NULL; // this is now owned by the collection.
 					}
@@ -459,10 +511,10 @@ JobRouterHookMgr::~JobRouterHookMgr() {};
 bool JobRouterHookMgr::initialize() { reconfig(); return true; /*HookClientMgr::initialize()*/; }
 bool JobRouterHookMgr::reconfig() { m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD"); return true; }
 
-int JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info) { return 1; }
-int JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job) { return 1; }
-int JobRouterHookMgr::hookJobExit(RoutedJob* r_job) { return 1; }
-int JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job) { return 1; }
+int JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info) { return 0; }
+int JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job) { return 0; }
+int JobRouterHookMgr::hookJobExit(RoutedJob* r_job) { return 0; }
+int JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job) { return 0; }
 
 std::string
 JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
@@ -490,6 +542,11 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 
 ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed)
 {
+	classad::ClassAd * job = const_cast<classad::ClassAd*>(&ad);
+	job->InsertAttr(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	if (my_identity) {
+		job->InsertAttr(ATTR_JOB_MANAGED_MANAGER, my_identity);
+	}
 	return CJR_OK;
 }
 
@@ -508,11 +565,19 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 
 bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	return true;
+	return submit_job(owner, domain, static_cast<classad::ClassAd&>(src), schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
 }
 
 bool submit_job( const std::string & owner, const std::string & domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
+	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
+		schedd_name ? schedd_name : "local",
+		pool_name ? pool_name : "local",
+		is_sandboxed ? " (sandboxed)" : "");
+	if (submitted_jobs_fh) {
+		fPrintAd(submitted_jobs_fh, src, false);
+		fprintf(submitted_jobs_fh, "\n");
+	}
 	return true;
 }
 

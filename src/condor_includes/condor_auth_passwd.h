@@ -44,7 +44,11 @@
 
 class CondorError;
 namespace classad {
+	class ExprTree;
 	class ClassAd;
+}
+namespace jwt {
+	class decoded_jwt;
 }
 
 /** A class to implement the AKEP2 protocol for password-based authentication.
@@ -328,6 +332,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
 	CondorAuthPasswordRetval doServerRec2(CondorError* errstack, bool non_blocking);
 
+		/** Check to see if a given token is on the blacklist; returns
+		    true if the token is blacklisted. */
+	bool isTokenBlacklisted(const jwt::decoded_jwt &jwt);
+
 	int m_client_status;
 	int m_server_status;
 	int m_ret_value;
@@ -354,6 +362,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	std::string m_keyfile_token;
 	std::string m_server_issuer;
 	std::set<std::string> m_server_keys;
+	std::unique_ptr<classad::ExprTree> m_token_blacklist_expr;
 
 	CondorAuthPasswordState m_state;
 

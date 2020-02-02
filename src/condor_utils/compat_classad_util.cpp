@@ -963,11 +963,6 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 	return result;
 }
 
-void AttrList_setPublishServerTime( bool publish )
-{
-	AttrList_setPublishServerTimeMangled( publish );
-}
-
 /**************************************************************************
  *
  * Function: AddClassAdXMLFileHeader

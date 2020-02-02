@@ -36,6 +36,7 @@
 #include "directory.h"
 #include "format_time.h"
 #include "console-utils.h"
+#include "ipv6_hostname.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"
@@ -798,7 +799,9 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 	}
 
 	if (port_offset) {
-		formatstr(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
+		// TODO Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		formatstr(out, "<%s:%s>", my_ip.Value(), str.substr(port_offset).c_str());
 	} else {
 		formatstr(out, "<%s>", str.c_str());
 	}

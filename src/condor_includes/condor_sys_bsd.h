@@ -60,10 +60,6 @@
    MAXINT inbetween. */
 #include <sys/param.h>
 
-#if !defined(WCOREFLG)
-#	define WCOREFLG 0x0200
-#endif
-
 #include <sys/fcntl.h>
 
 
@@ -85,14 +81,7 @@
 ** Condor-specific system definitions
 ****************************************/
 
-#define HAS_64BIT_STRUCTS		0
-#define SIGSET_CONST			const
-#define SYNC_RETURNS_VOID		1
-#define HAS_U_TYPES			1
-#define SIGISMEMBER_IS_BROKEN		1
-
 #define MAXINT				INT_MAX
-typedef void* MMAP_T;
 
 #endif /* CONDOR_SYS_BSD_H */
 

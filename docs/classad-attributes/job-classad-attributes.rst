@@ -1171,8 +1171,8 @@ Job ClassAd Attributes
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
     :index:`KILLING_TIMEOUT`.
-    :index:`LastCheckpointPlatform<single: LastCheckpointPlatform; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCheckpointPlatform>`
+    :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; LastMatchTime>`
 
 ``LastMatchTime``
     An integer containing the epoch time when the job was last

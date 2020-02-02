@@ -75,8 +75,7 @@ Starter::Starter( const Starter& s )
 	, s_is_dc(false)
 	, s_orphaned_jobad(NULL)
 {
-	if( s.s_pid || s.s_birthdate ||
-	    s.s_port1 >= 0 || s.s_port2 >= 0 )
+	if( s.s_pid || s.s_birthdate )
 	{
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
 	}
@@ -107,8 +106,6 @@ Starter::initRunData( void )
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
 	s_hold_timeout = -1;
-	s_port1 = -1;
-	s_port2 = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -243,14 +240,6 @@ Starter::setIsDC( bool updated_is_dc )
 
 
 void
-Starter::setPorts( int port1, int port2 )
-{
-	s_port1 = port1;
-	s_port2 = port2;
-}
-
-
-void
 Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 {
 	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
@@ -270,27 +259,12 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		tree = itr->second;
 		pCopy=0;
 	
-		if (ignored_attr_list) {
-				// insert every attr that's not in the ignored_attr_list
-			if (!ignored_attr_list->contains(lhstr)) {
-				pCopy = tree->Copy();
-				ad->Insert(lhstr, pCopy);
-				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-					list->append(lhstr);
-				}
-			}
-		}
-		else {
-				// no list of attrs to ignore - fallback on old behavior
-			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
-				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
-				if( list ) {
-					list->append( lhstr );
-				}
-			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
-				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+			// insert every attr that's not in the ignored_attr_list
+		if (!ignored_attr_list->contains(lhstr)) {
+			pCopy = tree->Copy();
+			ad->Insert(lhstr, pCopy);
+			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
+				list->append(lhstr);
 			}
 		}
 	}
@@ -645,9 +619,8 @@ int Starter::spawn(Claim * claim, time_t now, Stream* s)
 		s_pid = execDCStarter(claim, s);
 	}
 	else {
-			// Use old icky non-daemoncore starter.
-		ASSERT(claim);
-		s_pid = execOldStarter(claim);
+		dprintf( D_ALWAYS, "The standard universe starter is no longer supported!\n" );
+		s_pid = 0;
 	}
 
 	if( s_pid == 0 ) {
@@ -896,8 +869,9 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 			args.AppendArg(jobid.c_str());
 		} break;
 
-		default:
 		case APPEND_SLOT: args.AppendArg(claim->rip()->r_id_str); break;
+		default:
+			EXCEPT("Programmer Error: unexpected append argument %d\n", append);
 		}
 	}
 
@@ -1193,123 +1167,6 @@ int Starter::execDCStarter(
 #endif
 
 	return s_pid;
-}
-
-
-int
-Starter::execOldStarter( Claim * claim )
-{
-#if defined(WIN32) /* THIS IS UNIX SPECIFIC */
-	return 0;
-#else
-	// don't allow this if GLEXEC_STARTER is true
-	//
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		// we don't support using glexec to spawn the old starter
-		dprintf( D_ALWAYS,
-			 "error: can't spawn starter %s via glexec\n",
-			 s_path );
-		return 0;
-	}
-
-	// set up the standard file descriptors
-	//
-	int std[3];
-	std[0] = s_port1;
-	std[1] = s_port1;
-	std[2] = s_port2;
-
-	// set up the starter's arguments
-	//
-	ArgList args;
-	args.AppendArg("condor_starter");
-	args.AppendArg(claim->client()->host());
-	args.AppendArg(daemonCore->InfoCommandSinfulString());
-	if (resmgr->is_smp()) {
-		args.AppendArg("-a");
-		args.AppendArg(claim->rip()->r_id_str);
-	}
-
-	Env env;
-
-		// The starter figures out its execute directory by paraming
-		// for EXECUTE, which we override in the environment here.
-		// This way, all the logic about choosing a directory to use
-		// is in only one place.
-	ASSERT( executeDir() );
-	env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
-
-	// set up the signal mask (block everything, which is what the old
-	// starter expects)
-	//
-	sigset_t full_mask;
-	sigfillset(&full_mask);
-
-	// set up a structure for telling DC to track the starter's process
-	// family
-	//
-	FamilyInfo family_info;
-	family_info.max_snapshot_interval = pid_snapshot_interval;
-	family_info.login = NULL;
-
-	// HISTORICAL COMMENTS:
-		/*
-		 * This should not change process groups because the
-		 * condor_master daemon may want to do a killpg at some
-		 * point...
-		 *
-		 *	if( setpgrp(0,getpid()) ) {
-		 *		EXCEPT( "setpgrp(0, %d)", getpid() );
-		 *	}
-		 */
-			/*
-			 * We _DO_ want to create the starter with it's own
-			 * process group, since when KILL evaluates to True, we
-			 * don't want to kill the startd as well.  The master no
-			 * longer kills via a process group to do a quick clean
-			 * up, it just sends signals to the startd and schedd and
-			 * they, in turn, do whatever quick cleaning needs to be 
-			 * done. 
-			 * Don't create a new process group if the config file says
-			 * not to.
-			 */
-	// END of HISTORICAL COMMENTS
-	//
-	// Create_Process now will param for USE_PROCESS_GROUPS internally and
-	// call setsid if needed.
-
-	// call Create_Process
-	//
-	int new_pid = daemonCore->Create_Process(s_path,       // path to binary
-	                                         args,         // arguments
-	                                         PRIV_ROOT,    // start as root
-	                                         main_reaper,  // reaper
-	                                         FALSE,        // no command port
-	                                         FALSE,        // no command port
-	                                         &env,
-	                                         NULL,         // inherit out cwd
-	                                         &family_info, // new family
-	                                         NULL,         // no inherited sockets
-	                                         std,          // std FDs
-	                                         NULL,         // no inherited FDs
-	                                         0,            // zero nice inc
-	                                         &full_mask,   // signal mask
-	                                         0);           // DC job opts
-
-	// clean up the "ports"
-	//
-	(void)close(s_port1);
-	(void)close(s_port2);
-
-	// check for error
-	//
-	if (new_pid == FALSE) {
-		dprintf(D_ALWAYS, "execOldStarter: Create_Process error\n");
-		return 0;
-	}
-
-	return new_pid;
-#endif
 }
 
 #if defined(LINUX)

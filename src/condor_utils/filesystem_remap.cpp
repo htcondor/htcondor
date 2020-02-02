@@ -380,6 +380,35 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 	return 0;
 }
 
+int 
+FilesystemRemap::AddDevShmMapping() {
+#ifdef LINUX
+	if (!param_boolean("MOUNT_PRIVATE_DEV_SHM", true)) {
+		return 1;
+	}
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	// Re-mount the mount point as a bind mount, so we can subsequently
+	// re-mount it as private.
+	
+	if (mount("/dev/shm", "/dev/shm", "tmpfs", 0, NULL)) {	
+		dprintf(D_ALWAYS, "Marking /dev/shm as a bind mount failed. (errno=%d, %s)\n", errno, strerror(errno));
+		return -1;
+	}
+
+	if (mount("none", "/dev/shm", NULL, MS_PRIVATE, NULL)) {
+		dprintf(D_ALWAYS, "Marking /dev/shm as a private mount failed. (errno=%d, %s)\n", errno, strerror(errno));
+		return -1;
+	} else {
+		dprintf(D_FULLDEBUG, "Mounting /dev/shm as a private mount successful.\n");
+	}
+
+	return 0;
+#else
+	return 0;
+#endif
+}
+
 int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 #ifndef HAVE_UNSHARE
 	dprintf(D_ALWAYS, "This system doesn't support remounting of filesystems: %s\n", mount_point.c_str());
@@ -515,6 +544,10 @@ int FilesystemRemap::PerformMappings() {
 		} else if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
 			break;
 		}
+	}
+
+	if (!retval) {
+		AddDevShmMapping();
 	}
 
 	// do mounts for RemapProc()

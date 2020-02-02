@@ -40,7 +40,7 @@ int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & wh
 
 
 static bool publish_server_timeMangled = false;
-void AttrList_setPublishServerTimeMangled( bool publish)
+void AttrList_setPublishServerTime(bool publish)
 {
     publish_server_timeMangled = publish;
 }
@@ -833,41 +833,4 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	}
 
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
-}
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v)
-{
-    return EvalTree(eTree, mine, NULL, v);
-}
-
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v)
-{
-    if(!mine)
-    {
-        return false;
-    }
-    const classad::ClassAd* tmp = eTree->GetParentScope(); 
-    eTree->SetParentScope(mine);
-
-    if(target)
-    {
-        classad::MatchClassAd mad(mine,target);
-
-        bool rval = eTree->Evaluate(*v);
-
-        mad.RemoveLeftAd( );
-        mad.RemoveRightAd( );
-        
-        //restore the old scope
-        eTree->SetParentScope(tmp);
-
-        return rval;
-    }
-
-
-    //restore the old scope
-    eTree->SetParentScope(tmp);
-
-    return eTree->Evaluate(*v);
 }

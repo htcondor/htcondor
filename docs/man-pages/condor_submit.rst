@@ -463,6 +463,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     another. If HTCondor detects that the error and output files for a
     job are the same, it will run the job such that the output and error
     data is merged. :index:`executable<single: executable; submit commands>`
+
  executable = <pathname>
     An optional path and a required file name of the executable file for
     this job cluster. Only one
@@ -473,6 +474,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     If no path or a relative path is used, then the executable file is
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
+    :index:`getenv<single: getenv; submit commands>`
 
  getenv = <True | False>
     If **getenv** is set to
@@ -1120,6 +1122,18 @@ FILE TRANSFER COMMANDS
         # If necessary
         aws_region = <region>
 
+    If you must access S3 using temporary credentials, you may specify the
+    temporary credentials using ``aws_access_key_id_file`` and
+    ``aws_secret_access_key_file`` for the files containing the corresponding
+    temporary token, and ``+EC2SessionToken`` for the file containing the
+    session token.
+
+    Temporary credentials have a limited lifetime.  If you are using S3 only
+    to download input files, the job must start before the credentials
+    expire.  If you are using S3 to upload output files, the job must finish
+    before the credentials expire.  HTCondor does not know when the credentials
+    will expire; if they do so before they are needed, file transfer will fail.
+
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
  transfer_output_files = < file1,file2,file... >
@@ -1192,6 +1206,11 @@ FILE TRANSFER COMMANDS
     semicolon. If you wish to remap file names that contain equals signs
     or semicolons, these special characters may be escaped with a
     backslash. You cannot specify directories to be remapped.
+
+    Note that whether an output file is transferred is controlled by
+    **transfer_output_files**. Listing a file in
+    **transfer_output_remaps** is not sufficient to cause it to be
+    transferred.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
@@ -1267,12 +1286,14 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
     to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
     **Note: non-zero values of success_exit_code should generally not be
     used for DAG node jobs.**
+
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if
     **success_exit_code** is set to a non-zero value, *condor_dagman*
@@ -1281,6 +1302,13 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     script that takes into account the value of **success_exit_code**
     (although this is not recommended). For multi-proc DAG node jobs,
     there is currently no way to overcome this limitation.
+    :index:`checkpoint_exit_code<single: checkpoint_exit_code; submit commands>`
+
+ checkpoint_exit_code = <integer>
+    The exit code which indicates that the executable has exited after
+    successfully taking a checkpoint.  The checkpoint will transferred
+    and the executable restarted.  See
+    :ref:`users-manual/self-checkpointing-applications:Self-Checkpointing Applications` for details.
     :index:`hold<single: hold; submit commands>`
 
  hold = <True | False>

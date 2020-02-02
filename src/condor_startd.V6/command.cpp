@@ -34,8 +34,6 @@ using std::map;
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
-
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
 
 int
@@ -1797,14 +1795,6 @@ activate_claim( Resource* rip, Stream* stream )
 		// Formerly known as "startjob"
 	bool mach_requirements = true;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
-	ReliSock rsock_1, rsock_2;
-#ifndef WIN32
-	int sock_1, sock_2;
-	int fd_1, fd_2;
-	struct sockaddr_storage frm;
-	int len = sizeof frm;	
-	StartdRec stRec;
-#endif
 	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().Value());
@@ -1950,100 +1940,9 @@ activate_claim( Resource* rip, Stream* stream )
 	} 
 #ifndef WIN32
 	else {
-		//
-		// This should be exclusively for the standard universe.
-		//
-		condor_sockaddr streamSA;
-		if(! streamSA.from_ip_string( stream->my_ip_str() )) {
-			EXCEPT( "Unable to extract socket address from stream.\n" );
-		}
-
-		// We don't officially support IPv6 in standard universe...
-		if( streamSA.is_ipv6() ) {
-			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  There may be problems.\n" );
-		}
-
-		stRec.version_num = VERSION_FOR_FLOCK;
-
-		// The shadow expects to be able to connect to the given port
-		// numbers at the address (and protocol) is used to contact the
-		// startd in the first place.
-		rsock_1.bind( streamSA.get_protocol(), false, 0, false );
-		rsock_1.listen();
-		sock_1 = rsock_1.get_file_desc();
-		stRec.ports.port1 = rsock_1.get_port();
-
-		rsock_2.bind( streamSA.get_protocol(), false, 0, false );
-		rsock_2.listen();
-		sock_2 = rsock_2.get_file_desc();
-		stRec.ports.port2 = rsock_2.get_port();
-
-		stRec.server_name = strdup( get_local_fqdn().Value() );
-
-		// Send our local IP address, too.
-		// stRec.ip_addr actually is never used.
-		// Just make sure that it does not have 0 value.
-		// // TODO: Arbitrarily picking IPv4 
-		condor_sockaddr local_addr = get_local_ipaddr(CP_IPV4);
-		struct in_addr local_in_addr = local_addr.to_sin().sin_addr;
-		memcpy( &stRec.ip_addr, &local_in_addr, sizeof(struct in_addr) );
-
-		stream->encode();
-		if (!stream->code(stRec)) {
-			delete tmp_starter;
-			ABORT;
-		}
-
-		if (!stream->end_of_message()) {
-			delete tmp_starter;
-			ABORT;
-		}
-
-			/* now that we sent stRec, free stRec.server_name which we strduped */
-		free( stRec.server_name );
-
-			/* Wait for connection to port1 */
-		len = sizeof frm;
-		memset( (char *)&frm,0, sizeof frm );
-		while( (fd_1=tcp_accept_timeout(sock_1, (struct sockaddr *)&frm,
-										&len, 150)) < 0 ) {
-			if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
-				if( fd_1 == -2 ) {
-					rip->dprintf( D_ALWAYS, "accept timed out\n" );
-					delete tmp_starter;
-					ABORT;
-				} else {
-					rip->dprintf( D_ALWAYS, 
-								  "tcp_accept_timeout returns %d, errno=%d\n",
-								  fd_1, errno );
-					delete tmp_starter;
-					ABORT;
-				}
-			}
-		}
-	
-			/* Wait for connection to port2 */
-		len = sizeof frm;
-		memset( (char *)&frm,0,sizeof frm );
-		while( (fd_2 = tcp_accept_timeout(sock_2, (struct sockaddr *)&frm,
-										  &len, 150)) < 0 ) {
-			if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
-				if( fd_2 == -2 ) {
-					rip->dprintf( D_ALWAYS, "accept timed out\n" );
-					delete tmp_starter;
-					close(fd_1);
-					ABORT;
-				} else {
-					rip->dprintf( D_ALWAYS, 
-								  "tcp_accept_timeout returns %d, errno=%d\n",
-								  fd_2, errno );
-					delete tmp_starter;
-					close(fd_1);
-					ABORT;
-				}
-			}
-		}
-		tmp_starter->setPorts( fd_1, fd_2 );
+		rip->dprintf( D_ALWAYS, "Standard universe starter is not supported.\n" );
+		delete tmp_starter;
+		ABORT;
 	}
 #endif	// of ifdef WIN32
 

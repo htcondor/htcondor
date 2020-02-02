@@ -55,8 +55,8 @@ class CondorCluster(object):
                 self._cluster_id = submit.queue(txn, count)
                 self._count = count
         except Exception as e:
-            Utils.TLog( "Job submission failed for an unknown error: " + str(e) )
-            raise RuntimeError(e)
+            Utils.TLog( "Job submission failed: " + str(e) )
+            raise e
 
         Utils.TLog("Job submitted succeeded with cluster ID " + str(self._cluster_id))
 

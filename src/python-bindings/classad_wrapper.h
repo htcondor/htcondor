@@ -86,6 +86,14 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     AttrItemIter endItems();
 
+        // Returns an iterator that behaves like dict.items in python.  The
+        // iterator will create an additional copy of the shared pointer.  For each
+        // tuple (key, value) produced by invoking __next__() on the iterator,
+        // the value may contain a reference back to the ClassAdWrapper.  This means
+        // that the ClassAdWrapper object will have live references until both the
+        // iterator and all the tuple values are gone.
+    static boost::python::object items(boost::shared_ptr<ClassAdWrapper>);
+
     boost::python::object get(const std::string attr, boost::python::object result=boost::python::object()) const;
 
     boost::python::object setdefault(const std::string attr, boost::python::object result=boost::python::object());

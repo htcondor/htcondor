@@ -416,6 +416,8 @@ if( NOT WINDOWS)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
       add_definitions(-D_FORTIFY_SOURCE=2)
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
@@ -484,8 +486,6 @@ if( NOT WINDOWS)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
-	check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
-	check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
 	check_function_exists("access" HAVE_ACCESS)
@@ -527,7 +527,6 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
-	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -805,22 +804,10 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
-  # so the clipped detection will try to match glibc vers and if it fails will disable
-  if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" ON)
-  else()
-	option(CLIPPED "enable/disable the standard universe" ON)
-  endif()
-
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "disable the standard universe" ON)
-endif()
-
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
 endif()
 
 #####################################
@@ -1020,7 +1007,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.3.4)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.4.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)

@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_syscall_mode.h"
 #include "exit.h"
 #include "condor_debug.h"
 

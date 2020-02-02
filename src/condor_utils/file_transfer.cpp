@@ -3658,20 +3658,25 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
-	bool should_invoke_output_plugins, tmp;
-	if (!jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp)) {
-		should_invoke_output_plugins = m_final_transfer_flag;
-	} else {
-		if (!InitDownloadFilenameRemaps(&jobAd)) {
+	bool should_invoke_output_plugins = m_final_transfer_flag;
+	bool tmp;
+	if (jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp) && !tmp) {
+			// InitDownloadFilenameRemaps is always called by the server
+			// (the function name is a misnomer) for final transfers.  However,
+			// in this case, we also want output files to be remapped to URLs
+			// when spooling.  Hence, we call it here.
+		if (!m_final_transfer_flag && !InitDownloadFilenameRemaps(&jobAd)) {
 			return -1;
 		}
-		should_invoke_output_plugins = !tmp;
+		should_invoke_output_plugins = true;
 	}
 
 	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
+	dprintf(D_FULLDEBUG,"DoUpload: Output URL plugins %s be run\n",
+		should_invoke_output_plugins ? "will" : "will not");
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	if( want_priv_change ) {
@@ -5432,11 +5437,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	if (!m_job_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str());
 	}
 	if (!m_machine_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad.c_str());
 	}
-	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 
 	// prepare args for the plugin
 	ArgList plugin_args;
@@ -5539,11 +5545,12 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	if (!m_job_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_JOB_AD", m_job_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime job ad to %s\n", m_job_ad.c_str());
 	}
 	if (!m_machine_ad.empty()) {
 		plugin_env.SetEnv("_CONDOR_MACHINE_AD", m_machine_ad.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime machine ad to %s\n", m_machine_ad.c_str());
 	}
-	dprintf(D_FULLDEBUG, "FILETRANSFER: setting runtime ads to %s and %s\n", m_job_ad.c_str(), m_machine_ad.c_str());
 
 
 	// Determine if we want to run the plugin with root priv (if available).

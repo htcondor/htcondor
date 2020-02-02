@@ -15,35 +15,58 @@ Release Notes:
 
 New Features:
 
--  None.
+- Added ``GOMAXPROCS`` to the default list of environment variables that are
+  set to the number of CPU cores allocated to the job.
+  :ticket:`7418`
+
+- Added the option for *condor_dagman* to remove jobs after reducing
+  MaxJobs to a value lower than the number of currently running jobs. This
+  behavior is controlled by the 
+  :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
+  :ticket:`7368`
 
 Bugs Fixed:
 
--  None.
+- To work around an issue where long-running *gce_gahp* process enter a state
+  where they can no longer authenticate with GCE, the daemon now restarts once
+  every 24 hours.  This does not affect the jobs themselves.
+  See :ref:`gce_configuration_variables`.
+  :ticket:`7401`
+
+-  It is now safe to call functions from the Python bindings ``htcondor`` module
+   on multiple threads simultaneously. See the
+   :ref:`python-bindings-thread-safety` section in the
+   Python bindings documentation for more details.
+   :ticket:`7359`
+
+- The RPM packaging now obsoletes the standard universe package so that it will
+  deleted upon upgrade.
+  :ticker:`7444`
 
 Version 8.9.5
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.5 not yet released.
 
-.. HTCondor version 8.9.5 released on Month Date, 2019.
+-  HTCondor version 8.9.5 released on January 2, 2020.
 
 New Features:
+
+-  Implemented a *dataflow* mode for jobs. When enabled, a job whose
+   1) pre-declared output files already exist, and 2) output files are
+   more recent than its input files, is considered a dataflow job and
+   gets skipped. This feature can be enabled by setting the 
+   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to ``True``.
+   :ticket:`7231` 
+
+-  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
+   the context of ClassAd attributes, and print the result in ClassAd format.
+   :ticket:`7339`
 
 -  You may now specify ports to forward into your Docker container.  See
    :ref:`Docker and Networking` for details.
    :ticket:`7322`
-
--  *condor_submit* will no longer set the ``Owner`` attribute of jobs
-   it submits to the name of the current user. It now leaves this attribute up
-   to the *condor_schedd* to set.  This change was made because the *condor_schedd*
-   will reject the submission if the ``Owner`` attribute is set but does not
-   match the name of the mapped authenticated user submitting the job, and it is
-   difficult for *condor_submit* to know what the mapped name is when there is a mapfile
-   configured.
-   :ticket:`7355`
 
 -  Added the ability to edit certain properties of a running *condor_dagman*
    workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**.
@@ -51,7 +74,55 @@ New Features:
    then be updated in the running workflow.
    :ticket:`7236`
 
+-  Jobs which must use temporary credentials for S3 access may now specify
+   the "session token" in their submit files.  Set ``+EC2SessionToken``
+   to the name of a file whose only content is the session token.  Temporary
+   credentials have a limited lifetime, which HTCondor does not help you
+   manage; as a result, file transfers may fail because the temporary
+   credentials expired.
+   :ticket:`7407`
+
+-  Improved the performance of the negotiator by simplifying the definition of
+   the *condor_startd*'s ``WithinResourceLimits`` attribute when custom
+   resources are defined.
+   :ticket:`7323`
+
+-  If you configure a *condor_startd* with different SLOT_TYPEs,
+   you can use the SLOT_TYPE as a prefix for configuration entries.
+   This can be useful to set different BASE_GROUPs
+   for different slot types within the same *condor_startd*. For example,
+   SLOT_TYPE_1.BASE_CGROUP = hi_prio
+   :ticket:`7390`
+
+-  Added a new knob ``SUBMIT_ALLOW_GETENV``. This defaults to ``true``. When
+   set to ``false``, a submit file with `getenv = true` will become an error.
+   Administrators may want to set this to ``false`` to prevent users from 
+   submitting jobs that depend on the local environment of the submit machine.
+   :ticket:`7383`
+
+-  *condor_submit* will no longer set the ``Owner`` attribute of jobs
+   it submits to the name of the current user. It now leaves this attribute up
+   to the *condor_schedd* to set.  This change was made because the
+   *condor_schedd* will reject the submission if the ``Owner`` attribute is set
+   but does not match the name of the mapped authenticated user submitting the
+   job, and it is difficult for *condor_submit* to know what the mapped name is
+   when there is a map file configured.
+   :ticket:`7355`
+
+-  Added ability for a *condor_startd* to log the state of Ads when shutting
+   down using ``STARTD_PRINT_ADS_ON_SHUTDOWN`` and ``STARTD_PRINT_ADS_FILTER``.
+   :ticket:`7328`
+
 Bugs Fixed:
+
+-  ``condor_submit -i`` now works with Docker universe jobs.
+   :ticket:`7394`
+
+-  Fixed a bug that happened on a Linux *condor_startd* running as root where
+   a running job getting close to the ``RequestMemory`` limit, could get stuck, 
+   and neither get held with an out of memory error, nor killed, nor allowed
+   to run.
+   :ticket:`7367`
 
 -  The Python 3 bindings no longer segfault when putting a
    :class:`~classad.ClassAd` constructed from a Python dictionary into another
@@ -66,6 +137,23 @@ Bugs Fixed:
    with a default of None, if the default is used, it is now treated as the
    :attr:`classad.Value.Undefined` ClassAd value.
    :ticket:`7370`
+
+-  Fixed a bug where when file transfers fail with an error message containing
+   a newline (``\n``) character, the error message would not be propagated to
+   the job's hold message.
+   :ticket:`7395`
+
+-  SciTokens support is now available on all Linux and MacOS platforms.
+   :ticket:`7406`
+
+-  Fixed a bug that caused the Python bindings included in the tarball
+   package to fail due to a missing library dependency.
+   :ticket:`7435`
+
+-  Fixed a bug where the library that is pre-loaded to provide a sane passwd
+   entry when using ``condor_ssh_to_job`` was placed in the wrong directory
+   in the RPM packaging.
+   :ticket:`7408`
 
 Version 8.9.4
 -------------
@@ -90,8 +178,8 @@ New Features:
   the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
   :ticket:`7289`
 
-- Reduced the memory needed for *condor_dagman* to load a DAG that has a large number
-  of PARENT and CHILD statements.
+- Reduced the memory needed for *condor_dagman* to load a DAG that has
+  a large number of PARENT and CHILD statements.
   :ticket:`7170`
 
 - Optimized *condor_dagman* startup speed by removing unnecessary 3-second
@@ -113,7 +201,7 @@ New Features:
   :ticket:`7038`
 
 - Added ``erase_output_and_error_on_restart`` as a new submit command.  It
-  defaults to true; if set to false, and ``when_to_transfer_output`` is
+  defaults to ``true``; if set to ``false``, and ``when_to_transfer_output`` is
   ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
   when the job restarts, instead of erasing them (and starting the logs
   over).  This may make the output and error logs more useful when the
@@ -132,12 +220,12 @@ New Features:
   :ticket:`7201`
 
 - Added new configuration parameter for execute machines,
-  CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
-  condor LD_PRELOADs into unprivileged sshd it *condor_startd* a special version of
-  the Linux getpwnam() library call, which forces the user's shell to
-  /bin/bash and the home directory to the scratch directory.  This allows
-  condor_ssh_to_job to work on sites that don't create login shells for
-  slots users, or who want to run as nobody.
+  ``CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY``, which defaults to ``false``.
+  When ``true``, condor LD_PRELOADs into unprivileged sshd it *condor_startd*
+  a special version of the Linux getpwnam() library call, which forces
+  the user's shell to /bin/bash and the home directory to the scratch directory.
+  This allows *condor_ssh_to_job* to work on sites that don't create
+  login shells for slots users, or who want to run as nobody.
   :ticket:`7260`
 
 - The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
@@ -223,7 +311,7 @@ Bugs Fixed:
   :ticket:`7261`
 
 - In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
-  which return an HTTP 301 or 302 redirection but do not include a Location 
+  which return an HTTP 301 or 302 redirection but do not include a Location
   header. These were previously considered successful transfers. We've fixed
   this so they are now considered failures, and the jobs go on hold.
   :ticket:`7292`
@@ -303,16 +391,16 @@ New Features:
   :ticket:`7085`
 
 - Added a Python binding for *condor_submit_dag*. A new method,
-  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
+  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
-  
+
   ::
 
     dag_args = { "maxidle": 10, "maxpost": 5 }
     dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
-  monitored just like any other Submit description object in the Python bindings.  
+  monitored just like any other Submit description object in the Python bindings.
   :ticket:`6275`
 
 - The Python binding's ``JobEventLog`` can now be pickled and unpickled,
@@ -334,8 +422,8 @@ New Features:
   in a ``RuntimeError`` exception.  :ticket:`7109`
 
 - Improved the speed of matchmaking in pools with partitionable slots
-  by simplifying the slot's WithinResourceLimits expression.  This new 
-  definition for this expression now ignores the job's 
+  by simplifying the slot's WithinResourceLimits expression.  This new
+  definition for this expression now ignores the job's
   _condor_RequestXXX attributes, which were never set.
   In pools with simple start expressions, this can double the speed of
   matchmaking.
@@ -346,7 +434,7 @@ New Features:
   expressions in the slot START expression.
   :ticket:`7123`
 
-- Reduced DAGMan's memory footprint when running DAGs with nodes 
+- Reduced DAGMan's memory footprint when running DAGs with nodes
   that use the same submit file and/or current working directory.
   :ticket:`7121`
 
@@ -384,10 +472,10 @@ New Features:
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
 
-- HTCondor now sets numerous environment variables 
+- HTCondor now sets numerous environment variables
   to tell the job (or libraries being used by the job) how many CPU cores
-  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
-  to allow the administrator to customize this set of environment 
+  have been provisioned.  Also added the configuration knob ``STARTER_NUM_THREADS_ENV_VARS``
+  to allow the administrator to customize this set of environment
   variables.
   :ticket:`7296`
 
@@ -598,7 +686,7 @@ New Features:
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 
--  Added a new config knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
+-  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
 

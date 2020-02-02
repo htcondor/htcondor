@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
-#include "condor_socket_types.h"
 #include "condor_md.h"
 #include "selector.h"
 #include "ccb_client.h"

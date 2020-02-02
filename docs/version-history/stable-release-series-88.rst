@@ -8,14 +8,31 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.8
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.8 not yet released.
+
+.. HTCondor version 8.8.8 released on Month Date, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  The *condor_wait* tool is again as efficient when waiting forever as when
+   given a deadline on the command line.
+   :ticket:`7458`
+
 Version 8.8.7
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.7 not yet released.
-
-.. HTCondor version 8.8.7 released on Month Date, 2019.
+-  HTCondor version 8.8.7 released on December 26, 2019.
 
 -  For *condor_annex* users: Amazon Web Services is deprecating support for
    the Node.js 8.10 runtime used by *condor_annex*.  If you ran the *condor_annex*
@@ -26,14 +43,50 @@ Release Notes:
 
 New Features:
 
--  Added a python enum for DaemonOn and DaemonsOn
-   :ticket:`7380`
+-  The *condor_job_router* now applies routes in the order specified by the
+   configuration variable ``JOB_ROUTER_ROUTE_NAMES`` if it is defined.
+   :ticket:`7284`
 
 Bugs Fixed:
 
 -  Fixed a bug that caused *condor_submit* to fail when the remote option
-   was used and the remote Schedd was using a mapfile.
+   was used and the remote *condor_schedd*  was using a map file.
    :ticket:`7353`
+
+-  The *condor_wait* command will now function properly when reading a
+   file on AFS that a process on another machine is writing.  This bug
+   may have manifested as the machine running *condor_wait* not seeing
+   writes to the log file.
+   :ticket:`7373`
+
+-  Fixed a packaging problem where the ``condor-bosco`` RPM
+   (which is required by the ``condor-all`` RPM)
+   could not installed on CentOS 8.
+   :ticket:`7426`
+
+-  Reverted an earlier change which prohibited certain characters in
+   DAGMan node names. The period (.) character is now allowed again.
+   We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
+   configuration option, which, when sent to true, allow any characters 
+   (even illegal ones) to be allowed in node names.
+   :ticket:`7403`
+
+-  Fixed a bug in the Python bindings where the user could not turn on
+   HTCondor daemons. We added ``DaemonsOn`` and ``DaemonOn`` to the
+   ``DaemonCommands`` enumeration.
+   :ticket:`7380`
+
+-  Fixed a bug in the Python bindings that could result in a job submission
+   failure with the report that there is no active transaction.
+   :ticket:`7417`
+
+-  Fixed a bug in the Python bindings that could result in intermingled messages if a multi-threaded Python program enabled
+   the HTCondor debug log.
+   :ticket:`7429`
+
+-  The *condor_update_machine_ad* tool now respects the ``-pool`` and
+   ``-name`` options.
+   :ticket:`7378`
 
 -  Fixed potential authentication failures between the *condor_schedd*
    and *condor_startd* when multiple *condor_startd* s are using the
@@ -42,6 +95,23 @@ Bugs Fixed:
 -  Fixed a bug where the *condor_negotiator* would refuse to match an
    IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
    :ticket:`7397`
+
+-  Fixed a bug that can cause the *condor_gridmanager* to exit and
+   restart repeatedly if a Condor-C (i.e. grid-type *condor*) job's
+   proxy file disappears.
+   :ticket:`7409`
+
+-  Fixed a bug that could cause the *condor_negotiator* to incorrectly
+   count the number of jobs that will fit in a partitionable slot when
+   ``NEGOTIATOR_DEPTH_FIRST`` is set to ``True``.
+   The incorrect count was especially bad when ``SLOT_WEIGHT`` was set
+   to a value other than the default of ``Cpus``.
+   :ticket:`7422`
+
+-  Python scripts included in the HTCondor release (e.g. *condor_top*)
+   work again on systems that don't have *python2* in their ``PATH``.
+   This was broken in HTCondor 8.8.6 and primarily affected macOS.
+   :ticket:`7436`
 
 Version 8.8.6
 -------------
@@ -122,10 +192,12 @@ Bugs Fixed:
    value when passed a string.
    :ticket:`7253`
 
--  *condor_preen* will no longer query the *condor_schedd* the whole time it is
-   preening the spool directory.  Instead, it now builds a list of potentially
-   obsolete files and then queries the *condor_schedd* once to find out which of
-   these files are associated with jobs still in the Schedd.
+-  Fixed a bug where *condor_preen* may mistakenly remove files from the
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   :ticket:`7320`
+
+-  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day
+   for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
 -  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
@@ -296,11 +368,11 @@ New Features:
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
 
--  Dagman can now submit directly to the Schedd without using *condor_submit*
+-  Dagman can now submit directly to the *condor_schedd*  without using *condor_submit*
    This provides a workaround for slow submission rates for very large DAGs.
    This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
    which defaults to ``True``.  When it is ``False``, Dagman will contact the
-   local Schedd directly to submit jobs. :ticket:`6974`
+   local *condor_schedd*  directly to submit jobs. :ticket:`6974`
 
 -  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
    pools with 8.8.4 (and later) stable-series startds can run jobs submitted

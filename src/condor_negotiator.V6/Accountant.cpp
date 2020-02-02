@@ -1205,6 +1205,11 @@ ClassAd* Accountant::ReportState(bool rollup) {
         formatstr(tmp, "WeightedAccumulatedUsage%d", snum);
         ad->Assign(tmp.c_str(), WeightedAccumulatedUsage);
         
+        float SubmitterShare = 0;
+        if (CustomerAd->LookupFloat("SubmitterShare",SubmitterShare)==0) SubmitterShare=0;
+        formatstr(tmp, "SubmitterShare%d", snum);
+        ad->Assign(tmp.c_str(), SubmitterShare);
+
         int BeginUsageTime = 0;
         if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
         formatstr(tmp, "BeginUsageTime%d", snum);

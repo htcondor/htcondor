@@ -45,12 +45,15 @@ if (BUILD_TESTING)
 			ParseDryRunData.pm
 			ProcInfo.pm
 			SimpleJob.pm)
+
+	if (NOT ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 	foreach(scriptFile ${CHECK_MODULES})
 		add_custom_command ( OUTPUT ${TEST_TARGET_DIR}/Check/${scriptFile}
 			DEPENDS ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile}
 			COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile} ${TEST_TARGET_DIR}/Check/${scriptFile})
 		add_custom_target(test_copy_${scriptFile} ALL DEPENDS ${TEST_TARGET_DIR}/Check/${scriptFile})
 	endforeach()
+	endif()
 
 	# 1st remove generated files.
 	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
@@ -681,6 +684,8 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "core;quick;full;quicknolink" CTEST)
+	condor_pl_test(job_router_basic "Basic test of JobRouter routing." "core;quick;full;quicknolink" CTEST)
+	condor_pl_test(job_router_xform "Test of JobRouter transforms." "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "core;quick;full;quicknolink" CTEST)
 	condor_pl_test(job_hgq_negfail_basic_van "Test basic Hierarchical Group Quota behavior" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")

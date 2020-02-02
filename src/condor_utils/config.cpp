@@ -1444,7 +1444,7 @@ Parse_macros(
 
 	bool is_submit = (fnSubmit != NULL);
 	MACRO_SOURCE& FileSource = ms.source();
-	const char * source_file = macro_source_filename(FileSource, macro_set);
+	const char * source_file = ms.source_name(macro_set);
 	const char * source_type = is_submit ? "Submit file" : "Config source";
 
 	while (true) {

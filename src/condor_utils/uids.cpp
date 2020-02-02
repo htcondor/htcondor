@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_syscall_mode.h"
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "condor_environ.h"
@@ -808,7 +807,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			if ( dologging ) {
+			if ( dologging && IsFulldebug(D_FULLDEBUG) ) {
 				dprintf(D_FULLDEBUG, 
 						"TokenCache contents: \n%s", 
 						cached_tokens.cacheToString().Value());

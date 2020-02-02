@@ -150,7 +150,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
-	_submitQ = new Queue<Job*>;
+	_submitQ = new std::queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
 		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 	}
@@ -351,7 +351,7 @@ bool Dag::Bootstrap (bool recovery)
 		_jobstateLog.WriteRecoveryFinished();
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
-		update_status();
+		print_status();
 
 		_recovery = false;
     }
@@ -1140,14 +1140,16 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 				// submit event to the job we expected to see from
 				// our submit queue
 			Job* expectedJob = NULL;
-			if ( _submitQ->dequeue( expectedJob ) == -1 ) {
+			if ( _submitQ->empty() ) {
 				debug_printf( DEBUG_QUIET,
 						"Unrecognized submit event (for job "
 						"\"%s\") found in log (none expected)\n",
 						job->GetJobName() );
 				return;
-			} 
-			else if ( job != expectedJob ) {
+			}
+			expectedJob = _submitQ->front();
+			_submitQ->pop();
+			if ( job != expectedJob ) {
 				ASSERT( expectedJob != NULL );
 				debug_printf( DEBUG_QUIET,
 						"Unexpected submit event (for job "
@@ -1156,7 +1158,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 						job->GetJobName(),
 						expectedJob->GetJobName() );
 				// put expectedJob back onto submit queue
-				_submitQ->enqueue( expectedJob );
+				_submitQ->push( expectedJob );
 				return;
 			}
 		}
@@ -3347,6 +3349,36 @@ Dag::GetReject( MyString &firstLocation )
 	return _reject;
 }
 
+//-------------------------------------------------------------------------
+void 
+Dag::SetMaxJobsSubmitted(int newMax) {
+
+	bool isChanged = (newMax != _maxJobsSubmitted);
+	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+
+	// Update our internal max jobs count
+	_maxJobsSubmitted = newMax;
+
+	// If maxJobs is set to 0, that means no maximum limit. Exit now.
+	if (_maxJobsSubmitted == 0) return;
+
+	// Optionally remove jobs to meet the new limit, starting with most recent
+	if (isChanged && removeJobsAfterLimitChange) {
+		int submittedJobsCount = 0;
+		Job* job;
+		ListIterator<Job> iList (_jobs);
+		while ((job = iList.Next()) != NULL) {
+			if (job->GetStatus() == Job::STATUS_SUBMITTED) {
+				submittedJobsCount++;
+				if (submittedJobsCount > _maxJobsSubmitted) {
+					job->retry_max++;
+					RemoveBatchJob(job);
+				}
+			}
+		}
+	}
+}
+
 //===========================================================================
 
 /** Set the filename of the jobstate.log file.
@@ -4322,9 +4354,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 
     // append node to the submit queue so we can match it with its
     // submit event once the latter appears in the HTCondor job log
-	if( _submitQ->enqueue( node ) == -1 ) {
-		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
-	}
+	_submitQ->push( node );
 
     node->SetStatus( Job::STATUS_SUBMITTED );
 

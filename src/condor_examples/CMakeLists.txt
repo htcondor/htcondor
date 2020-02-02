@@ -51,7 +51,6 @@ install (FILES
 		condor.sysconfig
 		README
 		condor.boot.rpm
-		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		condor_config.generic
 		condor_config.generic.redhat

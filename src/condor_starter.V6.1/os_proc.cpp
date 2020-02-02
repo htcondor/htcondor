@@ -480,7 +480,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
 	if (SupportsPIDNamespace()) {
-		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
 		sing_result = htcondor::Singularity::DISABLE;
 	}

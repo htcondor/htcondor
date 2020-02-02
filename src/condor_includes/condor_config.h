@@ -529,6 +529,7 @@ BEGIN_C_DECLS
 		virtual ~MacroStream() {};
 		virtual char * getline(int gl_opt) = 0;
 		virtual MACRO_SOURCE& source() = 0;
+		virtual const char * source_name(MACRO_SET &set) = 0;
 	};
 
 	// A MacroStream that uses, but does not own a FILE* and MACRO_SOURCE
@@ -538,6 +539,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamYourFile() { fp = NULL; src = NULL; }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return *src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src && src->id >= 0 && src->id < (int)set.sources.size())
+				return set.sources[src->id];
+			return "file";
+		}
 		void set(FILE* _fp, MACRO_SOURCE& _src) { fp =  _fp; src = &_src; }
 		void reset() { fp = NULL; src = NULL; }
 	protected:
@@ -552,6 +558,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamFile() { if (fp) fclose(fp); fp = NULL; memset(&src, 0, sizeof(src)); }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src.id >= 0 && src.id < (int)set.sources.size())
+				return set.sources[src.id];
+			return "file";
+		}
 		bool open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg);
 		int  close(MACRO_SET& set, int parsing_return_val);
 	protected:
@@ -566,6 +577,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamMemoryFile() { ls.clear(); }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return *src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src && src->id >= 0 && src->id < (int)set.sources.size())
+				return set.sources[src->id];
+			return "memory";
+		}
 		void set(const char* _fp, ssize_t _cb, size_t _ix, MACRO_SOURCE& _src) { ls.init(_fp, _cb, _ix); src = &_src; }
 		void reset() { ls.clear(); src = NULL; }
 		// return a pointer to the part of the memory buffer that has not yet been read
@@ -604,6 +620,8 @@ BEGIN_C_DECLS
 		MACRO_SOURCE * src;
 	};
 
+	// A MacroStream that parses memory but does not support line continuation like MacroStreamMemoryFile does 
+	// used by transforms
 	class MacroStreamCharSource : public MacroStream {
 	public:
 		MacroStreamCharSource() 
@@ -616,6 +634,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamCharSource() { if (input) delete input; input = NULL; }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src.id >= 0 && src.id < (int)set.sources.size())
+				return set.sources[src.id];
+			return "param";
+		}
 		bool open(const char * src_string, const MACRO_SOURCE & _src);
 		int  close(MACRO_SET& set, int parsing_return_val);
 		int  load(FILE* fp, MACRO_SOURCE & _src, bool preserve_linenumbers = false);
@@ -630,7 +653,6 @@ BEGIN_C_DECLS
 		// copy construction and assignment are not permitted.
 		MacroStreamCharSource(const MacroStreamCharSource&);
 		MacroStreamCharSource & operator=(MacroStreamCharSource that); 
-
 	};
 
 	// this must be C++ linkage because condor_string already has a c linkage function by this name.

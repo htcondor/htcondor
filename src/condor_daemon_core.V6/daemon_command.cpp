@@ -501,9 +501,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
+		// Note: We no longer support soap, but this peek is part of the
+		//   code below that checks if this is a command that shared port
+		//   should transparently hand off to the collector.
 	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp ) {
+	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
 			// TODO Should we be ignoring the return value of condor_read?
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
@@ -1031,6 +1034,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			} // end is_tcp
 		} // end !using_cookie
 	} // end DC_AUTHENTICATE
+
+	dprintf( D_DAEMONCORE, "DAEMONCORE: Leaving ReadCommand(m_req==%i)\n", m_req);
 
 	// This path means they were using "old-school" commands.  No DC_AUTHENTICATE,
 	// just raw command numbers.  We still want to do IPVerify on these however, so

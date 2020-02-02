@@ -26,8 +26,6 @@
 
 #include "condor_common.h"
 
-#include "condor_socket_types.h"
-
 #if HAVE_CLONE
 #include <sched.h>
 #include <sys/syscall.h>
@@ -496,6 +494,7 @@ DaemonCore::~DaemonCore()
 	for (i=0;i<nCommand;i++) {
 		free( comTable[i].command_descrip );
 		free( comTable[i].handler_descrip );
+		delete comTable[i].alternate_perm;
 	}
 	if ( m_unregisteredCommand.num ) {
 		free( m_unregisteredCommand.command_descrip );
@@ -1064,8 +1063,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].dprintf_flag = dprintf_flag;
 	comTable[i].wait_for_payload = wait_for_payload;
 	if (alternate_perm) {
-		comTable[i].alternate_perm = new std::vector<DCpermission>();
-		*(comTable[i].alternate_perm) = *alternate_perm;
+		comTable[i].alternate_perm = new std::vector<DCpermission>(*alternate_perm);
 	}
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
@@ -1105,13 +1103,12 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].command_descrip = NULL;
 			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
+			delete comTable[i].alternate_perm;
+			comTable[i].alternate_perm = NULL;
 			while ( nCommand > 0 && comTable[nCommand - 1].num == 0 &&
 					comTable[nCommand - 1].handler == NULL &&
 					comTable[nCommand - 1].handlercpp == NULL ) {
 				nCommand--;
-			}
-			if (comTable[i].alternate_perm) {
-				delete comTable[i].alternate_perm;
 			}
 			return TRUE;
 		}
@@ -4857,7 +4854,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// sanity check on the pid.  we don't want to do something silly like
 	// kill pid -1 because the pid has not been initialized yet.
 	int signed_pid = (int) pid;
-	if ( signed_pid > -10 && signed_pid < 3 ) {
+	if ((signed_pid > -10) && (signed_pid < 0)){ 
 		EXCEPT("Send_Signal: sent unsafe pid (%d)",signed_pid);
 	}
 
@@ -9375,7 +9372,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 		// HandleProcessExit(pid, status);
 		wait_entry.child_pid = pid;
 		wait_entry.exit_status = status;
-		WaitpidQueue.enqueue(wait_entry);
+		WaitpidQueue.push_back(wait_entry);
 		if (first_time) {
 			Send_Signal( mypid, DC_SERVICEWAITPIDS );
 			first_time = false;
@@ -9396,10 +9393,12 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int)
     while ( iReapsCnt )
     {
 		// pull an reap event off our queue
-		if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
+		if ( WaitpidQueue.empty() ) {
 			// queue is empty, just return cuz nothing more to do
 			return TRUE;
 		}
+		wait_entry = WaitpidQueue.front();
+		WaitpidQueue.pop_front();
 
 		// we pulled something off the queue, handle it
 		HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
@@ -9410,7 +9409,7 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 	// now check if the queue still has more entries.  if so,
 	// repost the DC_SERVICEWAITPIDS signal so we'll eventually
 	// come back here and service the next entry.
-	if ( !WaitpidQueue.IsEmpty() ) {
+	if ( !WaitpidQueue.empty() ) {
 		Send_Signal( mypid, DC_SERVICEWAITPIDS );
 	}
 
@@ -9433,7 +9432,7 @@ pidWatcherThread( void* arg )
 	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	unsigned int exited_pid;
 	DWORD result;
-	Queue<DaemonCore::WaitpidEntry> MyExitedQueue;
+	std::queue<DaemonCore::WaitpidEntry> MyExitedQueue;
 	DaemonCore::WaitpidEntry wait_entry;
 
 	entry = (DaemonCore::PidWatcherEntry *) arg;
@@ -9516,11 +9515,12 @@ pidWatcherThread( void* arg )
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex
 				// to go changing anything in WaitpidQueue).
-			if ( !MyExitedQueue.IsEmpty() ) {
+			if ( !MyExitedQueue.empty() ) {
 				daemonCore->HandleSig(_DC_RAISESIGNAL,DC_SERVICEWAITPIDS);
 			}
-			while (MyExitedQueue.dequeue(wait_entry)==0) {
-				daemonCore->WaitpidQueue.enqueue( wait_entry );
+			while (!MyExitedQueue.empty()) {
+				daemonCore->WaitpidQueue.push_back( MyExitedQueue.front() );
+				MyExitedQueue.pop();
 			}
 
 			// now wakeup the main thread so it notices our changes.
@@ -9604,7 +9604,7 @@ pidWatcherThread( void* arg )
 			// added to the main thread WaitpidQueue.
 			wait_entry.child_pid = exited_pid;
 			wait_entry.exit_status = 0;  // we'll get the status later
-			MyExitedQueue.enqueue(wait_entry);
+			MyExitedQueue.push(wait_entry);
 			must_send_signal = true;
 		}
 
@@ -10373,8 +10373,10 @@ bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
 	wait_entry.child_pid = pid;
 	wait_entry.exit_status = 0; // ignored in WaitpidEntry::operator==, avoid uninit warning
 
-	if(WaitpidQueue.IsMember(wait_entry)) {
-		return true;
+	for(auto itr = WaitpidQueue.begin(); itr != WaitpidQueue.end(); itr++ ) {
+		if ( *itr == wait_entry ) {
+			return true;
+		}
 	}
 #endif
 

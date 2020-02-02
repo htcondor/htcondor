@@ -114,9 +114,6 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
-/* Define if doing a clipped build (USED)*/
-#cmakedefine CLIPPED 1
-
 /* Define if enabling KBDD (USED)*/
 #cmakedefine NEEDS_KBDD 1
 // configurable options.
@@ -271,9 +268,6 @@
 
 /* Define to 1 if you have the 'clock_gettime' function. (USED)*/
 #cmakedefine HAVE_CLOCK_GETTIME 1
-/* Define to 1 if 'clock_gettime' function and CLOCK_MONOTONIC_RAW defined. (USED)*/
-#cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
-#cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
 
 /* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
 #cmakedefine HAVE_CLOCK_NANOSLEEP 1
@@ -571,9 +565,6 @@
 
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
-
-/* Define to 1 if proc_pid_rusage() exists (Darwin function) */
-#cmakedefine HAVE_PROC_PID_RUSAGE
 
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"

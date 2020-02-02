@@ -284,7 +284,6 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
-	char*			m_ckptpltfrm;
 	List<AttribValue> m_lst_static;     // list of user-specified static attributes
 
      	// temporary attributes for raw utsname info

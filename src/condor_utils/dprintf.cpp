@@ -71,6 +71,17 @@
 
 #include <sstream>
 
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+#ifdef WIN32
+static bool _dprintf_expect_threads = true;
+#else
+static bool _dprintf_expect_threads = false;
+#endif
+void dprintf_make_thread_safe() {
+	_dprintf_expect_threads = true;
+}
+
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
 // machine in order
@@ -249,11 +260,7 @@ double _condor_debug_get_time_double()
 {
 #if defined(HAVE_CLOCK_GETTIME)
 	struct timespec tm;
-	#ifdef HAVE_CLOCK_MONOTONIC_RAW
-	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
-	#else
 	clock_gettime(CLOCK_MONOTONIC, &tm);
-	#endif
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
 #elif defined(WIN32)
 	LARGE_INTEGER li;
@@ -798,7 +805,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	//time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
-	mode_t		old_umask;
 #endif
 	int saved_errno;
 	priv_state	priv;
@@ -837,7 +843,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	art.is_enabled = true;
 #endif
 
-#if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
+#if !defined(WIN32) /* signals don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
@@ -849,11 +855,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
-
-		/* Make sure our umask is reasonable, in case we're the shadow
-		   and the remote job has tried to set its umask or
-		   something.  -Derek Wright 6/11/98 */
-	old_umask = umask( 022 );
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -875,7 +876,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
 	 * if we are running w/ threads.
 	 */
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_lock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -892,7 +893,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   log anything when we're in PRIV_USER_FINAL, to avoid
 		   exit(DPRINTF_ERROR). */
 	if (get_priv() == PRIV_USER_FINAL) {
-		/* Ensure to undo the signal blocking/umask code for unix and
+		/* Ensure to undo the signal blocking code for unix and
 			leave the critical section for windows. */
 		goto cleanup;
 	}
@@ -993,16 +994,11 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	errno = saved_errno;
 
-#if !defined(WIN32) // umasks don't exist in WIN32
-		/* restore umask */
-	(void)umask( old_umask );
-#endif
-
 	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_unlock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -1833,7 +1829,7 @@ dprintf_touch_log()
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( it->logPath.c_str(), 0644);
+			(void) chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}

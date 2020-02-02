@@ -21,6 +21,7 @@
 #define _COLLECTOR_DAEMON_H_
 
 #include <vector>
+#include <queue>
 
 #include "condor_classad.h"
 #include "totals.h"
@@ -30,7 +31,6 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
-#include "Queue.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -156,8 +156,8 @@ public:
 		char subsys[15];
 	} pending_query_entry_t;
 
-	static Queue<pending_query_entry_t *> query_queue_high_prio;
-	static Queue<pending_query_entry_t *> query_queue_low_prio;
+	static std::queue<pending_query_entry_t *> query_queue_high_prio;
+	static std::queue<pending_query_entry_t *> query_queue_low_prio;
 	static int ReaperId;
 	static int QueryReaper(Service *, int pid, int exit_status);
 	static int max_query_workers;  // from config file
@@ -211,6 +211,7 @@ protected:
 	static class CCBServer *m_ccb_server;
 
 	static bool filterAbsentAds;
+	static bool forwardClaimedPrivateAds;
 
 private:
 

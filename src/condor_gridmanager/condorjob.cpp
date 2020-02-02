@@ -354,7 +354,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	SetRemoteJobId( NULL );
 		// We always want to go through GM_INIT. With the remote job id set
 		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
-	if ( gmState != GM_INIT ) {
+		// If we don't have a gahp object, don't interrupt the error handling
+		// for that.
+	if ( gmState != GM_INIT && gahp != NULL ) {
 		gmState = GM_CLEAR_REQUEST;
 	}
 }
@@ -1303,6 +1305,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_RESIDENT_SET_SIZE,
 		ATTR_PROPORTIONAL_SET_SIZE,
 		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 

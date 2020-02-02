@@ -217,7 +217,7 @@ main( int argc, char ** const argv )
 
 	// check to see if we're going to quit after a certain time
 	time_t die_time = 0;
-	int lifetime = param_integer("GCE_GAHP_LIFETIME", 0);
+	int lifetime = param_integer("GCE_GAHP_LIFETIME", 86400);
 	if (lifetime) {
 		die_time = time(0) + lifetime;
 	}

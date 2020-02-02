@@ -286,7 +286,7 @@ LinuxNetworkAdapter::detectWOL ( void )
 	// Fill in the WOL request and the ioctl request
 	wolinfo.cmd = ETHTOOL_GWOL;
 	getName( ifr );
-	ifr.ifr_data = (caddr_t)(& wolinfo);
+	ifr.ifr_data = (char *)(& wolinfo);
 
 	priv_state saved_priv = set_priv( PRIV_ROOT );
 	err = ioctl(sock, SIOCETHTOOL, &ifr);

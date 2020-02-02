@@ -682,7 +682,7 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	}
   
 	// fill in the values we got from the kernel
-	procRaw.imgsize = (u_long)ti.virtual_size;
+	procRaw.imgsize = (unsigned long)ti.virtual_size;
 	procRaw.rssize = ti.resident_size;
 	procRaw.user_time_1 = ti.user_time.seconds;
 	procRaw.user_time_2 = 0;

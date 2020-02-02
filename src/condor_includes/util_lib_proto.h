@@ -23,7 +23,6 @@
 
 #include "condor_config.h"
 #include "condor_getmnt.h"
-#include "condor_types.h"
 #include "condor_header_features.h"
 
 #if defined(__cplusplus)
@@ -41,9 +40,6 @@ int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
 //Only daemon_core_main need this
 void detach ( void );
-
-// only for standard uni shadow
-void update_rusage( struct rusage *ru1, struct rusage *ru2 );
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */

@@ -1,3 +1,27 @@
+condor (8.9.5-1) unstable; urgency=medium
+
+  * Added a new mode that skips jobs whose outputs are newer than their inputs
+  * Added command line tool to help debug ClassAd expressions
+  * Added port forwarding to Docker containers
+  * You may now change some DAGMan throttles while the DAG is running
+  * Added support for session tokens for pre-signed S3 URLs
+  * Improved the speed of the negotiator when custom resources are defined
+  * Fixed interactive submission of Docker jobs
+  * Fixed a bug where jobs wouldn't be killed when getting an OOM notification
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 30 Dec 2019 16:27:36 -0600
+
+condor (8.8.7-1) stable; urgency=medium
+
+  * Updated condor_annex to work with upcoming AWS Lambda function changes
+  * Added the ability to specify the order that job routes are applied
+  * Fixed a bug that could cause remote condor submits to fail
+  * Fixed condor_wait to work when the job event log is on AFS
+  * Fixed RPM packaging to be able to install condor-all on CentOS 8
+  * Period ('.') is allowed again in DAGMan node names
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Dec 2019 08:03:51 -0600
+
 condor (8.9.4-1) unstable; urgency=medium
 
   * Amazon S3 file transfers using pre-signed URLs

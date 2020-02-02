@@ -1596,18 +1596,26 @@ struct Schedd {
 
         // Set all the cluster attributes
         classad::ClassAdUnParser unparser;
-        unparser.SetOldClassAd(true);
+        unparser.SetOldClassAd(true, true);
+        std::string rhs, failed_attr;
+        int setattr_result = 0;
 
-        for (classad::ClassAd::const_iterator it = cluster_ad.begin(); it != cluster_ad.end(); it++)
-        {
-            std::string rhs;
-            unparser.Unparse(rhs, it->second);
-                // Note I don't release the GIL here - as we are in NoAck mode, assume this is just
-                // buffering up data into the socket.
-            if (-1 == SetAttribute(cluster, -1, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
-            {
-                THROW_EX(ValueError, it->first.c_str());
+        { // get module lock so we can call SetAttribute
+            condor::ModuleLock ml;
+            for (classad::ClassAd::const_iterator it = cluster_ad.begin(); it != cluster_ad.end(); it++) {
+                rhs.clear();
+                unparser.Unparse(rhs, it->second);
+                setattr_result = SetAttribute(cluster, -1, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck);
+                if (-1 == setattr_result) {
+                    failed_attr = it->first;
+                    break;
+                }
             }
+        } // release module lock
+
+        // report SetAttribute errors
+        if (setattr_result == -1) {
+            THROW_EX(ValueError, failed_attr.c_str());
         }
 
         orig_cluster_ad = cluster_ad;
@@ -1663,18 +1671,28 @@ struct Schedd {
             proc_ad.InsertAttr(ATTR_PROC_ID, procid);
 
             classad::ClassAdUnParser unparser;
-            unparser.SetOldClassAd( true );
-            for (classad::ClassAd::const_iterator it = proc_ad.begin(); it != proc_ad.end(); it++)
-            {
-                std::string rhs;
-                unparser.Unparse(rhs, it->second);
-                    // Note I don't release the GIL here - as we are in NoAck mode, assume this is just
-                    // buffering up data into the socket.
-                if (-1 == SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
-                {
-                    PyErr_SetString(PyExc_ValueError, it->first.c_str());
-                    throw_error_already_set();
+            unparser.SetOldClassAd( true, true );
+            int setattr_result = 0;
+            std::string failed_attr;
+            std::string rhs;
+
+            { // take module lock (and release GIL)
+                condor::ModuleLock ml;
+                for (classad::ClassAd::const_iterator it = proc_ad.begin(); it != proc_ad.end(); it++) {
+                    rhs.clear();
+                    unparser.Unparse(rhs, it->second);
+                    setattr_result = SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck);
+                    if (setattr_result == -1) {
+                        failed_attr = it->first;
+                        break;
+                    }
                 }
+            } // release module lock
+
+            // report any errors of SetAttribute
+            if (-1 == setattr_result) {
+                PyErr_SetString(PyExc_ValueError, failed_attr.c_str());
+                throw_error_already_set();
             }
             if (keep_results)
             {
@@ -2564,12 +2582,16 @@ public:
         SetDagOptions(opts, shallow_opts, deep_opts);
 
         // Make sure we can actually submit this DAG with the given options.
-        // If we can't, ensureOutputFilesExist() will abort and exit.
-        dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts);
+        // If we can't, throw an exception and exit.
+        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+            THROW_EX(RuntimeError, "Unable to write condor_dagman output files");
+        }
 
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines);
+        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+            THROW_EX(RuntimeError, "Unable to write condor_dagman submit file");
+        }
 
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
@@ -2859,11 +2881,13 @@ public:
 				if (rval == 2) {
 					classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 					if (clusterad) {
+						condor::ModuleLock ml;
 						rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
 					}
 				}
 				// send the proc ad unless there was a failure.
 				if (rval >= 0) {
+					condor::ModuleLock ml;
 					rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
 				}
 				process_submit_errstack(m_hash.error_stack());

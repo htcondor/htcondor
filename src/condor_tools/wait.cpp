@@ -251,8 +251,8 @@ int main( int argc, char *argv[] )
 	}
 
 	while( 1 ) {
-		int timeout_ms = 0;
-		if ( ! dont_wait) {
+		int timeout_ms = -1;
+		if(! dont_wait) {
 			int now = time(NULL);
 			if( stoptime && now > stoptime ) {
 				printf( "Time expired.\n" );
@@ -336,7 +336,7 @@ int main( int argc, char *argv[] )
 			if (dont_wait) {
 				EXIT_SUCCESS;
 			}
-	} else if( outcome == ULOG_RD_ERROR ) {
+		} else if( outcome == ULOG_RD_ERROR ) {
 			dprintf( D_FULLDEBUG, "Got ULOG_RD_ERROR, done.\n" );
 			EXIT_FAILURE;
 		} else if( outcome == ULOG_MISSED_EVENT ) {

@@ -30,14 +30,14 @@ class Daemon;
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
-#include "condor_collector.h"
 #include "condor_secman.h"
-#include "condor_network.h" // For the port numbers...
 #include "daemon_types.h"
 #include "KeyCache.h"
 #include "CondorError.h"
 #include "command_strings.h"
 #include "dc_message.h"
+
+#define COLLECTOR_PORT					9618
 
 /** 
   Class used to pass around and store information about a given

@@ -27,7 +27,6 @@
 #include "status_types.h"
 #include "totals.h"
 
-#include "condor_collector.h"
 #include "collector_engine.h"
 #include "hashkey.h"
 
@@ -102,9 +101,10 @@ StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
+bool CollectorDaemon::forwardClaimedPrivateAds = true;
 
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
 int CollectorDaemon::ReaperId = -1;
 int CollectorDaemon::max_query_workers = 4;
 int CollectorDaemon::reserved_for_highprio_query_workers = 1;
@@ -236,7 +236,7 @@ CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
 		error_code = 4;
 		error_string = "Failed to walk the schedd table.";
 	}
-	if (schedd_addr.empty()) {
+	if (!error_code && schedd_addr.empty()) {
 		error_code = 5;
 		formatstr(error_string, "Schedd %s is not known to the collector.",
 			schedd_name.c_str());
@@ -645,13 +645,13 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			  (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers - reserved_for_highprio_query_workers))
 			 ||
 			 ((high_prio_query==true) &&
-			  (active_query_workers - reserved_for_highprio_query_workers + query_queue_high_prio.Length() <  max_query_workers + max_pending_query_workers))
+			  (active_query_workers - reserved_for_highprio_query_workers + (int)query_queue_high_prio.size() <  max_query_workers + max_pending_query_workers))
 		   )
 		{
 			if ( high_prio_query ) {
-				query_queue_high_prio.enqueue( query_entry );
+				query_queue_high_prio.push( query_entry );
 			} else {
-				query_queue_low_prio.enqueue( query_entry );
+				query_queue_low_prio.push( query_entry );
 			}
 			did_we_fork = QueryReaper(NULL, -1, -1);
 			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
@@ -717,24 +717,25 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		// Pull of an entry from our high_prio queue; if nothing there, grab
 		// one from our low prio queue.  Ignore "stale" (old) requests.
 
-		high_prio_query = query_queue_high_prio.Length() > 0;
+		high_prio_query = query_queue_high_prio.size() > 0;
 
 		// Dequeue a high priority entry if worker slots available.
+		// If high priority queue is empty, dequeue a low priority entry
+		// if a worker slot (minus those reserved only for high prioirty) is available.
 		if ( active_query_workers < max_query_workers ) {
-			query_queue_high_prio.dequeue(query_entry);
-			// If high priority queue is empty, dequeue a low priority entry
-			// if a worker slot (minus those reserved only for high prioirty) is available.
-			if ((query_entry == NULL) &&
-			    (active_query_workers < (max_query_workers - reserved_for_highprio_query_workers)))
-			{
-				query_queue_low_prio.dequeue(query_entry);
+			if ( !query_queue_high_prio.empty() ) {
+				query_entry = query_queue_high_prio.front();
+				query_queue_high_prio.pop();
+			} else if ( !query_queue_low_prio.empty() && active_query_workers < (max_query_workers - reserved_for_highprio_query_workers) ) {
+				query_entry = query_queue_low_prio.front();
+				query_queue_low_prio.pop();
 			}
 		}
 
 		// Update our pending stats counters.  Note we need to do this regardless
 		// of if query_entry==NULL, since we may be here because something was either
 		// recently added into the queue, or recently removed from the queue.
-		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		pending_query_workers = query_queue_high_prio.size() + query_queue_low_prio.size();
 		collectorStats.global.PendingQueries = pending_query_workers;
 
 		// If query_entry==NULL, we are not forking anything now, so we're done for now
@@ -1211,18 +1212,22 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 
 collector_runtime_probe CollectorEngine_receive_update_runtime;
+#ifdef PROFILE_RECEIVE_UPDATE
 collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_plugins_runtime;
 collector_runtime_probe CollectorEngine_ru_forward_runtime;
 collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+#endif
 
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+#ifdef PROFILE_RECEIVE_UPDATE
 	double rt_last = rt.begin;
+#endif
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -1232,7 +1237,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
+#endif
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -1264,7 +1271,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		return FALSE;
 
 	}
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
+#endif
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -1273,7 +1282,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
+#endif
 
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
@@ -1283,12 +1294,16 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+#endif
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
 		int rv = stashSocket( (ReliSock *)sock );
+#ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+#endif
 		return rv;
 	}
 
@@ -1802,8 +1817,6 @@ void CollectorDaemon::Config()
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
 	Sinful mySinful( myself );
-	Sinful mySharedPortDaemonSinful = mySinful;
-	mySharedPortDaemonSinful.setSharedPortID( NULL );
 	while( collectorsToUpdate->next( daemon ) ) {
 		const char * current = daemon->addr();
 		if( current == NULL ) { continue; }
@@ -1812,28 +1825,6 @@ void CollectorDaemon::Config()
 		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
 			continue;
-		}
-
-		// addressPointsToMe() doesn't know that the shared port daemon
-		// forwards connections that otherwise don't ask to be forwarded
-		// to the collector.  This means that COLLECTOR_HOST doesn't need
-		// to include ?sock=collector, but also that mySinful has a
-		// shared port address and currentSinful may not.  Since we know
-		// that we're trying to contact the collector here -- that is, we
-		// can tell we're not contacting the shared port daemon in the
-		// process of doing something else -- we can safely assume that
-		// any currentSinful without a shared port ID intends to connect
-		// to the default collector.
-		dprintf( D_FULLDEBUG, "checking for self: '%s', '%s, '%s'\n", mySinful.getSharedPortID(), mySharedPortDaemonSinful.getSinful(), currentSinful.getSinful() );
-		if( mySinful.getSharedPortID() != NULL && mySharedPortDaemonSinful.addressPointsToMe( currentSinful ) ) {
-			// Check to see if I'm the default collector.
-			std::string collectorSPID;
-			param( collectorSPID, "SHARED_PORT_DEFAULT_ID" );
-			if(! collectorSPID.size()) { collectorSPID = "collector"; }
-			if( strcmp( mySinful.getSharedPortID(), collectorSPID.c_str() ) == 0 ) {
-				dprintf( D_FULLDEBUG, "Skipping sending update to myself via my shared port daemon.\n" );
-				collectorsToUpdate->deleteCurrent();
-			}
 		}
 	}
 
@@ -1991,6 +1982,7 @@ void CollectorDaemon::Config()
 		filterAbsentAds = false;
 	}
 
+	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
 	return;
 }
 
@@ -2191,6 +2183,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
+		if (pvtAd && !forwardClaimedPrivateAds){
+			std::string state;
+			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
+				pvtAd = NULL;
+			}
+		}
 	}
 
 	bool should_forward = true;

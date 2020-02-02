@@ -214,78 +214,6 @@ bool param_boolean( const char *, bool default_value, bool,
 	return default_value;
 }
 
-/* stub out the various cedar and daemoncore calls I don't need since noone
-	should be using them with libcondorapi. Notice: This is gross
-	since the header file itself includes partial implementations
-	of inline functions and junk. */
-
-/* This is the first non-inline virtual function form the Stream class.
-	This means that all of the inline functions get defined in this .o file. :)
-	Wheeee!!!! */
-Stream::~Stream(){};
-
-/* stub the entire Stream interface :( */
-	int Stream::code(void *&) { return not_impl(); }
-	int Stream::code(char &) { return not_impl(); }
-	int Stream::code(unsigned char &) { return not_impl(); }
-	int Stream::code(int &){ return not_impl(); }
-	int Stream::code(unsigned int &){ return not_impl(); }
-	int Stream::code(long &){ return not_impl(); }
-	int Stream::code(unsigned long &){ return not_impl(); }
-#if !defined(__LP64__)
-	int Stream::code(int64_t &){ return not_impl(); }
-	int Stream::code(uint64_t &){ return not_impl(); }
-#endif
-	int Stream::code(short &){ return not_impl(); }
-	int Stream::code(unsigned short &){ return not_impl(); }
-	int Stream::code(float &){ return not_impl(); }
-	int Stream::code(double &){ return not_impl(); }
-	int Stream::code(char *&){ return not_impl(); }
-	int Stream::code_bytes(void *, int ){ return not_impl(); }
-	int Stream::code_bytes_bool(void *, int ){ return not_impl(); }
-	int Stream::code(PROC_ID &){ return not_impl(); }
-	int Stream::code(STARTUP_INFO &){ return not_impl(); }
-	int Stream::code(PORTS &){ return not_impl(); }
-	int Stream::code(StartdRec &){ return not_impl(); }
-	int Stream::code(open_flags_t &){ return not_impl(); }
-	int Stream::code(struct stat &){ return not_impl(); }
-	int Stream::code(condor_errno_t &){ return not_impl(); }
-#if !defined(WIN32)
-	int Stream::code(condor_signal_t &){ return not_impl(); }
-	int Stream::code(fcntl_cmd_t &){ return not_impl(); }
-	int Stream::code(struct rusage &){ return not_impl(); }
-	int Stream::code(struct statfs &){ return not_impl(); }
-	int Stream::code(struct timezone &){ return not_impl(); }
-	int Stream::code(struct timeval &){ return not_impl(); }
-	int Stream::code(struct utimbuf &){ return not_impl(); }
-	int Stream::code(struct rlimit &){ return not_impl(); }
-	int Stream::code_array(gid_t *&, int &){ return not_impl(); }
-#endif // !defined(WIN32)
-#if HAS_64BIT_STRUCTS
-	int Stream::code(struct stat64 &){ return not_impl(); }
-	int Stream::code(struct rlimit64 &){ return not_impl(); }
-#endif
-void Stream::allow_one_empty_message() { not_impl(); }
-int Stream::put(char const *){ return not_impl(); }
-int Stream::put(char const *, int){ return not_impl(); }
-int Stream::get(char *&){ return not_impl(); }
-int Stream::get(char *,int ){ return not_impl(); }
-int Stream::get(MyString&){ return not_impl(); }
-int Stream::get_string_ptr(char const *&){ return not_impl(); }
-int Stream::get_string_ptr(const char *&, int &){ return not_impl(); }
-
-void Stream::prepare_crypto_for_secret(){not_impl();}
-void Stream::restore_crypto_after_secret(){not_impl();}
-bool Stream::prepare_crypto_for_secret_is_noop() const{not_impl();return true;}
-bool Stream::set_crypto_mode(bool /*enabled*/){not_impl();return false;}
-int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
-int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
-int Stream::get_secret( const char *& /*s*/, int & /*len*/ ){not_impl();return 0;}
-void Stream::set_deadline_timeout(int){not_impl();}
-void Stream::set_deadline(time_t){not_impl();}
-time_t Stream::get_deadline() const{not_impl();return 0;}
-bool Stream::deadline_expired() const{not_impl();return false;}
-
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) { 
@@ -350,9 +278,6 @@ QueryResult CondorQuery::getQueryAd (ClassAd &)
 CondorQuery::CondorQuery(AdTypes ) { not_impl();} 
 
 CondorQuery::~CondorQuery() {} 
-
-const char*
-my_ip_string() {not_impl(); return 0;}
 
 #include "Regex.h"
 

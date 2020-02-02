@@ -115,6 +115,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_MEMORY_USAGE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
+	common_job_queue_attrs->insert( ATTR_SCRATCH_DIR_FILE_COUNT );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU );

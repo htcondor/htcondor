@@ -55,7 +55,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_syscall_mode.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
 #include "string_list.h"

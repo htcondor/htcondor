@@ -2133,8 +2133,8 @@ ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, C
 	const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
 {
 		// Automatically free our callback data at function exit.
-	std::unique_ptr<struct ImpersonationTokenContinuation> callback_ptr(
-		static_cast<struct ImpersonationTokenContinuation*>(misc_data));
+	std::unique_ptr<class ImpersonationTokenContinuation> callback_ptr(
+		static_cast<class ImpersonationTokenContinuation*>(misc_data));
 	ImpersonationTokenContinuation &callback_data = *callback_ptr;
 
 	if (!success) {

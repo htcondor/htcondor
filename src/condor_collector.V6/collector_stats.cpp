@@ -424,6 +424,7 @@ void UpdatesStats::Init()
 	bool enable = param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false);
 	int prof_publevel = enable ? IF_BASICPUB : IF_VERBOSEPUB;
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_receive_update, prof_publevel);
+#ifdef PROFILE_RECEIVE_UPDATE
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_pre_collect, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_collect, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_plugins, prof_publevel);
@@ -448,6 +449,7 @@ void UpdatesStats::Init()
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updatePvtAd, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_repeatAd, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_other, prof_publevel);
+#endif
 
 	getClassAdEx_clearProfileStats();
 	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
