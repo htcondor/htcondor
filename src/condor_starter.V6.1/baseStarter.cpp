@@ -320,6 +320,7 @@ CStarter::Config()
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
 			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
 		}
+		m_reuse_dir->PrintInfo(true);
 	} else {
 		m_reuse_dir.reset();
 	}

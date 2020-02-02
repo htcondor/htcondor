@@ -32,6 +32,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <sstream>
 
 #include <openssl/evp.h>
 
@@ -801,4 +802,34 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 		return false;
 	}
 	return true;
+}
+
+
+void
+DataReuseDirectory::PrintInfo(bool print_to_log)
+{
+	{
+		CondorError err;
+		LogSentry sentry = LockLog(err);
+		if (!UpdateState(sentry, err)) {
+			dprintf(D_ALWAYS, "Failed to print data reuse directory info because"
+				"state update failed: %s\n", err.getFullText().c_str());
+			return;
+		}
+	}
+	std::stringstream ss;
+	ss << "Data Reuse Directory status information:"
+		"\t- Filesystem path: " << m_dirpath << "\n"
+		"\t- Directory state is considered " << (m_valid ? "valid" : "INVALID") << "\n"
+		"\t- State file location: " << m_state_name << "\n"
+		"\t- Space allocated to the directory: " <<
+			metric_units(static_cast<double>(m_allocated_space)) << "\n"
+		"\t- Space in transfer reservations: " <<
+			metric_units(static_cast<double>(m_reserved_space)) << "\n"
+		"\t- Space use by committed files: " <<
+			metric_units(static_cast<double>(m_stored_space)) << "\n";
+	if (print_to_log)
+		dprintf(D_ALWAYS, "%s\n", ss.str().c_str());
+	else
+		printf("%s\n", ss.str().c_str());
 }
