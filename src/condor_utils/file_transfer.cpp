@@ -3819,7 +3819,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		std::vector<ExprTree*> info_list;
 		for (auto &info : m_reuse_info) {
 			classad::ClassAd *ad = new classad::ClassAd();
-			ad->InsertAttr("FileName", info.filename());
+			ad->InsertAttr("FileName", condor_basename(info.filename().c_str()));
 			ad->InsertAttr("ChecksumType", info.checksum_type());
 			ad->InsertAttr("Checksum", info.checksum());
 			ad->InsertAttr("Size", static_cast<long long>(info.size()));
