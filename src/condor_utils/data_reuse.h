@@ -62,6 +62,10 @@ public:
 
 	static bool IsChecksumTypeSupported(const std::string &type) {return type == "sha256";}
 
+	// Print known info about the state of the directory:
+	// - print_to_log: Set to True to print data via dprintf; otherwise, will print to stdout.
+	void PrintInfo(bool print_to_log);
+
 private:
 	class LogSentry {
 	public:
