@@ -227,7 +227,7 @@ private:
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
-const int GO_AHEAD_ONCE = 1;    // send one file and ask again
+//const int GO_AHEAD_ONCE = 1;    // send one file and ask again
 				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
 				// token, we assume it lasts forever.
 
@@ -2497,7 +2497,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
 							static_cast<uint64_t>(0), [](uint64_t val, const ReuseInfo &info) {return info.size() + val;});
-						dprintf(D_FULLDEBUG, "There are %lu bytes to retrieve.\n", to_retrieve);
+						dprintf(D_FULLDEBUG, "There are %llu bytes to retrieve.\n",
+							static_cast<unsigned long long>(to_retrieve));
 						if (to_retrieve) {
 							CondorError err;
 							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,

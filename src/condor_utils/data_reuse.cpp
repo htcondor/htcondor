@@ -60,7 +60,8 @@ DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 	}
 
 	m_allocated_space = param_integer("DATA_REUSE_BYTES", 0);
-	dprintf(D_FULLDEBUG, "Allocating %lu bytes for the data reuse directory\n", m_allocated_space);
+	dprintf(D_FULLDEBUG, "Allocating %llu bytes for the data reuse directory\n",
+		static_cast<unsigned long long>(m_allocated_space));
 
 	CondorError err;
 	LogSentry sentry = LockLog(err);
@@ -190,7 +191,11 @@ DataReuseDirectory::ReserveSpace(uint64_t size, uint32_t time, const std::string
 
 	if ((m_reserved_space + size > m_allocated_space) && !ClearSpace(size, sentry, err))
 	{
-		err.pushf("DataReuse", 1, "Unable to allocate space; %lu bytes allocated, %lu bytes reserved, %lu additional bytes requested", m_allocated_space, m_reserved_space, size);
+		err.pushf("DataReuse", 1, "Unable to allocate space; %llu bytes allocated, "
+			"%llu bytes reserved, %llu additional bytes requested",
+			static_cast<unsigned long long>(m_allocated_space),
+			static_cast<unsigned long long>(m_reserved_space),
+			static_cast<unsigned long long>(size));
 		return false;
 	}
 
