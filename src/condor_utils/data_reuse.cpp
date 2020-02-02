@@ -27,6 +27,7 @@
 #include "directory.h"
 #include "directory_util.h"
 #include "condor_mkstemp.h"
+#include "metric_units.h"
 
 #include <stdio.h>
 
@@ -59,7 +60,18 @@ DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 		CreatePaths();
 	}
 
-	m_allocated_space = param_integer("DATA_REUSE_BYTES", 0);
+	std::string allocated_space_str;
+	if (param(allocated_space_str, "DATA_REUSE_BYTES") && allocated_space_str.size()) {
+		int64_t tmp_value;
+		if (parse_int64_bytes(allocated_space_str.c_str(), tmp_value, 1)) {
+			m_allocated_space = tmp_value;
+		} else {
+			dprintf(D_ALWAYS, "Invalid value for DATA_REUSE_BYTES (must be an integer, "
+				"optionally with units like 'MB' or 'GB'): %s\n", allocated_space_str.c_str());
+			return;
+		}
+	}
+
 	dprintf(D_FULLDEBUG, "Allocating %llu bytes for the data reuse directory\n",
 		static_cast<unsigned long long>(m_allocated_space));
 
