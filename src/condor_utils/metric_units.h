@@ -29,10 +29,18 @@ i.e. 2096 becomes "2.0 KB", 3221225472 becomes "3.0 GB".
 Returns a pointer to a static buffer.
 */
 
-BEGIN_C_DECLS
-
 const char * metric_units( double bytes );
 
-END_C_DECLS
+/*
+Parse a input string for an int64 value optionally followed by K,M,G,or T
+as a scaling factor, then divide by a base scaling factor and return the
+result by ref. base is expected to be a multiple of 2 usually  1, 1024 or 1024*1024.
+result is truncated to the next largest value by base.
+
+Return value is true if the input string contains only a valid int, false if
+there are any unexpected characters other than whitespace.  value is
+unmodified when false is returned.
+*/
+bool parse_int64_bytes(const char * input, int64_t & value, int base);
 
 #endif
