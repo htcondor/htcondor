@@ -140,3 +140,6 @@ Known Issues
   `/update-config` in the container.  After updating secrets, run
   `/update-secrets` in the container.
 
+- cgroups support is not yet implemented.
+
+- Docker universe support is not yet implemented.
