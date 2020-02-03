@@ -85,9 +85,6 @@ extern const char * _sysapi_processor_flags;
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;
 
-/* needed by ckptpltfrm.c */
-extern char* _sysapi_ckptpltfrm;
-
 /* needed by load_avg.c */
 extern int _sysapi_getload;
 

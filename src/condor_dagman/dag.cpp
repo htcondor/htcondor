@@ -3349,6 +3349,36 @@ Dag::GetReject( MyString &firstLocation )
 	return _reject;
 }
 
+//-------------------------------------------------------------------------
+void 
+Dag::SetMaxJobsSubmitted(int newMax) {
+
+	bool isChanged = (newMax != _maxJobsSubmitted);
+	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+
+	// Update our internal max jobs count
+	_maxJobsSubmitted = newMax;
+
+	// If maxJobs is set to 0, that means no maximum limit. Exit now.
+	if (_maxJobsSubmitted == 0) return;
+
+	// Optionally remove jobs to meet the new limit, starting with most recent
+	if (isChanged && removeJobsAfterLimitChange) {
+		int submittedJobsCount = 0;
+		Job* job;
+		ListIterator<Job> iList (_jobs);
+		while ((job = iList.Next()) != NULL) {
+			if (job->GetStatus() == Job::STATUS_SUBMITTED) {
+				submittedJobsCount++;
+				if (submittedJobsCount > _maxJobsSubmitted) {
+					job->retry_max++;
+					RemoveBatchJob(job);
+				}
+			}
+		}
+	}
+}
+
 //===========================================================================
 
 /** Set the filename of the jobstate.log file.

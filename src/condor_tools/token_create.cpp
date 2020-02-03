@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
 
 #include "condor_auth_passwd.h"
 #include "match_prefix.h"
@@ -46,6 +47,10 @@ int main(int argc, char *argv[]) {
 	if (argc < 3) {
 		print_usage(argv[0]);
 	}
+
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
 
 	std::string pool;
 	std::string name;
@@ -107,8 +112,6 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
-
-	config();
 
 	CondorError err;
 	std::string token;

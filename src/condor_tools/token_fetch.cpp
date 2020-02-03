@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
 
 #include "condor_auth_passwd.h"
 #include "match_prefix.h"
@@ -114,6 +115,10 @@ generate_remote_schedd_token(const std::string &pool, const std::string &name,
 
 int main(int argc, char *argv[]) {
 
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
+
 	daemon_t dtype = DT_SCHEDD;
 	std::string pool;
 	std::string name;
@@ -189,8 +194,6 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
-
-	config();
 
 	if (remote_fetch && dtype != DT_SCHEDD)
 	{

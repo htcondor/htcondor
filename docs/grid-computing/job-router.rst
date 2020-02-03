@@ -237,27 +237,27 @@ will be considered in the order given by this configuration variable.
     JOB_ROUTER_SOURCE_JOB_CONSTRAINT = WantJobRouter
 
     # define a default maximum number of jobs that will be matched to each route
-    JOB_ROUTER_MAX_JOBS = 200
+    # and a limit on the number of idle jobs a route may have before we stop using it.
+    JOB_ROUTER_DEFAULT_MAX_JOBS_PER_ROUTE = 200
+    JOB_ROUTER_DEFAULT_MAX_IDLE_JOBS_PER_ROUTE = 10
 
     # This could be made an attribute of the job, rather than being hard-coded
     ROUTED_JOB_MAX_TIME = 1440
 
-    # Now we define each of the routes to send jobs on
-    JOB_ROUTER_ROUTE_NAMES = Site_1 Site_2 Site_3
+    # Now we define each of the routes to send jobs to
+    JOB_ROUTER_ROUTE_NAMES = Site1 Site2 CondorSite
 
-    JOB_ROUTER_ROUTE_Site_1 @=rt
-      MaxIdleJobs = 10
+    JOB_ROUTER_ROUTE_Site1 @=rt
       GridResource = "gt2 site1.edu/jobmanager-condor"
     @rt
 
-    JOB_ROUTER_ROUTE_Site_2 @=rt
-      MaxIdleJobs = 10
-      GridResource = "gt2 site1.edu/jobmanager-condor"
+    JOB_ROUTER_ROUTE_Site2 @=rt
+      GridResource = "gt2 site2.edu/jobmanager-condor"
       SET GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"
     @rt
 
-    JOB_ROUTER_ROUTE_Site_3 @=rt
-      MaxIdleJobs = 10
+    JOB_ROUTER_ROUTE_CondorSite @=rt
+      MaxIdleJobs = 20
       GridResource = "condor submit.site3.edu condor.site3.edu"
       SET remote_jobuniverse = 5
     @rt

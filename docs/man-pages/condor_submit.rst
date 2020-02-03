@@ -1206,6 +1206,11 @@ FILE TRANSFER COMMANDS
     semicolon. If you wish to remap file names that contain equals signs
     or semicolons, these special characters may be escaped with a
     backslash. You cannot specify directories to be remapped.
+
+    Note that whether an output file is transferred is controlled by
+    **transfer_output_files**. Listing a file in
+    **transfer_output_remaps** is not sufficient to cause it to be
+    transferred.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
