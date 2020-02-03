@@ -205,6 +205,14 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	case DELEGATE_GSI_CRED_SCHEDD:
 	case QMGMT_WRITE_CMD:
 	case GET_JOB_CONNECT_INFO:
+	case DC_EXCHANGE_SCITOKEN:
+	case DC_GET_SESSION_TOKEN:
+	case DC_START_TOKEN_REQUEST:
+	case DC_FINISH_TOKEN_REQUEST:
+	case DC_LIST_TOKEN_REQUEST:
+	case DC_APPROVE_TOKEN_REQUEST:
+	case DC_AUTO_APPROVE_TOKEN_REQUEST:
+	case COLLECTOR_TOKEN_REQUEST:
 		break;
 	default:
 		return;
@@ -14921,6 +14929,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			bounding_set,
 			requested_lifetime,
 			token,
+			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
 		{
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
@@ -14930,7 +14939,8 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			error_string = "Internal state error.";
 		} else {
 			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
-			dprintf(D_ALWAYS, "Collector %s token request for ID %s, bounding set %s,"
+			dprintf(D_ALWAYS | D_AUDIT, *static_cast<Sock*>(stream),
+				"Collector %s token request for ID %s, bounding set %s,"
 				" and lifetime %d issued.\n", peer_location, requested_identity.c_str(),
 				bounding_set_str.empty() ? "(none)" : bounding_set_str.c_str(),
 				requested_lifetime);

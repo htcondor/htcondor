@@ -568,8 +568,10 @@ Condor_Auth_Passwd::fetchLogin()
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
 					std::string local_token;
+						// Note we don't log the token generation here as it is an ephemeral token
+						// used server-side to complete the secret generation process.
 					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
-						authz_list, lifetime, local_token, &err))
+						authz_list, lifetime, local_token, 0, &err))
 					{
 						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
 							err.getFullText().c_str());
@@ -899,6 +901,9 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 					return false;
 				}
 			}
+			dprintf(D_AUDIT, mySock_->getUniqueId(),
+				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
 			if (isTokenBlacklisted(jwt)) {
 				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
 				free(ka);
@@ -963,29 +968,36 @@ Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
 	classad::ClassAd ad;
 	auto claims = jwt.get_payload_claims();
 	for (const auto &pair : claims) {
+		bool inserted = true;
 		const auto &claim = pair.second;
 		switch (claim.get_type()) {
 		case jwt::claim::type::null:
-			ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
 			break;
 		case jwt::claim::type::boolean:
-			ad.InsertAttr(pair.first, pair.second.as_bool());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
 			break;
 		case jwt::claim::type::int64:
-			ad.InsertAttr(pair.first, pair.second.as_int());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
 			break;
 		case jwt::claim::type::number:
-			ad.InsertAttr(pair.first, pair.second.as_number());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
 			break;
 		case jwt::claim::type::string:
-			ad.InsertAttr(pair.first, pair.second.as_string());
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
 			break;
 		// TODO: these are not currently supported
 		case jwt::claim::type::array: // fallthrough
 		case jwt::claim::type::object: // fallthrough
 		default:
 			break;
-		};
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
 	}
 
 	classad::EvalState state;
@@ -1582,6 +1594,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	const std::vector<std::string> &authz_list,
 	long lifetime,
 	std::string &token,
+	int ident,
 	CondorError *err)
 {
 	std::string example_username(POOL_PASSWORD_USERNAME);
@@ -1639,12 +1652,22 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
+		// Set a unique JTI so we can identify the token we issued later on.
+	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	if (hexkey) {
+		jwt_builder.set_id(hexkey.get());
+	}
 
 	try {
 		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 		token = jwt_token;
 	} catch (...) {
 		return false;
+	}
+	if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+		auto decoded_jwt = jwt::decode(token);
+		dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
 	}
 	return true;
 }

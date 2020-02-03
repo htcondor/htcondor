@@ -420,6 +420,9 @@ Requires(post): selinux-policy-targeted
 
 Obsoletes: condor-static < 7.2.0
 
+# Standard Universe discontinued as of 8.9.0
+Obsoletes: condor-std-universe
+
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
 %endif

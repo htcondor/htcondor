@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
 #include "compat_classad.h"
 
 #include "condor_auth_passwd.h"
@@ -104,9 +105,11 @@ list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, st
 }
 
 int main(int argc, char *argv[]) {
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
 
 	bool list_json = false;
-
 	daemon_t dtype = DT_COLLECTOR;
 	std::string pool;
 	std::string name;
@@ -138,6 +141,13 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
+		} else if (is_dash_arg_prefix(argv[i], "reqid", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -reqid requires a request ID argument.\n", argv[0]);
+				exit(1);
+			}
+			reqid = argv[i];
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);

@@ -367,7 +367,7 @@ UniShadow::getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss )
 }
 
 
-int
+int64_t
 UniShadow::getDiskUsage( void )
 {
 	return remRes->getDiskUsage();
