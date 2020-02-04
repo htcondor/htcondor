@@ -1661,13 +1661,13 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	try {
 		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 		token = jwt_token;
+		if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+			auto decoded_jwt = jwt::decode(token);
+			dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
+		}
 	} catch (...) {
 		return false;
-	}
-	if (ident && IsDebugCategory( D_AUDIT )) {
-			// Annoyingly, there's no way to get the payload from the jwt_builder object.
-		auto decoded_jwt = jwt::decode(token);
-		dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
 	}
 	return true;
 }
