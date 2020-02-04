@@ -94,6 +94,27 @@ container$ condor_status
 You should see the container in the output of `condor_status`.
 
 
+### Adding additional software to the image
+
+To add additional software to the execute node, create your own Dockerfile
+that uses the execute node image as a base, and installs the additional
+software.  For example, to install numpy, put this in a Dockerfile:
+```dockerfile
+FROM htcondor/execute:8.9.5-el7
+RUN \
+    yum install -y numpy && \
+    yum clean all && \
+    rm -rf /var/cache/yum/*
+```
+
+and build with:
+```console
+$ docker build -t custom-htcondor-worker .
+```
+
+Afterwards, use `custom-htcondor-worker` instead of `htcondor/execute:el7`
+in your `docker run` command.
+
 
 Building
 --------
