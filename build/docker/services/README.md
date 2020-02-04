@@ -39,10 +39,10 @@ In addition, you can add more HTCondor configuration by putting it in
 ### Example
 
 This example is for creating an execute node and adding it to a pool using
-token auth.  The execute node will have 2 CPUs and 4 GB of RAM, and will
-use the identity `dockerworker@example.net`.  The central manager has
-the hostname `cm.example.net`.  The container is run by the user `user`
-on the host `dockerhost.example.net`.
+token auth.  The execute node will have one partitionable slot with 2 CPUs
+and 4 GB of RAM, and will use the identity `dockerworker@example.net`.
+The central manager has the hostname `cm.example.net`.  The container is
+run by the user `user` on the host `dockerhost.example.net`.
 
 Create a directory for holding the token:
 ```console
@@ -75,8 +75,11 @@ dockerhost$ echo 'MEMORY=4096' >> ~/condorexec/env
 
 Start the container:
 ```console
-dockerhost$ docker run --env-file=~/condorexec/env \
+dockerhost$ docker run --detach --env-file=~/condorexec/env \
                 -v ~/condorexec/secrets:/root/secrets:ro \
+                --name=htcondor-execute \
+                --cpus=2
+                --memory-reservation=$(( 4096 * 1048576 )) \
                 htcondor/execute:el7
 ```
 
@@ -143,3 +146,6 @@ Known Issues
 - cgroups support is not yet implemented.
 
 - Docker universe support is not yet implemented.
+
+- Singularity support is not yet implemented.
+
