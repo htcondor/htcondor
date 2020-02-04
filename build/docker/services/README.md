@@ -6,9 +6,11 @@ Using the Execute Node Container
 
 ### Overview
 
-The execute node container can connect to an existing HTCondor pool
-via token authentication (recommended) or pool
-password.  The container uses CCB so exposing ports is not necessary.
+The execute node container can connect to an existing HTCondor pool via
+token authentication (recommended) or pool password.  Because of CCB,
+this container needs no inbound connectivity, and only needs outbound
+connectivity to the central manager and the submit host, even for running
+jobs or using `condor_ssh_to_job`.
 
 You must specify the address of the pool's central manager in the
 `CONDOR_HOST` environment variable.
@@ -96,12 +98,14 @@ You should see the container in the output of `condor_status`.
 Building
 --------
 
-The images are built using a Makefile.  The Makefile needs to know what
-version of HTCondor the images are built for, in order to tag them properly.
-The images for the various roles (`execute`, `cm`, `mini`, `submit`)
-are built on top of the `htcondor/base` image, which gets built first.
-`htcondor/base` contains the HTCondor software, some common configuration
-and scripts.
+The images are built using a Makefile.  You need to be `root` or be in the
+`docker` Unix group in order to use the Makefile.
+
+The Makefile needs to know what version of HTCondor the images are built for,
+in order to tag them properly.  The images for the various roles (`execute`,
+`cm`, `mini`, `submit`) are built on top of the `htcondor/base` image,
+which gets built first.  `htcondor/base` contains the HTCondor software,
+some common configuration and scripts.
 
 To build all the images, run:
 ```console
