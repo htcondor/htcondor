@@ -3463,7 +3463,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	for( int i = 11; i < argc; ++i ) {
 		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
 
-		int lcIndex = i - 11;
+		int lcIndex = i - 10;
 
 		// argv[i] is a JSON blob, because otherwise things got complicated.
 		// Luckily, we don't have handle generic JSON, just the single-level
@@ -3514,7 +3514,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				ss << lcIndex << ".";
 
 				// Once again, the AWS documentation has this wrong.
-				ss << "tagSpecificationSet.1.";
+				ss << "TagSpecificationSet.1.";
 				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
 				ss << "Tag." << i << ".";
 
@@ -3530,12 +3530,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
 			sl.rewind();
 			char * groupName = NULL;
-			for( unsigned i = 0; (groupName = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupName = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupName";
+				ss << "GroupSet." << i << ".GroupName";
 				request.query_parameters[ ss.str() ] = groupName;
 			}
 		}
@@ -3544,12 +3544,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupIDs" ].c_str() );
 			sl.rewind();
 			char * groupID = NULL;
-			for( unsigned i = 0; (groupID = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupID = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupId";
+				ss << "GroupSet." << i << ".GroupId";
 				request.query_parameters[ ss.str() ] = groupID;
 			}
 		}
@@ -3558,7 +3558,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "BlockDeviceMapping" ].c_str() );
 			sl.rewind();
 			char * mapping = NULL;
-			for( unsigned i = 0; (mapping = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (mapping = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
