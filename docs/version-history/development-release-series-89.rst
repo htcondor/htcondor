@@ -25,6 +25,11 @@ New Features:
   :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
   :ticket:`7368`
 
+- The new configuration parameter ``NEGOTIATOR_SUBMITTER_CONSTRAINT`` defines
+   an expression which constrains which submitter ads are considered for
+   matchmaking by the *condor_negotiator*.
+   :ticket:`7490`
+
 Bugs Fixed:
 
 - To work around an issue where long-running *gce_gahp* process enter a state

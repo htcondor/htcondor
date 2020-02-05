@@ -6780,6 +6780,13 @@ These macros affect the *condor_negotiator*.
     from the *condor_collector* by the *condor_negotiator* during a
     negotiation cycle.
 
+:macro-def:`NEGOTIATOR_SUBMITTER_CONSTRAINT`
+    An expression which constrains which submitter ClassAds are fetched
+    from the *condor_collector* by the *condor_negotiator* during a
+    negotiation cycle.
+    The *condor_negotiator* will ignore the jobs of submitters whose
+    submitter ads don't match this constraint.
+
 :macro-def:`NEGOTIATOR_JOB_CONSTRAINT`
     An expression which constrains which job ClassAds are considered for
     matchmaking by the *condor_negotiator*. This parameter is read by
