@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Copy extra configs from `/root/config` if any.
+if [[ -d /root/config ]]; then
+    cp /root/config/*.conf /etc/condor/config.d/
+fi
+
+ps axu | grep condor_master | grep -v grep && condor_reconfig
+
+# vim:et:sw=4:sts=4:ts=8
