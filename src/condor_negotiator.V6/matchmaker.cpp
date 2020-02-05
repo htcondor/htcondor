@@ -816,6 +816,20 @@ reinitialize ()
         free (tmp);
 	}
 
+	m_SubmitterConstraintStr.clear();
+	param(m_SubmitterConstraintStr, "NEGOTIATOR_SUBMITTER_CONSTRAINT");
+	if (!m_SubmitterConstraintStr.empty()) {
+		dprintf (D_FULLDEBUG, "%s = %s\n", "NEGOTIATOR_SUBMITTER_CONSTRAINT",
+		         m_SubmitterConstraintStr.c_str());
+		// do a test parse of the constraint before we try and use it.
+		ExprTree *SlotConstraint = NULL;
+		if (ParseClassAdRvalExpr(m_SubmitterConstraintStr.c_str(), SlotConstraint)) {
+			EXCEPT("Error parsing NEGOTIATOR_SUBMITTER_CONSTRAINT expresion: %s",
+			       m_SubmitterConstraintStr.c_str());
+		}
+		delete SlotConstraint;
+	}
+
 	m_JobConstraintStr.clear();
 	param(m_JobConstraintStr, "NEGOTIATOR_JOB_CONSTRAINT");
 
@@ -3543,11 +3557,17 @@ obtainAdsFromCollector (
     // build a query for Scheduler, Submitter and (constrained) machine ads
     //
 	CondorQuery publicQuery(ANY_AD);
-    publicQuery.addORConstraint("(MyType == \"Scheduler\") || (MyType == \"Submitter\")");
+	std::string constraint;
+	if (!m_SubmitterConstraintStr.empty()) {
+		formatstr(constraint, "((MyType == \"Submitter\") && (%s))",
+		          m_SubmitterConstraintStr.c_str());
+		publicQuery.addORConstraint(constraint.c_str());
+	} else {
+		publicQuery.addORConstraint("(MyType == \"Submitter\")");
+	}
     if (strSlotConstraint && strSlotConstraint[0]) {
-        MyString machine;
-        machine.formatstr("((MyType == \"Machine\") && (%s))", strSlotConstraint);
-        publicQuery.addORConstraint(machine.Value());
+        formatstr(constraint, "((MyType == \"Machine\") && (%s))", strSlotConstraint);
+        publicQuery.addORConstraint(constraint.c_str());
     } else {
         publicQuery.addORConstraint("(MyType == \"Machine\")");
     }

@@ -385,6 +385,7 @@ class Matchmaker : public Service
                                          // constraint before calculating quotas
                                          // formerly DynQuotaMachConstraint Added for CDF.
 
+		std::string m_SubmitterConstraintStr;
 		std::string m_JobConstraintStr;
 
 		bool m_staticRanks;
