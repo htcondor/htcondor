@@ -1298,8 +1298,8 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
 			domain, domain);
-		setRemoteDomain(domain);
 	}
+	setRemoteDomain(domain);
 	return TRUE;
 
 }
