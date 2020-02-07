@@ -1030,17 +1030,21 @@ the HTCondor UID domain.
 
 The configuration variable ``KERBEROS_SERVER_PRINCIPAL``
 :index:`KERBEROS_SERVER_PRINCIPAL` defines the name of a Kerberos
-principal. If ``KERBEROS_SERVER_PRINCIPAL`` is not defined, then the
-default value used is host. A principal specifies a unique name to which
-a set of credentials may be assigned.
+principal, to override the default ``host/<hostname>@<realm>.
+A principal specifies a unique name to which a set of
+credentials may be assigned.
 
-HTCondor takes the specified (or default) principal and appends a slash
-character, the host name, an '@' (at sign character), and the Kerberos
-realm. As an example, the configuration
+The configuration variable ``KERBEROS_SERVER_SERVICE``
+:index:`KERBEROS_SERVER_SERVICE` defines a Kerberos service to override
+the default ``host``. HTCondor prefixes this to ``/<hostname>@<realm>``
+to obtain the default Kerberos principal.  Configuration variable
+``KERBEROS_SERVER_PRINCIPAL`` overrides ``KERBEROS_SERVER_SERVICE``.
+
+As an example, the configuration
 
 ::
 
-    KERBEROS_SERVER_PRINCIPAL = condor-daemon
+    KERBEROS_SERVER_SERVICE = condor-daemon
 
 results in HTCondor's use of
 

@@ -9312,7 +9312,8 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 ``KERBEROS_SERVER_PRINCIPAL`` :index:`KERBEROS_SERVER_PRINCIPAL`
     An exact Kerberos principal to use. The default value is
-    host/<hostname>@<realm>, as set by the installed Kerberos. Where
+    ``$(KERBEROS_SERVER_SERVICE)/<hostname>@<realm>``, where
+    ``KERBEROS_SERVER_SERVICE`` defaults to ``host``. When
     both ``KERBEROS_SERVER_PRINCIPAL`` and ``KERBEROS_SERVER_SERVICE``
     are defined, this value takes precedence.
 
@@ -9322,12 +9323,10 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 ``KERBEROS_SERVER_SERVICE`` :index:`KERBEROS_SERVER_SERVICE`
     A string representing the Kerberos service name. This string is
-    prepended with a slash character (/) and the host name in order to
-    form the Kerberos server principal. This value defaults to host,
-    resulting in the same default value as specified by using
-    ``KERBEROS_SERVER_PRINCIPAL``. Where both
-    ``KERBEROS_SERVER_PRINCIPAL`` and ``KERBEROS_SERVER_SERVICE`` are
-    defined, the value of ``KERBEROS_SERVER_PRINCIPAL`` takes
+    suffixed with a slash character (/) and the host name in order to
+    form the Kerberos server principal. This value defaults to ``host``.
+    When both ``KERBEROS_SERVER_PRINCIPAL`` and ``KERBEROS_SERVER_SERVICE``
+    are defined, the value of ``KERBEROS_SERVER_PRINCIPAL`` takes
     precedence.
 
 ``KERBEROS_CLIENT_KEYTAB`` :index:`KERBEROS_CLIENT_KEYTAB`
