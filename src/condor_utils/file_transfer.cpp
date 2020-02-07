@@ -2510,6 +2510,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								retrieved_files.clear();
 								reuse_info.clear();
 							}
+							for (const auto &info : reuse_info) {
+								dprintf(D_FULLDEBUG, "File we will reuse: %s\n", info.filename().c_str());
+							}
 						}
 						ad.Insert("ReuseList", retrieved_list.release());
 						rc = 0;

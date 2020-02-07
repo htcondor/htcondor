@@ -245,6 +245,8 @@ DataReuseDirectory::ClearSpace(uint64_t size, LogSentry &sentry, CondorError &er
 			err.pushf("DataReuse", 4, "Failed to unlink cache entry: %s", strerror(errno));
 			return false;
 		}
+		dprintf(D_FULLDEBUG, "Decreasing reserved space by %llu",
+			static_cast<unsigned long long>(file_entry.size()));
 		m_reserved_space -= file_entry.size();
 
 		FileRemovedEvent event;
@@ -341,6 +343,10 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					resEvent.getReservedSpace()))
 			);
 			m_space_reservations.insert(std::move(value));
+			dprintf(D_FULLDEBUG, "Incrementing reserved space by %llu to %llu for UUID %s.\n",
+				static_cast<unsigned long long>(resEvent.getReservedSpace()),
+				static_cast<unsigned long long>(m_reserved_space + resEvent.getReservedSpace()),
+				resEvent.getUUID().c_str());
 			m_reserved_space += resEvent.getReservedSpace();
 		} else if (iter->second->getTag() != resEvent.getTag()) {
 			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
@@ -364,6 +370,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				" reservation is unknown!", relEvent.getUUID().c_str());
 			return false;
 		}
+		dprintf(D_FULLDEBUG, "Decrementing reserved space by %llu to %llu for UUID %s.\n", static_cast<unsigned long long>(iter->second->getReservedSpace()),
+			static_cast<unsigned long long>(m_reserved_space - iter->second->getReservedSpace()), relEvent.getUUID().c_str());
 		m_reserved_space -= iter->second->getReservedSpace();
 		m_space_reservations.erase(iter);
 		return true;
@@ -405,6 +413,10 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 			return false;
 		}
 		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());
+		dprintf(D_FULLDEBUG, "For file completion, decrementing reserved space by %llu to %llu for UUID %s.\n",
+			static_cast<unsigned long long>(comEvent.getSize()),
+                        static_cast<unsigned long long>(m_reserved_space - comEvent.getSize()),
+			comEvent.getUUID().c_str());
 		m_reserved_space -= comEvent.getSize();
 
 		bool already_has_file = false;
@@ -441,6 +453,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					entry->tag() == usedEvent.getTag();
 			});
 		if (iter != m_contents.end()) {
+			dprintf(D_FULLDEBUG, "Updated last use for file with checksum %s(%s) to %lu\n", usedEvent.getChecksum().c_str(), usedEvent.getChecksumType().c_str(), usedEvent.GetEventclock());
 			(*iter)->update_last_use(event.GetEventclock());
 			return true;
 		}
@@ -836,18 +849,56 @@ DataReuseDirectory::PrintInfo(bool print_to_log)
 		}
 	}
 	std::stringstream ss;
-	ss << "Data Reuse Directory status information:"
+	ss << "Data Reuse Directory status information:\n"
 		"\t- Filesystem path: " << m_dirpath << "\n"
 		"\t- Directory state is considered " << (m_valid ? "valid" : "INVALID") << "\n"
 		"\t- State file location: " << m_state_name << "\n"
 		"\t- Space allocated to the directory: " <<
-			metric_units(static_cast<double>(m_allocated_space)) << "\n"
-		"\t- Space in transfer reservations: " <<
-			metric_units(static_cast<double>(m_reserved_space)) << "\n"
-		"\t- Space use by committed files: " <<
-			metric_units(static_cast<double>(m_stored_space)) << "\n";
+			metric_units(static_cast<double>(m_allocated_space)) << "\n";
+	ss << "\t- Space in transfer reservations: " <<
+			metric_units(static_cast<double>(m_reserved_space)) << "\n";
+	ss << "\t- Space use by committed files: " <<
+			metric_units(static_cast<double>(m_stored_space));
 	if (print_to_log)
 		dprintf(D_ALWAYS, "%s\n", ss.str().c_str());
+	else
+		printf("%s\n", ss.str().c_str());
+
+	ss.str("");
+	ss.clear();
+
+	if (print_to_log && !IsDebugLevel(D_FULLDEBUG)) {
+		return;
+	}
+
+	ss << "Active space reservations:\n";
+	auto now = std::chrono::system_clock::now();
+	for (const auto &entry : m_space_reservations) {
+		ss << "\t- UUID " << entry.first << " for " <<
+			entry.second->getTag() << ": " <<
+			metric_units(static_cast<double>(entry.second->getReservedSpace())) <<
+			", " << std::chrono::duration_cast<std::chrono::seconds>(entry.second->getExpirationTime() - now).count() <<
+			" seconds remain.\n";
+	}
+	if (!m_space_reservations.size()) {
+		ss << "\t(None!)\n";
+	}
+
+	ss << "\nStored files:\n";
+	auto now_t = time(NULL);
+	for (const auto &entry : m_contents) {
+		ss << "\t- File with\n\t\t- Checksum " << entry->checksum() << "(" <<
+			entry->checksum_type() << ")\n\t\t- Owner: " <<
+			entry->tag() << "\n\t\t- Last use: " <<
+			(now_t - entry->last_use()) << " seconds ago (now: " << now_t << ")" << "\n\t\t- File size: " <<
+			metric_units(static_cast<double>(entry->size())) << "\n";
+	}
+	if (!m_contents.size()) {
+		ss << "\t(None!)\n";
+	}
+
+	if (print_to_log)
+		dprintf(D_FULLDEBUG, "%s\n", ss.str().c_str());
 	else
 		printf("%s\n", ss.str().c_str());
 }
