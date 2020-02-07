@@ -103,12 +103,12 @@ push-all: $(pushalltargets)
 $(pushalltargets):
 	@: $(if $(value REGISTRY),,$(error REGISTRY not set))
 	$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg),$(VERSION)-el$(getel)),$(call dockerpush,$(getimg),$(VERSION)-el$(getel)))
-	$(if $(findstring yes,$(UNVERSIONED)),$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg,$(getimg),el$(getel)),$(call dockerpush,$(getimg),el$(getel)))),)
+	$(if $(findstring yes,$(UNVERSIONED)),$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg),el$(getel)),$(call dockerpush,$(getimg),el$(getel))),)
 
 .PHONY: clean
 clean:
 	-docker rmi htcondor/{base,cm,execute,mini,submit}:$(VERSION)-el7$(SUFFIX)
-	$(if $(findstring yes,$(UNVERSIONED)),-docker rmi htcondor/{base,cm,execute,mini,submit}:el7$(SUFFIX))
+	-docker rmi htcondor/{base,cm,execute,mini,submit}:el7$(SUFFIX)
 #	-docker rmi htcondor/{base,cm,execute,mini,submit}:$(VERSION)-el8$(SUFFIX)
-#	$(if $(findstring yes,$(UNVERSIONED)),-docker rmi htcondor/{base,cm,execute,mini,submit}:el8$(SUFFIX))
+#	-docker rmi htcondor/{base,cm,execute,mini,submit}:el8$(SUFFIX)
 
