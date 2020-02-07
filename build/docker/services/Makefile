@@ -9,7 +9,9 @@ basetargets:=build-base-el7  #build-base-el8
 imgtargets-el7:=$(shell echo build-{cm,submit,execute,mini}-el7)
 #imgtargets-el8:=$(shell echo build-{cm,submit,execute,mini}-el8)
 imgtargets:=$(imgtargets-el7)  #$(imgtargets-el8)
-pushtargets:=$(shell echo push-{base,cm,submit,execute,mini}-el7)  #$(shell echo push-{base,cm,submit,execute,mini}-el8)
+pushtargets:=$(shell echo push-{execute,mini}-el7)  #$(shell echo push-{execute-mini}-el8)
+pushalltargets:=$(shell echo push-{base,cm,submit,execute,mini}-el7)  #$(shell echo push-{base,cm,submit,execute,mini}-el8)
+
 
 echo:=@echo
 echotbl:=@printf "%-30s %s\n"
@@ -41,7 +43,8 @@ help:
 	$(echo)
 	$(echotbl) "build" "Build all distro/image combinations"
 	$(echotbl) "build-IMAGE-DISTRO" "Build one distro/image combination"
-	$(echotbl) "push" "Push all distro/image combinations to a registry"
+	$(echotbl) "push" "Push default distro/image combinations to a registry"
+	$(echotbl) "push-all" "Push all distro/image combinations to a registry"
 	$(echotbl) "push-IMAGE-DISTRO" "Push one distro/image combination to a registry"
 	$(echotbl) "clean" "Delete images from local cache"
 	$(echotbl) "help" "This text"
@@ -51,8 +54,11 @@ help:
 	$(echo) "  $(imgtargets-el7)"
 #	$(echo) "  $(imgtargets-el8)"
 	$(echo)
-	$(echo) "Available push targets:"
+	$(echo) "Default push targets:"
 	$(echo) "  $(pushtargets)"
+	$(echo)
+	$(echo) "All push targets:"
+	$(echo) "  $(pushalltargets)"
 	$(echo)
 	$(echo)
 	$(echo) "Variables:"
@@ -84,11 +90,12 @@ $(imgtargets):
 $(imgtargets-el7): build-base-el7
 #$(imgtargets-el8): build-base-el8
 
-.PHONY: push
+.PHONY: push push-all
 push: $(pushtargets)
+push-all: $(pushalltargets)
 
-.PHONY: $(pushtargets)
-$(pushtargets):
+.PHONY: $(pushalltargets)
+$(pushalltargets):
 	@: $(if $(value REGISTRY),,$(error REGISTRY not set))
 	$(call dockerpush,$(getimg),$(VERSION)-el$(getel))
 	$(if $(findstring yes,$(UNVERSIONED)),$(call dockerpush,$(getimg),el$(getel)))
