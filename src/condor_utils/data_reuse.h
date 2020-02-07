@@ -87,9 +87,9 @@ private:
 	public:
 		FileEntry(DataReuseDirectory &parent, const std::string &checksum,
 			const std::string &checksum_type, const std::string &tag,
-			uint64_t size)
+			uint64_t size, time_t last_use)
 		: m_size(size),
-		m_last_use(time(NULL)),
+		m_last_use(last_use),
 		m_checksum(checksum),
 		m_checksum_type(checksum_type),
 		m_tag(tag),
