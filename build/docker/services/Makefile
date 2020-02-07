@@ -35,6 +35,11 @@ docker push $(REGISTRY)/htcondor/$(1):$(2)$(SUFFIX)
 endef
 
 
+define dockerpushhub =
+docker push htcondor/$(1):$(2)$(SUFFIX)
+endef
+
+
 .PHONY: help
 help:
 	$(echo) "Build and push Docker images for HTCondor"
@@ -97,8 +102,8 @@ push-all: $(pushalltargets)
 .PHONY: $(pushalltargets)
 $(pushalltargets):
 	@: $(if $(value REGISTRY),,$(error REGISTRY not set))
-	$(call dockerpush,$(getimg),$(VERSION)-el$(getel))
-	$(if $(findstring yes,$(UNVERSIONED)),$(call dockerpush,$(getimg),el$(getel)))
+	$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg),$(VERSION)-el$(getel)),$(call dockerpush,$(getimg),$(VERSION)-el$(getel)))
+	$(if $(findstring yes,$(UNVERSIONED)),$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg,$(getimg),el$(getel)),$(call dockerpush,$(getimg),el$(getel)))),)
 
 .PHONY: clean
 clean:
