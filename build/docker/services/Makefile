@@ -102,7 +102,7 @@ help:
 	$(echotbl) "SUFFIX" "Text to append to tag"
 	$(echotbl) "VERSION" "HTCondor version [$(VERSION)]"
 	$(echotbl) "UNVERSIONED" "Set to 'yes' to make or push unversioned tags of the images"
-	$(echotbl) "" "(e.g. htcondor/mini:el7 -> htcondor/mini:$(VERSION)-el7) [$(UNVERSIONED)]"
+	$(echotbl) "" "(e.g. htcondor/mini:el7 -> htcondor/mini:VERSION-el7) [$(UNVERSIONED)]"
 
 
 .PHONY: build
