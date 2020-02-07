@@ -1,4 +1,4 @@
-REGISTRY:=
+REGISTRY:=hub.docker.com
 DATE:=$(shell date +%Y%m%d)
 VERSION:=8.9.5
 SUFFIX:=
