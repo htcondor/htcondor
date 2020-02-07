@@ -836,7 +836,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     size_t numBytes = nitems * size;
 
     // In some unique cases, ftstats get passed in as null. If this happens, abort.
-    if( !ftstats ) return numBytes;
+    if( !ft_stats ) return numBytes;
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
