@@ -1,6 +1,6 @@
 REGISTRY:=hub.docker.com
 DATE:=$(shell date +%Y%m%d)
-VERSION:=8.9.5
+VERSION:=
 SUFFIX:=
 NOCACHE:=no
 UNVERSIONED:=no
@@ -16,27 +16,52 @@ pushalltargets:=$(shell echo push-{base,cm,submit,execute,mini}-el7)  #$(shell e
 echo:=@echo
 echotbl:=@printf "%-30s %s\n"
 
-define dockerbuild =
+
+define docker_build =
 docker build \
   --build-arg VERSION=$(VERSION) \
   --build-arg EL=$(2) \
   --build-arg BUILDDATE=$(DATE) \
   $(if $(findstring yes,$(NOCACHE)),--no-cache,) \
   -t htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) \
+  $(if $(findstring yes,$(UNVERSIONED)),-t htcondor/$(1):el$(2)$(SUFFIX),) \
   . -f $(1)/Dockerfile
-$(if $(findstring yes,$(UNVERSIONED)),docker tag htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) htcondor/$(1):el$(2)$(SUFFIX),)
 endef
 
 
-define dockerpush =
-docker tag htcondor/$(1):$(2)$(SUFFIX) $(REGISTRY)/htcondor/$(1):$(2)$(SUFFIX)
-docker push $(REGISTRY)/htcondor/$(1):$(2)$(SUFFIX)
--docker rmi $(REGISTRY)/htcondor/$(1):$(2)$(SUFFIX)
+define docker_push_versioned =
+$(if $(findstring hub.docker.com,$(REGISTRY)),$(call docker_push_hub_versioned,$(1),$(2)),$(call docker_push_custom_versioned,$(1),$(2)))
 endef
 
 
-define dockerpushhub =
-docker push htcondor/$(1):$(2)$(SUFFIX)
+define docker_push_unversioned =
+$(if $(findstring hub.docker.com,$(REGISTRY)),$(call docker_push_hub_unversioned,$(1),$(2)),$(call docker_push_custom_unversioned,$(1),$(2)))
+endef
+
+
+define docker_push_hub_versioned =
+docker push htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX)
+endef
+
+
+define docker_push_custom_versioned =
+docker tag              htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) \
+	    $(REGISTRY)/htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX)
+docker push $(REGISTRY)/htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX)
+-docker rmi $(REGISTRY)/htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX)
+endef
+
+
+define docker_push_hub_unversioned =
+docker push htcondor/$(1):el$(2)$(SUFFIX)
+endef
+
+
+define docker_push_custom_unversioned =
+docker tag              htcondor/$(1):el$(2)$(SUFFIX) \
+	    $(REGISTRY)/htcondor/$(1):el$(2)$(SUFFIX)
+docker push $(REGISTRY)/htcondor/$(1):el$(2)$(SUFFIX)
+-docker rmi $(REGISTRY)/htcondor/$(1):el$(2)$(SUFFIX)
 endef
 
 
@@ -72,7 +97,7 @@ help:
 	$(echotbl) "NOCACHE" "Set to 'yes' to disable use of Docker cache for building [$(NOCACHE)]"
 	$(echotbl) "SUFFIX" "Text to append to tag"
 	$(echotbl) "VERSION" "HTCondor version [$(VERSION)]"
-	$(echotbl) "UNVERSIONED" "Set to 'yes' to make unversioned tags of the images"
+	$(echotbl) "UNVERSIONED" "Set to 'yes' to make or push unversioned tags of the images"
 	$(echotbl) "" "(e.g. htcondor/mini:el7 -> htcondor/mini:$(VERSION)-el7) [$(UNVERSIONED)]"
 
 
@@ -86,14 +111,17 @@ getel=$(subst el,,$(word 3,$(subst -, ,$@)))
 
 .PHONY: $(basetargets)
 $(basetargets):
-	$(call dockerbuild,$(getimg),$(getel))
+	@: $(if $(value VERSION),,$(error VERSION not set))
+	$(call docker_build,$(getimg),$(getel))
 
 .PHONY: $(imgtargets)
 $(imgtargets):
-	$(call dockerbuild,$(getimg),$(getel))
+	@: $(if $(value VERSION),,$(error VERSION not set))
+	$(call docker_build,$(getimg),$(getel))
 
 $(imgtargets-el7): build-base-el7
 #$(imgtargets-el8): build-base-el8
+
 
 .PHONY: push push-all
 push: $(pushtargets)
@@ -101,14 +129,29 @@ push-all: $(pushalltargets)
 
 .PHONY: $(pushalltargets)
 $(pushalltargets):
-	@: $(if $(value REGISTRY),,$(error REGISTRY not set))
-	$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg),$(VERSION)-el$(getel)),$(call dockerpush,$(getimg),$(VERSION)-el$(getel)))
-	$(if $(findstring yes,$(UNVERSIONED)),$(if $(findstring hub.docker.com,$(REGISTRY)),$(call dockerpushhub,$(getimg),el$(getel)),$(call dockerpush,$(getimg),el$(getel))),)
+	$(if $(value VERSION),\
+		$(call docker_push_versioned,$(getimg),$(getel)),)
+	$(if $(findstring yes,$(UNVERSIONED)),\
+		$(call docker_push_unversioned,$(getimg),$(getel)),)
+
+
+define clean_versioned =
+-docker rmi htcondor/{base,cm,execute,mini,submit}:$(VERSION)-el$(1)$(SUFFIX)
+endef
+
+
+define clean_unversioned =
+-docker rmi htcondor/{base,cm,execute,mini,submit}:el$(1)$(SUFFIX)
+endef
 
 .PHONY: clean
 clean:
-	-docker rmi htcondor/{base,cm,execute,mini,submit}:$(VERSION)-el7$(SUFFIX)
-	-docker rmi htcondor/{base,cm,execute,mini,submit}:el7$(SUFFIX)
-#	-docker rmi htcondor/{base,cm,execute,mini,submit}:$(VERSION)-el8$(SUFFIX)
-#	-docker rmi htcondor/{base,cm,execute,mini,submit}:el8$(SUFFIX)
+	$(if $(value VERSION),\
+		$(call clean_versioned,7),)
+	$(if $(findstring yes,$(UNVERSIONED)),\
+		$(call clean_unversioned,7),)
+#	$(if $(value VERSION),\
+#		$(call clean_versioned,8),)
+#	$(if $(findstring yes,$(UNVERSIONED)),\
+#		$(call clean_unversioned,8),)
 
