@@ -186,8 +186,8 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 // Given a token request from a trusted collector, generate an identity token.
 #define COLLECTOR_TOKEN_REQUEST (SCHED_VERS+123)
 
-#define DOWNLOAD_SANDBOX_WITH_PERMS (SCHED_VERS+122) // Download the Sandbox from a schedd
-#define UPLOAD_OUTPUT_SANDBOX_WITH_PERMS (SCHED_VERS+123) // Upload the output Sandbox to a schedd
+#define DOWNLOAD_SANDBOX_WITH_PERMS (SCHED_VERS+124) // Download the Sandbox from a schedd
+#define UPLOAD_OUTPUT_SANDBOX_WITH_PERMS (SCHED_VERS+125) // Upload the output Sandbox to a schedd
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
