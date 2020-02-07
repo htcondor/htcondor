@@ -188,7 +188,9 @@ list item on its own line, and delimits the list with parentheses. The
 opening parenthesis goes on the same line as the **queue** command. The
 closing parenthesis goes on its own line. The **queue** command
 specified with the key word **from** will always use the second form of
-this syntax. Example 3 below uses this second form of syntax.
+this syntax. Example 3 below uses this second form of syntax. Finally,
+the key word **from** accepts a shell command in place of file name, 
+followed by a pipe ``|`` (example 4).
 
 The optional ``slice`` specifies a subset of the list of items using the
 Python syntax for a slice. Negative step values are not permitted.
@@ -271,6 +273,22 @@ specified is given a value from the list of items. For this example the
       arguments = -c -d 92
       queue
 
+**Example 4**
+
+::
+
+      queue from seq 7 9 |
+      
+feeds the list of items to queue with the output of ``seq 7 9``:
+
+::
+
+      item = 7
+      queue
+      item = 8
+      queue
+      item = 9
+      queue
 
 Variables in the Submit Description File
 ----------------------------------------
