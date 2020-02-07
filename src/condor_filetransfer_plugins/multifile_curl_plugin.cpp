@@ -835,6 +835,9 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
+    // In some unique cases, ftstats get passed in as null. If this happens, abort.
+    if( !ftstats ) return numBytes;
+
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
     char* token = strtok( buffer, delimiters );
