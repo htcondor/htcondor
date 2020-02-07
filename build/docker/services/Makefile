@@ -30,12 +30,16 @@ endef
 
 
 define docker_push_versioned =
-$(if $(findstring hub.docker.com,$(REGISTRY)),$(call docker_push_hub_versioned,$(1),$(2)),$(call docker_push_custom_versioned,$(1),$(2)))
+$(if $(findstring hub.docker.com,$(REGISTRY)),\
+	$(call docker_push_hub_versioned,$(1),$(2)),\
+	$(call docker_push_custom_versioned,$(1),$(2)))
 endef
 
 
 define docker_push_unversioned =
-$(if $(findstring hub.docker.com,$(REGISTRY)),$(call docker_push_hub_unversioned,$(1),$(2)),$(call docker_push_custom_unversioned,$(1),$(2)))
+$(if $(findstring hub.docker.com,$(REGISTRY)),\
+	$(call docker_push_hub_unversioned,$(1),$(2)),\
+	$(call docker_push_custom_unversioned,$(1),$(2)))
 endef
 
 
