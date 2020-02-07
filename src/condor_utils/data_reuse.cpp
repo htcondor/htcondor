@@ -75,6 +75,7 @@ DataReuseDirectory::DataReuseDirectory(const std::string &dirpath, bool owner) :
 
 	dprintf(D_FULLDEBUG, "Allocating %llu bytes for the data reuse directory\n",
 		static_cast<unsigned long long>(m_allocated_space));
+	m_valid = true;
 
 	CondorError err;
 	LogSentry sentry = LockLog(err);
@@ -404,13 +405,30 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 			return false;
 		}
 		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());
+		m_reserved_space -= comEvent.getSize();
 
-		std::unique_ptr<FileEntry> entry(new FileEntry(*this,
-			comEvent.getChecksum(),
-			comEvent.getChecksumType(),
-			iter->second->getTag(),
-			comEvent.getSize()));
-		m_contents.emplace_back(std::move(entry));
+		bool already_has_file = false;
+		for (const auto &entry : m_contents) {
+			if ((entry->checksum() == comEvent.getChecksum()) &&
+				(entry->checksum_type() == comEvent.getChecksumType()) &&
+				(entry->tag() == iter->second->getTag()))
+			{
+				already_has_file = true;
+				break;
+			}
+		}
+		if (!already_has_file) {
+			std::unique_ptr<FileEntry> entry(new FileEntry(*this,
+				comEvent.getChecksum(),
+				comEvent.getChecksumType(),
+				iter->second->getTag(),
+				comEvent.getSize(),
+				comEvent.GetEventclock()));
+			m_contents.emplace_back(std::move(entry));
+			dprintf(D_FULLDEBUG, "Incrementing stored space by %lu to %lu\n",
+				comEvent.getSize(), m_stored_space + comEvent.getSize());
+			m_stored_space += comEvent.getSize();
+		}
 	}
 		break;
 	case ULOG_FILE_USED: {
@@ -450,7 +468,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 			return false;
 		}
 		m_contents.erase(iter);
-		m_stored_space += remEvent.getSize();
+		m_stored_space -= remEvent.getSize();
 	}
 		break;
 	default:
@@ -527,7 +545,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 		return false;
 	}
 
-	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size));
+	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size, time(NULL)));
 	std::string dest_fname = new_entry->fname();
         auto dest_fname_template = dest_fname + ".XXXXXX";
         std::vector<char> dest_tmp_fname;
