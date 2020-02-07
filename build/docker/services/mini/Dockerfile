@@ -23,4 +23,14 @@ RUN \
 
 RUN useradd submituser
 
+# Remove files from base condor that are unused
+RUN rm -f \
+    /start.sh \
+    /update-config \
+    /update-secrets \
+    /etc/condor/config.d/01-security.conf
+
+# Call supervisord directly (we got rid of start.sh)
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+
 LABEL org.label-schema.build-date="${BUILDDATE}"
