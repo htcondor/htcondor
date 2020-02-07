@@ -322,6 +322,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					resEvent.getReservedSpace()))
 			);
 			m_space_reservations.insert(std::move(value));
+			m_reserved_space += resEvent.getReservedSpace();
 		} else if (iter->second->getTag() != resEvent.getTag()) {
 			dprintf(D_FAILURE, "Duplicate space reservation with incorrect tag (%s)\n",
 				resEvent.getTag().c_str());

@@ -6495,22 +6495,25 @@ bool
 rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 {
 		// These three lists must be kept in sync!
-	static const int ATTR_ARRAY_SIZE = 5;
+	static const int ATTR_ARRAY_SIZE = 6;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = {
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_ULOG_FILE,
-		ATTR_X509_USER_PROXY };
+		ATTR_X509_USER_PROXY,
+		"DataReuseManifestSHA256" };
 	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
 		false,
 		false,
 		true,
 		false,
+		false,
 		false };
 	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT,
+		NULL,
 		NULL,
 		NULL,
 		NULL };
