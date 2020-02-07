@@ -27,9 +27,7 @@
 #include "master.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "condor_collector.h"
 #include "condor_attributes.h"
-#include "condor_network.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "directory.h"
@@ -72,19 +70,19 @@ void	init_params();
 void	init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
-void	check_uid_for_privsep();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
-void	run_preen();
+void	run_preen();	 // timer handler
+int		run_preen_now(); // actually start preen if it is not already running.
 void	usage(const char* );
 void	main_shutdown_graceful();
 void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore state
 void	main_shutdown_fast();
 void	invalidate_ads();
 void	main_config();
-int	agent_starter(ReliSock *);
+int	agent_starter(ReliSock *, Stream *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
 int	ready_command_handler(Service *, int, Stream *);
@@ -125,18 +123,31 @@ int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
+static int dummyGlobal;
 
-const char	*default_daemon_list[] = {
-	"MASTER",
-	"STARTD",
-	"SCHEDD",
-	0};
+// daemons in this list are used when DAEMON_LIST is not configured
+// all will added to the list of daemons that condor_on can use
+// auto_start daemons will be started automatically when the master starts up
+// this list must contain only DC daemons
+static const struct {
+	const char * name;
+	bool auto_start;           // start automatically on startup
+	bool only_if_shared_port;  // start automatically only if shared port is enabled
+} default_daemon_list[] = {
+	{ "MASTER",       true , false},
+	{ "SHARED_PORT",  true,  true},
+	{ "COLLECTOR",    false, false},
+	{ "NEGOTIATOR",   false, false},
+	{ "STARTD",       false, false},
+	{ "SCHEDD",       false, false},
+	{ NULL, false, false}, // mark of list record
+};
 
 // NOTE: When adding something here, also add it to the various condor_config
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
 "REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG, GANGLIAD, ANNEXD";
 
@@ -156,6 +167,7 @@ public:
 		if ( watchdog_secs > 0 ) {
 			watchdog_secs = watchdog_secs / 1e6 / 3;
 			if (watchdog_secs <= 0) { watchdog_secs = 1; }
+			if (watchdog_secs > 20) { watchdog_secs = 10; }
 			Timeslice ts;
 			ts.setDefaultInterval(watchdog_secs);
 			m_watchdog_timer = daemonCore->Register_Timer(ts,
@@ -235,7 +247,7 @@ cleanup_memory( void )
 		ad = NULL;
 	}
 	if ( MasterName ) {
-		delete [] MasterName;
+		free( MasterName );
 		MasterName = NULL;
 	}
 	if ( FS_Preen ) {
@@ -638,8 +650,6 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
-		// Make sure if PrivSep is on we're not running as root
-	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
@@ -858,7 +868,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 }
 
 int
-agent_starter( ReliSock * s )
+agent_starter( ReliSock * s, Stream * )
 {
 	ReliSock* stream = (ReliSock*)s;
 	char *subsys = NULL;
@@ -917,6 +927,7 @@ handle_agent_fetch_log (ReliSock* stream) {
 	return res;
 }
 
+
 int
 handle_subsys_command( int cmd, Stream* stream )
 {
@@ -934,6 +945,14 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
+
+	// for testing condor_on -preen is allowed, but preen is not really a daemon
+	// so we intercept it here and 
+	if (strcasecmp(subsys, "preen") == MATCH) {
+		free(subsys);
+		return run_preen_now();
+	}
+
 	subsys = strupr( subsys );
 	if( !(daemon = daemons.FindDaemon(subsys)) ) {
 		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
@@ -1056,7 +1075,7 @@ init_params()
 			} 
 		}
 	} else {
-		delete [] MasterName;
+		free( MasterName );
 		tmp = param( "MASTER_NAME" );
 		MasterName = build_valid_daemon_name( tmp );
 		free( tmp );
@@ -1243,6 +1262,12 @@ init_daemon_list()
 			// Tolerate a trailing comma in the list
 		daemon_names.remove( "" );
 
+			// if the master is not in the list, pretend it is.
+			// so we end up creating a daemon object for it, and don't just abort
+		if ( ! daemon_names.contains("MASTER")) {
+			daemon_names.append("MASTER");
+		}
+
 
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
@@ -1295,10 +1320,21 @@ init_daemon_list()
 			}
 		}
 	} else {
-		daemons.ordered_daemon_names.create_union( dc_daemon_names, false );
-		for(int i = 0; default_daemon_list[i]; i++) {
-			new class daemon(default_daemon_list[i]);
+		// some daemons should start only if shared port is enabled
+		bool shared_port = SharedPortEndpoint::UseSharedPort() && param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST", true);
+
+		// use the default daemon list to decide which daemons to start now, and which will we allow to start
+		for(int i = 0; default_daemon_list[i].name; i++) {
+			const char * name = default_daemon_list[i].name;
+			daemon_names.append(name); // add to list of allowed daemons
+			// should we start it now?
+			if (default_daemon_list[i].auto_start) {
+				if (shared_port || ! default_daemon_list[i].only_if_shared_port) {
+					new class daemon(default_daemon_list[i].name);
+				}
+			}
 		}
+		daemons.ordered_daemon_names.create_union(daemon_names, false);
 	}
 
 }
@@ -1321,7 +1357,7 @@ init_classad()
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		ad->Assign(ATTR_NAME, default_name);
-		delete [] default_name;
+		free(default_name);
 	}
 
 #if !defined(WIN32)
@@ -1513,7 +1549,7 @@ invalidate_ads() {
 	
 	MyString line;
 	std::string escaped_name;
-	char* default_name = ::strnewp(MasterName);
+	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
@@ -1524,7 +1560,7 @@ invalidate_ads() {
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
-	delete [] default_name;
+	free( default_name );
 }
 
 static const struct {
@@ -1620,8 +1656,8 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-void
-run_preen()
+int
+run_preen_now()
 {
 	char *args=NULL;
 	const char	*preen_base;
@@ -1630,11 +1666,13 @@ run_preen()
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 	if ( preen_pid > 0 ) {
-		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d)\n", preen_pid );
+		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d), ignoring command to run Preen.\n", preen_pid );
+		return FALSE;
 	}
 
 	if( FS_Preen == NULL ) {
-		return;
+		dprintf( D_ALWAYS, "WARNING: PREEN has no configured value, ignoring command to run Preen.\n" );
+		return FALSE;
 	}
 	preen_base = condor_basename( FS_Preen );
 	arglist.AppendArg(preen_base);
@@ -1652,8 +1690,11 @@ run_preen()
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
+	return TRUE;
 }
 
+// this is the preen timer callback
+void run_preen() { run_preen_now(); }
 
 void
 RestartMaster()
@@ -1756,10 +1797,13 @@ bool main_has_console()
 int
 main( int argc, char **argv )
 {
+    // as of 8.9.6 daemon core defaults to foreground
+    // for the master (and only the master) we change it to default to background
+    dc_args_default_to_background(true);
+
     // parse args to see if we have been asked to run as a service.
     // services are started without a console, so if we have one
     // we can't possibly run as a service.
-    //
 #ifdef WIN32
     bool has_console = main_has_console();
     bool is_daemon = dc_args_is_background(argc, argv);
@@ -1795,6 +1839,31 @@ main( int argc, char **argv )
     }
 #endif
 
+#ifdef LINUX
+    // Check for necessary directories if we were started by the system
+    if (getuid() == 0 && getppid() == 1) {
+        // If the condor user is in LDAP, systemd will silently fail to create
+        // these necessary directories at boot. The condor user and paths are
+        // hard coded here, because they match the systemd configuration.
+        struct stat sbuf;
+        struct passwd *pwbuf = getpwnam("condor");
+        if (pwbuf) {
+            if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/run/condor", 0775) == 0) {
+                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
+                }
+            }
+            if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor", 0775) == 0) {
+                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
+                }
+            }
+        }
+    }
+#endif
+
 	return dc_main( argc, argv );
 }
 
@@ -1806,7 +1875,7 @@ void init_firewall_exceptions() {
 		 *dagman_image_path, *negotiator_image_path, *collector_image_path, 
 		 *starter_image_path, *shadow_image_path, *gridmanager_image_path, 
 		 *gahp_image_path, *gahp_worker_image_path, *credd_image_path, 
-		 *vmgahp_image_path, *kbdd_image_path, *hdfs_image_path, *bin_path;
+		 *vmgahp_image_path, *kbdd_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1814,9 +1883,10 @@ void init_firewall_exceptions() {
 	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", NT_ServiceFlag);
 
 	if ( add_exception == false ) {
-		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping\n");
+		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping firewall configuration\n");
 		return;
 	}
+	dprintf(D_ALWAYS, "Adding/Checking Windows firewall exceptions for all daemons\n");
 
 	// We use getExecPath() here instead of param() since it's
 	// possible the the Windows Service Control Manager
@@ -1850,7 +1920,6 @@ void init_firewall_exceptions() {
 	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
 	credd_image_path = param("CREDD");
 	kbdd_image_path = param("KBDD");
-	hdfs_image_path = param("HDFS");
 	vmgahp_image_path = param("VM_GAHP_SERVER");
 	
 	// We also want to add exceptions for the DAGMan we ship
@@ -1957,13 +2026,6 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (daemons.FindDaemon("HDFS") != NULL) && hdfs_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(hdfs_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n", hdfs_image_path);
-		}
-	}
-
 	if ( vmgahp_image_path ) {
 		if ( !SUCCEEDED(wfh.addTrusted(vmgahp_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
@@ -1992,29 +2054,6 @@ void init_firewall_exceptions() {
 	if ( credd_image_path ) { free(credd_image_path); }	
 	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
 	if ( kbdd_image_path ) { free(kbdd_image_path); }
-#endif
-}
-
-void
-check_uid_for_privsep()
-{
-#if !defined(WIN32)
-	if (param_boolean("PRIVSEP_ENABLED", false) && (getuid() == 0)) {
-		uid_t condor_uid = get_condor_uid();
-		if (condor_uid == 0) {
-			EXCEPT("PRIVSEP_ENABLED set, but current UID is 0 "
-			           "and condor UID is also set to root");
-		}
-		dprintf(D_ALWAYS,
-		        "PRIVSEP_ENABLED set, but UID is 0; "
-		            "will drop to UID %u and restart\n",
-		        (unsigned)condor_uid);
-		daemons.CleanupBeforeRestart();
-		set_condor_priv_final();
-		daemons.ExecMaster();
-		EXCEPT("attempt to restart (via exec) failed (%s)",
-		       strerror(errno));
-	}
 #endif
 }
 

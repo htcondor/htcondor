@@ -42,13 +42,10 @@ mv ../condor-${condor_version}.tgz ./condor_${condor_version}.orig.tar.gz
 tar xfpz condor_${condor_version}.orig.tar.gz
 cd condor-${condor_version}
 
-# Update condor_version for pre-release build
-#condor_release="0.$condor_build_id"
-# Update condor_version for final build
-condor_release="1"
-
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
+elif $(grep -qi buster /etc/os-release); then
+    dist='buster'
 elif $(grep -qi xenial /etc/os-release); then
     dist='xenial'
 elif $(grep -qi bionic /etc/os-release); then
@@ -62,21 +59,10 @@ echo "Distribution is $dist"
 cp -pr build/packaging/new-debian debian
 
 # Nightly build changelog
-#dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
-dch --newversion "$condor_version-$condor_release" \
-"Support for Debian 9, Ubuntu 16, and Ubuntu 18"
-dch --newversion "$condor_version-$condor_release" \
-"Improved Python bindings to support the full range of submit functionality"
-dch --newversion "$condor_version-$condor_release" \
-"Allows VMs to shutdown when the job is being gracefully evicted"
-dch --newversion "$condor_version-$condor_release" \
-"Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME"
-dch --newversion "$condor_version-$condor_release" \
-"Added the ability to run a job immediately by replacing a running job"
-
-dch --release --distribution $dist ignored
+#dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

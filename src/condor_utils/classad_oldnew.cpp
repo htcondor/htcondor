@@ -27,28 +27,20 @@
 
 using namespace std;
 
-// undefine this to get rid of the original (slow) _putClassAd function
-//#define ENABLE_V0_PUT_CLASSAD
-
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "compat_classad.h"
 
 // local helper functions, options are one or more of PUT_CLASSAD_* flags
-int _putClassAd(Stream *sock, classad::ClassAd& ad, int options);
-int _putClassAd(Stream *sock, classad::ClassAd& ad, int options, const classad::References &whitelist);
+int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
+	const classad::References *encrypted_attrs);
+int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
+	const classad::References &whitelist, const classad::References *encrypted_attrs);
 int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out);
-#ifdef ENABLE_V0_PUT_CLASSAD
- // these are the 8.2.0 _putClassAd implementations, available for timing comparison
- int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool exclude_private );
- int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool exclude_private, StringList * whitelist );
- static bool use_v0_put_classad = false;
-#endif
-
 
 
 static bool publish_server_timeMangled = false;
-void AttrList_setPublishServerTimeMangled( bool publish)
+void AttrList_setPublishServerTime(bool publish)
 {
     publish_server_timeMangled = publish;
 }
@@ -78,6 +70,7 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
+		dprintf(D_FULLDEBUG, "FAILED to get number of expressions.\n");
  		return false;
 	}
 
@@ -90,6 +83,7 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
 		if( !sock->get_string_ptr( strptr ) || !strptr ) {
+			dprintf(D_FULLDEBUG, "FAILED to get expression string.\n");
 			return( false );
 		}
 
@@ -293,7 +287,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		// and returns a pointer to the first non-whitespace character after the =
 		const char * rhs;
 		if ( ! SplitLongFormAttrValue(strptr, attr, rhs)) {
-			dprintf(D_ALWAYS, "getClassAd FAILED to insert%s %s\n", its_a_secret?" secret":"", strptr );
+			dprintf(D_ALWAYS, "getClassAd FAILED to split%s %s\n", its_a_secret?" secret":"", strptr );
 			return false;
 		}
 
@@ -544,316 +538,13 @@ int mergeProjectionFromQueryAd(classad::ClassAd & queryAd, const char * attr_pro
  *
  * It should also do encryption now.
  */
-int putClassAd ( Stream *sock, classad::ClassAd& ad )
+int putClassAd ( Stream *sock, const classad::ClassAd& ad )
 {
 	int options = 0;
-
-#ifdef ENABLE_V0_PUT_CLASSAD
-	if (use_v0_put_classad) {
-		return _putClassAd_v0(sock, ad, false, false, NULL);
-	}
-#endif
-
-	return _putClassAd(sock, ad, options);
+	return _putClassAd(sock, ad, options, nullptr);
 }
 
-#if 0
-/*
- * Put the ClassAd onto the wire in a non-blocking manner.
- * Return codes:
- * - If the network would have blocked (meaning the socket is buffering the add internally),
- *   then this returns 2.  Callers should stop sending ads, register the socket with DC for
- *   write, and wait for a callback.
- * - On success, this returns 1; this indicates that further ClassAds can be sent to this ReliSock.
- * - On permanent failure, this returns 0.
- */
-PRAGMA_REMIND("TJ: kill this off.")
-int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
-{
-	int options = 0;
-	if (exclude_private) { options |= PUT_CLASSAD_NO_PRIVATE; }
-
-	int retval;
-	bool backlog;
-	{
-		BlockingModeGuard guard(sock, true);
-	#ifdef ENABLE_V0_PUT_CLASSAD
-		if (use_v0_put_classad) {
-			retval = _putClassAd_v0(sock, ad, false, exclude_private, attr_whitelist);
-		} else
-	#endif
-		if (attr_whitelist) {
-			classad::References attrs;
-			_mergeStringListIntoWhitelist(*attr_whitelist, attrs);
-			retval = _putClassAd(sock, ad, options, attrs);
-		} else {
-			retval = _putClassAd(sock, ad, options);
-		}
-		backlog = sock->clear_backlog_flag();
-	}
-	if (!retval) {
-		return 0;
-	} else if (backlog) {
-		return 2;
-	}
-	return retval;
-}
-
-int
-putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
-{
-#ifdef ENABLE_V0_PUT_CLASSAD
-	if (use_v0_put_classad) {
-		return _putClassAd_v0(sock, ad, true, false);
-	}
-#endif
-    return _putClassAd(sock, ad, PUT_CLASSAD_NO_TYPES);
-}
-#endif
-
-#ifdef ENABLE_V0_PUT_CLASSAD
-// these are here for timing comparison
-int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool exclude_private )
-{
-	classad::ClassAdUnParser	unp;
-	std::string					buf;
-    bool send_server_time = false;
-
-	unp.SetOldClassAd( true, true );
-
-	int numExprs=0;
-
-    classad::AttrList::const_iterator itor;
-    classad::AttrList::const_iterator itor_end;
-
-    bool haveChainedAd = false;
-    
-    classad::ClassAd *chainedAd = ad.GetChainedParentAd();
-    
-    if(chainedAd){
-        haveChainedAd = true;
-    }
-
-    for(int pass = 0; pass < 2; pass++){
-
-        /* 
-        * Count the number of chained attributes on the first
-        *   pass (if any!), then the number of attrs in this classad on
-        *   pass number 2.
-        */
-        if(pass == 0){
-            if(!haveChainedAd){
-                continue;
-            }
-            itor = chainedAd->begin();
-			itor_end = chainedAd->end();
-        }
-        else {
-            itor = ad.begin();
-			itor_end = ad.end();
-        }
-
-		for(;itor != itor_end; itor++) {
-			std::string const &attr = itor->first;
-
-            if(!exclude_private ||
-			   !compat_classad::ClassAdAttributeIsPrivate(attr))
-            {
-                numExprs++;
-            }
-        }
-    }
-
-    if( publish_server_timeMangled ){
-        //add one for the ATTR_SERVER_TIME expr
-        numExprs++;
-        send_server_time = true;
-    }
-
-	sock->encode( );
-	if( !sock->code( numExprs ) ) {
-		return false;
-	}
-    
-    bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
-    for(int pass = 0; pass < 2; pass++){
-        if(pass == 0) {
-            /* need to copy the chained attrs first, so if
-             *  there are duplicates, the non-chained attrs
-             *  will override them
-             */
-            if(!haveChainedAd){
-                continue;
-            }
-            itor = chainedAd->begin();
-			itor_end = chainedAd->end();
-        } 
-        else {
-            itor = ad.begin();
-			itor_end = ad.end();
-        }
-
-		for(;itor != itor_end; itor++) {
-			std::string const &attr = itor->first;
-			classad::ExprTree const *expr = itor->second;
-
-            if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)){
-                continue;
-            }
-
-			buf = attr;
-            buf += " = ";
-            unp.Unparse( buf, expr );
-
-            if( ! crypto_is_noop &&
-				compat_classad::ClassAdAttributeIsPrivate(attr))
-			{
-                sock->put(SECRET_MARKER);
-
-                sock->put_secret(buf.c_str());
-            }
-            else if (!sock->put(buf) ){
-                return false;
-            }
-        }
-    }
-
-    if(send_server_time) {
-        //insert in the current time from the server's (Schedd) point of
-        //view. this is used so condor_q can compute some time values 
-        //based upon other attribute values without worrying about 
-        //the clocks being different on the condor_schedd machine
-        // -vs- the condor_q machine
-
-        char* serverTimeStr;
-        serverTimeStr = (char *) malloc(strlen(ATTR_SERVER_TIME)
-                                        + 3     //for " = "
-                                        + 12    // for integer
-                                        +1);    //for null termination
-        ASSERT( serverTimeStr );
-        sprintf(serverTimeStr, "%s = %ld", ATTR_SERVER_TIME, (long)time(NULL) );
-        if(!sock->put(serverTimeStr)){
-            free(serverTimeStr);
-            return 0;
-        }
-        free(serverTimeStr);
-    }
-
-    //ok, so the name of the bool doesn't really work here. It works
-    //  in the other places though.
-    if(!excludeTypes)
-    {
-        // Send the type
-        if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf)) {
-            return false;
-        }
-
-        if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf)) {
-            return false;
-        }
-    }
-
-	return true;
-}
-
-int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool exclude_private, StringList *attr_whitelist )
-{
-	if ( ! attr_whitelist) {
-		return _putClassAd_v0(sock, ad, excludeTypes, exclude_private);
-	}
-
-	classad::ClassAdUnParser	unp;
-	std::string					buf;
-    bool send_server_time = false;
-
-	unp.SetOldClassAd( true, true );
-
-	int numExprs=0;
-
-	numExprs += attr_whitelist->number();
-
-    if( publish_server_timeMangled ){
-        //add one for the ATTR_SERVER_TIME expr
-        numExprs++;
-        send_server_time = true;
-    }
-
-	sock->encode( );
-	if( !sock->code( numExprs ) ) {
-		return false;
-	}
-    
-	if( attr_whitelist ) {
-		attr_whitelist->rewind();
-		char const *attr;
-		while( (attr=attr_whitelist->next()) ) {
-			classad::ExprTree const *expr = ad.Lookup(attr);
-			buf = attr;
-			buf += " = ";
-            if( !expr || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)) )
-			{
-				buf += "undefined";
-            }
-			else {
-				unp.Unparse( buf, expr );
-			}
-
-            if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAdAttributeIsPrivate(attr) )
-			{
-                sock->put(SECRET_MARKER);
-
-                sock->put_secret(buf);
-            }
-            else if (!sock->put(buf) ){
-                return false;
-            }
-		}
-	}
-
-    if(send_server_time) {
-        //insert in the current time from the server's (Schedd) point of
-        //view. this is used so condor_q can compute some time values 
-        //based upon other attribute values without worrying about 
-        //the clocks being different on the condor_schedd machine
-        // -vs- the condor_q machine
-
-        char* serverTimeStr;
-        serverTimeStr = (char *) malloc(strlen(ATTR_SERVER_TIME)
-                                        + 3     //for " = "
-                                        + 12    // for integer
-                                        +1);    //for null termination
-        ASSERT( serverTimeStr );
-        sprintf(serverTimeStr, "%s = %ld", ATTR_SERVER_TIME, (long)time(NULL) );
-        if(!sock->put(serverTimeStr)){
-            free(serverTimeStr);
-            return 0;
-        }
-        free(serverTimeStr);
-    }
-
-    //ok, so the name of the bool doesn't really work here. It works
-    //  in the other places though.
-    if(!excludeTypes)
-    {
-        // Now, we always send empty strings for the special-case
-        // MyType/TargetType values at the end of the ad.
-        if (!sock->put("") || !souck->put("")) {
-            return false;
-        }
-    }
-
-	return true;
-}
-#endif // ENABLE_V0_PUT_CLASSAD
-
-int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::References * whitelist /*=NULL*/)
+int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist /*=nullptr*/, const classad::References * encrypted_attrs /*=nullptr*/)
 {
 	int retval = 0;
 	classad::References expanded_whitelist; // in case we need to expand the whitelist
@@ -883,9 +574,9 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 	{
 		BlockingModeGuard guard(rsock, true);
 		if (whitelist) {
-			retval = _putClassAd(sock, ad, options, *whitelist);
+			retval = _putClassAd(sock, ad, options, *whitelist, encrypted_attrs);
 		} else {
-			retval = _putClassAd(sock, ad, options);
+			retval = _putClassAd(sock, ad, options, encrypted_attrs);
 		}
 		bool backlog = rsock->clear_backlog_flag();
 		if (retval && backlog) { retval = 2; }
@@ -893,16 +584,16 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 	else // normal blocking mode put
 	{
 		if (whitelist) {
-			retval = _putClassAd(sock, ad, options, *whitelist);
+			retval = _putClassAd(sock, ad, options, *whitelist, encrypted_attrs);
 		} else {
-			retval = _putClassAd(sock, ad, options);
+			retval = _putClassAd(sock, ad, options, encrypted_attrs);
 		}
 	}
 	return retval;
 }
 
 // helper function for _putClassAd
-static int _putClassAdTrailingInfo(Stream *sock, classad::ClassAd& /* ad */, bool send_server_time, bool excludeTypes)
+static int _putClassAdTrailingInfo(Stream *sock, const classad::ClassAd& /* ad */, bool send_server_time, bool excludeTypes)
 {
     if (send_server_time)
     {
@@ -934,7 +625,8 @@ static int _putClassAdTrailingInfo(Stream *sock, classad::ClassAd& /* ad */, boo
 	return true;
 }
 
-int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
+int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
+	const classad::References *encrypted_attrs)
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
@@ -953,11 +645,12 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 
 	bool haveChainedAd = false;
 
-	classad::ClassAd *chainedAd = ad.GetChainedParentAd();
+	const classad::ClassAd *chainedAd = ad.GetChainedParentAd();
 	if(chainedAd){
 		haveChainedAd = true;
 	}
 
+	int private_count = 0;
 	for(int pass = 0; pass < 2; pass++){
 
 		/*
@@ -981,7 +674,8 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!compat_classad::ClassAdAttributeIsPrivate(attr))
+				!(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
 				if(excludeTypes)
 				{
@@ -992,8 +686,14 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 					}
 				}
 				else { numExprs++; }
+			} else {
+				private_count++;
 			}
 		}
+	}
+		// If we counted no private attributes, we don't need to test again later.
+	if (exclude_private && !private_count) {
+		//exclude_private = false;
 	}
 
 	if( publish_server_timeMangled ){
@@ -1029,7 +729,9 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)){
+			if(exclude_private && (compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
+			{
 				continue;
 			}
 
@@ -1045,8 +747,9 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			buf += " = ";
 			unp.Unparse( buf, expr );
 
-			if( ! crypto_is_noop &&
-				compat_classad::ClassAdAttributeIsPrivate(attr))
+			if( ! crypto_is_noop && private_count &&
+				(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
 			{
 				sock->put(SECRET_MARKER);
 
@@ -1061,7 +764,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
 }
 
-int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad::References &whitelist)
+int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const classad::References &whitelist, const classad::References *encrypted_attrs)
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
@@ -1071,7 +774,10 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
-		if ( ! ad.Lookup(*attr) || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(*attr))) {
+		if ( ! ad.Lookup(*attr) || (exclude_private && (
+			compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
+		))) {
 			blacklist.insert(*attr);
 		}
 	}
@@ -1111,8 +817,9 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 		unp.Unparse( buf, expr );
 
 		if ( ! crypto_is_noop &&
-			compat_classad::ClassAdAttributeIsPrivate(*attr))
-		{
+			(compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
+		) {
 			if (!sock->put(SECRET_MARKER)) {
 				return false;
 			}
@@ -1126,41 +833,4 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 	}
 
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
-}
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v)
-{
-    return EvalTree(eTree, mine, NULL, v);
-}
-
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v)
-{
-    if(!mine)
-    {
-        return false;
-    }
-    const classad::ClassAd* tmp = eTree->GetParentScope(); 
-    eTree->SetParentScope(mine);
-
-    if(target)
-    {
-        classad::MatchClassAd mad(mine,target);
-
-        bool rval = eTree->Evaluate(*v);
-
-        mad.RemoveLeftAd( );
-        mad.RemoveRightAd( );
-        
-        //restore the old scope
-        eTree->SetParentScope(tmp);
-
-        return rval;
-    }
-
-
-    //restore the old scope
-    eTree->SetParentScope(tmp);
-
-    return eTree->Evaluate(*v);
 }

@@ -70,7 +70,7 @@ if (WITH_GLOBUS)
 					INSTALL_COMMAND make install &&
 						touch ${LIBTOOL_INSTALL_LOC}/done)
 
-			condor_post_external( libtool OFF OFF )
+			condor_post_external( libtool OFF OFF "" )
 			set( GLOBUS_DEPENDS ${LIBTOOL_REF} )
 			set( GLOBUS_FLAGS CPPFLAGS=-I${GLOBUS_INSTALL_LOC}/include LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib )
 		else()
@@ -200,7 +200,7 @@ if (WITH_GLOBUS)
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
 		endif()
 
-		condor_post_external( globus include/globus OFF )
+		condor_post_external( globus include/globus OFF "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND}" )
 
 		if ( LINUX )
 			# Install the Globus libraries manually.
@@ -291,7 +291,16 @@ if (WITH_GLOBUS)
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
 		find_multiple( "globus_ftp_client" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
-		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include;/usr/local/globus/include/globus")
+		  find_program(DPKG_ARCHITECTURE dpkg-architecture)
+		  if (DPKG_ARCHITECTURE)
+		    execute_process(
+		      COMMAND ${DPKG_ARCHITECTURE} -qDEB_HOST_MULTIARCH
+		      OUTPUT_VARIABLE DEB_HOST_MULTIARCH
+		      OUTPUT_STRIP_TRAILING_WHITESPACE)
+		  else()
+		    set (DEB_HOST_MULTIARCH no-deb-multiarch)
+		  endif()
+		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include;/usr/include/${DEB_HOST_MULTIARCH}/globus;/usr/local/globus/include/globus")
 		endif(GLOBUS_FOUND)
 
 	endif(NOT PROPER)

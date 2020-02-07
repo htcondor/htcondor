@@ -83,7 +83,7 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	gahp = NULL;
 
 	std::string gahp_name = batch_type;
-	if ( resource_name && *resource_name ) {
+	if ( *resource_name ) {
 		formatstr_cat( gahp_name, "/%s", resource_name );
 		m_gahpIsRemote = true;
 	}
@@ -159,6 +159,7 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 	ping_delay = 0;
 	
 		// TODO Is there a meaning ping command we can perform?
+/* comment out to calm coverity
 	int rc = 0;
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -169,9 +170,10 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 		ping_succeeded = false;
 	} 
 	else {
+*/
 		ping_complete = true;
 		ping_succeeded = true;
-	}
+//	}
 
 	return;
 }

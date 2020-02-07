@@ -25,7 +25,6 @@
 #include "condor_open.h"
 
 #include "daemon.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"
@@ -37,10 +36,12 @@
 #include "time_offset.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"
+#include "condor_netaddr.h"
 #include "condor_sinful.h"
 
-#include "counted_ptr.h"
 #include "ipv6_hostname.h"
+
+#include <sstream>
 
 void
 Daemon::common_init() {
@@ -91,16 +92,16 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 	_type = tType;
 
 	if( tPool ) {
-		_pool = strnewp( tPool );
+		_pool = strdup( tPool );
 	} else {
 		_pool = NULL;
 	}
 
 	if( tName && tName[0] ) {
 		if( is_valid_sinful(tName) ) {
-			New_addr( strnewp(tName) );
+			New_addr( strdup(tName) );
 		} else {
-			_name = strnewp( tName );
+			_name = strdup( tName );
 		}
 	} 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "  
@@ -126,31 +127,31 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 
 	switch( _type ) {
 	case DT_MASTER:
-		_subsys = strnewp( "MASTER" );
+		_subsys = strdup( "MASTER" );
 		break;
 	case DT_STARTD:
-		_subsys = strnewp( "STARTD" );
+		_subsys = strdup( "STARTD" );
 		break;
 	case DT_SCHEDD:
-		_subsys = strnewp( "SCHEDD" );
+		_subsys = strdup( "SCHEDD" );
 		break;
 	case DT_CLUSTER:
-		_subsys = strnewp( "CLUSTERD" );
+		_subsys = strdup( "CLUSTERD" );
 		break;
 	case DT_COLLECTOR:
-		_subsys = strnewp( "COLLECTOR" );
+		_subsys = strdup( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		_subsys = strnewp( "NEGOTIATOR" );
+		_subsys = strdup( "NEGOTIATOR" );
 		break;
 	case DT_CREDD:
-		_subsys = strnewp( "CREDD" );
+		_subsys = strdup( "CREDD" );
 		break;
 	case DT_GENERIC:
-		_subsys = strnewp( "GENERIC" );
+		_subsys = strdup( "GENERIC" );
 		break;
 	case DT_HAD:
-		_subsys = strnewp( "HAD" );
+		_subsys = strdup( "HAD" );
 		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
@@ -158,7 +159,7 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	}
 
 	if( tPool ) {
-		_pool = strnewp( tPool );
+		_pool = strdup( tPool );
 	} else {
 		_pool = NULL;
 	}
@@ -203,37 +204,34 @@ Daemon::operator=(const Daemon &copy)
 void
 Daemon::deepCopy( const Daemon &copy )
 {
-		// NOTE: strnewp(NULL) returns NULL, and doesn't seg fault,
-		// which is exactly what we want everywhere in this method.
-
-	New_name( strnewp(copy._name) );
-	New_alias( strnewp(copy._alias) );
-	New_hostname( strnewp(copy._hostname) );
-	New_full_hostname( strnewp(copy._full_hostname) );
-	New_addr( strnewp(copy._addr) );
-	New_version( strnewp(copy._version) );
-	New_platform( strnewp(copy._platform) );
-	New_pool( strnewp(copy._pool) );
+	New_name( copy._name ? strdup(copy._name) : NULL );
+	New_alias( copy._alias ? strdup(copy._alias) : NULL );
+	New_hostname( copy._hostname ? strdup(copy._hostname) : NULL );
+	New_full_hostname( copy._full_hostname ? strdup(copy._full_hostname) : NULL );
+	New_addr( copy._addr ? strdup(copy._addr) : NULL );
+	New_version( copy._version ? strdup(copy._version) : NULL );
+	New_platform( copy._platform ? strdup(copy._platform) : NULL );
+	New_pool( copy._pool ? strdup(copy._pool) : NULL );
 
 	if( copy._error ) {
 		newError( copy._error_code, copy._error );
 	} else {
 		if( _error ) { 
-			delete [] _error;
+			free(_error);
 			_error = NULL;
 		}
 		_error_code = copy._error_code;
 	}
 
 	if( _id_str ) {
-		delete [] _id_str;
+		free(_id_str);
 	}
-	_id_str = strnewp( copy._id_str );
+	_id_str = copy._id_str ? strdup( copy._id_str ) : NULL;
 
 	if( _subsys ) {
-		delete [] _subsys;
+		free(_subsys);
 	}
-	_subsys = strnewp( copy._subsys );
+	_subsys = copy._subsys ? strdup( copy._subsys ) : NULL;
 
 	_port = copy._port;
 	_type = copy._type;
@@ -245,6 +243,10 @@ Daemon::deepCopy( const Daemon &copy )
 	if(copy.m_daemon_ad_ptr) {
 		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
 	}
+
+	m_owner = copy.m_owner;
+	m_methods = copy.m_methods;
+
 		/*
 		  there's nothing to copy for _sec_man... it'll already be
 		  instantiated at this point, and the SecMan object is really
@@ -263,18 +265,18 @@ Daemon::~Daemon()
 		display( D_HOSTNAME );
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
 	}
-	if( _name ) delete [] _name;
-	if( _alias ) delete [] _alias;
-	if( _pool ) delete [] _pool;
-	if( _addr ) delete [] _addr;
-	if( _error ) delete [] _error;
-	if( _id_str ) delete [] _id_str;
-	if( _subsys ) delete [] _subsys;
-	if( _hostname ) delete [] _hostname;
-	if( _full_hostname ) delete [] _full_hostname;
-	if( _version ) delete [] _version;
-	if( _platform ) { delete [] _platform; }
-	if( _cmd_str ) { delete [] _cmd_str; }
+	if( _name ) free(_name);
+	if( _alias ) free(_alias);
+	if( _pool ) free(_pool);
+	if( _addr ) free(_addr);
+	if( _error ) free(_error);
+	if( _id_str ) free(_id_str);
+	if( _subsys ) free(_subsys);
+	if( _hostname ) free(_hostname);
+	if( _full_hostname ) free(_full_hostname);
+	if( _version ) free(_version);
+	if( _platform ) { free(_platform); }
+	if( _cmd_str ) { free(_cmd_str); }
 	if( m_daemon_ad_ptr) { delete m_daemon_ad_ptr; }
 }
 
@@ -283,7 +285,7 @@ Daemon::~Daemon()
 // Data-providing methods
 //////////////////////////////////////////////////////////////////////
 
-char*
+const char*
 Daemon::name( void )
 {
 	if( ! _name ) {
@@ -293,7 +295,7 @@ Daemon::name( void )
 }
 
 
-char*
+const char*
 Daemon::hostname( void )
 {
 	if( ! _hostname && ! _tried_init_hostname ) {
@@ -303,7 +305,7 @@ Daemon::hostname( void )
 }
 
 
-char*
+const char*
 Daemon::version( void )
 {
 	if( ! _version && ! _tried_init_version ) {
@@ -313,7 +315,7 @@ Daemon::version( void )
 }
 
 
-char*
+const char*
 Daemon::platform( void )
 {
 	if( ! _platform && ! _tried_init_version ) {
@@ -323,7 +325,7 @@ Daemon::platform( void )
 }
 
 
-char*
+const char*
 Daemon::fullHostname( void )
 {
 	if( ! _full_hostname && ! _tried_init_hostname ) {
@@ -333,7 +335,7 @@ Daemon::fullHostname( void )
 }
 
 
-char*
+const char*
 Daemon::addr( void )
 {
 	if( ! _addr ) {
@@ -343,7 +345,7 @@ Daemon::addr( void )
 }
 
 
-char*
+const char*
 Daemon::pool( void )
 {
 	if( ! _pool ) {
@@ -398,7 +400,7 @@ Daemon::idStr( void )
 	} else {
 		return "unknown daemon";
 	}
-	_id_str = strnewp( buf.c_str() );
+	_id_str = strdup( buf.c_str() );
 	return _id_str;
 }
 
@@ -542,7 +544,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -551,21 +553,20 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, i
 	// NOTE: if there is a callback function, we _must_ guarantee that it is
 	// eventually called in all code paths.
 
-	StartCommandResult start_command_result = StartCommandFailed;
-
-	ASSERT(sock);
+	ASSERT(req.m_sock);
 
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
-	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
+	ASSERT(!req.m_nonblocking || req.m_callback_fn || req.m_sock->type() == Stream::safe_sock);
 
 	// set up the timeout
 	if( timeout ) {
-		sock->timeout( timeout );
+		req.m_sock->timeout( timeout );
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
-
+	auto start_command_result = sec_man->startCommand(req);
+	// when sec_man->startCommand returns, sock may have been closed and the sock object deleted.
+	// do NOT add code referencing the sock here!!!
 	return start_command_result;
 }
 
@@ -607,36 +608,52 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, misc_data );
+			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
 			return StartCommandSucceeded;
 		} else {
 			return StartCommandFailed;
 		}
 	}
 
-	return startCommand (
-						 cmd,
-						 *sock,
-						 timeout,
-						 errstack,
-						 subcmd,
-						 callback_fn,
-						 misc_data,
-						 nonblocking,
-						 cmd_description,
-						 _version,
-						 &_sec_man,
-						 raw_protocol,
-						 sec_session_id);
+	// Prepare the request.
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = *sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
+	req.m_nonblocking = nonblocking;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
+
+	return startCommand_internal( req, timeout, &_sec_man );
 }
 
 
 bool
 Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = subcmd;
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
 	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
+
+	auto rc = startCommand_internal(req, timeout, &_sec_man);
+
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -715,17 +732,43 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, 
 StartCommandResult
 Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = callback_fn;
+	req.m_misc_data = misc_data;
 	// This is the nonblocking version of startCommand().
-	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	req.m_nonblocking = true;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
+
+	return startCommand_internal(req, timeout, &_sec_man);
 }
 
 bool
 Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
-	// This is a blocking version of startCommand().
-	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	SecMan::StartCommandRequest req;
+	req.m_cmd = cmd;
+	req.m_sock = sock;
+	req.m_raw_protocol = raw_protocol;
+	req.m_errstack = errstack;
+	req.m_subcmd = 0; // no sub-command
+	req.m_callback_fn = nullptr;
+	req.m_misc_data = nullptr;
+	// This is the blocking version of startCommand().
+	req.m_nonblocking = false;
+	req.m_cmd_description = cmd_description;
+	req.m_sec_session_id = sec_session_id;
+	req.m_owner = m_owner;
+	req.m_methods = m_methods;
+
+	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -1013,10 +1056,6 @@ Daemon::locate( Daemon::LocateType method )
 	  setSubsystem( "CREDD" );
 	  rval = getDaemonInfo( CREDD_AD, true, method );
 	  break;
-	case DT_STORK:
-	  setSubsystem( "STORK" );
-	  rval = getDaemonInfo( ANY_AD, false, method );
-	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
@@ -1077,9 +1116,9 @@ bool
 Daemon::setSubsystem( const char* subsys )
 {
 	if( _subsys ) {
-		delete [] _subsys;
+		free(_subsys);
 	}
-	_subsys = strnewp( subsys );
+	_subsys = subsys ? strdup( subsys ) : NULL;
 
 	return true;
 }
@@ -1111,11 +1150,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		char *specified_host = param( buf.c_str() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
-			_name = strnewp( specified_host );
+			_name = specified_host;
 			dprintf( D_HOSTNAME, 
 					 "No name given, but %s defined to \"%s\"\n",
 					 buf.c_str(), specified_host );
-			free(specified_host);
 		}
 	}
 	if( _name ) {
@@ -1142,37 +1180,35 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 
 		if(host && hostaddr.from_ip_string(host) ) {
 			buf = generate_sinful(host, _port);
-			New_addr( strnewp(buf.c_str()) );
+			New_addr( strdup(buf.c_str()) );
 			dprintf( D_HOSTNAME,
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
 				// We were given a hostname, not an address.
 			MyString fqdn;
-			if(host) {
-				dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
-						 "finding IP address\n", host );
-				if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
-					// With a hostname, this is a fatal Daemon error.
-					formatstr( buf, "unknown host %s", host );
-					newError( CA_LOCATE_FAILED, buf.c_str() );
-					if (host) free( host );
+			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+					 "finding IP address\n", host );
+			if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
+				// With a hostname, this is a fatal Daemon error.
+				formatstr( buf, "unknown host %s", host );
+				newError( CA_LOCATE_FAILED, buf.c_str() );
+				free( host );
 
-						// We assume this is a transient DNS failure.  Therefore,
-						// set _tried_locate = false, so that we keep trying in
-						// future calls to locate().
-					_tried_locate = false;
+					// We assume this is a transient DNS failure.  Therefore,
+					// set _tried_locate = false, so that we keep trying in
+					// future calls to locate().
+				_tried_locate = false;
 
-					return false;
-				}
-			} else return false;
+				return false;
+			}
 			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
 			if (fqdn.Length() > 0)
-				New_full_hostname(strnewp(fqdn.Value()));
+				New_full_hostname(strdup(fqdn.Value()));
 			if( host ) {
-				New_alias( strnewp(host) );
+				New_alias( strdup(host) );
 			}
-			New_addr( strnewp(buf.c_str()) );
+			New_addr( strdup(buf.c_str()) );
 		}
 
 		if (host) free( host );
@@ -1198,12 +1234,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// if it worked, we've now got the proper values for the
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
-		New_alias( strnewp(get_host_part( _name )) );
+		New_alias( strdup(get_host_part( _name )) );
 		New_name( tmp );
 		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
 				 tmp );
 			// now, grab the fullhost from the name we just made...
-		tmp = strnewp( get_host_part(_name) ); 
+		tmp = strdup( get_host_part(_name) ); 
 		dprintf( D_HOSTNAME,
 				 "Using \"%s\" for full hostname in Daemon object\n", tmp );
 		New_full_hostname( tmp );
@@ -1226,7 +1262,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 						 _name );
 				_is_local = true;
 			}
-			delete [] my_name;
+			free(my_name);
 		}
 	} else if ( _type != DT_NEGOTIATOR ) {
 			// We were passed neither a name nor an address, so use
@@ -1235,7 +1271,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
             // name
 		_is_local = true;
 		New_name( localName() );
-		New_full_hostname( strnewp(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().Value()) );
 		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
 				 "values - name: \"%s\", full host: \"%s\"\n", 
 				 _name, _full_hostname );
@@ -1384,9 +1420,9 @@ Daemon::getCmInfo( const char* subsys )
 		// For CM daemons, the "pool" and "name" should be the same
 		// thing.  See if either is set, and if so, use it for both.  
 	if( _name && ! _pool ) {
-		New_pool( strnewp(_name) );
+		New_pool( strdup(_name) );
 	} else if ( ! _name && _pool ) {
-		New_name( strnewp(_pool) );
+		New_name( strdup(_pool) );
 	} else if ( _name && _pool ) {
 		if( strcmp(_name, _pool) ) {
 				// They're different, this is bad.
@@ -1431,8 +1467,8 @@ Daemon::getCmInfo( const char* subsys )
 				// everything else (port, hostname, etc), will be
 				// initialized and set correctly by our caller based
 				// on the fullname and the address.
-			New_name( strnewp(get_local_fqdn().Value()) );
-			New_full_hostname( strnewp(get_local_fqdn().Value()) );
+			New_name( strdup(get_local_fqdn().Value()) );
+			New_full_hostname( strdup(get_local_fqdn().Value()) );
 			free( host );
 			return true;
 		}
@@ -1488,8 +1524,8 @@ Daemon::findCmDaemon( const char* cm_name )
 	if( _port == 0 && readAddressFile(_subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
-		New_name( strnewp(get_local_fqdn().Value()) );
-		New_full_hostname( strnewp(get_local_fqdn().Value()) );
+		New_name( strdup(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().Value()) );
 		return true;
 	}
 
@@ -1497,7 +1533,7 @@ Daemon::findCmDaemon( const char* cm_name )
 		// file, so we should store the string we used (as is) in
 		// _name, so that we can get to it later if we need it.
 	if( ! _name ) {
-		New_name( strnewp(cm_name) );
+		New_name( strdup(cm_name) );
 	}
 
 		// Now that we've got the port, grab the hostname for the rest
@@ -1521,7 +1557,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 
 	if( saddr.from_ip_string(host) ) {
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( sinful.getSinful() ? strdup( sinful.getSinful() ) : NULL );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1544,18 +1580,19 @@ Daemon::findCmDaemon( const char* cm_name )
 			return false;
 		}
 		sinful.setHost(saddr.to_ip_string().Value());
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
+		sinful.setAlias(fqdn.Value());
+		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
-		New_full_hostname(strnewp(fqdn.Value()));
+		New_full_hostname(strdup(fqdn.Value()));
 		if( host ) {
-			New_alias( strnewp(host) );
+			New_alias( strdup(host) );
 		}
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strdup( sinful.getSinful() ) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
 	if( _pool ) {
-		New_pool( strnewp(_name) );
+		New_pool( strdup(_name) );
 	}
 
 	free( host );
@@ -1618,7 +1655,7 @@ Daemon::initHostname( void )
 		return false;
 	}
 
-	char* tmp = strnewp(fqdn.Value());
+	char* tmp = strdup(fqdn.Value());
 	New_full_hostname( tmp );
 	initHostnameFromFull();
 	return true;
@@ -1636,13 +1673,13 @@ Daemon::initHostnameFromFull( void )
 		// if we have _full_hostname we just want to trim off the
 		// domain the same way for _hostname.
 	if( _full_hostname ) {
-		copy = strnewp( _full_hostname );
+		copy = strdup( _full_hostname );
 		tmp = strchr( copy, '.' );
 		if( tmp ) {
 			*tmp = '\0';
 		}
-		New_hostname( strnewp(copy) );
-		delete [] copy;
+		New_hostname( strdup(copy) );
+		free( copy );
 		return true; 
 	}
 	return false;
@@ -1682,7 +1719,7 @@ Daemon::initVersion( void )
 			char ver[128];
 			CondorVersionInfo vi;
 			vi.get_version_from_file(exe_file, ver, 128);
-			New_version( strnewp(ver) );
+			New_version( strdup(ver) );
 			dprintf( D_HOSTNAME, "Found version string \"%s\" "
 					 "in local binary (%s)\n", ver, exe_file );
 			free( exe_file );
@@ -1732,9 +1769,9 @@ void
 Daemon::newError( CAResult err_code, const char* str )
 {
 	if( _error ) {
-		delete [] _error;
+		free(_error);
 	}
-	_error = strnewp( str );
+	_error = str ? strdup( str ) : NULL;
 	_error_code = err_code;
 }
 
@@ -1749,7 +1786,7 @@ Daemon::localName( void )
 		my_name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {
-		my_name = strnewp( get_local_fqdn().Value() );
+		my_name = strdup( get_local_fqdn().Value() );
 	}
 	return my_name;
 }
@@ -1816,7 +1853,7 @@ Daemon::readAddressFile( const char* subsys )
 	if( is_valid_sinful(buf.Value()) ) {
 		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
 				 "%s address file\n", buf.Value(), use_superuser ? "superuser" : "local" );
-		New_addr( strnewp(buf.Value()) );
+		New_addr( strdup(buf.Value()) );
 		rval = true;
 	}
 
@@ -1825,13 +1862,13 @@ Daemon::readAddressFile( const char* subsys )
 	if( buf.readLine(addr_fp) ) {
 			// chop off the newline
 		buf.chomp();
-		New_version( strnewp(buf.Value()) );
+		New_version( strdup(buf.Value()) );
 		dprintf( D_HOSTNAME,
 				 "Found version string \"%s\" in address file\n",
 				 buf.Value() );
 		if( buf.readLine(addr_fp) ) {
 			buf.chomp();
-			New_platform( strnewp(buf.Value()) );
+			New_platform( strdup(buf.Value()) );
 			dprintf( D_HOSTNAME,
 					 "Found platform string \"%s\" in address file\n",
 					 buf.Value() );
@@ -1871,12 +1908,13 @@ Daemon::readLocalClassAd( const char* subsys )
 	addr_file = NULL;
 
 	int adIsEOF, errorReadingAd, adEmpty = 0;
-	adFromFile = new ClassAd(addr_fp, "...", adIsEOF, errorReadingAd, adEmpty);
+	adFromFile = new ClassAd;
+	InsertFromFile(addr_fp, *adFromFile, "...", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(adFromFile);
 	if(!m_daemon_ad_ptr) {
 		m_daemon_ad_ptr = new ClassAd(*adFromFile);
 	}
-	counted_ptr<ClassAd> smart_ad_ptr(adFromFile);
+	std::unique_ptr<ClassAd> smart_ad_ptr(adFromFile);
 	
 	fclose(addr_fp);
 
@@ -1884,7 +1922,7 @@ Daemon::readLocalClassAd( const char* subsys )
 		return false;	// did that just leak adFromFile?
 	}
 
-	return getInfoFromAd( smart_ad_ptr );
+	return getInfoFromAd( smart_ad_ptr.get() );
 }
 
 bool
@@ -1914,12 +1952,12 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		// construct the IP_ADDR attribute
 	formatstr( buf, "%sIpAddr", _subsys );
 	if ( ad->LookupString( buf.c_str(), buf2 ) ) {
-		New_addr( strnewp( buf2.c_str() ) );
+		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = buf;
 	}
 	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
-		New_addr( strnewp( buf2.c_str() ) );
+		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = ATTR_MY_ADDRESS;
 	}
@@ -1958,13 +1996,6 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 
 bool
-Daemon::getInfoFromAd( counted_ptr<class ClassAd>& ad )
-{
-	return getInfoFromAd( ad.get() );
-}
-
-
-bool
 Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value )
 {
 	if( ! value ) {
@@ -1983,9 +2014,9 @@ Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value 
 		return false;
 	}
 	if( *value ) {
-		delete [] *value;
+		free( *value );
 	}
-	*value = strnewp(tmp);
+	*value = strdup(tmp);
 	dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
 			 attrname, tmp );
 	free( tmp );
@@ -1993,18 +2024,11 @@ Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value 
 	return true;
 }
 
-bool
-Daemon::initStringFromAd( counted_ptr<class ClassAd>& ad, const char* attrname, char** value )
-{
-	return initStringFromAd( ad.get(), attrname, value);
-}
-
-
 char*
 Daemon::New_full_hostname( char* str )
 {
 	if( _full_hostname ) {
-		delete [] _full_hostname;
+		free(_full_hostname);
 	} 
 	_full_hostname = str;
 	return str;
@@ -2015,7 +2039,7 @@ char*
 Daemon::New_hostname( char* str )
 {
 	if( _hostname ) {
-		delete [] _hostname;
+		free(_hostname);
 	} 
 	_hostname = str;
 	return str;
@@ -2026,7 +2050,7 @@ void
 Daemon::New_addr( char* str )
 {
 	if( _addr ) {
-		delete [] _addr;
+		free(_addr);
 	} 
 	_addr = str;
 
@@ -2048,16 +2072,16 @@ Daemon::New_addr( char* str )
 							formatstr(buf,"<%s>",priv_addr);
 							priv_addr = buf.c_str();
 						}
-						delete [] _addr;
-						_addr = strnewp( priv_addr );
+						free(_addr);
+						_addr = strdup( priv_addr );
 						sinful = Sinful( _addr );
 					}
 					else {
 						// no private address was specified, so use public
 						// address with CCB disabled
 						sinful.setCCBContact(NULL);
-						delete [] _addr;
-						_addr = strnewp( sinful.getSinful() );
+						free(_addr);
+						_addr = strdup( sinful.getSinful() );
 					}
 				}
 				free( our_network_name );
@@ -2067,8 +2091,8 @@ Daemon::New_addr( char* str )
 				// it is not so noisy in logs and such.
 				sinful.setPrivateAddr(NULL);
 				sinful.setPrivateNetworkName(NULL);
-				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				free(_addr);
+				_addr = strdup( sinful.getSinful() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}
@@ -2096,8 +2120,8 @@ Daemon::New_addr( char* str )
 			if( !_full_hostname || (strcmp(_alias,_full_hostname)!=0 && (strncmp(_alias,_full_hostname,len)!=0 || _full_hostname[len]!='.')) )
 			{
 				sinful.setAlias(_alias);
-				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				free(_addr);
+				_addr = strdup( sinful.getSinful() );
 			}
 		}
 	}
@@ -2118,7 +2142,7 @@ char*
 Daemon::New_version ( char* ver )
 {
 	if( _version ) {
-		delete [] _version;
+		free(_version);
 	} 
 	_version = ver;
 	return ver;
@@ -2128,7 +2152,7 @@ char*
 Daemon::New_platform ( char* plat )
 {
 	if( _platform ) {
-		delete [] _platform;
+		free(_platform);
 	} 
 	_platform = plat;
 	return plat;
@@ -2139,7 +2163,7 @@ char*
 Daemon::New_name( char* str )
 {
 	if( _name ) {
-		delete [] _name;
+		free( _name );
 	} 
 	_name = str;
 	return str;
@@ -2149,7 +2173,7 @@ const char*
 Daemon::New_alias( char *str )
 {
 	if( _alias ) {
-		delete [] _alias;
+		free(_alias);
 	}
 	_alias = str;
 	return str;
@@ -2159,7 +2183,7 @@ char*
 Daemon::New_pool( char* str )
 {
 	if( _pool ) {
-		delete [] _pool;
+		free(_pool);
 	} 
 	_pool = str;
 	return str;
@@ -2195,10 +2219,10 @@ Daemon::checkAddr( void )
 		}
 			// clear out some things that would confuse locate()
 		_tried_locate = false;
-		delete [] _addr;
+		free(_addr);
 		_addr = NULL;
 		if( _is_local ) {
-			delete [] _name;
+			free( _name );
 			_name = NULL;
 		}
 		locate();
@@ -2232,11 +2256,11 @@ void
 Daemon::setCmdStr( const char* cmd )
 {
 	if( _cmd_str ) { 
-		delete [] _cmd_str;
+		free(_cmd_str);
 		_cmd_str = NULL;
 	}
 	if( cmd ) {
-		_cmd_str = strnewp( cmd );
+		_cmd_str = strdup( cmd );
 	}
 }
 
@@ -2457,5 +2481,745 @@ Daemon::getInstanceID( std::string & instanceID ) {
 	}
 
 	instanceID.assign( (const char *)instance_id, instance_length );
+	return true;
+}
+
+
+bool
+Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
+	std::string &token, CondorError *err)
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getSessionToken() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	std::stringstream ss;
+	for (const auto &authz : authz_bounding_limit) {
+		ss << authz << ",";
+	}
+	const std::string &authz_limit_str = ss.str();
+	if (!authz_limit_str.empty() && !ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_limit_str.substr(0, authz_limit_str.size()-1))) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+			return false;
+	}
+
+	if (!startCommand( DC_GET_SESSION_TOKEN, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to start command for "
+			"token request with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() Failed to send ClassAd to remote"
+			" daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+			return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to recieve response from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getSessionToken() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getSessionToken() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		if (err) err->pushf("DAEMON", 1, "BUG!  Daemon::getSessionToken() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, CondorError &err) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::exchangeSciToken() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (!ad.InsertAttr(ATTR_SEC_TOKEN, scitoken)) {
+		err.pushf("DAEMON", 1, "Failed to create SciToken exchange request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create SciToken exchange request ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		err.pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+			return false;
+	}
+
+	if (!startCommand( DC_EXCHANGE_SCITOKEN, &rSock, 20, &err)) {
+		err.pushf("DAEMON", 1, "Failed to start command for SciToken exchange "
+			"with remote daemon at '%s'.\n", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to start command for "
+			"SciToken exchange with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		err.pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() Failed to send ClassAd to remote"
+			" daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to send end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		err.pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to recieve response from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to read end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf( D_FULLDEBUG, "Daemon::exchangeSciToken() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		err.push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::exchangeToken() received a malformed ad, "
+			"containing no resulting token and no error message, from remote daemon "
+			"at '%s'\n", _addr ? _addr : "(unknown)" );
+		err.pushf("DAEMON", 1, "BUG!  Daemon::exchangeSciToken() received a "
+			"malformed ad containing no resulting token and no error message, from "
+			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+Daemon::startTokenRequest( const std::string &identity,
+	const std::vector<std::string> &authz_bounding_set, int lifetime,
+	const std::string &client_id, std::string &token, std::string &request_id,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::startTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	std::stringstream ss;
+	for (const auto &authz : authz_bounding_set) {
+		ss << authz << ",";
+	}
+	const std::string &authz_limit_str = ss.str();
+	if (!authz_limit_str.empty() &&
+		!ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
+			authz_limit_str.substr(0, authz_limit_str.size()-1)))
+	{
+		if (err) { err->pushf("DAEMON", 1, "Failed to create token request ClassAd"); }
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	// Since token lifetime is capped by the server and clients gain no
+	// benefit from shorter lifetimes, don't provide a default lifetime
+	// for token requests; just accept the server default.  (Presently,
+	// only in the condor_token_request implemention is lifetime not -1.)
+	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to create token request ClassAd"); }
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+	if (identity.empty()) {
+		std::string domain;
+		if (!param(domain, "UID_DOMAIN")) {
+			if (err) { err->pushf("DAEMON", 1, "No UID_DOMAIN set!"); }
+			dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+			return false;
+		}
+		if (!ad.InsertAttr(ATTR_USER, "condor@" + domain)) {
+			if (err) { err->pushf("DAEMON", 1, "Failed to set the default username"); }
+			dprintf(D_FULLDEBUG, "Failed to set the default username\n");
+			return false;
+		}
+	} else {
+		auto at_sign = identity.find('@');
+		if (at_sign == std::string::npos) {
+			std::string domain;
+			if (!param(domain, "UID_DOMAIN")) {
+				if (err) { err->pushf("DAEMON", 1, "No UID_DOMAIN set!"); }
+				dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+				return false;
+			}
+			if (!ad.InsertAttr(ATTR_USER, identity + "@" + domain)) {
+				if (err) { err->pushf("DAEMON", 1, "Unable to set requested id."); }
+				dprintf(D_FULLDEBUG, "Unable to set requested id.\n");
+				return false;
+			}
+		} else if (!ad.InsertAttr(ATTR_USER, identity)) {
+			if (err) { err->pushf("DAEMON", 1, "Unable to set requested identity."); }
+			dprintf(D_FULLDEBUG, "Unable to set requested identity.\n");
+			return false;
+		}
+	}
+	if (client_id.empty() || !ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) { err->pushf("DAEMON", 1, "Unable to set client ID."); }
+		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to connect "
+			"to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!startCommand( DC_START_TOKEN_REQUEST, &rSock, 20, err)) {
+		if (err) { err->pushf("DAEMON", 1, "failed to start "
+			"command for token request with remote daemon at '%s'.",
+			_addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to start "
+			"command for token request with remote daemon at '%s'.\n",
+			_addr ? _addr : "(unknown)");
+		return false;
+	}
+		// Try forcing encryption.  If it's not available, then this request will be
+		// queued ONLY IF auto-approval is allowed.
+	rSock.set_crypto_mode(true);
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to send "
+			"ClassAd to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to send "
+			"ClassAd to remote daemon at '%s'\n", _addr ? _addr : "unknown" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
+			"response from remote daemon at at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to recieve "
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if(!rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to read "
+			"end-of-message from remote daemon at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf( D_FULLDEBUG, "Daemon::startTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) { err->push("DAEMON", error_code, err_msg.c_str()); }
+		return false;
+	}
+
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token) || token.empty()) {
+		if (result_ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id)
+			&& !request_id.empty())
+		{
+			return true;
+		}
+		if (err) { err->pushf("DAEMON", 1, "BUG!  Daemon::startTokenRequest() "
+			"received a malformed ad, containing no resulting token and no "
+			"error message, from remote daemon at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::startTokenRequest() "
+			"received a malformed ad, containing no resulting token and no "
+			"error message, from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+Daemon::finishTokenRequest(const std::string &client_id, const std::string &request_id,
+	std::string &token, CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::finishTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (client_id.empty() || !ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) { err->pushf("DAEMON", 1, "Unable to set client ID."); }
+		dprintf(D_FULLDEBUG, "Unable to set client ID.\n");
+		return false;
+	}
+	if (request_id.empty() || !ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+		if (err) { err->pushf("DAEMON", 1, "Unable to set request ID."); }
+		dprintf(D_FULLDEBUG, "Unable to set request ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to connect "
+			"to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_FINISH_TOKEN_REQUEST, &rSock, 20, err)) {
+		if (err) { err->pushf("DAEMON", 1, "failed to start "
+			"command for token request with remote daemon at '%s'.",
+			_addr ? _addr : "NULL"); }
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to start "
+			"command for token request with remote daemon at '%s'.\n",
+			_addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to send "
+			"ClassAd to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() Failed to send "
+			"ClassAd to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
+			"response from remote daemon at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to recieve "
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to read "
+			"end-of-message from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf( D_FULLDEBUG, "Daemon::finishTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		if (err) { err->push("DAEMON", error_code, err_msg.c_str()); }
+		return false;
+	}
+
+	// We are successful regardless of whether the token has any content --
+	// an empty token string (without an error) means that the request is
+	// still pending on the server.
+	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		if (err) { err->pushf("DAEMON", 1, "BUG!  Daemon::finishTokenRequest() "
+			"received a malformed ad containing no resulting token "
+			"and no error message, from remote daemon at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::finishTokenRequest() "
+			"received a malformed ad, containing no resulting token "
+			"and no error message, from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::listTokenRequest(const std::string &request_id, std::vector<classad::ClassAd> &results,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::listTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (!request_id.empty()) {
+		if (!ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+			if (err) { err->pushf("DAEMON", 1, "Unable to set request ID."); }
+			dprintf(D_FULLDEBUG, "Unable to set request ID.\n");
+			return false;
+		}
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to connect "
+			"to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_LIST_TOKEN_REQUEST, &rSock, 20, err)) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to start "
+			"command for listing token requests with remote daemon at '%s'.",
+			_addr ? _addr : "NULL"); }
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() failed to start "
+			"command for listing token requests with remote daemon at '%s'.\n",
+			_addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to send "
+			"ClassAd to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed to send "
+			"ClassAd to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	while (true) {
+		classad::ClassAd ad;
+		if (!getClassAd(&rSock, ad) || !rSock.end_of_message()) {
+			if (err) { err->pushf("DAEMON", 2, "Failed to receive "
+				"response ClassAd from remote daemon at '%s'",
+				_addr ? _addr : "(unknown)"); }
+			dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed to receive "
+				"response ClassAd from remote daemon at '%s'\n",
+				_addr ? _addr : "NULL" );
+			return false;
+		}
+
+		// The use of ATTR_OWNER here as an end-sentinel is arbitrary; I used this attribute and
+		// special value just to be similar to the condor_q protocol.
+		long long intVal;
+		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) {
+			std::string errorMsg;
+			if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal &&
+				ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (err) { err->pushf("DAEMON", intVal, "%s", errorMsg.c_str()); }
+				dprintf(D_FULLDEBUG, "Daemon::listTokenRequest() Failed due "
+					"to remote error: '%s' (error code %lld)\n",
+					errorMsg.c_str(), intVal);
+				return false;
+			}
+			break;
+		}
+
+		results.emplace_back();
+		results.back().CopyFrom(ad);
+		ad.Clear();
+	}
+	return true;
+}
+
+
+bool
+Daemon::approveTokenRequest( const std::string &client_id, const std::string &request_id,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::approveTokenRequest() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (request_id.empty()) {
+		if (err) { err->pushf("DAEMON", 1, "No request ID provided."); }
+		dprintf(D_FULLDEBUG,
+			"Daemon::approveTokenRequest(): No request ID provided.\n");
+		return false;
+	} else if (!ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id)) {
+		if (err) { err->pushf("DAEMON", 1, "Unable to set request ID."); }
+		dprintf(D_FULLDEBUG,
+			"Daemon::approveTokenRequest(): Unable to set request ID.\n");
+		return false;
+	}
+	if (client_id.empty()) {
+		if (err) { err->pushf("DAEMON", 1, "No client ID provided."); }
+		dprintf(D_FULLDEBUG,
+			"Daemon::approveTokenRequest(): No client ID provided.\n");
+		return false;
+	} else if (!ad.InsertAttr(ATTR_SEC_CLIENT_ID, client_id)) {
+		if (err) { err->pushf("DAEMON", 1, "Unable to set client ID."); }
+		dprintf(D_FULLDEBUG,
+			"Daemon::approveTokenRequest(): Unable to set client ID.\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to connect "
+			"to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!startCommand( DC_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
+		if (err) { err->pushf("DAEMON", 1,
+			"command for approving token requests with remote daemon at '%s'.",
+			_addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to start command for "
+			"approving token requests with remote daemon at '%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to send "
+			"ClassAd to remote daemon at '%s'", _addr ? _addr : "(unknown)"); }
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send "
+			"ClassAd to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to recieve "
+			"response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) { err->pushf("DAEMON", 1, "Failed to read "
+			"end-of-message from remote daemon at '%s'",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf( D_FULLDEBUG, "Daemon::approveTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	int error_code = 0;
+	if (!result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		if (err) { err->pushf("DAEMON", 1, "Remote daemon "
+			"at '%s' did not return a result.",
+			_addr ? _addr : "(unknown)" ); }
+		dprintf( D_FULLDEBUG, "Daemon::approveTokenRequest() - Remote daemon "
+			"at '%s' did not return a result.\n",
+			_addr ? _addr : "(unknown)" );
+		return false;
+	}
+	if (error_code) {
+		std::string err_msg;
+		result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg);
+		if (err_msg.empty()) {err_msg = "Unknown error.";}
+
+		if (err) { err->push("DAEMON", error_code, err_msg.c_str()); }
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
+	CondorError *err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::autoApproveTokenRequest() making connection to "
+		"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if (netblock.empty()) {
+		if (err) err->pushf("DAEMON", 1, "No netblock provided.");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): No netblock provided.");
+		return false;
+	} else {
+		condor_netaddr na;
+		if(! na.from_net_string(netblock.c_str())) {
+			err->pushf( "DAEMON", 2, "Auto-approval rule netblock invalid." );
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule netblock is invalid.\n");
+			return false;
+		}
+
+		if (!ad.InsertAttr(ATTR_SUBNET, netblock)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set netblock.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set netblock.\n");
+			return false;
+		}
+	}
+	if( lifetime > 0 ) {
+		if(! ad.InsertAttr(ATTR_SEC_LIFETIME, lifetime)) {
+			if (err) err->pushf("DAEMON", 1, "Unable to set lifetime.");
+			dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): Unable to set lifetime.\n");
+			return false;
+		}
+	} else {
+		if (err) err->pushf("DAEMON", 2, "Auto-approval rule lifetimes must be greater than zero." );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest(): auto-approval rule lifetimes must be greater than zero.\n" );
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		if (err) err->pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand( DC_AUTO_APPROVE_TOKEN_REQUEST, &rSock, 20, err)) {
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to start command for "
+			"auto-approving token requests with remote daemon at '%s'.\n",
+			_addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad) || !rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() Failed to send ClassAd to "
+			"remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to recieve response "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		if (err) err->pushf("DAEMON", 1, "Failed to read end-of-message from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	int error_code = 0;
+	if (!result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		if (err) err->pushf("DAEMON", 1, "Remote daemon at '%s' did not return a result.",
+			_addr ? _addr : "(unknown)" );
+		dprintf( D_FULLDEBUG, "Daemon::autoApproveTokenRequest() - Remote daemon at '%s' did "
+			"not return a result", _addr ? _addr : "(unknown)" );
+		return false;
+	}
+
+	if (error_code) {
+		std::string err_msg;
+		result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg);
+		if (err_msg.empty()) {err_msg = "Unknown error.";}
+
+		if (err) err->push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
 	return true;
 }

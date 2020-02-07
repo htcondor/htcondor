@@ -23,33 +23,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
  
-#if defined(HPUX)
-
-#include <sys/pstat.h>
-
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	struct pst_static s;
-	unsigned long pages, pagesz;
-	double size;
-						   
-	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-		pages = s.physical_memory;
-		pagesz = s.page_size >> 10;
-		size = (double)pages * (double)pagesz;
-		size /= 1024.0;
-
-		if (size > INT_MAX){
-			return INT_MAX;
-		}
-		return (int)size;
-	} else {
-		return -1;
-	}
-}
-
-#elif defined(Solaris) 
+#if defined(Solaris) 
 
 /*
  * This works for Solaris >= 2.3
@@ -169,88 +143,6 @@ sysapi_phys_memory_raw_no_param(void)
 	megs = mem / (1024 * 1024);
 
 	return megs;
-}
-#elif defined(AIX)
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	CLASS_SYMBOL cuat;
-	struct CuAt mem_ent;
-	struct CuAt *mret = NULL;
-	unsigned long memory_size = 0;
-	char *path = NULL;
-
-	/* will eventually use the ODMI to figure this out */
-    if (odm_initialize() < 0)
-    {
-		/* This is quite terrible if it happens */
-        dprintf(D_ALWAYS, 
-			"sysapi_phys_memory_raw(): Could not initialize the ODM database: "
-			"%d\n", odmerrno);
-		return -1;
-    }
-
-	/* remember to free this memory just before I leave this function */
-    path = odm_set_path("/etc/objrepos");
-	if (path == (char*)-1) /* eewww */
-	{
-        dprintf(D_ALWAYS, "sysapi_phys_memory_raw(): Could not set class path! "
-			"%d\n", odmerrno);
-		return -1;
-	}
-
-	/* open up a predefined class symbol found in libcfg.a */
-    cuat = odm_open_class(CuAt_CLASS);
-    if (cuat == NULL)
-    {
-        dprintf(D_ALWAYS, "sysapi_phys_memory_raw(): Could not open CuAt! %d\n",
-			odmerrno);
-    	if (odm_terminate() < 0)
-    	{
-        	dprintf(D_ALWAYS, "Could not terminate using the ODM database: "
-				"%d\n", odmerrno);
-			free(path);
-			return -1;
-    	}
-		free(path);
-		return -1;
-    }
-
-    /* odm_get_list() is scary cause I can't tell if it is going to actually
-        remove the entries from the ODM when it returns them to me or not.
-        So I'm traversing the list in the safe way that I know how */
-
-	/* get me the various memory entries that represent the full amount of 
-		memory on the machine */
-    mret = (struct CuAt *)odm_get_obj(cuat, "name like mem? AND attribute='size'", 
-		&mem_ent, ODM_FIRST);
-    while(mret != NULL && (int)mret != -1)
-    {
-		/* This value appears to be in Megabytes. */
-		memory_size += atoi(mem_ent.value);
-
-        mret = (struct CuAt *)odm_get_obj(cuat, NULL, &mem_ent, ODM_NEXT);
-    }
-
-    if (odm_close_class(cuat) < 0)
-    {
-        dprintf(D_ALWAYS, "Could not close CuAt in the ODM database: %d\n",
-			odmerrno);
-		free(path);
-		return -1;
-    }
-
-    if (odm_terminate() < 0)
-    {
-        dprintf(D_ALWAYS, "Could not terminate using the ODM database: %d\n",
-			odmerrno);
-		free(path);
-		return -1;
-    }
-
-	free(path);
-
-	return (int)memory_size;
 }
 #else
 #error "sysapi.h: Please define a sysapi_phys_memory_raw() for this platform!"

@@ -129,6 +129,7 @@ set( C_LIBEXEC		libexec )
 set( C_SBIN			sbin)
 
 set( C_PYTHONARCHLIB lib/python)
+set( C_PYTHON3ARCHLIB lib/python3)
 
 set( C_INCLUDE		include)
 set( C_INCLUDE_PUBLIC		include)
@@ -166,11 +167,15 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
-		set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
+		set( PYTHON_RPATH "$ORIGIN/../../:/lib:/usr/lib:$ORIGIN/../../condor" )
 	else()
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
-		set( PYTHON_RPATH "$ORIGIN/../:/lib64:/usr/lib64:$ORIGIN/../condor" )
+        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            set( PYTHON_RPATH "$ORIGIN/../../:/usr/lib64/boost169:/lib64:/usr/lib64:$ORIGIN/../../condor" )
+        else()
+            set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
+        endif()
 	endif()
 elseif( ${OS_NAME} STREQUAL "DARWIN" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
@@ -183,7 +188,11 @@ if ( CONDOR_RPMBUILD )
 	    set( PYTHON_RPATH "/usr/lib/condor" )
 	else()
 	    set( CONDOR_RPATH "/usr/lib64:/usr/lib64/condor" )
-	    set( PYTHON_RPATH "/usr/lib64/condor" )
+        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            set( PYTHON_RPATH "/usr/lib64/condor:/usr/lib64/boost169" )
+        else()
+            set( PYTHON_RPATH "/usr/lib64/condor" )
+        endif()
 	endif ()
 endif()
 
@@ -309,12 +318,10 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	file( WRITE ${WINVER} "#define CONDOR_VERSION \"${PACKAGE_VERSION}\"\n")
 	#file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
-	option(WIN_EXEC_NODE_ONLY "Minimal Package Win exec node only" OFF)
-
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
-	execute_process( COMMAND python -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
+	execute_process( COMMAND python -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHONARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name

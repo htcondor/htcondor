@@ -80,7 +80,7 @@ def _get_option_env(option):
     
 def _get_config_option (option, section="general"):
     global parsed_config_file
-    if parsed_config_file == None:
+    if parsed_config_file is None:
         return None
     
     if parsed_config_file.has_option(section, option):

@@ -32,7 +32,6 @@
 #include "my_hostname.h"
 #include "condor_config.h"
 #include "get_port_range.h"
-#include "condor_socket_types.h"
 #include "condor_netdb.h"
 #if defined ( WIN32 )
 #include <iphlpapi.h>
@@ -45,9 +44,6 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-static
-int bindWithin(const int fd, const int low_port, const int high_port);
 
 
 const char *
@@ -325,133 +321,6 @@ string_to_port( const char* addr )
 	return port;
 }
 
-// This union allow us to avoid casts, which cause
-// gcc to warn about type punning pointers, which
-// may or may not cause it to generate invalid code
-typedef union {
-	struct sockaddr sa;
-	struct sockaddr_in v4;
-	struct sockaddr_in6 v6;
-	struct sockaddr_storage all;
-} ipv4or6_storage;
-
-/* Bind the given fd to the correct local interface. */
-
-// [IPV6] Ported
-int
-_condor_local_bind( int is_outgoing, int fd )
-{
-	/* Note: this function is completely WinNT screwed.  However,
-	 * only non-Cedar components call this function (ckpt-server,
-	 * old shadow) --- and these components are not destined for NT
-	 * anyhow.  So on NT, just pass back success so log file is not
-	 * full of scary looking error messages.
-	 *
-	 * This function should go away when everything uses CEDAR.
-	 */
-#ifndef WIN32
-	int lowPort, highPort;
-	if ( get_port_range(is_outgoing, &lowPort, &highPort) == TRUE ) {
-		if ( bindWithin(fd, lowPort, highPort) == TRUE )
-            return TRUE;
-        else
-			return FALSE;
-	} else {
-		//struct sockaddr_storage ss;
-		ipv4or6_storage ss;
-		socklen_t len = sizeof(ss);
-		int r = getsockname(fd, &(ss.sa), &len);
-		if (r != 0) {
-			dprintf(D_ALWAYS, "ERROR: getsockname fialed, errno: %d\n",
-					errno);
-			return FALSE;
-		}
-
-			// this implementation should be changed to the one
-			// using condor_sockaddr class
-		if (ss.all.ss_family == AF_INET) {
-			struct sockaddr_in* sa_in = &(ss.v4);
-			memset( (char *)sa_in, 0, sizeof(struct sockaddr_in) );
-			sa_in->sin_family = AF_INET;
-			sa_in->sin_port = 0;
-			/*
-			  we don't want to honor BIND_ALL_INTERFACES == true in
-			  here.  this code is only used in the ckpt server (which
-			  isn't daemoncore, so the hostallow localhost stuff
-			  doesn't matter) and for bind()ing outbound connections
-			  inside do_connect().  so, there's no harm in always
-			  binding to all interfaces in here...
-			  Derek <wright@cs.wisc.edu> 2005-09-20
-			*/
-			sa_in->sin_addr.s_addr = INADDR_ANY;
-		} else if (ss.all.ss_family == AF_INET6) {
-			struct sockaddr_in6* sin6 = &(ss.v6);
-			sin6->sin6_addr = in6addr_any;
-			sin6->sin6_port = 0;
-		} else {
-			dprintf(D_ALWAYS, "ERROR: getsockname returned with unknown "
-					"socket type %d\n", ss.all.ss_family);
-			return FALSE;
-		}
-
-		if( bind(fd, &(ss.sa), len) < 0 ) {
-			dprintf( D_ALWAYS, "ERROR: bind failed, errno: %d\n",
-					 errno );
-			return FALSE;
-		}
-	}
-#endif  /* of ifndef WIN32 */
-	return TRUE;
-}
-
-static
-int bindWithin( const int fd, const int lowPort, const int highPort ) {
-	int pid = (int)getpid();
-	int range = highPort - lowPort + 1;
-	int initialPort = lowPort + (pid * 173 % range);
-
-	condor_sockaddr initializedSA;
-	int rv = condor_getsockname( fd, initializedSA );
-	if( rv != 0 ) {
-		dprintf( D_ALWAYS, "_condor_local_bind::bindWithin() - getsockname() failed.\n" );
-		return FALSE;
-	}
-	initializedSA.set_addr_any();
-
-	int trialPort = initialPort;
-	do {
-		condor_sockaddr trialSA = initializedSA;
-		trialSA.set_port( trialPort++ );
-
-#ifndef WIN32
-		priv_state oldPriv = PRIV_UNKNOWN;
-		if( trialPort <= 1024 ) {
-			// use root priv for the call to bind to allow privileged ports
-			oldPriv = set_root_priv();
-		}
-#endif
-
-		rv = bind( fd, trialSA.to_sockaddr(), trialSA.get_socklen() );
-
-#ifndef WIN32
-		if( trialPort <= 1024 ) {
-			set_priv( oldPriv );
-		}
-#endif
-
-		if( rv == 0 ) {
-			dprintf( D_NETWORK, "_condor_local_bind::bindWithin(): bound to %d\n", trialPort - 1 );
-			return TRUE;
-		} else {
-			dprintf( D_NETWORK, "_condor_local_bind::bindWithin(): failed to bind to %d (%s)\n", trialPort - 1, strerror(errno) );
-		}
-
-		if( trialPort > highPort ) { trialPort = lowPort; }
-	} while( trialPort != initialPort );
-
-	dprintf( D_ALWAYS, "_condor_local_bind::bindWithin() - failed to bind any port within (%d ~ %d)\n", lowPort, highPort );
-	return FALSE;
-}
 
 /* This function has a unit test. */
 int
@@ -558,51 +427,6 @@ getHostFromAddr( const char* addr )
 	return host;
 }
 
-
-char*
-getAddrFromClaimId( const char* id )
-{
-	char* tmp;
-	char* addr;
-	char* copy = strdup( id );
-	tmp = strchr( copy, '#' );
-	if( tmp ) {
-		*tmp = '\0';
-		if( is_valid_sinful(copy) ) {
-			addr = strdup( copy );
-			free( copy );
-			return addr;
-		}
-	}
-	free( copy );
-	return NULL;
-}
-
-
-struct sockaddr_in *
-getSockAddr(int sockfd)
-{
-    // do getsockname
-    static struct sockaddr_in sa_in;
-    SOCKET_LENGTH_TYPE namelen = sizeof(sa_in);
-    if (getsockname(sockfd, (struct sockaddr *)&sa_in, (socklen_t*)&namelen) < 0) {
-        dprintf(D_ALWAYS, "failed getsockname(%d): %s\n", sockfd, strerror(errno));
-        return NULL;
-    }
-    // if getsockname returns INADDR_ANY, we rely upon get_local_addr() since returning
-    // 0.0.0.0 is not a good idea.
-    if (sa_in.sin_addr.s_addr == ntohl(INADDR_ANY)) {
-        // This is standad universe -only code at this point, so we know
-        // we want an IPv4 address.
-        condor_sockaddr myaddr = get_local_ipaddr( CP_IPV4 );
-        sa_in.sin_addr = myaddr.to_sin().sin_addr;
-        // This can happen, I think, if we're running in IPv6-only mode.
-        // It may make sense to check for ENABLE_IPV4 (if not an actual
-        // IPv4 interface) when the checkpoint server starts up, instead.
-        assert( sa_in.sin_addr.s_addr != ntohl(INADDR_ANY) );
-    }
-    return &sa_in;
-}
 
 int generate_sinful(char* buf, int len, const char* ip, int port) {
 	if (strchr(ip, ':')) {

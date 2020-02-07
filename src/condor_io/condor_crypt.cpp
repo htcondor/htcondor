@@ -76,8 +76,16 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
         ASSERT(buf);
+		// Note that RAND_seed does not seed, but rather simply
+		// adds entropy to the pool that is initialized with /dev/urandom
+		// (actually, this could potentially help in the case where HTCondor
+		// is running on a system without /dev/urandom; seems ... unlikely for
+		// Linux!).
+		//
+		// As this only helps the pool, we are OK with calling the 'insecure'
+		// variant here.
 		for (int i = 0; i < size; i++) {
-			buf[i] = get_random_int() & 0xFF;
+			buf[i] = get_random_int_insecure() & 0xFF;
 		}
 
         RAND_seed(buf, size);
@@ -91,11 +99,11 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     int r, s, size = sizeof(r);
     unsigned char * tmp = key;
     for (s = 0; s < length; s+=size, tmp+=size) {
-        r = get_random_int();
+        r = get_random_int_insecure();
         memcpy(tmp, &r, size);
     }
     if (length > s) {
-        r = get_random_int();
+        r = get_random_int_insecure();
         memcpy(tmp, &r, length - s);
     }
 #endif

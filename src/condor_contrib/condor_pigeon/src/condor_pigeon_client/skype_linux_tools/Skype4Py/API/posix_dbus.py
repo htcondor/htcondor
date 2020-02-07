@@ -64,17 +64,17 @@ class _ISkypeAPI(_ISkypeAPIBase):
         self.bus = opts.pop('Bus', None)
         try:
             mainloop = opts.pop('MainLoop')
-            if self.bus != None:
+            if self.bus is not None:
                 raise TypeError('Bus and MainLoop cannot be used at the same time!')
         except KeyError:
-            if self.bus == None:
+            if self.bus is None:
                 import dbus.mainloop.glib
                 import gobject
                 gobject.threads_init()
                 dbus.mainloop.glib.threads_init()
                 mainloop = dbus.mainloop.glib.DBusGMainLoop()
                 self.mainloop = gobject.MainLoop()
-        if self.bus == None:
+        if self.bus is None:
             from dbus import SessionBus
             self.bus = SessionBus(private=True, mainloop=mainloop)
         if opts:
@@ -90,7 +90,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
         if hasattr(self, 'mainloop'):
             self.mainloop.quit()
         self.skype_in = self.skype_out = None
-        if self.dbus_name_owner_watch != None:
+        if self.dbus_name_owner_watch is not None:
             self.bus.remove_signal_receiver(self.dbus_name_owner_watch)
         self.dbus_name_owner_watch = None
         self.DebugPrint('closed')

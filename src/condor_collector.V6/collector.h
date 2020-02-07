@@ -21,6 +21,7 @@
 #define _COLLECTOR_DAEMON_H_
 
 #include <vector>
+#include <queue>
 
 #include "condor_classad.h"
 #include "totals.h"
@@ -30,7 +31,6 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
-#include "Queue.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -116,8 +116,6 @@ public:
 	static int reportSubmittorScanFunc(ClassAd*);
 	static int reportMiniStartdScanFunc(ClassAd *cad);
 
-	static void reportToDevelopers();
-
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();
 	
@@ -126,6 +124,10 @@ public:
 
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock(int cmd, ClassAd* theAd);	
+
+		// Take an incoming session and forward a token request to the schedd.
+	static int schedd_token_request(Service *, int, Stream *stream);
+
 
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
@@ -154,8 +156,8 @@ public:
 		char subsys[15];
 	} pending_query_entry_t;
 
-	static Queue<pending_query_entry_t *> query_queue_high_prio;
-	static Queue<pending_query_entry_t *> query_queue_low_prio;
+	static std::queue<pending_query_entry_t *> query_queue_high_prio;
+	static std::queue<pending_query_entry_t *> query_queue_low_prio;
 	static int ReaperId;
 	static int QueryReaper(Service *, int pid, int exit_status);
 	static int max_query_workers;  // from config file
@@ -202,7 +204,6 @@ protected:
 
 	static ClassAd *ad;
 	static CollectorList* collectorsToUpdate;
-	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static int stashSocket( ReliSock* sock );
@@ -210,6 +211,7 @@ protected:
 	static class CCBServer *m_ccb_server;
 
 	static bool filterAbsentAds;
+	static bool forwardClaimedPrivateAds;
 
 private:
 

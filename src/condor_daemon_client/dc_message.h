@@ -325,7 +325,7 @@ public:
 	friend class DCMsg;
 private:
 		// This is called by DaemonClient when startCommand has finished.
-	static void connectCallback(bool success, Sock *sock, CondorError *errstack, void *misc_data);
+	static void connectCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 		// This is called by DaemonCore when the sock has data.
 	int receiveMsgCallback(Stream *sock);
@@ -451,6 +451,28 @@ public:
 
 private:
 	ClassAd m_msg;
+};
+
+/*
+ * TwoClassAdMsg is a message consisting of two ClassAds.
+  */
+class TwoClassAdMsg : public DCMsg {
+	public:
+		TwoClassAdMsg( int cmd, ClassAd & first, ClassAd & second );
+
+		virtual bool writeMsg( DCMessenger * messenger, Sock * sock );
+		virtual bool readMsg( DCMessenger * messenger, Sock * sock );
+
+		virtual MessageClosureEnum messageSent( DCMessenger * messenger, Sock * sock );
+		virtual MessageClosureEnum messageReceived( DCMessenger * messenger, Sock *sock );
+
+		// Custom methods.
+		ClassAd & getFirstClassAd() { return firstClassAd; }
+		ClassAd & getSecondClassAd() { return secondClassAd; }
+
+	private:
+		ClassAd firstClassAd;
+		ClassAd secondClassAd;
 };
 
 class ChildAliveMsg: public DCMsg {

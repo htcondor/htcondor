@@ -182,6 +182,7 @@ main(int argc, char *argv[])
 
 	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 #if !defined(WIN32)
@@ -393,9 +394,9 @@ main(int argc, char *argv[])
 			CondorError errstack;
 			ClassAd respad;
 			int invalid;
-			MyString reason;
-			MyString td_sinful;
-			MyString td_cap;
+			std::string reason;
+			std::string td_sinful;
+			std::string td_cap;
 
 			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD, 
 				global_constraint, FTP_CFTP, &respad, &errstack);
@@ -409,7 +410,7 @@ main(int argc, char *argv[])
 			if (invalid == TRUE) {
 				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 				respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-				fprintf( stderr, "%s\n", reason.Value());
+				fprintf( stderr, "%s\n", reason.c_str());
 				exit(EXIT_FAILURE);
 			}
 
@@ -417,9 +418,9 @@ main(int argc, char *argv[])
 			respad.LookupString(ATTR_TREQ_CAPABILITY, td_cap);
 
 			dprintf(D_ALWAYS, 
-				"td: %s, cap: %s\n", td_sinful.Value(), td_cap.Value());
+				"td: %s, cap: %s\n", td_sinful.c_str(), td_cap.c_str());
 
-			DCTransferD dctd(td_sinful.Value());
+			DCTransferD dctd(td_sinful.c_str());
 
 			result = dctd.download_job_files(&respad, &errstack);
 			if ( !result ) {

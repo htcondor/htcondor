@@ -216,7 +216,7 @@ windows_suspend(DWORD pid)
 
 		// get the list of threads for this process
 		//
-		ExtArray<DWORD> tid_array;
+		std::vector<DWORD> tid_array;
 		int num_tids = sys_info.GetTIDs(pid, tid_array);
 		if (num_tids == 0) {
 			// TODO: we need to handle this case!!!
@@ -227,7 +227,7 @@ windows_suspend(DWORD pid)
 
 		// go through the thread list, calling SuspendThread on each
 		//
-		for (int i = 0; i < num_tids; i++) {
+		for (size_t i = 0; i < tid_array.size(); i++) {
 
 			// see if we already have a record for this thread
 			//

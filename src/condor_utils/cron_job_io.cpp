@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <string.h>
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job.h"
 #include "condor_cron_job_io.h"
@@ -83,7 +82,7 @@ CronJobOut::Output( const char *buf, int len )
 	strcat( line, buf );
 
 	// Queue it up, get out
-	m_lineq.enqueue( line );
+	m_lineq.push( line );
 
 	// Done
 	return 0;
@@ -93,19 +92,19 @@ CronJobOut::Output( const char *buf, int len )
 int
 CronJobOut::GetQueueSize( void )
 {
-	return m_lineq.Length( );
+	return m_lineq.size( );
 }
 
 // Flush the queue
 int
 CronJobOut::FlushQueue( void )
 {
-	int		size = m_lineq.Length( );
-	char	*line;
+	int		size = m_lineq.size( );
 
 	// Flush out the queue
-	while( ! m_lineq.dequeue( line ) ) {
-		free( line );
+	while( m_lineq.size() ) {
+		free( m_lineq.front() );
+		m_lineq.pop();
 	}
 	m_q_sep.clear();
 
@@ -119,7 +118,9 @@ CronJobOut::GetLineFromQueue( void )
 {
 	char	*line;
 
-	if ( ! m_lineq.dequeue( line ) ) {
+	if ( m_lineq.size() ) {
+		line = m_lineq.front();
+		m_lineq.pop();
 		return line;
 	} else {
 		m_q_sep.clear();

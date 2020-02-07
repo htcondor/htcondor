@@ -30,7 +30,6 @@
 
 #include "XInterface.unix.h"
 #include "condor_config.h"
-#include "condor_string.h"
 //#include <paths.h>
 #if USES_UTMPX  /* SGI IRIX 62/65 */
 #	include <utmpx.h>
@@ -116,7 +115,9 @@ XInterface::TryUser(const char *user)
 	if (strcmp(user, "root") == 0) {
 		set_root_priv();
 	} else {
-		init_user_ids( user, NULL );
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
 		set_user_priv();
 		need_uninit = true;
 	}
@@ -182,8 +183,8 @@ XInterface::~XInterface()
 	}
 
 	if ( logged_on_users ) {
-		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
-			delete[] (*logged_on_users)[foo];
+		for (size_t foo =0; foo < logged_on_users->size(); foo++) {
+			free((*logged_on_users)[foo]);
 		}
 		delete logged_on_users;
 	}
@@ -198,13 +199,13 @@ XInterface::ReadUtmp() {
 #endif
 
 	if ( logged_on_users ) {
-		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
-			delete[] (*logged_on_users)[foo];
+		for (size_t foo =0; foo < logged_on_users->size(); foo++) {
+			free((*logged_on_users)[foo]);
 		}
 		delete logged_on_users;
 	}
 
-	logged_on_users = new ExtArray< char * >;
+	logged_on_users = new std::vector< char * >;
 
 
 	// fopen the Utmp.  If we fail, bail...
@@ -225,7 +226,7 @@ XInterface::ReadUtmp() {
 
 		if (utmp_entry.ut_type == USER_PROCESS) {
 			bool _found_it = false;
-			for (int i=0; (i<=logged_on_users->getlast()) && (! _found_it); i++) {
+			for (size_t i=0; (i<logged_on_users->size()) && (! _found_it); i++) {
 				if (!strcmp(utmp_entry.ut_user, (*logged_on_users)[i])) {
 					_found_it = true;
 				}
@@ -233,8 +234,7 @@ XInterface::ReadUtmp() {
 			if (! _found_it) {
 				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
 					utmp_entry.ut_user );
-				(*logged_on_users)[logged_on_users->getlast()+1] =
-					strnewp( utmp_entry.ut_user );
+				logged_on_users->push_back(strdup( utmp_entry.ut_user ));
 			}
 		}
 	}
@@ -290,8 +290,8 @@ XInterface::Connect()
 
 	ReadUtmp();
 
-	int utmpIndex = 0;
-	while (utmpIndex <= logged_on_users->getlast()) {
+	size_t utmpIndex = 0;
+	while (utmpIndex < logged_on_users->size()) {
 
 		const char *username = (*logged_on_users)[utmpIndex];
 

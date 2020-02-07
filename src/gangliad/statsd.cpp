@@ -22,7 +22,6 @@
 #include <condor_daemon_core.h>
 #include "directory.h"
 #include "dc_collector.h"
-#include "counted_ptr.h"
 #include "statsd.h"
 
 #include <memory>
@@ -185,7 +184,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 			bool dynamic_slot = false;
-			daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
+			(void) daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
 			if( dynamic_slot ) {
 				return false;
 			}
@@ -223,7 +222,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				ExtArray<MyString> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					counted_ptr<Metric> metric(statsd->newMetric());
+					std::shared_ptr<Metric> metric(statsd->newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -373,6 +372,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		}
 		else if( !strcasecmp(my_type.c_str(),"submitter") ) {
 			daemon_ad.EvaluateAttrString(ATTR_SCHEDD_NAME,machine);
+		}
+		else if( !strcasecmp(my_type.c_str(),"accounting") ) {
+			daemon_ad.EvaluateAttrString(ATTR_NEGOTIATOR_NAME,machine);
 		}
 		else {
 			// use the daemon name for the metric machine name
@@ -881,7 +883,7 @@ StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
 		 itr != m_metrics.end();
 		 itr++ )
 	{
-		counted_ptr<Metric> metric(newMetric());
+		std::shared_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
 		metric->evaluateDaemonAd(**itr,*daemon_ad,m_verbosity,this);
 	}

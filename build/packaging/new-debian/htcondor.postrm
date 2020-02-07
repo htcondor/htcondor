@@ -4,7 +4,6 @@
 set -e
 
 condor_user=condor
-condor_local_cfg=/etc/condor/condor_config.local
 condor_debconf_cfg=/etc/condor/config.d/00debconf
 
 
@@ -27,10 +26,6 @@ case "$1" in
         # wipe out runtime data (logs, ...)
         remove_condor_dirs
         [ -f $condor_debconf_cfg ] && rm $condor_debconf_cfg
-        # unless the file has any non-comment purge it too
-        [ -f $condor_local_cfg ] \
-            && [ "$(grep -v '^[#]' < $condor_local_cfg | wc -w)" = "0" ] \
-                && rm $condor_local_cfg
         # not removing the condor system user; see http://bugs.debian.org/621833
         # for a discussion. also not trying to lock the condor user as it was
         # configured with --disabled-login --disabled-password already

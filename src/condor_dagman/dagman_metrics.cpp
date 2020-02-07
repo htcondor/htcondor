@@ -61,7 +61,6 @@ DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 //---------------------------------------------------------------------------
 DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 			const char *primaryDagFile, int rescueDagNum ) :
-	_sendMetrics( false ),
 	_simpleNodes( 0 ),
 	_subdagNodes( 0 ),
 	_simpleNodesSuccessful( 0 ),
@@ -74,41 +73,15 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_graphNumEdges( 0 ),
 	_graphNumVertices( 0 )
 {
-	_primaryDagFile = strnewp(primaryDagFile);
+	_primaryDagFile = strdup(primaryDagFile);
 
 	_rescueDagNum = rescueDagNum;
-
-		//
-		// Figure out whether to actually report the metrics.  We only
-		// send metrics if it's enabled with the PEGASUS_METRICS
-		// environment variable.  But that can be overridden by the
-		// CONDOR_DEVELOPERS config macro.
-		//
-	const char *tmp = getenv( "PEGASUS_METRICS" );
-	if ( tmp && ( ( strcasecmp( tmp, "true" ) == 0 ) ||
-				( strcasecmp( tmp, "1" ) == 0 ) ) ) {
-		_sendMetrics = true;
-	}
-
-	tmp = param( "CONDOR_DEVELOPERS" );
-	if ( tmp && strcmp( tmp, "NONE" ) == 0 ) {
-		_sendMetrics = false;
-	}
 
 		//
 		// Set the metrics file name.
 		//
 	_metricsFile = primaryDagFile;
 	_metricsFile += ".metrics";
-
-		//
-		// If we're actually sending metrics, Pegasus should have
-		// created a braindump.txt file that includes a bunch of
-		// Pegasus information.
-		//
-	if ( _sendMetrics ) {
-		ParseBraindumpFile();
-	}
 
 		//
 		// Get DAG node counts. Also gather some simple graph metrics here 
@@ -122,7 +95,11 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	dag->_jobs.Rewind();
 	while ( (node = dag->_jobs.Next()) ) {
 		_graphNumVertices++;
+#ifdef DEAD_CODE
 		_graphNumEdges += node->NumChildren();
+#else
+		_graphNumEdges += node->CountChildren();
+#endif
 		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
@@ -136,7 +113,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 //---------------------------------------------------------------------------
 DagmanMetrics::~DagmanMetrics()
 {
-	delete[] _primaryDagFile;
+	free(_primaryDagFile);
 }
 
 //---------------------------------------------------------------------------
@@ -145,7 +122,7 @@ DagmanMetrics::ProcStarted( const struct tm &eventTime )
 {
 		// Avoid possible mktime() craziness unless we really need the
 		// metrics -- see gittrac #2898.
-	if ( _sendMetrics ) {
+	if ( false ) {
 		double et = GetTime( eventTime );
 			// We decrement by et - _startTime instead of just et here to
 			// reduce numerical error.
@@ -159,7 +136,7 @@ DagmanMetrics::ProcFinished( const struct tm &eventTime )
 {
 		// Avoid possible mktime() craziness unless we really need the
 		// metrics -- see gittrac #2898.
-	if ( _sendMetrics ) {
+	if ( false ) {
 		double et = GetTime( eventTime );
 			// We increment by et - _startTime instead of just et here to
 			// reduce numerical error.
@@ -192,92 +169,6 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 {
 	if ( !WriteMetricsFile( exitCode, status ) ) {
 		return false;
-	}
-
-	bool disabled = false;
-
-#if defined(WIN32)
-	disabled = true;
-#endif
-
-	if ( disabled ) {
-		debug_printf( DEBUG_NORMAL,
-					"Metrics reporting is not available on this platform.\n" );
-
-	} else if ( _sendMetrics ) {
-		MyString reporterPath;
-		const char* exe = param( "DAGMAN_PEGASUS_REPORT_METRICS" );	
-		if(exe) {
-			reporterPath = exe;
-		} else {
-			const char *libexec = param( "LIBEXEC" );
-			if ( !libexec ) {
-				debug_printf( DEBUG_QUIET,
-							"LIBEXEC not defined; can't find condor_dagman_metrics_reporter\n" );
-				return false;
-			}
-			reporterPath = libexec;
-			reporterPath += "/";
-			reporterPath += "condor_dagman_metrics_reporter";
-		}
-
-		MyString duration = IntToStr( param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 ) );
-
-		MyString metricsOutputFile( _primaryDagFile );
-		metricsOutputFile += ".metrics.out";
-
-		debug_printf( DEBUG_NORMAL,
-					"Reporting metrics to Pegasus metrics server(s); output is in %s.\n",
-					metricsOutputFile.Value() );
-
-		ArgList args;
-		args.AppendArg(reporterPath.Value());	
-		args.AppendArg("-f");
-		args.AppendArg(_metricsFile.Value());
-			// If the DAG was condor_rm'ed, we want the reporter to sleep.
-		if ( status == Dag::DAG_STATUS_RM ) {
-			args.AppendArg("-s");
-		}
-		args.AppendArg( "-t" );
-		args.AppendArg( duration.Value() );
-			// Dump the args to the dagman.out file
-		MyString cmd; // for debug output
-		args.GetArgsStringForDisplay( &cmd );
-		debug_printf( DEBUG_NORMAL, "Running command <%s>\n", cmd.Value() );
-
-		int stdFds[3];
-		stdFds[0] = -1; // stdin
-		stdFds[1] = safe_open_wrapper_follow( metricsOutputFile.Value(),
-					O_WRONLY | O_CREAT | O_TRUNC | O_APPEND ); // stdout
-		stdFds[2] = stdFds[1]; // stderr goes to the same file as stdout
-
-		int pid = daemonCore->Create_Process(
-					reporterPath.Value(),
-					args,
-					PRIV_UNKNOWN,
-					1, // reaper
-					false, // no command port
-					false, // no command port
-					NULL, // just inherit env of parent
-					NULL, // no cwd
-					NULL, // no FamilyInfo
-					NULL, // no sock_inherit_list
-					stdFds );
-
-		if ( pid == 0 ) {
-			debug_printf( DEBUG_QUIET,
-						"Error: failed to start condor_dagman_metrics_reporter (%d, %s)\n",
-						errno, strerror( errno ) );
-		}
-
-		if ( close( stdFds[1] ) != 0 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: closing stdout for metrics "
-						"reporter; errno %d (%s)\n", errno,
-						strerror( errno ) );
-		}
-
-	} else {
-		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
 	}
 
 	return true;
@@ -324,10 +215,14 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
-	fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
-	fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
-	fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
-	fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
+
+	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
+	if ( report_graph_metrics == true ) {
+		fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
+		fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
+		fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
+		fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
+	}
 
 		// Last item must NOT have trailing comma!
 	fprintf( fp, "    \"dag_status\":%d\n", status );
@@ -369,11 +264,22 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 void
 DagmanMetrics::GatherGraphMetrics( Dag* dag )
 {
+#ifdef DEAD_CODE
 	// Gather metrics about the size, shape of the graph.
 	_graphWidth = GetGraphWidth( dag );
 	_graphHeight = GetGraphHeight( dag );
+#else
+	// if we haven't alrady run the DFS cycle detection do that now
+	// it has the side effect of determining the width and height of the graph
+	if ( ! dag->_graph_width) {
+		dag->isCycle();
+	}
+	_graphWidth = dag->_graph_width;
+	_graphHeight = dag->_graph_height;
+#endif
 }
 
+#ifdef DEAD_CODE
 //---------------------------------------------------------------------------
 int
 DagmanMetrics::GetGraphHeight( Dag* dag )
@@ -415,15 +321,15 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 	}
 
 	// Base case: if this is a leaf node, return 1
-	if( node->NumChildren() == 0 ) {
+	if (node->NoChildren()) {
 		return 1;
 	}
 
 	// Recursive case: call this function recursively on all child nodes, then
 	// return the greatest height found among all children.
+	int maxHeight = 0;
 	set<JobID_t>& childNodes = node->GetQueueRef( Job::Q_CHILDREN );
 	set<JobID_t>::const_iterator it;
-	int maxHeight = 0;
 	for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
 		Job* child = dag->FindNodeByNodeID( *it );
 		int thisChildHeight = 1 + GetGraphHeightRecursive( child, dag, visited );
@@ -511,6 +417,8 @@ DagmanMetrics::GetGraphWidth( Dag* dag )
 	return maxWidth;
 }
 
+#endif // DEAD_CODE
+
 //---------------------------------------------------------------------------
 MyString
 DagmanMetrics::GetVersion()
@@ -529,58 +437,4 @@ DagmanMetrics::GetVersion()
 	}
 
 	return result;
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanMetrics::ParseBraindumpFile()
-{
-	const char *filename = getenv( "PEGASUS_BRAINDUMP_FILE" );
-	if ( !filename ) {
-		filename = "braindump.txt";
-	}
-
-	FILE *fp = safe_fopen_wrapper_follow( filename, "r" );
-	if ( !fp ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning:  could not open Pegasus braindump file %s\n",
-					filename );
-		check_warning_strictness( DAG_STRICT_2 );
-		return;
-	}
-
-	int lineno = 0;
-	const char *line;
-		// Note:  getline() frees memory from the previous call each time.
-	while ( (line = getline_trim( fp, lineno ) ) ) {
-		MyStringTokener tok;
-		tok.Tokenize(line);
-		const char *token1;
-		token1 = tok.GetNextToken( " \t", true );
-		if ( token1 ) {
-			const char *token2 = tok.GetNextToken( " \t", true );
-			if ( token2 ) {
-				if ( strcmp( token1, "wf_uuid" ) == 0 ) {
-					_workflowId = token2;
-				} else if ( strcmp( token1, "root_wf_uuid" ) == 0 ) {
-					_rootWorkflowId = token2;
-				} else if ( strcmp( token1, "planner" ) == 0 ) {
-					_plannerName = token2;
-				} else if ( strcmp( token1, "planner_version" ) == 0 ) {
-					_plannerVersion = token2;
-				}
-			} else {
-				debug_printf( DEBUG_QUIET,
-							"Warning:  no value for %s in braindump file\n",
-							token1 );
-				check_warning_strictness( DAG_STRICT_2 );
-			}
-		}
-	}
-
-	if ( fclose( fp ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: closing Pegasus braindump file %s; errno %d (%s)\n",
-					filename, errno, strerror( errno ) );
-	}
 }

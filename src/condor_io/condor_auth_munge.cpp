@@ -24,22 +24,68 @@
 #include <stdlib.h>
 #include <munge.h>
 #include "condor_auth_munge.h"
-#include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "condor_mkstemp.h"
 #include "ipv6_hostname.h"
 
+#if defined(DLOPEN_SECURITY_LIBS)
+#include <dlfcn.h>
+#endif
+
+// Symbols from the munge library
+static munge_err_t (*munge_encode_ptr)(char **, munge_ctx_t, const void *, int) = NULL;
+static munge_err_t (*munge_decode_ptr)(const char *, munge_ctx_t, void **, int *, uid_t *, gid_t *) = NULL;
+static const char * (*munge_strerror_ptr)(munge_err_t) = NULL;
+
+bool Condor_Auth_MUNGE::m_initTried = false;
+bool Condor_Auth_MUNGE::m_initSuccess = false;
+
 Condor_Auth_MUNGE :: Condor_Auth_MUNGE(ReliSock * sock)
     : Condor_Auth_Base    ( sock, CAUTH_MUNGE ),
 	m_crypto(NULL)
 {
+	ASSERT( Initialize() == true );
 }
 
 Condor_Auth_MUNGE :: ~Condor_Auth_MUNGE()
 {
 }
 
+bool Condor_Auth_MUNGE::Initialize()
+{
+	if ( m_initTried ) {
+		return m_initSuccess;
+	}
+
+#if defined(DLOPEN_SECURITY_LIBS)
+	void *dl_hdl;
+
+	if ( (dl_hdl = dlopen(LIBMUNGE_SO, RTLD_LAZY)) == NULL ||
+		 !(munge_encode_ptr = (munge_err_t (*)(char **, munge_ctx_t, const void *, int))dlsym(dl_hdl, "munge_encode")) ||
+		 !(munge_decode_ptr = (munge_err_t (*)(const char *, munge_ctx_t, void **, int *, uid_t *, gid_t *))dlsym(dl_hdl, "munge_decode")) ||
+		 !(munge_strerror_ptr = (const char * (*)(munge_err_t))dlsym(dl_hdl, "munge_strerror"))
+		 ) {
+
+		// Error in the dlopen/sym calls, return failure.
+		const char *err_msg = dlerror();
+		dprintf( D_ALWAYS, "Failed to open Munge library: %s\n",
+				 err_msg ? err_msg : "Unknown error" );
+		m_initSuccess = false;
+	} else {
+		m_initSuccess = true;
+	}
+#else
+	munge_encode_ptr = munge_encode;
+	munge_decode_ptr = munge_decode;
+	munge_strerror_ptr = munge_strerror;
+
+	m_initSuccess = true;
+#endif
+
+	m_initTried = true;
+	return m_initSuccess;
+}
 
 int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* errstack, bool /* non_blocking */)
 {
@@ -64,16 +110,16 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 		// For tools and daemons not started as root, this
 		// is a no-op.
 		priv_state saved_priv = set_condor_priv();
-		err = munge_encode (&munge_token, NULL, key, 24);
+		err = (*munge_encode_ptr) (&munge_token, NULL, key, 24);
 		set_priv(saved_priv);
 
 		if ( err != EMUNGE_SUCCESS ) {
-			dprintf(D_ALWAYS, "AUTHENTICATE_MUNGE: Client error: %i: %s\n", err, munge_strerror (err));
-			errstack->pushf("MUNGE", 1000,  "Client error: %i: %s", err, munge_strerror (err));
+			dprintf(D_ALWAYS, "AUTHENTICATE_MUNGE: Client error: %i: %s\n", err, (*munge_strerror_ptr) (err));
+			errstack->pushf("MUNGE", 1000,  "Client error: %i: %s", err, (*munge_strerror_ptr) (err));
 
 			// send the text of the error as the token so we stay sync in on
 			// the wire protocol and the other side can print out a reason.
-			munge_token = strdup(munge_strerror(err));
+			munge_token = strdup((*munge_strerror_ptr)(err));
 			client_result = -1;
 		} else {
 			// success on client side
@@ -148,12 +194,12 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 
 		unsigned char *key;
 		int   len;
-		err = munge_decode (munge_token, NULL, (void**)&key, &len, &uid, &gid);
+		err = (*munge_decode_ptr) (munge_token, NULL, (void**)&key, &len, &uid, &gid);
 		free(munge_token);
 
 		if (err != EMUNGE_SUCCESS) {
-			dprintf(D_ALWAYS, "AUTHENTICATE_MUNGE: Server error: %i: %s.\n", err, munge_strerror(err));
-			errstack->pushf("MUNGE", 1005, "Server error: %i: %s", err, munge_strerror(err));
+			dprintf(D_ALWAYS, "AUTHENTICATE_MUNGE: Server error: %i: %s.\n", err, (*munge_strerror_ptr)(err));
+			errstack->pushf("MUNGE", 1005, "Server error: %i: %s", err, (*munge_strerror_ptr)(err));
 			server_result = -1;
 		} else {
 			char *tmpOwner = my_username( uid );

@@ -55,34 +55,32 @@ get_host_part( const char* name )
 // valid daemon name that corresponds with the given name.  Basically,
 // see if there's an '@'.  If so, leave the name alone. If not,
 // resolve what we were passed as a hostname.  The string is allocated
-// with strnewp() (or it's equivalent), so you should deallocate it
-// with delete [].
+// with strdup(), so you should deallocate it with free().
 char*
 get_daemon_name( const char* name )
 {
-	char *tmp, *tmpname, *daemon_name = NULL;
+	const char *tmp;
+	char *daemon_name = NULL;
 
 	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
 			 name ); 
 
 		// First, check for a '@' in the name. 
-	tmpname = strdup( name );
-	tmp = strrchr( tmpname, '@' );
+	tmp = strrchr( name, '@' );
 	if( tmp ) {
 			// There's a '@'.
 		dprintf( D_HOSTNAME, "Daemon name has an '@', we'll leave it alone\n" );
-		daemon_name = strnewp( name );
+		daemon_name = strdup( name );
 	} else {
 			// There's no '@', just try to resolve the hostname.
 		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
 				 "regular hostname\n" );
 
-		//MyString hostname(tmpname);
-		MyString fqdn = get_fqdn_from_hostname(tmpname);
-		//daemon_name = get_full_hostname( tmpname );
-		daemon_name = strnewp(fqdn.Value());
+		std::string fqdn = get_fqdn_from_hostname(name);
+		if(! fqdn.empty()) {
+			daemon_name = strdup(fqdn.c_str());
+		}
 	}
-	free( tmpname );
 
 		// If there was an error, this will still be NULL.
 	if( daemon_name ) { 
@@ -100,11 +98,12 @@ get_daemon_name( const char* name )
 // no '@', try to resolve what we have and see if it's
 // get_local_fqdn().Value.  If so, use it, otherwise, use
 // name@get_local_fqdn().Value().  We return the answer in a string which
-// should be deallocated w/ delete [].
+// should be deallocated w/ free().
 char*
 build_valid_daemon_name( const char* name ) 
 {
-	char *tmp, *tmpname = NULL, *daemon_name = NULL;
+	const char *tmp;
+	char *daemon_name = NULL;
 	int size;
 
 		// This flag determines if we want to just return a copy of
@@ -117,17 +116,16 @@ build_valid_daemon_name( const char* name )
 	bool just_name = false;
 
 	if( name && *name ) {
-		tmpname = strnewp( name );
-		tmp = strrchr( tmpname, '@' );
+		tmp = strrchr( name, '@' );
 		if( tmp ) {
 				// name we were passed has an '@', we just want to
 				// leave the name alone
 			just_name = true;
 		} else {
 				// no '@', see if what we have is our hostname
-			MyString fqdn = get_fqdn_from_hostname(name);
-			if( fqdn.Length() > 0 ) {
-				if( !strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) ) {
+			std::string fqdn = get_fqdn_from_hostname(name);
+			if( fqdn.length() > 0 ) {
+				if( !strcasecmp( get_local_fqdn().Value(), fqdn.c_str() ) ) {
 						// Yup, so just the full hostname.
 					just_host = true;
 				}					
@@ -139,23 +137,22 @@ build_valid_daemon_name( const char* name )
 	}
 
 	if( just_host ) {
-		daemon_name = strnewp( get_local_fqdn().Value() );
+		daemon_name = strdup( get_local_fqdn().Value() );
 	} else {
 		if( just_name ) {
-			daemon_name = strnewp( name );
+			daemon_name = strdup( name );
 		} else {
-			size = strlen(tmpname) + get_local_fqdn().length() + 2; 
-			daemon_name = new char[size];
-			sprintf( daemon_name, "%s@%s", tmpname, get_local_fqdn().Value() ); 
+			size = strlen(name) + get_local_fqdn().length() + 2; 
+			daemon_name = (char *)malloc(size);
+			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().Value() ); 
 		}
 	}
-	delete [] tmpname;
 	return daemon_name;
 }
 
 
 /* 
-   Return a string on the heap (must be deallocated with delete()) that 
+   Return a string on the heap (must be deallocated with free()) that 
    contains the default daemon name for the calling process.  If we're
    root (additionally, on UNIX, if we're condor), we default to the
    full hostname.  Otherwise, we default to username@full.hostname.
@@ -164,11 +161,11 @@ char*
 default_daemon_name( void )
 {
 	if( is_root() ) {
-		return strnewp( get_local_fqdn().Value() );
+		return strdup( get_local_fqdn().Value() );
 	}
 #ifndef WIN32
 	if( getuid() == get_real_condor_uid() ) {
-		return strnewp( get_local_fqdn().Value() );
+		return strdup( get_local_fqdn().Value() );
 	}
 #endif /* ! LOSE32 */
 	char* name = my_username();
@@ -180,7 +177,7 @@ default_daemon_name( void )
 		return NULL;
 	}
 	int size = strlen(name) + get_local_fqdn().length() + 2;
-	char* ans = new char[size];
+	char* ans = (char *)malloc(size);
 	if( ! ans ) {
 		free( name );
 		return NULL;

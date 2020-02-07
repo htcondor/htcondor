@@ -288,6 +288,7 @@ class OperationParens : public Operation
 
 		/// Make a deep copy of the expression
 		virtual ExprTree* Copy( ) const;
+		virtual bool _Evaluate( EvalState &, Value &) const;
 
 	protected:
 		/// Constructor

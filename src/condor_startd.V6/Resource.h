@@ -112,6 +112,8 @@ public:
 	void	releaseAllClaimsReversibly( void );
 	void	killAllClaims( void );
 
+	void	dropAdInLogFile( void );
+
         void	setBadputCausedByDraining();
         bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
 
@@ -264,7 +266,7 @@ public:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATION
-	bool	evaluateHibernate( MyString &state ) const;
+	bool	evaluateHibernate( std::string &state ) const;
 #endif /* HAVE_HIBERNATION */
 
 	int     evalMaxVacateTime();

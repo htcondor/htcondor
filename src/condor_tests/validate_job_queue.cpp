@@ -35,7 +35,7 @@ my_exit( int status )
 	fflush( stderr );
 
 	if ( ! status ) {
-		clear_config();
+		clear_global_config_table();
 	}
 
 	exit( status );

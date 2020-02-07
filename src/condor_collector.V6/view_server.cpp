@@ -768,8 +768,11 @@ void ViewServer::WriteHistory()
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				MSC_SUPPRESS_WARNING(6031) // return value of rename ignored.
-				rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				int r = rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				if (r < 0) {
+					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value(), errno);
+					EXCEPT("Could not rename data file");
+				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
 				if(FileHash->lookup(DataSet[i][j].OldFileName.Value(),
@@ -824,13 +827,13 @@ int ViewServer::SubmittorScanFunc(ClassAd* cad)
 
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))<0) return 1;
-	if (cad->LookupString(ATTR_MACHINE,Machine,sizeof(Machine))<0) return 1;
+	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))==false) return 1;
+	if (cad->LookupString(ATTR_MACHINE,Machine,sizeof(Machine))==false) return 1;
 	GroupName=Name;
 	strcat(Name,"/");
 	strcat(Name,Machine);
-	if (cad->LookupInteger(ATTR_RUNNING_JOBS,JobsRunning)<0) JobsRunning=0;
-	if (cad->LookupInteger(ATTR_IDLE_JOBS,JobsIdle)<0) JobsIdle=0;
+	if (cad->LookupInteger(ATTR_RUNNING_JOBS,JobsRunning)==false) JobsRunning=0;
+	if (cad->LookupInteger(ATTR_IDLE_JOBS,JobsIdle)==false) JobsIdle=0;
 
 	// Add to group Totals
 
@@ -942,9 +945,9 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 	// Get Group Name
 
 	char tmp[200];
-	if (cad->LookupString(ATTR_ARCH,tmp,sizeof(tmp))<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_ARCH,tmp,sizeof(tmp))==false) strcpy(tmp,"Unknown");
 	MyString GroupName=MyString(tmp)+"/";
-	if (cad->LookupString(ATTR_OPSYS,tmp,sizeof(tmp))<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_OPSYS,tmp,sizeof(tmp))==false) strcpy(tmp,"Unknown");
 	GroupName+=tmp;
 
 	// Add to group Totals
@@ -1023,14 +1026,14 @@ int ViewServer::CkptScanFunc(ClassAd* cad)
 	
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))<0) return 1;
-	if (cad->LookupInteger("BytesReceived",Bytes)<0) Bytes=0;
+	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))==false) return 1;
+	if (cad->LookupInteger("BytesReceived",Bytes)==false) Bytes=0;
 	BytesReceived=float(Bytes)/(1024*1024);
-	if (cad->LookupInteger("BytesSent",Bytes)<0) Bytes=0;
+	if (cad->LookupInteger("BytesSent",Bytes)==false) Bytes=0;
 	BytesSent=float(Bytes)/(1024*1024);
-	if (cad->LookupFloat("AvgReceiveBandwidth",AvgReceiveBandwidth)<0) AvgReceiveBandwidth=0;
+	if (cad->LookupFloat("AvgReceiveBandwidth",AvgReceiveBandwidth)==false) AvgReceiveBandwidth=0;
 	AvgReceiveBandwidth=AvgReceiveBandwidth/1024;
-	if (cad->LookupFloat("AvgSendBandwidth",AvgSendBandwidth)<0) AvgSendBandwidth=0;
+	if (cad->LookupFloat("AvgSendBandwidth",AvgSendBandwidth)==false) AvgSendBandwidth=0;
 	AvgSendBandwidth=AvgSendBandwidth/1024;
 
 	// Add to accumulated data

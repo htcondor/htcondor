@@ -23,7 +23,6 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "condor_string.h"
 #include "status_string.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
@@ -78,7 +77,7 @@ Directory::Directory( const char *name, priv_state priv )
 {
 	initialize( priv );
 
-	curr_dir = strnewp(name);
+	curr_dir = strdup(name);
 	//dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
 	ASSERT(curr_dir);
 
@@ -98,7 +97,7 @@ Directory::Directory( StatInfo* info, priv_state priv )
 	ASSERT(info);
 	initialize( priv );
 
-	curr_dir = strnewp( info->FullPath() );
+	curr_dir = strdup( info->FullPath() );
 	ASSERT(curr_dir);
 
 #ifndef WIN32
@@ -142,7 +141,7 @@ Directory::initialize( priv_state priv )
 
 Directory::~Directory()
 {
-	delete [] curr_dir;
+	free( curr_dir );
 	if( curr ) {
 		delete curr;
 	}
@@ -161,7 +160,7 @@ Directory::~Directory()
 }
 
 filesize_t
-Directory::GetDirectorySize()
+Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/)
 {
 	const char* thefile = NULL;
 	filesize_t dir_size = 0;
@@ -171,10 +170,13 @@ Directory::GetDirectorySize()
 	Rewind();
 
 	while ( (thefile=Next()) ) {
+		if (number_of_entries) {
+			(*number_of_entries)++;
+		}
 		if ( IsDirectory() && !IsSymlink() ) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
-			dir_size += subdir.GetDirectorySize();
+			dir_size += subdir.GetDirectorySize(number_of_entries);
 		} else {
 			dir_size += GetFileSize();
 		}

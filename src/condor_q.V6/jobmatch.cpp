@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "queue_internal.h"
-#include "get_daemon_name.h"
 #if 0
 #include "MyString.h"
 #include "ad_printmask.h"
@@ -556,8 +555,8 @@ static bool checkOffer(
 	}
 	ac.both_match++;
 
-	int offline = 0;
-	if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		ac.fOffline++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname);
 	}
@@ -749,7 +748,7 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
-	int		jobMatched = false;
+	bool	jobMatched = false;
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -774,11 +773,11 @@ bool doJobRunAnalysis (
 	}
 	if (jobState == HELD) {
 		job_status = "Job is held.";
-		MyString hold_reason;
+		std::string hold_reason;
 		request->LookupString( ATTR_HOLD_REASON, hold_reason );
-		if( hold_reason.Length() ) {
+		if( hold_reason.length() ) {
 			job_status += "\n\nHold reason: ";
-			job_status += hold_reason.Value();
+			job_status += hold_reason;
 		}
 	}
 	if (jobState == REMOVED) {
@@ -813,8 +812,8 @@ bool doJobRunAnalysis (
 			char const *requirements_attr = (universe == CONDOR_UNIVERSE_LOCAL)
 				? ATTR_START_LOCAL_UNIVERSE 
 				: ATTR_START_SCHEDULER_UNIVERSE;
-			int can_start = 0;
-			if ( ! scheddAd->EvalBool(requirements_attr, request, can_start)) {
+			bool can_start = false;
+			if ( ! EvalBool(requirements_attr, scheddAd, request, can_start)) {
 				match_result.formatstr_cat("This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
 			} else {
 				if (can_start) { ac.both_match++; } else { ac.fOffConstraint++; }
@@ -923,8 +922,8 @@ bool doJobRunAnalysis (
 		}
 		ac.both_match++;
 
-		int offline = 0;
-		if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+		bool offline = false;
+		if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 			ac.fOffline++;
 			if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname.c_str(), verb_width);
 			continue;
@@ -1332,7 +1331,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 	int universe = CONDOR_UNIVERSE_MIN;
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
-	MyString resource;
+	std::string resource;
 	switch(universe) {
 			// Known valid
 		case CONDOR_UNIVERSE_STANDARD:
@@ -1350,7 +1349,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
 			request->LookupString(ATTR_GRID_RESOURCE, resource);
-			if ( strstr(resource.Value(),"$$") ) {
+			if ( strstr(resource.c_str(),"$$") ) {
 				uses_matchmaking = true;
 				break;
 			}  
@@ -1406,8 +1405,8 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	std::string slotname = "";
 	slot->LookupString(ATTR_NAME , slotname);
 
-	int offline = 0;
-	if (slot->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (slot->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		sprintf(return_buff, "%-24.24s  is offline\n", slotname.c_str());
 		return return_buff;
 	}
@@ -1475,12 +1474,6 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 				pretty_req += "\n\n  START is\n    ";
 				PrettyPrintExprTree(tree, pretty_req, 4, console_width);
 				inline_attrs.insert(ATTR_START);
-			}
-			tree = slot->LookupExpr(ATTR_IS_VALID_CHECKPOINT_PLATFORM);
-			if (tree) {
-				pretty_req += "\n\n  " ATTR_IS_VALID_CHECKPOINT_PLATFORM " is\n    ";
-				PrettyPrintExprTree(tree, pretty_req, 4, console_width);
-				inline_attrs.insert(ATTR_IS_VALID_CHECKPOINT_PLATFORM);
 			}
 			tree = slot->LookupExpr(ATTR_WITHIN_RESOURCE_LIMITS);
 			if (tree) {
@@ -1556,7 +1549,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	}
 
 #if 1
-	PRAGMA_REMIND("TJ: what does this do?")
+	//PRAGMA_REMIND("TJ: what does this do?")
 #else
 	if (better_analyze) {
 		std::string ana_buffer = "";

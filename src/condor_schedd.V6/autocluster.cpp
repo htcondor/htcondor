@@ -93,18 +93,15 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 	if (significant_attrs && ! next_id_exhausted && (MATCH == strcasecmp(new_sig_attrs,significant_attrs))) {
 		if (free_input_attrs) {
 			free(const_cast<char*>(new_sig_attrs));
-			new_sig_attrs = NULL;
 		}
 		return false;
 	}
 
 	//PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
 
-	const char * free_attrs = NULL;
-
 	if (replace_attrs || ! significant_attrs) {
 		// Create significant_attrs from new_sig_attrs
-		free_attrs = significant_attrs; // remember to free this later
+		free(const_cast<char*>(significant_attrs));
 		if (free_input_attrs) {
 			significant_attrs = new_sig_attrs;
 		} else {
@@ -119,15 +116,13 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		StringList new_attrs(new_sig_attrs);
 		sig_attrs_changed = attrs.create_union(new_attrs,true);
 		if (sig_attrs_changed) {
-			free_attrs = significant_attrs; // free this later
+			free(const_cast<char*>(significant_attrs));
 			significant_attrs = attrs.print_to_string();
-		} else if (free_input_attrs) {
-			free_attrs = new_sig_attrs; // free this later
+		}
+		if (free_input_attrs) {
+			free(const_cast<char*>(new_sig_attrs));
 		}
 	}
-
-	// free whatever list of attrs we don't need anymore
-	if (free_attrs) { free(const_cast<char*>(free_attrs)); free_attrs = NULL; }
 
 	// the SIGNIFICANT_ATTRIBUTES setting changed, purge our
 	// state.
@@ -143,7 +138,7 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 // lookup the autocluster for a job (assumes job.autocluster_id is valid)
 JobCluster::JobIdSetMap::iterator JobCluster::find_job_id_set(JobQueueJob & job)
 {
-	// use the job's cluster_id field to quickly lookup the old JobIdSetMap
+	// use the job's autocluster_id field to quickly lookup the old JobIdSetMap
 	// if that set map actually still contains the job, return it.
 	JobIdSetMap::iterator it = cluster_use.find(job.autocluster_id);
 	if (it != cluster_use.end() && it->second.contains(job.jid)) {
@@ -317,9 +312,7 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			JobIdSetMap::iterator jit = find_job_id_set(job);
 			if (jit != cluster_use.end()) {
 				int old_id = jit->first;
-				if (old_id == cur_id) {
-					jit->second.insert(job.jid);
-				} else {
+				if (old_id != cur_id) {
 					jit->second.erase(job.jid);
 					if (jit->second.empty()) { cluster_gone.insert(old_id); }
 					cluster_use[cur_id].insert(job.jid);
@@ -617,24 +610,47 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job)
 	return cur_id;
 }
 
-void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
+bool AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
 {
 	// If any of the attrs used to create the signature are
 	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
 	// the signature needs to be recomputed as it may have changed.
 	// Note we do this whether or not the transaction is committed - that
 	// is ok, and actually is probably more efficient than hitting disk.
-	char * sigAttrs = NULL;
-	job.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sigAttrs);
-	if ( sigAttrs ) {
-		StringList attrs(sigAttrs);
-		if ( attrs.contains_anycase(attr) ) {
-			job.Delete(ATTR_AUTO_CLUSTER_ID);
-			job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
-			job.autocluster_id = -1;
+	ExprTree * expr = job.Lookup(ATTR_AUTO_CLUSTER_ATTRS);
+	if (expr) {
+		std::string tmp;
+		const char * sigAttrs = NULL;
+		if (ExprTreeIsLiteralString(expr, sigAttrs)) {
+		} else if (job.LookupString(ATTR_AUTO_CLUSTER_ATTRS, tmp)) {
+			// we don't expect this to be an expression rather than a string
+			// but if it is, we should still be able to handle it.
+			sigAttrs = tmp.c_str();
+		} else {
+			// is not a string and does not evaluate to one.
+			return false;
 		}
-		free(sigAttrs);
-		sigAttrs = NULL;
+
+		if (is_attr_in_attr_list(attr, sigAttrs)) {
+			removeFromAutocluster(job);
+			return true;
+		}
+	}
+	return false;
+}
+
+void AutoCluster::removeFromAutocluster(JobQueueJob &job)
+{
+	if (job.autocluster_id >= 0) {
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+		JobIdSetMap::iterator it = cluster_use.find(job.autocluster_id);
+		if (it != cluster_use.end()) {
+			it->second.erase(job.jid);
+		}
+#endif
+		job.Delete(ATTR_AUTO_CLUSTER_ID);
+		job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
+		job.autocluster_id = -1;
 	}
 }
 
@@ -652,7 +668,7 @@ int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
 	aggregate_jobs_args * pargs = (aggregate_jobs_args*)pv;
 	JobCluster* pjc = pargs->pjc;
-	if (pargs->constraint && ! EvalBool(job, pargs->constraint)) {
+	if (pargs->constraint && ! EvalExprBool(job, pargs->constraint)) {
 		// if there is a constraint, and it doesn't evaluate to true, skip this job.
 		return 0;
 	}
@@ -859,7 +875,7 @@ ClassAd * JobAggregationResults::next()
 
 		// if there is a constraint, then only return the ad if it matches the constraint.
 		if (constraint) {
-			if ( ! EvalBool(&ad, constraint))
+			if ( ! EvalExprBool(&ad, constraint))
 				continue;
 		}
 

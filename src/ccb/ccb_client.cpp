@@ -122,8 +122,8 @@ CCBClient::myName()
 bool
 CCBClient::ReverseConnect_blocking( CondorError *error )
 {
-	counted_ptr<ReliSock> listen_sock;
-	counted_ptr<SharedPortEndpoint> shared_listener;
+	std::shared_ptr<ReliSock> listen_sock;
+	std::shared_ptr<SharedPortEndpoint> shared_listener;
 	char const *listener_addr = NULL;
 
 	m_ccb_contacts.rewind();
@@ -143,7 +143,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		// FIXME: Assumes that shared port knows what it's doing.
 		//
 		if( SharedPortEndpoint::UseSharedPort() ) {
-			shared_listener = counted_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
+			shared_listener = std::shared_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
 			shared_listener->InitAndReconfig();
 			MyString errmsg;
 			if( !shared_listener->CreateListener() ) {
@@ -169,9 +169,14 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				continue;
 			}
 
-			listen_sock = counted_ptr<ReliSock>( new ReliSock() );
+			listen_sock = std::shared_ptr<ReliSock>( new ReliSock() );
+
 			// Should bind() should accept a condor_sockaddr directly?
-			listen_sock->bind( ccbSA.get_protocol(), false, 0, false );
+			if (!listen_sock->bind( ccbSA.get_protocol(), false, 0, false )) {
+				dprintf(D_ALWAYS,"CCBClient: can't bind listen socket\n");
+				return false;
+			}
+
 			if( ! listen_sock->listen() ) {
 				MyString errmsg;
 				errmsg.formatstr( "Failed to listen for reversed connection from %s.",
@@ -304,7 +309,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 					if( shared_listener.get() ) {
 						shared_listener->RemoveListenerFromSelector(selector);
 							// destruct the shared port endpoint
-						shared_listener = counted_ptr<SharedPortEndpoint>(NULL);
+						shared_listener = std::shared_ptr<SharedPortEndpoint>(NULL);
 					}
 
 					success = true;
@@ -359,7 +364,7 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address,
 }
 
 bool
-CCBClient::AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_ptr<SharedPortEndpoint> shared_listener)
+CCBClient::AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener)
 {
 	// This happens when we are in ReverseConnect_blocking().
 	// and our listen socket becomes readable, indicating that
@@ -401,7 +406,7 @@ CCBClient::AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_pt
 		return false;
 	}
 
-	MyString connect_id;
+	std::string connect_id;
 	msg.LookupString(ATTR_CLAIM_ID,connect_id);
 
 	if( cmd != CCB_REVERSE_CONNECT || connect_id != m_connect_id ) {
@@ -454,7 +459,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 
 	msg.LookupBool(ATTR_RESULT,result);
 	if( !result ) {
-		MyString remote_errmsg;
+		std::string remote_errmsg;
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
 		errmsg.formatstr(
@@ -462,7 +467,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 			"request for reversed connection to %s: %s",
 			m_ccb_sock->peer_description(),
 			m_target_peer_description.Value(),
-			remote_errmsg.Value());
+			remote_errmsg.c_str());
 
 		if( error ) {
 			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
@@ -641,7 +646,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 	else {
 		ClassAd msg = ((ClassAdMsg *)cb->getMessage())->getMsgClassAd();
 		bool result = false;
-		MyString remote_errmsg;
+		std::string remote_errmsg;
 		msg.LookupBool(ATTR_RESULT,result);
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
@@ -651,7 +656,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 				"(non-blocking) request for reversed connection to %s: %s\n",
 				m_cur_ccb_address.Value(),
 				m_target_peer_description.Value(),
-				remote_errmsg.Value());
+				remote_errmsg.c_str());
 			UnregisterReverseConnectCallback();
 			try_next_ccb();
 		}
@@ -785,7 +790,7 @@ CCBClient::ReverseConnectCommandHandler(Service *,int cmd,Stream *stream)
 
 	// Now figure out which CCBClient is waiting for this connection.
 
-	MyString connect_id;
+	std::string connect_id;
 	msg.LookupString(ATTR_CLAIM_ID,connect_id);
 
 	classy_counted_ptr<CCBClient> client;
@@ -793,7 +798,7 @@ CCBClient::ReverseConnectCommandHandler(Service *,int cmd,Stream *stream)
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,
 				"CCBClient: failed to find requested connection id %s.\n",
-				connect_id.Value());
+				connect_id.c_str());
 		return FALSE;
 	}
 	client->ReverseConnectCallback((Sock *)stream);

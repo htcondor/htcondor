@@ -13,6 +13,6 @@ echo N is $N
 cp ../signing_policy certificates/$N.signing_policy
 cp CondorSigningCA1/signing-ca-1.crt certificates/$N.0
 
-openssl req -newkey rsa:1024 -keyout cert.key -nodes -config ../openssl.cnf -out cert.req -batch -subj "/C=US/ST=Wisconsin/L=Madison/O=CHTC/O=TEST/CN=CERT"
-openssl ca -config ../openssl.cnf -out cert.crt -in cert.req -batch
+#openssl req -newkey rsa:1024 -keyout cert.key -nodes -config ../openssl.cnf -out cert.req -batch -subj "/C=US/ST=Wisconsin/L=Madison/O=CHTC/O=TEST/CN=CERT"
+#openssl ca -config ../openssl.cnf -out cert.crt -in cert.req -batch
 

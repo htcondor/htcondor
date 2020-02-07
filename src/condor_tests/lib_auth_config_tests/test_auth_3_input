@@ -28,15 +28,15 @@ ADMINISTRATOR * 10.2.3.41 DENIED
 
 #ALLOW_NEGOTIATOR = *.cs.wisc.edu
 #DENY_NEGOTIATOR = condor.cs.wisc.edu
-NEGOTIATOR user@domain www.cs.wisc.edu ALLOWED
+NEGOTIATOR user@domain ingwe.cs.wisc.edu ALLOWED
 NEGOTIATOR user@domain condor.cs.wisc.edu DENIED
 NEGOTIATOR user@domain www.wisc.edu DENIED
-NEGOTIATOR * www.cs.wisc.edu ALLOWED
+NEGOTIATOR * ingwe.cs.wisc.edu ALLOWED
 NEGOTIATOR * condor.cs.wisc.edu DENIED
 
 #ALLOW_CONFIG = config@domain/*.cs.wisc.edu
 #DENY_CONFIG = config@domain/condor.cs.wisc.edu
-CONFIG config@domain www.cs.wisc.edu ALLOWED
+CONFIG config@domain ingwe.cs.wisc.edu ALLOWED
 CONFIG config@domain condor.cs.wisc.edu DENIED
 CONFIG config2@domain condor.cs.wisc.edu DENIED
-CONFIG config2@domain www.cs.wisc.edu DENIED
+CONFIG config2@domain ingwe.cs.wisc.edu DENIED

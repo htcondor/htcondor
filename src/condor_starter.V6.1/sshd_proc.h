@@ -27,7 +27,7 @@
 class SSHDProc : public VanillaProc
 {
 public:
-	SSHDProc(ClassAd* job_ad, bool delete_ad = false);
+	SSHDProc(ClassAd* job_ad, const std::string &session_dir, bool delete_ad = false);
 
 	virtual int SshStartJob(int std_fds[],char const *std_fnames[]);
 
@@ -43,6 +43,7 @@ public:
 
 	virtual bool SupportsPIDNamespace() { return false;}
 	virtual std::string CgroupSuffix() { return "/sshd";}
+	std::string session_dir;
 };
 
 #endif

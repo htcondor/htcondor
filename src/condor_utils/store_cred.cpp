@@ -34,8 +34,72 @@
 #include "condor_base64.h"
 #include "zkm_base64.h"
 #include "my_popen.h"
+#include "directory.h"
+
+#include <chrono>
+#include <algorithm>
+#include <iterator>
+#include <unordered_set>
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
+
+namespace {
+
+class NamedCredentialCache
+{
+private:
+	std::vector<std::string> m_creds;
+	std::chrono::steady_clock::time_point m_last_refresh;
+
+public:
+	NamedCredentialCache() {}
+
+	void Refresh() {
+		m_creds.clear();
+		m_last_refresh = std::chrono::steady_clock::time_point();
+	}
+
+	bool List(std::vector<std::string> &creds, CondorError *err);
+};
+
+NamedCredentialCache g_cred_cache;
+
+char *
+read_password_from_filename(const char *filename, CondorError *err)
+{
+	char  *buffer = nullptr;
+	size_t len;
+	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
+	if(rc) {
+		// buffer now contains the binary contents from the file.
+		// due to the way 8.4.X and earlier version wrote the file,
+		// there will be trailing NULL characters, although they are
+		// ignored in 8.4.X by the code that reads them.  As such, for
+		// us to agree on the password, we also need to discard
+		// everything after the first NULL.  we do this by simply
+		// resetting the len.  there is a function "strnlen" but it's a
+		// GNU extension so we just do the raw scan here:
+		size_t newlen = 0;
+		while(newlen < len && buffer[newlen]) {
+			newlen++;
+		}
+		len = newlen;
+
+		// undo the trivial scramble
+		char *pw = (char *)malloc(len + 1);
+		simple_scramble(pw, buffer, len);
+		pw[len] = '\0';
+		free(buffer);
+		return pw;
+	}
+
+	if (err) err->pushf("CRED", 1, "Failed to read file %s securely.", filename);
+	dprintf(D_ALWAYS, "read_password_from_filename(): read_secure_file(%s) failed!\n", filename);
+	return nullptr;
+}
+
+}
+
 
 #ifndef WIN32
 	// **** UNIX CODE *****
@@ -48,7 +112,7 @@ void SecureZeroMemory(void *p, size_t n)
 
 
 int
-NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
+OAUTH_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
 	// store a SciToken produced by the credential producer.
 	//
@@ -57,12 +121,12 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// exist and are configurable, the token should be stored using that
 	// method, not via the credential producer.
 
-	dprintf(D_ALWAYS, "ZKM: NEW store cred user %s len %i mode %i\n", user, len, mode);
+	dprintf(D_ALWAYS, "OAUTH store cred user %s len %i mode %i\n", user, len, mode);
 
 	// only set to true if it actually happens
 	cred_modified = false;
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return FAILURE;
@@ -79,7 +143,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 	// create dir for user's creds
 	MyString user_cred_dir;
-	user_cred_dir.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, username);
+	user_cred_dir.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	mkdir(user_cred_dir.Value(), 0700);
 
 	// create filenames
@@ -87,7 +151,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	char filename[PATH_MAX];
 	sprintf(tmpfilename, "%s%cscitokens.top.tmp", user_cred_dir.Value(), DIR_DELIM_CHAR);
 	sprintf(filename, "%s%cscitokens.top", user_cred_dir.Value(), DIR_DELIM_CHAR);
-	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+	dprintf(D_ALWAYS, "Writing user cred data to %s\n", tmpfilename);
 
 	// contents of pw are base64 encoded.  decode now just before they go
 	// into the file.
@@ -96,7 +160,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		dprintf(D_ALWAYS, "Failed to decode credential!\n");
 		free(rawbuf);
 		return false;
 	}
@@ -113,18 +177,18 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	free(rawbuf);
 
 	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		dprintf(D_ALWAYS, "Failed to write secure temp file %s\n", tmpfilename);
 		return FAILURE;
 	}
 
 	// now move into place
-	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	dprintf(D_ALWAYS, "Renaming %s to %s\n", tmpfilename, filename);
 	priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
 	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+		dprintf(D_ALWAYS, "Failed to rename %s to %s\n", tmpfilename, filename);
 
 		// should we rm tmpfilename ?
 		return FAILURE;
@@ -136,14 +200,14 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 }
 
 int
-ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
+UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
-	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
+	dprintf(D_ALWAYS, "Unix store cred user %s len %i mode %i\n", user, len, mode);
 
 	// only set to true if it actually happens
 	cred_modified = false;
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return FAILURE;
@@ -160,7 +224,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
-	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	struct stat cred_stat_buf;
 	int rc = stat(ccfilename, &cred_stat_buf);
 
@@ -192,9 +256,9 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// create filenames
 	char tmpfilename[PATH_MAX];
 	char filename[PATH_MAX];
-	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, username);
-	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, username);
-	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+	sprintf(filename, "%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+	dprintf(D_ALWAYS, "Writing credential data to %s\n", tmpfilename);
 
 	// contents of pw are base64 encoded.  decode now just before they go
 	// into the file.
@@ -203,7 +267,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		dprintf(D_ALWAYS, "Failed to decode credential!\n");
 		free(rawbuf);
 		return false;
 	}
@@ -215,18 +279,18 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	free(rawbuf);
 
 	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		dprintf(D_ALWAYS, "Failed to write secure temp file %s\n", tmpfilename);
 		return FAILURE;
 	}
 
 	// now move into place
-	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	dprintf(D_ALWAYS, "Renaming %s to %s\n", tmpfilename, filename);
 	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
 	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+		dprintf(D_ALWAYS, "Failed to rename %s to %s\n", tmpfilename, filename);
 
 		// should we rm tmpfilename ?
 		return FAILURE;
@@ -239,11 +303,11 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 
 char*
-ZKM_UNIX_GET_CRED(const char *user, const char *domain)
+UNIX_GET_CRED(const char *user, const char *domain)
 {
-	dprintf(D_ALWAYS, "ZKM: get cred user %s domain %s\n", user, domain);
+	dprintf(D_ALWAYS, "Unix get cred user %s domain %s\n", user, domain);
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got GET_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return NULL;
@@ -251,8 +315,8 @@ ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 
 	// create filenames
 	MyString filename;
-	filename.formatstr("%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
-	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
+	filename.formatstr("%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
+	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
 	unsigned char *buf = 0;
@@ -279,8 +343,8 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_ALWAYS, "ZKM: GOT UNIX GET CRED\n");
-		return ZKM_UNIX_GET_CRED(username, domain);
+		dprintf(D_ALWAYS, "GOT UNIX GET CRED\n");
+		return UNIX_GET_CRED(username, domain);
 	} 
 
 	// See if the security manager has overridden the pool password.
@@ -291,42 +355,15 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// EVERYTHING BELOW HERE IS FOR POOL PASSWORD ONLY
 
-	char *filename = param("SEC_PASSWORD_FILE");
-	if (filename == NULL) {
+	auto_free_ptr filename( param("SEC_PASSWORD_FILE") );
+	if (!filename) {
 		dprintf(D_ALWAYS,
 		        "error fetching pool password; "
 		            "SEC_PASSWORD_FILE not defined\n");
 		return NULL;
 	}
 
-	char  *buffer;
-	size_t len;
-	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
-	if(rc) {
-		// buffer now contains the binary contents from the file.
-		// due to the way 8.4.X and earlier version wrote the file,
-		// there will be trailing NULL characters, although they are
-		// ignored in 8.4.X by the code that reads them.  As such, for
-		// us to agree on the password, we also need to discard
-		// everything after the first NULL.  we do this by simply
-		// resetting the len.  there is a function "strnlen" but it's a
-		// GNU extension so we just do the raw scan here:
-		size_t newlen = 0;
-		while(newlen < len && buffer[newlen]) {
-			newlen++;
-		}
-		len = newlen;
-
-		// undo the trivial scramble
-		char *pw = (char *)malloc(len + 1);
-		simple_scramble(pw, buffer, len);
-		pw[len] = '\0';
-		free(buffer);
-		return pw;
-	}
-
-	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename);
-	return NULL;
+	return read_password_from_filename(filename.ptr(), nullptr);
 }
 
 int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified)
@@ -340,13 +377,13 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		// See if we are operating in "new" or "old" mode and dispatch accordingly
-		if (param_boolean("TOKENS", false)) {
-			dprintf(D_ALWAYS, "ZKM: GOT *NEW* UNIX STORE CRED\n");
-			return NEW_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
+		if (param_boolean("CREDD_OAUTH_MODE", false)) {
+			dprintf(D_ALWAYS, "GOT OAUTH STORE CRED\n");
+			return OAUTH_STORE_CRED(user, cred, credlen, mode, cred_modified);
 		}
 
-		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
-		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
+		dprintf(D_ALWAYS, "GOT UNIX STORE CRED\n");
+		return UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
 	}
 
 	//
@@ -678,7 +715,6 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	char * user = NULL;
 	char * domain = NULL;
 	char * password = NULL;
-	bool dcfound = (daemonCore != NULL);
 
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
@@ -718,7 +754,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 
 		// Get the username and domain from the wire
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in get_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in get_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	sock->decode();
 
@@ -804,13 +840,12 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
-	int mode;
+	int mode = STORE_CRED_FIRST_MODE - 1;
 	int result;
 	int answer = FAILURE;
 	int cred_modified = false;
-	bool dcfound = daemonCore != NULL;
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in store_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
@@ -838,7 +873,13 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return FALSE;
+		goto cleanup_and_exit;
+	}
+
+	if (mode < STORE_CRED_FIRST_MODE || mode > STORE_CRED_LAST_MODE) {
+		dprintf(D_ALWAYS, "store_cred: %d is not a valid mode\n", mode);
+		answer = FAILURE;
+		goto cleanup_and_exit;
 	}
 
 	if ( user ) {
@@ -850,13 +891,20 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 		}
 		else {
 				// We don't allow one user to set another user's credential
+				//   (except for users explicitly allowed to)
+				// TODO: We deliberately ignore the user domains. Isn't
+				//   that a security issue?
 				// we don't allow updates to the pool password through this interface
+			std::string param_val;
+			param(param_val, "CRED_SUPER_USERS");
+			StringList auth_users( param_val.c_str() );
+			auth_users.append(std::string(user).substr(0, tmp-user).c_str());
 			const char *sock_owner = sock->getOwner();
 			if ( sock_owner == NULL ||
 #if defined(WIN32)
-			     strncasecmp( sock_owner, user, tmp-user )
+			     !auth_users.contains_anycase_withwildcard( sock_owner )
 #else
-			     strncmp( sock_owner, user, tmp-user )
+			     !auth_users.contains_withwildcard( sock_owner )
 #endif
 			   )
 			{
@@ -884,7 +932,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 #else
 
 	// see if we're in "new" mode.  call a hook to translate refresh into access
-	if(param_boolean("TOKENS", false)) {
+	if(param_boolean("CREDD_OAUTH_MODE", false)) {
 		char* cthook = param("SEC_CREDD_TOKEN_HOOK");
 		if (!cthook) {
 			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK... skipping\n");
@@ -948,6 +996,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	}
 #endif // WIN32
 
+cleanup_and_exit:
 	if (pw) {
 		SecureZeroMemory(pw, strlen(pw));
 		free(pw);
@@ -1069,17 +1118,16 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
+int store_pool_cred_handler(class Service *, int, Stream *s)
 {
 	int result;
 	char *pw = NULL;
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
-	bool dcfound = daemonCore != NULL;
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
-		return;
+		return CLOSE_STREAM;
 	}
 
 	// if we're the CREDD_HOST, make sure any password setting is done locally
@@ -1104,13 +1152,13 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 			if (!addr || strcmp(my_ip_str.Value(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
-				return;
+				return CLOSE_STREAM;
 			}
 		}
 		free(credd_host);
 	}
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in store_pool_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	// we don't actually care if the cred was modified in this
 	// situation, but the below function signature requires it
@@ -1127,7 +1175,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	}
 
 	// construct the full pool username
-	username += domain;	
+	username += domain;
 
 	// do the real work
 	if (pw && *pw) {
@@ -1151,6 +1199,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 spch_cleanup:
 	if (pw) free(pw);
 	if (domain) free(domain);
+
+	return CLOSE_STREAM;
 }
 
 int 
@@ -1159,7 +1209,6 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int result;
 	int return_val;
 	Sock* sock = NULL;
-	bool dcfound = daemonCore != NULL;
 
 		// to help future debugging, print out the mode we are in
 	static const int mode_offset = 100;
@@ -1267,7 +1316,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		
-		dprintf (D_ALWAYS, "ZKM: First potential block in store_cred, DC==%i\n", dcfound);
+		//dprintf (D_ALWAYS, "First potential block in store_cred, DC==%i\n", daemonCore != NULL);
 
 		sock->decode();
 		
@@ -1450,14 +1499,14 @@ char*
 get_password() {
 	char *buf;
 	
-	buf = new char[MAX_PASSWORD_LENGTH + 1];
+	buf = (char *)malloc(MAX_PASSWORD_LENGTH + 1);
 	
 	if (! buf) { fprintf(stderr, "Out of Memory!\n\n"); return NULL; }
 	
 		
 	printf("Enter password: ");
 	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH + 1, false) ) {
-		delete[] buf;
+		free(buf);
 		return NULL;
 	}
 	
@@ -1465,3 +1514,120 @@ get_password() {
 }
 
 
+bool
+NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
+{
+	// First, check to see if our cache is still usable; if so, make a copy.
+	auto current = std::chrono::steady_clock::now();
+	if (std::chrono::duration_cast<std::chrono::seconds>(current - m_last_refresh).count() < 10) {
+		std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+		return true;
+	}
+
+	// Next, iterate through the passwords directory and cache the names
+	// Note we reuse the exclude regexp from the configuration subsys.
+
+	std::string dirpath;
+	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
+		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+		return false;
+	}
+
+	const char* _errstr;
+	int _erroffset;
+	std::string excludeRegex;
+		// We simply fail invalid regex as the config subsys should have EXCEPT'd
+		// in this case.
+	if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
+		if (err) err->push("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
+		return false;
+	}
+	Regex excludeFilesRegex;
+	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+		if (err) err->pushf("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+			"config parameter is not a valid "
+			"regular expression.  Value: %s,  Error: %s",
+			excludeRegex.c_str(), _errstr ? _errstr : "");
+		return false;
+	}
+	if(!excludeFilesRegex.isInitialized() ) {
+		if (err) err->push("CRED", 1, "Failed to initialize exclude files regex.");
+		return false;
+	}
+
+		// If we can, try reading out the passwords as root.
+	TemporaryPrivSentry sentry(get_priv_state() == PRIV_UNKNOWN ? PRIV_UNKNOWN : PRIV_ROOT);
+
+	m_creds.clear();
+	std::unordered_set<std::string> tmp_creds;
+
+	std::string pool_password;
+	if (param(pool_password, "SEC_PASSWORD_FILE")) {
+		if (0 == access(pool_password.c_str(), R_OK)) {
+			tmp_creds.insert("POOL");
+		}
+	}
+
+	Directory dir(dirpath.c_str());
+	if (!dir.Rewind()) {
+		if (err) {
+			err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
+				dirpath.c_str(), strerror(errno), errno);
+		}
+		if (!tmp_creds.empty()) {
+			std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
+			std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+		} else {
+			return false;
+		}
+	}
+
+	const char *file;
+	while( (file = dir.Next()) ) {
+		if (dir.IsDirectory()) {
+			continue;
+		}
+		if(!excludeFilesRegex.match(file)) {
+			if (0 == access(dir.GetFullPath(), R_OK)) {
+				tmp_creds.insert(file);
+			}
+		} else {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring password file "
+				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
+				"'%s'\n", dir.GetFullPath());
+		}
+	}
+
+	std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
+	std::sort(m_creds.begin(), m_creds.end());
+	std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+
+	return true;
+}
+
+
+bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err) {
+	std::string dirpath;
+	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
+		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+		return false;
+	}
+	std::string fullpath = dirpath + DIR_DELIM_CHAR + cred;
+	std::unique_ptr<char> password(read_password_from_filename(fullpath.c_str(), err));
+
+	if (!password.get()) {
+		return false;
+	}
+	contents = std::string(password.get());
+	return true;
+}
+
+
+bool
+listNamedCredentials(std::vector<std::string> &creds, CondorError *err) {
+	return g_cred_cache.List(creds, err);
+}
+
+void refreshNamedCredentials() {
+	g_cred_cache.Refresh();
+}

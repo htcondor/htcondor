@@ -28,7 +28,6 @@
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "gahp_common.h"
-#include "condor_string.h"
 #include "strupr.h"
 #include "my_popen.h"
 #include "condor_environ.h"
@@ -303,20 +302,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();
 	}
-	else if (Starter->condorPrivSepHelper() != NULL) {
-		vmgahp_user_uid = Starter->condorPrivSepHelper()->get_uid();
-		char* user_name;
-		if (!pcache()->get_user_name(vmgahp_user_uid, user_name)) {
-			EXCEPT("unable to get user name for UID %u", vmgahp_user_uid);
-		}
-		if (!pcache()->get_user_ids(user_name,
-		                            vmgahp_user_uid,
-		                            vmgahp_user_gid))
-		{
-			EXCEPT("unable to get GID for UID %u", vmgahp_user_uid);
-		}
-		free(user_name);
-	}
 	else {
 		// vmgahp may have setuid-root (e.g. vmgahp for Xen)
 		vmgahp_user_uid = get_condor_uid();
@@ -459,7 +444,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	if( m_include_gahp_log ) {
 		result = daemonCore->Register_Pipe(m_vmgahp_errorfd,
 				"m_vmgahp_errorfd",
-				static_cast<PipeHandlercpp>(&VMGahpServer::err_pipe_ready),
+				(PipeHandlercpp)&VMGahpServer::err_pipe_ready_from_pipe,
 				"VMGahpServer::err_pipe_ready",this);
 
 		if( result == -1 ) { 
@@ -469,7 +454,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 				m_stderr_tid = -1;
 			}
 			m_stderr_tid = daemonCore->Register_Timer(2, 
-					2, (TimerHandlercpp)&VMGahpServer::err_pipe_ready, 
+					2, (TimerHandlercpp)&VMGahpServer::err_pipe_ready_from_timer, 
 					"VMGahpServer::err_pipe_ready",this);
 			if( m_stderr_tid == -1 ) {
 				start_err_msg = "Internal vmgahp server error";
@@ -710,7 +695,7 @@ VMGahpServer::setPollInterval(unsigned int interval)
 	if( m_pollInterval > 0 ) {
 		m_poll_tid = daemonCore->Register_Timer(m_pollInterval, 
 				m_pollInterval, 
-				(TimerHandlercpp)&VMGahpServer::poll, 
+				(TimerHandlercpp)&VMGahpServer::poll_from_timer, 
 				"VMGahpServer::poll",this); 
 	}
 }
@@ -738,13 +723,13 @@ VMGahpServer::pipe_ready(int)
 }
 
 int
-VMGahpServer::err_pipe_ready(int /*pipe_end*/)
+VMGahpServer::err_pipe_ready(void)
 {
 	int count = 0;
 
-	if( ( m_is_initialized == false) || 
+	if( ( m_is_initialized == false) ||
 			( m_vmgahp_errorfd == -1 ) || !daemonCore ) {
-		return false;
+		return FALSE;
 	}
 
 	char buff[2049];
@@ -1030,11 +1015,11 @@ VMGahpServer::poll_real_soon()
 	}
 }
 
-int
+void
 VMGahpServer::poll_now()
 {
 	m_poll_real_soon_tid = -1;
-	return poll();
+	(void)poll();
 }
 
 int
@@ -1326,8 +1311,7 @@ VMGahpServer::isSupportedVMType(const char *vmtype)
 void 
 VMGahpServer::printSystemErrorMsg(void) 
 {
-	int dummy_pipe = -1;
-	err_pipe_ready(dummy_pipe);
+	err_pipe_ready();
 }
 
 bool
@@ -1381,8 +1365,9 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 
 	const char *name;
 	ExprTree *expr = NULL;
-	m_job_ad->ResetExpr();
-	while( m_job_ad->NextExpr(name, expr) ) {
+	for( auto itr = m_job_ad->begin(); itr != m_job_ad->end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 		can_send_it = false;
 
 		if( !m_send_all_classad ) {
@@ -1462,7 +1447,7 @@ VMGahpServer::killVM(void)
 		return;
 	}
 
-	MyString matchstring;
+	std::string matchstring;
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		if( create_name_for_VM(m_job_ad, matchstring) == false ) {
 			dprintf(D_ALWAYS, "VMGahpServer::killVM() : "
@@ -1475,7 +1460,7 @@ VMGahpServer::killVM(void)
 		matchstring = m_workingdir;
 	}
 
-	if( matchstring.IsEmpty() ) {
+	if( matchstring.empty() ) {
 		dprintf(D_ALWAYS, "VMGahpServer::killVM() : empty matchstring\n");
 		return;
 	}
@@ -1502,11 +1487,6 @@ VMGahpServer::killVM(void)
 		tmp_str.formatstr("%d", (int)get_condor_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
-	else if (Starter->condorPrivSepHelper() != NULL) {
-		MyString tmp_str;
-		tmp_str.formatstr("%d", (int)Starter->condorPrivSepHelper()->get_uid());
-		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
-	}
 #endif
 
 	priv_state oldpriv; 
@@ -1520,7 +1500,7 @@ VMGahpServer::killVM(void)
 
 	if( ret == 0 ) {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() is called with "
-							"'%s'\n", matchstring.Value());
+							"'%s'\n", matchstring.c_str());
 	}else {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() failed!\n");
 	}

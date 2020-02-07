@@ -267,7 +267,14 @@ clean_error() {
 }
 
 # as long as there are relevant job in the queue wait and try again
-while [ \$(condor_q -long -attributes Owner \$hold_jids | grep "$USER" | wc -l) -ge 1 ]; do
+counter=3
+while [ \$(condor_q -long -attributes Owner \$hold_jids | grep "$USER" | wc -l) -ge 1 -o \$counter -ge 1 ]; do
+	job_count=\$(condor_q -long -attributes Owner \$hold_jids | grep "$USER" | wc -l)
+	if [ \$job_count -eq 0 ]; then
+		counter=\$((counter-1))
+	else
+		counter=3
+	fi
 	sleep 5
 done
 

@@ -73,7 +73,7 @@ ReadEvents( Options &opts, int &numEvents );
 void
 ReportError( const ReadUserLog &reader );
 
-const char *timestr( const struct tm &tm );
+const char *timestr( time_t );
 
 // Simple term signal handler
 static bool	global_done = false;
@@ -514,7 +514,7 @@ ReadEvents(Options &opts, int &totalEvents)
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
 						event->cluster, event->proc, event->subproc,
-						timestr(event->GetEventTime()) );
+						timestr(event->GetEventclock()) );
 			}
 
 			if (opts.missedCheck ) {
@@ -739,10 +739,10 @@ ReportError( const ReadUserLog &reader )
 			 error_str, error, line_num );
 }
 
-const char *timestr( const struct tm &t )
+const char *timestr( time_t time )
 {
 	static char	tbuf[64];
-	strncpy( tbuf, asctime( &t ), sizeof(tbuf) );
+	strncpy( tbuf, asctime( localtime(&time) ), sizeof(tbuf) );
 	tbuf[sizeof(tbuf)-1] = '\0';
 	if ( strlen(tbuf) ) {
 		tbuf[strlen(tbuf)-1] = '\0';

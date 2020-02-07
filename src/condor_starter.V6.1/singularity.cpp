@@ -131,20 +131,22 @@ Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::Cla
 Singularity::result
 Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
-		MyString &exec,
-		ArgList &args,
+		std::string &exec,
+		ArgList &job_args,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
 		Env &job_env)
 {
+	ArgList sing_args;
+
 	if (!param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd)) {return Singularity::DISABLE;}
 
 	if (!enabled()) {
 		dprintf(D_ALWAYS, "Singularity job has been requested but singularity does not appear to be configured on this host.\n");
 		return Singularity::FAILURE;
 	}
-	std::string exec_str;
-	if (!find_singularity(exec_str)) {
+	std::string sing_exec_str;
+	if (!find_singularity(sing_exec_str)) {
 		return Singularity::FAILURE;
 	}
 
@@ -157,21 +159,22 @@ Singularity::setup(ClassAd &machineAd,
 	std::string target_dir;
 	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
 
-	args.RemoveArg(0);
+	job_args.RemoveArg(0);
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
 		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
-		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.Value());
+		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
-	args.InsertArg(exec.Value(), 0);
-	exec = exec_str;
+	sing_args.AppendArg(sing_exec_str.c_str());
+	sing_args.AppendArg("exec");
 
-	args.InsertArg(image.c_str(), 0);
-	args.InsertArg("-C", 0);
 	// Bind
 	// Mount under scratch
 	std::string scratch;
-	if (param(scratch, "MOUNT_UNDER_SCRATCH")) {
+	if (!param_eval_string(scratch, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
+		param(scratch, "MOUNT_UNDER_SCRATCH");
+	}
+	if (scratch.length() > 0) {
 		StringList scratch_list(scratch.c_str());
 		scratch_list.rewind();
 		char *next_dir;
@@ -180,13 +183,13 @@ Singularity::setup(ClassAd &machineAd,
 				scratch_list.deleteCurrent();
 				continue;
 			}
-			args.InsertArg(next_dir, 0);
-			args.InsertArg("-S", 0);
+			sing_args.AppendArg("-S");
+			sing_args.AppendArg(next_dir);
 		}
 	}
 	if (job_iwd != execute_dir) {
-		args.InsertArg(job_iwd.c_str(), 0);
-		args.InsertArg("-B", 0);
+		sing_args.AppendArg("-B");
+		sing_args.AppendArg(job_iwd.c_str());
 	}
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
@@ -197,29 +200,15 @@ Singularity::setup(ClassAd &machineAd,
 		bind_spec += target_dir;
 		// Only change PWD to our new target dir if that's where we should startup.
 		if (job_iwd == execute_dir) {
-			args.InsertArg(target_dir.c_str(), 0);
-			args.InsertArg("--pwd", 0);
+			sing_args.AppendArg("--pwd");
+			sing_args.AppendArg(target_dir.c_str());
 		}
 		// Update the environment variables
-		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
-		job_env.SetEnv("TEMP", target_dir.c_str());
-		job_env.SetEnv("TMP", target_dir.c_str());
-		std::string chirp = target_dir + "/.chirp.config";
-		std::string machine_ad = target_dir + "/.machine.ad";
-		std::string job_ad = target_dir + "/.job.ad";
-		job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
-		job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
-		job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
-		MyString proxy_file;
-		if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
-		     strncmp( execute_dir.c_str(), proxy_file.Value(),
-                      execute_dir.length() ) == 0 ) {
-			std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
-			job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
-		}
+		retargetEnvs(job_env, target_dir, execute_dir);
+
 	}
-	args.InsertArg(bind_spec.c_str(), 0);
-	args.InsertArg("-B", 0);
+	sing_args.AppendArg("-B");
+	sing_args.AppendArg(bind_spec.c_str());
 
 	if (param_eval_string(bind_spec, "SINGULARITY_BIND_EXPR", "SingularityBind", &machineAd, &jobAd)) {
 		dprintf(D_FULLDEBUG, "Parsing bind mount specification for singularity: %s\n", bind_spec.c_str());
@@ -227,17 +216,44 @@ Singularity::setup(ClassAd &machineAd,
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
-			args.InsertArg(next_bind, 0);
-			args.InsertArg("-B", 0);
+			sing_args.AppendArg("-B");
+			sing_args.AppendArg(next_bind);
 		}
 	}
 
-	args.InsertArg("exec", 0);
-	args.InsertArg(exec.c_str(), 0);
+	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
+		sing_args.AppendArg("--no-home");
+	}
+
+	MyString args_error;
+	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
+	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+		dprintf(D_ALWAYS,"singularity: failed to parse extra arguments: %s\n",
+		args_error.Value());
+		free(tmp);
+		return Singularity::FAILURE;
+	}
+	if (tmp) free(tmp);
+
+	// if the startd has assigned us a gpu, add --nv to the sing exec
+	// arguments to mount the nvidia devices
+	std::string assignedGpus;
+	machineAd.LookupString("AssignedGPUs", assignedGpus);
+	if  (assignedGpus.length() > 0) {
+		sing_args.AppendArg("--nv");
+	}
+
+	sing_args.AppendArg("-C");
+	sing_args.AppendArg(image.c_str());
+
+	sing_args.AppendArg(exec.c_str());
+	sing_args.AppendArgsFromArgList(job_args);
 
 	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string, 1);
-	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.Value(), args_string.Value());
+	job_args = sing_args;
+	job_args.GetArgsStringForDisplay(&args_string, 1);
+	exec = sing_exec_str;
+	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.Value());
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -250,6 +266,31 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 	return true;
 }
 
+bool
+Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
+	
+	// if SINGULARITY_TARGET_DIR is set, we need to reset
+	// all the job's environment variables that refer to the scratch dir
+
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
+	job_env.SetEnv("TEMP", target_dir.c_str());
+	job_env.SetEnv("TMP", target_dir.c_str());
+	job_env.SetEnv("TMPDIR", target_dir.c_str());
+	std::string chirp = target_dir + "/.chirp.config";
+	std::string machine_ad = target_dir + "/.machine.ad";
+	std::string job_ad = target_dir + "/.job.ad";
+	job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
+	job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
+	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
+	MyString proxy_file;
+	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
+	     strncmp( execute_dir.c_str(), proxy_file.Value(),
+	      execute_dir.length() ) == 0 ) {
+		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
+		job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
+	}
+	return true;
+}
 bool 
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;

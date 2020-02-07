@@ -30,6 +30,7 @@
 #include "condor_attributes.h"
 #include "dc_schedd.h"
 #include "spool_version.h"
+#include "file_transfer.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -237,8 +238,8 @@ initShadow( ClassAd* ad )
 	dprintf( D_ALWAYS, "Initializing a %s shadow for job %d.%d\n", 
 			 CondorUniverseName(universe), cluster, proc );
 
-	int wantPS = 0;
-	ad->LookupBool("WantParallelScheduling", wantPS);
+	bool wantPS = false;
+	ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
 	if (wantPS) {
 		universe = CONDOR_UNIVERSE_PARALLEL;
 	}
@@ -268,7 +269,7 @@ void startShadow( ClassAd *ad )
 		// see if the SchedD punched a DAEMON-level authorization
 		// hole for this job. if it did, we'll do the same here
 		//
-	MyString auth_hole_id;
+	std::string auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
 		IpVerify* ipv = daemonCore->getIpVerify();
 		if (!ipv->PunchHole(DAEMON, auth_hole_id) ||
@@ -276,16 +277,31 @@ void startShadow( ClassAd *ad )
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job may fail to execute\n",
-			        auth_hole_id.Value());
+			        auth_hole_id.c_str());
 		}
 	}
 
 	initShadow( ad );
 
-	int wantClaiming = 0;
+	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
-	if( is_reconnect ) {
+	// Check if we want to skip dataflow jobs (where output files exist and are
+	// newer than input files). If so, skip the job before it ever starts.
+	bool skip_dataflow_jobs = param_boolean( "SHADOW_SKIP_DATAFLOW_JOBS", false );
+	if ( skip_dataflow_jobs ) {
+		if ( FileTransfer::IsDataflowJob( ad ) ) {
+			// Set a few attributes in the plumbing that will convince the shadow
+			// to shut down this job as if it ran and exited successfully.
+			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
+			ad->Assign( ATTR_ON_EXIT_CODE, 0 );
+			Shadow->isDataflowJob = true;
+			Shadow->shutDown( JOB_EXITED );
+		}
+		dprintf(D_ALWAYS, "Job %d.%d is not a dataflow job, running it as usual\n", cluster, proc);
+	}
+
+	if ( is_reconnect ) {
 		Shadow->attemptingReconnectAtStartup = true;
 		Shadow->reconnect();
 	} else {

@@ -25,11 +25,11 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 #include "condor_random_num.h"
-#include "condor_string.h"
 #include "simple_arg.h"
 #include "stat_wrapper.h"
 #include "read_user_log.h"
 #include "user_log_header.h"
+#include "condor_string.h"
 #include "my_username.h"
 #include <stdio.h>
 #if defined(UNIX)
@@ -67,7 +67,6 @@ public:
 public:
 	const char *getName( void ) const { return m_name; };
 	bool getXml( void ) const { return m_isXml; };
-	bool getStork( void ) const { return m_stork; };
 	double getRandomProb( void ) const { return m_randomProb; };
 	Verbosity getVerbosity( void ) const { return m_verbosity; };
 	bool Verbose( Verbosity v ) const { return (m_verbosity >= v); };
@@ -75,7 +74,6 @@ public:
 public:
 	const char	*m_name;
 	bool		 m_isXml;
-	bool		 m_stork;
 	double		 m_randomProb;		// Probability of 'random' events
 	Verbosity	 m_verbosity;
 };
@@ -91,7 +89,6 @@ public:
 	const SharedOptions	&getShared( void ) const { return m_shared; };
 	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
-	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
 		return m_shared.getRandomProb();
 	};
@@ -107,13 +104,9 @@ public:
 		return m_cluster >= 0 ? m_cluster : getpid();
 	};
 	int getProc( void ) const {
-		if ( m_shared.m_stork )
-			return -1;
 		return m_proc >= 0 ? m_proc : 0;
 	};
 	int getSubProc( void ) const {
-		if ( m_shared.m_stork )
-			return -1;
 		return m_subProc >= 0 ? m_subProc : 0;
 	};
 	int getNumProcs( void ) const { return m_numProcs; };
@@ -171,7 +164,6 @@ public:
 	};
 	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
-	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
 		return m_shared.getRandomProb();
 	};
@@ -448,7 +440,6 @@ SharedOptions::SharedOptions( void )
 {
 	m_name				= NULL;
 	m_isXml				= false;
-	m_stork				= false;
 	m_randomProb		= 0.0;
 	m_verbosity			= VERB_ERROR;
 }
@@ -560,7 +551,6 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		"  -p|--persist <file>: persist writer state to file (for jobid gen)\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --no-sleep: Don't sleep at all between events\n"
-		"  --stork: simulate Stork (-1 for proc and subproc)\n"
 		"  --random <percent>: gen other random events every <percent> times\n"
 		"  --submit_note <string>: submit event note\n"
 		"\n"
@@ -730,10 +720,6 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		else if ( arg.Match("no-sleep") ) {
 			opts->m_sleep_seconds  = 0;
 			opts->m_sleep_useconds = 0;
-
-		}
-		else if ( arg.Match( "stork") ) {
-			m_shared.m_stork = true;
 
 		}
 		else if ( arg.Match("subproc") ) {
@@ -1071,35 +1057,18 @@ Workers::waitForWorkers( int max_seconds )
 // **************************
 //  Rotating user log class
 // **************************
-static const char *getUserName( void )
-{
-	static char	buf[128];
-	buf[0] = '\0';
-# if defined(UNIX)
-	struct passwd	*pw = getpwuid( getuid() );
-	if ( NULL == pw ) {
-		return "owner";
-	}
-	strncpy(buf, pw->pw_name, sizeof(buf) );
-# else
-	DWORD		size = sizeof(buf);
-	GetUserName( buf, &size );
-# endif
-	buf[sizeof(buf)-1] = '\0';
-	return buf;
-}
 TestLogWriter::TestLogWriter( Worker & /*worker*/,
 							  const WorkerOptions &options )
-	: WriteUserLog( getUserName(),
-					my_domainname(),
-					options.getLogFile(),
-					options.getCluster(),
-					options.getProc(),
-					options.getSubProc(),
-					options.getXml() ),
+	: WriteUserLog(),
 	  m_options( options ),
 	  m_rotations( 0 )
 {
+	setEnableGlobalLog( true );
+	initialize( options.getLogFile(), options.getCluster(), options.getProc(),
+	            options.getSubProc() );
+	if ( options.getXml() ) {
+		setUseCLASSAD( 1 );
+	}
 	if ( options.getName() ) {
 		setCreatorName( options.getName() );
 	}
@@ -1234,7 +1203,7 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 		}
 		event.Reset( );
 
-		if ( !error && ( get_random_float() < m_options.getRandomProb() )  ) {
+		if ( !error && ( get_random_float_insecure() < m_options.getRandomProb() )  ) {
 			event.GenEventRandom( );
 			if ( event.WriteEvent( *this ) ) {
 				printf( "Error writing event type %d\n",
@@ -1341,7 +1310,7 @@ timestr( void )
 static unsigned
 randint( unsigned maxval )
 {
-	return get_random_uint() % maxval;
+	return get_random_uint_insecure() % maxval;
 }
 
 
@@ -1360,7 +1329,7 @@ ULogEvent *
 EventInfo::GenEvent( void )
 {
 	// Select the event type
-	double	randval = get_random_float( );
+	double	randval = get_random_float_insecure( );
 
 	// Special case: execute event
 	if ( randval < m_options.getRandomProb() ) {
@@ -1642,7 +1611,7 @@ EventInfo::GenEventGeneric( void )
 bool
 EventInfo::GenIsLarge( void )
 {
-	m_is_large = (get_random_float() >= 0.8);
+	m_is_large = (get_random_float_insecure() >= 0.8);
 	return m_is_large;
 }
 

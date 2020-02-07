@@ -23,7 +23,7 @@
 
 int get_credmon_pid();
 bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal);
-bool credmon_poll_continue(const char* user, int retry);
+bool credmon_poll_continue(const char* user, int retry, const char* name = NULL);
 bool credmon_poll(const char* user, bool force_fresh, bool send_signal);
 bool credmon_mark_creds_for_sweeping(const char* user);
 void credmon_sweep_creds();

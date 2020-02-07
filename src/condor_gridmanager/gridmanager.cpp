@@ -175,12 +175,9 @@ requestScheddUpdate( BaseJob *job, bool notify )
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
 
-	const char *name;
-	ExprTree *value;
-	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
-		 job->jobAd->NextDirtyExpr(name, value) == false ) {
+		 job->jobAd->dirtyBegin() == job->jobAd->dirtyEnd() ) {
 		job->SetEvaluateState();
 		return;
 	}
@@ -754,7 +751,7 @@ doContactSchedd()
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			BaseJob *old_job;
-			int job_is_matched = 1;		// default to true if not in ClassAd
+			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
@@ -1046,10 +1043,14 @@ contact_schedd_next_add_job:
 		const char *attr_value;
 		ExprTree *expr;
 		bool fake_job_in_queue = false;
-		curr_job->jobAd->ResetExpr();
-		while ( curr_job->jobAd->NextDirtyExpr(attr_name, expr) == true &&
-				fake_job_in_queue == false ) {
-			attr_value = ExprTreeToString( expr );
+		for ( auto itr = curr_job->jobAd->dirtyBegin(); itr != curr_job->jobAd->dirtyEnd() && fake_job_in_queue == false; itr++ ) {
+			attr_name = itr->c_str();
+			expr = curr_job->jobAd->LookupExpr( attr_name );
+			if ( expr ) {
+				attr_value = ExprTreeToString( expr );
+			} else {
+				attr_value = "Undefined";
+			}
 
 			dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			rc = SetAttribute( curr_job->procID.cluster,

@@ -47,35 +47,35 @@ int write_password_file(const char* path, const char* password)
 	size_t password_len = strlen(password);
 	char *scrambled_password = (char*)malloc(password_len);
 	memset(scrambled_password, 0, password_len);
-	simple_scramble(scrambled_password, password, password_len);
+	simple_scramble(scrambled_password, password, (int)password_len);
 	int rc = write_secure_file(path, scrambled_password, password_len, true);
 	free(scrambled_password);
 	return rc;
 }
 
-
-// writes data of length len securely to file specified in path
-// returns true(success) or false (failure)
-//
-bool write_secure_file(const char* path, const void* data, size_t len, bool as_root)
+#if 0
+FILE* open_secure_file_for_write(const char* path, bool as_root, bool group_readable /*= false*/)
 {
 	int fd = 0;
-	int save_errno = 0;
 
-	if(as_root) {
+#ifdef WIN32
+	const int open_flags = O_WRONLY | O_CREAT | O_TRUNC | O_BINARY;
+	const char * fdopen_format = "wb";
+#else
+	const int open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+	const char * fdopen_format = "w";
+#endif
+	mode_t access_mode = 0600;
+	if (group_readable) { access_mode = 0640; }
+
+	if (as_root) {
 		// create file with root priv but drop it asap
 		priv_state priv = set_root_priv();
-		fd = safe_open_wrapper_follow(path,
-				   O_WRONLY | O_CREAT | O_TRUNC,
-				   0600);
-		save_errno = errno;
+		fd = safe_open_wrapper_follow(path, open_flags, access_mode);
 		set_priv(priv);
 	} else {
 		// create file as euid
-		fd = safe_open_wrapper_follow(path,
-				   O_WRONLY | O_CREAT | O_TRUNC,
-				   0600);
-		save_errno = errno;
+		fd = safe_open_wrapper_follow(path, open_flags, access_mode);
 	}
 
 	if (fd == -1) {
@@ -83,10 +83,87 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 			"ERROR: write_secure_file(%s): open() failed: %s (%d)\n",
 			path,
 			strerror(errno),
-				errno);
+			errno);
+		return NULL;
+	}
+	FILE *fp = fdopen(fd, fdopen_format);
+	if (fp == NULL) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): fdopen() failed: %s (%d)\n",
+			path,
+			strerror(errno),
+			errno);
+		return NULL;
+	}
+
+	return fp;
+}
+
+bool write_secure_file(const char* path, const void* data, size_t len, bool as_root, bool group_readable /*= false*/)
+{
+	FILE* fp = open_secure_file_for_write(path, as_root, group_readable);
+	if ( ! fp) {
+		// error has already been logged
 		return false;
 	}
-	FILE *fp = fdopen(fd, "w");
+
+	size_t sz = fwrite(data, 1, len, fp);
+	int save_errno = errno;
+	fclose(fp);
+
+	if (sz != len) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): error writing to file: %s (%d)\n",
+			path,
+			strerror(save_errno),
+			save_errno);
+		return false;
+	}
+
+	return true;
+}
+
+#else
+
+// writes data of length len securely to file specified in path
+// returns true(success) or false (failure)
+//
+bool write_secure_file(const char* path, const void* data, size_t len, bool as_root, bool group_readable /*=false*/)
+{
+	int fd = 0;
+	int save_errno = 0;
+
+#ifdef WIN32
+	const int open_flags = O_WRONLY | O_CREAT | O_TRUNC | O_BINARY;
+	const char * fdopen_format = "wb";
+#else
+	const int open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+	const char * fdopen_format = "w";
+#endif
+	mode_t access_mode = 0600;
+	if (group_readable) { access_mode = 0640; }
+
+	if(as_root) {
+		// create file with root priv but drop it asap
+		priv_state priv = set_root_priv();
+		fd = safe_open_wrapper_follow(path, open_flags, access_mode);
+		save_errno = errno;
+		set_priv(priv);
+	} else {
+		// create file as euid
+		fd = safe_open_wrapper_follow(path, open_flags, access_mode);
+		save_errno = errno;
+	}
+
+	if (fd == -1) {
+		dprintf(D_ALWAYS,
+			"ERROR: write_secure_file(%s): open() failed: %s (%d)\n",
+			path,
+			strerror(save_errno),
+				save_errno);
+		return false;
+	}
+	FILE *fp = fdopen(fd, fdopen_format);
 	if (fp == NULL) {
 		dprintf(D_ALWAYS,
 			"ERROR: write_secure_file(%s): fdopen() failed: %s (%d)\n",
@@ -112,7 +189,7 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 	return true;
 }
 
-
+#endif
 
 // read a "secure" file.
 //
@@ -126,7 +203,7 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 // success, they receive a pointer to a newly-malloc()ed buffer and the length.
 //
 bool
-read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
+read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int verify_mode /*= SECURE_FILE_VERIFY_ALL*/)
 {
 	FILE* fp = 0;
 	int save_errno = 0;
@@ -134,11 +211,11 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 	if(as_root) {
 		// open the file with root priv but drop it asap
 		priv_state priv = set_root_priv();
-		fp = safe_fopen_wrapper_follow(fname, "r");
+		fp = safe_fopen_wrapper_follow(fname, "rb");
 		save_errno = errno;
 		set_priv(priv);
 	} else {
-		fp = safe_fopen_wrapper_follow(fname, "r");
+		fp = safe_fopen_wrapper_follow(fname, "rb");
 		save_errno = errno;
 	}
 
@@ -162,31 +239,42 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		return false;
 	}
 
-	// skip ownership check on windows
-#ifndef WIN32
-	// make sure the file owner matches expected owner
-	uid_t fowner;
-	if(as_root) {
-		fowner = getuid();
-	} else {
-		fowner = geteuid();
+	if (verify_mode & SECURE_FILE_VERIFY_OWNER) {
+	#ifdef WIN32
+		// ownership check and on Windows is done differently
+		// TODO: check ACLs on Windows for owner
+	#else
+		// make sure the file owner matches expected owner
+		uid_t fowner;
+		if(as_root) {
+			fowner = getuid();
+		} else {
+			fowner = geteuid();
+		}
+		if (st.st_uid != fowner) {
+			dprintf(D_ALWAYS,
+				"ERROR: read_secure_file(%s): file must be owned "
+					"by uid %i, was uid %i\n", fname, fowner, st.st_uid);
+			fclose(fp);
+			return false;
+		}
+	#endif
 	}
-	if (st.st_uid != fowner) {
-		dprintf(D_ALWAYS,
-			"ERROR: read_secure_file(%s): file must be owned "
-			    "by uid %i, was uid %i\n", fname, fowner, st.st_uid);
-		fclose(fp);
-		return false;
-	}
-#endif
 
-	// make sure no one else can read the file
-	if (st.st_mode & 077) {
-		dprintf(D_ALWAYS,
-			"ERROR: read_secure_file(%s): file must not be readable "
-			    "by others, had perms %o\n", fname, st.st_mode);
-		fclose(fp);
-		return false;
+	if (verify_mode & SECURE_FILE_VERIFY_ACCESS) {
+	#ifdef WIN32
+		// permissions check and on Windows is done differently
+		// TODO: check ACLs on Windows for owner exclusive read/write
+	#else
+		// make sure no one else can read the file
+		if (st.st_mode & 077) {
+			dprintf(D_ALWAYS,
+				"ERROR: read_secure_file(%s): file must not be readable "
+					"by others, had perms %o\n", fname, st.st_mode);
+			fclose(fp);
+			return false;
+		}
+	#endif
 	}
 
 	// now read the entire file.

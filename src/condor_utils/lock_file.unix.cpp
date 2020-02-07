@@ -144,13 +144,13 @@ lock_file( int fd, LOCK_TYPE type, bool do_block )
 			// If we are the schedd, retry early and often.
 			// usleep time averages to 1/20 of a second, and
 			// keep trying on average for 20 seconds.
-			_lock_file_usleep_time = get_random_uint() % 100000;
+			_lock_file_usleep_time = get_random_uint_insecure() % 100000;
 			_lock_file_num_retries = 20 * 20;
 		} else {
 			// If we are not the schedd (eg we are the shadow), we
 			// can be less agressive. usleep an average of a second, try
 			// for 5 minutes.
-			_lock_file_usleep_time = get_random_uint() % 2000000;
+			_lock_file_usleep_time = get_random_uint_insecure() % 2000000;
 			_lock_file_num_retries = 60 * 5;
 		}
 		if (subsys) free(subsys);

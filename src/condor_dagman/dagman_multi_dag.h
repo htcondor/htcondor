@@ -26,6 +26,7 @@
 #ifndef DAGMAN_MULTI_DAG_H
 #define DAGMAN_MULTI_DAG_H
 
+#if 0 // Moved to dagman_utils
 	// The default maximum rescue DAG number.
 const int MAX_RESCUE_DAG_DEFAULT = 100;
 
@@ -101,5 +102,6 @@ MyString HaltFileName( const MyString &primaryDagFile );
 	@param pathname The path of the file to unlink
 */
 void tolerant_unlink( const char *pathname );
+#endif
 
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

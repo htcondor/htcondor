@@ -129,4 +129,7 @@ int command_drain_jobs( Service*, int dc_cmd, Stream* s );
 // Cancel prior request to drain jobs
 int command_cancel_drain_jobs( Service*, int dc_cmd, Stream* s );
 
+// ...
+int command_coalesce_slots( Service *, int, Stream * stream );
+
 #endif /* _STARTD_COMMAND_H */

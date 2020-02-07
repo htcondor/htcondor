@@ -17,7 +17,7 @@ my $time = 21;
 while( $time < $ARGV[0] ) {
 	# print( "${jobID} " );
 	system( 'condor_status -ads ${_CONDOR_SCRATCH_DIR}/.update.ad -af ' .
-		"Assigned${resourceName}s ${resourceName}sUsage" );
+		"Assigned${resourceName}s ${resourceName}sUsage ${resourceName}sAverageUsage" );
 	sleep( 10 );
 	$time += 10;
 }

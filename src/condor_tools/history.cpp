@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "dc_collector.h"
 #include "dc_schedd.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
@@ -177,6 +176,8 @@ main(int argc, const char* argv[])
   const char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
 
+  bool hasSince = false;
+  bool hasForwards = false;
 
   GenericQuery constraint; // used to build a complex constraint.
   ExprTree *constraintExpr=NULL;
@@ -186,6 +187,7 @@ main(int argc, const char* argv[])
   int i;
   myDistro->Init( argc, argv );
 
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   readfromfile = ! param_defined("SCHEDD_HOST");
@@ -212,10 +214,16 @@ main(int argc, const char* argv[])
 	// must be at least -forw to avoid conflict with -f (for file) and -format
     else if (is_dash_arg_prefix(argv[i],"nobackwards",3) ||
 			 is_dash_arg_prefix(argv[i],"forwards",4)) {
+		if ( hasSince ) {
+			fprintf(stderr,
+				"Error: Argument -forwards cannot be combined with -since.\n");
+			exit(1);
+		}
 		if ( ! writetosocket) {
 			backwards=FALSE;
 		}
-    }
+		hasForwards = true;
+	}
 
     else if (is_dash_arg_colon_prefix(argv[i],"wide", &pcolon, 1)) {
         wide_format=TRUE;
@@ -382,6 +390,11 @@ main(int argc, const char* argv[])
 		constraint.addCustomAND(argv[i]);
     }
 	else if (is_dash_arg_prefix(argv[i],"since",4)) {
+		if ( hasForwards ) {
+			fprintf(stderr,
+				"Error: Argument -forwards cannot be combined with -since.\n");
+			exit(1);
+		}
 		// make sure we have at least one more argument
 		if (argc <= i+1) {
 			fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
@@ -414,6 +427,7 @@ main(int argc, const char* argv[])
 			fprintf( stderr, "Error: invalid -since constraint: %s\n\tconstraint must be a job-id, or expression.", argv[i] );
 			exit(1);
 		}
+		hasSince = true;
 	}
     else if (is_dash_arg_prefix(argv[i],"completedsince",3)) {
 		i++;
@@ -571,8 +585,8 @@ static bool
 render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	double utime;
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
+		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
 			utime = 0;
 		}
 	}
@@ -662,8 +676,8 @@ static bool
 render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int clusterId, procId;
-	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
-	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
+	if( ! ad->LookupInteger(ATTR_CLUSTER_ID,clusterId)) clusterId = 0;
+	if( ! ad->LookupInteger(ATTR_PROC_ID,procId)) procId = 0;
 	formatstr(val, "%4d.%-3d", clusterId, procId);
 	return true;
 }
@@ -671,12 +685,12 @@ render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 static bool
 render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
 		return false;
 
 	char * args;
-	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
-		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
+	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
+		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
 		val += " ";
 		val += args;
 		free(args);
@@ -1009,7 +1023,10 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 		exit(1);
 	}
 
-    buf.readLine(fd);
+    if (!buf.readLine(fd)) {
+		fprintf(stderr, "Error %d: cannot read from history file %s\n", errno, filename);
+		exit(1);
+	}
   
     owner = (char *) malloc(buf.Length() * sizeof(char)); 
 
@@ -1041,8 +1058,16 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
             }
 
             // Find previous delimiter + summary
-            fseek(fd, prevOffset, SEEK_SET);
-            buf.readLine(fd);
+            int ret = fseek(fd, prevOffset, SEEK_SET);
+			if (ret < 0) {
+				fprintf(stderr, "Cannot seek in history file to find delimiter\n");
+				exit(1);
+			}
+
+            if (!buf.readLine(fd)) {
+				fprintf(stderr, "Cannot read history file\n");
+				exit(1);
+			}
 
             void * pvner = realloc (owner, buf.Length() * sizeof(char));
             ASSERT( pvner != NULL );
@@ -1134,7 +1159,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
 					exit(1);
 				}
-                buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
+				// Read one line to skip delimiter and adjust to actual offset of ad
+                if (!buf.readLine(LogFile)) {
+					printf( "\t*** Error: Can't read delimiter inside history file: errno %d\n", errno);
+					exit(1);
+				}
             } else { // Offset set to 0
                 BOF = true;
                 if (fseek(LogFile, offset, SEEK_SET) < 0) {
@@ -1144,10 +1173,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
         }
       
-        if( !( ad=new ClassAd(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+        if( !( ad=new ClassAd ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
-        } 
+        }
+        InsertFromFile(LogFile,*ad,"***", EndFlag, ErrorFlag, EmptyFlag);
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
@@ -1165,7 +1195,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
@@ -1297,12 +1327,12 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 	++adCount;
 
-	if (sinceExpr && EvalBool(&ad, sinceExpr)) {
+	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
 		return;
 	}
 
-	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}
@@ -1422,7 +1452,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
-PRAGMA_REMIND("tj: TODO fix to handle summary print format")
+//PRAGMA_REMIND("tj: TODO fix to handle summary print format")
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,

@@ -31,8 +31,6 @@
 	//changed isSeparator to allow constructor to redefine
 //#define isSeparator(x) (isspace(x) || x == ',' )
 
-char *strnewp( const char * );
-
 int
 StringList::isSeparator( char x )
 {
@@ -47,9 +45,9 @@ StringList::isSeparator( char x )
 StringList::StringList(const char *s, const char *delim ) 
 {
 	if ( delim ) {
-		m_delimiters = strnewp( delim );
+		m_delimiters = strdup( delim );
 	} else {
-		m_delimiters = strnewp( "" );
+		m_delimiters = strdup( "" );
 	}
 	if ( s ) {
 		initializeFromString(s);
@@ -59,7 +57,7 @@ StringList::StringList(const char *s, const char *delim )
 StringList::StringList(const char *s, char delim_char, bool keep_empty_fields )
 {
 	char delims[2] = { delim_char, 0 };
-	m_delimiters = strnewp( delims );
+	m_delimiters = strdup( delims );
 	if ( s ) {
 		if (keep_empty_fields) {
 			initializeFromString(s, delim_char);
@@ -77,7 +75,7 @@ StringList::StringList( const StringList &other )
 
 	const char *delim = other.getDelimiters();
 	if ( delim ) {
-		m_delimiters = strnewp( delim );
+		m_delimiters = strdup( delim );
 	}
 
 	// Walk through the other list, verify that everything is in my list
@@ -204,8 +202,7 @@ StringList::clearAll()
 StringList::~StringList ()
 {
 	clearAll();
-	if ( m_delimiters )
-		delete [] m_delimiters;
+	free(m_delimiters);
 }
 
 
@@ -311,14 +308,29 @@ StringList::remove_anycase(const char *str)
 }
 
 bool
-StringList::substring( const char *st )
+StringList::prefix( const char *st )
 {
 	char    *x;
-	
+
 	m_strings.Rewind ();
 	while( (x = m_strings.Next()) ) {
 		size_t len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+StringList::prefix_anycase( const char *st )
+{
+	char    *x;
+
+	m_strings.Rewind ();
+	while( (x = m_strings.Next()) ) {
+		size_t len = strlen(x);
+		if( strncasecmp(st, x, len) == MATCH ) {
 			return true;
 		}
 	}
@@ -639,7 +651,7 @@ StringList::shuffle() {
 	}
 
 	for (i = 0; i+1 < count; i++) {
-		unsigned int j = (unsigned int)(i + (get_random_float() * (count-i)));
+		unsigned int j = (unsigned int)(i + (get_random_float_insecure() * (count-i)));
 		// swap m_strings at i and j
 		str = list[i];
 		list[i] = list[j];

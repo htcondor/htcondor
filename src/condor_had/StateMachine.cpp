@@ -133,9 +133,9 @@ HADStateMachine::~HADStateMachine(void)
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
     SetTargetTypeName( invalidate_ad, HAD_ADTYPE );
-    line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
-	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
+	invalidate_ad.Assign( ATTR_NAME, m_name );
     daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
 
@@ -209,7 +209,7 @@ HADStateMachine::softReconfigure(void)
         // 'my_username' allocates dynamic string
         buffer = my_username();
         tmp = buffer ? buffer : "UNKNOWN";
-        m_name.formatstr( "%s@%s", tmp, get_local_fqdn().Value() );
+        formatstr( m_name, "%s@%s", tmp, get_local_fqdn().Value() );
 	if ( buffer ) {
 		free( buffer );
 	}
@@ -1151,10 +1151,8 @@ HADStateMachine::updateCollectors(void)
  *              HAD is active or not and sends the update to collectors
  */
 void
-HADStateMachine::updateCollectorsClassAd(const MyString& isHadActive)
+HADStateMachine::updateCollectorsClassAd(const std::string& isHadActive)
 {
-    MyString line;
-
     m_classAd.Assign( ATTR_HAD_IS_ACTIVE, isHadActive );
 
     int successfulUpdatesNumber =

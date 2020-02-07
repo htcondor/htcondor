@@ -225,8 +225,8 @@ static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
 
 	float rank1 = 0;
 	float rank2 = 0;
-	rank_ad->EvalFloat(ATTR_RANK,ad1,rank1);
-	rank_ad->EvalFloat(ATTR_RANK,ad2,rank2);
+	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
+	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
 
 	return rank1 > rank2;
 }
@@ -416,7 +416,8 @@ void Defrag::loadState()
 	}
 	else {
 		int isEOF=0, errorReadingAd=0, adEmpty=0;
-		ClassAd *ad = new ClassAd(fp, "...", isEOF, errorReadingAd, adEmpty);
+		ClassAd *ad = new ClassAd;
+		InsertFromFile(fp, *ad, "...", isEOF, errorReadingAd, adEmpty);
 		fclose( fp );
 
 		if( errorReadingAd ) {
@@ -856,12 +857,12 @@ Defrag::publish(ClassAd *ad)
 	char *valid_name = build_valid_daemon_name(m_defrag_name.c_str());
 	ASSERT( valid_name );
 	m_daemon_name = valid_name;
-	delete [] valid_name;
+	free(valid_name);
 
 	SetMyTypeName(*ad, "Defrag");
 	SetTargetTypeName(*ad, "");
 
-	ad->Assign(ATTR_NAME,m_daemon_name.c_str());
+	ad->Assign(ATTR_NAME,m_daemon_name);
 
 	m_stats.Tick();
 	m_stats.Publish(*ad);
@@ -884,6 +885,6 @@ Defrag::invalidatePublicAd() {
 
 	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
-	invalidate_ad.Assign(ATTR_NAME, m_daemon_name.c_str());
+	invalidate_ad.Assign(ATTR_NAME, m_daemon_name);
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }

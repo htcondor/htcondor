@@ -150,7 +150,7 @@ class _WeakMethod(object):
     def __call__(self):
         if self.weak_im_self:
             im_self = self.weak_im_self()
-            if im_self == None:
+            if im_self is None:
                 return None
         else:
             im_self = None
@@ -159,13 +159,13 @@ class _WeakMethod(object):
     def __repr__(self):
         obj = self()
         objrepr = repr(obj)
-        if obj == None:
+        if obj is None:
             objrepr = 'dead'
         return '<weakref at 0x%x; %s>' % (id(self), objrepr)
     def _dies(self, ref):
         # weakref to im_self died
         self.im_func = self.im_class = None
-        if self.callback != None:
+        if self.callback is not None:
             self.callback(self)
 
 def WeakCallableRef(c, callback=None):
@@ -346,7 +346,7 @@ class EventHandlingBase(object):
         handlers = dict([(x, x()) for x in self._EventHandlers[Event]])
         if None in handlers.values():
             # cleanup
-            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] != None])
+            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] is not None])
         handlers = filter(None, handlers.values())
         # try the On... handlers
         try:
@@ -400,7 +400,7 @@ class EventHandlingBase(object):
         handlers = dict([(x, x()) for x in self._EventHandlers[Event]])
         if None in handlers.values():
             # cleanup
-            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] != None])
+            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] is not None])
         if Target in handlers.values():
             return False
         self._EventHandlers[Event].append(WeakCallableRef(Target))
@@ -426,7 +426,7 @@ class EventHandlingBase(object):
         handlers = dict([(x, x()) for x in self._EventHandlers[Event]])
         if None in handlers.values():
             # cleanup
-            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] != None])
+            self._EventHandlers[Event] = list([x[0] for x in handlers.items() if x[1] is not None])
         for wref, trg in handlers.items():
             if trg == Target:
                 self._EventHandlers[Event].remove(wref)

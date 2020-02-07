@@ -62,6 +62,12 @@
 #define BUILDIDSTR ""
 #endif
 
+#if defined(PACKAGEID)
+#define PACKAGEIDSTR " PackageID: " xstr(PACKAGEID)
+#else
+#define PACKAGEIDSTR ""
+#endif
+
 #if !defined(BUILD_DATE)
 #  define BUILD_DATE __DATE__
 #endif
@@ -87,7 +93,7 @@
 
 
 static const char* CondorVersionString =
-"$CondorVersion: " CONDOR_VERSION " " BUILD_DATE BUILDIDSTR  PRE_RELEASE_STR " $";
+"$CondorVersion: " CONDOR_VERSION " " BUILD_DATE BUILDIDSTR PACKAGEIDSTR  PRE_RELEASE_STR " $";
 
 /* Here is the platform string.  You don't need to edit this */
 static const char* CondorPlatformString = "$CondorPlatform: " PLATFORM " $";

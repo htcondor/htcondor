@@ -52,10 +52,22 @@
 */
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-					const char* DAGNodeName, MyString &DAGParentNodeNames,
+					const char* DAGNodeName, const char *DAGParentNodeNames,
+#ifdef DEAD_CODE
 					List<Job::NodeVar> *vars, int priority, int retry,
+#else
+					Job* node, int priority, int retry,
+#endif
 					const char* directory, const char *worflowLogFile,
 					bool hold_claim, const MyString &batchName );
+
+bool direct_condor_submit(const Dagman &dm, Job* node,
+	const char *worflowLogFile,
+	const MyString &parents,
+	const char *batchName,
+	CondorID& condorID);
+
+bool send_reschedule(const Dagman &dm);
 
 void set_fake_condorID( int subprocID );
 

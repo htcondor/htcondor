@@ -1,0 +1,663 @@
+#!/usr/bin/python
+
+import atexit
+import classad
+import datetime
+import errno
+import htcondor
+import os
+import re
+import signal
+import socket
+import sys
+import time
+
+from pytest.CondorTest import CondorTest
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+if Utils.IsWindows is False:
+    import pwd
+
+
+def assertEqual(val1, val2, subtest, msg=""):
+    if val1 == val2: 
+        CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are equal, as expected")
+    else:
+        failureMessage = "Values " + str(val1) + " and " + str(val2) + " not equal"
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+
+def assertNotEqual(val1, val2, subtest, msg=""):
+    if val1 == val2: 
+        failureMessage = "Values " + str(val1) + " and " + str(val2) + " are equal"
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+    else:
+        CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are unequal, as expected")
+
+def assertRaises(exception, callable, subtest, args=[], kwds=[], msg=""):
+    try:
+        callable(args)
+    except exception as error:
+        CondorTest.RegisterSuccess(subtest, "Raised an exception " + str(exception) + ", as expected")
+        return
+    failureMessage = "Did not raise exception " + str(exception)
+    if msg != "": failureMessage = msg
+    CondorTest.RegisterFailure(subtest, failureMessage)
+
+def assertTrue(expr, subtest, msg=""):
+    if expr is True:
+        CondorTest.RegisterSuccess(subtest, "Expression " + str(expr) + " is True, as expected")
+    else:
+        failureMessage = "Expression " + str(expr) + " is not True"
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+
+def assertFalse(expr, subtest, msg=""):
+    if expr is False:
+        CondorTest.RegisterSuccess(subtest, "Expression " + str(expr) + " is False, as expected")
+    else:
+        failureMessage = "Expression " + str(expr) + " is not False"
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+
+# Used for local development only! Never call this in live code, it will do horrible things!
+def cleanup():
+    os.system("rm -rf *.local")
+    os.system("rm -rf *.err")
+    os.system("rm -rf *.out")
+
+def waitLocalDaemon(daemon, timeout=5):
+    address_file = htcondor.param[daemon + "_ADDRESS_FILE"]
+    for i in range(timeout):
+        if os.path.exists(address_file):
+            return
+        time.sleep(1)
+    if not os.path.exists(address_file):
+        raise RuntimeError("Waiting for daemon %s timed out." % daemon)
+
+def waitRemoteDaemon(dtype, dname, pool=None, timeout=5):
+    print("waitRemoteDaemon dtype = " + str(dtype) + ", dname = " + str(dname))
+    if pool:
+        coll = htcondor.Collector(pool)
+    else:
+        coll = htcondor.Collector()
+    for i in range(timeout):
+        try:
+            return coll.locate(dtype, dname)
+        except Exception:
+            pass
+        time.sleep(1)
+    return coll.locate(dtype, dname)
+     
+
+#
+# FIXME: Schedd.act() doesn't raise an exception when we see
+# '09/27/18 12:24:49 DCSchedd:actOnJobs: Action failed', which means that
+# these tests aren't reliable.
+#
+
+def testRemoteParam():
+    env_params = { 
+        "FOO": "BAR" 
+    }
+    personal = CondorTest.StartPersonalCondor("testRemoteParam", env_params)
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    rparam = htcondor.RemoteParam(coll_ad)
+    assertTrue("FOO" in rparam, "testRemoteParam-1")
+    assertEqual(rparam["FOO"], "BAR", "testRemoteParam-2")
+    assertTrue(len(rparam.keys()) > 100, "testRemoteParam-3")
+    CondorTest.StopPersonalCondor("testRemoteParam")
+    
+    os.environ["_condor_FOO"] = ""
+
+def testRemoteSetParam():
+    env_params = { 
+        "SETTABLE_ATTRS_READ": "OOF",
+        "ENABLE_RUNTIME_CONFIG": "TRUE"
+    }
+    personal = CondorTest.StartPersonalCondor("testRemoteSetParam", env_params)
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    rparam = htcondor.RemoteParam(coll_ad)
+    #for item in rparam.items():
+    #    print("rparam item = " + str(item))
+    assertTrue("OOF" not in rparam, "testRemoteSetParam-1")
+    rparam["OOF"] = "BAR"
+    htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+    rparam2 = htcondor.RemoteParam(coll_ad)
+    assertTrue("OOF" in rparam2, "testRemoteSetParam-2")
+    assertEqual(rparam2["OOF"], "BAR", "testRemoteSetParam-3")
+    del rparam["OOF"]
+    rparam2.refresh()
+    htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+    assertTrue("OOF" not in rparam2, "testRemoteSetParam-4")
+    assertTrue(("ENABLE_CHIRP_DELAYED", "true") in rparam2.items(), "testRemoteSetParam-5")
+    CondorTest.StopPersonalCondor("testRemoteSetParam")
+
+def testLocate():
+    env_params = { 
+        "COLLECTOR_ARGS": "-port $(PORT)",
+        "COLLECTOR_HOST": "$(CONDOR_HOST):$(PORT)"
+    }
+    personal = CondorTest.StartPersonalCondor("testLocate", env_params)
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    #print("coll_ad = " + str(coll_ad))
+    assertTrue("MyAddress" in coll_ad, "testLocate")
+    assertEqual(coll_ad["Name"].split(":")[-1], htcondor.param["PORT"], "testLocate")
+    CondorTest.StopPersonalCondor("testLocate")
+
+def testLocateList():
+    env_params = { 
+        "COLLECTOR_ARGS": "-port $(PORT)",
+        "COLLECTOR_HOST": "$(CONDOR_HOST):$(PORT)"
+    }
+    personal = CondorTest.StartPersonalCondor("LocateList", env_params)
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    assertTrue("MyAddress" in coll_ad, "LocateList-1")
+    assertEqual(coll_ad["Name"].split(":")[-1], htcondor.param["PORT"], "LocateList-2")
+    # Make sure we can pass a list of addresses
+    coll = htcondor.Collector(["collector.example.com", coll_ad['Name']])
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    CondorTest.StopPersonalCondor("LocateList")
+
+def testRemoteLocate():
+    personal = CondorTest.StartPersonalCondor("testRemoteLocate")
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    # FIXME: waitRemoteDaemon() function is unable to find daemon
+    remote_ad = waitRemoteDaemon(htcondor.DaemonTypes.Collector, "%s@%s" % (htcondor.param["COLLECTOR_NAME"], htcondor.param["CONDOR_HOST"]))
+    remote_address = remote_ad["MyAddress"].split(">")[0].split("?")[0].lower()
+    coll_address = coll_ad["MyAddress"].split(">")[0].split("?")[0].lower()
+    assertEqual(remote_address, coll_address, "testRemoteLocate")
+    CondorTest.StopPersonalCondor("testRemoteLocate")
+
+def testScheddLocate():
+    personal = CondorTest.StartPersonalCondor("testScheddLocate")
+    coll = htcondor.Collector()
+    name = "%s@%s" % (htcondor.param["SCHEDD_NAME"], htcondor.param["CONDOR_HOST"])
+    # FIXME: waitRemoteDaemon() function is unable to find daemon
+    schedd_ad = waitRemoteDaemon(htcondor.DaemonTypes.Schedd, name, timeout=10)
+    assertEqual(schedd_ad.eval("Name").lower(), name.lower())
+    CondorTest.StopPersonalCondor("testScheddLocate")
+
+def testCollectorAdvertise():
+    personal = CondorTest.StartPersonalCondor("testCollectorAdvertise")
+    coll = htcondor.Collector()
+    now = time.time()
+    ad = classad.ClassAd('[MyType="GenericAd"; Name="Foo"; Foo=1; Bar=%.22f; Baz="foo"]' % now)
+    # FIXME: Figure out why the collector isn't advertising this ad
+    coll.advertise([ad])
+    for i in range(15):
+        ads = coll.query(htcondor.AdTypes.Any, 'Name =?= "Foo"', ["Bar"])
+        print("Ads: " + str(ads))
+        if ads: break
+        time.sleep(1)
+    assertEqual(len(ads), 1, "testCollectorAdvertise-1")
+    assertTrue(isinstance(ads[0]["Bar"], float), "testCollectorAdvertise-2")
+    assertEqual(ads[0]["Bar"], now, "testCollectorAdvertise-3")
+    assertTrue("Foo" not in ads[0], "testCollectorAdvertise-4")
+    CondorTest.StopPersonalCondor("testCollectorAdvertise")
+
+# FIXME: Fails to clean up correctly in Windows at end of test
+def testScheddSubmit():
+    personal = CondorTest.StartPersonalCondor("testScheddSubmit")
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmit.err"; Out = "testScheddSubmit.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    schedd = htcondor.Schedd()
+    ads = []
+    cluster = schedd.submit(submit_ad, 1, False, ads)
+    for i in range(60):
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+        if len(ads) == 0:
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    assertEqual(open("testScheddSubmit.out").read(), "hello world \n", "testScheddSubmit")
+    CondorTest.StopPersonalCondor("testScheddSubmit")
+
+# FIXME: Fails to clean up correctly in Windows at end of test
+def testScheddSubmitMany():
+    personal = CondorTest.StartPersonalCondor("testScheddSubmitMany")
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany.err"; Out = "testScheddSubmitMany.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    schedd = htcondor.Schedd()
+    ads = []
+    cluster = schedd.submit(submit_ad, 10, False, ads)
+    for i in range(60):
+        ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+        ads = list(ads)
+        if len(ads) == 0:
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    assertEqual(open("testScheddSubmitMany.out").read(), "hello world \n", "testScheddSubmitMany")
+    CondorTest.StopPersonalCondor("testScheddSubmitMany")
+
+# FIXME: Fails to clean up correctly in Windows at end of test
+def testScheddSubmitMany2():
+    personal = CondorTest.StartPersonalCondor("testScheddSubmitMany2")
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany2.err"; Out = "testScheddSubmitMany2.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    schedd = htcondor.Schedd()
+    ads = []
+    cluster = schedd.submitMany(submit_ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
+    for i in range(60):
+        ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus", 'ProcId', 'foo'])
+        ads = list(ads)
+        for ad in ads:
+            if ad['ProcId'] < 5: assertEqual(ad['foo'], 1, "testScheddSubmitMany2-1-" + str(ad['ProcId']))
+            else: assertEqual(ad['foo'], 2, "testScheddSubmitMany2-2-" + str(ad['ProcId']))
+        if len(ads) == 0:
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    assertEqual(open("testScheddSubmitMany2.out").read(), "hello world \n", "testScheddSubmitMany2-3")
+    CondorTest.StopPersonalCondor("testScheddSubmitMany2")
+
+# FIXME: This test exits arbitrarily on the Batlab Windows computers (but works fine on local Windows 10)
+def testScheddQueryPoll():
+    personal = CondorTest.StartPersonalCondor("testScheddQueryPoll")
+    submit_ad = classad.ClassAd('[Err = "testScheddQueryPoll.err"; Out = "testScheddQueryPoll.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    schedd = htcondor.Schedd()
+    ads = []
+    cluster = schedd.submit(submit_ad, 10, False, ads)
+    for i in range(60):
+        ads_iter = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query1")
+        ads_iter2 = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"], name="query2")
+        ads = []
+        for query in htcondor.poll([ads_iter, ads_iter2]):
+            assertTrue(query.tag() in ["query1", "query2"], "testScheddQueryPoll-" + str(i))
+            ads += query.nextAdsNonBlocking()
+        if len(ads) == 0:
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+    CondorTest.StopPersonalCondor("testScheddQueryPoll")
+
+# FIXME: The loop below doesn't check for a time-out condition, so when
+# it does, this test errors out rather than fails.  More importantly,
+# there's a type error in the call to session.sendClaim().  Also,
+# the second timeout loop also needs an else clause; it it times out,
+# we don't want to chase the 'file not found' red herring again.
+def testNegotiator():
+    personal = CondorTest.StartPersonalCondor("Negotiator")
+    schedd = htcondor.Schedd()
+
+    schedd.act(htcondor.JobAction.Remove, 'true')
+    submit_ad = classad.ClassAd('[Err = "Negotiator.err"; Out = "Negotiator.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    ads = []
+    cluster = schedd.submit(submit_ad, 1, False, ads)
+
+    # Get claim for startd
+    claim_ads = []
+    for i in range(10):
+        startd_ads = htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd)
+        private_ads = htcondor.Collector().query(htcondor.AdTypes.StartdPrivate)
+        if (len(startd_ads) != htcondor.param['NUM_CPUS']) or (len(private_ads) != htcondor.param['NUM_CPUS']):
+            time.sleep(1)
+            continue
+        break
+    assertEqual(len(startd_ads), len(private_ads), "Negotiator-1")
+    assertEqual(len(startd_ads), htcondor.param['NUM_CPUS'], "Negotiator-2")
+    for ad in htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd):
+        for pvt_ad in private_ads:
+            if pvt_ad.get('Name') == ad['Name']:
+                ad['ClaimId'] = pvt_ad['Capability']
+                claim_ads.append(ad)
+    assertEqual(len(claim_ads), len(startd_ads), "Negotiator-3")
+    claim = claim_ads[0]
+
+    me = "%s@%s" % (pwd.getpwuid(os.geteuid()).pw_name, htcondor.param['UID_DOMAIN'])
+    with schedd.negotiate(me) as session:
+        print(str(session))
+        # FIXME: list(session) on the next line returns an empty list
+        requests = list(session)
+        assertEqual(len(requests), 1, "Negotiator-4")
+        request = requests[0]
+        assertTrue(request.symmetricMatch(claim), "Negotiator-5")
+        session.sendClaim(claim['ClaimId'], claim, request)
+
+    for i in range(60):
+        ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+        ads = list(ads)
+        if len(ads) == 0:
+            break
+        time.sleep(1)
+    assertEqual(open(output_file).read(), "hello world \n", "Negotiator-5")
+    CondorTest.StopPersonalCondor("Negotiator")
+
+# FIXME: Directory cleanup breaks in Python 2
+def testScheddNonblockingQuery():
+    personal = CondorTest.StartPersonalCondor("testScheddNonblockingQuery")
+    schedd = htcondor.Schedd()
+    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQuery.err"; Out = "testScheddNonblockingQuery.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    ads = []
+    cluster = schedd.submit(submit_ad, 10, False, ads)
+    for i in range(60):
+        ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+        ads2 = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+        ctrs = [0, 0]
+        iters = [(ads, 0), (ads2, 1)]
+        while iters:
+            for it, pos in iters:
+                try:
+                    next(it)
+                    ctrs[pos] += 1
+                except StopIteration:
+                    iters.remove((it, pos))
+        if ctrs[0] == 0:
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    assertEqual(open("testScheddNonblockingQuery.out").read(), "hello world \n", "testScheddNonblockingQuery")
+    CondorTest.StopPersonalCondor("testScheddNonblockingQuery")
+
+# FIXME: This test doesn't actually check anything. Should we fix it or dump it?
+def testScheddNonblockingQueryRemove():
+    personal = CondorTest.StartPersonalCondor("testScheddNonblockingQueryRemove")
+    schedd = htcondor.Schedd()
+    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQueryRemove.err"; Out = "testScheddNonblockingQueryRemove.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    ads = []
+    cluster = schedd.submit(submit_ad, 300, False, ads)
+    ads = schedd.xquery("ClusterId == %d" % cluster)
+    schedd.act(htcondor.JobAction.Remove, "ClusterId == %d" % cluster)
+    time.sleep(3)
+    CondorTest.StopPersonalCondor("testScheddNonblockingQueryRemove")
+
+def testScheddNonblockingQueryCount():
+    personal = CondorTest.StartPersonalCondor("testScheddNonblockingQueryCount")
+    schedd = htcondor.Schedd()
+    submit_ad = classad.parseOne(open("python_bindings/submit_large.ad"))
+    schedd.act(htcondor.JobAction.Remove, "true")
+    ads = []
+    time.sleep(1)
+    while ads:
+        time.sleep(.2)
+        ads = schedd.query("true")
+    for i in range(1, 60):
+        schedd.submit(submit_ad, i, True, ads)
+        ads = schedd.query("true", ["ClusterID", "ProcID"])
+        ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
+        assertFalse(bool(ads2[0].lookup("ProcID") == classad.Value.Undefined), "testScheddNonblockingQueryCount-1")
+        for ad in ads:
+            found_ad = False
+            for ad2 in ads2:
+                if ad2["ProcID"] == ad["ProcID"] and ad2["ClusterID"] == ad["ClusterID"]:
+                    found_ad = True
+                    break
+            assertTrue(found_ad, "testScheddNonblockingQueryCount-2-" + str(i), msg="Ad %s missing from xquery results: %s" % (ad, ads2))
+        assertEqual(len(ads), i, "testScheddNonblockingQueryCount-3-" + str(i), msg="Old query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads)))
+        assertEqual(len(ads2), i, "testScheddNonblockingQueryCount-4", msg="New query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads2)))
+        schedd.act(htcondor.JobAction.Remove, "true")
+        while ads:
+            time.sleep(.2)
+            ads = schedd.query("true")
+    CondorTest.StopPersonalCondor("testScheddNonblockingQueryCount")
+
+def testScheddSubmitSpool():
+    personal = CondorTest.StartPersonalCondor("testScheddSubmitSpool")
+    schedd = htcondor.Schedd()
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitSpool.err"; Out = "testScheddSubmitSpool.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
+    result_ads = []
+    cluster = schedd.submit(submit_ad, 1, True, result_ads)
+    schedd.spool(result_ads)
+    for i in range(60):
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+        assertEqual(len(ads), 1, "testScheddSubmitSpool-1-" + str(i))
+        if ads[0]["JobStatus"] == 4:
+            break
+        if i % 5 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    schedd.retrieve("ClusterId == %d" % cluster)
+    schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
+    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+    assertEqual(len(ads), 0, "testScheddSubmitSpool-2")
+    assertEqual(open("testScheddSubmitSpool.out").read(), "hello world \n", "testScheddSubmitSpool-3")
+    CondorTest.StopPersonalCondor("testScheddSubmitSpool")
+
+# FIXME: the last half of this is all broken because ClusterID really
+# isn't in the ad.  I don't know if that's a bug or a deliberate API
+# change or if the test never worked in the first place.  Also,
+# it appears the first assertEqual() is erroneous (again, I don't know
+# if this is a mistake, a bug, or a deliberately changed API).
+def testScheddSubmitFile():
+    personal = CondorTest.StartPersonalCondor("ScheddSubmitFile")
+    submit_obj = htcondor.Submit()
+
+    submit_obj['foo'] = '$(bar) 1'
+    submit_obj['bar'] = '2'
+
+    # FIXME: the 'queue' statement is not showing up in the str(submit_obj) value.
+    # Did we change the way submit objects are represented as strings?
+    assertEqual(str(submit_obj), "foo = $(bar) 1\nbar = 2\nqueue", "ScheddSubmitFile-1")
+    assertEqual(submit_obj.expand('foo'), "2 1", "ScheddSubmitFile-2")
+    assertEqual(set(submit_obj.keys()), set(['foo', 'bar']), "ScheddSubmitFile-3")
+    assertEqual(set(submit_obj.values()), set(['$(bar) 1', '2']), "ScheddSubmitFile-4")
+    assertEqual(set(submit_obj.items()), set([('foo', '$(bar) 1'), ('bar', '2')]), "ScheddSubmitFile-5")
+    d = dict(submit_obj)
+    assertEqual(set(d.items()), set([('foo', '$(bar) 1'), ('bar', '2')]), "ScheddSubmitFile-6")
+
+    assertEqual(str(htcondor.Submit(d)), str(submit_obj), "ScheddSubmitFile-7")
+
+    submit_obj = htcondor.Submit({"executable": "/bin/sh",
+                                    "arguments":  "-c ps faux",
+                                    "output":     "test.out.$(Cluster).$(Process)",
+                                    "+foo":       "true",
+                                    "+baz_bar":   "false",
+                                    "+qux":       "1"})
+    schedd = htcondor.Schedd()
+    ads = []
+    with schedd.transaction() as txn:
+            cluster_id = submit_obj.queue(txn, ad_results=ads)
+    assertEqual(len(ads), 1, "ScheddSubmitFile-8")
+    ad = ads[0]
+    assertEqual(cluster_id, ad['ClusterId'], "ScheddSubmitFile-9")
+    assertEqual(ad['In'], '/dev/null', "ScheddSubmitFile-10")
+    assertEqual(ad['Args'], "-c ps faux", "ScheddSubmitFile-11")
+    outfile = "test.out.%d.0" % ad['ClusterId']
+    assertEqual(ad['Out'], outfile, "ScheddSubmitFile-12")
+    assertEqual(ad['foo'], True, "ScheddSubmitFile-13")
+    assertEqual(ad['baz_bar'], False, "ScheddSubmitFile-14")
+    assertEqual(ad['qux'], 1, "ScheddSubmitFile-15")
+
+    finished = False
+    for i in range(60):
+        ads = schedd.query("ClusterId == %d" % cluster_id, ["JobStatus"])
+        if len(ads) == 0:
+            finished = True
+            break
+        if i % 2 == 0:
+            schedd.reschedule()
+        time.sleep(1)
+    assertTrue(finished, "ScheddSubmitFile-16")
+    assertTrue(len(open(outfile).read()) > 0, "ScheddSubmitFile-17")
+    CondorTest.StopPersonalCondor("ScheddSubmitFile")
+
+# FIXME: Like all other timing loops, this one needs an else clause.
+def testClaim():
+    os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name
+    personal = CondorTest.StartPersonalCondor("Claim")
+    output_file = "Claim.out"
+    coll = htcondor.Collector()
+    for i in range(10):
+        ads = coll.locateAll(htcondor.DaemonTypes.Startd)
+        if len(ads) > 0: break
+        time.sleep(1)
+    job_common = { \
+        'Cmd': '/bin/sh', 
+        'JobUniverse': 5,
+        'Iwd': os.getcwd(),
+        'Out': 'testclaim.out',
+        'Err': 'testclaim.err',
+        'StarterUserLog': 'testclaim.log',
+    }
+    claim = htcondor.Claim(ads[0])
+    claim.requestCOD()
+    hello_world_job = dict(job_common)
+    hello_world_job['Arguments'] = "-c 'echo hello world > %s'" % output_file
+    claim.activate(hello_world_job)
+    for i in range(10):
+        if os.path.exists(output_file): break
+        time.sleep(1)
+    assertEqual(open(output_file).read(), "hello world \n", "Claim-1")
+    sleep_job = dict(job_common)
+    sleep_job['Args'] = "-c 'sleep 5m'"
+    claim.activate(sleep_job)
+    claim.suspend()
+    claim.renew()
+    #claim.delegateGSIProxy()
+    claim.resume()
+    claim.deactivate(htcondor.VacateTypes.Fast)
+    claim.release()
+    CondorTest.StopPersonalCondor("Claim")
+
+# FIXME: Like all other timing loops, this one needs an else clause.
+# FIXME: This test doesn't check anything. Should we fix it or ditch it?
+def testDrain():
+    personal = CondorTest.StartPersonalCondor("Drain")
+    output_file = "Drain.out"
+    coll = htcondor.Collector()
+    for i in range(10):
+        ads = coll.locateAll(htcondor.DaemonTypes.Startd)
+        if len(ads) > 0: break
+        time.sleep(1)
+    startd = htcondor.Startd(ads[0])
+    drain_id = startd.drainJobs(htcondor.DrainTypes.Fast)
+    startd.cancelDrainJobs(drain_id)
+    CondorTest.StopPersonalCondor("Drain")
+
+def testPing():
+    personal = CondorTest.StartPersonalCondor("testPing")
+    coll = htcondor.Collector()
+    coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+    assertTrue("MyAddress" in coll_ad, "testPing-1")
+    secman = htcondor.SecMan()
+    authz_ad = secman.ping(coll_ad, "WRITE")
+    assertTrue("AuthCommand" in authz_ad, "testPing-2")
+    assertEqual(authz_ad['AuthCommand'], 60021, "testPing-3")
+    assertTrue("AuthorizationSucceeded" in authz_ad, "testPing-4")
+    assertTrue(authz_ad['AuthorizationSucceeded'], "testPing-5")
+
+    authz_ad = secman.ping(coll_ad["MyAddress"], "WRITE")
+    assertTrue("AuthCommand" in authz_ad, "testPing-6")
+    assertEqual(authz_ad['AuthCommand'], 60021, "testPing-7")
+    assertTrue("AuthorizationSucceeded" in authz_ad, "testPing-8")
+    assertTrue(authz_ad['AuthorizationSucceeded'], "testPing-9")
+
+    authz_ad = secman.ping(coll_ad["MyAddress"])
+    assertTrue("AuthCommand" in authz_ad, "testPing-10")
+    assertEqual(authz_ad['AuthCommand'], 60011, "testPing-11")
+    assertTrue("AuthorizationSucceeded" in authz_ad, "testPing-12")
+    assertTrue(authz_ad['AuthorizationSucceeded'], "testPing-13")
+    CondorTest.StopPersonalCondor("testPing")
+
+def testTransaction():
+    personal = CondorTest.StartPersonalCondor("testTransaction")
+    schedd = htcondor.Schedd()
+    submit_ad = classad.ClassAd('[Err = "testTransaction.err"; Out = "testTransaction.out"; Cmd = "/bin/sh"; Arguments = "-c \'sleep 20m\';"; UserLog = "testTransaction.log"]')
+    result_ads = []
+    cluster = schedd.submit(submit_ad, 1, True, result_ads)
+
+    with schedd.transaction() as txn:
+        schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(1))
+        schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(2))
+    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
+    assertEqual(len(ads), 1, "testTransaction-1")
+    assertEqual(ads[0]['foo'], 1, "testTransaction-2")
+    assertEqual(ads[0]['bar'], 2, "testTransaction-3")
+
+    with schedd.transaction() as txn:
+        schedd.edit(["%d.0" % cluster], 'baz', classad.Literal(3))
+        with schedd.transaction(htcondor.TransactionFlags.NonDurable | htcondor.TransactionFlags.ShouldLog, True) as txn:
+            schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(4))
+            schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(5))
+    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
+    assertEqual(len(ads), 1, "testTransaction-4")
+    assertEqual(ads[0]['foo'], 4, "testTransaction-5")
+    assertEqual(ads[0]['bar'], 5, "testTransaction-6")
+    assertEqual(ads[0]['baz'], 3, "testTransaction-7")
+
+    try:
+        with schedd.transaction() as txn:
+            schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(6))
+            schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(7))
+            raise Exception("force abort")
+    except:
+        exctype, e = sys.exc_info()[:2]
+        if not issubclass(exctype, Exception):
+            raise
+        assertEqual(str(e), "force abort", "testTransaction-7")
+    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
+    assertEqual(len(ads), 1, "testTransaction-8")
+    assertEqual(ads[0]['foo'], 4, "testTransaction-9")
+    assertEqual(ads[0]['bar'], 5, "testTransaction-10")
+
+    try:
+        with schedd.transaction() as txn:
+            schedd.edit(["%d.0" % cluster], 'baz', classad.Literal(8))
+            with schedd.transaction(htcondor.TransactionFlags.NonDurable | htcondor.TransactionFlags.ShouldLog, True) as txn:
+                schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(9))
+                schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(10))
+            raise Exception("force abort")
+    except:
+        exctype, e = sys.exc_info()[:2]
+        if not issubclass(exctype, Exception): 
+            raise
+        assertEqual(str(e), "force abort", "testTransaction-11")
+    ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
+    assertEqual(len(ads), 1, "testTransaction-12")
+    assertEqual(ads[0]['foo'], 4, "testTransaction-13")
+    assertEqual(ads[0]['bar'], 5, "testTransaction-14")
+    assertEqual(ads[0]['baz'], 3, "testTransaction-15")
+
+    # A removed job may persist in the queue for a short time, but its
+    # JobStatus will be 3 (REMOVED)
+    schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
+    ads = schedd.query("ClusterId == %d && JobStatus != 3" % cluster, ["JobStatus"])
+    assertEqual(len(ads), 0, "testTransaction-16")
+    CondorTest.StopPersonalCondor("testTransaction")
+
+
+def main():
+
+    # Setup condor environment variables that will be used globally across all tests
+    os.environ["_condor_PORT"] = "9622"
+    os.environ["_condor_SCHEDD_NAME"] = "python_bindings_htcondor"
+
+    # Now run the tests!
+    testRemoteParam()
+
+    if Utils.IsWindows() is False:
+        print("Running Linux-only tests")
+        testRemoteSetParam()
+        testLocate()
+        testLocateList()
+        #testRemoteLocate() # FIXME
+        #testScheddLocate() # FIXME
+        #testCollectorAdvertise() # FIXME
+        #testScheddNonblockingQueryRemove() # FIXME
+        testScheddNonblockingQueryCount()
+        testScheddSubmitSpool()
+        #testScheddSubmitFile() # FIXME
+        #testDrain() # FIXME
+        testPing()
+        testTransaction()
+        testScheddNonblockingQuery()
+        testScheddSubmit()
+        testScheddSubmitMany()
+        testScheddSubmitMany2()
+        testScheddQueryPoll()
+        #testNegotiator() # FIXME
+        #testClaim() # FIXME
+
+
+if __name__ == '__main__':
+    main()
+

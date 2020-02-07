@@ -22,7 +22,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
+#include "condor_string.h"
+#include "basename.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "nullfile.h"
@@ -310,7 +311,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -353,8 +354,6 @@ void INFNBatchJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -386,7 +385,7 @@ void INFNBatchJob::doEvaluateState()
 				std::string error_string = "Failed to start GAHP: ";
 				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+				jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -401,7 +400,7 @@ void INFNBatchJob::doEvaluateState()
 					std::string error_string = "Failed to start transfer GAHP: ";
 					error_string += gahp->getGahpStderr();
 
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -466,8 +465,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( remoteSandboxId == NULL ) {
 				CreateSandboxId();
 			}
-			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-			if ( attr_exists && attr_dirty ) {
+			if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -479,7 +477,7 @@ void INFNBatchJob::doEvaluateState()
 				if ( errorString == "" ) {
 					std::string error_string = "Attempts to submit failed: ";
 					error_string += gahp->getGahpStderr();
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				}
 				gmState = GM_HOLD;
 				break;
@@ -647,8 +645,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -927,8 +924,7 @@ void INFNBatchJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1142,10 +1138,7 @@ void INFNBatchJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -1282,26 +1275,14 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 	const char *attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
-		ATTR_COMPLETION_DATE,
-		ATTR_JOB_RUN_COUNT,
-		ATTR_JOB_START_DATE,
 		ATTR_ON_EXIT_BY_SIGNAL,
 		ATTR_ON_EXIT_SIGNAL,
 		ATTR_ON_EXIT_CODE,
 		ATTR_EXIT_REASON,
-		ATTR_JOB_CURRENT_START_DATE,
-		ATTR_JOB_LOCAL_SYS_CPU,
-		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
-		ATTR_NUM_CKPTS,
-		ATTR_NUM_GLOBUS_SUBMITS,
-		ATTR_NUM_MATCHES,
 		ATTR_NUM_RESTARTS,
 		ATTR_JOB_REMOTE_WALL_CLOCK,
-		ATTR_JOB_CORE_DUMPED,
-		ATTR_EXECUTABLE_SIZE,
-		ATTR_IMAGE_SIZE,
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
@@ -1516,18 +1497,24 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// Remove all remote_* attributes from the new ad before
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
-	const char *next_name;
-	submit_ad->ResetName();
-	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
-			 strlen( next_name ) > 7 ) {
+	auto itr = submit_ad->begin();
+	while ( itr != submit_ad->end() ) {
+		// This convoluted setup is an attempt to avoid invalidating
+		// the iterator when deleting the attribute.
+		if ( strncasecmp( itr->first.c_str(), "REMOTE_", 7 ) == 0 &&
+		     itr->first.size() > 7 ) {
 
-			submit_ad->Delete( next_name );
+			std::string name = itr->first;
+			itr++;
+			submit_ad->Delete( name );
+		} else {
+			itr++;
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	const char *next_name;
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1563,7 +1550,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}
@@ -1708,14 +1695,14 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
 			char const *attr_name = &(next_name[7]);
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			xfer_ad->Insert( attr_name, pTree );
 		}
 	}

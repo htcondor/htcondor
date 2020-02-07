@@ -46,7 +46,7 @@ class AbstractQuery: # pure virtual, just to have a minimum set of methods defin
     # constraint_func is a boolean function, with only one argument (data el)
     # same output as fetch, but limited to constraint_func(el)==True
     #
-    # if constraint_func==None, return all the data
+    # if constraint_func is None, return all the data
     def fetchStored(self,constraint_func=None):
         raise RuntimeError,"fetchStored not implemented"
 
@@ -71,12 +71,12 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
         self.resource_str=resource_str
         self.group_attribute=group_attribute
         self.pool_name=pool_name
-        if pool_name==None:
+        if pool_name is None:
             self.pool_str=""
         else:
             self.pool_str="-pool %s"%pool_name
 
-        if security_obj!=None:
+        if security_obj is not None:
             if security_obj.has_saved_state():
                 raise RuntimeError, "Cannot use a security object which has saved state."
             self.security_obj=copy.deepcopy(security_obj)
@@ -84,7 +84,7 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
             self.security_obj=condorSecurity.ProtoRequest()
 
     def require_integrity(self,requested_integrity): # if none, dont change, else forse that one
-        if requested_integrity==None:
+        if requested_integrity is None:
             condor_val=None
         elif requested_integrity:
             condor_val="REQUIRED"
@@ -96,12 +96,12 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
 
     def get_requested_integrity(self):
         condor_val = self.security_obj.get('CLIENT','INTEGRITY')
-        if condor_val==None:
+        if condor_val is None:
             return None
         return (condor_val=='REQUIRED')
 
     def require_encryption(self,requested_encryption): # if none, dont change, else forse that one
-        if requested_encryption==None:
+        if requested_encryption is None:
             condor_val=None
         elif requested_encryption:
             condor_val="REQUIRED"
@@ -113,18 +113,18 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
 
     def get_requested_encryption(self):
         condor_val = self.security_obj.get('CLIENT','ENCRYPTION')
-        if condor_val==None:
+        if condor_val is None:
             return None
         return (condor_val=='REQUIRED')
 
     def fetch(self,constraint=None,format_list=None):
-        if constraint==None:
+        if constraint is None:
             constraint_str=""
         else:
             constraint_str="-constraint '%s'"%constraint
 
-        full_xml=(format_list==None)
-        if format_list!=None:
+        full_xml=(format_list is None)
+        if format_list is not None:
             format_arr=["-format '<c>' ClusterId"] #clusterid is always there, so this will always be printed out
             for format_el in format_list:
                 attr_name,attr_type=format_el
@@ -163,7 +163,7 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
 class CondorQ(QueryExe):
     def __init__(self,schedd_name=None,pool_name=None,security_obj=None):
         self.schedd_name=schedd_name
-        if schedd_name==None:
+        if schedd_name is None:
             schedd_str=""
         else:
             schedd_str="-name %s"%schedd_name
@@ -171,7 +171,7 @@ class CondorQ(QueryExe):
         QueryExe.__init__(self,"condor_q",schedd_str,["ClusterId","ProcId"],pool_name,security_obj)
 
     def fetch(self,constraint=None,format_list=None):
-        if format_list!=None:
+        if format_list is not None:
             # check that ClusterId and ProcId are present, and if not add them
             format_list=complete_format_list(format_list, [("ClusterId",'i'),("ProcId",'i')])
         return QueryExe.fetch(self,constraint=constraint,format_list=format_list)
@@ -181,7 +181,7 @@ class CondorQ(QueryExe):
 class CondorQLite(QueryExe):
     def __init__(self,schedd_name=None,pool_name=None,security_obj=None):
         self.schedd_name=schedd_name
-        if schedd_name==None:
+        if schedd_name is None:
             schedd_str=""
         else:
             schedd_str="-name %s"%schedd_name
@@ -189,7 +189,7 @@ class CondorQLite(QueryExe):
         QueryExe.__init__(self,"condor_q",schedd_str,"ClusterId",pool_name,security_obj)
 
     def fetch(self,constraint=None,format_list=None):
-        if format_list!=None:
+        if format_list is not None:
             # check that ClusterId is present, and if not add it
             format_list=complete_format_list(format_list, [("ClusterId",'i')])
         return QueryExe.fetch(self,constraint=constraint,format_list=format_list)
@@ -197,7 +197,7 @@ class CondorQLite(QueryExe):
 # condor_status
 class CondorStatus(QueryExe):
     def __init__(self,subsystem_name=None,pool_name=None,security_obj=None):
-        if subsystem_name==None:
+        if subsystem_name is None:
             subsystem_str=""
         else:
             subsystem_str="-%s"%subsystem_name
@@ -205,7 +205,7 @@ class CondorStatus(QueryExe):
         QueryExe.__init__(self,"condor_status",subsystem_str,"Name",pool_name,security_obj)
 
     def fetch(self,constraint=None,format_list=None):
-        if format_list!=None:
+        if format_list is not None:
             # check that Name present and if not, add it
             format_list=complete_format_list(format_list, [("Name",'s')])
         return QueryExe.fetch(self,constraint=constraint,format_list=format_list)
@@ -267,7 +267,7 @@ class Summarize:
 
     # Parameters:
     #    constraint - string to be passed to query.fetch()
-    #    hash_func  - if !=None, use this instead of the main one
+    #    hash_func  - if is not None, use this instead of the main one
     # Returns a dictionary of hash values
     #    Elements are counts (or more dictionaries if hash returns lists)
     def count(self,constraint=None,hash_func=None):
@@ -295,7 +295,7 @@ class Summarize:
 
     ### Internal
     def getHash(self,hash_func):
-        if hash_func==None:
+        if hash_func is None:
             return self.hash_func
         else:
             return hash_func
@@ -423,7 +423,7 @@ def xml2list_end_element(name):
     
 def xml2list_char_data(data):
     global xml2list_data,xml2list_inclassad,xml2list_inattr,xml2list_intype
-    if xml2list_inattr==None:
+    if xml2list_inattr is None:
         return # only process when in attribute
 
     if xml2list_intype=="i":
@@ -431,7 +431,7 @@ def xml2list_char_data(data):
     elif xml2list_intype=="r":
         xml2list_inattr["val"]= float(data)
     elif xml2list_intype=="b":
-        if xml2list_inattr["val"]!=None:
+        if xml2list_inattr["val"] is not None:
             pass #nothing to do, value was in attribute
         else:
             xml2list_inattr["val"]=(data[0] in ('T','t','1'))
@@ -500,7 +500,7 @@ def list2dict(list_data,attr_name):
 
 
 def applyConstraint(data,constraint_func):
-    if constraint_func==None:
+    if constraint_func is None:
         return data
     else:
         outdata={}
@@ -544,7 +544,7 @@ def fetch2count(data,hash_func):
         el=data[k]
 
         hid=hash_func(el)
-        if hid==None:
+        if hid is None:
             continue # hash tells us it does not want to count this
 
         # cel will point to the real counter
@@ -585,7 +585,7 @@ def fetch2list(data,hash_func):
         el=data[k]
 
         hid=hash_func(el)
-        if hid==None:
+        if hid is None:
             continue # hash tells us it does not want to list this
 
         # lel will point to the real list

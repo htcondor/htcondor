@@ -33,12 +33,6 @@ ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
 # Executables
 TR=tr
 
-if [ `uname` = Darwin ] ; then
-    MD5SUM=md5
-else
-    MD5SUM=md5sum
-fi
-
 usage()
 {
 cat << EOM
@@ -50,6 +44,7 @@ commands:
  -r|--remove [host]         Remove the installed cluster (first in list)
  -s|--status [host]         Get status of installed cluster
  -t|--test [host]           Test the installed cluster (all clusters)
+ -o|--override directory    Override the bosco installation with a directory structure
  -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
@@ -742,7 +737,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:hp: --longoptions add:,platform:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:hp:o: --longoptions add:,platform:,list,status:,test:,remove:,help,override:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
@@ -750,6 +745,7 @@ fi
 eval set -- "$TEMP"
 
 platform_force=
+override_dir=
 
 # test and remove could have 0 or 1 parameter
 while true; do
@@ -765,6 +761,7 @@ while true; do
         -s|--status) get_status $2;  shift 2; exit 0 ;;
         -t|--test) test_cluster $2; exit 0 ;;
         -r|--remove) remove_cluster $2; exit 0;;
+        -o|--override) override_dir=$2; shift 2;;
         
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -813,8 +810,8 @@ fi
 
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
-    # Generate a md5sum password
-    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM | $MD5SUM | awk '{print $1}'`
+    # Generate a password
+    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM`
 
     # Output the password to a specially crafted file
     mkdir -p `dirname $PASSPHRASE_LOCATION`
@@ -1004,7 +1001,7 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
     fi
 
     if [ ! -e $bosco_passwd_file ]; then  
-        random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
+        random_string=`echo $RANDOM`
         condor_store_cred -p $random_string -f $bosco_passwd_file 
     fi
 
@@ -1016,6 +1013,12 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
     fi 
     rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
     rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
+fi
+
+# If patch is set, perform the patch
+if [ ! -z "${override_dir}" ]; then
+    echo "Patching bosco installation from directory: $override_dir"
+    rsync -aq $override_dir/ $local_install_dir
 fi
 
 # Do the actual rsync

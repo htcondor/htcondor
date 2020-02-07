@@ -22,7 +22,7 @@
 #if !defined( COMPRESS_H )
 #define COMPRESS_H
 
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include "classad/classad.h"
 
 namespace classad {

@@ -493,5 +493,5 @@ UserProc::ThisProcRunsAlongsideMainProc()
 char const *
 UserProc::getArgv0()
 {
-	return CONDOR_EXEC;
+	return 0;
 }

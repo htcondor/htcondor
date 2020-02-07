@@ -31,6 +31,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include "read_user_log.h"
+#include "classad/classad_distribution.h"
 
 struct hostent *NameEnt;
 /*
@@ -132,6 +133,7 @@ int main(int argc, char* argv[])
 	}
 
 	char done = 0;
+	char read_error = 0;
 	char found = 0;
 	char evicted = 0;
 	char aborted = 0;
@@ -160,10 +162,18 @@ int main(int argc, char* argv[])
 		//cout << ULogEventOutcomeNames[outcome] << endl;
 		//printf("Outcome from rul->readEvent(e) is %d\n",outcome);
         switch( outcome ) {
-		  case ULOG_NO_EVENT:
 		  case ULOG_RD_ERROR:
+			printf("RD_ERROR\n");
+			read_error++;
+			done++;
+			break;
+		  case ULOG_NO_EVENT:
+			done++;
+			break;
+		  default:
 		  case ULOG_UNK_ERROR:
 		  case ULOG_MISSED_EVENT:
+			printf("ULOG_outcome_%d\n", outcome);
 			done++;
 			break;
 		  case ULOG_OK:
@@ -256,54 +266,6 @@ int main(int argc, char* argv[])
 				  case ULOG_GENERIC:
 					printf("Job Generic.........\n");
 					break;
-				  case ULOG_JOB_AD_INFORMATION:
-				  {
-					printf("Job Ad Information.........\n");
-
-					JobAdInformationEvent	*info =
-						dynamic_cast<JobAdInformationEvent*>( e );
-					if ( !info ) {
-						printf( "Event isn't a JobAdInformationEvent!!!\n" );
-						break;
-					}
-
-					// print a attribute which is always there
-					const char *attr;
-					attr = "JobStatus";
-					if ( !info->LookupInteger(attr, myjobstatus) ) {
-						printf( "%s not found!\n", attr );
-					}
-					else {
-						printf("%s is %d\n", attr, myjobstatus);
-					}
-
-					attr = "BillString";
-					if ( !info->LookupString(attr, &eventtestval) ) {
-						printf( "%s not found!\n", attr );
-					}
-					else {
-						printf("%s is '%s'\n", attr, eventtestval );
-						free( eventtestval );
-					}
-
-					attr = "BillInt";
-					if ( !info->LookupInteger(attr, myjobstatus) ) {
-						printf( "%s not found!\n", attr );
-					}
-					else {
-						printf("%s is %d\n", attr, myjobstatus);
-					}
-
-					attr = "BillBool";
-					if ( !info->LookupInteger(attr, myjobstatus) ) {
-						printf( "%s not found!\n", attr );
-					}
-					else {
-						printf("%s is %d\n", attr, myjobstatus);
-					}
-					break;
-				  }
-
 				  case ULOG_JOB_ABORTED:
 					printf("Job ABORTED by user.........\n");
 					break;
@@ -324,6 +286,30 @@ int main(int argc, char* argv[])
 					break;
 				  case ULOG_NODE_TERMINATED:
 					printf("Node Terminated .........\n");
+					{
+						NodeTerminatedEvent *info = dynamic_cast<NodeTerminatedEvent*>(e);
+						if (!info) {
+							printf("Event isn't a NodeTerminatedEvent!!!\n");
+							break;
+						}
+
+						// print a attribute which is always there
+						classad::ClassAd * ad = reinterpret_cast<classad::ClassAd*>(info->toClassAd(true));
+						if ( ! ad) { printf("toClassAd failed!\n"); break; }
+
+						int rmem = -1, memu = -1, mem = -1;
+						if (!ad->EvaluateAttrNumber("Memory", mem)) {
+							printf("\tMemory not found!\n");
+						}
+						if (!ad->EvaluateAttrNumber("MemoryUsage", memu)) {
+							printf("\tMemoryUsage not found!\n");
+						}
+						if (!ad->EvaluateAttrNumber("RequestMemory", rmem)) {
+							printf("\tRequestMemory not found!\n");
+						}
+						printf("\tMemory : requested %d, got %d, used %d\n", rmem, mem, memu);
+						delete ad;
+					}
 					break;
 				  case ULOG_POST_SCRIPT_TERMINATED:
 					printf("Post Script Terminated.........\n");
@@ -344,15 +330,108 @@ int main(int argc, char* argv[])
 				  case ULOG_REMOTE_ERROR:
 					printf("Job Remote Error.........\n");
 					break;
-				  //case ULOG_JOB_DISCONNECTED:
-					//printf("Job Disconnected.........\n");
-					//break;
-				  //case ULOG_JOB_RECONNECTED:
-					//printf("Job Reconnected.........\n");
-					//break;
-				  //case ULOG_JOB_RECONNECT_FAILED:
-					//printf("Job Reconnect Failed.........\n");
-					//break;
+				  case ULOG_JOB_DISCONNECTED:
+					printf("Job Disconnected.........\n");
+					break;
+				  case ULOG_JOB_RECONNECTED:
+					printf("Job Reconnected.........\n");
+					break;
+				  case ULOG_JOB_RECONNECT_FAILED:
+					printf("Job Reconnect Failed.........\n");
+					break;
+				  case ULOG_GRID_RESOURCE_UP:
+					printf("Grid Resource Up.........\n");
+					break;
+				  case ULOG_GRID_RESOURCE_DOWN:
+					printf("Grid Resource Down.........\n");
+					break;
+				  case ULOG_GRID_SUBMIT:
+					printf("Job Submitted remotely.........\n");
+					break;
+				  case ULOG_JOB_AD_INFORMATION:
+				  {
+					printf("Job Ad Information.........\n");
+
+					JobAdInformationEvent	*info =
+						dynamic_cast<JobAdInformationEvent*>( e );
+					if ( !info ) {
+						printf( "Event isn't a JobAdInformationEvent!!!\n" );
+						break;
+					}
+
+					// print a attribute which is always there
+					const char *attr;
+					attr = "JobStatus";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "\t%s not found!\n", attr );
+					}
+					else {
+						printf("\t%s is %d\n", attr, myjobstatus);
+					}
+
+					attr = "BillString";
+					if ( !info->LookupString(attr, &eventtestval) ) {
+						printf( "\t%s not found!\n", attr );
+					}
+					else {
+						printf("\t%s is \"%s\"\n", attr, eventtestval );
+						free( eventtestval );
+					}
+
+					attr = "BillInt";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "\t%s not found!\n", attr );
+					}
+					else {
+						printf("\t%s is %d\n", attr, myjobstatus);
+					}
+
+					attr = "BillBool";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "\t%s not found!\n", attr );
+					}
+					else {
+						printf("\t%s is %s\n", attr, myjobstatus ? "true" : "false");
+					}
+					break;
+				  }
+				  case ULOG_JOB_STATUS_UNKNOWN:
+					printf("Job Status Unknown.........\n");
+					break;
+				  case ULOG_JOB_STATUS_KNOWN:
+					printf("Job Status Known.........\n");
+					break;
+				  case ULOG_JOB_STAGE_IN:
+					printf("Job performing stage-in.........\n");
+					break;
+				  case ULOG_JOB_STAGE_OUT:
+					printf("Job performing stage-out.........\n");
+					break;
+				  case ULOG_ATTRIBUTE_UPDATE:
+					printf("Attribute updated.........\n");
+					break;
+				  case ULOG_PRESKIP:
+					printf("PRE_SKIP event for DAGMan.........\n");
+					break;
+				  case ULOG_CLUSTER_SUBMIT:
+					printf("Cluster submitted.........\n");
+					break;
+				  case ULOG_CLUSTER_REMOVE:
+					printf("Cluster removed.........\n");
+					break;
+				  case ULOG_FACTORY_PAUSED:
+					printf("Factory paused.........\n");
+					break;
+				  case ULOG_FACTORY_RESUMED:
+					printf("Factory resumed.........\n");
+					break;
+				  case ULOG_NONE:
+					printf("None (try again later).........\n");
+					break;
+				  case ULOG_FILE_TRANSFER:
+					printf("File transfer.........\n");
+					break;
+
 				  default:
 					printf("UNKNOWN USER LOG EVENT.........\n");
 					break;
@@ -464,7 +543,11 @@ int main(int argc, char* argv[])
 
 	if( strcmp(action, "TRACE") == 0 )
 	{
+		if (read_error) {
+			printf("DONE (read error)\n");
+		} else {
 			printf("DONE\n");
+		}
 			return(0);
 	}
 

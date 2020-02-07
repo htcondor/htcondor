@@ -21,7 +21,6 @@
 #include "ad_printmask.h"
 #include "Regex.h"
 #include "tokener.h"
-#include "condor_string.h"	// for getline
 #include <string>
 
 // collapse a c++ escapes in-place in a std::string
@@ -104,21 +103,6 @@ bool collapse_escapes(std::string & str)
 	str.resize(ix);
 	return true;
 }
-
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-bool CaseInsensitiveLiteral::operator ==(const char * str) const {
-	if (lit == str) return true;
-	if ((!lit) || (!str)) return false;
-	return strcasecmp(lit, str) == 0;
-}
-bool CaseInsensitiveLiteral::operator <(const char * str) const {
-	if ( ! lit) { return str ? -1 : 0; }
-	else if ( ! str) { return 1; }
-	return strcasecmp(lit, str) < 0;
-}
-#endif
 
 int tokener::compare_nocase(const char * pat) const
 {

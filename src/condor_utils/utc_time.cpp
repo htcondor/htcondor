@@ -25,15 +25,16 @@
 # include <sys/timeb.h>
 #endif
 
-
-void condor_gettimestamp( struct timeval &tv )
+#ifdef WIN32
+time_t condor_gettimestamp(long & usec)
 {
-#if defined(WIN32)
+	time_t sec;
+
 	// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
 	static bool check_for_precise = false;
 	static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
-	static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
-	if ( ! check_for_precise) {
+	static BOOLEAN(WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
+	if (! check_for_precise) {
 		HMODULE hmod = GetModuleHandle("Kernel32.dll");
 		if (hmod) { *(FARPROC*)&get_precise_time = GetProcAddress(hmod, "GetSystemTimePreciseAsFileTime"); }
 		hmod = GetModuleHandle("ntdll.dll");
@@ -45,18 +46,29 @@ void condor_gettimestamp( struct timeval &tv )
 		get_precise_time(&nanos);
 		unsigned long now = 0;
 		time_to_1970(&nanos, &now);
-		tv.tv_sec = now;
-		tv.tv_usec = (int)((nanos / 10) % 1000000);
+		sec = now;
+		usec = (long)((nanos / 10) % 1000000);
 	} else {
 		struct _timeb tb;
 		_ftime(&tb);
-		tv.tv_sec = tb.time;
-		tv.tv_usec = tb.millitm * 1000;
+		sec = tb.time;
+		usec = tb.millitm * 1000;
 	}
-#elif defined(HAVE_GETTIMEOFDAY)
+	return sec;
+}
+#else
+void condor_gettimestamp( struct timeval &tv )
+{
+#ifdef HAVE_GETTIMEOFDAY
 	gettimeofday( &tv, NULL );
+#elif defined(HAVE__FTIME) 
+	struct _timeb tb;
+	_ftime(&tb);
+	tv.tv_sec = tb.time;
+	tv.tv_usec = tb.millitm * 1000;
 #else
 #error Neither _ftime() nor gettimeofday() are available!
 #endif
 }
+#endif
 

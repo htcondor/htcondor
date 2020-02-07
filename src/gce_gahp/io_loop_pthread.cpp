@@ -215,8 +215,22 @@ main( int argc, char ** const argv )
 		 */
 	gce_gahp_grab_big_mutex();
 
+	// check to see if we're going to quit after a certain time
+	time_t die_time = 0;
+	int lifetime = param_integer("GCE_GAHP_LIFETIME", 86400);
+	if (lifetime) {
+		die_time = time(0) + lifetime;
+	}
+
 	for(;;) {
+		// main driver
 		ioprocess.stdinPipeHandler();
+
+		// if lifetime is set, see if we need to quit.  die_time pre-computed above.
+		if(die_time && (time(0) > die_time)) {
+			dprintf(D_ALWAYS, "GCEGAHP: I've been around %i seconds.  Exiting.\n", lifetime);
+			_exit(0);
+		}
 	}
 
 	return 0;

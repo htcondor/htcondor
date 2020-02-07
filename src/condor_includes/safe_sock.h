@@ -103,7 +103,7 @@ public:
 	// Methods
 	void init();	/* shared initialization method */
 
-    const char * isIncomingDataMD5ed();
+    const char * isIncomingDataHashed();
     const char * isIncomingDataEncrypted();
 
 #ifdef DEBUG

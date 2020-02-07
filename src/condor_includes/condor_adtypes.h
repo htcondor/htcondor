@@ -29,6 +29,7 @@
 #define MASTER_ADTYPE			"DaemonMaster"
 #define CKPT_SRVR_ADTYPE		"CkptServer"
 #define JOB_ADTYPE			"Job"
+#define JOB_SET_ADTYPE			"JobSet"
 #define QUERY_ADTYPE			"Query"
 #define COLLECTOR_ADTYPE		"Collector"
 #define CKPT_FILE_ADTYPE		"CkptFile"

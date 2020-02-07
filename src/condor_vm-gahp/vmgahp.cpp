@@ -25,7 +25,6 @@
 #include "env.h"
 #include "condor_environ.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_vm_universe_types.h"
@@ -660,7 +659,7 @@ VMGahp::executeStart(VMRequest *req)
 		return;
 	}
 
-	MyString vmworkingdir;
+	std::string vmworkingdir;
 	if( m_jobAd->LookupString( "VM_WORKING_DIR", vmworkingdir) != 1 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
@@ -669,7 +668,7 @@ VMGahp::executeStart(VMRequest *req)
 		return;
 	}
 
-	MyString job_vmtype;
+	std::string job_vmtype;
 	if( m_jobAd->LookupString( ATTR_JOB_VM_TYPE, job_vmtype) != 1 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
@@ -679,12 +678,12 @@ VMGahp::executeStart(VMRequest *req)
 		return;
 	}
 
-	if(strcasecmp(vmtype, job_vmtype.Value()) != 0 ) {
+	if(strcasecmp(vmtype, job_vmtype.c_str()) != 0 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
 		vmprintf(D_ALWAYS, "Argument is %s but VM_TYPE in job classAD "
-						"is %s\n", vmtype, job_vmtype.Value());
+						"is %s\n", vmtype, job_vmtype.c_str());
 		return;
 	}
 
@@ -700,18 +699,18 @@ VMGahp::executeStart(VMRequest *req)
 	// TBD: tstclair this totally needs to be re-written
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		new_vm = new XenType( vmworkingdir.Value(), m_jobAd );
+		new_vm = new XenType( vmworkingdir.c_str(), m_jobAd );
 		ASSERT(new_vm);
 	}else if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0) {
 	  new_vm = new KVMType(
-				vmworkingdir.Value(), m_jobAd);
+				vmworkingdir.c_str(), m_jobAd);
 		ASSERT(new_vm);
 	}else
 #endif
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.Value(),
 				m_gahp_config->m_vm_script.Value(),
-				vmworkingdir.Value(), m_jobAd);
+				vmworkingdir.c_str(), m_jobAd);
 		ASSERT(new_vm);
 	}else
 	  {
@@ -1092,9 +1091,9 @@ VMGahp::killAllProcess()
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
-			MyString vmname;
+			std::string vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				XenType::killVMFast(vmname.Value());
+				XenType::killVMFast(vmname.c_str());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
@@ -1103,9 +1102,9 @@ VMGahp::killAllProcess()
 			     CONDOR_VM_UNIVERSE_KVM ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
-			MyString vmname;
+			std::string vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				KVMType::killVMFast(vmname.Value());
+				KVMType::killVMFast(vmname.c_str());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}

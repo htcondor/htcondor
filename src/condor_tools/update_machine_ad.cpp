@@ -42,6 +42,8 @@ void usage( const char * self ) {
 }
 
 int main( int argc, char ** argv ) {
+
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	char * name = NULL, * pool = NULL, * file = NULL;
@@ -55,9 +57,22 @@ int main( int argc, char ** argv ) {
 			return 0;
 		} else
 		if( is_arg_prefix( argv[i], "-pool" ) ) {
-			pool = argv[i];
+			++i;
+			if( i < argc ) {
+				pool = argv[i];
+			} else {
+				usage( argv[0] );
+				return 0;
+			}
 		} else
 		if( is_arg_prefix( argv[i], "-name" ) ) {
+			++i;
+			if( i < argc ) {
+				name = argv[i];
+			} else {
+				usage( argv[0] );
+				return 0;
+			}
 			name = argv[i];
 		} else {
 			file = argv[i];
@@ -78,7 +93,8 @@ int main( int argc, char ** argv ) {
 	}
 
 	int isEOF = 0, isError = 0, isEmpty = 0;
-	ClassAd update( f, "\n", isEOF, isError, isEmpty );
+	ClassAd update;
+	InsertFromFile( f, update, "\n", isEOF, isError, isEmpty );
 	if( isError || isEmpty ) {
 		fprintf( stderr, "Failed to parse '%s', aborting.\n", file );
 		//if( isEOF ) { fprintf( stderr, "File ended unexpectedly.  Please add a blank line the end of the file.\n" ); }

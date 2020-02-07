@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_string.h"
 
 #include "script.h"
 #include "util.h"
@@ -46,13 +45,13 @@ Script::Script( bool post, const char* cmd, int deferStatus, time_t deferTime,
 	_node         (node)
 {
 	ASSERT( cmd != NULL );
-    _cmd = strnewp (cmd);
+    _cmd = strdup (cmd);
     return;
 }
 
 //-----------------------------------------------------------------------------
 Script::~Script () {
-    delete [] _cmd;
+    free(_cmd);
     return;
 }
 
@@ -83,7 +82,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
     const char *delimiters = " \t";
     char * token;
 	ArgList args;
-    char * cmd = strnewp(_cmd);
+    char * cmd = strdup(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
 
@@ -150,7 +149,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 	_pid = daemonCore->Create_Process( cmd, args,
 									   PRIV_UNKNOWN, reaperId, FALSE, FALSE,
 									   NULL, NULL, NULL, NULL, NULL, 0 );
-    delete [] cmd;
+    free( cmd );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,

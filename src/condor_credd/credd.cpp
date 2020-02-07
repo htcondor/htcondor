@@ -28,6 +28,8 @@
 #include "get_daemon_name.h"
 #include "subsystem_info.h"
 #include "credmon_interface.h"
+#include "ipv6_hostname.h"
+#include "secure_file.h"
 
 //-------------------------------------------------------------
 
@@ -60,6 +62,12 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
 								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
 								"refresh_all_handler", this, DAEMON,
+								D_FULLDEBUG );
+
+		// See if creds are present for all modules requested
+	daemonCore->Register_Command( ZKM_QUERY_CREDS, "ZKM_QUERY_CREDS",
+								(CommandHandlercpp)&CredDaemon::zkm_query_creds,
+								"zkm_query_creds", this, WRITE,
 								D_FULLDEBUG );
 
 		// set timer to periodically advertise ourself to the collector
@@ -104,11 +112,8 @@ CredDaemon::reconfig()
 	}
 	m_name = param("CREDD_HOST");
 	if (m_name == NULL) {
-		char* tmp = default_daemon_name();
-		ASSERT(tmp != NULL);
-		m_name = strdup(tmp);
+		m_name = default_daemon_name();
 		ASSERT(m_name != NULL);
-		delete[] tmp;
 	}
 	if(m_name == NULL) {
 		EXCEPT("default_daemon_name() returned NULL");
@@ -182,19 +187,223 @@ CredDaemon::invalidate_ad()
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }
 
-void
+int
 CredDaemon::nop_handler(int, Stream*)
 {
-	return;
+	return 0; // ????
 }
 
-void
+
+int
+CredDaemon::zkm_query_creds( int, Stream* s)
+{
+	ReliSock* r = (ReliSock*)s;
+	r->decode();
+	int numads = 0;
+	if (!r->code(numads)) {
+		dprintf(D_ALWAYS, "zkm_query_creds: cannot read numads off wire\n");
+		r->end_of_message();
+		return CLOSE_STREAM;
+	}
+
+	std::vector<ClassAd> requests;
+	requests.resize(numads);
+	for(int i=0; i<numads; i++) {
+		if (!getClassAd(r, requests[i])) {
+			dprintf(D_ALWAYS, "zkm_query_creds: cannot read classad off wire\n");
+			r->end_of_message();
+			return CLOSE_STREAM;
+		}
+	}
+	r->end_of_message();
+
+	dprintf(D_ALWAYS, "Got query_creds for %d OAUTH services.\n", numads);
+
+	MyString URL;
+
+	ClassAdListDoesNotDeleteAds missing;
+	for(int i=0; i<numads; i++) {
+		MyString service;
+		MyString handle;
+		MyString user;
+		requests[i].LookupString("Service", service);
+		requests[i].LookupString("Handle", handle);
+		requests[i].LookupString("Username", user);
+
+		MyString tmpfname;
+		tmpfname = service;
+		tmpfname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
+		if(handle.Length()) {
+			tmpfname += "_";
+			tmpfname += handle;
+		}
+		tmpfname += ".top";
+
+		dprintf(D_FULLDEBUG, "query_creds: checking for %s\n", tmpfname.Value());
+		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
+			dprintf(D_ALWAYS, "query_creds: did not find %s\n", tmpfname.Value());
+			missing.Insert(&requests[i]);
+		}
+	}
+
+	if (missing.Length() > 0) {
+		// create unique request file with classad metadata
+		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
+
+		MyString web_prefix;
+		param(web_prefix, "CREDMON_WEB_PREFIX");
+		if (web_prefix.empty()) {
+			web_prefix = "https://";
+			web_prefix += get_local_fqdn();
+		}
+
+		MyString contents; // what we will write to the credential directory for this URL
+
+		missing.Rewind();
+		ClassAd * req;
+		while ((req = missing.Next())) {
+			// fill in everything we need to pass
+			ClassAd ad;
+			std::string tmpname;
+			std::string tmpvalue;
+			std::string secret_filename;
+
+			std::string service;
+			req->LookupString("Service", service);
+			ad.Assign("Provider", service);
+
+			req->LookupString("Username", tmpvalue);
+			ad.Assign("LocalUser", tmpvalue);
+
+			req->LookupString("Handle", tmpvalue);
+			ad.Assign("Handle", tmpvalue);
+
+			req->LookupString("Scopes", tmpvalue);
+			ad.Assign("Scopes", tmpvalue);
+
+			req->LookupString("Audience", tmpvalue);
+			ad.Assign("Audience", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_CLIENT_ID";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("ClientId", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_CLIENT_SECRET_FILE";
+			tmpvalue.clear();
+			char *buf = NULL;
+			size_t buf_len = 0;
+			size_t secret_len = 0;
+			if (param(secret_filename, tmpname.c_str()) && ! secret_filename.empty() &&
+				read_secure_file(secret_filename.c_str(), (void**)&buf, &buf_len, true)) {
+				// Read the file and use the contents before the first
+				// newline, if any. remember the buffer is probably not null terminated!
+				size_t i = 0;
+				for ( i = 0; i < buf_len; i++ ) {
+					// file may have terminating \r\n, etc,
+					// we use only up to the first non-printing character
+					if ( buf[i] <= 0x1F ) {
+						break;
+					}
+				}
+				secret_len = i;  // the secret length might be less than the file length
+				tmpvalue.assign(buf, secret_len); // copy so that we can null terminate
+				memset(buf, 0, buf_len); // overwrite the secret before freeing the buffer
+				free(buf);
+			} else {
+				//TODO: make a better error return channel for this command
+				URL.formatstr("Failed to securely read client secret for service %s", service.c_str());
+				dprintf(D_ALWAYS, "query_creds: ERROR: could not securely read file '%s' for service %s\n", secret_filename.c_str(), service.c_str());
+				goto bail;
+			}
+			ad.Assign("ClientSecret", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_RETURN_URL_SUFFIX";
+			auto_free_ptr url_suffix(param(tmpname.c_str()));
+			tmpvalue = web_prefix;
+			if (url_suffix) { tmpvalue += url_suffix.ptr(); }
+			ad.Assign("ReturnUrl", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_AUTHORIZATION_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("AuthorizationUrl", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_TOKEN_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("TokenUrl", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_USER_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("UserUrl", tmpvalue);
+
+			// serialize classad into string
+			if(!contents.empty()) {
+				contents += "\n";
+			}
+			// append the new ad
+			sPrintAd(contents, ad);
+
+			if (IsDebugVerbose(D_FULLDEBUG)) {
+				std::string tmp;
+				formatstr(tmp, "<contents of %s> %d bytes", secret_filename.c_str(), (int)secret_len);
+				ad.Assign("ClientSecret", tmp);
+				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.c_str());
+				dPrintAd(D_FULLDEBUG, ad);
+			}
+		}
+
+		// write the file into sec_credential_dir
+		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
+		if(!cred_dir) {
+			EXCEPT("NO SEC_CREDENTIAL_DIRECTORY");
+		}
+
+		MyString path = cred_dir.ptr();
+		path += DIR_DELIM_CHAR;
+		path += key.ptr();
+
+		dprintf(D_ALWAYS, "query_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
+		const bool as_root = false; // write as current user
+		const bool group_readable = true;
+		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), as_root, group_readable);
+
+		if (rc != SUCCESS) {
+			dprintf(D_ALWAYS, "query_creds: failed to write secure temp file %s\n", path.Value());
+		} else {
+			// on success we return a URL
+			URL = web_prefix;
+			URL += "/key/";
+			URL += key.ptr();
+			dprintf(D_ALWAYS, "query_creds: returning URL %s\n", URL.Value());
+		}
+	} else {
+		dprintf(D_ALWAYS, "query_creds: found all requested OAUTH services. returning empty URL %s\n", URL.Value());
+	}
+
+bail:
+	r->encode();
+	if (!r->code(URL)) {
+		dprintf(D_ALWAYS, "query_creds: error sending URL to client\n");
+	}
+	r->end_of_message();
+
+	return CLOSE_STREAM;
+}
+
+int
 CredDaemon::refresh_all_handler( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
 	ClassAd ad;
-	getClassAd(r, ad);
+	if (!getClassAd(r, ad)) {
+		dprintf(D_ALWAYS, "credd::refresh_all_handler cannot receive classad\n");
+	}
 	r->end_of_message();
 
 	// don't actually care (at the moment) what's in the ad, it's for
@@ -217,6 +426,8 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
 	putClassAd(r, ad);
 	r->end_of_message();
+
+	return CLOSE_STREAM;
 }
 
 //-------------------------------------------------------------

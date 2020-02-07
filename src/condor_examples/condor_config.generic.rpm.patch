@@ -1,5 +1,5 @@
---- condor_config.generic	2016-09-15 16:20:28.110363550 -0500
-+++ condor_config.patched	2016-09-15 15:36:52.916227570 -0500
+--- condor_config.generic	2019-08-04 17:15:38.663989094 -0500
++++ condor_config.patched	2019-08-04 17:16:45.739011862 -0500
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,37 @@
+@@ -50,5 +48,28 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -60,13 +60,4 @@
 +
 +JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
 +
-+SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = /etc/condor/condor_ssh_to_job_sshd_config_template
-+
-+##  What machine is your central manager?
-+
-+CONDOR_HOST = $(FULL_HOSTNAME)
-+
-+##  This macro determines what daemons the condor_master will start and keep its watchful eyes on.
-+##  The list is a comma or space separated list of subsystem names
-+
-+DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
++##  Install the minicondor package to run HTCondor on a single node

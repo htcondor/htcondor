@@ -21,11 +21,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "nullfile.h"
-#include "filename_tools.h"
 #include "condor_holdcodes.h"
 
 #ifdef WIN32
@@ -461,7 +458,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 		jobAd->Assign( ATTR_HOLD_REASON_CODE, holdReasonCode );
 		jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, holdReasonSubCode );
 	}
@@ -505,8 +502,6 @@ void EC2Job::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 	std::string gahp_error_code;
 
@@ -528,11 +523,11 @@ void EC2Job::doEvaluateState()
 		gahp_error_code = "";
 
 		// JEF: Crash the gridmanager if requested by the job
-		int should_crash = 0;
+		bool should_crash = false;
 		jobAd->Assign( "GMState", gmState );
-		jobAd->SetDirtyFlag( "GMState", false );
+		jobAd->MarkAttributeClean( "GMState" );
 
-		if ( jobAd->EvalBool( "CrashGM", NULL, should_crash ) && should_crash ) {
+		if ( jobAd->LookupBool( "CrashGM", should_crash ) && should_crash ) {
 			EXCEPT( "Crashing gridmanager at the request of job %d.%d",
 					procID.cluster, procID.proc );
 		}
@@ -550,8 +545,7 @@ void EC2Job::doEvaluateState()
 				// constructor is called while we're connected to the schedd).
 
 				// JEF: Save GMSession to the schedd if needed
-				jobAd->GetDirtyFlag( "GMSession", &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( "GMSession" ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -711,23 +705,21 @@ void EC2Job::doEvaluateState()
 					SetClientToken(build_client_token().c_str());
 				}
 
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				bool need_update = jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID );
 
 				std::string type;
 				jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type );
 				if ( type != myResource->m_serverType ) {
 					jobAd->Assign( ATTR_EC2_SERVER_TYPE, myResource->m_serverType );
-					attr_exists = true;
-					attr_dirty = true;
+					need_update = true;
 				}
 
 				if ( m_should_gen_key_pair && m_key_pair.empty() ) {
 					SetKeypairId( build_keypair().c_str() );
-					attr_exists = true;
-					attr_dirty = true;
+					need_update = true;
 				}
 
-				if ( attr_exists && attr_dirty ) {
+				if ( need_update ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -943,9 +935,7 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_SAVE_INSTANCE_ID:
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID,
-									 &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					// Wait for the instance id to be saved to the schedd
 					requestScheddUpdate( this, true );
 					break;
@@ -1038,9 +1028,7 @@ void EC2Job::doEvaluateState()
 				if ( condorState != HELD && condorState != REMOVED ) {
 					JobTerminated();
 					if ( condorState == COMPLETED ) {
-						jobAd->GetDirtyFlag( ATTR_JOB_STATUS,
-											 &attr_exists, &attr_dirty );
-						if ( attr_exists && attr_dirty ) {
+						if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 							requestScheddUpdate( this, true );
 							break;
 						}
@@ -1079,18 +1067,18 @@ void EC2Job::doEvaluateState()
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
 				if ( !m_remoteJobId.empty() && condorState != REMOVED
-					 && wantResubmit == 0 && doResubmit == 0 ) {
+					 && wantResubmit == false && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
 				}
 
 				// Only allow a rematch *if* we are also going to perform a resubmit
 				if ( wantResubmit || doResubmit ) {
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 				}
 
 				if ( wantResubmit ) {
-					wantResubmit = 0;
+					wantResubmit = false;
 					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
@@ -1135,7 +1123,7 @@ void EC2Job::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 					// Set ad attributes so the schedd finds a new match.
-					int dummy;
+					bool dummy;
 					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 						jobAd->Assign( ATTR_JOB_MATCHED, false );
 						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -1157,10 +1145,7 @@ void EC2Job::doEvaluateState()
 				// through. However, since we registered update events the
 				// first time, requestScheddUpdate won't return done until
 				// they've been committed to the schedd.
-				const char *name;
-				ExprTree *expr;
-				jobAd->ResetExpr();
-				if ( jobAd->NextDirtyExpr(name, expr) ) {
+				if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1209,7 +1194,7 @@ void EC2Job::doEvaluateState()
 					// dprintf( D_ALWAYS, "DEBUG: m_state_reason_code = %s (assuming 'NULL')\n", m_state_reason_code.c_str() );
 					if( ! m_state_reason_code.empty() ) {
 						// Send the user a copy of the reason code.
-						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 						requestScheddUpdate( this, false );
 
 							//
@@ -2362,14 +2347,14 @@ void EC2Job::StatusUpdate( const char * instanceID,
 		if( m_state_reason_code != stateReasonCode ) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 			m_state_reason_code = stateReasonCode;
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	} else {
 		if(! m_state_reason_code.empty()) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Clearing old state reason code of '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), m_remoteJobId.c_str() );
 			m_state_reason_code.clear();
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	}

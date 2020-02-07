@@ -475,10 +475,9 @@ const char *CreamResource::getDelegationError( Proxy *job_proxy )
 	return NULL;
 }
 
-int CreamResource::ProxyCallback()
+void CreamResource::ProxyCallback()
 {
 	daemonCore->Reset_Timer( delegationTimerId, 0 );
-	return 0;
 }
 
 void CreamResource::checkDelegation()

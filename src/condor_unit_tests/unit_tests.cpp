@@ -62,6 +62,7 @@ bool OTEST_Directory(void);
 bool OTEST_TmpDir(void);
 bool OTEST_StatInfo(void);
 bool OTEST_condor_sockaddr();
+bool OTEST_ranger();
 
 	// function map that maps testing function names to testing functions
 const static struct {
@@ -96,6 +97,7 @@ const static struct {
 	map(OTEST_TmpDir),
 	map(OTEST_StatInfo),
 	map(OTEST_condor_sockaddr),
+	map(OTEST_ranger),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 

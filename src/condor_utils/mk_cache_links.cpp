@@ -62,8 +62,11 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 	strcat( (char*) hashSource, modifiedTimeStr.c_str() );
 
 	// Now calculate the hash
-	memcpy(hashResult, Condor_MD_MAC::computeOnce(hashSource,
-		strlen((const char*) hashSource)), HASHNAMELEN);
+	unsigned char *theHash = Condor_MD_MAC::computeOnce(hashSource,
+		strlen((const char *) hashSource));
+	memcpy(hashResult, theHash, HASHNAMELEN);
+	free(theHash);
+
 	char entryHashName[HASHNAMELEN * 2]; // 2 chars per hex byte
 	entryHashName[0] = '\0';
 	char letter[3];
@@ -71,6 +74,7 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 		sprintf(letter, "%x", hashResult[i]);
 		strcat(entryHashName, letter);
 	}
+	delete [] hashSource;
 
 	return entryHashName;
 }
@@ -92,13 +96,6 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	param(webRootDir, "HTTP_PUBLIC_FILES_ROOT_DIR");
 	if(webRootDir.empty()) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
-						"not set! Falling back to regular file transfer\n");
-		return (false);
-	}
-	std::string webRootOwner;
-	param(webRootOwner, "HTTP_PUBLIC_FILES_ROOT_OWNER");
-	if(webRootOwner.empty()) {
-		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_OWNER "
 						"not set! Falling back to regular file transfer\n");
 		return (false);
 	}
@@ -176,7 +173,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// Check if target link already exists
 	FILE *targetLink = safe_fopen_wrapper(targetLinkPath, "r");
 	if (targetLink) {
-		// If link exists, update the .access file timestamp.
+		// If link exists, great! Move on to the next step.
 		retVal = true;
 		fclose(targetLink);
 	}	
@@ -192,37 +189,9 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 	}
 
-	// Now we need to make sure nothing devious has happened, that the hard link 
-	// points to the file we're expecting. First, make sure that the user 
-	// specified by HTTP_PUBLIC_FILES_ROOT_OWNER is a valid user.
-	uid_t link_uid = -1;
-	gid_t link_gid = -1;
-	bool isValidUser = pcache()->get_user_ids(webRootOwner.c_str(), link_uid, link_gid);
-	if (!isValidUser) {
-		dprintf(D_ALWAYS, "Unable to look up HTTP_PUBLIC_FILES_ROOT_OWNER (%s)"
-				" in /etc/passwd. Aborting.\n", webRootOwner.c_str());
-		retVal = false;
-	}
-
-	if (link_uid == 0 || link_gid == 0) {
-		dprintf(D_ALWAYS, "HTTP_PUBLIC_FILES_ROOT_OWNER (%s)"
-			" in /etc/passwd has UID 0.  Aborting.\n", webRootOwner.c_str());
-		retVal = false;
-	}
-
-	// Now that we've verified HTTP_PUBLIC_FILES_ROOT_OWNER is a valid user, 
-	// switch privileges to this user. Open the hard link. Verify that the
-	// inode is the same as the file we opened earlier on.	
+	// Open the hard link. Verify that the inode is the same as the file we 
+	// opened earlier on
 	if (retVal == true) {
-		if(setegid(link_gid) == -1) {
-			dprintf(D_ALWAYS, "MakeLink: Error switching to group ID %d\n", link_gid);
-			retVal = false;
-		}
-		if(seteuid(link_uid) == -1) {
-			dprintf(D_ALWAYS, "MakeLink: Error switching to user ID %d\n", link_uid);
-			retVal = false;
-		}
-
 		if (stat(targetLinkPath, &targetLinkStat) == 0) {
 			targetLinkInodeNum = targetLinkStat.st_ino;
 			if (srcFileInodeNum == targetLinkInodeNum) {
@@ -236,19 +205,22 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 		else {
 			retVal = false;
-			dprintf(D_ALWAYS, "Cannot open hard link %s as user %s. Reverting to "
-				"regular file transfer.\n", targetLinkPath, webRootOwner.c_str());
+			dprintf(D_ALWAYS, "Makelink: Cannot open hard link %s. Reverting to "
+				"regular file transfer.\n", targetLinkPath);
 		}
 	}
-	
+
 	// Touch the access file. This will create it if it doesn't exist, or update
 	// the timestamp if it does.
-	FILE* accessFile = fopen(accessFilePath.c_str(), "w");
-	if (accessFile) {
-		fclose(accessFile);
-	}
-	else {
-		dprintf(D_ALWAYS, "Failed to update access file %s.\n", accessFilePath.c_str());
+	if (retVal == true ) {
+		FILE* accessFile = fopen(accessFilePath.c_str(), "w");
+		if (accessFile) {
+			fclose(accessFile);
+		}
+		else {
+			dprintf(D_ALWAYS, "MakeLink: Failed to update access file %s (Error %d:"
+				" %s)\n", accessFilePath.c_str(), errno, strerror(errno));
+		}
 	}
 	
 	// Release the lock on the access file
@@ -280,7 +252,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 
 	char *initialWorkingDir = NULL;
 	const char *path;
-	MyString remap;
+	std::string remap;
 	struct stat fileStat;
 	time_t fileModifiedTime = time(NULL);
 
@@ -346,17 +318,13 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 			}
 		}
 		free( initialWorkingDir );
-		if ( remap.Length() > 0 ) {
-			MyString remapnew;
-			char *buf = NULL;
-			if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
-				remapnew = buf;
-				free(buf);
-				buf = NULL;
+		if ( remap.length() > 0 ) {
+			std::string remapnew;
+			if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, remapnew) == 1) {
 				remapnew += ";";
 			} 
 			remapnew += remap;
-			if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap.Value()) == false) {
+			if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap) == false) {
 				dprintf(D_ALWAYS, "mk_cache_links.cpp: Could not add to jobAd: "
 													"%s\n", remap.c_str());
 			}

@@ -131,7 +131,7 @@ if [ $? -ne 0 ]; then
     fi
     if [ ! -e $HOME/boscoinstaller ]; then
       echo "Unable to download Bosco. Please see "
-      echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart"
+      echo "https://osg-bosco.github.io/docs/BoscoQuickStart"
       echo "to download manually Bosco and install it."
       exit 0
     fi
@@ -211,7 +211,7 @@ echo "BOSCO on $REMOTE_HOST Tested"
 if [ $? -ne 0 ]; then
   echo "Failed to test the cluster $REMOTE_HOST. Please check your data and retry."
   echo "The BOSCO install document contains some troubleshooting information:"
-  echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoInstall"
+  echo "https://osg-bosco.github.io/docs/BoscoInstall/"
   exit 1
 fi
 
@@ -223,7 +223,7 @@ Remember to setup the environment all the time you want to use Bosco:
 source ~/bosco/bosco_setenv
 
 Here is a quickstart guide about BOSCO:
-https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart
+https://osg-bosco.github.io/docs/BoscoQuickStart
 
 To remove Bosco you can run:
 source ~/bosco/bosco_setenv; bosco_uninstall --all

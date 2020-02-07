@@ -20,10 +20,12 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "condor_attributes.h"
 #include "daemon.h"
+#include "condor_daemon_core.h"
 #include "dc_schedd.h"
 #include "proc.h"
 #include "file_transfer.h"
@@ -33,6 +35,7 @@
 
 #include <sstream>
 
+#include <sstream>
 
 // // // // //
 // DCSchedd
@@ -478,8 +481,9 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
-		job.ResetExpr();
-		while( job.NextExpr(lhstr, tree) ) {
+		for ( auto itr = job.begin(); itr != job.end(); itr++ ) {
+			lhstr = itr->first.c_str();
+			tree = itr->second;
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
@@ -491,7 +495,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 				pTree = tree->Copy();
 				job.Insert(new_attr_name, pTree);
 			}
-		}	// while next expr
+		}
 
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
 			if( errstack ) {
@@ -1002,7 +1006,7 @@ bool DCSchedd::transferOutputSandbox(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 // requests to the transferd. Also, if the transferd dies, the schedd is 
 // informed quickly and reliably due to the closed connection.
 bool
-DCSchedd::register_transferd(MyString sinful, MyString id, int timeout, 
+DCSchedd::register_transferd(const std::string &sinful, const std::string &id, int timeout,
 		ReliSock **regsock_ptr, CondorError *errstack) 
 {
 	ReliSock *rsock;
@@ -2427,10 +2431,16 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 }
 
 bool
-DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string & errorMessage ) {
+DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage, PROC_ID * vids, unsigned vCount, int flags ) {
+	std::string vidList;
+	formatstr( vidList, "%d.%d", vids[0].cluster, vids[0].proc );
+	for( unsigned i = 1; i < vCount; ++i ) {
+		formatstr_cat( vidList, ", %d.%d", vids[i].cluster, vids[i].proc );
+	}
+
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d, %d.%d ) making connection to %s\n",
-			vid.cluster, vid.proc, bid.cluster, bid.proc,
+		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d <- %s ) making connection to %s\n",
+			bid.cluster, bid.proc, vidList.c_str(),
 			_addr ? _addr : "NULL");
 	}
 
@@ -2453,11 +2463,21 @@ DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string &
 		return false;
 	}
 
+	// It would seem obvious to construct a ClassAd list of ClassAds
+	// with attributes "Cluster" and "Proc", but it turns out to be
+	// way easier to send a StringList of the x.y notation, instead.
+	//
+	// It's also marginally more efficient to send a string than two
+	// 64-bit ints, so encode the beneficiary job ID that way.
+	char bidStr[PROC_ID_STR_BUFLEN];
+	ProcIdToStr( bid, bidStr );
+
 	ClassAd request;
-	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
-	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
-	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
-	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
+	request.Assign( "VictimJobIDs", vidList );
+	request.Assign( "BeneficiaryJobID", bidStr );
+	if( flags != 0 ) {
+		request.Assign( "Flags", flags );
+	}
 
 	sock.encode();
 	if(! putClassAd( & sock, request )) {
@@ -2494,5 +2514,180 @@ DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string &
 		return false;
 	}
 
+	return true;
+}
+
+
+class ImpersonationTokenContinuation : Service {
+
+public:
+	ImpersonationTokenContinuation(const std::string &identity,
+		const std::vector<std::string> &authz_bounding_set,
+		int lifetime,
+		ImpersonationTokenCallbackType *callback,
+		void *misc_data)
+	:
+	  m_identity(identity),
+	  m_authz_bounding_set(authz_bounding_set),
+	  m_lifetime(lifetime),
+	  m_callback(callback),
+	  m_misc_data(misc_data)
+	{}
+
+	static void startCommandCallback(bool success, Sock *sock, CondorError *errstack,
+		const std::string & /*trust_domain*/, bool /*should_try_token_request*/,
+		void *misc_data);
+
+	int finish(Stream*);
+
+private:
+	std::string m_identity;
+	std::vector<std::string> m_authz_bounding_set;
+	int m_lifetime{-1};
+	ImpersonationTokenCallbackType *m_callback{nullptr};
+	void *m_misc_data{nullptr};
+};
+
+
+int ImpersonationTokenContinuation::finish(Stream *stream)
+{
+	auto &sock = *static_cast<Sock *>(stream);
+	CondorError err;
+	std::unique_ptr<ImpersonationTokenContinuation> myself(this);
+
+	stream->decode();
+	classad::ClassAd ad;
+	if (!getClassAd(&sock, ad) || !sock.end_of_message()) {
+		err.push("DCSCHEDD", 5, "Failed to receive response from schedd.");
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	int error_code;
+	std::string error_string = "(unknown)";
+	if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		ad.EvaluateAttrString(ATTR_ERROR_STRING, error_string);
+		err.push("SCHEDD", error_code, error_string.c_str());
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	std::string token;
+	if (!ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		err.push("DCSCHEDD", 6, "Remote schedd failed to return a token.");
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	m_callback(true, token, err, m_misc_data);
+	return true;
+}
+
+
+void
+ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, CondorError *errstack,
+	const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
+{
+		// Automatically free our callback data at function exit.
+	std::unique_ptr<class ImpersonationTokenContinuation> callback_ptr(
+		static_cast<class ImpersonationTokenContinuation*>(misc_data));
+	ImpersonationTokenContinuation &callback_data = *callback_ptr;
+
+	if (!success) {
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+		// Ok, we have successfully established a connection.  Let's build the request ad
+		// and shoot it off.
+	classad::ClassAd request_ad;
+	if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
+		!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
+	{
+		errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+	if (!callback_data.m_authz_bounding_set.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &authz : callback_data.m_authz_bounding_set) {
+			if (first) {first = false;}
+			else {ss << ",";}
+			ss << authz;
+		}
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str()))
+		{
+			errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+			callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+			return;
+		}
+	}
+
+	sock->encode();
+	if (!putClassAd(sock, request_ad) ||
+		!sock->end_of_message())
+	{
+		errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
+			" to remote schedd.");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+
+		// Now, we must register a callback to wait for a response.
+	auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
+		(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
+		"Finish impersonation token request",
+		callback_ptr.get(), ALLOW, HANDLE_READ);
+	if (rc < 0) {
+		errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+
+		// At this point, the callback has been registered and DaemonCore owns the
+		// memory; release the unique_ptr to prevent it from deleting the callback
+		// object at exit.
+	callback_ptr.release();
+}
+
+
+bool
+DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
+	const std::vector<std::string> &authz_bounding_set, int lifetime,
+	ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err)
+{
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf(D_COMMAND, "DCSchedd::requestImpersonationTokenAsync() making connection "
+			" to '%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	if (identity.empty()) {
+		err.push("DC_SCHEDD", 1, "Impersonation token identity not provided.");
+		dprintf(D_FULLDEBUG, "Impersonation token identity not provided.\n");
+		return false;
+	}
+	std::string full_identity = identity;
+	auto at_sign = identity.find('@');
+	if (at_sign == std::string::npos) {
+		std::string domain;
+		if (!param(domain, "UID_DOMAIN")) {
+			err.push("DAEMON", 1, "No UID_DOMAIN set!");
+			dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+			return false;
+		}
+		full_identity = identity + "@" + domain;
+	}
+
+		// Connect to the schedd (if necessary) and start a non-blocking command.
+		// The continuation object holds the state needed to make the request ad later.
+	auto continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
+		lifetime, callback, misc_data);
+	auto result = startCommand_nonblocking(COLLECTOR_TOKEN_REQUEST, Stream::reli_sock, 20, &err,
+		ImpersonationTokenContinuation::startCommandCallback, continuation,
+		"requestImpersonationToken");
+
+	if (result == StartCommandFailed) {
+		return false; // Assume startCommand already left a reasonable error message.
+	}
 	return true;
 }

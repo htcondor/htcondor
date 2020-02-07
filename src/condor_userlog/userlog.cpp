@@ -301,7 +301,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 
 	sprintf(hash, "%d.%d", cluster, proc);
 
-	JobStatistics *js;
+	JobStatistics *js = NULL;
 	if (Stats.lookup(hash, js) < 0) {
 		js = new JobStatistics(cluster, proc);
 		Stats.insert(hash, js);
@@ -323,7 +323,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 			break;
 		}
 	}
-	HostStatistics *hs;
+	HostStatistics *hs = NULL;
 	if (HStats.lookup(ip_addr, hs) < 0) {
 		condor_sockaddr addr;
 		const char* hostname = NULL;

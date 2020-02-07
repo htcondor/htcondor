@@ -40,11 +40,11 @@ int arch_test(int trials)
 
 	if (foo == NULL || strlen(foo) <= 0 || (strcmp(foo, "UNKNOWN")==0)) {
 		return_val = return_val || 1;
-		dprintf(D_ALWAYS, "SysAPI: ERROR! sysapi_condor_arch returned a bad or unknown string");
+		dprintf(D_ALWAYS, "SysAPI: ERROR! sysapi_condor_arch returned a bad or unknown string\n");
 	}
 	if (bar == NULL || strlen(bar) <= 0 || (strcmp(bar, "UNKNOWN")==0)) {
 		return_val = return_val || 1;
-		dprintf(D_ALWAYS, "SysAPI: ERROR! sysapi_uname_arch returned a bad string");
+		dprintf(D_ALWAYS, "SysAPI: ERROR! sysapi_uname_arch returned a bad string\n");
 	}
 
 

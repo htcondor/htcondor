@@ -1,3 +1,205 @@
+condor (8.9.5-1) unstable; urgency=medium
+
+  * Added a new mode that skips jobs whose outputs are newer than their inputs
+  * Added command line tool to help debug ClassAd expressions
+  * Added port forwarding to Docker containers
+  * You may now change some DAGMan throttles while the DAG is running
+  * Added support for session tokens for pre-signed S3 URLs
+  * Improved the speed of the negotiator when custom resources are defined
+  * Fixed interactive submission of Docker jobs
+  * Fixed a bug where jobs wouldn't be killed when getting an OOM notification
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 30 Dec 2019 16:27:36 -0600
+
+condor (8.8.7-1) stable; urgency=medium
+
+  * Updated condor_annex to work with upcoming AWS Lambda function changes
+  * Added the ability to specify the order that job routes are applied
+  * Fixed a bug that could cause remote condor submits to fail
+  * Fixed condor_wait to work when the job event log is on AFS
+  * Fixed RPM packaging to be able to install condor-all on CentOS 8
+  * Period ('.') is allowed again in DAGMan node names
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Dec 2019 08:03:51 -0600
+
+condor (8.9.4-1) unstable; urgency=medium
+
+  * Amazon S3 file transfers using pre-signed URLs
+  * Further reductions in DAGMan memory usage
+  * Added -idle option to condor_q to display information about idle jobs
+  * Support for SciTokens authentication
+  * A tool, condor_evicted_files, to examine the SPOOL of an idle job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2019 15:40:14 -0600
+
+condor (8.8.6-1) stable; urgency=medium
+
+  * Initial support for CentOS 8
+  * Fixed a memory leak in SSL authentication
+  * Fixed a bug where "condor_submit -spool" would only submit the first job
+  * Reduced encrypted file transfer CPU usage by a factor of six
+  * "condor_config_val -summary" displays changes from a default configuration
+  * Improved the ClassAd documentation, added many functions that were omitted
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 13 Nov 2019 08:18:44 -0600
+
+condor (8.9.3-1) unstable; urgency=medium
+
+  * TOKEN and SSL authentication methods are now enabled by default
+  * The job and global event logs use ISO 8601 formatted dates by default
+  * Added Google Drive multifile transfer plugin
+  * Added upload capability to Box multifile transfer plugin
+  * Added Python bindings to submit a DAG
+  * Python 'JobEventLog' can be pickled to facilitate intermittent readers
+  * 2x matchmaking speed for partitionable slots with simple START expressions
+  * Improved the performance of the condor_schedd under heavy load
+  * Reduced the memory footprint of condor_dagman
+  * Initial implementation to record the circumstances of a job's termination
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Sep 2019 00:00:00 -0500
+
+condor (8.8.5-1) stable; urgency=medium
+
+  * Fixed two performance problems on Windows
+  * Fixed Java universe on Debian and Ubuntu systems
+  * Added two knobs to improve performance on large scale pools
+  * Fixed a bug where requesting zero GPUs would require a machine with GPUs
+  * HTCondor can now recognize nVidia Volta and Turing GPUs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Sep 2019 13:22:29 -0500
+
+condor (8.8.4-1) stable; urgency=medium
+
+  * Python 3 bindings - see version history for details (requires EPEL on EL7)
+  * Can configure DAGMan to dramatically reduce memory usage on some DAGs
+  * Improved scalability when using the python bindings to qedit jobs
+  * Fixed infrequent schedd crashes when removing scheduler universe jobs
+  * The condor_master creates run and lock directories when systemd doesn't
+  * The condor daemon obituary email now contains the last 200 lines of log
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 09 Jul 2019 10:15:38 -0500
+
+condor (8.9.2-1) unstable; urgency=medium
+
+  * The HTTP/HTTPS file transfer plugin will timeout and retry transfers
+  * A new multi-file box.com file transfer plugin to download files
+  * The manual has been moved to Read the Docs
+  * Configuration options for job-log time-stamps (UTC, ISO 8601, sub-second)
+  * Several improvements to SSL authentication
+  * New TOKEN authentication method enables fine-grained authorization control
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 05 Jun 2019 08:03:56 -0500
+
+condor (8.8.3-1) stable; urgency=medium
+
+  * Fixed a bug where jobs were killed instead of peacefully shutting down
+  * Fixed a bug where a restarted schedd wouldn't connect to its running jobs
+  * Improved file transfer performance when sending multiple files
+  * Fix a bug that prevented interactive submit from working with Singularity
+  * Orphaned Docker containers are now cleaned up on execute nodes
+  * Restored a deprecated Python interface that is used to read the event log
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 22 May 2019 07:16:49 -0500
+
+condor (8.9.1-1) unstable; urgency=medium
+
+  * An efficient curl plugin that supports uploads and authentication tokens
+  * HTCondor automatically supports GPU jobs in Docker and Singularity
+  * File transfer times are now recorded in the user job log and the job ad
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 17 Apr 2019 06:50:37 -0600
+
+condor (8.8.2-1) stable; urgency=medium
+
+  * Fixed problems with condor_ssh_to_job and Singularity jobs
+  * Fixed a problem that could cause condor_annex to crash
+  * Fixed a problem where the job queue would very rarely be corrupted
+  * condor_userprio can report concurrency limits again
+  * Fixed the GPU discovery and monitoring code to map GPUs in the same way
+  * Made the CHIRP_DELAYED_UPDATE_PREFIX configuration knob work again
+  * Fixed restarting HTCondor from the Service Control Manager on Windows
+  * Fixed a problem where local universe jobs could not use condor_submit
+  * Restored a deprecated Python interface that is used to read the event log
+  * Fixed a problem where condor_shadow reuse could confuse DAGMan
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2019 07:48:19 -0500
+
+condor (8.9.0-1) unstable; urgency=medium
+
+  * Absent any configuration, HTCondor denies authorization to all users
+  * All HTCondor daemons under a condor_master share a security session
+  * Scheduler Universe jobs are prioritized by job priority
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 27 Feb 2019 17:05:36 -0600
+
+condor (8.8.1-1) stable; urgency=medium
+
+  * Fixed excessive CPU consumption with GPU monitoring
+  * GPU monitoring is off by default; enable with "use feature: GPUsMonitor"
+  * HTCondor now works with the new CUDA version 10 libraries
+  * Fixed a bug where sometimes jobs would not start on a Windows execute node
+  * Fixed a bug that could cause DAGman to go into an infinite loop on exit
+  * The JobRouter doesn't forward the USER attribute between two UID Domains
+  * Made Collector.locateAll() more efficient in the Python bindings
+  * Improved efficiency of the negotiation code in the condor_schedd
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Feb 2019 15:44:41 -0600
+
+condor (8.8.0-1) stable; urgency=medium
+
+  * Automatically add AWS resources to your pool using HTCondor Annex
+  * The Python bindings now include submit functionality
+  * Added the ability to run a job immediately by replacing a running job
+  * A new minihtcondor package makes single node installations easy
+  * HTCondor now tracks and reports GPU utilization
+  * Several performance enhancements in the collector
+  * The grid universe can create and manage VM instances in Microsoft Azure
+  * The MUNGE security method is now supported on all Linux platforms
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 03 Jan 2019 12:03:47 -0600
+
+condor (8.7.10-1) unstable; urgency=medium
+
+  * Can now interactively submit Docker jobs
+  * The administrator can now add arguments to the Singularity command line
+  * The MUNGE security method is now supported on all Linux platforms
+  * The grid universe can create and manage VM instances in Microsoft Azure
+  * Added a single-node package to facilitate using a personal HTCondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 Oct 2018 16:07:41 -0500
+
+condor (8.6.13-1) stable; urgency=medium
+
+  * Made the Python 'in' operator case-insensitive for ClassAd attributes
+  * Python bindings are now built for the Debian and Ubuntu platforms
+  * Fixed a memory leak in the Python bindings
+  * Fixed a bug where absolute paths failed for output/error files on Windows
+  * Fixed a bug using Condor-C to run Condor-C jobs
+  * Fixed a bug where Singularity could not be used if Docker was not present
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 Oct 2018 10:28:39 -0500
+
+condor (8.7.9-1) unstable; urgency=medium
+
+  * Support for Debian 9, Ubuntu 16, and Ubuntu 18
+  * Improved Python bindings to support the full range of submit functionality
+  * Allows VMs to shutdown when the job is being gracefully evicted
+  * Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME
+  * Added the ability to run a job immediately by replacing a running job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 01 Aug 2018 00:40:39 -0500
+
+condor (8.6.12-1) stable; urgency=medium
+
+  * Support for Debian 9, Ubuntu 16, and Ubuntu 18
+  * Fixed a memory leak that occurred when SSL authentication fails
+  * Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+  * Fixed a bug to allow a queue super user to edit protected attributes
+  * Fixed a problem setting the job environment in the Singularity container
+  * Fixed several other minor problems
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 31 Jul 2018 22:58:32 -0500
+
 condor (8.6.11) unstable; urgency=medium
 
   * Nightly build

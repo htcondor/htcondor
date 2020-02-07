@@ -11,12 +11,10 @@ echo "* Another option would be to run ccmake or cmake-gui"
 echo "* and select the options you care to build with"
 echo "-------------------------------------------------------------------"
 cmake \
-  -DNO_PHONE_HOME:BOOL=TRUE \
   -DHAVE_BACKFILL:BOOL=FALSE \
   -DHAVE_BOINC:BOOL=FALSE \
   -DHAVE_KBDD:BOOL=TRUE \
   -DHAVE_HIBERNATION:BOOL=TRUE \
-  -DWANT_LEASE_MANAGER:BOOL=FALSE \
   -DWANT_CONTRIB:BOOL=ON \
   -DWANT_MAN_PAGES:BOOL=TRUE \
   -DWANT_FULL_DEPLOYMENT:BOOL=FALSE \

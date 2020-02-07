@@ -29,7 +29,7 @@
 #include "remoteresource.h"
 #include "directory.h"
 #include "secure_file.h"
-#include "condor_base64.h"
+#include "zkm_base64.h"
 
 
 #if defined(Solaris)
@@ -209,9 +209,7 @@ do_REMOTE_syscall()
 				// reconnect.  happy day! :)
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 
-			const char* txt = "Socket between submit and execute hosts "
-				"closed unexpectedly";
-			Shadow->logDisconnectedEvent( txt ); 
+			Shadow->resourceDisconnected(thisRemoteResource);
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
@@ -1266,7 +1264,8 @@ case CONDOR_getfile:
 		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
 		if(fd >= 0) {
 			struct stat info;
-			stat(path, &info);
+			int rc = stat(path, &info);
+			ASSERT(rc)
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
 			ASSERT( buf );
@@ -1293,6 +1292,7 @@ case CONDOR_getfile:
 		}
 		free( (char *)path );
 		free( buf );
+		close(fd);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
@@ -1328,7 +1328,10 @@ case CONDOR_putfile:
 		ASSERT( result );
 		free((char*)path);
 
-        if (length <= 0) return 0;
+        if (length <= 0) {
+			if (fd >= 0) close(fd);
+			return 0;
+		}
 		
 		int num = -1;
 		if(fd >= 0) {
@@ -1369,7 +1372,7 @@ case CONDOR_getlongdir:
 
 		errno = 0;
 		rval = -1;
-		MyString msg, check;
+		std::string msg, check;
 		const char *next;
 		Directory directory(path);
 		struct stat stat_buf;
@@ -1377,26 +1380,30 @@ case CONDOR_getlongdir:
 		memset( line, 0, sizeof(line) );
 		
 		// Get directory's contents
-		while((next = directory.Next())) {
-			dprintf(D_ALWAYS, "next: %s\n", next);
-			msg.formatstr_cat("%s\n", next);
-			check.formatstr("%s%c%s", path, DIR_DELIM_CHAR, next);
-			rval = stat(check.Value(), &stat_buf);
-			terrno = (condor_errno_t)errno;
-			if(rval == -1) {
-				break;
+		if(directory.Rewind()) {
+			rval = 0;
+			while((next = directory.Next())) {
+				dprintf(D_ALWAYS, "next: %s\n", next);
+				msg += next;
+				msg += "\n";
+				formatstr(check, "%s%c%s", path, DIR_DELIM_CHAR, next);
+				rval = stat(check.c_str(), &stat_buf);
+				terrno = (condor_errno_t)errno;
+				if(rval == -1) {
+					break;
+				}
+				if(stat_string(line, &stat_buf) < 0) {
+					rval = -1;
+					break;
+				}
+				msg += line;
 			}
-			if(stat_string(line, &stat_buf) < 0) {
-				rval = -1;
-				break;
+			if(rval >= 0) {
+				msg += "\n";	// Needed to signify end of data
+				rval = msg.length();
 			}
-			msg.formatstr_cat("%s", line);
 		}
 		terrno = (condor_errno_t)errno;
-		if(msg.Length() > 0) {
-			msg.formatstr_cat("\n");	// Needed to signify end of data
-			rval = msg.Length();
-		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
@@ -1407,7 +1414,7 @@ case CONDOR_getlongdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->put(msg.Value()) );
+			result = ( syscall_sock->put(msg) );
 			ASSERT( result );
 		}
 		free((char*)path);
@@ -1425,22 +1432,25 @@ case CONDOR_getdir:
 
 		errno = 0;
 		rval = -1;
-		MyString msg;
+		std::string msg;
 		const char *next;
 		Directory directory(path);
 
 		// Get directory's contents
-		while((next = directory.Next())) {
-			msg.formatstr_cat("%s", next);
-			msg.formatstr_cat("\n");
+		if(directory.Rewind()) {
+			while((next = directory.Next())) {
+				msg += next;
+				msg += "\n";
+			}
+			msg += "\n";	// Needed to signify end of data
+			rval = (int)msg.length();
 		}
 		terrno = (condor_errno_t)errno;
-		if(msg.Length() > 0) {
-			msg.formatstr_cat("\n");	// Needed to signify end of data
-			rval = msg.Length();
-		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
+		// NOTE: Older starters treated rval==0 as an error.
+		//   Any successful reply should have a value greater than 0
+		//   (at least 1 for the terminating "\n").
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
 		ASSERT( result );
@@ -1449,7 +1459,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->put(msg.Value()) );
+			result = ( syscall_sock->put(msg) );
 			ASSERT( result );
 		}
 		free((char*)path);
@@ -2158,7 +2168,7 @@ case CONDOR_getdir:
 		// send response
 		syscall_sock->encode();
 
-		MyString user;
+		std::string user;
 		int cluster_id, proc_id;
 		ClassAd* ad;
 		pseudo_get_job_ad(ad);
@@ -2166,7 +2176,9 @@ case CONDOR_getdir:
 		ad->LookupInteger("ProcId", proc_id);
 		ad->LookupString("Owner", user);
 
-		MyString cred_dir_name;
+		bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
+
+		std::string cred_dir_name;
 		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
 			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
 			return -1;
@@ -2174,36 +2186,46 @@ case CONDOR_getdir:
 		cred_dir_name += DIR_DELIM_CHAR;
 		cred_dir_name += user;
 
-		dprintf( D_SECURITY, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
-		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
-		const char *fname;
-		bool had_error = false;
-		while((fname = cred_dir.Next())) {
-			// only send the "use level" creds.
-			const char *last4 = fname + strlen(fname) - 4;
-			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
-				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
-				continue;
-			}
-			MyString fullname = cred_dir_name;
-			fullname += DIR_DELIM_CHAR;
-			fullname += fname;
+		// what we want to do is send only the ".use" creds, and only
+		// the ones required for this job.  we will need to get that
+		// list of names from the Job Ad.
+		std::string services_needed;
+		ad->LookupString("OAuthServicesNeeded", services_needed);
+		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
-			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
+		bool had_error = false;
+		StringList services_list(services_needed.c_str());
+		services_list.rewind();
+		char *curr;
+		while((curr = services_list.next())) {
+			MyString fname,fullname;
+			fname.formatstr("%s.use", curr);
+
+			// change the '*' to an '_'.  These are stored that way
+			// so that the original service name can be cleanly
+			// separate if needed.  we don't care, so just change
+			// them all up front.
+			fname.replaceString("*", "_");
+
+			fullname.formatstr("%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.Value());
+
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
-			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, true);
+			const bool as_root = true;
+			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
+			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
 				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value() );
 				had_error = true;
 				break;
 			}
-			MyString b64 = condor_base64_encode(buf, len);
+			std::string b64 = Base64::zkm_base64_encode(buf, len);
 			free(buf);
 
 			ClassAd ad;
-			ad.Assign("Service", fname);
+			ad.Assign("Service", fname.Value());
 			ad.Assign("Data", b64);
 
 			int more_ads = 1;

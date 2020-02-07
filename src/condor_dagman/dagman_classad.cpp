@@ -64,11 +64,29 @@ DagmanClassad::~DagmanClassad()
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
+			int maxPostScripts )
+{
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	SetDagAttribute( ATTR_DAGMAN_MAXJOBS, maxJobs );
+	SetDagAttribute( ATTR_DAGMAN_MAXIDLE, maxIdle );
+	SetDagAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
+	SetDagAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
+
+	CloseConnection( queue );
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int ready, int failed, int unready,
-			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats )
+			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
+			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts )
 {
-
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
 					"Skipping ClassAd update -- DagmanClassad object is invalid\n" );
@@ -90,11 +108,31 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetDagAttribute( ATTR_DAG_NODES_UNREADY, unready );
 	SetDagAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
-	
+
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
 	stats.Publish( stats_ad );
 	SetDagAttribute( ATTR_DAG_STATS, stats_ad );
+
+	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
+	// users. Start by declaring variables for these properties.
+	int jobAdMaxIdle;
+	int jobAdMaxJobs;
+	int jobAdMaxPreScripts;
+	int jobAdMaxPostScripts;
+
+	// Look up the current values of these properties in the condor_dagman job ad.
+	GetDagAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
+	GetDagAttribute( ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
+	GetDagAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
+	GetDagAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
+
+	// Update our internal dag values according to whatever is in the job ad.
+	maxIdle = jobAdMaxIdle;
+	maxJobs = jobAdMaxJobs;
+	maxPreScripts = jobAdMaxPreScripts;
+	maxPostScripts = jobAdMaxPostScripts;
+
 
 	CloseConnection( queue );
 }
@@ -298,5 +336,24 @@ DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
 	attrVal = val;
 	free( val );
 
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
+DagmanClassad::GetDagAttribute( const char *attrName, int &attrVal,
+			bool printWarning )
+{
+	int val;
+	if ( GetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+				"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
 	return true;
 }

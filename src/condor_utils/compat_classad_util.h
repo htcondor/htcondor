@@ -40,6 +40,28 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
 
+// returns true when the expression is a comparision between an attribute ref and a literal
+// on exit:
+//  when return is true
+//   cmp_op is the comparison operator
+//   attr   is the name of the attribute
+//   value  is the literal value
+//  when return is false, attr and/or value *may* have been modified
+bool ExprTreeIsAttrCmpLiteral(classad::ExprTree * tree, classad::Operation::OpKind & cmp_op, std::string & attr, classad::Value & value);
+
+// Returns true when the expression selects a single job by cluster or proc,
+// or a single cluster
+// on exit:
+//  cluster is clusterid of expression, or -1, 
+//  proc is procid of expresion or -1
+//  cluster_only is true if expression should match ONLY the cluster ad
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * expr, int & cluster, int & proc, bool & cluster_only);
+// same as above, but a trailing clause that matches and all DAG children is allowed
+// on exit:
+//  same as above.
+//  dagman_job_id is true if clusterid was set AND expression has (DagmanJobId == cluster)
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * expr, int & cluster, int & proc, bool & cluster_only, bool & dagman_job_id);
+
 // check to see that a classad expression is valid
 // if attrs is not NULL, it also adds attribute references from the expression into the current set.
 bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
@@ -63,9 +85,9 @@ classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad
 // note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
 classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
 
-bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
+bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint);
 
-bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
+bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
 
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
@@ -80,8 +102,6 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
 bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
 
 bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch = false);
-
-void AttrList_setPublishServerTime( bool publish );
 
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);

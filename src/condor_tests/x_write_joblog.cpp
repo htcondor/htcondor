@@ -33,69 +33,18 @@
 #include <sys/socket.h>
 #endif
 #include "write_user_log.h"
+#include "classad/classad_distribution.h"
+#include "my_username.h"
 
 struct hostent *NameEnt;
-/*
-**#define NUL       "\0";
-*/
-
-WriteUserLog logFile("owner", NULL, "local.log", 0, 0, 0, false);
 
 static void simulateUsage(struct rusage &ru) {
 	memset(&ru, 0, sizeof(ru));
-	// put in some 'reasonble' values here??
+	ru.ru_utime.tv_sec = 93784;
+	ru.ru_stime.tv_sec = 454028;
 }
 
-int writeSubmitEvent();
-int writeRemoteErrorEvent();
-int writeExecuteEvent();
-int writeExecutableErrorEvent();
-int writeCheckpointedEvent();
-int writeJobAbortedEvent();
-int writeJobEvictedEvent();
-int writeJobTerminatedEvent();
-int writeNodeTerminatedEvent();
-int writePostScriptTerminatedEvent();
-int writeGlobusSubmitEvent();
-int writeGlobusSubmitFailedEvent();
-int writeGlobusResourceUpEvent();
-int writeGlobusResourceDownEvent();
-int writeJobImageSizeEvent(); 
-int writeShadowExceptionEvent(); 
-int writeJobSuspendedEvent(); 
-int writeJobUnsuspendedEvent(); 
-int writeJobHeldEvent(); 
-int writeJobReleasedEvent(); 
-int writeNodeExecuteEvent(); 
-
-int
-main(int , char **)
-{
-	writeSubmitEvent();
-	writeRemoteErrorEvent();
-	writeExecuteEvent();
-	writeExecutableErrorEvent();
-	writeCheckpointedEvent();
-	writeJobAbortedEvent();
-	writeJobEvictedEvent();
-	writeJobTerminatedEvent();
-	writeNodeTerminatedEvent();
-	writePostScriptTerminatedEvent();
-	writeGlobusSubmitEvent();
-	writeGlobusSubmitFailedEvent();
-	writeGlobusResourceUpEvent();
-	writeGlobusResourceDownEvent();
-	writeJobImageSizeEvent(); 
-	writeShadowExceptionEvent(); 
-	writeJobSuspendedEvent(); 
-	writeJobUnsuspendedEvent(); 
-	writeJobHeldEvent(); 
-	writeJobReleasedEvent(); 
-	writeNodeExecuteEvent(); 
-	exit(0);
-}
-
-int writeSubmitEvent()
+int writeSubmitEvent(WriteUserLog &logFile)
 {
 	SubmitEvent submit;
 	submit.setSubmitHost("<128.105.165.12:32779>");
@@ -108,39 +57,7 @@ int writeSubmitEvent()
 	return(0);
 }
 
-int writeExecuteEvent()
-{
-	ExecuteEvent execute;
-	execute.setExecuteHost("<128.105.165.12:32779>");
-	if ( !logFile.writeEvent(&execute) ) {
-		printf("Complain about bad execute write\n");
-		exit(1);
-	}
-	return(0);
-}
-
-int writeExecutableErrorEvent()
-{
-	ExecutableErrorEvent executeerror;
-	executeerror.errType = CONDOR_EVENT_BAD_LINK;
-	if ( !logFile.writeEvent(&executeerror) ) {
-		printf("Complain about bad executeerror write\n");
-		exit(1);
-	}
-	return(0);
-}
-
-int writeCheckpointedEvent()
-{
-	CheckpointedEvent checkpoint;
-	if ( !logFile.writeEvent(&checkpoint) ) {
-		printf("Complain about bad checkpoint write\n");
-		exit(1);
-	}
-	return(0);
-}
-
-int writeRemoteErrorEvent()
+int writeRemoteErrorEvent(WriteUserLog &logFile)
 {
 	RemoteErrorEvent remoteerror;
 	remoteerror.setExecuteHost("<128.105.165.12:32779>");
@@ -154,7 +71,56 @@ int writeRemoteErrorEvent()
 	return(0);
 }
 
-int writeJobAbortedEvent()
+int writeGenericEvent(WriteUserLog & logFile)
+{
+	GenericEvent gen;
+	gen.setInfoText("Lorem ipsum dolor sit amet, in duo prima aeque principes euismod.");
+	if ( !logFile.writeEvent(&gen) ) {
+		printf("Complain about bad generic write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeExecuteEvent(WriteUserLog &logFile)
+{
+	ExecuteEvent execute;
+	execute.setExecuteHost("<128.105.165.12:32779>");
+	if ( !logFile.writeEvent(&execute) ) {
+		printf("Complain about bad execute write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeExecutableErrorEvent(WriteUserLog &logFile)
+{
+	ExecutableErrorEvent executeerror;
+	executeerror.errType = CONDOR_EVENT_BAD_LINK;
+	if ( !logFile.writeEvent(&executeerror) ) {
+		printf("Complain about bad executeerror write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeCheckpointedEvent(WriteUserLog &logFile)
+{
+	CheckpointedEvent checkpoint;
+	checkpoint.sent_bytes = 11;
+	rusage ru;
+	simulateUsage(ru);
+	checkpoint.run_local_rusage = ru;
+	checkpoint.run_remote_rusage = ru;
+	if ( !logFile.writeEvent(&checkpoint) ) {
+		printf("Complain about bad checkpoint write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+
+int writeJobAbortedEvent(WriteUserLog &logFile)
 {
 	JobAbortedEvent jobabort;
 	jobabort.setReason("cause I said so!");
@@ -165,11 +131,20 @@ int writeJobAbortedEvent()
 	return(0);
 }
 
-int writeJobEvictedEvent()
+int writeJobEvictedEvent(WriteUserLog &logFile)
 {
 	JobEvictedEvent jobevicted;
 	jobevicted.setReason("It misbehaved!");
 	jobevicted.setCoreFile("corefile");
+	rusage ru;
+	simulateUsage(ru);
+	jobevicted.run_local_rusage = ru;
+	jobevicted.run_remote_rusage = ru;
+	jobevicted.sent_bytes = 1;
+	jobevicted.recvd_bytes = 2;
+	jobevicted.terminate_and_requeued = true;
+	jobevicted.normal = true;
+	jobevicted.checkpointed = false;
 	if ( !logFile.writeEvent(&jobevicted) ) {
 	        printf("Complain about bad jobevicted write\n");
 			exit(1);
@@ -177,7 +152,7 @@ int writeJobEvictedEvent()
 	return(0);
 }
 
-int writeJobTerminatedEvent()
+int writeJobTerminatedEvent(WriteUserLog &logFile)
 {
 	struct rusage ru;
 	simulateUsage(ru);
@@ -188,11 +163,15 @@ int writeJobTerminatedEvent()
 	jobterminated.returnValue = 4;
 	jobterminated.run_remote_rusage = ru;
 	jobterminated.total_remote_rusage = ru;
+	// Should local usage always be 0?
+	jobterminated.run_local_rusage = ru;
+	jobterminated.total_local_rusage = ru;
 	jobterminated.recvd_bytes = 200000;
 	jobterminated.sent_bytes = 400000;
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
 	jobterminated.setCoreFile( "badfilecore" );
+	jobterminated.normal = false;
 	if ( !logFile.writeEvent(&jobterminated) ) {
 	        printf("Complain about bad jobterminated write\n");
 			exit(1);
@@ -200,10 +179,20 @@ int writeJobTerminatedEvent()
 	return(0);
 }
 
-int writeNodeTerminatedEvent()
+int writeNodeTerminatedEvent(WriteUserLog &logFile)
 {
 	struct rusage ru;
 	simulateUsage(ru);
+
+	classad::ClassAd use;
+	use.InsertAttr("RequestMemory", 44);
+	use.InsertAttr("Memory", 55);
+	use.InsertAttr("MemoryUsage", 33);
+
+	use.InsertAttr("RequestPets", 1);
+	use.InsertAttr("Pets", 1);
+	use.InsertAttr("PetsUsage", 0.5);
+	use.InsertAttr("AssignedPets", "Spot");
 
 	NodeTerminatedEvent nodeterminated;
 	nodeterminated.node = 44;
@@ -212,11 +201,17 @@ int writeNodeTerminatedEvent()
 	nodeterminated.returnValue = 4;
 	nodeterminated.run_remote_rusage = ru;
 	nodeterminated.total_remote_rusage = ru;
+	// Should local usage always be 0?
+	nodeterminated.run_local_rusage = ru;
+	nodeterminated.total_local_rusage = ru;
 	nodeterminated.recvd_bytes = 200000;
 	nodeterminated.sent_bytes = 400000;
 	nodeterminated.total_recvd_bytes = 800000;
 	nodeterminated.total_sent_bytes = 900000;
 	nodeterminated.setCoreFile( "badfilecore" );
+
+	nodeterminated.initUsageFromAd(use);
+
 	if ( !logFile.writeEvent(&nodeterminated) ) {
 	        printf("Complain about bad nodeterminated write\n");
 			exit(1);
@@ -224,7 +219,7 @@ int writeNodeTerminatedEvent()
 	return(0);
 }
 
-int writePostScriptTerminatedEvent()
+int writePostScriptTerminatedEvent(WriteUserLog &logFile)
 {
 	PostScriptTerminatedEvent postscriptterminated;
 	postscriptterminated.normal = false;
@@ -237,7 +232,7 @@ int writePostScriptTerminatedEvent()
 	return(0);
 }
 
-int writeGlobusSubmitEvent()
+int writeGlobusSubmitEvent(WriteUserLog &logFile)
 {
 	GlobusSubmitEvent globussubmitevent;
 	globussubmitevent.rmContact = strdup("ResourceManager");;
@@ -250,7 +245,7 @@ int writeGlobusSubmitEvent()
 	return(0);
 }
 
-int writeGlobusSubmitFailedEvent()
+int writeGlobusSubmitFailedEvent(WriteUserLog &logFile)
 {
 	GlobusSubmitFailedEvent globussubmitfailedevent;
 	globussubmitfailedevent.reason = strdup("Cause it could");;
@@ -261,7 +256,7 @@ int writeGlobusSubmitFailedEvent()
 	return(0);
 }
 
-int writeGlobusResourceUpEvent()
+int writeGlobusResourceUpEvent(WriteUserLog &logFile)
 {
 	GlobusResourceUpEvent globusresourceupevent;
 	globusresourceupevent.rmContact = strdup("ResourceUp");;
@@ -272,7 +267,7 @@ int writeGlobusResourceUpEvent()
 	return(0);
 }
 
-int writeGlobusResourceDownEvent()
+int writeGlobusResourceDownEvent(WriteUserLog &logFile)
 {
 	GlobusResourceDownEvent globusresourcedownevent;
 	globusresourcedownevent.rmContact = strdup("ResourceDown");;
@@ -283,10 +278,13 @@ int writeGlobusResourceDownEvent()
 	return(0);
 }
 
-int writeJobImageSizeEvent()
+int writeJobImageSizeEvent(WriteUserLog &logFile)
 {
 	JobImageSizeEvent jobimagesizeevent;
 	jobimagesizeevent.image_size_kb = 128;
+	jobimagesizeevent.resident_set_size_kb = 129;
+	jobimagesizeevent.proportional_set_size_kb = 130;
+	jobimagesizeevent.memory_usage_mb = 131;
 	if ( !logFile.writeEvent(&jobimagesizeevent) ) {
 		printf("Complain about bad jobimagesizeevent write\n");
 		exit(1);
@@ -295,7 +293,7 @@ int writeJobImageSizeEvent()
 }
 
 
-int writeShadowExceptionEvent() 
+int writeShadowExceptionEvent(WriteUserLog &logFile)
 {
 	ShadowExceptionEvent shadowexceptionevent;
 	shadowexceptionevent.sent_bytes = 4096;
@@ -310,7 +308,7 @@ int writeShadowExceptionEvent()
 }
 
 
-int writeJobSuspendedEvent()
+int writeJobSuspendedEvent(WriteUserLog &logFile)
 {
 	JobSuspendedEvent jobsuspendevent;
 	jobsuspendevent.num_pids = 99;
@@ -321,7 +319,7 @@ int writeJobSuspendedEvent()
 	return(0);
 }
 
-int writeJobUnsuspendedEvent()
+int writeJobUnsuspendedEvent(WriteUserLog &logFile)
 {
 	JobUnsuspendedEvent jobunsuspendevent;
 	//jobunsuspendevent.num_pids = 99;
@@ -332,7 +330,7 @@ int writeJobUnsuspendedEvent()
 	return(0);
 }
 
-int writeJobHeldEvent() 
+int writeJobHeldEvent(WriteUserLog &logFile)
 {
 	JobHeldEvent jobheldevent;
 	jobheldevent.setReason("CauseWeCan");
@@ -345,7 +343,7 @@ int writeJobHeldEvent()
 	return(0);
 }
 
-int writeJobReleasedEvent() 
+int writeJobReleasedEvent(WriteUserLog &logFile)
 {
 	JobReleasedEvent jobreleasedevent;
 	jobreleasedevent.setReason("MessinWithYou");
@@ -356,7 +354,7 @@ int writeJobReleasedEvent()
 	return(0);
 }
 
-int writeNodeExecuteEvent()
+int writeNodeExecuteEvent(WriteUserLog &logFile)
 {
 	NodeExecuteEvent nodeexecuteevent;
 	nodeexecuteevent.node = 49;
@@ -366,4 +364,262 @@ int writeNodeExecuteEvent()
 		exit(1);
 	}
 	return(0);
+}
+
+int writeJobDisconnectedEvent(WriteUserLog &logFile)
+{
+	JobDisconnectedEvent evt;
+	evt.setStartdAddr("<128.105.165.12:32779>");
+	evt.setStartdName("ThatMachine");
+	evt.setDisconnectReason("TL;DR");
+	//evt.setNoReconnectReason();
+	evt.setStartdAddr("<128.105.165.12:32780>");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobDisconnectedEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobReconnectedEvent(WriteUserLog &logFile)
+{
+	JobReconnectedEvent evt;
+	evt.setStartdAddr("<128.105.165.12:32779>");
+	evt.setStartdName("ThatMachine");
+	evt.setStarterAddr("<128.105.165.12:32780>");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobReconnectedEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobReconnectFailedEvent(WriteUserLog &logFile)
+{
+	JobReconnectFailedEvent evt;
+	evt.setStartdName("ThatMachine");
+	evt.setReason("The're just not into you");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobReconnectFailedEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeGridResourceUpEvent(WriteUserLog &logFile)
+{
+	GridResourceUpEvent evt;
+	evt.resourceName = strdup("Resource Name");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad GridResourceUpEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeGridResourceDownEvent(WriteUserLog &logFile)
+{
+	GridResourceDownEvent evt;
+	evt.resourceName = strdup("Resource Name");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad GridResourceDownEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeGridSubmitEvent(WriteUserLog &logFile)
+{
+	GridSubmitEvent evt;
+	evt.resourceName = strdup("Resource Name");
+	evt.jobId = strdup("100.1");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad GridSubmitEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobAdInformationEvent(WriteUserLog &logFile)
+{
+	JobAdInformationEvent evt;
+	evt.Assign("JobStatus", 2);
+	evt.Assign("BILLBool", true);
+	evt.Assign("BILLInt", 1000);
+	evt.Assign("BILLReal", 66.66);
+	evt.Assign("BillString", "lorem ipsum dolor");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobAdInformationEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobStatusUnknownEvent(WriteUserLog &logFile)
+{
+	JobStatusUnknownEvent evt;
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobStatusUnknownEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobStatusKnownEvent(WriteUserLog &logFile)
+{
+	JobStatusKnownEvent evt;
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobStatusKnownEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobStageInEvent(WriteUserLog &logFile)
+{
+	JobStageInEvent evt;
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobStageInEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeJobStageOutEvent(WriteUserLog &logFile)
+{
+	JobStageOutEvent evt;
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad JobStageOutEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeAttributeUpdateEvent(WriteUserLog &logFile)
+{
+	AttributeUpdate evt;
+	evt.setName("PrivateAttr");
+	evt.setValue("1");
+	evt.setOldValue("0");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad AttributeUpdate write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writePreSkipEvent(WriteUserLog &logFile)
+{
+	PreSkipEvent evt;
+	evt.setSkipNote("DAGMan info");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad PreSkipEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeClusterSubmitEvent(WriteUserLog &logFile)
+{
+	ClusterSubmitEvent evt;
+	evt.setSubmitHost("<128.105.165.12:32779>");
+	evt.submitEventLogNotes = strdup("DAGMan info");
+	evt.submitEventUserNotes = strdup("User info");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad Cluster Submit Event write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeClusterRemoveEvent(WriteUserLog &logFile)
+{
+	ClusterRemoveEvent evt;
+	evt.next_proc_id = 100;
+	evt.next_row = 10;
+	evt.completion = ClusterRemoveEvent::CompletionCode::Complete;
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad Cluster Remove Event write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeFactoryPausedEvent(WriteUserLog &logFile)
+{
+	FactoryPausedEvent evt;
+	evt.setReason("Hang on a second");
+	evt.setPauseCode(42);
+	evt.setHoldCode(24);
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad FactoryPausedEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int writeFactoryResumedEvent(WriteUserLog &logFile)
+{
+	FactoryResumedEvent evt;
+	evt.setReason("just messin wit' ya");
+	if ( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad FactoryResumedEvent write\n");
+		exit(1);
+	}
+	return(0);
+}
+
+int
+main(int argc, const char * argv[])
+{
+	const char * logname = "local.log";
+	if (argc > 1) { logname = argv[1]; }
+
+	// The cluster and proc IDs are arbitrary but should be non-zero.  The
+	// subproc ID is always (and must be) zero.
+	WriteUserLog logFile;
+	logFile.initialize(logname, 14, 55, 0);
+
+	writeSubmitEvent(logFile);
+	writeExecuteEvent(logFile);
+	writeExecutableErrorEvent(logFile);
+	writeCheckpointedEvent(logFile);
+	writeJobEvictedEvent(logFile);
+	writeJobTerminatedEvent(logFile);
+	writeJobImageSizeEvent(logFile);
+	writeShadowExceptionEvent(logFile);
+	writeGenericEvent(logFile);
+	writeJobAbortedEvent(logFile);
+	writeJobSuspendedEvent(logFile);
+	writeJobUnsuspendedEvent(logFile);
+	writeJobHeldEvent(logFile);
+	writeJobReleasedEvent(logFile);
+	writeNodeExecuteEvent(logFile);
+	writeNodeTerminatedEvent(logFile);
+	writePostScriptTerminatedEvent(logFile);
+	writeGlobusSubmitEvent(logFile);
+	writeGlobusSubmitFailedEvent(logFile);
+	writeGlobusResourceUpEvent(logFile);
+	writeGlobusResourceDownEvent(logFile);
+	writeRemoteErrorEvent(logFile);
+
+	writeJobDisconnectedEvent(logFile);
+	writeJobReconnectedEvent(logFile);
+	writeJobReconnectFailedEvent(logFile);
+	writeGridResourceUpEvent(logFile);
+	writeGridResourceDownEvent(logFile);
+	writeGridSubmitEvent(logFile);
+	writeJobAdInformationEvent(logFile);
+	writeJobStatusUnknownEvent(logFile);
+	writeJobStatusKnownEvent(logFile);
+	writeJobStageInEvent(logFile);
+	writeJobStageOutEvent(logFile);
+	writeAttributeUpdateEvent(logFile);
+	writePreSkipEvent(logFile);
+	writeClusterSubmitEvent(logFile);
+	writeClusterRemoveEvent(logFile);
+	writeFactoryPausedEvent(logFile);
+	writeFactoryResumedEvent(logFile);
+
+	exit(0);
 }

@@ -178,6 +178,7 @@ goto :clean_cmake
 :need_cmake3
 if "%CMAKE_VER:~0,1%"=="2" (
     set CMAKE_BIN_DIR=C:\Program Files\CMake3\bin
+    if exist C:\Tools\Cmake3\bin\cmake.exe set CMAKE_BIN_DIR=C:\Tools\Cmake3\bin
     for /F "tokens=3" %%I in ('"%CMAKE_BIN_DIR%\cmake.exe" -version') do set CMAKE_VER=%%~nI
 )
 echo using cmake CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
@@ -226,7 +227,7 @@ if NOT "%BUILD_VERSION%"=="" (
 )
 :: the BUILD_WIN_TAG is used to indicate the Windows version in the .zip and .msi names
 :: 7 indicates that XP is no longer supported, which is currently the case when we build with VC11
-set BUILD_WIN_TAG=
+set BUILD_WIN_TAG=%NMI_PLATFORM:~14%
 if "%NMI_PLATFORM%"=="x86_64_Windows10" set BUILD_WIN_TAG=10
 if "%NMI_PLATFORM%"=="x86_64_Windows7" set BUILD_WIN_TAG=7
 if "%~2"=="VC9" set BUILD_WIN_TAG=XP

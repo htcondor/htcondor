@@ -19,58 +19,22 @@
 
 
 #include "condor_common.h"
-#include "condor_io.h"
-#include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_daemon_core.h"
 
-#include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log.h"
-#include "classad_collection.h"
-#include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
-#include "condor_adtypes.h"
-#include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
-#include "dedicated_scheduler.h"
-#include "condor_email.h"
-#include "condor_universe.h"
-#include "globus_utils.h"
-#include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_string.h" // for strnewp, etc.
-#include "utc_time.h"
-#include "condor_crontab.h"
-#include "forkwork.h"
 #include "condor_open.h"
-#include "ickpt_share.h"
-#include "classadHistory.h"
-#include "directory.h"
-#include "filename_tools.h"
-#include "spool_version.h"
 #include "condor_holdcodes.h"
-#include "nullfile.h"
-#include "condor_url.h"
-#include "classad/classadCache.h"
-#include <param_info.h>
 #include "condor_version.h"
 #include "submit_utils.h"
 #include "set_user_priv_from_ad.h"
 #include "my_async_fread.h"
-
-#if defined(HAVE_DLOPEN) || defined(WIN32)
-#include "ScheddPlugin.h"
-#endif
-
-#if defined(HAVE_GETGRNAM)
-#include <sys/types.h>
-#include <grp.h>
-#endif
 
 
 class JobFactory : public SubmitHash {
@@ -82,7 +46,7 @@ public:
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(MacroStream & ms, ClassAd * user_ident, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, ClassAd * user_ident, int cluster_id, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
@@ -162,6 +126,7 @@ protected:
 	SubmitForeachArgs fea;
 	char emptyItemString[4];
 	int cached_total_procs;
+	bool is_submit_on_hold;
 
 	// let these functions access internal factory data
 	friend bool LoadJobFactoryDigest(JobFactory* factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
@@ -170,6 +135,7 @@ protected:
 	friend int JobFactoryRowCount(JobFactory * factory);
 	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
+	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 
 	// we override this so that we can use an async foreach implementation.
 	int  load_q_foreach_items(
@@ -186,7 +152,9 @@ JobFactory::JobFactory(const char * _name, int id)
 	, ident(id)
 	, paused(mmInvalid)
 	, cached_total_procs(-42)
+	, is_submit_on_hold(false)
 {
+	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
@@ -241,7 +209,7 @@ bool LoadJobFactoryDigest(JobFactory * factory, const char * submit_digest_text,
 	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
 
 	errmsg = "";
-	int rval = factory->LoadDigest(ms, user_ident, errmsg);
+	int rval = factory->LoadDigest(ms, user_ident, factory->ID(), errmsg);
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", factory->getClusterId(), errmsg.c_str());
 		return false;
@@ -266,7 +234,7 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 	for (size_t ix = off; ix < cbbuf; ++ix) {
 		if (buf[ix] == '\n') {
 			remainder.append(buf+off, ix-off);
-			factory->fea.items.append(remainder.data(), remainder.size());
+			factory->fea.items.append(remainder.data(), (int)remainder.size());
 			remainder.clear();
 			off = ix+1;
 		}
@@ -319,7 +287,7 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 		// to impersonate the user while loading the itemdata.
 		// An 8.7.9 condor_submit will put the itemdata into SPOOL, so we would only impersonate
 		// if the condor_submit was 8.7.5 thru 8.7.8 (and not remote). we choose not to support that case.
-		rval = factory->LoadDigest(ms, NULL, errmsg);
+		rval = factory->LoadDigest(ms, NULL, factory->ID(), errmsg);
 	#else
 		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
 		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
@@ -414,6 +382,13 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
 	return true;
 }
 
+bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code) {
+	if ( ! factory) {
+		hold_code = 0;
+		return false;
+	}
+	return factory->getSubmitOnHold(hold_code);
+}
 
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 {
@@ -426,6 +401,10 @@ void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
 	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
 	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
+	int code = 0;
+	if (factory->getSubmitOnHold(code)) {
+		iad.Assign("JobFactorySubmitOnHoldCode", code);
+	}
 }
 
 // returns true if the factory changed state, false otherwise.
@@ -434,10 +413,12 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	if ( ! factory)
 		return false;
 
-	int paused = factory->IsPaused() ? 1 : 0;
+	const bool paused = factory->IsPaused();
 
-	dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
+	if (IsDebugVerbose(D_MATERIALIZE)) {
+		dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
 			factory->ID(), factory->Name(), want_pause, factory->IsPaused(), factory->PauseMode());
+	}
 
 	// make sure that the desired mode is a valid one.
 	// Also, we want to disallow setting the mode to  ClusterRemoved using this function.
@@ -445,11 +426,11 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	else if (want_pause > mmNoMoreItems) want_pause = mmNoMoreItems;
 
 	// If the factory is in the correct meta-mode (either paused or not),
-	// then we won't try and change the actual pause code - we just return true.
+	// then we won't try and change the actual pause code - we just return false (no state change).
 	// As a result of this test, a factory in mmInvalid or mmNoMoreItems state
 	// can't be changed to mmHold or visa versa.
 	if (paused == (want_pause != mmRunning)) {
-		return true;
+		return false;
 	}
 
 	dprintf(D_MATERIALIZE, "CheckJobFactoryPause %s job factory %d %s code=%d\n",
@@ -469,7 +450,7 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 // return value is 0 for 'can't materialize now, try later'
 // in which case retry_delay is set to indicate how long later should be
 // retry_delay of 0 means we are done, either because of failure or because we ran out of jobs to materialize.
-int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, int & retry_delay)
+int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, TransactionWatcher & txn, int & retry_delay)
 {
 	retry_delay = 0;
 	if (factory->IsPaused()) {
@@ -550,8 +531,8 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
 	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
-	bool check_empty = true;
-	bool fail_empty = false;
+	const bool check_empty = true;
+	const bool fail_empty = false;
 	std::string empty_var_names;
 	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
 	if (row_num < row) {
@@ -575,10 +556,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		}
 	}
 
-	bool already_in_transaction = InTransaction();
-	if ( ! already_in_transaction) {
-		BeginTransaction();
-	}
+	txn.BeginOrContinue(jid.proc);
 
 	SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id+1);
 	if ( ! no_items && (step+1 == step_size)) {
@@ -614,20 +592,11 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		factory->delete_job_ad();
 	}
 	if (rval < 0) {
-		if ( ! already_in_transaction) {
-			AbortTransaction();
-		}
+		txn.AbortIfAny();
 		return rval; // failed instantiation
 	}
 
-	if( !already_in_transaction ) {
-		CondorError errorStack;
-		rval = CommitTransactionAndLive( 0, & errorStack );
-		if (rval < 0) {
-			dprintf(D_ALWAYS, "CommitTransaction() failed for job %d.%d rval=%d (%s)\n", jid.cluster, jid.proc, rval, errorStack.empty() ? "no message" : errorStack.message() );
-			return rval;
-		}
-	}
+	// our caller will commit the transaction (if any)
 
 	return 1; // successful instantiation.
 }
@@ -672,7 +641,7 @@ static bool EnableOverlappedIO() {
 }
 #endif
 
-int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & errmsg)
+int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id, std::string & errmsg)
 {
 	char * qline = NULL;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
@@ -713,6 +682,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & 
 					// the reader was primed with itemdata sent over the wire...
 				} else if (fea.items.number() > 0) {
 					// we populated the itemdata already
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%d\n", cluster_id, fea.items.number());
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					bool restore_priv = false;
@@ -720,23 +690,39 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & 
 					if  (user_ident) {
 						restore_priv = true;
 						priv = set_user_priv_from_ad(*user_ident);
+					} else {
+						// if we are not impersonating a user, then the items filename MUST be in spool
+						extern void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/);
+						extern char* Spool; // in schedd_main.cpp. 
+						MyString spooled_filename;
+						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
+						if (spooled_filename != fea.items_filename) {
+							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.Value(), cluster_id);
+							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.Value());
+							rval = -1;
+						}
 					}
+
+					if (rval == 0) {
 					#ifdef WIN32
-					// on Windows, make the use of async io a pref since it doesn't work on all platforms (sigh)
-					bool can_overlap = EnableOverlappedIO();
-					reader.set_sync( ! can_overlap);
+						// on Windows, make the use of async io a pref since it doesn't work on all platforms (sigh)
+						bool can_overlap = EnableOverlappedIO();
+						reader.set_sync(!can_overlap);
 					#endif
 
-					// setup an async reader for the itemdata
-					rval = reader.open(fea.items_filename.c_str());
-					if (rval) {
-						formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
-					} else {
-						rval = reader.queue_next_read();
+						// setup an async reader for the itemdata
+						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
-							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
-						} else {
-							fea.foreach_mode = foreach_from_async;
+							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+						}
+						else {
+							rval = reader.queue_next_read();
+							if (rval) {
+								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							}
+							else {
+								fea.foreach_mode = foreach_from_async;
+							}
 						}
 					}
 					// failed to open or start the item reader, so just close it and free the internal buffers.
@@ -834,6 +820,11 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	// if we find one, then use that instead of the default token separator
 	char * pus = strchr(data, '\x1F');
 	if (pus) {
+		char * pend = data + strlen(data);
+		// remove trailing \r\n
+		if (pend > data && pend[-1] == '\n') { *--pend = 0; }
+		if (pend > data && pend[-1] == '\r') { *--pend = 0; }
+
 		for (;;) {
 			*pus = 0;
 			// trim token separator and also trailing whitespace
@@ -842,7 +833,8 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 			if ( ! var) break;
 
 			// advance to the next field and skip leading whitespace
-			data = pus+1;
+			data = pus;
+			if (data < pend) ++data;
 			while (*data == ' ' || *data == '\t') ++data;
 			pus = strchr(data, '\x1F');
 			var = fea.vars.next();
@@ -850,14 +842,8 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 				set_live_submit_variable(var, data, false);
 			}
 			if ( ! pus) {
-				// last field, check for trailing whitespace and \r\n 
-				pus = data + strlen(data);
-				if (pus > data && pus[-1] == '\n') --pus;
-				if (pus > data && pus[-1] == '\r') --pus;
-				if (pus == data) {
-					// we ran out of fields! use terminating null for all of the remaining fields
-					while ((var = fea.vars.next())) { set_live_submit_variable(var, data, false); }
-				}
+				// last field, use the terminating null for the remainder of items.
+				pus = pend;
 			}
 		}
 	} else {

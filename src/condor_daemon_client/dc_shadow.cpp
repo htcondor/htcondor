@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 
@@ -39,7 +38,7 @@ DCShadow::DCShadow( const char* tName ) : Daemon( DT_SHADOW, tName, NULL )
 			// We must have been given a sinful string instead of a hostname.
 			// Just use the sinful string in place of a hostname, contrary
 			// to the default behavior in Daemon::Daemon().
-		_name = strnewp(_addr);
+		_name = strdup(_addr);
 	}
 }
 
@@ -74,20 +73,19 @@ DCShadow::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( tmp );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCShadow::initFromClassAd(): invalid %s in ad (%s)\n", 
 					 ATTR_SHADOW_IP_ADDR, tmp );
+			free( tmp );
 		}
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_SHADOW_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
-		free( tmp );
+		New_version( tmp );
 		tmp = NULL;
 	}
 

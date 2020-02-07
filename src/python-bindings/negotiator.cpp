@@ -299,32 +299,97 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(priority_overloads, getPriorities, 0, 1);
 
 void export_negotiator()
 {
-    class_<Negotiator>("Negotiator", "Client-side operations for the HTCondor negotiator")
-        .def(init<const ClassAdWrapper &>(":param ad: An ad containing the location of the negotiator; if not specified, uses the default pool"))
-        .def("setPriority", &Negotiator::setPriority, "Set the fairshare of a user\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New fairshare priority.")
-        .def("setFactor", &Negotiator::setFactor, "Set the usage factor of a user\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New priority factor.")
-        .def("setUsage", &Negotiator::setUsage, "Set the usage of a user\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New usage value.")
-        .def("setBeginUsage", &Negotiator::setBeginUsage, "Set the first time a user began using the pool\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New time of first usage.")
-        .def("setLastUsage", &Negotiator::setLastUsage, "Set the last time the user began using the pool\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New time of last usage.")
-        .def("resetUsage", &Negotiator::resetUsage, "Reset the usage of user\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.")
-        .def("deleteUser", &Negotiator::deleteUser, "Delete a user from the accounting\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.")
-        .def("resetAllUsage", &Negotiator::resetAllUsage, "Reset all usage accounting")
-        .def("getResourceUsage", &Negotiator::getResourceUsage, "Get the resource usage for a given user\n"
-            ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":return: A list of resource ClassAds.")
-        .def("getPriorities", &Negotiator::getPriorities, priority_overloads("Retrieve the pool accounting information"
-            ":return: A list of accounting ClassAds."))
+    class_<Negotiator>("Negotiator",
+            R"C0ND0R(
+            This class provides a query interface to the ``condor_negotiator``.
+            It primarily allows one to query and set various parameters in the fair-share accounting.
+            )C0ND0R",
+        init<const ClassAdWrapper &>(
+            R"C0ND0R(
+            :param ad: A ClassAd describing the claim and the ``condor_negotiator``
+                location.  If omitted, the default pool negotiator is assumed.
+            :type ad: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "ad")))
+        .def(boost::python::init<>(boost::python::args("self")))
+        .def("setPriority", &Negotiator::setPriority,
+            R"C0ND0R(
+            Set the real priority of a specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param float prio: The priority to be set for the user; must be greater-than 0.0.
+            )C0ND0R",
+            boost::python::args("self", "user", "prio"))
+        .def("setFactor", &Negotiator::setFactor,
+            R"C0ND0R(
+            Set the priority factor of a specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param float factor: The priority factor to be set for the user; must be greater-than or equal-to 1.0.
+            )C0ND0R",
+            boost::python::args("self", "user", "factor"))
+        .def("setUsage", &Negotiator::setUsage,
+            R"C0ND0R(
+            Set the accumulated usage of a specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param float usage: The usage, in hours, to be set for the user.
+            )C0ND0R",
+            boost::python::args("self", "user", "usage"))
+        .def("setBeginUsage", &Negotiator::setBeginUsage,
+            R"C0ND0R(
+            Manually set the time that a user begins using the pool.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param int value: The Unix timestamp of initial usage.
+            )C0ND0R",
+            boost::python::args("self", "user", "value"))
+        .def("setLastUsage", &Negotiator::setLastUsage,
+            R"C0ND0R(
+            Manually set the time that a user last used the pool.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param int value: The Unix timestamp of last usage.
+            )C0ND0R",
+            boost::python::args("self", "user", "value"))
+        .def("resetUsage", &Negotiator::resetUsage,
+            R"C0ND0R(
+            Reset all usage accounting of the specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            )C0ND0R",
+            boost::python::args("self", "user"))
+        .def("deleteUser", &Negotiator::deleteUser,
+            R"C0ND0R(
+            Delete all records of a user from the Negotiator's fair-share accounting.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            )C0ND0R",
+            boost::python::args("self", "user"))
+        .def("resetAllUsage", &Negotiator::resetAllUsage,
+            R"C0ND0R(
+            Reset all usage accounting.  All known user records in the negotiator are deleted.
+            )C0ND0R",
+            boost::python::args("self"))
+        .def("getResourceUsage", &Negotiator::getResourceUsage,
+            R"C0ND0R(
+            Get the resources (slots) used by a specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :return: List of ads describing the resources (slots) in use.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R",
+            boost::python::args("self", "user"))
+        .def("getPriorities", &Negotiator::getPriorities, priority_overloads(
+            R"C0ND0R(
+            Retrieve the pool accounting information, one per entry.
+            Returns a list of accounting ClassAds.
+
+            :param bool rollup: Set to ``True`` if accounting information, as applied to
+                hierarchical group quotas, should be summed for groups and subgroups.
+            :return: A list of accounting ads, one per entity.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R",
+            boost::python::args("self", "rollup")))
         ;
 }

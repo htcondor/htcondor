@@ -422,9 +422,9 @@ ProcFamily::count_tasks_cgroup()
 	if (*handle) {
 		cgroup_get_task_end(handle);
 	}
-	if (handle) {
-		free(handle);
-	}
+
+	free(handle);
+
 	if (err) {
 		return -err;
 	}
@@ -503,7 +503,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	int ret;
 	void *handle;
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
-	char blkio_stats_name[] = "blkio.io_service_bytes";
+	char blkio_stats_name[] = "blkio.throttle.io_service_bytes";
 	short ctr;
 	int64_t read_bytes=0, write_bytes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
@@ -556,7 +556,7 @@ ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
 	int ret;
 	void *handle;
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
-	char blkio_stats_name[] = "blkio.io_serviced";
+	char blkio_stats_name[] = "blkio.throttle.io_serviced";
 	short ctr;
 	int64_t reads=0, writes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
@@ -595,6 +595,54 @@ ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
 
 	usage->block_reads = reads;
 	usage->block_writes = writes;
+
+	return 0;
+}
+
+int
+ProcFamily::aggregate_usage_cgroup_io_wait(ProcFamilyUsage* usage) {
+	if (!m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER) || !m_cgroup.isValid())
+		return 1;
+
+	int ret;
+	void *handle;
+	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
+	char blkio_stats_name[] = "blkio.io_wait_time";
+	short ctr;
+	int64_t total = 0;
+	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
+	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
+	while (ret == 0) {
+		ctr = 0;
+		word = strtok_r(line_contents, sep, &tok_handle);
+		while (word && ctr < 3) {
+			info[ctr++] = word;
+			word = strtok_r(NULL, sep, &tok_handle);
+		}
+		if (ctr == 2) {
+			errno = 0;
+			int64_t ctrval = strtoll(info[1], NULL, 10);
+			if (errno) {
+				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
+					 info[1], strerror(errno));
+				break;
+			}
+			if (strcmp(info[0], "Total") == 0) {
+				total = ctrval;
+			} 
+		}
+		ret = cgroup_read_value_next(&handle, line_contents, BLOCK_STATS_LINE_MAX);
+	}
+	if (handle != NULL) {
+		cgroup_read_value_end(&handle);
+	}
+
+	if (ret != ECGEOF) {
+		dprintf(D_ALWAYS, "Internal cgroup error when retrieving iowait statistics: %s\n", cgroup_strerror(ret));
+		return 1;
+	}
+
+	usage->io_wait = total / 1.e9;
 
 	return 0;
 }
@@ -642,59 +690,56 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	}
 
 	int err;
-	struct cgroup_stat stats;
-	void *handle = NULL;
-	u_int64_t tmp = 0, image = 0;
-	bool found_rss = false;
+	u_int64_t usage_in_bytes = 0;
+	struct cgroup_controller *memct;
 
 	// Update memory
 
-	err = cgroup_read_stats_begin(MEMORY_CONTROLLER_STR, m_cgroup_string.c_str(), &handle, &stats);
-	while (err != ECGEOF) {
-		if (err > 0) {
-			dprintf(D_PROCFAMILY,
-				"Unable to read cgroup %s memory stats (ProcFamily %u): %u %s.\n",
-				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
-			break;
-		}
-		if (_check_stat_uint64(stats, "total_rss", &tmp)) {
-			image += tmp;
-			usage->total_resident_set_size = tmp/1024;
-			found_rss = true;
-		} else if (_check_stat_uint64(stats, "total_mapped_file", &tmp)) {
-			image += tmp;
-		} else if (_check_stat_uint64(stats, "total_swap", &tmp)) {
-			image += tmp;
-		}
-		err = cgroup_read_stats_next(&handle, &stats);
-	}
-	if (handle != NULL) {
-		cgroup_read_stats_end(&handle);
-	}
-	if (found_rss) {
-		usage->total_image_size = image/1024;
-	} else {
+	Cgroup memcg;
+	if (m_cm.create(m_cgroup_string, memcg, CgroupManager::MEMORY_CONTROLLER, CgroupManager::MEMORY_CONTROLLER) ||
+			!memcg.isValid()) {
 		dprintf(D_PROCFAMILY,
-			"Unable to find all necesary memory structures for cgroup %s"
-			" (ProcFamily %u)\n",
+			"Unable to create cgroup %s (ProcFamily %u).\n",
 			m_cgroup_string.c_str(), m_root_pid);
+		return -1;
 	}
-	// The poor man's way of updating the max image size.
-	if (image > m_max_image_size) {
-		m_max_image_size = image/1024;
+
+	if ((memct = cgroup_get_controller(&const_cast<struct cgroup &>(memcg.getCgroup()), MEMORY_CONTROLLER_STR)) == NULL) {
+		dprintf(D_PROCFAMILY,
+			"Unable to load memory controller for cgroup %s (ProcFamily %u).\n",
+			m_cgroup_string.c_str(), m_root_pid);
+		return -1;
 	}
-	// XXX: Try again at using this at a later date.
-	// Currently, it reports the max size *including* the page cache.
-	// Doh!
-	//
-	// Try updating the max size using cgroups
-	//update_max_image_size_cgroup();
+
+	err = cgroup_get_value_uint64(memct, "memory.usage_in_bytes", &usage_in_bytes);
+	if (err != 0) {
+		dprintf(D_PROCFAMILY,
+			"Unable to read cgroup %s memory usage (ProcFamily %u): %u %s.\n",
+			m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
+	} else {
+
+		// Memory is ok
+		usage->total_image_size = usage_in_bytes/1024;
+		usage->total_resident_set_size = usage_in_bytes/1024;
+
+		// The poor man's way of updating the max image size.
+		if (usage_in_bytes > m_max_image_size) {
+			m_max_image_size = usage_in_bytes/1024;
+		}
+		// XXX: Try again at using this at a later date.
+		// Currently, it reports the max size *including* the page cache.
+		// Doh!
+		//
+		// Try updating the max size using cgroups
+		//update_max_image_size_cgroup();
+	}
 
 	// Update CPU
 	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
-
+	
 	aggregate_usage_cgroup_blockio(usage);
 	aggregate_usage_cgroup_blockio_io_serviced(usage);
+	aggregate_usage_cgroup_io_wait(usage);
 
 	// Finally, update the list of tasks
 	if ((err = count_tasks_cgroup()) < 0) {

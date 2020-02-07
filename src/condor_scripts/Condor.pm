@@ -830,6 +830,7 @@ sub Monitor
 		if( $saw_submit && $num_active_jobs == 0 )
 		{
 			monitor_debug( "leaving eventlog monitor because num_active_jobs=$num_active_jobs\n" , 1);
+			close SUBMIT_LOG;
 			return 1;
 		}
 
@@ -924,15 +925,7 @@ sub Monitor
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
 
-		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
-		    {
-			monitor_debug( "$job_id was evicted without ckpt\n" ,2);
-			# execute callback if one is registered
-			&$EvictedWithoutCheckpointCallback( %info )
-			    if defined $EvictedWithoutCheckpointCallback;
-
-		    }
-		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
+		    if( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
 			monitor_debug( "$job_id was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
@@ -945,6 +938,14 @@ sub Monitor
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
+		    }
+		    elsif( $line =~ /^\s+\(0\) / )
+		    {
+			monitor_debug( "$job_id was evicted without ckpt\n" ,2);
+			# execute callback if one is registered
+			&$EvictedWithoutCheckpointCallback( %info )
+			    if defined $EvictedWithoutCheckpointCallback;
+
 		    }
 		    else
 		    {
@@ -1541,7 +1542,7 @@ sub Monitor
 
 		    next LINE;
 		}
-		# 035: Factory submitted
+		# 035: Cluster submitted
 		elsif( $line =~ 
 			/^035\s+\(0*(\d+)\.\-01.*<([^>]+)>/ )
 		{
@@ -1562,7 +1563,7 @@ sub Monitor
 			if defined $SubmitCallback;
 
 		}
-		# 036 (10794.-01.000) 02/20 15:20:43 Factory removed
+		# 036 (10794.-01.000) 02/20 15:20:43 Cluster removed
 		elsif( $line =~ /^036\s+\(0*(\d+)\.\-01\./ )
 		{
 		    $info{'cluster'} = $1;
@@ -1668,7 +1669,7 @@ sub Monitor
 	#	008 (171.000.000) 06/15 14:49:45 user defined text
 		# 008: chirp ulog
 		elsif( $line =~ 
-			/^008\s+\((\d+)\.(\d+)\.\d+\)\s+([0-9\/]+)\s+([0-9:]+)\s*(.*)$/ )
+			/^008\s+\((\d+)\.(\d+)\.\d+\)\s+([0-9\/\-]+)\s+([0-9:Z\+\-]+)\s*(.*)$/ )
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;
@@ -1683,6 +1684,7 @@ sub Monitor
 			if defined $ULogCallback;
 		}
 	    }
+    close SUBMIT_LOG;
     return 1;
 }
 
@@ -1825,15 +1827,7 @@ sub MultiMonitor
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
 
-		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
-		    {
-			monitor_debug( "job was evicted without ckpt\n" ,2);
-			# execute callback if one is registered
-			&$EvictedWithoutCheckpointCallback( %info )
-			    if defined $EvictedWithoutCheckpointCallback;
-
-		    }
-		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
+		    if( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
 			monitor_debug( "job was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
@@ -1846,6 +1840,14 @@ sub MultiMonitor
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
+		    }
+		    elsif( $line =~ /^\s+\(0\) / )
+		    {
+			monitor_debug( "job was evicted without ckpt\n" ,2);
+			# execute callback if one is registered
+			&$EvictedWithoutCheckpointCallback( %info )
+			    if defined $EvictedWithoutCheckpointCallback;
+
 		    }
 		    else
 		    {
@@ -2483,7 +2485,7 @@ sub MultiMonitor
 	#	008 (171.000.000) 06/15 14:49:45 user defined text
 		# 008: chirp ulog
 		elsif( $line =~ 
-			/^008\s+\((\d+)\.(\d+)\.\d+\)\s+([0-9\/]+)\s+([0-9:]+)\s*(.*)$/ )
+			/^008\s+\((\d+)\.(\d+)\.\d+\)\s+([0-9\/\-]+)\s+([0-9:Z\+\-]+)\s*(.*)$/ )
 		{
 		    $info{'cluster'} = $1;
 		    $info{'job'} = $2;

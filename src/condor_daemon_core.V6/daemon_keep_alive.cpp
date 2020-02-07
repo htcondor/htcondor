@@ -77,7 +77,7 @@ DaemonKeepAlive::reconfig(void)
 
 			send_child_alive_timer = daemonCore->Register_Timer(0,
 					(unsigned)m_child_alive_period,
-					(TimerHandlercpp)&DaemonKeepAlive::SendAliveToParent,
+					(TimerHandlercpp)&DaemonKeepAlive::SendAliveToParentFromTimer,
 					"DaemonKeepAlive::SendAliveToParent", this );
 
 				// Send this immediately, because if we hang before
@@ -103,7 +103,7 @@ DaemonKeepAlive::reconfig(void)
 		interval.setMaxInterval(600);
 		interval.setTimeslice(0.01);
 		scan_for_hung_children_timer = daemonCore->Register_Timer(interval,
-				(TimerHandlercpp)&DaemonKeepAlive::ScanForHungChildren,
+				(TimerHandlercpp)&DaemonKeepAlive::ScanForHungChildrenFromTimer,
 				"DaemonKeepAlive::ScanForHungChildren", this );
 	}
 

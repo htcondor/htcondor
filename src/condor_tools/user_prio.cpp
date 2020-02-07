@@ -332,14 +332,14 @@ static void PrintModularAds(
 
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
-			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+			if (constraintExpr && ! EvalExprBool(&prioAds[id], constraintExpr))
 				continue;
 			print_mask.display(out, &prioAds[id]);
 		}
 	} else {
 		// now print the userprio records
 		for (int id = 0; id < (int)prioAds.size(); ++id) {
-			if (constraintExpr && ! EvalBool(&prioAds[id], constraintExpr))
+			if (constraintExpr && ! EvalExprBool(&prioAds[id], constraintExpr))
 				continue;
 			fprintf(out, "\n");
 			fPrintAd(out, prioAds[id]);
@@ -379,6 +379,7 @@ main(int argc, const char* argv[])
   const char * pcolon = NULL; // used to parse -arg:opt arguments
 
   myDistro->Init( argc, argv );
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
@@ -884,7 +885,7 @@ main(int argc, const char* argv[])
     ClassAd* ad=new ClassAd();
     bool is_eof = false; 
     int error = 0;
-	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
+	if ( ! InsertFromFile(file, *ad, is_eof, error) && error) {
       fprintf(stderr, "Error %d reading userprio ads\n", error);
       fclose(file);
       exit(1);
@@ -925,7 +926,7 @@ main(int argc, const char* argv[])
 
 	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
 	c.locate();
-	char *v = c.version();
+	const char *v = c.version();
 	CondorVersionInfo cvi(v);
 	if (!cvi.built_since_version(8,5,2)) {
 		fromCollector = false;	
@@ -1105,16 +1106,16 @@ static int CountElem(ClassAd* ad)
 
 static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accountingAds, LineRec* LR, bool GroupRollup)
 {
-  char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
-  char  attrLastUsage[32];
+  char  attrName[64], attrPrio[64], attrResUsed[64], attrWtResUsed[64], attrFactor[64], attrBeginUsage[64], attrAccUsage[64], attrRequested[64];
+  char  attrLastUsage[64];
   MyString attrAcctGroup;
   MyString attrIsAcctGroup;
   char  name[128], policy[32];
-  float priority, Factor, AccUsage = -1;
+  float priority = 0, Factor = 0, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
-  float wtResUsed, requested;
-  MyString AcctGroup;
+  float wtResUsed, requested = 0;
+  std::string AcctGroup;
   bool IsAcctGroup;
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;
   bool fNeedGroupIdFixup = false;
@@ -1183,7 +1184,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
         IsAcctGroup = false;
     }
 
-    char attr[32];
+    char attr[64];
     sprintf( attr, "EffectiveQuota%s", strI );
     if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
     sprintf( attr, "ConfigQuota%s", strI );

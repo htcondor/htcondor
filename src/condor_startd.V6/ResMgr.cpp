@@ -28,12 +28,19 @@
 #include "overflow.h"
 #include <math.h>
 #include "credmon_interface.h"
+#include "condor_auth_passwd.h"
+#include "condor_netdb.h"
+#include "token_utils.h"
+#include "data_reuse.h"
 
 #include "slot_builder.h"
 
 #include "strcasestr.h"
 
-ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
+ResMgr::ResMgr() :
+	extras_classad( NULL ),
+	max_job_retirement_time_override(-1),
+	m_token_requester(&ResMgr::token_request_callback, this)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -150,7 +157,6 @@ ResMgr::~ResMgr()
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
-	delete m_attr;
 
 #if HAVE_BACKFILL
 	if( m_backfill_mgr ) {
@@ -193,6 +199,7 @@ ResMgr::~ResMgr()
 	if( new_type_nums ) {
 		delete [] new_type_nums;
 	}
+	delete m_attr;
 }
 
 
@@ -442,13 +449,7 @@ ResMgr::init_resources( void )
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		max_types = param_integer("MAX_SLOT_TYPES",
-								  param_integer("MAX_VIRTUAL_MACHINE_TYPES",
-												10));
-	} else {
-		max_types = param_integer("MAX_SLOT_TYPES", 10);
-	}
+	max_types = param_integer("MAX_SLOT_TYPES", 10);
 
 	max_types += 1;
 
@@ -470,7 +471,7 @@ ResMgr::init_resources( void )
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
-		id_disp = new IdDispenser( num_cpus(), 1 );
+		id_disp = new IdDispenser( 1 );
 		return;
 	}
 
@@ -489,7 +490,7 @@ ResMgr::init_resources( void )
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
-	id_disp = new IdDispenser( num_cpus(), i+1 );
+	id_disp = new IdDispenser( i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
@@ -506,6 +507,15 @@ ResMgr::init_resources( void )
 	m_hook_mgr = new StartdHookMgr;
 	m_hook_mgr->initialize();
 #endif
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
 }
 
 
@@ -662,6 +672,16 @@ ResMgr::reconfig_resources( void )
 					  "State change: resource no longer needed by configuration\n" );
 		rip->set_destination_state( delete_state );
 	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
+
 
 		// Finally, call our helper, so that if all the slots we need to
 		// get rid of are gone by now, we'll allocate the new ones.
@@ -887,7 +907,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if( ! resources ) {
 		return NULL;
 	}
-	int requirements;
+	bool requirements;
 	int i;
 
 		/*
@@ -908,9 +928,9 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 		// find the first one that matches our requirements
 	for( i = 0; i < nresources; i++ ) {
-		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
-			requirements = 0;
+			requirements = false;
 		}
 		if( requirements ) {
 			return resources[i];
@@ -1058,12 +1078,14 @@ int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 					 bool nonblock )
 {
+	static bool first_time = true;
+
 		// Increment the resmgr's count of updates.
 	num_updates++;
-		// Actually do the updates, and return the # of updates sent.
-	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 
-	static bool first_time = true;
+	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_STARTD");
+
 	if (first_time) {
 		first_time = false;
 		dprintf( D_ALWAYS, "Initial update sent to collector(s)\n");
@@ -1258,14 +1280,11 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
-		}
 	}
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
-	startd_stats.pool.Publish(*cp, 0);
+	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
@@ -1297,10 +1316,11 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// of the machine.
 	//
 
-	cap->ResetExpr();
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
-	while( cap->NextExpr( attr, expr ) ) {
+	for ( auto itr = cap->begin(); itr != cap->end(); itr++ ) {
+		attr = itr->first.c_str();
+		expr = itr->second;
 		//
 		// Copy the whole ad over, excepting special or computed attributes.
 		//
@@ -1331,7 +1351,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
 
-		int universeOnline = 0;
+		bool universeOnline = false;
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName );
@@ -1339,13 +1359,13 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 
 			std::string reason = "[unknown reason]";
 			cap->LookupString( reasonName.c_str(), reason );
-			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+			extras_classad->Assign( reasonName.c_str(), reason );
 		} else {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.
 			offlineUniverses.erase( universeName );
-			extras_classad->Assign( reasonTime.c_str(), "undefined" );
-			extras_classad->Assign( reasonName.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonTime.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonName.c_str(), "undefined" );
 		}
 	}
 
@@ -1500,7 +1520,7 @@ ResMgr::start_sweep_timer( void )
 	}
 
 	// only sweep if not in TOKENS mode
-	if (!param_boolean("TOKENS", false)) {
+	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
 		return TRUE;
 	}
 
@@ -1604,6 +1624,12 @@ ResMgr::reset_timers( void )
 	resetHibernateTimer();
 #endif /* HAVE_HIBERNATE */
 
+		// Clear out any pending token requests.
+	m_token_client_id = "";
+	m_token_request_id = "";
+
+		// This is a borrowed reference; do not delete.
+	m_token_daemon = nullptr;
 }
 
 
@@ -1640,7 +1666,7 @@ ResMgr::addResource( Resource *rip )
 	nresources++;
 
 	// if this newly added slot is part of a pair, fixup the pair pointers
-	dprintf(D_ALWAYS, "Setting up slot pairings\n");
+	dprintf(D_FULLDEBUG, "Setting up slot pairings\n");
 	if (rip->r_pair_name && rip->r_pair_name[0] == '#') {
 		int slot_type = atoi(rip->r_pair_name+1);
 		dprintf(D_ALWAYS, "\t searching for type %d to pair with %s (%s)\n", slot_type, rip->r_id_str, rip->r_pair_name);
@@ -1883,7 +1909,7 @@ void ResMgr::updateHibernateConfiguration() {
 
 
 int
-ResMgr::allHibernating( MyString &target ) const
+ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
@@ -1898,7 +1924,7 @@ ResMgr::allHibernating( MyString &target ) const
 		// We take largest value as the representative
 		// hibernation level for this machine
 	target = "";
-	MyString str;
+	std::string str;
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
@@ -1909,11 +1935,11 @@ ResMgr::allHibernating( MyString &target ) const
 		}
 
 		int tmp = m_hibernation_manager->stringToSleepState (
-			str.Value () );
+			str.c_str () );
 
 		dprintf ( D_FULLDEBUG,
 			"allHibernating: resource #%d: '%s' (0x%x)\n",
-			i + 1, str.Value (), tmp );
+			i + 1, str.c_str (), tmp );
 
 		if ( 0 == tmp ) {
 			activity = true;
@@ -1940,7 +1966,7 @@ ResMgr::checkHibernate( void )
 
 		// If all resources have gone unused for some time
 		// then put the machine to sleep
-	MyString	target;
+	std::string target;
 	int level = allHibernating( target );
 	if( level > 0 ) {
 
@@ -2052,7 +2078,7 @@ ResMgr::cancelHibernateTimer( void )
 
 
 int
-ResMgr::disableResources( const MyString &state_str )
+ResMgr::disableResources( const std::string &state_str )
 {
 
 	dprintf (
@@ -2063,7 +2089,7 @@ ResMgr::disableResources( const MyString &state_str )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetState ( state_str.Value() );
+	m_hibernation_manager->setTargetState ( state_str.c_str() );
 
 	/* update the CM */
 	bool ok = true;
@@ -2629,4 +2655,17 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_classad, A_PUBLIC );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+
+void
+ResMgr::token_request_callback(bool success, void *miscdata)
+{
+	auto self = reinterpret_cast<ResMgr *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->up_tid != -1)) {
+		daemonCore->Reset_Timer( self->up_tid, update_offset,
+			update_interval );
+	}
 }

@@ -27,9 +27,6 @@
 #include "pool_allocator.h"
 #include "tokener.h"
 
-// currently no-one uses the MyRowOfData version of the print mask
-//#define ALLOW_ROD_PRINTMASK
-
 enum {
 	FormatOptionNoPrefix = 0x01,
 	FormatOptionNoSuffix = 0x02,
@@ -128,9 +125,6 @@ typedef struct {
 } CustomFormatFnTableItem;
 typedef case_sensitive_sorted_tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
 
-#ifdef ALLOW_ROD_PRINTMASK
-class MyRowOfData; // forward ref
-#endif
 class MyRowOfValues; // forward ref
 
 class AttrListPrintMask
@@ -164,10 +158,6 @@ class AttrListPrintMask
 	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
 	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
-#ifdef ALLOW_ROD_PRINTMASK
-	int   render (MyRowOfData & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
-	int   display (std::string & out, MyRowOfData & row); // append to string out. return number of chars added
-#endif
 	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
 	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
@@ -207,56 +197,6 @@ class AttrListPrintMask
 							const char *attr
 							);
 };
-
-#ifdef ALLOW_ROD_PRINTMASK
-
-class MyRowOfData
-{
-public:
-	MyRowOfData() : pdata(NULL), cols(0), cmax(0), flat(false) {};
-	~MyRowOfData();
-	int cat(const char * s);
-	int SetMaxCols(int max_cols);
-
-	// Copies a null-terminated character string into the object
-	//MyRowOfData& operator=(const char *s);
-	// appends a null-terminated string
-	//MyRowOfData& operator+=(const char *s);
-	// appends a MyString
-	MyRowOfData& operator+=(const MyString &S) { cat(S.c_str()); return *this; }
-
-	bool formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
-
-	//int Length();
-	int ColCount() { return cols; }
-	int ColWidth(int index=-1) {
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) return strlen(pdata[index]);
-		return -1;
-	}
-	const char * Column(int index) {
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) return pdata[index];
-		return NULL;
-	}
-	const char * SwapColumnData(int index, const char * cnew) {
-		const char * cold = NULL;
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) {
-			cold = pdata[index];
-			pdata[index] = const_cast<char*>(cnew);
-		}
-		return cold;
-	}
-
-private:
-	char **       pdata; // pointer to data, either an array of pointers, or a pointer to an szz
-	int           cols;
-	int           cmax;
-	bool          flat;
-};
-
-#endif
 
 class MyRowOfValues
 {

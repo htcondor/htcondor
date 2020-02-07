@@ -46,7 +46,7 @@ void
 create_id(time_t *t, unsigned int *mii)
 {
 	if (g_initialized == FALSE) {
-		g_mii = get_random_uint();
+		g_mii = get_random_uint_insecure();
 		g_initialized = TRUE;
 	}
 

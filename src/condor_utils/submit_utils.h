@@ -23,33 +23,48 @@
 #include "condor_config.h" // for MACRO_SOURCE
 #include <dc_schedd.h> // for ShouldTransferFiles_t
 
+
 /*
-**	Names of possible CONDOR variables.
+**	submit keywords that control submit behavior
+*/
+#define SUBMIT_CMD_skip_filechecks "skip_filechecks"
+#define SUBMIT_CMD_AllowArgumentsV1 "allow_arguments_v1"
+#define SUBMIT_CMD_AllowEnvironmentV1 "allow_environment_v1"
+#define SUBMIT_CMD_GetEnvironment "getenv"
+#define SUBMIT_CMD_GetEnvironmentAlt "get_env"
+#define SUBMIT_CMD_AllowStartupScript "allow_startup_script"
+#define SUBMIT_CMD_AllowStartupScriptAlt "AllowStartupScript"
+#define SUBMIT_CMD_SendCredential "send_credential"
+
+/*
+**	submit keywords that specify job attributes
 */
 #define SUBMIT_KEY_Cluster "Cluster"
 #define SUBMIT_KEY_Process "Process"
 #define SUBMIT_KEY_BatchName "batch_name"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
+#define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
 #define SUBMIT_KEY_Arguments2 "arguments2"
-#define SUBMIT_KEY_AllowArgumentsV1 "allow_arguments_v1"
-#define SUBMIT_KEY_GetEnvironment "getenv"
-#define SUBMIT_KEY_AllowStartupScript "allow_startup_script"
-#define SUBMIT_KEY_AllowEnvironmentV1 "allow_environment_v1"
 #define SUBMIT_KEY_Environment1 "environment"
 #define SUBMIT_KEY_Environment2 "environment2"
 #define SUBMIT_KEY_Input "input"
+#define SUBMIT_KEY_Stdin "stdin"
 #define SUBMIT_KEY_Output "output"
+#define SUBMIT_KEY_Stdout "stdout"
 #define SUBMIT_KEY_Error "error"
+#define SUBMIT_KEY_Stderr "stderr"
 #if !defined(WIN32)
 #define SUBMIT_KEY_RootDir "rootdir"
 #endif
 #define SUBMIT_KEY_InitialDir "initialdir"
+#define SUBMIT_KEY_InitialDirAlt "initial_dir"
+#define SUBMIT_KEY_JobIwd "job_iwd"
 #define SUBMIT_KEY_RemoteInitialDir "remote_initialdir"
 #define SUBMIT_KEY_Requirements "requirements"
 #define SUBMIT_KEY_Preferences "preferences"
@@ -61,6 +76,7 @@
 #define SUBMIT_KEY_RequestCpus "request_cpus"
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
+#define SUBMIT_KEY_RequestGpus "request_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 
 #define SUBMIT_KEY_Universe "universe"
@@ -69,10 +85,17 @@
 #define SUBMIT_KEY_EmailAttributes "email_attributes"
 #define SUBMIT_KEY_ExitRequirements "exit_requirements"
 #define SUBMIT_KEY_UserLogFile "log"
-#define SUBMIT_KEY_UseLogUseXML "log_xml"
+#define SUBMIT_KEY_UserLogUseXML "log_xml"
 #define SUBMIT_KEY_DagmanLogFile "dagman_log"
-#define SUBMIT_KEY_CoreSize "coresize"
+#define SUBMIT_KEY_CoreSize "core_size"
 #define SUBMIT_KEY_NiceUser "nice_user"
+#define SUBMIT_KEY_KeepClaimIdle "keep_claim_idle"
+#define SUBMIT_KEY_JobAdInformationAttrs "job_ad_information_attrs"
+#define SUBMIT_KEY_JobLeaseDuration "job_lease_duration"
+#define SUBMIT_KEY_JobMachineAttrs "job_machine_attrs"
+#define SUBMIT_KEY_JobMachineAttrsHistoryLength "job_machine_attrs_history_length"
+#define SUBMIT_KEY_NodeCount "node_count"
+#define SUBMIT_KEY_NodeCountAlt "NodeCount"
 
 #define SUBMIT_KEY_GridResource "grid_resource"
 #define SUBMIT_KEY_X509UserProxy "x509userproxy"
@@ -87,8 +110,6 @@
 #define SUBMIT_KEY_KeystorePassphraseFile "keystore_passphrase_file"
 #define SUBMIT_KEY_CreamAttributes "cream_attributes"
 #define SUBMIT_KEY_BatchQueue "batch_queue"
-
-#define SUBMIT_KEY_SendCredential "send_credential"
 
 #define SUBMIT_KEY_FileRemaps "file_remaps"
 #define SUBMIT_KEY_BufferFiles "buffer_files"
@@ -112,13 +133,18 @@
 #define SUBMIT_KEY_ToolDaemonOutput "tool_daemon_output"
 #define SUBMIT_KEY_SuspendJobAtExec "suspend_job_at_exec"
 
+#define SUBMIT_KEY_WhenToTransferOutput "when_to_transfer_output"
+#define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
+#define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
+#define SUBMIT_KEY_TransferOutputFilesAlt "TransferOutputFiles"
 #define SUBMIT_KEY_TransferOutputRemaps "transfer_output_remaps"
 #define SUBMIT_KEY_TransferExecutable "transfer_executable"
 #define SUBMIT_KEY_TransferInput "transfer_input"
 #define SUBMIT_KEY_TransferOutput "transfer_output"
 #define SUBMIT_KEY_TransferError "transfer_error"
+#define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 
@@ -185,6 +211,12 @@
 #define SUBMIT_KEY_RetryUntil "retry_until"
 #define SUBMIT_KEY_SuccessExitCode "success_exit_code"
 
+// Self-Checkpointing Parameters
+#define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+
+// ...
+#define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
+
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
@@ -212,6 +244,10 @@
 // docker "universe" Parameters
 //
 #define SUBMIT_KEY_DockerImage "docker_image"
+#define SUBMIT_KEY_DockerNetworkType "docker_network_type"
+
+#define SUBMIT_KEY_ContainerServiceNames "container_service_names"
+#define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 
 //
 // VM universe Parameters
@@ -220,16 +256,29 @@
 #define SUBMIT_KEY_VM_Type "vm_type"
 #define SUBMIT_KEY_VM_Memory "vm_memory"
 #define SUBMIT_KEY_VM_VCPUS "vm_vcpus"
+#define SUBMIT_KEY_VM_DISK "vm_disk"
 #define SUBMIT_KEY_VM_MACAddr "vm_macaddr"
 #define SUBMIT_KEY_VM_Checkpoint "vm_checkpoint"
 #define SUBMIT_KEY_VM_Networking "vm_networking"
 #define SUBMIT_KEY_VM_Networking_Type "vm_networking_type"
+#define SUBMIT_KEY_VM_NO_OUTPUT_VM "vm_no_output_vm"
+#define SUBMIT_KEY_VM_XEN_KERNEL "xen_kernel"
+#define SUBMIT_KEY_VM_XEN_INITRD "xen_initrd"
+#define SUBMIT_KEY_VM_XEN_ROOT   "xen_root"
+#define SUBMIT_KEY_VM_XEN_KERNEL_PARAMS "xen_kernel_params"
+#define SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES "vmware_should_transfer_files"
+#define SUBMIT_KEY_VM_VMWARE_SNAPSHOT_DISK "vmware_snapshot_disk"
+#define SUBMIT_KEY_VM_VMWARE_DIR "vmware_dir"
 
 //
 // EC2 Query Parameters
 //
+#define SUBMIT_KEY_WantNameTag "WantNameTag"
 #define SUBMIT_KEY_EC2AccessKeyId "ec2_access_key_id"
 #define SUBMIT_KEY_EC2SecretAccessKey "ec2_secret_access_key"
+#define SUBMIT_KEY_AWSAccessKeyIdFile "aws_access_key_id_file"
+#define SUBMIT_KEY_AWSSecretAccessKeyFile "aws_secret_access_key_file"
+#define SUBMIT_KEY_AWSRegion "aws_region"
 #define SUBMIT_KEY_EC2AmiID "ec2_ami_id"
 #define SUBMIT_KEY_EC2UserData "ec2_user_data"
 #define SUBMIT_KEY_EC2UserDataFile "ec2_user_data_file"
@@ -246,6 +295,7 @@
 #define SUBMIT_KEY_EC2VpcSubnet "ec2_vpc_subnet"
 #define SUBMIT_KEY_EC2VpcIP "ec2_vpc_ip"
 #define SUBMIT_KEY_EC2TagNames "ec2_tag_names"
+#define SUBMIT_KEY_EC2TagPrefix "ec2_tag_"
 #define SUBMIT_KEY_EC2SpotPrice "ec2_spot_price"
 #define SUBMIT_KEY_EC2BlockDeviceMapping "ec2_block_device_mapping"
 #define SUBMIT_KEY_EC2ParamNames "ec2_parameter_names"
@@ -275,21 +325,25 @@
 #define SUBMIT_KEY_AzureAdminUsername "azure_admin_username"
 #define SUBMIT_KEY_AzureAdminKey "azure_admin_key"
 
+// Common cloud parameters
+#define SUBMIT_KEY_CloudLabelNames "cloud_label_names"
+#define SUBMIT_KEY_CloudLabelPrefix "cloud_label_"
+
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
-#define SUBMIT_KEY_JobMaterializeMaxIdle "materialize_max_idle"
+#define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
+#define SUBMIT_KEY_JobMaterializeMaxIdleAlt "materialize_max_idle"
+
 
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 
-#if !defined(WIN32)
 #define SUBMIT_KEY_KillSig "kill_sig"
 #define SUBMIT_KEY_RmKillSig "remove_kill_sig"
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
-#endif
 
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
@@ -390,7 +444,7 @@ public:
 
 // used to indicate the role of a file when invoking the check_file callback
 enum _submit_file_role {
-	SFR_STDIN,
+	SFR_GENERIC,
 	SFR_STDOUT,
 	SFR_STDERR,
 	SFR_INPUT,
@@ -498,7 +552,7 @@ public:
 
 	// establishes default job attibutes that are independent of submit file (i.e. SUBMIT_ATTRS, etc)
 	// call once before parsing the submit file and/or calling make_job_ad.
-	int init_base_ad(time_t _submit_time, const char * owner); // returns 0 on success
+	int init_base_ad(time_t _submit_time, const char * username); // returns 0 on success
 
 	// establish default attributes using a foreign ad rather than by calling init_base_ad above
 	// used by late materialization when the 'base' ad is the cluster ad in the job queue.
@@ -516,7 +570,7 @@ public:
 	// After calling this method, subsequent calls to make_job_ad() will produce a job ad that
 	// is chained to the cluster ad
 	// This function does nothing if the SubmitHash is using a foreign clusterad (i.e. you called set_cluster_ad())
-	bool fold_job_into_base_ad(ClassAd * job);
+	bool fold_job_into_base_ad(int cluster_id, ClassAd * job);
 
 	// If we have an initialized cluster ad, return it
 	ClassAd * get_cluster_ad() {
@@ -548,13 +602,11 @@ public:
 		baseJob.Clear();
 		jid.cluster = 0; jid.proc = 0;
 		clusterAd = NULL;
-		base_job_is_cluster_ad = false;
+		base_job_is_cluster_ad = 0;
 	}
 
-	int InsertJobExpr (const char *expr, const char * source_label=NULL);
-	int InsertJobExpr (const MyString &expr);
-	int InsertJobExprInt(const char * name, int val);
-	int InsertJobExprString(const char * name, const char * val);
+	int AssignJobExpr (const char *attr, const char * expr, const char * source_label=NULL);
+	bool AssignJobString(const char * name, const char * val);
 	bool AssignJobVal(const char * attr, bool val);
 	bool AssignJobVal(const char * attr, double val);
 	bool AssignJobVal(const char * attr, long long val);
@@ -566,16 +618,19 @@ public:
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
-	void dump(FILE* out, int flags);
-	const char* to_string(std::string & buf, int flags);
+	void dump(FILE* out, int flags); // print the hash to the given FILE*
+	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
+	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
+
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse()  { return JobUniverse; }
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
 	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
+	bool getSubmitOnHold(int & code) { code = SubmitOnHoldCode; return SubmitOnHold; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -590,14 +645,14 @@ protected:
 	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
-	MyString   submit_owner; // owner specified to init_cluster_ad
+	MyString   submit_username; // username specified to init_cluster_ad
 
 	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
 	const char * abort_raw_macro_val;
 
-	// keep track of whether we have turned the baseJob into a cluster ad yet
-	bool base_job_is_cluster_ad;
+	// keep track of whether we have turned the baseJob into a cluster ad yet, and what cluster it is
+	int base_job_is_cluster_ad;
 
 	// options set externally (by command line arguments?)
 	bool DisableFileChecks; // file checks disabled by config, not submit file
@@ -606,6 +661,8 @@ protected:
 	bool IsRemoteJob;
 	int (*FnCheckFile)(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 	void *CheckFileArg;
+
+	bool CheckProxyFile;
 
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables
@@ -618,32 +675,17 @@ protected:
 
 	// options set as we parse the submit file
 	// these variables are used to pass values between the various SetXXX functions below
-	ShouldTransferFiles_t should_transfer;
 	int  JobUniverse;
 	bool JobIwdInitialized;
-	bool IsNiceUser;
 	bool IsDockerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
-	bool NeedsJobDeferral;
-	bool NeedsPerFileEncryption;
-	bool HasEncryptExecuteDir;
-	bool HasTDP;
-	bool UserLogSpecified;
-	bool StreamStdout;
-	bool StreamStderr;
-	bool RequestMemoryIsZero;
-	bool RequestDiskIsZero;
-	bool RequestCpusIsZeroOrOne;
+	bool SubmitOnHold;
+	int  SubmitOnHoldCode;
 	bool already_warned_requirements_disk;
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
-	long long ExecutableSizeKb; // size of cmd or sizeof VM memory backing
-	long long TransferInputSizeKb;
-	auto_free_ptr tdp_cmd;
-	auto_free_ptr tdp_input;
 	auto_free_ptr RunAsOwnerCredD;
-	MyString JobRequirements;
 	MyString JobIwd;
 	#if !defined(WIN32)
 	MyString JobRootdir;
@@ -656,101 +698,119 @@ protected:
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
 	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
 
+	// entries of this struct map the table of the build functions to what job attrs are set and what keywords are referenced.
+	struct _build_job_attrs {
+		int (SubmitHash::*build)();
+		const char * job_attrs;
+		const char * submit_keys;
+	};
+	const struct _build_job_attrs* SaBuild();
 
 	// worker functions that build up the job from the hashtable
 	// they pass data between themselves by setting class variables
 	// so the must be called in a specific order.
-	int SetDescription();
-	int SetJobStatus();
-	int SetJobLease();
-	int SetSimpleJobExprs();
-	int SetRemoteAttrs();
-	int SetJobMachineAttrs();
-	int SetExecutable();
-	int SetUniverse();
-	int SetMachineCount();
-	int SetImageSize();
-	int SetRequestResources();
-	int SetStdFile( int which_file );
-	int SetPriority();
-	int SetNotification();
-	int SetWantRemoteIO();
-	int SetNotifyUser ();
-	int SetEmailAttributes();
-	int SetCronTab();
-	int SetRemoteInitialDir();
-	int SetExitRequirements();
-	int SetOutputDestination();
-	int SetWantGracefulRemoval();
-	int SetJobMaxVacateTime();
-	int SetArguments();
-	int SetGridParams();
-	int SetGSICredentials();
-	int SetJobDeferral();
-	int SetJobRetries();
-	int SetEnvironment();
-	#if !defined(WIN32)
-	int ComputeRootDir(bool check_access=true);
-	int SetRootDir(bool check_access=true);
-	#endif
-	int SetRequirements();
-	bool check_requirements( char const *orig, MyString &answer );
-	int SetTransferFiles();
-	int InsertFileTransAttrs( FileTransferOutput_t when_output );
-	int SetPerFileEncryption();
-	int SetEncryptExecuteDir();
-	int SetTDP();
-	int SetRunAsOwner();
-	int SetLoadProfile();
-	int SetRank();
-	int ComputeIWD(bool check_access=true);
-	int SetIWD(bool check_access=true);
-	int SetUserLog();
-	int SetUserLogXML();
-	int SetCoreSize();
-	int SetFileOptions();
-	int SetFetchFiles();
-	int SetCompressFiles();
-	int SetAppendFiles();
-	int SetLocalFiles();
-	#if !defined(WIN32)
-	int SetKillSig();
-	char *findKillSigName(const char* submit_name, const char* attr_name);
-	#endif
 
-	int SetPeriodicHoldCheck();
-	int SetPeriodicRemoveCheck();
-	int SetNoopJob();
-	int SetLeaveInQueue();
-	int SetDAGNodeName();
-	int SetMatchListLen();
-	int SetDAGManJobId();
-	int SetLogNotes();
-	int SetUserNotes();
-	int SetStackSize();
-	int SetJarFiles();
-	int SetJavaVMArgs();
-	int SetParallelStartupScripts(); //JDB
-	int SetMaxJobRetirementTime();
-	int SetConcurrencyLimits();
-	int SetAccountingGroup();
-	int SetVMParams();
-	int SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString &VMNetworkType, bool VMHardwareVT, bool vm_need_fsdomain);
+	int SetUniverse();  /* run once */
+
+#if !defined(WIN32)
+	int ComputeRootDir();
+	int SetRootDir();
+	int check_root_dir_access();
+#endif
+	int ComputeIWD();
+	int SetIWD();		  /* factory:ok */
+
+
+	int SetExecutable();  /* run once if */ // TODO: split out some functionality
+	int SetArguments();  /* run once if */
+	int SetGridParams();  /* run once if, grid universe only */
+	int SetVMParams();  /* run once if, VM universe only */
+	int SetJavaVMArgs();  /* run once if,  */
+	int SetParallelParams();  /* run once */
+
+	int SetEnvironment(); /* run once if, special */
+
+	int SetJobStatus();  /* run once if */
+
+	int SetTDP();  /* run once if, maybe split up?*/
+	int SetStdin();  /* run once if */
+	int SetStdout();  /* run once if */
+	int SetStderr();  /* run once if */
+	int SetGSICredentials();  /* run once if */
+
+	int SetNotification();  /* factory:ok */
+	int SetRank();  /* run once if */
+	int SetPeriodicExpressions();  /* factory:ok */
+	int SetLeaveInQueue();  /* factory:ok */
+	int SetJobRetries();  /* factory:ok */
+	int SetKillSig();  /* run once if */
+	char *fixupKillSigName(char* sig);
+
+	int SetImageSize(); /* run always */ // TODO: , split out request_disk
+
+	int SetRequestResources(); /* n attrs, prunable by pattern */
+	int SetConcurrencyLimits();  /* 2 attrs, prunable */
+	int SetAccountingGroup();  /* 3 attrs, prunable */
+
+	int SetSimpleJobExprs(); /* run always */
+	int SetAutoAttributes(); /* run always */
+	int ReportCommonMistakes(); /* run always */
+
+	int SetJobDeferral();  /* run always */
+
+	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
+	int SetTransferFiles();
 	int FixupTransferInputFiles();
+	//bool check_requirements( char const *orig, MyString &answer );
+	int SetRequirements(); // after SetTransferFiles
+
+	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
+	// construct the Requirements expression for a VM uinverse job.
+	int AppendVMRequirements(MyString & vmanswer, bool VMCheckpoint, bool VMNetworking, const MyString &VMNetworkType, bool VMHardwareVT, bool vm_need_fsdomain);
+
+	// check if the job ad has  Cron attributes set, checked by SetRequirements
+	// return value is NULL if false,
+	// otherwise it is the name of the attribute that tells us we need job deferral
+	const char * NeedsJobDeferral();
+
+    // For now, just handles port-forwarding.
+    int SetContainerSpecial();
+
+	int CheckStdFile(
+		_submit_file_role role,
+		const char * value, // in: filename to use, may be NULL
+		int access,         // in: desired access if checking for file accessiblity
+		MyString & file,    // out: filename, possibly fixed up.
+		bool & transfer_it, // in,out: whether we expect to transfer it or not
+		bool & stream_it);  // in,out: whether we expect to stream it or not
 
 	// private helper functions
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
+	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
+	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:
 
 	int64_t calc_image_size_kb( const char *name);
 
-	void process_input_file_list(StringList * input_list, MyString *input_files, bool * files_specified, long long & accumulate_size_kb);
-	int non_negative_int_fail(const char * Name, char * Value);
-	void transfer_vm_file(const char *filename, long long & accumulate_size_kb);
+	// returns a count of files in the input list
+	int process_input_file_list(StringList * input_list, long long * accumulate_size_kb);
+	//int non_negative_int_fail(const char * Name, char * Value);
+	typedef int (SubmitHash::*FNSETATTRS)(const char * key);
+	FNSETATTRS is_special_request_resource(const char * key);
+
+	int SetRequestMem(const char * key);   /* used by SetRequestResources */
+	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
+	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
+
+	void handleAVPairs(const char * s, const char * j,
+	  const char * sp, const char * jp,
+	  const YourStringNoCase & gt );      /* used by SetGridParams */
+
+	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 };
 
 struct SubmitStepFromQArgs {
@@ -898,8 +958,8 @@ struct SubmitStepFromQArgs {
 	{
 		// so that the separator and line terminators can be \0, we make the size strlen()
 		// unless the first character is \0, then the size is 1
-		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
-		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
 		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
@@ -945,6 +1005,9 @@ const char * init_submit_default_macros();
 #ifdef WIN32
 void publishWindowsOSVersionInfo(ClassAd & ad);
 #endif
+
+// used for utility debug code in condor_submit
+const struct SimpleSubmitKeyword * get_submit_keywords();
 
 #ifndef EXPAND_GLOBS_WARN_EMPTY
 // functions in submit_glob.cpp

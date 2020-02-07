@@ -23,17 +23,20 @@ install(FILES		condor-annex-ec2
 		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 )
 
-# Only install the ec2 configuration and master shutdown script on RHEL for now
+# Only install the master shutdown script on RHEL for now
 if (RPM_SYSTEM_NAME)
-install(FILES		50ec2.config
-		DESTINATION	"${C_CONFIGD}"
-)
-
 install(FILES		master_shutdown_script.sh
 		DESTINATION	"${C_CONFIGD}/.."
 		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
 )
 endif (RPM_SYSTEM_NAME)
+
+# Only install the small shadow configuration on RHEL
+if (RPM_SYSTEM_NAME AND (${BIT_MODE} MATCHES "32"))
+install(FILES		00-small-shadow
+		DESTINATION	"${C_ETC_EXAMPLES}"
+)
+endif ()
 
 
 install(FILES		condor.sysconfig
@@ -48,7 +51,6 @@ install (FILES
 		condor.sysconfig
 		README
 		condor.boot.rpm
-		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		condor_config.generic
 		condor_config.generic.redhat
@@ -66,6 +68,8 @@ install (FILES
 		condor.socket
 		condor-tmpfiles.conf
 		condor-annex-ec2.service
+		00-minicondor
+		50ec2.config
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES
@@ -151,22 +155,25 @@ elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)
 
-	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
-	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
-						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-						COMMAND cp
-						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
-						COMMAND patch
-						ARGS condor.boot.debian ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.debian.patch )
+	# Older OSes use an init script
+	if (CONDOR_PLATFORM MATCHES "Debian8" OR CONDOR_PLATFORM MATCHES "Ubuntu14")
+		#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
+		add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
+							WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+							COMMAND cp
+							ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
+							COMMAND patch
+							ARGS condor.boot.debian ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.debian.patch )
 
-	add_custom_target(	patch_init_script
-						ALL
-						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian)
+		add_custom_target(	patch_init_script
+							ALL
+							DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian)
 
-	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
-			DESTINATION	"${C_INIT}"
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
-			RENAME	condor)
+		install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
+				DESTINATION	"${C_INIT}"
+				PERMISSIONS ${CONDOR_SCRIPT_PERMS}
+				RENAME	condor)
+	endif()
 else()
 	#Other Platform
 	install(FILES		condor_config.generic

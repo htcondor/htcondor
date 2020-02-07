@@ -448,7 +448,9 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 		}
 		if( disconnect ) {
 				// Tell the server we are done.
-			m_xfer_queue_sock->put("");
+			if (!m_xfer_queue_sock->put("")) {
+				dprintf(D_ALWAYS,"Failed to send disconnect request.\n");
+			}
 			m_xfer_queue_sock->end_of_message();
 		}
 	}

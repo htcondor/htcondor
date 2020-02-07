@@ -21,7 +21,7 @@
 use File::Copy;
 use File::Path;
 use Getopt::Long;
-use Digest::MD5;
+use Digest::SHA;
 
 open(DATA,">job_chirp_io.txtdata") || die "Can't open output file $!\n";
 
@@ -62,18 +62,18 @@ print DATA "$message";
 
 close(DATA);
 
-open(DATA,"<job_chirp_io.txtdata") || die "Can't open input file $!\n";
-open(MD5,">job_chirp_io.txtdatamd5") || die "Can't open MD5 output file $!\n";
-my $datamd5 = Digest::MD5->new;
+#open(DATA,"<job_chirp_io.txtdata") || die "Can't open input file $!\n";
+open(SHA256,">job_chirp_io.txtdatasha256") || die "Can't open SHA256 output file $!\n";
+my $datasha256 = Digest::SHA->new(256);
 
-$datamd5->addfile(DATA);
-close(DATA);
+$datasha256->addfile("job_chirp_io.txtdata");
+#close(DATA);
 
 
-my $hexmd5 = $datamd5->hexdigest;
+my $hexsha256 = $datasha256->hexdigest;
 
-print MD5 "$hexmd5\n";
-close(MD5);
+print SHA256 "$hexsha256\n";
+close(SHA256);
 
 sub fill_row 
 {

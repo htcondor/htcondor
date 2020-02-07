@@ -1,0 +1,244 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+import htcondor
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+#
+# We start a "personal condor" consisting of only a master, configured to
+# authenticate with only the TOKEN method.  Then we run condor_ping to see
+# if it (a) authenticates properly and (b) declines authentication properly.
+# This initial test basically duplicates the old PASSWORD method, because
+# condor_ping and the master will share the master password.
+#
+# We then run condor_token_create to generate an actual token, and repeat the
+# previous test, but with condor_ping configured to ignore the master
+# password.  (We can't delete it, since the master needs it.)
+#
+# We then run condor_token_fetch to generate an actual token, etc.
+#
+# TODO: We then generate a second master password, get another token from /it/,
+# remove the first master password, and verify that the first token doesn't
+# work and that the second token does.
+#
+# TODO: We should also check that we automatically use the correct token if
+# we have one for more than one master key and/or more than trust domain.
+#
+# TODO: Also, since we're using condor_ping, we should can easily test
+# if the privilege-restriction code works, and should do so.
+#
+
+def preparePasswordFile( file, contents ):
+	Utils.WriteFile( file, contents )
+	os.chmod( file, 0600 )
+
+def extractTokenFileFromListOutput( output ):
+	return output.split( ' ' )[-1][0:-1]
+
+def main():
+	#
+	# Set up for TOKEN authentication.  This is harder than it needs to be,
+	# because we can't call StartPersonalCondor() until it's all working --
+	# the condor_who tool never reports the daemons as ready if it can't
+	# authenticate.  This is annoying because we want everything --
+	# specifically including the user token store -- to be relative to
+	# $(LOCAL_DIR), to make sure it doesn't pollute other (or later) tests.
+	#
+	# So this is a glorious hack; what this test needs is the ability to
+	# specify the local dir ahead of time.  Instead, we use our insider
+	# knowledge to predict it.
+	#
+	# And no, I don't think you can skip on creating all of the empty
+	# directories.
+	#
+
+	localDir = os.getcwd() + "/" + "lib_auth_protocol-token" + ".local"
+	Utils.MakedirsIgnoreExist( localDir )
+
+	passwordFile = localDir + "/" + "password"
+	preparePasswordFile( passwordFile, "password file contents" )
+
+	wrongPasswordFile = localDir + "/" + "wrong-password"
+	preparePasswordFile( wrongPasswordFile, "wrong password file" )
+
+	userTokensDir = localDir + "/" + "user-tokens.d"
+	Utils.MakedirsIgnoreExist( userTokensDir )
+
+	systemTokensDir = localDir + "/" + "system-tokens.d"
+	Utils.MakedirsIgnoreExist( systemTokensDir )
+
+	passwordsDir = localDir + "/" + "password.d"
+	Utils.MakedirsIgnoreExist( passwordsDir )
+
+	params = {
+		"DAEMON_LIST" : "MASTER",
+		"MASTER_DEBUG" : "D_SECURITY",
+
+		"SEC_DEFAULT_AUTHENTICATION_METHODS" : "TOKEN",
+		"SEC_DEFAULT_AUTHENTICATION" : "REQUIRED",
+		"SEC_CLIENT_AUTHENTICATION" : "REQUIRED",
+
+		"SEC_PASSWORD_DIRECTORY" : passwordsDir,
+		"SEC_TOKEN_SYSTEM_DIRECTORY" : systemTokensDir,
+		"SEC_PASSWORD_FILE" : passwordFile,
+		"SEC_TOKEN_DIRECTORY" : userTokensDir,
+
+		# FIXME: I want there to be no permissions in the security system
+		# other than condor_pool@*/* and administrator@domain/*.  Get ZKM
+		# to review/test these settings for that purpose.
+		"ALLOW_ADMINISTRATOR" : "condor_pool@*/*, administrator@domain/*",
+		"ALLOW_OWNER" : "condor_pool@*/*, administrator@domain/*",
+		"ALLOW_CONFIG" : "condor_pool@*/*, administrator@domain/*",
+		"DENY_ALL" : "*",
+	}
+
+	personalCondor = CondorTest.StartPersonalCondor( "lib_auth_protocol-token",
+		params )
+	if personalCondor == -1:
+		Utils.TLog( "Failed to start a personal condor, aborting.\n" )
+		sys.exit( TEST_FAILURE )
+
+
+	#
+	# Check if we authenticate without a password file or token.
+	#
+	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = ""
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if r:
+		CondorTest.RegisterFailure( "null-operation", "condor_ping command worked" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	CondorTest.RegisterSuccess( "null-operation", "TOKEN authentication without pool password or tokens: OK" )
+
+
+	#
+	# Check if we authenticate with a correct master password and don't
+	# with an incorrect master password.
+	#
+
+	# Test if shared master password properly fails.
+	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if r:
+		CondorTest.RegisterFailure( "shared-master-password", "condor_ping command worked" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	del os.environ["_CONDOR_SEC_PASSWORD_FILE"]
+
+	# Test if shared master password properly succeeds.
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "shared-master-password", "condor_ping command failed" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+
+	CondorTest.RegisterSuccess( "shared-master-password", "TOKEN authentication with shared master password: OK" )
+
+	#
+	# Check user tokens.
+	#
+
+	# Create a valid token for an authorized user.
+	r = Utils.RunCommandCarefully( ( 'condor_token_create',
+		'-identity', 'administrator@domain', '-token', 'tokenfile' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_token_create failed" )
+		Utils.TLog("condor_token_create output:\n" + r.output)
+		Utils.TLog("condor_token_create error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	CondorTest.RegisterSuccess( "token-create", "condor_token_create worked" )
+	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_ping command failed (authorized user token)" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+
+	# Delete the authorized token and verify that it fails.
+	r = Utils.RunCommandCarefully( 'condor_token_list', 20 )
+	if not r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_token_list command failed" )
+		Utils.TLog("condor_token_list output:\n" + r.output)
+		Utils.TLog("condor_token_list error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	CondorTest.RegisterSuccess( "token-list", "condor_token_list worked" )
+	tokenFile = extractTokenFileFromListOutput( r.output )
+	os.unlink(tokenFile)
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_ping command succeeded (no user-specific token)" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+
+	# Create a valid token for an unauthorized user.
+	del os.environ["_CONDOR_SEC_PASSWORD_FILE"]
+	r = Utils.RunCommandCarefully( ( 'condor_token_create',
+		'-identity', 'test@trust-domain', '-token', 'tokenfile' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_token_create failed" )
+		Utils.TLog("condor_token_create output:\n" + r.output)
+		Utils.TLog("condor_token_create error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if r:
+		CondorTest.RegisterFailure( "user-specific-token", "condor_ping command succeeded (unauthorized identity)" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	os.unlink(tokenFile)
+
+	CondorTest.RegisterSuccess( "user-specific-token", "TOKEN authentication with user-specific tokens: OK" )
+
+
+	#
+	# Test condor_token_fetch.
+	#
+	del os.environ["_CONDOR_SEC_PASSWORD_FILE"]
+	r = Utils.RunCommandCarefully( ( 'condor_token_fetch',
+		'-type', 'master', '-token', 'tokenfile' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "token-fetch", "condor_token_fetch failed" )
+		Utils.TLog("condor_token_fetch output:\n" + r.output)
+		Utils.TLog("condor_token_fetch error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
+	r = Utils.RunCommandCarefully( ( 'condor_ping',
+		'-type', 'master', '-table', 'ALL' ), 20 )
+	if not r:
+		CondorTest.RegisterFailure( "token-fetch", "condor_ping command failed" )
+		Utils.TLog("condor_ping output:\n" + r.output)
+		Utils.TLog("condor_ping error:\n" + r.error)
+		sys.exit( TEST_FAILURE )
+	del os.environ["_CONDOR_SEC_PASSWORD_FILE"]
+	os.unlink(tokenFile)
+
+	CondorTest.RegisterSuccess( "token-fetch", "condor_token_fetch worked" )
+
+
+	#
+	# All done.
+	#
+	sys.exit( TEST_SUCCESS )
+
+if __name__ == "__main__":
+	main()

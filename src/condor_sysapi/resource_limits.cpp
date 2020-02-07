@@ -103,16 +103,7 @@ sysapi_set_resource_limits(int)
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
 
-#elif defined( HPUX ) 
-
-void
-sysapi_set_resource_limits(int)
-{
-		/* These platforms do not support limit() */
-	dprintf( D_ALWAYS, "Setting resource limits not supported!\n" );
-}
-
-#elif defined( WIN32 ) || defined( AIX ) || defined( Darwin ) || defined( CONDOR_FREEBSD )
+#elif defined( WIN32 ) || defined( Darwin ) || defined( CONDOR_FREEBSD )
 
 void
 sysapi_set_resource_limits(int)

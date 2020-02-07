@@ -125,9 +125,8 @@ class TransferDaemon
 		MyString get_schedd_sinful(void);
 
 		// Who is this transferd (after it registers)
-		void set_sinful(MyString sinful);
-		void set_sinful(char *sinful);
-		MyString get_sinful(void);
+		void set_sinful(const std::string &sinful);
+		const std::string& get_sinful(void);
 
 		// The socket the schedd uses to listen to updates from the td.
 		// This is also what was the original registration socket.
@@ -164,7 +163,7 @@ class TransferDaemon
 
 	private:
 		// The sinful string of this transferd after registration
-		MyString m_sinful;
+		std::string m_sinful;
 
 		// the owner of the transferd
 		MyString m_fquser;
@@ -183,7 +182,7 @@ class TransferDaemon
 
 		// Storage of Transfer Requests when transferd is doing its work
 		// Key: capability, Value: TransferRequest
-		HashTable<MyString, TransferRequest*> m_treqs_in_progress;
+		HashTable<std::string, TransferRequest*> m_treqs_in_progress;
 
 		// The registration socket that the schedd also receives updates on.
 		ReliSock *m_update_sock; 
@@ -236,7 +235,9 @@ class TDMan : public Service
 		void register_handlers(void);
 
 		// what to do when a td dies or exits
-		int transferd_reaper(long pid, int status);
+		// we implicitly required that sizeof(int) == sizeof(long) here.
+		// int transferd_reaper(long pid, int status);
+		int transferd_reaper(int pid, int status);
 
 		// deal with a td that comes back to register itself to me.
 		int transferd_registration(int cmd, Stream *sock);

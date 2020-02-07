@@ -107,6 +107,12 @@ ReplyAndClean::operator() () {
 		delete lambdaGahp;
 	}
 
+	if( s3Gahp ) {
+		// See above.
+		daemonCore->Cancel_Timer( s3Gahp->getNotificationTimerId() );
+		delete s3Gahp;
+	}
+
 	if( scratchpad ) {
 		// We're done with the scratchpad, too.
 		delete scratchpad;

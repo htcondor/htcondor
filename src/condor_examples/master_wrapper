@@ -119,7 +119,7 @@ class Setting( object ) :
         self._required = required
         self._level = -1
         self.Set( default, "default", 0 )
-        if sysconfig == None :
+        if sysconfig is None :
             sysconfig = var
         self._sysconfig = sysconfig
         self._condor_config = condor_config

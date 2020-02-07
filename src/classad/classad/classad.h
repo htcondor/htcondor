@@ -25,12 +25,13 @@
 #include <set>
 #include <map>
 #include <vector>
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 
 namespace classad {
 
 typedef std::set<std::string, CaseIgnLTStr> References;
+typedef std::set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
 typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
@@ -97,20 +98,12 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-#if 1
 		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
-		bool Insert( const std::string& attrName, ClassAd* expr) { return Insert(attrName, (ExprTree*)expr); }    // (ignores cache)
 		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
 		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
-#else
-		// 
-		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
-		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
-		bool Insert( const std::string& serialized_nvp);
-#endif
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -576,6 +569,16 @@ class ClassAd : public ExprTree
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
+		ClassAd &operator=(ClassAd &&rhs) {
+			this->do_dirty_tracking = rhs.do_dirty_tracking;
+			this->chained_parent_ad = rhs.chained_parent_ad;
+			this->alternateScope = rhs.alternateScope;
+
+			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+			this->attrList = std::move(rhs.attrList);
+
+			return *this;
+		}
         /** Fill in this ClassAd with the contents of the other ClassAd.
          *  This ClassAd is cleared of its contents before the copy happens.
          *  @return true if the copy succeeded, false otherwise.

@@ -1,0 +1,58 @@
+diff --git a/samples/condor/Makefile b/samples/condor/Makefile
+index a7a3c41..975253f 100644
+--- a/samples/condor/Makefile
++++ b/samples/condor/Makefile
+@@ -7,8 +7,8 @@ distclean: clean
+ 
+ distclean-recursive: clean
+ 
+-boinc_gahp: boinc_gahp.cpp ../../lib/remote_submit.h ../../lib/remote_submit.cpp ../../svn_version.h
+-	g++ -g -O0 -I../../lib -I../.. \
++boinc_gahp: boinc_gahp.cpp ../../lib/remote_submit.h ../../lib/remote_submit.cpp ../../version.h
++	g++ -g -O2 -I../../lib -I../.. \
+ 	-o boinc_gahp boinc_gahp.cpp ../../lib/remote_submit.cpp \
+ 	-L../../lib -lboinc -lpthread -lcurl
+ 
+diff --git a/samples/condor/boinc_gahp.cpp b/samples/condor/boinc_gahp.cpp
+index 85b8b30..505115d 100644
+--- a/samples/condor/boinc_gahp.cpp
++++ b/samples/condor/boinc_gahp.cpp
+@@ -34,9 +34,9 @@
+ #include "md5_file.h"
+ #include "parse.h"
+ #include "remote_submit.h"
+-#include "svn_version.h"
++#include "version.h"
+ 
+-#define BOINC_GAHP_VERSION "1.0.1"
++#define BOINC_GAHP_VERSION "1.0.2"
+ 
+ using std::map;
+ using std::pair;
+@@ -513,7 +513,7 @@ void handle_fetch_output(COMMAND& c) {
+             sprintf(buf, "get_output_file()\\ returned\\ %d\\ ", retval);
+             s = string(buf) + escape_str(error_msg);
+         } else {
+-            sprintf(buf, "cd %s; unzip %s_output.zip", req.dir, req.job_name);
++            sprintf(buf, "cd %s; unzip -o %s_output.zip >/dev/null", req.dir, req.job_name);
+             retval = system(buf);
+             if (retval) {
+                 s = string("unzip\\ failed");
+@@ -723,7 +723,7 @@ int COMMAND::parse_command() {
+ }
+ 
+ void print_version(bool startup) {
+-    BPRINTF("%s$GahpVersion: %s %s BOINC\\ GAHP\\ GIT:%x $\n", startup ? "" : "S ", BOINC_GAHP_VERSION, __DATE__, GIT_REVISION);
++    BPRINTF("%s$GahpVersion: %s %s BOINC\\ GAHP $\n", startup ? "" : "S ", BOINC_GAHP_VERSION, __DATE__);
+ }
+ 
+ int n_results() {
+@@ -882,7 +882,7 @@ void read_config() {
+ int main(int argc, char*argv[]) {
+     if (argc>1) {
+         if (!strcmp(argv[1],"--version")) {
+-            fprintf(stderr,SVN_VERSION"\n");
++            fprintf(stderr,"%s\n",BOINC_VERSION_STRING);
+             return 0;
+         }
+     }

@@ -31,13 +31,14 @@ my $iswindows = CondorUtils::is_windows();
 
 my $append_config;
 $append_config = "
-	SCHEDD_ALLOW_LATE_MATERIALIZE = true
+	# this is now the default
+	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
 ";
 
 ###########  create submit file ##################
 my $pid = $$;
 my $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
 queue";
 my $submitfile = "$testname$pid.sub";
@@ -89,7 +90,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
 max_materialize = 10
 queue 12";

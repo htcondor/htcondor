@@ -1,0 +1,264 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+import htcondor
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+#
+# Test to see if startd job policies function properly during retirement.
+#
+# First, we'll test to make sure the the job policy in question functions
+# during normal operations.
+#
+# Then we'll test the job policy when draining.  (We assume for now that the
+# START expression has no effect on job policy, so we'll test with
+# backfill active.)  Then we'll test to see if the job policy functions
+# on jobs which were accepted while draining.
+#
+# Because we expect all of this to work, we'll start off with just two
+# separate test runs.  If this test ever fails, we may need to split the
+# component tests out for easier diagnosis.
+#
+# The first test run will configure a personal condor with retirement time
+# and the HOLD_IF_MEMORY_EXCEEDED policy.  It will (1) submit a job, (2) wait
+# for the job to start, and then (5) signal the job to misbehave and (6) wait
+# for the job to go on hold.  [Steps 3 and 4 only runs in the next test.]
+#
+# The job in question will be like cmd_drain_scavenging's, in that it will
+# poll for a 'killfile'; however, this job will start consuming a large
+# of memory, instead.
+#
+# The second test run will use the same personal condor.  In step (1) and (2),
+# it will submit two jobs.  Then it (3) will signal the startd to drain and
+# (4) wait for the startd to change state appropriately.  After steps (5) and
+# (6), this test will also (7) check to make sure that the other job is still
+# running.  If it is, the test will (8) submit a third copy of the same job,
+# (9) verify that it's running and (10) signal it to misbehave.  The test will
+# then check (11) that the job went on hold and (12) the other job is still
+# running.  At this point, we've completed our twelve-step program and our
+# livers thank us.
+#
+# To test job policies during a peaceful shut-down, a third test run
+# would be cleanest.  We can do steps (1) and (2) as per the second test
+# run, and then instead of (3), tell the startd to peacefully shut down
+# and instead of (4), wait for the startd to start doing so.  We can
+# then do steps (5), (6), and (7).  I don't think we need to do steps (8)
+# (9), (10), (11), and (12), but I guess it won't hurt.  (On the other hand,
+# we may need to split this test off into its own .run file to make
+# this test doesn't take too long.)
+#
+
+# In Python 3.4 or later, or 2.7 with pathlib installed, this would
+# instead be 'Path( filename ).touch()'.
+def touch( filename ):
+	with open( filename, 'a' ):
+		os.utime( filename, None )
+
+def askToMisbehave( job, proc, killfile ):
+	Utils.TLog( "Asking {0}.{1} to misbehave...".format( job._cluster_id, proc ) )
+	touch( killfile + ".{0}.{1}".format( job._cluster_id, proc ) )
+
+def main():
+	#
+	# Construct our test executable.
+	#
+	jobFile = os.path.join( os.getcwd(), "condition-sleep.py" )
+	contents = """#!/usr/bin/env python
+
+import os
+import sys
+import time
+import signal
+
+signal.signal( signal.SIGTERM, signal.SIG_IGN )
+killFile = sys.argv[1]
+maxSleep = sys.argv[2]
+
+for i in range( 0, int(maxSleep) ):
+	if os.path.isfile( killFile ):
+		memoryWaste = list( range( 0, 1024 * 1024 * 16 ) )
+	time.sleep( 1 )
+
+sys.exit( 0 )
+"""
+	if not Utils.WriteFile( jobFile, contents ):
+		Utils.TLog( "Failed to write test executable, aborting.\n" );
+		sys.exit( TEST_FAILURE )
+
+	try:
+		os.chmod( jobFile, 0o755 )
+	except OSError as ose:
+		Utils.TLog( "Failed to make test file executable, aborting: {0}\n".format( ose ) );
+		sys.exit( TEST_FAILURE )
+
+	#
+	# Start a personal condor with draining and a policy to test.
+	#
+	params = {
+		"STARTD_DEBUG" : "D_SUB_SECOND D_FULLDEBUG D_JOB",
+		"MAXJOBRETIREMENTTIME" : 300
+	}
+	ordered_params = """
+use feature : PartitionableSlot
+use policy : HOLD_IF_MEMORY_EXCEEDED
+"""
+
+	personalCondor = CondorTest.StartPersonalCondor( "cmd_drain_policies", params, ordered_params )
+	if personalCondor == -1:
+		# Arguably, if it fails to start a personal condor, CondorTest should
+		# register a failure and exit of its own accord.
+		Utils.TLog( "Failed to start a personal condor, aborting.\n" );
+		sys.exit( TEST_FAILURE )
+
+	#
+	# Run the first subtest ("normal").  If it doesn't succeed, there's no
+	# point in running the second subtest, so just abort right away.
+	#
+
+	# Step (1).
+	killfile = os.getcwd() + "/killfile-cdp"
+	jobArgs = {
+		"executable":				jobFile,
+		"transfer_executable":		"false",
+		# Wouldn't it be nice if these could be literal bools, instead?
+		"should_transfer_files":	"true",
+		"universe":					"vanilla",
+		"arguments":				killfile + ".$(CLUSTER).$(PROCESS) 3600",
+		# Wouldn't it be nice if this could be a literal bool, instead?
+		"request_memory":			"1",
+		"log":						"cmd_drain_policies.log"
+	}
+	firstTestJob = CondorCluster( jobArgs )
+	firstTestJob.Submit()
+
+	# Step (2).
+	if not firstTestJob.WaitUntilExecute( 60 ):
+		CondorTest.RegisterFailure( "normal", "First job did not start running." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (5).
+	askToMisbehave( firstTestJob, 0, killfile )
+
+	# Step (6).
+	if not firstTestJob.WaitUntilJobHeld( 60 ):
+		CondorTest.RegisterFailure( "normal", "First job did not go on hold." )
+		sys.exit( TEST_FAILURE )
+
+	CondorTest.RegisterSuccess( "normal", "Job went on hold as expected" );
+
+	#
+	# Run the second subtest ("while-draining").
+	#
+
+	# Step (1).
+	secondTestCluster = CondorCluster( jobArgs )
+	secondTestCluster.Submit( 2 )
+
+	# Step (2).
+	if not secondTestCluster.WaitUntilAllExecute( 60 ):
+		CondorTest.RegisterFailure( "while-draining", "Second test jobs did not all start running." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (3).
+	hostname = htcondor.param[ 'FULL_HOSTNAME' ]
+	if not Utils.RunCommandCarefully( ( 'condor_drain',
+		'-start', 'IsBackfill == true', hostname ), 20 ) != 0:
+		CondorTest.RegisterFailure( "while-draining", "condor_drain command failed" )
+		sys.exit( TEST_FAILURE )
+	else:
+		Utils.TLog( "Issued condor_drain command." )
+
+	# Step (4).  Should maybe be a function on CondorPersonal?
+	Utils.TLog( "Waiting for startd to start draining..." )
+	collector = htcondor.Collector()
+	for delay in range( 1, 20 ):
+		time.sleep( 1 )
+		ads = collector.query( htcondor.AdTypes.Startd, True,
+			[ "Name", "State", "Activity" ] )
+		if len(ads) != 3:
+			Utils.TLog( "Found unexpected number of ads ({0}): retrying.".format( len(ads) ) )
+			continue
+
+		stateChanged = True
+		for ad in ads:
+			if ad["Name"].startswith( "slot1@" ):
+				continue
+			if ad["State"] != "Claimed":
+				Utils.TLog( "Found an expected state ({0}), will retry.".format( ad["State"] ) );
+				stateChanged = False
+				break
+			if ad["Activity"] != "Retiring":
+				Utils.TLog( "Found an expected activity ({0}), will retry.".format( ad["Activity"] ) );
+				stateChanged = False
+				break
+		if stateChanged:
+			break
+		else:
+			Utils.TLog( "Startd has not started draining yet, will check again." )
+	Utils.TLog( "... startd has started draining." )
+
+	# Step (5).
+	askToMisbehave( secondTestCluster, 0, killfile )
+
+	# Step (6).
+	if not secondTestCluster.WaitUntilJobHeld( 60, 0 ):
+		CondorTest.RegisterFailure( "while-draining", "First job did not go on hold." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (7).  Note that we ask the schedd and not the job event log if the
+	# other job is still running.  This technically causes a race condition,
+	# because the jobs only sleep for an hour (instead of forever), but the
+	# test should have timed out well before then.  (There's another possible
+	# race condition because MaxJobRetirementTime is only 300 seconds.
+	# FIXME: bump the MJRT up to an hour as well?)  It wouldn't be hard to
+	# write a little function to determine the state of a job according to
+	# its log, but it would be hard to synchronize with some other JEL's
+	# idea of what time it is.  Of course, with a rememberer in JEL, that
+	# wouldn't be a problem....
+	stcJobAd = secondTestCluster.QueryForJobAd( 1 )
+	if stcJobAd['JobStatus'] != JobStatus.Number['Running']:
+		CondorTest.RegisterFailure( "while-draining", "Second job is not still running after the first job went on hold." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (8).
+	backfillJobArgs = jobArgs.copy();
+	backfillJobArgs[ "+IsBackfill" ] = "true"
+	thirdTestJob = CondorCluster( backfillJobArgs )
+	thirdTestJob.Submit()
+
+	# Step (9).
+	if not thirdTestJob.WaitUntilExecute( 60 ):
+		CondorTest.RegisterFailure( "while-draining", "Third (backfill) test job did not start running." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (10).
+	askToMisbehave( thirdTestJob, 0, killfile )
+
+	# Step (11).
+	if not thirdTestJob.WaitUntilJobHeld( 60 ):
+		CondorTest.RegisterFailure( "while-draining", "Backfill job did not go on hold." )
+		sys.exit( TEST_FAILURE )
+
+	# Step (12).  See above about possible race conditions and why they
+	# shouldn't matter in practice.
+	stcJobAd = secondTestCluster.QueryForJobAd( 1 )
+	if stcJobAd['JobStatus'] != JobStatus.Number['Running']:
+		CondorTest.RegisterFailure( "while-draining", "Second job is not still running after the backfill job went on hold." )
+		sys.exit( TEST_FAILURE )
+
+	CondorTest.RegisterSuccess( "while-draining", "Jobs behaved as expected" );
+
+	# Ask the second job to misbehave so that our personal condor shuts
+	# down quickly (it otherwise by default waits for retirement).
+	askToMisbehave( secondTestCluster, 1, killfile );
+
+if __name__ == "__main__":
+	main()

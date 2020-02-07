@@ -239,7 +239,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
 			MyString curError;
-			if ( !CronTab::validateParameter( ctr, buffer.Value(), curError ) ) {
+			if ( !CronTab::validateParameter( buffer.Value(), CronTab::attributes[ctr], curError ) ) {
 				ret = false;
 				error += curError;
 			}
@@ -276,8 +276,8 @@ CronTab::getError() {
  * 		 just the characters
  **/
 bool
-CronTab::validateParameter( int attribute_idx, const char *parameter,
-							MyString &error ) {
+CronTab::validateParameter(const char* parameter, const char * attr, MyString& error)
+{
 	bool ret = true;
 		//
 		// Make sure there are only valid characters 
@@ -288,7 +288,7 @@ CronTab::validateParameter( int attribute_idx, const char *parameter,
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
-		error += CronTab::attributes[attribute_idx];
+		error += attr;
 		ret = false;
 	}
 	return ( ret );
@@ -688,7 +688,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		// We only need to delete curRange if we had
 		// instantiated a new object for it
 		//
-	if ( attribute_idx == CRONTAB_DOM_IDX && curRange ) delete curRange;
+	if ( attribute_idx == CRONTAB_DOM_IDX) delete curRange;
 	
 	return ( ret );
 }
@@ -719,8 +719,8 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// the error message to the log
 		//
 	MyString error;
-	if ( ! CronTab::validateParameter(	attribute_idx,
-										param->Value(),
+	if ( ! CronTab::validateParameter(	param->Value(),
+										CronTab::attributes[attribute_idx],
 										error ) ) {
 		dprintf( D_ALWAYS, "%s", error.Value() );
 			//
@@ -768,6 +768,9 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				MyString stepStr( _temp );
 				stepStr.trim();
 				cur_step = atoi( stepStr.Value() );
+				if (cur_step == 0) {
+					return false;
+				}
 			}
 				//
 				// Now that we have the denominator, put the numerator back
@@ -873,7 +876,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		 		// Make sure this value isn't alreay added and 
 		 		// that it falls in our step listing for the range
 		 		//
-			if ( ( ( temp % cur_step ) == 0 ) && !this->contains( *list, temp ) ) {
+			if (((temp % cur_step) == 0) && !this->contains(*list, temp)) {
 				list->add( temp );
 		 	}
 		} // FOR

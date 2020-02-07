@@ -23,7 +23,6 @@
 #include "condor_attributes.h"
 #include "condor_state.h"
 #include "status_types.h"
-#include "get_daemon_name.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -37,6 +36,7 @@
 #include "directory.h"
 #include "format_time.h"
 #include "console-utils.h"
+#include "ipv6_hostname.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"
@@ -328,7 +328,7 @@ render_slot_id (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 	static char outstr[10];
 	outstr[0] = 0;
 	//bool from_name = false;
-	int is_dynamic = false;
+	bool is_dynamic = false;
 	if (/*from_name || */(ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
 		std::string name;
 		if (ad->LookupString(ATTR_NAME, name) && (0 == name.find("slot"))) {
@@ -621,7 +621,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 			if (line) data = line;
 
 			if (data.find("====") == 0 || data.find("----") == 0) {
-				subhead = line;
+				subhead = line ? line : "";
 				data.clear();
 
 				// first line after headings is not data, but underline
@@ -711,9 +711,12 @@ static void get_process_table(TABULAR_MAP & table)
 #ifdef WIN32
 	cmdargs.AppendArg("tasklist");
 	//cmdargs.AppendArg("/V");
-#else
+#elif defined(LINUX)
 	cmdargs.AppendArg("ps");
 	cmdargs.AppendArg("-eF");
+#else
+	cmdargs.AppendArg("ps");
+	cmdargs.AppendArg("-ef");
 #endif
 
 	FILE * stream = my_popen(cmdargs, "r", 0);
@@ -796,7 +799,9 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 	}
 
 	if (port_offset) {
-		formatstr(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
+		// TODO Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		formatstr(out, "<%s:%s>", my_ip.Value(), str.substr(port_offset).c_str());
 	} else {
 		formatstr(out, "<%s>", str.c_str());
 	}
@@ -1323,6 +1328,7 @@ void init_condor_config()
 		// is no global config file, so tell the config subsystem that.
 		config_continue_if_no_config(true);
 	}
+	set_priv_initialize(); // allow uid switching if root
 	config();
 }
 

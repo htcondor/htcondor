@@ -153,6 +153,8 @@ FunctionCall( )
 		functionTable["regexp"		] =	(void*)matchPattern;
         functionTable["regexpmember"] =	(void*)matchPatternMember;
 		functionTable["regexps"     ] = (void*)substPattern;
+		functionTable["replace"     ] = (void*)substPattern;
+		functionTable["replaceall"  ] = (void*)substPattern;
 #endif
 
 			// conversion functions
@@ -1969,6 +1971,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::ABSOLUTE_TIME_VALUE:
@@ -1999,11 +2002,15 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 			{
 				string buf;
 				arg.IsStringValue( buf );
-				if( strcasecmp( "false", buf.c_str( ) ) || buf == "" ) {
+				if (strcasecmp("false", buf.c_str()) == 0) { 
 					result.SetBooleanValue( false );
-				} else {
+					return( true );
+				} 
+				if (strcasecmp("true", buf.c_str()) == 0) { 
 					result.SetBooleanValue( true );
-				}
+					return( true );
+				} 
+				result.SetUndefinedValue();
 				return( true );
 			}
 
@@ -2084,6 +2091,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
@@ -2422,6 +2430,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 
 	case Value::ERROR_VALUE:
 	case Value::CLASSAD_VALUE:
+	case Value::SCLASSAD_VALUE:
 	case Value::LIST_VALUE:
 	case Value::SLIST_VALUE:
 	case Value::STRING_VALUE:
@@ -2596,7 +2605,7 @@ static bool regexp_helper(const char *pattern, const char *target,
                           Value &result);
 
 bool FunctionCall::
-substPattern( const char*,const ArgumentList &argList,EvalState &state,
+substPattern( const char *name,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
     bool        have_options;
@@ -2649,6 +2658,14 @@ substPattern( const char*,const ArgumentList &argList,EvalState &state,
         result.SetErrorValue( );
         return( true );
     }
+
+	if( strcasecmp( name, "replace" ) == 0 ) {
+		have_options = true;
+		options_string += "f";
+	} else if( strcasecmp( name, "replaceall" ) == 0 ) {
+		have_options = true;
+		options_string += "fg";
+	}
 
 		// if either argument is not a string, the result is an error
 	if( !arg0.IsStringValue( pattern ) || !arg1.IsStringValue( target ) || !arg2.IsStringValue( replace ) ) {
@@ -2783,6 +2800,7 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
     result.SetBooleanValue(false);
     
     ExprTree *target_expr;
+	bool couldBeUndefined = false;
     ExprList::const_iterator list_iter = target_list->begin();
     while (list_iter != target_list->end()) {
         Value target_value;
@@ -2793,9 +2811,18 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
                 result.SetErrorValue();
                 return true;
             }
+
+			// If the list element is not a string, result is error
+			// unless it is undefined, then total result is either
+			// true (if one matches) or undefined
             if (!target_value.IsStringValue(target)) {
-                result.SetErrorValue();
-                return true;
+				if (target_value.IsUndefinedValue()) {
+					couldBeUndefined = true;
+				} else {
+					// Some non-string, not-undefined value, error and give up
+                	result.SetErrorValue();
+                	return true;
+				}
             } else {
                 bool have_match;
                 bool success = regexp_helper(pattern, target, NULL, have_options, options_string, have_match_value);
@@ -2815,6 +2842,9 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
         }
         list_iter++;
     }
+	if (couldBeUndefined) {
+		result.SetUndefinedValue();
+	}
     return true;
 }
 
@@ -2828,6 +2858,8 @@ static bool regexp_helper(
 {
     int         options;
 	int			status;
+	bool		full_target = false;
+	bool		find_all = false;
 
 #if defined (USE_POSIX_REGEX)
 	regex_t		re;
@@ -2846,6 +2878,9 @@ static bool regexp_helper(
         // forwards compatibility.
         if ( options_string.find( 'i' ) != string::npos ) {
             options |= REG_ICASE;
+        }
+        if ( options_string.find( 'f' ) != string::npos ) {
+            full_target = true;
         }
     }
 
@@ -2883,6 +2918,9 @@ static bool regexp_helper(
 		string output;
 		bool replace_success = true;
 
+		if ( full_target ) {
+			output.append(target, pmatch[0].rm_so);
+		}
 		while (*replace) {
 			if (*replace == '\\') {
 				if (isdigit(replace[1])) {
@@ -2901,6 +2939,9 @@ static bool regexp_helper(
 			}
 			replace++;
 		}
+		if ( replace_success && full_target ) {
+			output.append(target+pmatch[0].rm_eo, strlen(target+pmatch[0].rm_eo));
+		}
 
 		if( replace_success ) {
 			result.SetStringValue( output );
@@ -2911,7 +2952,11 @@ static bool regexp_helper(
 		return( true );
 	}
 	else if( status == REG_NOMATCH && replace ) {
-		result.SetStringValue( "" );
+		if ( full_target ) {
+			result.SetStringValue( target );
+		} else {
+			result.SetStringValue( "" );
+		}
 		return( true );
 	}
 
@@ -2930,7 +2975,15 @@ static bool regexp_helper(
 #elif defined (USE_PCRE)
     const char  *error_message;
     int         error_offset;
-    pcre        *re;
+    pcre        *re = NULL;
+	int group_count = 0;
+	int oveccount = 0;
+	int *ovector = NULL;
+	bool empty_match = false;
+	int addl_opts = 0;
+	int target_len = strlen(target);
+	int target_idx = 0;
+	string output;
 
     options     = 0;
     if( have_options ){
@@ -2949,6 +3002,19 @@ static bool regexp_helper(
         if ( options_string.find( 'x' ) != string::npos ) {
             options |= PCRE_EXTENDED;
         }
+		if ( replace ) {
+			// The 'f' option means that the result should consist of
+			// the full target string with any replacement(s) applied
+			// in-place.
+			if ( options_string.find( 'f' ) != string::npos ) {
+				full_target = true;
+			}
+			// The 'g' option means that all matches to the pattern
+			// should be found in the target string (without overlaps).
+			if ( options_string.find( 'g' ) != string::npos ) {
+				find_all = true;
+			}
+		}
     }
 
     re = pcre_compile( pattern, options, &error_message,
@@ -2956,68 +3022,96 @@ static bool regexp_helper(
     if ( re == NULL ){
 			// error in pattern
 		result.SetErrorValue( );
-    } else {
-		int group_count;
-		pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
-		int oveccount = 3 * (group_count + 1); // +1 for the string itself
-		int * ovector = (int *) malloc(oveccount * sizeof(int));
+		goto cleanup;
+	}
 
+	pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
+	oveccount = 3 * (group_count + 1); // +1 for the string itself
+	ovector = (int *) malloc(oveccount * sizeof(int));
 
-        status = pcre_exec(re, NULL, target, (int)strlen(target),
-                           0, 0, ovector, oveccount);
-        if (status >= 0) {
-            result.SetBooleanValue( true );
-        } else {
-            result.SetBooleanValue( false );
-        }
+	// NOTE: For global replacement option 'g', we don't properly
+	//   handle situations where a single character of the target
+	//   consists of multiple bytes. These are UTF-8 strings and
+	//   environments where a newline is CRLF. These options can be
+	//   enabled within the search pattern in PCRE.
 
-		pcre_free(re);
+	do {
 
-		if( replace && status<0 ) {
-			result.SetStringValue( "" );
+		if ( empty_match ) {
+			addl_opts = PCRE_NOTEMPTY_ATSTART | PCRE_ANCHORED;
+		} else {
+			addl_opts = 0;
 		}
-		else if( replace ) {
+
+        status = pcre_exec(re, NULL, target, target_len,
+                           target_idx, addl_opts, ovector, oveccount);
+
+		if (empty_match && status == PCRE_ERROR_NOMATCH) {
+			output += target[target_idx];
+			target_idx++;
+			empty_match = false;
+			status = 0;
+			continue;
+		}
+
+		if( status >= 0 && replace ) {
 
 			const char **groups = NULL;
-			string output;
 			int ngroups = status;
-			bool replace_success = true;
+			const char *replace_ptr = replace;
+
+			if ( full_target ) {
+				output.append(&target[target_idx], ovector[0] - target_idx);
+			}
 
 			if( pcre_get_substring_list(target,ovector,ngroups,&groups)!=0 ) {
 				result.SetErrorValue( );
-				replace_success = false;
+				goto cleanup;
 			}
-			else while (*replace) {
-				if (*replace == '\\') {
-					if (isdigit(replace[1])) {
-						int offset = replace[1] - '0';
-						replace++;
+			else while (*replace_ptr) {
+				if (*replace_ptr == '\\') {
+					if (isdigit(replace_ptr[1])) {
+						int offset = replace_ptr[1] - '0';
+						replace_ptr++;
 						if( offset >= ngroups ) {
-							replace_success = false;
-							break;
+							result.SetErrorValue();
+							goto cleanup;
 						}
 						output += groups[offset];
 					} else {
 						output += '\\';
 					}
 				} else {
-					output += *replace;
+					output += *replace_ptr;
 				}
-				replace++;
+				replace_ptr++;
 			}
 
 			pcre_free_substring_list( groups );
 
-			if( replace_success ) {
-				result.SetStringValue( output );
-			}
-			else {
-				result.SetErrorValue( );
+			target_idx = ovector[1];
+			if ( ovector[0] == ovector[1] ) {
+				empty_match = true;
 			}
 		}
 
-		free( ovector );
-    }
+    } while (status >= 0 && find_all);
+
+	if ( status < 0 && status != PCRE_ERROR_NOMATCH ) {
+		result.SetErrorValue();
+	} else if ( !replace ) {
+		result.SetBooleanValue( status >= 0 );
+	} else {
+		if ( full_target ) {
+			output += &target[target_idx];
+		}
+		result.SetStringValue(output);
+	}
+ cleanup:
+	if ( re ) {
+		pcre_free(re);
+	}
+	free(ovector);
     return true;
 #endif
 }

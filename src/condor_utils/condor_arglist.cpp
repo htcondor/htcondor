@@ -149,10 +149,10 @@ ArgListToArgsArray(SimpleList<MyString> const &args_list)
 	SimpleListIterator<MyString> it(args_list);
 	MyString *arg;
 	int i;
-	char **args_array = new char *[args_list.Number()+1];
+	char **args_array = (char **)malloc((args_list.Number()+1)*sizeof(char*));
 	ASSERT(args_array);
 	for(i=0;it.Next(arg);i++) {
-		args_array[i] = strnewp(arg->Value());
+		args_array[i] = strdup(arg->Value());
 		ASSERT(args_array[i]);
 	}
 	args_array[i] = NULL;
@@ -175,9 +175,9 @@ deleteStringArray(char **array)
 {
 	if(!array) return;
 	for(int i=0;array[i];i++) {
-		delete [] array[i];
+		free(array[i]);
 	}
-	delete [] array;
+	free(array);
 }
 
 

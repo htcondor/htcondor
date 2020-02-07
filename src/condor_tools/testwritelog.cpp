@@ -46,7 +46,6 @@
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
@@ -108,6 +107,7 @@ main( int argc, char *argv[] )
 #endif
 
 	// initialize the config settings
+	set_priv_initialize(); // allow uid switching if root
 	config_ex(CONFIG_OPT_NO_EXIT);
 	
 		// Initialize things
@@ -273,9 +273,6 @@ grab_val( const char *str, const char *pattern )
 	}
 	return -1;
 }
-
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
 
 /*
   Initialize information from the configuration files.

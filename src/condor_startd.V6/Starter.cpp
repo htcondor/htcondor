@@ -36,6 +36,7 @@
 #include "classadHistory.h"
 #include "classad_helpers.h"
 #include "ipv6_hostname.h"
+#include "shared_port_endpoint.h"
 
 #if defined(LINUX)
 #include "glexec_starter.linux.h"
@@ -74,8 +75,7 @@ Starter::Starter( const Starter& s )
 	, s_is_dc(false)
 	, s_orphaned_jobad(NULL)
 {
-	if( s.s_pid || s.s_birthdate ||
-	    s.s_port1 >= 0 || s.s_port2 >= 0 )
+	if( s.s_pid || s.s_birthdate )
 	{
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
 	}
@@ -87,7 +87,7 @@ Starter::Starter( const Starter& s )
 	}
 
 	if( s.s_path ) {
-		s_path = strnewp( s.s_path );
+		s_path = strdup( s.s_path );
 	} else {
 		s_path = NULL;
 	}
@@ -106,12 +106,11 @@ Starter::initRunData( void )
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
 	s_hold_timeout = -1;
-	s_port1 = -1;
-	s_port2 = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
 	s_was_reaped = false;
+	s_created_execute_dir = false;
 	s_is_vm_universe = false;
 #if HAVE_BOINC
 	s_is_boinc = false;
@@ -156,7 +155,7 @@ Starter::~Starter()
 	}
 
 	if (s_path) {
-		delete [] s_path;
+		free(s_path);
 	}
 	if( s_ad ) {
 		delete( s_ad );
@@ -176,7 +175,7 @@ Starter::~Starter()
 bool
 Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
-	int requirements = 0;
+	bool requirements = false;
 	ClassAd* merged_ad;
 	if( mach_ad ) {
 		merged_ad = new ClassAd( *mach_ad );
@@ -184,8 +183,8 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	} else {
 		merged_ad = new ClassAd( *s_ad );
 	}
-	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
-		requirements = 0;
+	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
+		requirements = false;
 		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
 		classad::PrettyPrint pp;
 		std::string szbuff;
@@ -196,21 +195,21 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 		
 	}
 	delete( merged_ad );
-	return (bool)requirements;
+	return requirements;
 }
 
 
 bool
 Starter::provides( const char* ability )
 {
-	int has_it = 0;
+	bool has_it = false;
 	if( ! s_ad ) {
 		return false;
 	}
-	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
-		has_it = 0;
+	if( ! s_ad->LookupBool(ability, has_it) ) {
+		has_it = false;
 	}
-	return (bool)has_it;
+	return has_it;
 }
 
 
@@ -228,9 +227,9 @@ void
 Starter::setPath( const char* updated_path )
 {
 	if( s_path ) {
-		delete [] s_path;
+		free(s_path);
 	}
-	s_path = strnewp( updated_path );
+	s_path = strdup( updated_path );
 }
 
 void
@@ -241,71 +240,36 @@ Starter::setIsDC( bool updated_is_dc )
 
 
 void
-Starter::setPorts( int port1, int port2 )
-{
-	s_port1 = port1;
-	s_port2 = port2;
-}
-
-
-void
 Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 {
 	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
 		return;
 	}
 
-		// Check for ATTR_STARTER_IGNORED_ATTRS. If defined,
-		// we insert all attributes from the starter ad except those
-		// in the list. If not, we fall back on our old behavior
-		// of only inserting attributes prefixed with "Has" or
-		// "Java". Either way, we only add the "Has" attributes
-		// into the StringList (the StarterAbilityList)
-	char* ignored_attrs = NULL;
 	StringList* ignored_attr_list = NULL;
-	if (s_ad->LookupString(ATTR_STARTER_IGNORED_ATTRS, &ignored_attrs)) {
-		ignored_attr_list = new StringList(ignored_attrs);
-		free(ignored_attrs);
-
-		// of course, we don't want ATTR_STARTER_IGNORED_ATTRS
-		// in either!
-		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
-	}
+	ignored_attr_list = new StringList();
+	ignored_attr_list->append(ATTR_VERSION);
+	ignored_attr_list->append(ATTR_IS_DAEMON_CORE);
+	
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
-	s_ad->ResetExpr();
-	while( s_ad->NextExpr(lhstr, tree) ) {
+	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		pCopy=0;
 	
-		if (ignored_attr_list) {
-				// insert every attr that's not in the ignored_attr_list
-			if (!ignored_attr_list->contains(lhstr)) {
-				pCopy = tree->Copy();
-				ad->Insert(lhstr, pCopy);
-				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-					list->append(lhstr);
-				}
-			}
-		}
-		else {
-				// no list of attrs to ignore - fallback on old behavior
-			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
-				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
-				if( list ) {
-					list->append( lhstr );
-				}
-			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
-				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+			// insert every attr that's not in the ignored_attr_list
+		if (!ignored_attr_list->contains(lhstr)) {
+			pCopy = tree->Copy();
+			ad->Insert(lhstr, pCopy);
+			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
+				list->append(lhstr);
 			}
 		}
 	}
 
-	if (ignored_attr_list) {
-		delete ignored_attr_list;
-	}
+	delete ignored_attr_list;
 }
 
 
@@ -597,7 +561,7 @@ Starter::finalizeExecuteDir(Claim * claim)
 {
 		// If setExecuteDir() has already been called (e.g. BOINC), then
 		// do nothing.  Otherwise, choose the execute dir now.
-	if( !executeDir() ) {
+	if( s_execute_dir.empty() ) {
 		ASSERT( claim && claim->rip() );
 		setExecuteDir( claim->rip()->executeDir() );
 	}
@@ -606,13 +570,7 @@ Starter::finalizeExecuteDir(Claim * claim)
 char const *
 Starter::executeDir()
 {
-	return s_execute_dir.Length() ? s_execute_dir.Value() : NULL;
-}
-
-char const *
-Starter::encryptedExecuteDir()
-{
-	return s_encrypted_execute_dir.Length() ? s_encrypted_execute_dir.Value() : NULL;
+	return !s_execute_dir.empty() ? s_execute_dir.c_str() : NULL;
 }
 
 // Spawn the starter process that this starter object is managing.
@@ -661,9 +619,8 @@ int Starter::spawn(Claim * claim, time_t now, Stream* s)
 		s_pid = execDCStarter(claim, s);
 	}
 	else {
-			// Use old icky non-daemoncore starter.
-		ASSERT(claim);
-		s_pid = execOldStarter(claim);
+		dprintf( D_ALWAYS, "The standard universe starter is no longer supported!\n" );
+		s_pid = 0;
 	}
 
 	if( s_pid == 0 ) {
@@ -706,8 +663,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_JOB_PRIO, 0);
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
-		MyString gjid;
-		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
+		std::string gjid;
+		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}
@@ -746,15 +703,10 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	}
 
 		// Now, delete any files lying around.
+		// If we created the parent execute directory (say for filesystem
+		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
-	if ( encryptedExecuteDir() ) {
-		// Remove $EXECUTE/encryptedX/dir_pid/*
-		cleanup_execute_dir( s_pid, encryptedExecuteDir(), true );
-		s_encrypted_execute_dir = "";
-	} else {
-		// Remove $EXECUTE/dir_pid/*
-		cleanup_execute_dir( s_pid, executeDir() );
-	}
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 
 #if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
@@ -768,7 +720,7 @@ int
 Starter::execJobPipeStarter( Claim* claim )
 {
 	int rval;
-	MyString lock_env;
+	std::string lock_env;
 	ArgList args;
 	Env env;
 	char* tmp;
@@ -787,7 +739,7 @@ Starter::execJobPipeStarter( Claim* claim )
 		lock_env += DIR_DELIM_CHAR;
 		lock_env += "StarterLock.cod";
 
-		env.SetEnv(lock_env.Value());
+		env.SetEnv(lock_env.c_str());
 	}
 
 		// Create an argument list for this starter, based on the claim.
@@ -894,6 +846,16 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
 
+	// If a slot-type is defined, pass it as the local name
+	// so starter params can switch on slot-type
+	if (claim->rip()->type() != 0) {
+		args.AppendArg("-local-name");
+
+		std::string slot_type_name("slot_type_");
+		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		args.AppendArg(slot_type_name);
+	}
+
 	// Note: the "-a" option is a daemon core option, so it
 	// must come first on the command line.
 	if (append != APPEND_NOTHING) {
@@ -902,13 +864,14 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
 
 		case APPEND_JOBID: {
-			MyString jobid;
-			jobid.formatstr("%d.%d", claim->cluster(), claim->proc());
+			std::string jobid;
+			formatstr(jobid, "%d.%d", claim->cluster(), claim->proc());
 			args.AppendArg(jobid.c_str());
 		} break;
 
-		default:
 		case APPEND_SLOT: args.AppendArg(claim->rip()->r_id_str); break;
+		default:
+			EXCEPT("Programmer Error: unexpected append argument %d\n", append);
 		}
 	}
 
@@ -939,11 +902,16 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
+		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
-		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		dPrintAd( D_JOB, update_ad );
+		if (IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else {
+			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+		}
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -961,7 +929,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 
 		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
-			claim->receiveJobClassAdUpdate( update_ad );
+			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
 			ClassAd * jobAd = claim->ad();
 			if (jobAd) {
@@ -1006,13 +974,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// The starter figures out its execute directory by paraming
-		// for EXECUTE, which we override in the environment here.
-		// This way, all the logic about choosing a directory to use
-		// is in only one place.
-	ASSERT( executeDir() );
-	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
-
 		// Handle encrypted execute directory
 	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
 	FilesystemRemap* fs_remap = NULL;
@@ -1031,25 +992,32 @@ int Starter::execDCStarter(
 		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
 		static int unsigned long privdirnum = 0;
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		s_encrypted_execute_dir.formatstr("%s%cencrypted%lu",executeDir(),
+		formatstr_cat(s_execute_dir,"%cencrypted%lu",
 				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(encryptedExecuteDir(), 0755) < 0 ) {
+		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "Failed to create encrypted dir %s: %s\n",
-			         encryptedExecuteDir(),
+			         s_execute_dir.c_str(),
 			         strerror(errno) );
 			return 0;
 		}
+		s_created_execute_dir = true;
 		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", encryptedExecuteDir() );
+		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
 		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(encryptedExecuteDir()) ) {
+		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
 			// FilesystemRemap object dprintfs out an error message for us
 			return 0;
 		}
-		new_env.SetEnv( "_CONDOR_EXECUTE", encryptedExecuteDir() );
 #endif
 	}
+
+		// The starter figures out its execute directory by paraming
+		// for EXECUTE, which we override in the environment here.
+		// This way, all the logic about choosing a directory to use
+		// is in only one place.
+	ASSERT( executeDir() );
+	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
 	env = &new_env;
 
@@ -1172,10 +1140,11 @@ int Starter::execDCStarter(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
 
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "starter" );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1198,123 +1167,6 @@ int Starter::execDCStarter(
 #endif
 
 	return s_pid;
-}
-
-
-int
-Starter::execOldStarter( Claim * claim )
-{
-#if defined(WIN32) /* THIS IS UNIX SPECIFIC */
-	return 0;
-#else
-	// don't allow this if GLEXEC_STARTER is true
-	//
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		// we don't support using glexec to spawn the old starter
-		dprintf( D_ALWAYS,
-			 "error: can't spawn starter %s via glexec\n",
-			 s_path );
-		return 0;
-	}
-
-	// set up the standard file descriptors
-	//
-	int std[3];
-	std[0] = s_port1;
-	std[1] = s_port1;
-	std[2] = s_port2;
-
-	// set up the starter's arguments
-	//
-	ArgList args;
-	args.AppendArg("condor_starter");
-	args.AppendArg(claim->client()->host());
-	args.AppendArg(daemonCore->InfoCommandSinfulString());
-	if (resmgr->is_smp()) {
-		args.AppendArg("-a");
-		args.AppendArg(claim->rip()->r_id_str);
-	}
-
-	Env env;
-
-		// The starter figures out its execute directory by paraming
-		// for EXECUTE, which we override in the environment here.
-		// This way, all the logic about choosing a directory to use
-		// is in only one place.
-	ASSERT( executeDir() );
-	env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
-
-	// set up the signal mask (block everything, which is what the old
-	// starter expects)
-	//
-	sigset_t full_mask;
-	sigfillset(&full_mask);
-
-	// set up a structure for telling DC to track the starter's process
-	// family
-	//
-	FamilyInfo family_info;
-	family_info.max_snapshot_interval = pid_snapshot_interval;
-	family_info.login = NULL;
-
-	// HISTORICAL COMMENTS:
-		/*
-		 * This should not change process groups because the
-		 * condor_master daemon may want to do a killpg at some
-		 * point...
-		 *
-		 *	if( setpgrp(0,getpid()) ) {
-		 *		EXCEPT( "setpgrp(0, %d)", getpid() );
-		 *	}
-		 */
-			/*
-			 * We _DO_ want to create the starter with it's own
-			 * process group, since when KILL evaluates to True, we
-			 * don't want to kill the startd as well.  The master no
-			 * longer kills via a process group to do a quick clean
-			 * up, it just sends signals to the startd and schedd and
-			 * they, in turn, do whatever quick cleaning needs to be 
-			 * done. 
-			 * Don't create a new process group if the config file says
-			 * not to.
-			 */
-	// END of HISTORICAL COMMENTS
-	//
-	// Create_Process now will param for USE_PROCESS_GROUPS internally and
-	// call setsid if needed.
-
-	// call Create_Process
-	//
-	int new_pid = daemonCore->Create_Process(s_path,       // path to binary
-	                                         args,         // arguments
-	                                         PRIV_ROOT,    // start as root
-	                                         main_reaper,  // reaper
-	                                         FALSE,        // no command port
-	                                         FALSE,        // no command port
-	                                         &env,
-	                                         NULL,         // inherit out cwd
-	                                         &family_info, // new family
-	                                         NULL,         // no inherited sockets
-	                                         std,          // std FDs
-	                                         NULL,         // no inherited FDs
-	                                         0,            // zero nice inc
-	                                         &full_mask,   // signal mask
-	                                         0);           // DC job opts
-
-	// clean up the "ports"
-	//
-	(void)close(s_port1);
-	(void)close(s_port2);
-
-	// check for error
-	//
-	if (new_pid == FALSE) {
-		dprintf(D_ALWAYS, "execOldStarter: Create_Process error\n");
-		return 0;
-	}
-
-	return new_pid;
-#endif
 }
 
 #if defined(LINUX)
@@ -1350,7 +1202,7 @@ Starter::dprintf( int flags, const char* fmt, ... )
 	va_list args;
 	va_start( args, fmt );
 	if ( ! s_dpf.empty()) {
-		MyString fmt_str( s_dpf );
+		std::string fmt_str( s_dpf );
 		fmt_str += ": ";
 		fmt_str += fmt;
 		::_condor_dprintf_va( flags, ident, fmt_str.c_str(), args );
@@ -1419,8 +1271,8 @@ Starter::getIpAddr( void )
 	if( ! s_pid ) {
 		return NULL;
 	}
-	if( !m_starter_addr.IsEmpty() ) {
-		return m_starter_addr.Value();
+	if( !m_starter_addr.empty() ) {
+		return m_starter_addr.c_str();
 	}
 
 	// Fall back on the raw contact string known to daemonCore.
@@ -1608,12 +1460,7 @@ Starter::softkillTimeout( void )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
-		Claim * c = resmgr->getClaimByPid( pid() );
-		if( c && c->rip() && c->rip()->r_id_str ) {
-			dprintf( D_ALWAYS, "%s: max vacate time expired.  Escalating to a fast shutdown of the job.\n",  c->rip()->r_id_str );
-		} else {
-			dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
-		}
+		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
 		killHard(s_is_vm_universe ? vm_killing_timeout : killing_timeout);
 	}
 }

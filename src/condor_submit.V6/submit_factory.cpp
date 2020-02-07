@@ -20,8 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_network.h"
-#include "condor_string.h"
 #include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
@@ -43,8 +41,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
-#include "get_daemon_name.h"
-//#include "condor_qmgr.h"  // only submit_protocol.cpp is allowed to access the schedd's Qmgt functions
 #include "sig_install.h"
 #include "access.h"
 #include "daemon.h"
@@ -53,7 +49,6 @@
 #include "extArray.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "which.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -76,6 +71,7 @@
 #include <submit_utils.h>
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
 #define USE_SUBMIT_UTILS 1
+#include "condor_qmgr.h"
 #include "submit_internal.h"
 
 #include "list.h"
@@ -112,10 +108,9 @@ extern int ClusterId;
 extern int DashDryRun;
 extern int DumpSubmitHash;
 extern int default_to_factory;
-extern unsigned int submit_unique_id; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 
 
-int write_factory_file(const char * filename, const void* data, size_t cb, mode_t access)
+int write_factory_file(const char * filename, const void* data, int cb, mode_t access)
 {
 	int fd = safe_open_wrapper_follow(filename, O_WRONLY|_O_BINARY|O_CREAT|O_TRUNC|O_APPEND, access);
 	if (fd == -1) {
@@ -123,9 +118,10 @@ int write_factory_file(const char * filename, const void* data, size_t cb, mode_
 		return -1;
 	}
 
-	size_t cbwrote = write(fd, data, cb);
+	int cbwrote = write(fd, data, cb);
 	if (cbwrote != cb) {
 		dprintf(D_ALWAYS, "ERROR: write_factory_file(%s): write() failed: %s (%d)\n", filename, strerror(errno), errno);
+		close(fd);
 		return -1;
 	}
 
@@ -276,8 +272,9 @@ int SendClusterAd (ClassAd * ad)
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
 
-	ad->ResetExpr();
-	while (ad->NextExpr(lhstr, tree)) {
+	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		if ( ! lhstr || ! tree) {
 			fprintf( stderr, "\nERROR: Null attribute name or value for cluster %d\n", ClusterId );
 			return -1;
@@ -314,7 +311,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 	// if submit foreach data is not already a disk file, turn it into one.
 	bool make_foreach_file = false;
 	if (spill_items) {
-		PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
+		// PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
 		if (o.items.isEmpty()) {
 			o.foreach_mode = foreach_not;
 		} else {
@@ -330,12 +327,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 	// so make it now.
 	if (make_foreach_file) {
 		MyString foreach_fn;
-		//PRAGMA_REMIND("tj: REMOVE THIS HACK")
-		if (default_to_factory) { // hack to make the test suite work.
-			foreach_fn.formatstr("condor_submit.%d.%u.items", ClusterId, submit_unique_id);
-		} else {
-			foreach_fn.formatstr("condor_submit.%d.items", ClusterId);
-		}
+		foreach_fn.formatstr("condor_submit.%d.items", ClusterId);
 		o.items_filename = hash.full_path(foreach_fn.c_str(), false);
 
 		int fd = safe_open_wrapper_follow(o.items_filename.c_str(), O_WRONLY|_O_BINARY|O_CREAT|O_TRUNC|O_APPEND, 0644);
@@ -347,8 +339,8 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 		std::string line;
 		for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
 			line = item; line += "\n";
-			size_t cbwrote = write(fd, line.data(), line.size());
-			if (cbwrote != line.size()) {
+			int cbwrote = write(fd, line.data(), (int)line.size());
+			if (cbwrote != (int)line.size()) {
 				dprintf(D_ALWAYS, "ERROR: write_items_file(%s): write() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
 				rval = -1;
 				break;
@@ -496,7 +488,7 @@ int submit_factory_job (
 		// if submit foreach data is not already a disk file, turn it into one.
 		bool make_foreach_file = false;
 		if (spill_foreach_data) {
-			PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
+			//PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
 			if (o.items.isEmpty()) {
 				o.foreach_mode = foreach_not;
 			} else {

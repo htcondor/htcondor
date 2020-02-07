@@ -20,6 +20,7 @@
 #include "condor_common.h" 
 #include "condor_snutils.h"
 #include "condor_debug.h"
+#include "condor_random_num.h"
 #include <limits>
 
 #include "stl_string_utils.h"
@@ -38,7 +39,8 @@ bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value()
 bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
 
 
-int vformatstr(std::string& s, const char* format, va_list pargs) {
+static
+int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
 	int n;
@@ -58,7 +60,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     // In this case, fixed buffer was sufficient so we're done.
     // Return number of chars written.
     if (n < fixlen) {
-        s = fixbuf;
+		if (concat) {
+			s.append(fixbuf, n);
+		} else {
+			s.assign(fixbuf, n);
+		}
         return n;
     }
 
@@ -87,7 +93,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     if (nn >= n) EXCEPT("Insufficient buffer size (%d) for printing %d chars", n, nn);
 
     // safe to do string assignment
-    s = varbuf;
+	if (concat) {
+		s.append(varbuf, nn);
+	} else {
+		s.assign(varbuf, nn);
+	}
 
     // clean up our allocated buffer
     delete[] varbuf;
@@ -96,10 +106,18 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     return nn;
 }
 
+int vformatstr(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, false, format, pargs);
+}
+
+int vformatstr_cat(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, true, format, pargs);
+}
+
 int formatstr(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int r = vformatstr(s, format, args);
+    int r = vformatstr_impl(s, false, format, args);
     va_end(args);
     return r;
 }
@@ -109,7 +127,7 @@ int formatstr(MyString& s, const char* format, ...) {
     std::string t;
     va_start(args, format);
     // this gets me the sprintf-standard return value (# chars printed)
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s = t;
     return r;
@@ -117,11 +135,9 @@ int formatstr(MyString& s, const char* format, ...) {
 
 int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
-    std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(s, true, format, args);
     va_end(args);
-    s += t;
     return r;
 }
 
@@ -129,7 +145,7 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s += t.c_str();
     return r;
@@ -262,6 +278,20 @@ void title_case( std::string &str )
 	}
 }
 
+bool ends_with(const std::string& str, const std::string& post) {
+	size_t postSize = post.size();
+	if( postSize == 0 ) { return false; }
+
+	size_t strSize = str.size();
+	if( strSize < postSize ) { return false; }
+
+	size_t offset = strSize - postSize;
+	for( size_t i = 0; i < postSize; ++i ) {
+		if( str[offset + i] != post[i] ) { return false; }
+	}
+	return true;
+}
+
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre)
 {
@@ -328,6 +358,57 @@ int blankline( const char *str )
 	return( (*str=='\0') ? 1 : 0);
 }
 
+/*
+ * return true if the input attibute is in the list of attributes
+ * search is case insensitive.  Items in the list should be space or comma or newline separated
+ * return value is NULL if attribute not found, or a pointer to the first character in the list
+ * after the matching attribute if a match is found
+ *
+ * This code relys on the fact that attribute names can only contain Alpha-numeric characters, _ or .
+ * The list is must be separated by comma, space or non-printing characters and must contain only
+ * valid attribute names otherwise. these assumptions allow for some shortcuts in the code
+ * that make it much faster than an iterative strcasecmp would be.  They also mean that an attempt
+ * to use this to compare arbitrary strings could result in false matches. 
+ * For instance, { is uppercase [ according to this code. and * would match \n
+ *
+ */
+const char * is_attr_in_attr_list(const char * attr, const char * list)
+{
+	// a fairly optimized comparison of characters to see if they match case-insenstively
+	// this ONLY works for A-Za-Z0-9, and can generate false matches if either of the strings
+	// contains non-printing characters, but it will work for our use case here
+	#define ALPHANUM_EQUAL_NOCASE(c1,c2) ((((c1) ^ (c2)) & ~0x20) == 0)
+	// this is true for space, comma and newline, NOT true for :;<=>?@
+	#define IS_SEP_CHAR(ch) ((ch) <= ',')
+
+	const char * a = attr;
+	const char * p = list;
+	while (*p) {
+		a = attr;
+		while (*a && ALPHANUM_EQUAL_NOCASE(*p,*a)) { ++p, ++a; }
+		// we get to here at the end of attr, or when char matching fails against the list
+
+		if ( ! *a) {
+			// at the end of attr, we have a match if we are also at the end of
+			// an entry in the list
+			if ( ! *p || IS_SEP_CHAR(*p)) {
+				// the attribute has ended, so this is a match
+				// return a pointer to where we stopped searching.
+				return p;
+			}
+		}
+
+		// skip to the end of this entry in the list (skip all non-separator characters)
+		while (*p && !IS_SEP_CHAR(*p)) { ++p; }
+		// skip to the start of the next entry (skip separator characters)
+		while (*p && IS_SEP_CHAR(*p)) { ++p; }
+	}
+
+	#undef ALPHANUM_EQUAL_NOCASE
+	#undef IS_SEP_CHAR
+
+	return NULL;
+}
 
 #if 1
 static MyStringTokener tokenbuf;
@@ -431,6 +512,72 @@ size_t filename_offset_from_path(std::string & pathname)
 #endif
 	}
 	return ix;
+}
+
+// if len is 10, this means 10 random ascii characters from the set.
+void
+randomlyGenerateInsecure(std::string &str, const char *set, int len)
+{
+	int i;
+	int idx;
+	int set_len;
+
+    if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	set_len = (int)strlen(set);
+
+	// now pick randomly from the set and fill stuff in
+	for (i = 0; i < len ; i++) {
+		idx = get_random_int_insecure() % set_len;
+		str[i] = set[idx];
+	}
+}
+
+#if 0
+void
+randomlyGeneratePRNG(std::string &str, const char *set, int len)
+{
+	if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	auto set_len = strlen(set);
+	for (int idx = 0; idx < len; idx++) {
+		auto rand_val = get_random_int_insecure() % set_len;
+		str[idx] = set[rand_val];
+	}
+}
+#endif
+
+void
+randomlyGenerateInsecureHex(std::string &str, int len)
+{
+	randomlyGenerateInsecure(str, "0123456789abcdef", len);
+}
+
+void
+randomlyGenerateShortLivedPassword(std::string &str, int len)
+{
+	// Create a randome password of alphanumerics
+	// and safe-to-print punctuation.
+	//
+	//randomlyGeneratePRNG(
+	randomlyGenerateInsecure(
+				str,
+				"abcdefghijklmnopqrstuvwxyz"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"0123456789"
+				"!@#$%^&*()-_=+,<.>/?",
+				len
+				);
 }
 
 // return the bounds of the next token or -1 if no tokens remain

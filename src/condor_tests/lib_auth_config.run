@@ -64,6 +64,8 @@ foreach my $subfile (readdir GD) {
 	#print "input:$input\n"
 #}
 
+my $total_failures = 0;
+
 chdir("$topdir");
 #foreach $input ( glob($inputdir . "/test_auth_*_input") ) {
 foreach my $input ( @inputfiles ) {
@@ -98,11 +100,13 @@ foreach my $input ( @inputfiles ) {
 
   if ( $result != 0 ) {
     print "Authorization test Failure: condor_test_auth < $input\n";
-    exit(1);
   }
+  $total_failures += $result;
 }
 
-print "\n";
-print "Authorization test Success\n";
+  if ($total_failures == 0) {
+    print "\n";
+    print "Authorization test Success\n";
+  }
 
-exit(0);
+exit($total_failures);

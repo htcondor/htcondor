@@ -26,6 +26,8 @@
 
 using namespace std;
 
+#define EMPTY -2
+
 namespace classad {
 
 // ctor
@@ -34,9 +36,8 @@ Lexer ()
 {
 	// initialize lexer state (token, etc.) variables
 	tokenType = LEX_END_OF_INPUT;
-	lexBufferCount = 0;
 	savedChar = 0;
-	ch = 0;
+	ch = EMPTY;
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
@@ -63,11 +64,10 @@ bool Lexer::
 Initialize(LexerSource *source)
 {
 	lexSource = source;
-	ch = lexSource->ReadCharacter();
+	ch = EMPTY;
 
 	// token state initialization
-	lexBuffer = ch;
-	lexBufferCount = 0;
+	lexBuffer.clear();
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
@@ -79,10 +79,9 @@ Initialize(LexerSource *source)
 bool Lexer::
 Reinitialize(void)
 {
-	ch = lexSource->ReadCharacter();
+	ch = EMPTY;
 	// token state initialization
-	lexBuffer = ch;
-	lexBufferCount = 0;
+	lexBuffer.clear();
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
@@ -126,12 +125,21 @@ FinishedParse ()
 }
 
 
+// fetch:  Fetch the next character to be examined, if we don't have
+//   it already.
+void Lexer::
+fetch (void)
+{
+	if (ch == EMPTY) {
+		ch = lexSource->ReadCharacter();
+	}
+}
+
 // Mark:  This function is called when the beginning of a token is detected
 void Lexer::
 mark (void)
 {
-	lexBuffer = ch;
-	lexBufferCount = 0;
+	lexBuffer.clear();
 	accumulating = true;
 	return;
 }
@@ -141,28 +149,28 @@ mark (void)
 void  Lexer::
 cut (void)
 {
-	if(lexBufferCount < lexBuffer.length())
-	{
-		lexBuffer.erase( lexBufferCount );
-	}
 	accumulating = false;
 	return;
 }
 
 
-// Wind:  This function is called when an additional character must be read
-//        from the input source; the conceptual action is to move the cursor
+// Wind:  This function is called when we're done with the current character
+//        and want to either dispose of it or add it to the current token.
+//        By default, we also read the next character from the input source,
+//        though this can be suppressed (when the caller knows we're at the
+//        end of a token.
 void Lexer::
-wind (void)
+wind (bool fetch)
 {
-	if(ch == -1) return;
-	ch = lexSource->ReadCharacter();
-	++lexBufferCount;
-	if( ch == -1 ) return;
-	if( accumulating ) {
-		lexBuffer += ch; 
+	if(ch == EOF) return;
+	if (accumulating && ch != EMPTY) {
+		lexBuffer += ch;
 	}
-	return;
+	if (fetch) {
+		ch = lexSource->ReadCharacter();
+	} else {
+		ch = EMPTY;
+	}
 }
 
 			
@@ -194,7 +202,10 @@ PeekToken (TokenValue *lvalp)
 
 	// Set the token to unconsumed
 	tokenConsumed = false;
-	
+
+	// Fetch the next character, if we haven't already
+	fetch();
+
 	// consume white space
 	while( 1 ) {
 		if( isspace( ch ) ) {
@@ -257,7 +268,6 @@ PeekToken (TokenValue *lvalp)
 		case LEX_CLOSE_BOX:
 		case LEX_CLOSE_PAREN:
 		case LEX_CLOSE_BRACE:
-		case LEX_BACKSLASH:
 			tokenizePunctOperator();
 			break;
 		default:
@@ -354,11 +364,11 @@ tokenizeNumber (void)
 			// get octal or real
 			numberType = INTEGER;
 			while( isdigit( ch ) ) {
-				wind( );
-				if( !isodigit( ch ) ) {
+				if( numberType == INTEGER && !isodigit( ch ) ) {
 					// not an octal number
 					numberType = REAL;
 				}
+				wind();
 			}
 			if( ch == '.' || tolower( ch ) == 'e' ) {
 				numberType = REAL;
@@ -421,9 +431,13 @@ tokenizeNumber (void)
 		long long l;
 		int base = 0;
 		if ( _useOldClassAdSemantics || jsonLex ) {
-			// Old ClassAds don't support octal or hexidecimal
+			// Old ClassAds and JSON don't support octal or hexidecimal
 			// representations for integers.
 			base = 10;
+			if ( lexBuffer[0] == '0' && lexBuffer.length() > 1 ) {
+				tokenType = LEX_TOKEN_ERROR;
+				return( tokenType );
+			}
 		}
 #ifdef WIN32
 		l = _strtoi64( lexBuffer.c_str(), NULL, base );
@@ -569,13 +583,11 @@ tokenizeString(char delim)
 				tempch = lexSource->ReadCharacter();
 			}
 			if (tempch != delim) {  // a new token exists after the string
-                if (tempch != -1) {
-                    lexSource->UnreadCharacter();
-                }
+				ch = tempch;
 				stringComplete = true;
 			} else {    // the adjacent string is to be concatenated to the existing string
-				lexBuffer.erase(lexBufferCount--); // erase the lagging '\"'
 				wind();
+				lexBuffer.erase(lexBuffer.length() - 1); // erase the lagging '\"'
 			}
 		}
 		else {
@@ -585,7 +597,9 @@ tokenizeString(char delim)
 		}    
 	}
 	cut( );
-	wind( );	// skip over the close quote
+	if (ch == delim) {
+		wind(false);	// skip over the close quote
+	}
 	bool validStr = true; // to check if string is valid after converting escape
 	bool quoted_expr = false; // for JSON, does string look like a quoted expression
 	if ( jsonLex ) {
@@ -643,15 +657,11 @@ tokenizeStringOld(char delim)
 			//   whitespace after a string that ends with a backslash.
 			//   With some contortions, we can handle trailing whitespace.
 			tempch = lexSource->ReadCharacter();
-			if ( tempch > 0 ) {
-				lexSource->UnreadCharacter();
-			}
 			if ( tempch > 0 && tempch != '\n' ) {
 				// more text after quote, quote is part of the string value
 				// remove backslash before quote
-				lexBuffer.erase(lexBufferCount--);
-				lexBuffer[lexBufferCount] = '"';
-				wind();
+				lexBuffer[lexBuffer.length()-1] = delim;
+				ch = tempch;
 			} else {
 				// string ends with a backslash
 				stringComplete = true;
@@ -664,7 +674,9 @@ tokenizeStringOld(char delim)
 		}
 	}
 	cut( );
-	wind( );	// skip over the close quote
+	if (ch == delim) {
+		wind(false);	// skip over the close quote
+	}
 	bool validStr = true; // to check if string is valid after converting escape
 	yylval.SetStringValue( lexBuffer.c_str( ) );
 	if (validStr) {
@@ -692,7 +704,7 @@ tokenizePunctOperator (void)
 	int extra_lookahead;
 
 	mark( );
-	wind ();
+	wind (false);
 	switch (oldch) {
 		// these cases don't need lookaheads
 		case '.':
@@ -789,33 +801,36 @@ tokenizePunctOperator (void)
 
 		case '&':
 			tokenType = LEX_BITWISE_AND;
+			fetch();
 			if (ch == '&') {
 				tokenType = LEX_LOGICAL_AND;
-				wind ();
+				wind (false);
 			}
 			break;
 
 
 		case '|':
 			tokenType = LEX_BITWISE_OR;
+			fetch();
 			if (ch == '|') {
 				tokenType = LEX_LOGICAL_OR;
-				wind ();
+				wind (false);
 			}
 			break;
 
 
 		case '<':
 			tokenType = LEX_LESS_THAN;
+			fetch();
 			switch (ch) {
 				case '=':
 					tokenType = LEX_LESS_OR_EQUAL;
-					wind ();
+					wind (false);
 					break;
 
 				case '<':
 					tokenType = LEX_LEFT_SHIFT;
-					wind ();
+					wind (false);
 					break;
 
 				default:
@@ -827,10 +842,11 @@ tokenizePunctOperator (void)
 
 		case '>':
 			tokenType = LEX_GREATER_THAN;
+			fetch();
 			switch (ch) {
 				case '=':
 					tokenType = LEX_GREATER_OR_EQUAL;
-					wind ();
+					wind (false);
 					break;
 
 				case '>':
@@ -838,7 +854,7 @@ tokenizePunctOperator (void)
 					wind ();
 					if (ch == '>') {
 						tokenType = LEX_URIGHT_SHIFT;
-						wind ();
+						wind (false);
 					}
 					break;
 				
@@ -851,10 +867,11 @@ tokenizePunctOperator (void)
 
 		case '=':
 			tokenType = LEX_BOUND_TO;
+			fetch();
 			switch (ch) {
 				case '=':
 					tokenType = LEX_EQUAL;
-					wind ();
+					wind (false);
 					break;
 
 				case '?':
@@ -868,7 +885,7 @@ tokenizePunctOperator (void)
 						return tokenType;
 					}
 
-					wind ();
+					wind (false);
 					break;
 
 				case '!':
@@ -877,7 +894,7 @@ tokenizePunctOperator (void)
 					if (extra_lookahead == '=') {
 						tokenType = LEX_META_NOT_EQUAL;
 						wind();
-						wind();
+						wind(false);
 					}
 					break;
 
@@ -890,10 +907,11 @@ tokenizePunctOperator (void)
 
 		case '!':
 			tokenType = LEX_LOGICAL_NOT;
+			fetch();
 			switch (ch) {
 				case '=':
 					tokenType = LEX_NOT_EQUAL;
-					wind ();
+					wind (false);
 					break;
 
 				default:
@@ -974,7 +992,6 @@ strLexToken (int tokenValue)
 		case LEX_CLOSE_PAREN:            return "LEX_CLOSE_PAREN";
 		case LEX_OPEN_BRACE: 			 return "LEX_OPEN_BRACE";
 		case LEX_CLOSE_BRACE: 			 return "LEX_CLOSE_BRACE";
-		case LEX_BACKSLASH:              return "LEX_BACKSLASH";
 
 		default:
 				return "** Unknown **";

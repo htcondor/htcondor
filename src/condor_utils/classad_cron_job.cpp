@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_string.h"
 #include "subsystem_info.h"
 #include "env.h"
 #include "condor_cron_job.h"

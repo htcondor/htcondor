@@ -26,7 +26,6 @@
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "basename.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "condor_vm_universe_types.h"
 #include "hook_utils.h"
 #include "classad_visa.h"
@@ -801,13 +800,13 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 void
 JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 {
-	int value;
-	if (!job_ad->EvalBool(ATTR_WANT_STARTER_EXECUTION_VISA, NULL, value) ||
+	bool value;
+	if (!job_ad->LookupBool(ATTR_WANT_STARTER_EXECUTION_VISA, value) ||
 	    !value)
 	{
 		return;
 	}
-	MyString iwd;
+	std::string iwd;
 	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
 		dprintf(D_ALWAYS,
 		        "writeExecutionVisa error: no IWD in job ad!\n");
@@ -818,7 +817,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	bool ok = classad_visa_write(&visa_ad,
 	                             get_mySubSystem()->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
-	                             iwd.Value(),
+	                             iwd.c_str(),
 	                             &filename);
 	set_priv(priv);
 	if (ok) {
@@ -897,20 +896,17 @@ JobInfoCommunicator::startUpdateTimer( void )
 }
 
 
-/* 
+/*
    We can't just have our periodic timer call periodicJobUpdate()
    directly, since it passes in arguments that screw up the default
    bool that determines if we want to ensure the update works.  So,
    the periodic updates call this function instead, which calls the
    non-ensure version.
 */
-int
+void
 JobInfoCommunicator::periodicJobUpdateTimerHandler( void )
 {
-	if( periodicJobUpdate(NULL, false) ) {
-		return TRUE;
-	}
-	return FALSE;
+	periodicJobUpdate(NULL, false);
 }
 
 

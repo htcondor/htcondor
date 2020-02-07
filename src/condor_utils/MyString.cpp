@@ -21,11 +21,10 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_snutils.h"
-#include "condor_string.h"
-#include "condor_random_num.h"
+#include "condor_debug.h"
 #include "strupr.h"
-#include "simplelist.h"
 #include <limits>
+#include <vector>
 
 /*--------------------------------------------------------------------
  *
@@ -136,6 +135,17 @@ operator=(const MyString& S)
     return *this;
 }
 
+/** Destructively moves a MyString guts from rhs to this */
+MyString& 
+MyString::operator=(MyString &&rhs) {
+	delete Data;
+	this->Data     = rhs.Data;
+	this->Len      = rhs.Len;
+	this->capacity = rhs.capacity;
+	rhs.init();
+	return *this;
+}
+
 MyString& MyString::
 operator=(const std::string& S) 
 {
@@ -225,7 +235,7 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (sz <= capacity && capacity > 0) {
+	if (sz <= capacity && capacity > 0 && Data) {
 		success = true;
 	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
@@ -360,10 +370,6 @@ template <> bool MyString::serialize_int<bool>(bool val) { append_str(val ? "1" 
 
 #ifdef WIN32
 #define strtoull _strtoui64
-#pragma push_macro("min")
-#pragma push_macro("max")
-#undef min
-#undef max
 #endif
 
 // deserialize an int into the given value, and advance the deserialization pointer.
@@ -484,11 +490,6 @@ void force_mystring_templates() {
 }
 #endif
 
-#ifdef WIN32
- #pragma pop_macro("min")
- #pragma pop_macro("max")
-#endif
-
 MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
 
 
@@ -510,7 +511,7 @@ MyString::substr(int pos, int len) const
 	if ( pos < 0 ) {
 		pos = 0;
 	}
-	if ( pos + len > Len ) {
+	if ( len > Len - pos ) {
 		len = Len - pos;
 	}
 	S.reserve( len );
@@ -602,7 +603,7 @@ MyString::replaceString(
 	const char *pszReplaceWith, 
 	int iStartFromPos) 
 {
-	SimpleList<int> listMatchesFound; 		
+	std::vector<int> listMatchesFound;
 	
 	int iToReplaceLen = (int)strlen(pszToReplace);
 	if (!iToReplaceLen) {
@@ -614,21 +615,21 @@ MyString::replaceString(
 		iStartFromPos = find(pszToReplace, iStartFromPos);
 		if (iStartFromPos == -1)
 			break;
-		listMatchesFound.Append(iStartFromPos);
+		listMatchesFound.push_back(iStartFromPos);
 		iStartFromPos += iToReplaceLen;
 	}
-	if (!listMatchesFound.Number())
+	if (!listMatchesFound.size())
 		return false;
 	
 	int iLenDifPerMatch = iWithLen - iToReplaceLen;
-	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.Number();
+	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.size();
 	char *pNewData = new char[iNewLen+1];
 		
 	int iItemStartInData;
 	int iPosInNewData = 0;
 	int iPreviousEnd = 0;
-	listMatchesFound.Rewind();
-	while(listMatchesFound.Next(iItemStartInData)) {
+	for(size_t i = 0; i < listMatchesFound.size(); i++) {
+		iItemStartInData = listMatchesFound[i];
 		memcpy(pNewData + iPosInNewData, 
 			   Data + iPreviousEnd, 
 			   iItemStartInData - iPreviousEnd);
@@ -755,12 +756,38 @@ MyString::chomp( void )
 	return chomped;
 }
 
+// Trim leading and trailing whitespace in place in the given buffer
+// returns the new size of data in the buffer
+// this does NOT \0 terminate the resulting buffer
+// but you can insure that it is \0 terminated by:
+//   buf[trim_in_place(buf, strlen(buf))] = 0;
+// Because of the way this is coded, if length includes the terminating \0
+// then this will trim only leading whitespace.
+// note: this is here rather than in a string utils because of condorapi
+int trim_in_place(char* buf, int length)
+{
+	int pos = length;
+	while (pos > 1 && isspace(buf[pos-1])) { --pos; }
+	if (pos < length) { length = pos; }
+	pos = 0;
+	while (pos < length && isspace(buf[pos])) { ++pos; }
+	if (pos > 0) {
+		length -= pos;
+		if (length > 0) { memmove(buf, &buf[pos], length); }
+	}
+	return length;
+}
+
 void
 MyString::trim( void )
 {
 	if( Len == 0 ) {
 		return;
 	}
+#if 1 // inline trim
+	Len = trim_in_place(Data, Len);
+	Data[Len] = '\0';
+#else
 	int		begin = 0;
 	while ( begin < Len && isspace(Data[begin]) ) { ++begin; }
 
@@ -770,6 +797,7 @@ MyString::trim( void )
 	if ( begin != 0 || end != Length() - 1 ) {
 		*this = substr(begin, 1 + end - begin);
 	}
+#endif
 }
 
 char
@@ -782,11 +810,41 @@ MyString::trim_quotes(const char * quote_chars)
 	char ch = Data[0];
 	if (strchr(quote_chars, ch)) {
 		if (Data[Len - 1] == ch) {
+#if 1 // inline trime
+			if (remove_prefix(&Data[Len-1])) {
+				Len -= 1;
+				Data[Len] = '\0';
+			}
+#else
 			*this = substr(1, Len - 2);
+#endif
 			return ch;
 		}
 	}
 	return 0;
+}
+
+bool
+MyString::remove_prefix(const char * prefix)
+{
+	if (Len <= 0)
+		return false;
+
+	int pos = 0;
+	for (const char * p = prefix; *p; ++p, ++pos) {
+		if (pos >= Len || *p != Data[pos]) {
+			return false;
+		}
+	}
+
+	if (pos <= 0) {
+		return false;
+	}
+
+	Len -= pos;
+	if (Len > 0) { memmove(Data, &Data[pos], Len); }
+	Data[Len] = 0;
+	return true;
 }
 
 void
@@ -804,65 +862,6 @@ MyString::RemoveAllWhitespace( void )
 	}
 	Data[j] = '\0';
 	Len = j;
-}
-
-// if len is 10, this means 10 random ascii characters from the set.
-void
-MyString::randomlyGenerate(const char *set, int len)
-{
-	int i;
-	int idx;
-	int set_len;
-
-    if (!set || len <= 0) {
-		// passed in NULL set, so automatically MyString is empty
-		// or told the string size is negative or nothing, again empty string.
-		if (Data) {
-			Data[0] = '\0';
-		}
-		Len = 0;
-		// leave capacity alone.
-		return;
-	}
-
-	// start over from scratch with this string.
-    if (Data) {
-		delete[] Data;
-	}
-
-	Data = new char[len+1]; 
-	Data[len] = '\0';
-	Len = len;
-	capacity = len;
-
-	set_len = (int)strlen(set);
-
-	// now pick randomly from the set and fill stuff in
-	for (i = 0; i < len ; i++) {
-		idx = get_random_int() % set_len;
-		Data[i] = set[idx];
-	}
-}
-
-void
-MyString::randomlyGenerateHex(int len)
-{
-	randomlyGenerate("0123456789abcdef", len);
-}
-
-void
-MyString::randomlyGeneratePassword(int len)
-{
-	// Create a randome password of alphanumerics
-	// and safe-to-print punctuation.
-	//
-	randomlyGenerate(
-				"abcdefghijklmnopqrstuvwxyz"
-				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-				"0123456789"
-				"!@#$%^&*()-_=+,<.>/?",
-				len
-				);
 }
 
 void
@@ -1079,12 +1078,17 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *--------------------------------------------------------------------*/
 
 MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
-/*
-MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
-{
-	if (str) Tokenize(str);
+
+MyStringTokener &
+MyStringTokener::operator=(MyStringTokener &&rhs) {
+	free(tokenBuf);
+	this->tokenBuf = rhs.tokenBuf;
+	this->nextToken = rhs.nextToken;
+	rhs.tokenBuf = nullptr;
+	rhs.nextToken = nullptr;
+	return *this;
 }
-*/
+
 MyStringTokener::~MyStringTokener()
 {
 	if (tokenBuf) {
@@ -1149,6 +1153,13 @@ MyStringWithTokener::MyStringWithTokener(const char *s)
 	init();
 	size_t s_len = s ? strlen(s) : 0;
 	assign_str(s, (int)s_len);
+}
+
+MyStringWithTokener &
+MyStringWithTokener::operator=(MyStringWithTokener &&rhs) {
+	MyString::operator=(rhs);
+	this->tok = std::move(rhs.tok);
+	return *this;
 }
 
 #if 1

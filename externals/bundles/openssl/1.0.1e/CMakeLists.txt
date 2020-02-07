@@ -62,7 +62,7 @@ if (WITH_OPENSSL)
 			${OPENSSL_INSTALL_LOC}/lib/ssleay32.dll
 			DESTINATION ${C_LIB} )
 
-		condor_post_external( openssl include OFF )
+		condor_post_external( openssl include OFF "${OPENSSL_FOUND}" )
 
 		set(BUILDING_OPENSSL ON PARENT_SCOPE)
 

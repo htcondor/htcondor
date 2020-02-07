@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
-#include "condor_socket_types.h"
 #include "condor_md.h"
 #include "selector.h"
 #include "ccb_client.h"
@@ -576,7 +575,7 @@ ReliSock::peek_end_of_message()
 	return false;
 }
 
-const char * ReliSock :: isIncomingDataMD5ed()
+const char * ReliSock :: isIncomingDataHashed()
 {
     return NULL;    // For now
 }
@@ -584,7 +583,6 @@ const char * ReliSock :: isIncomingDataMD5ed()
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-
         // Check to see if we need to encrypt
         // Okay, this is a bug! H.W. 9/25/2001
 
@@ -616,7 +614,7 @@ ReliSock::put_bytes_after_encryption(const void *dta, int sz) {
 
 	int		nw;
 	int 	tw = 0;
-	int		header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		header_size = isOutgoing_Hash_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	for(nw=0;;) {
 		
 		if (snd_msg.buf.full()) {
@@ -1182,6 +1180,8 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 		} else {
 			result = m_authob->authenticate( hostAddr, methods, errstack, auth_timeout, non_blocking );
 		}
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
+
 		if ( result == 2 ) {
 			m_auth_in_progress = true;
 		}
@@ -1211,6 +1211,7 @@ int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, ch
 	if( m_auth_in_progress )
 	{
 		result = m_authob->authenticate_continue(errstack, non_blocking);
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
 		if (result == 2) {
 			return result;
 		}

@@ -21,11 +21,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "nullfile.h"
-#include "filename_tools.h"
 
 #ifdef WIN32
 #else
@@ -154,8 +151,8 @@ AzureJob::AzureJob( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_AZURE_AUTH_FILE, m_authFile );
 
 	if ( m_authFile.empty() ) {
-		error_string = "Auth file not defined";
-		goto error_exit;
+		// This means attempt to grab the default Azure CLI credentials
+		m_authFile = "NULL";
 	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
@@ -254,7 +251,7 @@ AzureJob::AzureJob( ClassAd *classad ) :
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 
 	return;
@@ -281,8 +278,6 @@ void AzureJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 	std::string gahp_error_code;
 	std::string tmp_str;
@@ -305,11 +300,11 @@ void AzureJob::doEvaluateState()
 		gahp_error_code = "";
 
 		// JEF: Crash the gridmanager if requested by the job
-		int should_crash = 0;
+		bool should_crash = false;
 		jobAd->Assign( "GMState", gmState );
-		jobAd->SetDirtyFlag( "GMState", false );
+		jobAd->MarkAttributeClean( "GMState" );
 
-		if ( jobAd->EvalBool( "CrashGM", NULL, should_crash ) && should_crash ) {
+		if ( jobAd->LookupBool( "CrashGM", should_crash ) && should_crash ) {
 			EXCEPT( "Crashing gridmanager at the request of job %d.%d",
 					procID.cluster, procID.proc );
 		}
@@ -327,8 +322,7 @@ void AzureJob::doEvaluateState()
 				// constructor is called while we're connected to the schedd).
 
 				// JEF: Save GMSession to the schedd if needed
-				jobAd->GetDirtyFlag( "GMSession", &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( "GMSession" ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -392,9 +386,7 @@ void AzureJob::doEvaluateState()
 					SetRemoteJobId(build_vm_name().c_str());
 				}
 
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -489,9 +481,7 @@ void AzureJob::doEvaluateState()
 
 			case GM_SAVE_VM_INFO:
 
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID,
-									 &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					// Wait for the instance id to be saved to the schedd
 					requestScheddUpdate( this, true );
 					break;
@@ -551,9 +541,7 @@ void AzureJob::doEvaluateState()
 				if ( condorState != HELD && condorState != REMOVED ) {
 					JobTerminated();
 					if ( condorState == COMPLETED ) {
-						jobAd->GetDirtyFlag( ATTR_JOB_STATUS,
-											 &attr_exists, &attr_dirty );
-						if ( attr_exists && attr_dirty ) {
+						if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 							requestScheddUpdate( this, true );
 							break;
 						}
@@ -590,7 +578,7 @@ void AzureJob::doEvaluateState()
 
 				// Only allow a rematch *if* we are also going to perform a resubmit
 				if ( wantResubmit || doResubmit ) {
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 				}
 
 				if ( wantResubmit ) {
@@ -640,7 +628,7 @@ void AzureJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 					// Set ad attributes so the schedd finds a new match.
-					int dummy;
+					bool dummy;
 					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 						jobAd->Assign( ATTR_JOB_MATCHED, false );
 						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -662,10 +650,7 @@ void AzureJob::doEvaluateState()
 				// through. However, since we registered update events the
 				// first time, requestScheddUpdate won't return done until
 				// they've been committed to the schedd.
-				const char *name;
-				ExprTree *expr;
-				jobAd->ResetExpr();
-				if ( jobAd->NextDirtyExpr(name, expr) ) {
+				if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 					requestScheddUpdate( this, true );
 					break;
 				}

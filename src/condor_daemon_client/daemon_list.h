@@ -28,6 +28,7 @@
 #include "condor_query.h"
 
 
+class DCTokenRequester;
 class DCCollector;
 class CondorQuery;
 
@@ -76,6 +77,8 @@ public:
 	void deleteCurrent();
 	void DeleteCurrent();
 
+	bool shouldTryTokenRequest();
+
  protected:
 	SimpleList<Daemon*> list;
 
@@ -108,7 +111,9 @@ class CollectorList : public DaemonList {
 
 		// Send updates to all the collectors
 		// return - number of successfull updates
-	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking);
+	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking,
+		DCTokenRequester *token_requester = nullptr, const std::string &identity = "",
+		const std::string authz_name = "");
 
 		// use this to detach the ad sequence counters before destroying the collector list
 		// we do this when we want to move the sequence counters to a new list

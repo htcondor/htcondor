@@ -373,7 +373,7 @@ class ISkype(EventHandlingBase):
         while '' in arg:
             arg.remove('')
         jarg = ' '.join(arg)
-        if Set == None: # Get
+        if Set is None: # Get
             if Cache and self._Cache and h in self._CacheDict:
                 return self._CacheDict[h]
             Value = self._DoCommand('GET %s' % jarg, jarg)
@@ -397,9 +397,9 @@ class ISkype(EventHandlingBase):
 
     def _Alter(self, ObjectType, ObjectId, AlterName, Args=None, Reply=None):
         com = 'ALTER %s %s %s' % (str(ObjectType), str(ObjectId), str(AlterName))
-        if Reply == None:
+        if Reply is None:
             Reply = com
-        if Args != None:
+        if Args is not None:
             com = '%s %s' % (com, Args)
         reply = self._DoCommand(com, Reply)
         arg = com.split()
@@ -416,7 +416,7 @@ class ISkype(EventHandlingBase):
 
     def _Search(self, ObjectType, Args=None):
         com = 'SEARCH %s' % ObjectType
-        if Args != None:
+        if Args is not None:
             com = '%s %s' % (com, Args)
         return tuple(esplit(chop(self._DoCommand(com))[-1], ', '))
 

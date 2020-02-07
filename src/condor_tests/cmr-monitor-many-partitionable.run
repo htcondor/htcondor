@@ -62,6 +62,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Many';
 #
 # Verify the configuration before running the test.
 #
+sleep(5);
 CustomMachineResource::TestSlotAndResourceCount( 1, $testName, "SQUID" );
 CustomMachineResource::TestSlotAndResourceCount( 1, $testName, "TAKO" );
 

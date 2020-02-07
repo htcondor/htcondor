@@ -1,99 +1,158 @@
-import datetime
-import errno
-import htcondor
-import os
-import subprocess
+from __future__ import absolute_import
+
+import atexit
 import sys
 import time
+import traceback
 
-from PersonalCondor import PersonalCondor
-from Utils import Utils
-
-JOB_SUCCESS = 0
-JOB_FAILURE = 1
-
-TEST_SUCCESS = 0
-TEST_FAILURE = 1
-
+from .Globals import *
+from .Utils import Utils
+from .PersonalCondor import PersonalCondor
 
 class CondorTest(object):
 
-    def __init__(self, name):
-        self._name = name
-        self._personal_condors = dict()
+    #
+    # Personal Condor management
+    #
+    _personal_condors = { }
+
+    #
+    # Subtest reporting.  The idea here is two-fold: (1) to abstract away
+    # reporting (e.g., for Metronome or for CTests or for Jenkins) and
+    # (2) to help test authors catch typos and accidentally skipped tests.
+    #
+    _tests = { }
+
+    #
+    # Exit code defaults to false, until proven successful
+    #
+    _exit_code = TEST_FAILURE
+
+    #
+    # Any exception in the Python runtime should be considered a test failure.
+    # Register an exception catch, however this should not exit immediately.
+    # Instead, keep track of it and handle later in the ExitHandler() function.
+    #
+    _is_exception = False
+    def excepthook(exctype, value, tb):
+        traceback.print_exception(exctype, value, tb)
+        CondorTest._is_exception = True
+    sys.excepthook = excepthook
+
+    # @return A PersonalCondor object.  The corresponding master daemon
+    # has been started.
+    #
+    # (FIXME) In the default case, locate the "current"/"default" personal
+    # condor that the test suite should have already started for us.
+    # Also, if CONDOR_CONFIG is not set already, complain.
+    #
+    # (The above may indicate that this class should really be CondorInstance,
+    # instead.  We also may want to allow a CondorInstance to be constructed
+    # by passing it a (full) filepath to a CONDOR_CONFIG.)
+    #
+    # Otherwise, construct a new personal condor and register an
+    # atexit function to make sure we shut it down (FIXME: aggressively).
+    #
+    # Make the returned PersonalCondor the 'active' object (that is, set
+    # its CONDOR_CONFIG in the enviroment).
+    #
+    @staticmethod
+    def StartPersonalCondor(name, params=None, ordered_params=None):
+        pc = CondorTest._personal_condors.get( name )
+        if pc is None:
+            pc = PersonalCondor( name, params, ordered_params )
+            CondorTest._personal_condors[ name ] = pc
+       	if not pc.Start():
+       		raise RuntimeError("Personal condor '{0}' failed to start.".format(name));
+        return pc
+
+    @staticmethod
+    def StopPersonalCondor(name):
+        pc = CondorTest._personal_condors.get( name )
+        if pc is not None:
+            pc.Stop()
+            del CondorTest._personal_condors[name]
+
+    @staticmethod
+    def StopAllPersonalCondors():
+        for name, pc in CondorTest._personal_condors.keys():
+            pc.Stop()
+        CondorTest._personal_condors.clear()
 
 
-    def __del__(self):
-        self.End()
+    # @param subtest An arbitrary string denoting which part of the test
+    #                passed or failed, or the name of test if it's indivisible.
+    # @param message An arbitrary string explaining why the (sub)test failed.
+    @staticmethod
+    def RegisterFailure( subtest, message ):
+        Utils.TLog( "[" + subtest + "] FAILURE: " + message )
+        CondorTest._tests[ subtest ] = ( TEST_FAILURE, message )
+        return None
+
+    @staticmethod
+    def RegisterSuccess( subtest, message ):
+        Utils.TLog( "[" + subtest + "] SUCCESS: " + message )
+        CondorTest._tests[ subtest ] = ( TEST_SUCCESS, message )
+        return None
+
+    # @param list A list of arbitrary strings corresponding to parts of the
+    #             test.  The test will fail if any member of this list has
+    #             not been the first argument to RegisterSuccess().
+    @staticmethod
+    def RegisterTests( list ):
+        for test in list:
+            CondorTest._tests[ test ] = ( TEST_SKIPPED, "[initial state]" )
 
 
-    def _failure_callback_fn(self):
-        Utils.TLog("Default CondorTest failure callback invoked")
+    #
+    # Exit handling.
+    #
+
+    @staticmethod
+    def ExitHandler():
+        # We're headed out the door, start killing our PCs.
+        for name, pc in CondorTest._personal_condors.items():
+            pc.BeginStopping()
+
+        # Check for any failed tests
+        tests_failed = False
+        for subtest in CondorTest._tests.keys():
+            record = CondorTest._tests[subtest]
+            if record[0] != TEST_SUCCESS:
+                Utils.TLog( "[" + subtest + "] did not succeed, failing test!" )
+                tests_failed = True
+
+        if tests_failed is False and CondorTest._is_exception is False:
+            CondorTest._exit_code = TEST_SUCCESS
+
+        # Make sure the PCs are really gone.
+        if CondorTest._personal_condors:
+            Utils.TLog( "Waiting for personal condor(s) to finish stopping..." )
+            time.sleep(5)
+            for name, pc in CondorTest._personal_condors.items():
+                pc.FinishStopping()
+
+        # If we're the last registered exit handler to raise an exception,
+        # this would determine the interpreter's exit code, but instead
+        # causes a scary-looking KeyError warning from the threading module.
+        #
+        # To avoid that, if we've imported the threading module, remove it
+        # from the sys.modules dictionary.  This is probably wildly unsafe,
+        # but since we're in the exit handler, that probably doesn't matter.
+        if sys.modules.get("threading") is not None:
+        	del sys.modules["threading"]
+        sys.exit(CondorTest._exit_code)
+
+    # The 'early-out' method.  Records the intended exit code, because
+    # Python doesn't.  We could skip using the atexit library, but this
+    # is more-obviously correct.
+    @staticmethod
+    def Exit( code ):
+        CondorTest._exit_code = code
+        return CondorTest._original_exit( code )
 
 
-    def _submit_callback_fn(self):
-        Utils.TLog("Default CondorTest submit callback invoked")
-
-
-    def _success_callback_fn(self):
-        Utils.TLog("Default CondorTest success callback invoked")
-
-
-    # @return: -1 if error, or the numeric key >=0 of this PersonalCondor instance if success
-    def StartPersonalCondor(self):
-        personal = PersonalCondor(self._name)
-        success = personal.Start()
-        if success is not True:
-            return -1
-        self._personal_condors[0] = personal
-        return 0
-
-
-    def SubmitJob(self, job, wait=True, key=0):
-
-        self._submit_callback_fn()
-
-        result = JOB_FAILURE
-        
-        # If no PersonalCondor objects are registered to this test, submit to system condor
-        if len(self._personal_condors) == 0:
-            result = job.Submit(wait)
-        # If a single PersonalCondor object is registered, update the system CONDOR_CONFIG 
-        # to point to that object's condor_config.local, then submit the test
-        elif len(self._personal_condors) == 1:
-            for key, personal in self._personal_condors.items():
-                personal.SetCondorConfig()
-                result = job.Submit(wait)
-        # If multiple PersonalCondor objects are registered, check the user-supplied key
-        # value, update CONDOR_CONFIG to point to the specific instance, then submit the test
-        elif len(self._personal_condors) > 1:
-            self._personal_condors[key].SetCondorConfig()
-            result = job.Submit(wait)
-
-        # Invoke the appropriate callback function
-        Utils.TLog("Submit returned result = " + str(result))
-        if result == JOB_SUCCESS:
-            self._success_callback_fn()
-        elif result == JOB_FAILURE:
-            self._failure_callback_fn()
-
-
-    def RegisterSubmit(self, _submit_callback_fn):
-        self._submit_callback_fn = _submit_callback_fn
-
-
-    def RegisterSuccess(self, _success_callback_fn):
-        self._success_callback_fn = _success_callback_fn
-
-
-    def RegisterFailure(self, _failure_callback_fn):
-        self._failure_callback_fn = _failure_callback_fn
-
-
-    def End(self):
-        try:
-            for key, personal in self._personal_condors.items():
-                personal.Stop()
-                del self._personal_condors[key]
-        except:
-            Utils.TLog("PersonalCondor was not running, ending test")
+# Register the exit handler and wrap sys.exit on module load.
+atexit.register( CondorTest.ExitHandler )
+CondorTest._original_exit = sys.exit
+sys.exit = CondorTest.Exit

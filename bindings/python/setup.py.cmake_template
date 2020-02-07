@@ -1,0 +1,64 @@
+from setuptools import setup
+from setuptools.dist import Distribution
+import os
+
+package_name = "htcondor"
+packages = "${PACKAGES}".split(';')
+version = "${PACKAGE_VERSION}${APPEND_VERSION}"
+long_description = open("${CMAKE_CURRENT_SOURCE_DIR}/README.rst", "r").read()
+
+package_data = {}
+if os.name == "posix":
+    package_data["htcondor"] = ["*.so", "htcondor_libs/*.so*"]
+    package_data["classad"] = ["*.so"]
+else:
+    package_data["htcondor"] = ["*.pyd", "*.dll", "htcondor_libs/*.dll*"]
+    package_data["classad"] = ["*.pyd", "*.dll"]
+
+class BinaryDistribution(Distribution):
+    """ Forces BinaryDistribution. """
+
+    def has_ext_modules(self):
+        return True
+
+    def is_pure(self):
+        return False
+
+
+setup(
+    name=package_name,
+    version=version,
+    url="http://htcondor.org/",
+    license="ASL 2.0",
+    description="HTCondor Python bindings",
+    long_description=long_description,
+    distclass=BinaryDistribution,
+    packages=packages,
+    package_data=package_data,
+    zip_safe=False,
+    author="The HTCondor Project",
+    author_email="htcondor-admin@cs.wisc.edu",
+    maintainer="Brian Bockelman, Jason Patton, Tim Theisen",
+    include_package_data=True,
+    keywords="htcondor classad htc dhtc condor",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Information Technology",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        # 'Operating System :: MacOS',
+        # 'Operating System :: Microsoft :: Windows',
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: C++",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Software Development",
+        "Topic :: System :: Distributed Computing",
+    ],
+)

@@ -23,6 +23,7 @@
 # splices. It does not test the running of it--only the parsing of it.
 
 use CondorTest;
+use Data::Dumper;
 
 $cmd = 'job_dagman_splice-scaling.dag';
 $testdesc =  'Splice Inclusion Scaling Test';
@@ -37,17 +38,20 @@ sub RUNNING{2};
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	my %info = @_;
+	CondorTest::debug("Got Abnormal job exit:\n");
+	print Dumper($info);
+	die "Abnormal exit was NOT expected - aborting test\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Abort event NOT expected - aborting test\n";
 };
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	die "Held event NOT expected - aborting test\n";
 };
 
 $executed = sub
@@ -59,7 +63,8 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	my %info = @_;
+	CondorTest::debug("DAG $info{cluster} submitted:\n\tWe should see submit, executing, and successful completion\n",1);
 };
 
 $success = sub

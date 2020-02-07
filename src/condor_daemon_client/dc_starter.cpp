@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "condor_ver_info.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
@@ -67,20 +66,19 @@ DCStarter::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( tmp );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCStarter::initFromClassAd(): invalid %s in ad (%s)\n", 
 					 ATTR_STARTER_IP_ADDR, tmp );
+			free( tmp );
 		}
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
-		free( tmp );
+		New_version( tmp );
 		tmp = NULL;
 	}
 
@@ -244,7 +242,10 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
 		// read reply from starter
 	int success=0;
-	sock->get(success);
+	int r = sock->get(success);
+	if (!r) {
+		dprintf(D_ALWAYS, "Error reading hold message reply from starter\n");
+	}
 
 	return success!=0;
 }

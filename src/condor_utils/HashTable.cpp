@@ -69,7 +69,7 @@ size_t hashFunction( char const *key )
     size_t i = 0;
     if ( key ) {
 		for ( ; *key ; key++ ) {
-			i += (i<<5) + (const unsigned char)*key;
+			i += (i<<5) + (unsigned char)*key;
 		}
     }
     return i;
@@ -94,7 +94,7 @@ size_t hashFunction( const YourStringNoCase &key )
 {
     size_t i = 0;
 	for ( const char *p = key.Value(); *p ; p++ ) {
-		i += (i<<5) + (const unsigned char)(*p & ~0x20);
+		i += (i<<5) + (unsigned char)(*p & ~0x20);
 	}
     return i;
 }

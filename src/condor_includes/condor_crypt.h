@@ -53,7 +53,7 @@ class Condor_Crypt_Base {
     //------------------------------------------
     // PURPOSE: Generate a random key
     //          First method use rand function to generate the key
-    //          Second method use MD5 hashing algorithm to generate a key
+    //          Second method use a hashing algorithm to generate a key
     //             using the input string. initialkey should not be too short!
     // REQUIRE: length of the key, default to 12
     // RETURNS: a buffer (malloc) with length 

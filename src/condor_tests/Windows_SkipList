@@ -2,17 +2,15 @@
 # note, an line that has more than a single filename will be ignored.
 # that includes lines that have any non-whitespace after the filename.
 
-# tj sez, these tests should be fixed
-#cmd_status_shows-help
-cmd_wait_shows-all
-cmd_wait_shows-base
-cmd_wait_shows-notimeout
-cmd_wait_shows-partial
+
 # bug in windows disconnect/reconnect  reconnection failure
 job_schedd_restart-check_reconnect
 job_schedd_restart-runningjobs-ok
 # dagman gets a hard kill
 job_dagman_node_status_rm
+
+# tj: this needs windows commands for config include
+lib_include_cmd_config
 
 #Java tests turned off since java in refactor glue still not working windows 8
 # bt 6/3/14
@@ -20,14 +18,11 @@ job_core_err_java
 job_core_initialdir_java
 job_core_input_java
 job_core_output_java
-lib_include_cmd_config
 
 lib_auth_protocol-ctb
 lib_auth_protocol-fs
 lib_auth_protocol-ssl
 lib_chirpio_van
-lib_eventlog
-lib_eventlog_base
 lib_procapi_pidtracking-snapshot
 file_transfer_submit
 
@@ -144,23 +139,23 @@ job_dagman_splice_connect-D
 job_dagman_splice_connect-E
 job_dagman_splice_connect-F
 
-lib_eventlog_rotation-no_rotations_1
-lib_eventlog_rotation-no_rotations_2
-lib_eventlog_rotation-no_rotations_3
-lib_eventlog_rotation-reader_2_rotations
-lib_eventlog_rotation-reader_2_rotations_2_loops
-lib_eventlog_rotation-reader_20_rotations
-lib_eventlog_rotation-reader_20_rotations_2_loops
-lib_eventlog_rotation-reader_20_rotations_20_loops
-lib_eventlog_rotation-reader_missed_1
-lib_eventlog_rotation-reader_missed_2
-lib_eventlog_rotation-reader_old_rotations
-lib_eventlog_rotation-reader_simple
-lib_eventlog_rotation-w_20_rotations
-lib_eventlog_rotation-w_20_rotations_2_loops
-lib_eventlog_rotation-w_20_rotations_20_loops
-lib_eventlog_rotation-w_2_rotations
-lib_eventlog_rotation-w_2_rotations_2_loops
-lib_eventlog_rotation-w_5_rotations
-lib_eventlog_rotation-w_old_rotations
-lib_eventlog_rotation-w_old_rotations_2_loops
+#lib_eventlog_rotation-no_rotations_1
+#lib_eventlog_rotation-no_rotations_2
+#lib_eventlog_rotation-no_rotations_3
+#lib_eventlog_rotation-reader_2_rotations
+#lib_eventlog_rotation-reader_2_rotations_2_loops
+#lib_eventlog_rotation-reader_20_rotations
+#lib_eventlog_rotation-reader_20_rotations_2_loops
+#lib_eventlog_rotation-reader_20_rotations_20_loops
+#lib_eventlog_rotation-reader_missed_1
+#lib_eventlog_rotation-reader_missed_2
+#lib_eventlog_rotation-reader_old_rotations
+#lib_eventlog_rotation-reader_simple
+#lib_eventlog_rotation-w_20_rotations
+#lib_eventlog_rotation-w_20_rotations_2_loops
+#lib_eventlog_rotation-w_20_rotations_20_loops
+#lib_eventlog_rotation-w_2_rotations
+#lib_eventlog_rotation-w_2_rotations_2_loops
+#lib_eventlog_rotation-w_5_rotations
+#lib_eventlog_rotation-w_old_rotations
+#lib_eventlog_rotation-w_old_rotations_2_loops

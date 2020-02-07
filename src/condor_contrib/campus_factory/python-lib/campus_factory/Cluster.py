@@ -25,7 +25,7 @@ class Cluster:
             self.offline = OfflineAds()
         
         self.cluster_entry, self.cluster_type = self._ParseClusterId(cluster_unique)
-        if self.cluster_type == None:
+        if self.cluster_type is None:
             self.cluster_type = "pbs"
         
         
@@ -57,7 +57,7 @@ class Cluster:
     
     def ClusterMeetPreferences(self):
         idleslots = self.status.GetIdleGlideins()
-        if idleslots == None:
+        if idleslots is None:
             logging.info("Received None from idle glideins, going to try later")
             raise ClusterPreferenceException("Received None from idle glideins")
         logging.debug("Idle glideins = %i" % idleslots)
@@ -67,7 +67,7 @@ class Cluster:
 
         # Check for idle glidein jobs
         idlejobs = self.status.GetIdleGlideinJobs()
-        if idlejobs == None:
+        if idlejobs is None:
             logging.info("Received None from idle glidein jobs, going to try later")
             raise ClusterPreferenceException("Received None from idle glidein jobs")
         logging.debug("Queued jobs = %i" % idlejobs)
@@ -77,7 +77,7 @@ class Cluster:
         
         # Check for held jobs
         heldjobs = self.status.GetHeldGlideins()
-        if heldjobs == None:
+        if heldjobs is None:
             logging.info("Received None from held glidein jobs, going to try later")
             raise ClusterPreferenceException("Received None from held glidein jobs")
         logging.debug("Held jobs = %i" % heldjobs)

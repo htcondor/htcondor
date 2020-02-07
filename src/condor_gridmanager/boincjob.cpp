@@ -23,7 +23,6 @@
 #include "condor_attributes.h"
 #include "condor_debug.h"
 #include "env.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
 #include "spooled_job_files.h"
@@ -276,7 +275,7 @@ BoincJob::BoincJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -300,13 +299,11 @@ void BoincJob::Reconfig()
 
 void BoincJob::doEvaluateState()
 {
-	bool connect_failure = false;
+	const bool connect_failure = false;
 	int old_gm_state;
 	std::string old_remote_state;
 	bool reevaluate_state = true;
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -422,8 +419,7 @@ void BoincJob::doEvaluateState()
 		case GM_SUBMIT_SAVE: {
 			// Save the batch and job names before submitting
 			// TODO Handle REMOVED and HELD?
-			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-			if ( attr_exists && attr_dirty ) {
+			if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -470,7 +466,8 @@ void BoincJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == BOINC_JOB_STATUS_ERROR ) {
-				// TODO Handle error
+			        gmState = GM_HOLD;
+				jobAd->Assign( ATTR_HOLD_REASON, "Reason unknown, check the server");
 			} else {
 				// TODO anything to do?
 			}
@@ -517,8 +514,7 @@ void BoincJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -633,7 +629,7 @@ void BoincJob::doEvaluateState()
 			if ( ( remoteJobName != NULL ||
 				   remoteState == BOINC_JOB_STATUS_ERROR ) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				if(remoteJobName == NULL) {
 					dprintf(D_FULLDEBUG,
@@ -653,10 +649,10 @@ void BoincJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to BOINC because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -690,7 +686,7 @@ void BoincJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -712,10 +708,7 @@ void BoincJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -932,6 +925,13 @@ std::string BoincJob::GetAppName()
 	std::string name;
 	jobAd->LookupString( ATTR_JOB_CMD, name );
 	return name;
+}
+
+std::string BoincJob::GetVar(const char * str)
+{
+        std::string var = "";
+        jobAd->LookupString( str, var );
+        return var;
 }
 
 ArgList *BoincJob::GetArgs()

@@ -92,7 +92,7 @@ my_exit( int status )
 	fflush( stderr );
 
 	if ( ! status ) {
-		clear_config();
+		clear_global_config_table();
 		// this is here to validate that we can still param() with an empty param table.
 		char *dummy = param("DUMMY"); if (dummy) free(dummy);
 	}
@@ -118,6 +118,7 @@ usage(int retval = 1)
 		"\tvalue is expanded unless -raw, -evaluate, -default or -dump is\n"
 		"\tspecified. When used with -dump, <var> is regular expression.\n"
 		"\n    where <view> is one or more of\n"
+		"\t-summary\t\tPrint all variables changed by config files\n"
 		"\t-dump\t\tPrint values of all variables that match <var>\n"
 		"\t\t\tThe value is raw unless -expanded, -default, or -evaluate\n"
 		"\t\t\tis specified. If no <vars>, Print all variables\n"
@@ -165,6 +166,7 @@ usage(int retval = 1)
 		"\t-startd\t\t\tQuery the startd\n"
 		"\t-collector\t\tQuery the collector\n"
 		"\t-negotiator\t\tQuery the negotiator\n"
+		"\t-root-config <file>\tUse <file> as the root config file\n"
 		"\n    where <help> is one of\n"
 		"\t-help\t\tPrint this screen and exit\n"
 		"\t-version\tPrint HTCondor version and exit\n"
@@ -190,7 +192,7 @@ typedef union _write_config_options {
 		unsigned int comment_env       :1;
 		unsigned int comment_5         :1;
 		unsigned int comment_6         :1;
-		unsigned int comment_7         :1;
+		unsigned int comment_version   :1;
 		unsigned int sort_name         :1;
 		unsigned int hide_obsolete     :1;
 		unsigned int hide_if_match     :1;
@@ -504,7 +506,6 @@ main( int argc, const char* argv[] )
 {
 	char	*value = NULL, *tmp = NULL;
 	const char * pcolon;
-	const char *host = NULL;
 	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
 	const char *name = NULL;     // cooked -name argument after get_daemon_name lookup
@@ -527,8 +528,10 @@ main( int argc, const char* argv[] )
 	bool    show_by_usage_unused = false;
 	bool    evaluate_daemon_vars = false;
 	bool    print_config_sources = false;
+	const char * root_config = NULL;
 	const char * write_config = NULL;
 	WRITE_CONFIG_OPTIONS write_config_flags = {0};
+	bool    dash_summary = false;
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
@@ -589,9 +592,7 @@ main( int argc, const char* argv[] )
 
 		// if we get here, the arg begins with "-",
 		const char * arg = argv[i]+1;
-		if (is_arg_prefix(arg, "host", 1)) { // as of 8/27/2013 -host is a secret option used by condor_init
-			host = use_next_arg("host", argv, i);
-		} else if (is_arg_prefix(arg, "name", 1)) {
+		if (is_arg_prefix(arg, "name", 1)) {
 			name_arg = use_next_arg("name", argv, i);
 		} else if (is_arg_prefix(arg, "address", 1)) {
 			addr = use_next_arg("address", argv, i);
@@ -706,7 +707,22 @@ main( int argc, const char* argv[] )
 			show_by_usage = true;
 			show_by_usage_unused = false;
 			//dash_usage = true;
+		} else if (is_arg_prefix(arg, "summary", 3)){
+			if (write_config && ! dash_summary) {
+				fprintf(stderr, "%s cannot be used with -writeconfig\n", argv[i]);
+				usage();
+			}
+			write_config_flags.all = 0;
+			write_config_flags.hide_obsolete = 1;
+			write_config_flags.hide_if_match = 1;
+			write_config_flags.comment_version = 1;
+			dash_summary = true;
+			write_config = "-";
 		} else if (is_arg_colon_prefix(arg, "writeconfig", &pcolon, 3)) {
+			if (dash_summary) {
+				fprintf(stderr, "%s cannot be used with -summary\n", argv[i]);
+				usage();
+			}
 			write_config = use_next_arg("writeconfig", argv, i);
 			write_config_flags.all = 0;
 			if (pcolon) {
@@ -748,6 +764,8 @@ main( int argc, const char* argv[] )
 				write_config_flags.comment_def_match = true;
 				write_config_flags.sort_name = false;
 			}
+		} else if (is_dash_arg_prefix(argv[i], "root-config", 4)) {
+			root_config = use_next_arg("root-config", argv, i);
 		} else if (is_arg_colon_prefix(arg, "debug", &pcolon, 2)) {
 				// dprintf to console
 			dash_debug = true;
@@ -770,7 +788,7 @@ main( int argc, const char* argv[] )
 				tmp = opts.next(); if (tmp) profile_iter = atoi(tmp);
 			}
 		} else {
-			fprintf(stderr, "%s is not valid argument\n", argv[i]);
+			fprintf(stderr, "%s is not a valid argument\n", argv[i]);
 			usage();
 		}
 	}
@@ -814,7 +832,9 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	config_host(host, config_options);
+	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
+	set_priv_initialize(); // allow uid switching if root
+	config_host(NULL, config_options, root_config);
 	validate_config(false, 0); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
@@ -827,7 +847,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config_host(host, config_options);
+		config_host(NULL, config_options, root_config);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();
@@ -1097,7 +1117,7 @@ main( int argc, const char* argv[] )
 				ReliSock sock;
 				while (collectors->next (collector)) {
 					if (collector->locate() &&
-					    sock.connect((char*) collector->addr(), 0)) {
+					    sock.connect(collector->addr(), 0)) {
 						// Do something with the connection, 
 						// such that we won't end up with 
 						// noise in the collector log
@@ -1311,8 +1331,8 @@ main( int argc, const char* argv[] )
 					param_id = pmet->param_id;
 					type_and_flags = param_default_help_by_id(pmet->param_id, descrip, tags, used_for);
 				}
+				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					raw_supported = true;
 					if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {
@@ -1397,7 +1417,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr;
+	const char* addr;
 	const char* name;
 	bool connect_error = true;
 	do {
@@ -1466,7 +1486,7 @@ GetRemoteParamRaw(
 	def_value = "";
 	usage_report = "";
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1542,7 +1562,7 @@ int GetRemoteParamStats(Daemon* target, ClassAd & ad)
 	ReliSock s;
 	s.timeout(30);
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1625,7 +1645,7 @@ GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<
 	ReliSock s;
 	s.timeout(30);
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1719,7 +1739,7 @@ GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<
 	if (names.size() > 1) {
 		std::sort(names.begin(), names.end(), sort_ascending_ignore_case);
 	}
-	return names.size();
+	return (int)names.size();
 }
 
 void
@@ -1736,7 +1756,7 @@ SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr;
+	const char* addr;
 	const char* name;
 	bool connect_error = true;
 
@@ -2443,6 +2463,9 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 	//fprintf(fh, "\n<all done>\n");
 	if ( ! args.output.empty()) {
 		//fprintf(fh, "<not empty>\n");
+		if (opts.comment_version) {
+			fprintf(fh, "# condor_config_val %s\n", CondorVersion());
+		}
 		std::map<unsigned long long, std::string>::iterator it;
 		long last_id = -1;
 		for (it = args.output.begin(); it != args.output.end(); it++) {

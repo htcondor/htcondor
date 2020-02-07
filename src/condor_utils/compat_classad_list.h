@@ -114,8 +114,6 @@ public:
 
     // Count classads satisfying constraint.  Optionally remove ads that don't.
     int CountMatches(classad::ExprTree* constraint);
-
-	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
 };
 
 /* ClassAdList is just like ClassAdListDoesNotDeleteAds, except it

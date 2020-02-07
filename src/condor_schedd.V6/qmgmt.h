@@ -37,7 +37,6 @@ GCC_DIAG_OFF(invalid-offsetof)
 #error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
 #endif
 
-void PrintQ();
 class Service;
 
 class QmgmtPeer {
@@ -68,6 +67,7 @@ class QmgmtPeer {
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
 		int isAuthenticated() const;
+		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
 
 	protected:
 
@@ -128,18 +128,45 @@ private:
 };
 	
 
-// used to store a ClassAd + runtime information in a condor hashtable.
-class JobQueueJob : public ClassAd {
+// used to store a ClassAd + basic information in a condor hashtable.
+class JobQueueBase : public ClassAd {
 public:
 	JOB_ID_KEY jid;
 protected:
-	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)
+	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)	
+public:
+	JobQueueBase(int _etype=0) 
+		: jid(0, 0)
+		, entry_type(_etype)		
+	{};
+	virtual ~JobQueueBase() {};
+
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
+	enum {
+		entry_type_unknown = 0,
+		entry_type_header,
+		entry_type_jobset,
+		entry_type_cluster,
+		entry_type_job,
+	};
+	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
+	bool IsJob() { return IsType(entry_type_job); }
+	bool IsHeader() { return IsType(entry_type_header); }
+	bool IsJobSet() { return IsType(entry_type_jobset); }
+	bool IsCluster() { return IsType(entry_type_cluster); }
+};
+
+class JobQueueJob : public JobQueueBase {
+public:
+	//TT JOB_ID_KEY jid;
+protected:
 	char universe;      // this is in sync with ATTR_JOB_UNIVERSE
 	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
 	char status;        // this is in sync with committed job status and used when tracking job counts by state
 public:
 	int dirty_flags;	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
-	int spare;
+	int set_id;
 	int autocluster_id;
 	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
@@ -152,13 +179,13 @@ protected:
 
 public:
 	JobQueueJob(int _etype=0)
-		: jid(0,0)
-		, entry_type(_etype)
+		: JobQueueBase(_etype)
+		//TT , jid(0,0)
 		, universe(0)
 		, has_noop_attr(2) // value of 2 forces IsNoopJob() to populate this field
 		, status(0) // JOB_STATUS_MIN
 		, dirty_flags(0)
-		, spare(0)
+		, set_id(0)
 		, autocluster_id(0)
 		, submitterdata(NULL)
 		, ownerinfo(NULL)
@@ -166,16 +193,8 @@ public:
 	{}
 	virtual ~JobQueueJob() {};
 
-	enum {
-		entry_type_unknown=0,
-		entry_type_header,
-		entry_type_cluster,
-		entry_type_job,
-	};
-	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
-	bool IsJob() { return IsType(entry_type_job); }
-	bool IsHeader() { return IsType(entry_type_header); }
-	bool IsCluster() { return IsType(entry_type_cluster); }
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
 	int  Universe() { return universe; }
 	int  Status() { return status; }
 	void SetUniverse(int uni) { universe = uni; }
@@ -193,8 +212,6 @@ public:
 	//JobQueueJob( const classad::ClassAd &ad );
 	friend class JobQueueCluster;
 	friend class qelm;
-
-	void PopulateFromAd(); // populate this structure from contained ClassAd state
 
 	// if this object is a job object, it should be linked to its cluster object
 	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return parent; return NULL; }
@@ -240,10 +257,10 @@ public:
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
-	void PopulateInfoAd(ClassAd & iad, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
+	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
 };
 
-
+class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
@@ -263,12 +280,13 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, TransactionWatcher & trans, int & retry_delay);
 
 // returns true if there is no materialize policy expression, or if the expression evalues to true
 // returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set
 // a value of > 0 for retry_delay indicates that trying again later might give a different answer.
-bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int & retry_delay);
+// num_pending should be the number of jobs that have been materialized but not yet committed
+bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int num_pending, int & retry_delay);
 
 int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * job);
 bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster has a non-paused, non-complete factory
@@ -288,6 +306,7 @@ int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
 bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
+bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
@@ -306,6 +325,7 @@ bool isQueueSuperUser( const char* user );
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  In addition to everything OwnerCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
+// This call assumes Q_SOCK is set to a valid QmgmtPeer object.
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
@@ -333,6 +353,14 @@ ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
 #define FreeJobAd(ad) ad = NULL
 
+// Inside the sched SetAttribute call takes a 32 bit integer as the flags field
+// but only 8 bits are used by the wire protocol.  so anything bigger than 1<<7
+// is effectively a SetAttribute flag private to the schedd. we start here at 1<<16
+// to leave room to expand the public flags someday (maybe)
+typedef unsigned int SetAttributeFlags_t;
+const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
+const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
@@ -342,7 +370,6 @@ JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 // does the parts of NewProc that are common between external submit and schedd late materialization
 int NewProcInternal(int cluster_id, int proc_id);
 // call NewProcInternal, and then SetAttribute on all of the attributes in job that are not the same as ClusterAd
-typedef unsigned char SetAttributeFlags_t;
 int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags);
 #endif
 
@@ -453,11 +480,47 @@ protected:
 	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
 };
 
+class TransactionWatcher {
+public:
+	TransactionWatcher() : firstid(-1), lastid(-1), started(false), completed(false) {}
+	~TransactionWatcher() { AbortIfAny(); }
+
+	// don't allow copy or assigment of this class
+	TransactionWatcher(const TransactionWatcher&) = delete;
+	TransactionWatcher& operator=(const TransactionWatcher) = delete;
+
+	bool InTransaction() { return started && ! completed; }
+
+	// start a transaction, or continue one if we already started it
+	int BeginOrContinue(int id);
+
+	// commit if we started a transaction
+	int CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack);
+
+	// cancel if we started a transaction
+	int AbortIfAny();
+
+	// return the range of ids passed to BeginOrContinue
+	// returns true if ids were set.
+	bool GetIdRange(int & first, int & last) {
+		if (! started) return false;
+		first = firstid;
+		last = lastid;
+		return true;
+	}
+
+private:
+	int firstid;
+	int lastid;
+	bool started;
+	bool completed;
+};
+
 // new for 8.3, use a non-string type as the key for the JobQueue
 // and a type derived from ClassAd for the payload.
 typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
-typedef ClassAdLog<JOB_ID_KEY, JobQueueJob*> JobQueueLogType;
+typedef ClassAdLog<JOB_ID_KEY, JobQueuePayload> JobQueueLogType;
 
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
@@ -491,8 +554,10 @@ bool UniverseUsesVanillaStartExpr(int universe);
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
-bool OwnerCheck(int,int);
 
+// JobSet qmgmt support functions
+bool JobSetDestroy(int setid);
+bool JobSetStoreAllDirtyAttrs(int setid, ClassAd & src, bool create);
 
 // priority records
 extern prio_rec *PrioRec;

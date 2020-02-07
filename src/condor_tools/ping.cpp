@@ -72,7 +72,7 @@ void process_err_stack(CondorError *errstack) {
 
 
 void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
-	MyString  val;
+	std::string  val;
 
 	if(!rv) {
 		printf("%s failed!  Use -verbose for more information.\n", name.Value());
@@ -82,30 +82,34 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf("%s using (", name.Value());
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no encryption");
 	} else {
 		ad->LookupString("cryptomethods", val);
-		printf("%s", val.Value());
+		printf("%s", val.c_str());
 	}
 
 	printf(", ");
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no integrity");
 	} else {
+#ifdef FIPS_MODE
+		printf("SHA");
+#else
 		printf("MD5");
+#endif
 	}
 
 	printf(", and ");
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no authentication");
 	} else {
 		ad->LookupString("authmethods", val);
-		printf("%s", val.Value());
+		printf("%s", val.c_str());
 	}
 
 	printf(") ");
@@ -117,14 +121,14 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf(" as ");
 
 	ad->LookupString("myremoteusername", val);
-	printf("%s", val.Value());
+	printf("%s", val.c_str());
 
 	printf ("\n");
 }
 
 
 void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
-	MyString  val;
+	std::string  val;
 
 	if(!rv) {
 		printf("%s failed!\n", name.Value());
@@ -134,43 +138,47 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 	}
 
 	ad->LookupString("remoteversion", val);
-	printf("Remote Version:              %s\n", val.Value());
+	printf("Remote Version:              %s\n", val.c_str());
 	val = CondorVersion();
-	printf("Local  Version:              %s\n", val.Value());
+	printf("Local  Version:              %s\n", val.c_str());
 
 	ad->LookupString("sid", val);
-	printf("Session ID:                  %s\n", val.Value());
+	printf("Session ID:                  %s\n", val.c_str());
 	printf("Instruction:                 %s\n", name.Value());
 	printf("Command:                     %i\n", cmd);
 
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Encryption:                  none\n");
 	} else {
 		ad->LookupString("cryptomethods", val);
-		printf("Encryption:                  %s\n", val.Value());
+		printf("Encryption:                  %s\n", val.c_str());
 	}
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Integrity:                   none\n");
 	} else {
+#ifdef FIPS_MODE
+		printf("Integrity:                   SHA\n");
+#else
 		printf("Integrity:                   MD5\n");
+#endif
 	}
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Authentication:              none\n");
 	} else {
 		ad->LookupString("authmethods", val);
-		printf("Authenticated using:         %s\n", val.Value());
+		printf("Authenticated using:         %s\n", val.c_str());
 		ad->LookupString("authmethodslist", val);
-		printf("All authentication methods:  %s\n", val.Value());
+		printf("All authentication methods:  %s\n", val.c_str());
 	}
 
 	ad->LookupString("myremoteusername", val);
-	printf("Remote Mapping:              %s\n", val.Value());
+	printf("Remote Mapping:              %s\n", val.c_str());
 
 	bool bval;
 	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
@@ -188,7 +196,7 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 
 
 void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
-	MyString  val;
+	std::string  val;
 
 	printf("%20s", name.Value());
 
@@ -198,35 +206,39 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 	}
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
 		ad->LookupString("authmethods", val);
 	}
-	printf("%15s", val.Value());
+	printf("%15s", val.c_str());
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
 		ad->LookupString("cryptomethods", val);
 	}
-	printf("%11s", val.Value());
+	printf("%11s", val.c_str());
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
+#ifdef FIPS_MODE
+		val = "SHA";
+#else
 		val = "MD5";
+#endif
 	}
-	printf("%10s", val.Value());
+	printf("%10s", val.c_str());
 
 	bool bval;
 	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
 	printf(bval ? "    ALLOW " : "     DENY ");
 
 	ad->LookupString("myremoteusername", val);
-	printf("%s", val.Value());
+	printf("%s", val.c_str());
 
 	printf("\n");
 }
@@ -351,17 +363,16 @@ int main( int argc, char *argv[] )
 	char *optional_config=0;
 	int  output_mode = -1;
 	daemon_t dtype = DT_NONE;
-	int i;
 
-	ExtArray<MyString> worklist_name;
-	ExtArray<int> worklist_number;
-	int worklist_count = 0;
+	std::vector<std::string> worklist_name;
+	std::vector<int> worklist_number;
 	Daemon * daemon = NULL;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	for( i=1; i<argc; i++ ) {
+	for( int i=1; i<argc; i++ ) {
 		if(!strncmp(argv[i],"-help",strlen(argv[i]))) {
 			usage(argv[0]);
 			exit(0);
@@ -458,20 +469,20 @@ int main( int argc, char *argv[] )
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			// a special case
 			if(strcasecmp("ALL", argv[i]) == 0) {
-				worklist_name[worklist_count++] = "ALLOW";
-				worklist_name[worklist_count++] = "READ";
-				worklist_name[worklist_count++] = "WRITE";
-				worklist_name[worklist_count++] = "NEGOTIATOR";
-				worklist_name[worklist_count++] = "ADMINISTRATOR";
-				worklist_name[worklist_count++] = "OWNER";
-				worklist_name[worklist_count++] = "CONFIG";
-				worklist_name[worklist_count++] = "DAEMON";
-				worklist_name[worklist_count++] = "ADVERTISE_STARTD";
-				worklist_name[worklist_count++] = "ADVERTISE_SCHEDD";
-				worklist_name[worklist_count++] = "ADVERTISE_MASTER";
+				worklist_name.push_back("ALLOW");
+				worklist_name.push_back("READ");
+				worklist_name.push_back("WRITE");
+				worklist_name.push_back("NEGOTIATOR");
+				worklist_name.push_back("ADMINISTRATOR");
+				worklist_name.push_back("OWNER");
+				worklist_name.push_back("CONFIG");
+				worklist_name.push_back("DAEMON");
+				worklist_name.push_back("ADVERTISE_STARTD");
+				worklist_name.push_back("ADVERTISE_SCHEDD");
+				worklist_name.push_back("ADVERTISE_MASTER");
 			} else {
 				// an individual item to act on
-				worklist_name[worklist_count++] = argv[i];
+				worklist_name.push_back(argv[i]);
 			}
 		} else {
 			fprintf(stderr,"ERROR: Unknown argument: %s\n\n",argv[i]);
@@ -487,27 +498,25 @@ int main( int argc, char *argv[] )
 	}
 
 	// use some default
-	if(worklist_count == 0) {
+	if(worklist_name.size() == 0) {
 		if(output_mode) {
 			fprintf( stderr, "WARNING: Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n");
 		}
-		worklist_name[0] = "DC_NOP";
-		worklist_count++;
+		worklist_name.push_back("DC_NOP");
 	}
 
 
 	// convert each item
 	bool all_okay = true;
-	for (i=0; i<worklist_count; i++) {
-		int c = getSomeCommandFromString(worklist_name[i].Value());
+	for (size_t i=0; i<worklist_name.size(); i++) {
+		int c = getSomeCommandFromString(worklist_name[i].c_str());
 		if (c == -1) {
 			if(output_mode) {
-				fprintf(stderr, "ERROR: Could not understand TOKEN \"%s\".\n", worklist_name[i].Value());
+				fprintf(stderr, "ERROR: Could not understand TOKEN \"%s\".\n", worklist_name[i].c_str());
 			}
 			all_okay = false;
-		} else {
-			worklist_number[i] = c;
 		}
+		worklist_number.push_back(c);
 	}
 	if (!all_okay) {
 		exit(1);
@@ -567,7 +576,7 @@ int main( int argc, char *argv[] )
 	}
 
 	all_okay = true;
-	for(i=0; i<worklist_count; i++) {
+	for(size_t i=0; i<worklist_name.size(); i++) {
 		// any item failing induces failure of whole program
 		if (!do_item(daemon, worklist_name[i], worklist_number[i], output_mode)) {
 			all_okay = false;

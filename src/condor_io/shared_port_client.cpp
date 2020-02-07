@@ -107,11 +107,23 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 		// on anything platform-dependent.
 
 	sock->encode();
-	sock->put(SHARED_PORT_CONNECT);
-	sock->put(shared_port_id);
+	if (!sock->put(SHARED_PORT_CONNECT)) {
+		dprintf(D_ALWAYS, "SharedPortClient: failed to send connect to %s\n", 
+				sock->peer_description());
+		return false;
+	}
+	if (!sock->put(shared_port_id)) {
+		dprintf(D_ALWAYS, "SharedPortClient: failed to send shared_port_id to %s\n", 
+				sock->peer_description());
+		return false;
+	}
 
 		// for debugging
-	sock->put(myName().Value());
+	if (!sock->put(myName().Value())) {
+		dprintf(D_ALWAYS, "SharedPortClient: failed to send my name to %s\n", 
+				sock->peer_description());
+		return false;
+	}
 
 	int deadline = sock->get_deadline();
 	if( deadline ) {
@@ -126,11 +138,19 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 			deadline = -1;
 		}
 	}
-	sock->put(deadline);
+	if (!sock->put(deadline)) {
+		dprintf(D_ALWAYS, "SharedPortClient: failed to send deadline to %s\n", 
+				sock->peer_description());
+		return false;
+	}
 
 		// for possible future use
 	int more_args = 0;
-	sock->put(more_args);
+	if (!sock->put(more_args)) {
+		dprintf(D_ALWAYS, "SharedPortClient: failed to more args to %s\n", 
+				sock->peer_description());
+		return false;
+	}
 
 	if( !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -737,8 +757,11 @@ SharedPortState::HandleFD(Stream *&s)
 			std::string procCmdLinePath = procPath + "/cmdline";
 			// No _follow, since the kernel doesn't create symlinks for this.
 			int pclFD = safe_open_no_create( procCmdLinePath.c_str(), O_RDONLY );
-			ssize_t procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
-			close( pclFD );
+			ssize_t procCmdLineLength = -1;
+			if( pclFD >= 0 ) {
+				procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
+				close( pclFD );
+			}
 			if( procCmdLineLength == -1 ) {
 				strcpy( procCmdLine, "(unable to read cmdline)" );
 			} else if( 0 <= procCmdLineLength && procCmdLineLength <= 1024 ) {

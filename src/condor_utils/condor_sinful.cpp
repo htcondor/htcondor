@@ -23,6 +23,7 @@
 #include "internet.h"
 #include "condor_attributes.h"
 #include "daemon.h"	// for global_dc_sinful()
+#include "condor_config.h"
 
 #include <sstream>
 
@@ -469,6 +470,19 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 		  )
 		{
 			return true;
+		}
+		// If only one address has a shared port id, check if it matches
+		// the default id (usually "collector").
+		if ((spid == NULL) != (addr_spid == NULL)) {
+			const char *ck_spid = (spid != NULL) ? spid : addr_spid;
+			std::string default_spid;
+			param(default_spid, "SHARED_PORT_DEFAULT_ID");
+			if ( default_spid.empty() ) {
+				default_spid = "collector";
+			}
+			if ( !strcmp(ck_spid, default_spid.c_str()) ) {
+				return true;
+			}
 		}
 	}
 
@@ -958,7 +972,7 @@ void Sinful::parseV1String() {
 			m_valid = false;
 			return;
 		}
-		MyString ccbContactString;
+		std::string ccbContactString;
 		CCBServer::CCBIDToContactString( ccbAddress.c_str(), ccbID, ccbContactString );
 		ccbList.append( ccbContactString.c_str() );
 	}
@@ -1111,7 +1125,7 @@ Sinful::regenerateV1String() {
 				return;
 			}
 			v.push_back( * sr );
-			free( sr );
+			delete sr;
 		}
 	}
 

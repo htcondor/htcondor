@@ -27,7 +27,7 @@ FileTransferStats::FileTransferStats() {
 FileTransferStats::~FileTransferStats() {}
 
 void FileTransferStats::Init() {
-    TransferReturnCode = -1;
+    TransferHTTPStatusCode = -1;
     TransferSuccess = false;
     TransferTotalBytes = 0;
     TransferTries = 0;
@@ -35,6 +35,7 @@ void FileTransferStats::Init() {
 	TransferEndTime = 0;
 	TransferStartTime = 0;
 	TransferFileBytes = 0;
+    LibcurlReturnCode = -1;
 }
 
 void FileTransferStats::Publish(classad::ClassAd &ad) const {
@@ -62,8 +63,10 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         ad.InsertAttr("TransferLocalMachineName", TransferLocalMachineName);
     if (!TransferProtocol.empty())
         ad.InsertAttr("TransferProtocol", TransferProtocol);
-    if (TransferReturnCode > 0) 
-        ad.InsertAttr("TransferReturnCode", TransferReturnCode);
+    if (TransferHTTPStatusCode > 0) 
+        ad.InsertAttr("TransferHTTPStatusCode", TransferHTTPStatusCode);
+    if (LibcurlReturnCode >= 0)
+        ad.InsertAttr("LibcurlReturnCode", LibcurlReturnCode);
     if (TransferTries > 0) 
         ad.InsertAttr("TransferTries", TransferTries);
     if (!TransferType.empty())

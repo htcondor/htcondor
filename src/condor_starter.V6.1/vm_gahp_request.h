@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "gahp_common.h"
 #include "MyString.h"
-#include "condor_string.h"
 #include "condor_arglist.h"
 #include "vm_proc.h"
 #include "vm_gahp_server.h"
@@ -104,7 +103,7 @@ class VMGahpRequest : public Service {
 		void setReqId(int id);
 		void setPendingStatus(reqstatus status);
 		void setResult(Gahp_Args *result);
-		int pending_timer_fn();
+		void pending_timer_fn();
 
 		reqmode m_mode;
 		MyString m_command;

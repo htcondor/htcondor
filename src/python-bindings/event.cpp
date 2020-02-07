@@ -33,7 +33,9 @@ EventIterator::EventIterator(FILE *source, bool is_xml, bool owns_fd)
   , m_done(0)
   , m_source(source)
   , m_reader(new ReadUserLog(source, is_xml, false))
-{}
+{
+	PyErr_Warn(PyExc_DeprecationWarning, "EventIterator is deprecated; use JobEventLog instead.");
+}
 
 // copy construction is swap of ownership
 EventIterator::EventIterator(const EventIterator& that)
@@ -45,6 +47,8 @@ EventIterator::EventIterator(const EventIterator& that)
 	, m_source(that.m_source)
 	, m_reader(new ReadUserLog(that.m_source, that.m_is_xml, false))
 {
+	PyErr_Warn(PyExc_DeprecationWarning, "EventIterator is deprecated; use JobEventLog instead.");
+
 	// take ownership of the file source so it doesn't get closed then that is destroyed.
 	const_cast<EventIterator&>(that).m_owns_fd = false;
 }
@@ -261,7 +265,7 @@ EventIterator::next()
     // Bug workaround: the last event generates ULOG_RD_ERROR on line 0.
     switch (retval) {
         case ULOG_OK:
-            tmp_ad = reinterpret_cast<classad::ClassAd*>(new_event->toClassAd());
+            tmp_ad = reinterpret_cast<classad::ClassAd*>(new_event->toClassAd(false));
             if (tmp_ad)
             {
                 output->CopyFrom(*tmp_ad);
@@ -288,6 +292,8 @@ readEventsFile(boost::python::object input, bool is_xml)
 {
 	FILE * file = NULL;
 	bool close_file = false; // true when we want EventIterator to close the file
+
+    PyErr_Warn(PyExc_DeprecationWarning, "read_events is deprecated; use JobEventLog instead.");
 
     boost::python::extract<std::string> input_as_string(input);
 	if (input_as_string.check()) {

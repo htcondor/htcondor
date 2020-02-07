@@ -441,7 +441,9 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentials();
+	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
 	bool refreshSandboxCredentialsMultiple();
+	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 
@@ -480,7 +482,9 @@ private:
 	char *m_reconnect_sec_session;
 
 	/// if true, transfer files at vacate time (in addtion to job exit)
+	// but only if we get to the point of starting the job
 	bool transfer_at_vacate;
+	bool m_job_setup_done;
 
 	bool wants_file_transfer;
 	bool wants_x509_proxy;
@@ -488,6 +492,7 @@ private:
 	char* uid_domain;
 	char* fs_domain;
 	bool trust_uid_domain;
+	bool trust_local_uid_domain;
 
 	std::string m_chirp_config_filename;
 	bool m_wrote_chirp_config;

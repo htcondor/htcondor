@@ -3,18 +3,18 @@
 # "condor_submit -interactive". Essentially, it runs
 # /bin/sleep on the execute node for 3 minutes. The idea
 # is to run some job that uses no cpu/memory just just until the ssh
-# client connects. 
+# client connects.
 #
 universe = vanilla
-executable = /bin/sleep
+executable = /bin/sh
 #
 # Sleep for 180 seconds (3 minutes), which should be plenty of time for
 # the ssh client to connect. If it does not connect before
 # the three minutes are up, it likely never will.  So in the
-# event that the user simply kills the ssh client before the job 
+# event that the user simply kills the ssh client before the job
 # is launched, the job will only consume the slot for three minutes.
 #
-arguments = 180
+arguments = "-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'"
 #
 # Most shells (such as bash) will honor the TMOUT environment variable,
 # which tells the shell to exit after TMOUT seconds of inactivity.
@@ -22,7 +22,7 @@ arguments = 180
 #
 environment = "TMOUT=7200"
 #
-# 
+#
 transfer_executable = false
 notification = never
 priority = 1000

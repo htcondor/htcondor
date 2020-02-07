@@ -16,13 +16,13 @@
  # 
  ############################################################### 
 
-if (WINDOWS AND NOT WIN_EXEC_NODE_ONLY)
+if (WINDOWS)
 	
-	file( GLOB BWSrcs *.cpp *.h *.rc *.rc2 res/*)
-	
-	condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "" OFF)
+  file( GLOB BWSrcs *.cpp *.h *.rc *.rc2 res/*)
+  
+  condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "" OFF)
 
-	set_target_properties (condor_birdwatcher PROPERTIES WIN32_EXECUTABLE TRUE)
+  set_target_properties (condor_birdwatcher PROPERTIES WIN32_EXECUTABLE TRUE)
 
 else()
 

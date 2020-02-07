@@ -83,7 +83,7 @@ FILE* LoadClassAdLog(
 	m_original_log_birthdate = time(NULL);
 
 	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
-	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		errmsg.formatstr("failed to open log %s, errno = %d\n", filename, errno);
 		return NULL;
@@ -267,10 +267,10 @@ bool TruncateClassAdLog(
 	FILE *new_log_fp;
 
 	tmp_log_filename.formatstr( "%s.tmp", filename);
-	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
-		errmsg.formatstr("failed to rotate log: safe_open_wrapper(%s) returns %d\n",
-				tmp_log_filename.Value(), new_log_fd);
+		errmsg.formatstr("failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
+			tmp_log_filename.Value(), errno, strerror(errno));
 		return false;
 	}
 
@@ -278,6 +278,8 @@ bool TruncateClassAdLog(
 	if (new_log_fp == NULL) {
 		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
 				tmp_log_filename.Value());
+		close(new_log_fd);
+		unlink(tmp_log_filename.Value());
 		return false;
 	}
 
@@ -300,12 +302,15 @@ bool TruncateClassAdLog(
 	// functions just EXCEPT'ed rather than returning errors.
 	if ( ! success) {
 		fclose(new_log_fp);
+		unlink(tmp_log_filename.Value());
 		return false;
 	}
 
 	fclose(new_log_fp);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename.Value(), filename) < 0) {
 		errmsg.formatstr("failed to rotate job queue log!\n");
+
+		unlink(tmp_log_filename.Value());
 
 		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
@@ -314,6 +319,7 @@ bool TruncateClassAdLog(
 			log_fp = fdopen(log_fd, "a+");
 			if (log_fp == NULL) {
 				errmsg.formatstr("failed to refdopen log %s, errno = %d after failing to rotate log.",filename,errno);
+				close(log_fd);
 			}
 		}
 
@@ -541,7 +547,6 @@ bool WriteClassAdLogState(
 {
 	LogRecord	*log=NULL;
 	ExprTree	*expr=NULL;
-	const char	*attr_name = NULL;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
@@ -569,15 +574,13 @@ bool WriteClassAdLogState(
 			// not all the exprs in the chained ad as well.
 		classad::ClassAd *chain = ad->GetChainedParentAd();
 		ad->Unchain();
-		ad->ResetName();
-		attr_name = ad->NextNameOriginal();
-		while (attr_name) {
-			expr = ad->LookupExpr(attr_name);
+		for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+			expr = itr->second;
 				// This conditional used to check whether the ExprTree is
 				// invisible, but no codepath sets any attributes
 				// invisible for this call.
 			if (expr) {
-				log = new LogSetAttribute(key, attr_name,
+				log = new LogSetAttribute(key, itr->first.c_str(),
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
 					errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
@@ -586,7 +589,6 @@ bool WriteClassAdLogState(
 				}
 				delete log;
 			}
-			attr_name = ad->NextNameOriginal();
 		}
 			// ok, now that we're done writing out this ad, restore the chain
 		ad->ChainToAd(chain);
@@ -823,29 +825,17 @@ LogSetAttribute::Play(void *data_structure)
 	if ( ! table->lookup(key, ad))
 		return -1;
 
-#if 1
 	std::string attr(name);
 	if (ad->InsertViaCache(attr, value)) {
 		rval = TRUE;
 	} else {
 		rval = FALSE;
 	}
-#else
-	PRAGMA_REMIND("tj: FIX to re-enable the use of the classadCache here")
-	if (value_expr) {
-		// Such a shame, do we really need to make a
-		// copy of value_expr here?  Seems like we could just
-		// assign it and then set value_expr to NULL and avoid
-		// copying a parse tree, since after we Play it I doubt
-		// this class does anything more with value_expr beyond
-		// deallocating it.  - Todd 11/13 <tannenba@cs.wisc.edu>
-		ExprTree * pTree = value_expr->Copy();
-		rval = ad->Insert(name, pTree);
+	if (is_dirty) {
+		ad->MarkAttributeDirty(name);
 	} else {
-		rval = ad->AssignExpr(name, value);
+		ad->MarkAttributeClean(name);
 	}
-#endif
-	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
@@ -1015,13 +1005,37 @@ LogEndTransaction::Play(void *) {
 	return 1;
 }
 
+
+int
+LogEndTransaction::WriteBody(FILE* fp)
+{
+	int rval = 0;
+	if (comment) {
+		int len = (int)strlen(comment);
+		if (len > 0) {
+			fputc('#', fp);
+			rval = fwrite(comment, sizeof(char), len, fp);
+			if (rval < len) {
+				return -1;
+			}
+			rval += 1; // account for the # character
+		}
+	}
+	return rval;
+}
+
 int 
 LogEndTransaction::ReadBody( FILE* fp )
 {
 	char 	ch;
 	int		rval = fread( &ch, sizeof(char), 1, fp );
-	if( rval < 1 || ch != '\n' ) {
+	if( rval < 1 || (ch != '\n' && ch != '#') ) {
 		return( -1 );
+	}
+	if (ch == '#') {
+		int cch = readline(fp, comment);
+		if (cch < 0)
+			return -1;
 	}
 	return( 1 );
 }
@@ -1105,9 +1119,6 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 		int		op;
 
 		delete log_rec;
-		if( !fp ) {
-			EXCEPT("Error: failed fdopen() while recovering from corrupt log record %lu", recnum);
-		}
 
         // check if this bogus record is in the midst of a transaction
 	    // (try to find a CloseTransaction log record)

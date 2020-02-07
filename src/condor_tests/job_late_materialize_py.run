@@ -3,13 +3,13 @@
 ##
 ## Copyright (C) 2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import os
 import time
 import classad
 import htcondor
+from htcondor import JobEventType
 
 # request a  personal condor with late materialization enabled
 #testreq: personal
@@ -29,29 +30,24 @@ append_config = """
 #<<CONDOR_TESTREQ_CONFIG;
   NUM_CPUS = 6
   NUM_SLOTS = 6
-  SCHEDD_ALLOW_LATE_MATERIALIZE = true
+  # this is now the default
+  #SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
   SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
+  SCHEDD_DEBUG = D_MATERIALIZE:2 D_CAT $(SCHEDD_DEBUG)
   #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 """
 
-from pytest.CondorJob import CondorJob
-from pytest.CondorTest import CondorTest
-from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
-testname = os.path.basename(__file__)[:-3]
-
-# dump the environment.
-Utils.TLog("the environment")
-for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
+testname = os.path.basename(__file__)[:-4]
 
 sub = htcondor.Submit("""
 	universe = vanilla
 	executable = x_sleep.pl
-	arguments = 10
+	arguments = 3
 	notification = never
 	max_materialize = 4
 	queue 10
@@ -75,11 +71,19 @@ peak_materialized = 0
 peak_running = 0
 peak_idle = 0
 
-def wait_for_cluster_removal(id, logfile, timeout):
+def print_file_contents(filename):
+	with open(filename) as fh : logdata = fh.read()
+	print("--- %s ---" % filename)
+	print(logdata)
 
-	start_time = time.time()
-	end_time = start_time + timeout
+def cluster_removal(event):
+	if (event.type == JobEventType.CLUSTER_REMOVE): return 1
+	return 0
 
+#
+# The globals are the reason we aren't doing cluster.WaitForRemoval().
+#
+def wait_for_event(id, logfile, timeout, func):
 	global total_factories
 	global total_materialized
 	global total_exited
@@ -91,88 +95,256 @@ def wait_for_cluster_removal(id, logfile, timeout):
 	global peak_running
 	global peak_idle
 
-	events = htcondor.read_events(logfile)
-	while 1:
-		try:
-			if (time.time() > end_time) :
-				return 1
-				break
+	start_time = time.time()
+	end_time = start_time + timeout
 
-			# get an event, waiting up to 100 millisec
-			# if no event loop back to try again until the timeout expires
-			ad = events.poll(100)
-			if ad is None : continue
+	#
+	# Process events one at a time until we run out.  Then block looking for
+	# the next event until the deadline.
+	#
+	events = htcondor.JobEventLog(logfile)
+	for event in events.events(timeout):
+		if event.cluster != cluster:
+			continue
 
-			#print ad
+		if event.type == JobEventType.CLUSTER_REMOVE:
+			Utils.TLog("ulog: ClusterRemove({0})".format(event.cluster))
+			total_factories -= 1
 
-			# ignore events that are not in the cluster of interest
-			if ad['Cluster'] != cluster : continue
+			print('\t          now peak total')
+			print('\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running))
+			print('\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized))
+			print('\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized))
+			print('\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1))
+			#break
 
-			#print "oh cluster my cluster"
-			#print ad
+		elif event.type == JobEventType.CLUSTER_SUBMIT:
+			Utils.TLog("ulog: ClusterSubmit({0})".format(event.cluster))
+			total_factories += 1
+			#continue
 
-			if ad['MyType'] == 'FactoryRemoveEvent' :
-				#print "my cluster is gone"
-				total_factories -= 1
+		elif event.type == JobEventType.SUBMIT:
+			total_materialized += 1
+			num_materialized += 1
+			num_idle += 1
+			if num_materialized > peak_materialized : peak_materialized = num_materialized
+			if num_idle > peak_idle : peak_idle = num_idle
+			Utils.TLog("ulog: {0}.{1} jobSubmit() idle={2}({3}), materialized={4}({5})".format(event.cluster, event.proc, num_idle, peak_idle, num_materialized, peak_materialized))
+			#continue
 
-				print ' results for cluster {0}'.format(cluster)
-				print ''
-				print '          now peak total'
-				print 'running  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
-				print 'idle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
-				print 'factory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
-				break
+		elif event.type == JobEventType.EXECUTE:
+			total_running += 1
+			num_running += 1
+			num_idle -= 1
+			if num_running > peak_running : peak_running = num_running
+			Utils.TLog("ulog: {0}.{1} jobExec() running={2}({3})".format(event.cluster, event.proc, num_running, peak_running))
+			#continue
 
-			elif ad['MyType'] == 'FactorySubmitEvent' :
-				#print "there is my cluster"
-				total_factories += 1
-				continue
+		elif event.type == JobEventType.JOB_TERMINATED:
+			total_exited += 1
+			num_running -= 1
+			if event["TerminatedNormally"] : num_materialized -= 1
+			Utils.TLog("ulog: {0}.{1} jobTerm({2}) run={3}({4}), materialized={5}({6})".format(event.cluster, event.proc, event["TerminatedNormally"], num_running, peak_running, num_materialized, peak_materialized))
+			#continue
 
-			elif ad['MyType'] == 'SubmitEvent' :
-				#print "there is my job"
-				total_materialized += 1
-				num_materialized += 1
-				num_idle += 1
-				if total_materialized > peak_materialized : peak_materialized = total_materialized
-				if num_idle > peak_idle : peak_idle = num_idle
-				continue
+		elif event.type in [ JobEventType.IMAGE_SIZE ]:
+			#continue
+			pass
 
-			elif ad['MyType'] == 'ExecuteEvent' :
-				total_running += 1
-				num_running += 1
-				num_idle -= 1
-				if num_running > peak_running : peak_running = num_running
-				#print "my job is running! ", num_running
-				continue
+		else:
+			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format(event.cluster, event.proc, event.type));
+			return 0
 
-			elif ad['MyType'] == 'JobTerminatedEvent' :
-				print "there goes my job"
-				num_running -= 1
-				if ad['TerminatedNormally'] == 'true' : num_materialized -= 1
-				continue
+		if (func(event)) : break
 
-		except StopIteration:
-			break;
+	else:
+		return 1
 
 	return 0
+# end wait_for_cluster_removal
 
-#end wait_for_cluster_removal
-
-Utils.TLog("wait up to 5 min for jobs to materialize, run and exit")
-timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
-if timed_out : 
+Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize, run and exit" % cluster)
+timed_out = wait_for_event(cluster, logfile, 5*60, cluster_removal)
+if timed_out :
 	Utils.TLog("Timed out waiting for cluster remove event")
 	exit(1)
 
-Utils.TLog("cluster completed, checking results:")
-if peak_materialized != sub['max_materialize'] : 
+retval = 0
+Utils.TLog("cluster %d completed, checking results:" % cluster)
+if peak_materialized != int(sub['max_materialize']) :
 	Utils.Log("FAILURE: peak_materialized({0}) != max_materialize({1})".format(peak_materialized, sub['max_materialize']))
-elif total_materialized != 10 : 
-	Utils.Log("FAILURE: total_materialized({0}) != queue ({1})".format(total_materialized, 10))
-elif total_exited != 10 : 
-	Utils.Log("FAILURE: total_exited({0}) != queue ({1})".format(total_exited, 10))
+	retval = 1
+elif total_materialized != int(sub.getQArgs()) :
+	Utils.Log("FAILURE: total_materialized({0}) != queue {1}".format(total_materialized, sub.getQArgs()))
+	retval = 1
+elif total_exited != int(sub.getQArgs()) :
+	Utils.Log("FAILURE: total_exited({0}) != queue {1}".format(total_exited, sub.getQArgs()))
+	retval = 1
 else :
-	Utils.Log("OK: all checks passed")
+	Utils.Log("OK: all checks for cluster %d passed" % cluster)
 
-exit(0)
+# submit with more complex queue statement
+#
+sub = htcondor.Submit("""
+	executable = x_sleep.pl
+	arguments = 1
+	notification = never	
+	max_idle = 3
+	My.Foo = "$(Item)"
+	log = %s.$(ClusterId).log
+	queue in (A, B, C, D, E, F, G, H, I, J, K, L)
+	""" % testname)
+
+num_items = 0
+items = []
+for item in iter(sub.itemdata()):
+	items.append(item)
+	num_items += 1
+
+with schedd.transaction() as txn:
+	cluster = sub.queue(txn)
+
+logfile = "%s.%d.log" % (testname, cluster)
+
+total_factories = 0
+total_materialized = 0
+total_exited = 0
+total_running = 0
+num_materialized = 0
+num_running = 0
+num_idle = 0
+peak_materialized = 0
+peak_running = 0
+peak_idle = 0
+
+Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize, run and exit" % cluster)
+timed_out = wait_for_event(cluster, logfile, 5*60, cluster_removal)
+if timed_out:
+	Utils.TLog("Timed out waiting for cluster remove event")
+	exit(1)
+
+Utils.TLog("cluster %d completed, checking results:" % cluster)
+if peak_idle < int(sub['max_idle']):
+	Utils.Log("FAILURE: peak_idle({0}) < max_idle({1})".format(peak_idle, sub['max_idle']))
+	retval = 1
+elif peak_idle > 2*int(sub['max_idle']):
+	Utils.Log("FAILURE: peak_idle({0}) > 2*max_idle({1})".format(peak_idle, sub['max_idle']))
+	retval = 1
+elif total_materialized != num_items:
+	Utils.Log("FAILURE: total_materialized({0}) != {1}".format(total_materialized, num_items))
+	retval = 1
+elif total_exited != num_items:
+	Utils.Log("FAILURE: total_exited({0}) != {1}".format(total_exited, num_items))
+	retval = 1
+else:
+	Utils.Log("OK: total checks for cluster %d passed" % cluster)
+
+# wait a bit for the jobs to get written into the history file
+time.sleep(5)
+
+# count jobs for this cluster in the history file
+# and check to see that the Foo attribute is correct for each
+#
+Utils.TLog("Check history file for jobs of cluster %d:" % cluster)
+num_ads = 0
+num_ok = 0
+ads = schedd.history("ClusterId==%d" % cluster, ['ProcId', 'Foo'])
+for ad in ads:
+	num_ads += 1
+	if ad['Foo'] != items[ad['ProcId']]:
+		Utils.Log("FAILURE: Value of Foo for Proc {0} is {1}, but it should be {2}".format(ad['ProcId'], ad['Foo'], items[ad['ProcId']]))
+		retval = 1
+	else:
+		num_ok += 1
+
+if num_ads != num_items:
+	Utils.TLog("FAILURE: num_ads({0}) != num_items({1}) from history query".format(num_ads, num_items))
+	retval = 1
+elif num_ok == num_ads:
+	Utils.TLog("OK: item checks for cluster %d passed" % cluster)
+
+# submit using a python iterator
+#
+items = [
+	{'item':'A', 'MY.Bar':'"a"', 'MY.Baz':'1'},
+	{'item':'B', 'MY.Bar':'"b"', 'MY.Baz':'2'},
+	{'item':'C', 'MY.Bar':'"c"', 'MY.Baz':'3'},
+	{'item':'D', 'MY.Bar':'"d"', 'MY.Baz':'4'},
+	{'item':'E', 'MY.Bar':'"e"', 'MY.Baz':'5'},
+	{'item':'F', 'MY.Bar':'"f"', 'MY.Baz':'6'},
+]
+num_items = 6
+sub['hold'] = 'true'
+sub['max_idle'] = str(num_items)
+
+def all_materialized(event):
+	global num_items
+	global total_materialized
+	if (event.type == JobEventType.SUBMIT) and (num_items == total_materialized) : return 1
+	return 0
+
+with schedd.transaction() as txn:
+	subres = sub.queue_with_itemdata(txn, 1, iter(items))
+
+Utils.TLog("{0}".format(subres))
+
+cluster = subres.cluster();
+clusterad = subres.clusterad();
+logfile = clusterad['UserLog']
+
+total_factories = 0
+total_materialized = 0
+total_exited = 0
+total_running = 0
+num_materialized = 0
+num_running = 0
+num_idle = 0
+peak_materialized = 0
+peak_running = 0
+peak_idle = 0
+
+Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize" % cluster)
+timed_out = wait_for_event(cluster, logfile, 5*60, all_materialized)
+if timed_out:
+	Utils.TLog("Timed out waiting for all jobs to materialize")
+	print_file_contents(logfile)
+	exit(1)
+
+Utils.TLog("cluster %d completed, checking results:" % cluster)
+if total_materialized != num_items:
+	Utils.Log("FAILURE: total_materialized({0}) != {1}".format(total_materialized, num_items))
+	retval = 1
+else:
+	Utils.Log("OK: total checks for cluster %d passed" % cluster)
+
+# count jobs for this cluster in the history file
+# and check to see that the Foo attribute is correct for each
+#
+Utils.TLog("Check queue for jobs of cluster %d:" % cluster)
+num_ads = 0
+num_ok = 0
+ads = schedd.query("ClusterId==%d" % cluster, ['ProcId', 'JobStatus', 'Foo', 'Bar', 'Baz'])
+for ad in ads:
+	num_ads += 1
+	item = items[ad['ProcId']]
+	if ad['Foo'] != item['item']:
+		Utils.Log("FAILURE: Value of Foo for Proc {0} is {1}, but it should be {2}".format(ad['ProcId'], ad['Foo'], item['item']))
+		retval = 1
+	elif ad['Bar'] != item['MY.Bar'].strip('"'):
+		Utils.Log("FAILURE: Value of Bar for Proc {0} is {1}, but it should be {2}".format(ad['ProcId'], ad['Bar'], item['MY.Bar']))
+		retval = 1
+	elif ad['Baz'] != int(item['MY.Baz']):
+		Utils.Log("FAILURE: Value of Baz for Proc {0} is {1}, but it should be {2}".format(ad['ProcId'], ad['Baz'], item['MY.Baz']))
+		retval = 1
+	else:
+		num_ok += 1
+
+if num_ads != num_items:
+	Utils.TLog("FAILURE: num_ads({0}) != num_items({1}) from schedd query".format(num_ads, num_items))
+	retval = 1
+elif num_ok == num_ads:
+	Utils.TLog("OK: item checks for cluster %d passed" % cluster)
+
+
+exit(retval)
 

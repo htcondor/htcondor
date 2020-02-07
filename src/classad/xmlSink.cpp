@@ -251,6 +251,7 @@ Unparse(
 			add_tag(buffer, XMLLexer::tagID_RelativeTime, XMLLexer::tagType_End);
 			break;
 		}
+		case Value::SCLASSAD_VALUE:
 		case Value::CLASSAD_VALUE: {
 			ClassAd *ad = NULL;
 			vector< pair<string,ExprTree*> > attrs;

@@ -1,0 +1,415 @@
+==basic.sub
+Cmd=/^".*basic.cmd"$/
+Args="10s"
+ProcId=0
+JobStatus=1
+.
+ProcId=1
+JobStatus=1
+
+==argsin.sub
+Cmd=/^".*basic.cmd"$/
+Args="10s"
+ProcId=0
+.
+ProcId=1
+Args="20s"
+.
+ProcId=2
+Args="30s"
+
+==allprune.sub
+AppendFiles="cluster.log"
+Arguments=""
+BufferBlockSize=200
+BufferFiles=false
+BufferSize=100000
+ClusterId=3
+CompressFiles="c.dat"
+#CoreSize=34 * 1024
+CronDayOfMonth="2"
+CronDayOfWeek="1"
+CronHour="13"
+CronMinute="10"
+CronMonth="2"
+DAGManJobId=44
+DAGManNodesLog=/".+dagman.log"/
+DAGNodeName="node2"
+DeferralPrepTime=300
+DeferralWindow=0
+DontEncryptInputFiles="plain.dat"
+DontEncryptOutputFiles="plain.out"
+EmailAttributes="not,spam"
+EncryptExecuteDirectory=true
+EncryptInputFiles="a.dat, b.dat"
+EncryptOutputFiles="a.out"
+FetchFiles="d.dat"
+IsNoopJob=false
+JarFiles="basic.jar, stuff.jar"
+JobAdInformationAttrs="MemoryUsage, DiskUsage"
+JobBatchName="prune"
+JobDescription="all prunable submit keywords"
+JobLeaseDuration=7 * 60
+JobMachineAttrs="Machine, SlotId, Cpus, Disk, Memory"
+JobMachineAttrsHistoryLength=1
+JobMaterializeMaxIdle=4
+JobMaxVacateTime=5 * 60
+JobPrio=3
+KeepClaimIdle=3 * 60
+LastMatchListLength=4
+LoadProfile=true
+LocalFiles="local.file"
+MaxJobRetirementTime=6 * 60
+NextJobStartDelay=2 * 60
+NiceUser=true
+NoopJobExitCode=5
+NoopJobExitSignal=false
+NotifyUser="bt@cs.wisc.edu"
+OutputDestination=/"/scratch/output/[0-9]+"/
+ParallelScriptShadow="shadow.cmd"
+ParallelScriptStarter="starter.cmd"
+RemoteIwd="sandbox"
+Remote_GlobusRSL="what goes here"
+Remote_GridResource="condor stuff"
+Remote_NordugridRSL="or here"
+Remote_Remote_GlobusRSL="what goes over there"
+Remote_Remote_GridResource="condor remoter stuff"
+Remote_Remote_NordugridRSL="or over there"
+Requirements=/TARGET\.HasEncryptExecuteDirectory.+TARGET\.HasJobDeferral.+DeferralTime.+DeferralPrepTime/
+RunAsOwner=false
+StackSize=1024 * 1024
+SubmitEventNotes="ipso lorem"
+SubmitEventUserNotes="user ipso lorem"
+UserLog=/".*[0-9]+.log"/
+WantGracefulRemoval=true
+WantRemoteIO=false
+
+==gpu.sub
+RequestGPUs=1
+Requirements=/TARGET\.GPUs >= RequestGPUs/
+ProcId=0
+.
+ProcId=1
+
+==docker.sub
+DockerImage="ubuntu"
+Requirements=/TARGET\.HasDocker/
+WantDocker=true
+JobStatus=1
+ProcId=0
+.
+Args="20s"
+ProcId=1
+.
+Args="30s"
+ProcId=2
+
+==docker-noexe.sub
+Arguments=""
+Cmd=""
+DockerImage="ubuntu"
+#ExecutableSize=0
+#ImageSize=0
+Requirements=/TARGET\.HasDocker/
+TransferExecutable=false
+WantDocker=true
+ProcId=0
+
+==grid_azure.sub
+Arguments=""
+AzureAdminKey="/Users/jfrey/.ssh/azure_rsa.pub"
+AzureAdminUsername="jfrey"
+AzureAuthFile=/".+azure-jfrey.creds"/
+AzureImage="linux-ubuntu-latest"
+AzureLocation="centralus"
+AzureSize="Standard_DS1_V2"
+Cmd="jfrey-test"
+ExecutableSize=0
+GridResource="azure 4843bf93-0ebe-422e-b6ef-c877f6740099"
+ImageSize=0
+JobUniverse=9
+Requirements=true
+TransferExecutable=false
+UserLog=/".+azure.log"/
+WantClaiming=false
+
+==grid_condorc.sub
+Args="60"
+Err=/"err.[0-9]+.0"/
+GridResource="condor jfrey@here 127.0.0.1"
+JobUniverse=9
+Out=/"out.\d+.0"/
+Requirements=true
+ShouldTransferFiles="YES"
+StreamErr=false
+StreamOut=false
+UserLog=/".+condorc.log"/
+WantClaiming=false
+
+==grid_ec2.sub
+Arguments=""
+Cmd="TestSIR"
+EC2AccessKeyId=/".+Amazon.accessKeyFile"/
+EC2AmiID="ami-00000006"
+EC2InstanceType="m1.small"
+EC2KeyPairFile=/".+ssh_key_pair.9.0"/
+EC2SecretAccessKey=/".+Amazon.secretKeyFile"/
+EC2SpotPrice="0.011"
+EC2TagName="TestSIR"
+EC2UserDataFile=/".+ec2_user_data"/
+ExecutableSize=0
+GridResource="ec2 https://ec2.amazonaws.com/"
+ImageSize=0
+JobUniverse=9
+Requirements=true
+TransferExecutable=false
+WantClaiming=false
+
+==grid_gce.sub
+Arguments=""
+Cmd="Test"
+ExecutableSize=0
+GceAccount="jamesfrey@wisc.edu"
+GceImage="https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-7-wheezy-v20150112"
+GceJsonFile=/".+gce.json"/
+GceMachineType="https://www.googleapis.com/compute/v1/projects/devrel-htcondor-demo/zones/us-west1-a/machineTypes/n1-standard-666"
+GceMetadata="\"one=1 two=\"\"2\"\" three='spacey ''quoted'' value'\""
+GceMetadataFile=/".+gce.metadata"/
+GridResource="gce https://www.googleapis.com/compute/v1 jfrey-condor us-central1-a"
+ImageSize=0
+JobUniverse=9
+Requirements=true
+TransferExecutable=false
+UserLog=/".+gce.log"/
+WantClaiming=false
+
+==xfer0.sub
+Requirements=/TARGET\.HasFileTransfer.+"FTP",TARGET\.HasFileTransferPluginMethods/
+TransferInput="FTP://foo/bar"
+
+==xfer1.sub
+Err=/"\d+xfer1.12.err"/
+Out=/"\d+xfer1.12.out"/
+Requirements=/TARGET\.HasFileTransfer/
+ShouldTransferFiles="YES"
+StreamErr=false
+StreamOut=false
+TransferInput=/".+Multilevel_Thesis_WheatData"/
+TransferOutput="results.out"
+UserLog=/".+\d+.log"/
+
+==xfer2.sub
+Err=/"\d+xfer2.err"/
+Out=/"\d+xfer2.out"/
+OutputDestination=/"\d+/0"/
+Requirements=/TARGET\.HasFileTransfer .+"HTTP",TARGET\.HasFileTransferPluginMethods.+"HTTPS",TARGET\.HasFileTransferPluginMethods/
+ShouldTransferFiles="YES"
+StreamErr=false
+StreamOut=false
+TransferInput="../Multilevel_Thesis_WheatData,HTTP://example.com/file1,HTTPS://example.com/file2"
+TransferOutput="results.out"
+ProcId=0
+.
+OutputDestination=/"\d+/1"/
+ProcId=1
+
+==xfer3.sub
+Err=/".+\d+xfer3.sub.\d+_0.err"/
+Out=/".+\d+xfer3.sub.\d+_0.out"/
+Requirements=/TARGET\.HasFileTransfer .+"HTTP",TARGET\.HasFileTransferPluginMethods.+"HTTPS",TARGET.HasFileTransferPluginMethods/
+StreamErr=false
+StreamOut=false
+TransferInput="../run1 data.csv,HTTP://example.com/file1,HTTPS://example.com/file2"
+TransferOutput="results.out,checkpoint.dat"
+UserLog=/".+\d+xfer3.sub.log"/
+ProcId=0
+.
+Err=/".+\d+xfer3.sub.\d+_1.err"/
+Out=/".+\d+xfer3.sub.\d+_1.out"/
+ProcId=1
+TransferInput="../run2 data.csv,HTTP://example.com/file1,HTTPS://example.com/file2"
+.
+Err=/".+\d+xfer3.sub.\d+_2.err"/
+Out=/".+\d+xfer3.sub.\d+_2.out"/
+ProcId=2
+TransferInput="../run3 large data file,HTTP://example.com/file1,HTTPS://example.com/file2"
+
+==xfer4.sub
+Args="run1 data.csv"
+Err=/".+\d+xfer4.sub.\d+_0.err"/
+Out=/".+\d+xfer4.sub.\d+_0.out"/
+Requirements=/TARGET\.FileSystemDomain == MY\.FileSystemDomain/
+ShouldTransferFiles="NO"
+StreamErr=false
+StreamOut=false
+UserLog=/".+\d+xfer4.sub.log"/
+ProcId=0
+.
+Args="run2 data.csv"
+Err=/".+\d+xfer4.sub.\d+_1.err"/
+Out=/".+\d+xfer4.sub.\d+_1.out"/
+ProcId=1
+.
+Args="run3 large data file"
+Err=/".+\d+xfer4.sub.\d+_2.err"/
+Out=/".+\d+xfer4.sub.\d+_2.out"/
+ProcId=2
+
+==xfer5.sub
+Err=/".+\d+xfer5.sub.\d+_0.err"/
+Out=/".+\d+xfer5.sub.\d+_0.out"/
+StreamErr=false
+StreamOut=false
+
+==xfer6.sub
+Err=/".+\d+xfer6.sub.\d+_0.err"/
+Out=/".+\d+xfer6.sub.\d+_0.out"/
+
+==xfer7.sub
+Err=/".+\d+xfer7.sub.\d+_0.err"/
+Out=/".+\d+xfer7.sub.\d+_0.out"/
+StreamErr=true
+StreamOut=false
+
+==xfer8.sub
+Err=/".+\d+xfer8.sub.\d+_0.err"/
+Out=/".+\d+xfer8.sub.\d+_0.out"/
+StreamErr=false
+StreamOut=true
+
+==periodic.sub
+OnExitHold=ExitCode > 42
+OnExitHoldReason="job fooled by succeeding to well"
+OnExitHoldSubCode=43
+PeriodicHold=(time() - QDate) > 3600 || MemoryUsage > RequestMemory
+PeriodicHoldReason="exceeded 1 Hour in queue"
+PeriodicHoldSubCode=IfThenElse((time() - QDate) > 3600,92,93)
+PeriodicRelease=HoldSubCode == 93
+PeriodicRemove=(time() - QDate) > 3600 * 2
+
+==x509.sub
+DelegateJobGSICredentialsLifetime=2600
+MyProxyCredentialName="bob"
+MyProxyHost="example"
+MyProxyNewProxyLifetime=1 * 60 + 20
+MyProxyPassword=really - secure - huh
+MyProxyRefreshThreshold=2 * 60
+MyProxyServerDN="example.com"
+x509userproxy=/".+proxy"/
+
+==notify.sub
+EmailAttributes="the,quick,red,fox"
+NotifyUser="bt@cs.wisc.edu"
+WantGracefulRemoval=Currentime > 22
+
+==args.sub
+Arguments="The Quick Red Fox"
+
+==argsv2.sub
+Arguments="The Quicker, Redder Fox"
+
+==args_spaces.sub
+Arguments="-one The' 'Quicker,' 'Redder' 'Fox -two' 'other' 'stuff"
+
+==retries.sub
+JobMaxRetries=3
+OnExitHold=ExitCode > 42
+OnExitHoldReason="job fooled by succeeding to well"
+OnExitHoldSubCode=43
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+
+==success.sub
+JobMaxRetries=2
+JobSuccessExitCode=5
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == JobSuccessExitCode
+
+==parallel.sub
+JobUniverse=11
+MaxHosts=5
+MinHosts=5
+WantIOProxy=true
+
+==parasched.sub
+MaxHosts=5
+MinHosts=5
+WantParallelScheduling=true
+
+==basicres.sub
+RequestCpus=max({ TARGET.TotalCpus - 1,3 })
+RequestDisk=3145728
+RequestMemory=2253
+Requirements=/TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET\.Cpus >= RequestCpus/
+
+==customattr.sub
+CustomExpr=99 / Bottles || Beer
+CustomInt=23
+CustomReal=20.0
+CustomString="Ipso Lorem"
+
+==kvm.sub
+Cmd="Test VM job"
+JobUniverse=13
+JobVMCheckpoint=false
+JobVMMemory=1024
+JobVMNetworking=true
+JobVMNetworkingType="nat"
+JobVMType="kvm"
+JobVMVNCConsole=true
+JobVM_VCPUS=1
+RequestMemory=MY.JobVMMemory
+ShouldTransferFiles="YES"
+TransferExecutable=false
+#TransferInputSizeMB=1024
+UserLog=/".+vmu.log"/
+VMPARAM_vm_Disk="dummy.qcow2:sda1:w:qcow2,dummy2.qcow2:sdb1:w:qcow2"
+=warn=kvm.sub
+WARNING: 'RequestMemory' was NOT specified.  Using JobVMMemory = 1024.
+
+==wheat.sub
+Args="70 110"
+Err="prediction_script_data_70_0.err"
+Iwd=/".+Multilevel_Thesis_WheatData/70"/
+JobMaterializeMaxIdle=2000
+JobMaxRetries=5
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+Out="prediction_script_data_70.out"
+PeriodicHold=(NumJobCompletions > 10)
+RequestDisk=716800
+RequestMemory=1741
+Requirements=/OpSysMajorVer == 7.+TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET.HasFileTransfer/
+ShouldTransferFiles="YES"
+TransferInput="110.txt,grid_i.txt,my_env.RData,../../R_v2.tar.gz,../prediction_script_data.R,../../SLIBS.tar.gz"
+UserLog=/".+Multilevel_Thesis_WheatData/70.prediction_script_data_70.log"/
+
+==ref.sub
+Args="70 110 180"
+Err="data_70_0.err"
+Out="data_70.out"
+RequestDisk=716800
+RequestMemory=1741
+ShouldTransferFiles="YES"
+StreamErr=false
+StreamOut=false
+TransferInput="110.txt,grid_i.txt"
+UserLog=/".+data_70.log"/
+ProcId=0
+.
+Args="70 121 191"
+Err="data_70_1.err"
+ProcId=1
+TransferInput="121.txt,grid_i.txt"
+.
+Args="216 142 358"
+Err="data_216_2.err"
+Out="data_216.out"
+ProcId=2
+TransferInput="142.txt,grid_i.txt"
+UserLog=/".+data_216.log"/
+.
+Args="240 133 373"
+Err="data_240_3.err"
+Out="data_240.out"
+ProcId=3
+TransferInput="133.txt,grid_i.txt"
+UserLog=/".+data_240.log"/
+.

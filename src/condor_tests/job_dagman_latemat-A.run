@@ -31,7 +31,8 @@ use CondorUtils;
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
-	SCHEDD_ALLOW_LATE_MATERIALIZE = true
+	# this is now the default
+	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
 	SUBMIT_FACTORY_JOBS_BY_DEFAULT = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq
@@ -79,7 +80,7 @@ emit_file("job_dagman_latemat-A-nodeB.cmd", $nodeBFileContent);
 
 my @nodesOutputRegex = (
 	# Start with the NodeA jobs.
-	"-01\.000(.*)Factory submitted",
+	"-01\.000(.*)Cluster submitted",
 	"000\.000(.*)Job submitted",
 	"001\.000(.*)Job submitted",
 	"Job terminated",
@@ -96,10 +97,10 @@ my @nodesOutputRegex = (
 	"Job terminated",
 	"008\.000(.*)Job submitted",
 	"Job terminated",
-	"-01\.000(.*)Factory removed",
+	"-01\.000(.*)Cluster removed",
 	# Now we move on to the NodeB jobs. The second factory should not get 
 	# submitted until the first one is removed!
-	"-01\.000(.*)Factory submitted",
+	"-01\.000(.*)Cluster submitted",
 	"000\.000(.*)Job submitted",
 	"001\.000(.*)Job submitted",
 	"Job terminated",
@@ -107,7 +108,7 @@ my @nodesOutputRegex = (
 	"Job terminated",
 	"004\.000(.*)Job submitted",
 	"Job terminated",
-	"-01\.000(.*)Factory removed"
+	"-01\.000(.*)Cluster removed"
 );
 
 # truly const variables in perl

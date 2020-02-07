@@ -40,7 +40,7 @@ bool GcePing::ioCheck(char **argv, int argc)
 //     <preemptible> <json_file>
 bool GceInstanceInsert::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 14) &&
+	return verify_min_number_args(argc, 15) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&

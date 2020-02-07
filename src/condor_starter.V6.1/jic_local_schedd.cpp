@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
 #include "condor_classad.h"
@@ -495,8 +494,7 @@ JICLocalSchedd::getUniverse( void )
 bool
 JICLocalSchedd::initLocalUserLog( void )
 {
-	bool ret = u_log->initFromJobAd( job_ad, ATTR_ULOG_FILE,
-								 ATTR_ULOG_USE_XML, true );
+	bool ret = u_log->initFromJobAd( job_ad, false );
 	if( ! ret ) {
 		job_ad->Assign( ATTR_HOLD_REASON, "Failed to initialize user log");
 		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_UnableToInitUserLog );
@@ -533,13 +531,12 @@ JICLocalSchedd::retryJobCleanup( void )
 }
 
 
-int
+void
 JICLocalSchedd::retryJobCleanupHandler( void )
 {
     m_cleanup_retry_tid = -1;
     dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");
     Starter->allJobsDone();
-    return TRUE;
 }
 
 bool

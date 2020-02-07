@@ -411,7 +411,7 @@ ProcessId::writeConfirmationOnly(FILE* fp) const
 	}
 		// its an error otherwise
 	else{
-		dprintf(D_PROCFAMILY, "ERROR: Attempted to write a confirmation for a process id that was not confirmed");
+		dprintf(D_PROCFAMILY, "ERROR: Attempted to write a confirmation for a process id that was not confirmed\n");
 		return FAILURE;
 	}
 

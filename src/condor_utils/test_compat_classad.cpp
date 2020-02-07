@@ -21,8 +21,8 @@
 #include "condor_attributes.h"
 
 #include "classad/classad_distribution.h"
-#include "classad_oldnew.h"
 #include "compat_classad.h"
+#include "compat_classad_util.h"
 
 #include "classad/sink.h"
 
@@ -49,7 +49,7 @@ bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::Class
 bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose);
 bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose);
 
-bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
+bool test_EvalExprTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
 
 void setAllFalse(bool* b);
 
@@ -399,7 +399,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
     }
     */
     
-    c2->ChainCollapse();
+    ChainCollapse(*c2);
 
      
     /*
@@ -861,8 +861,8 @@ bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
 }
 //}}}
 
-//{{{ test_EvalTree
-bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+//{{{ test_EvalExprTree
+bool test_EvalExprTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedShortHand = false, passedNullTarget = false;
@@ -878,7 +878,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     classad::Value tmpVal;
 
     //should succeed
-    passedShortHand = EvalTree(itr->second, c1, &tmpVal);
+    passedShortHand = EvalExprTree(itr->second, c1, tmpVal);
 
     if(passedShortHand)
     {
@@ -887,7 +887,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("First EvalTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
+        printf("First EvalExprTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
         if(passedShortHand && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
@@ -899,7 +899,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     
     //should succeed
 
-    passedNullTarget = EvalTree(itr->second, c1,NULL, &tmpVal);
+    passedNullTarget = EvalExprTree(itr->second, c1,NULL, tmpVal);
 
     if(passedNullTarget)
     {
@@ -908,7 +908,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("Second EvalTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
+        printf("Second EvalExprTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
         if(passedNullTarget && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
@@ -919,27 +919,27 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     tmpVal.Clear();
 
     //should fail.
-    if(!EvalTree(itr->second, NULL,NULL, &tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,NULL, tmpVal) )
     {
         passedNullMine = true;
     }
 
     if(verbose)
     {
-        printf("Third EvalTree (null mine) %s.\n", passedNullMine ? "passed" : "failed");
+        printf("Third EvalExprTree (null mine) %s.\n", passedNullMine ? "passed" : "failed");
     }
 
     tmpVal.Clear();
 
     //this should also fail
-    if(!EvalTree(itr->second, NULL,c2, &tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,c2, tmpVal) )
     {
         passedNullMineRealTarget = true;
     }
 
     if(verbose)
     {
-        printf("Fourth EvalTree (null mine) %s.\n", passedNullMineRealTarget
+        printf("Fourth EvalExprTree (null mine) %s.\n", passedNullMineRealTarget
                 ? "passed" : "failed");
     }
 
@@ -947,7 +947,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     itr = c2->begin();
     itr++;
     //should pass
-    passedReal = EvalTree(itr->second, c1, c2, &tmpVal);
+    passedReal = EvalExprTree(itr->second, c1, c2, tmpVal);
 
     if(passedReal)
     {
@@ -967,7 +967,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("Fifth EvalTree (Real) %s.\n", passedReal ? "passed" : "failed");
+        printf("Fifth EvalExprTree (Real) %s.\n", passedReal ? "passed" : "failed");
         if(!wasRightNumber)
         {
             printf("But the number was not what was expected. Expected 3 and got %s.\n", buf.c_str());
@@ -1486,9 +1486,9 @@ void setUpAndRun(int verbose)
     printf("-------------\n");
 
 
-    printf("Testing EvalTree...\n");
-    passedTest[9] = test_EvalTree(compC4,compC2, verbose);
-    printf("EvalTree %s.\n", passedTest[10] ? "passed" : "failed");
+    printf("Testing EvalExprTree...\n");
+    passedTest[9] = test_EvalExprTree(compC4,compC2, verbose);
+    printf("EvalExprTree %s.\n", passedTest[10] ? "passed" : "failed");
     printf("-------------\n");
 
     printf("Testing GetInternalReferences...\n");

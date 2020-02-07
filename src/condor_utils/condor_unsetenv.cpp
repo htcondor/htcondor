@@ -31,7 +31,7 @@ static char *
 __findenv(const char *name, int *offset)
 {
         extern char **environ;
-        register int len;
+        register ptrdiff_t len;
         register const char *np;
         register char **p, *c;
 
@@ -42,7 +42,7 @@ __findenv(const char *name, int *offset)
         len = np - name;
         for (p = environ; (c = *p) != NULL; ++p)
                 if (strncmp(c, name, len) == 0 && c[len] == '=') {
-                        *offset = p - environ;
+                        *offset = (int)(p - environ);
                         return (c + len + 1);
                 }
         return (NULL);

@@ -32,7 +32,6 @@
  */
 
 #include "classy_counted_ptr.h"
-#include "counted_ptr.h"
 #include "reli_sock.h"
 #include "dc_message.h"
 #include "shared_port_endpoint.h"
@@ -59,7 +58,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	bool ReverseConnect_blocking( CondorError *error );
 	static bool SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, const MyString & peer, CondorError *error );
 
-	bool AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_ptr<SharedPortEndpoint> shared_listener);
+	bool AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener);
 	bool HandleReversedConnectionRequestReply(CondorError *error);
 
 	bool try_next_ccb();

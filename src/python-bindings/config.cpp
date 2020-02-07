@@ -423,7 +423,7 @@ struct Param
         {
             return param_to_py(attr.c_str(), pmeta, result_str);
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             PyErr_Clear();
             return object(result_str);
@@ -473,7 +473,7 @@ struct Param
         {
             results.append(name);
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             // Suppress the C++ exception.  The HTCondor code is not thread safe.
         }
@@ -542,14 +542,14 @@ struct Param
             {
                 pyvalue = param_to_py(name, pmeta, value);
             }
-            catch (error_already_set)
+            catch (error_already_set&)
             {
                 PyErr_Clear();
                 pyvalue = object(value);
             }
             results.append(make_tuple<std::string, object>(name, pyvalue));
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             // Suppress the python-to-C++ exception.  The HTCondor code is not thread safe.
             // This will set PyErr_Occurred so eventually the python exception fires.
@@ -633,19 +633,39 @@ void configWrapper() {
 
 void export_config()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     config_ex(CONFIG_OPT_NO_EXIT | CONFIG_OPT_WANT_META);
     param_insert("ENABLE_CLASSAD_CACHING", "false");
     classad::ClassAdSetExpressionCaching(false);
 
-    def("version", CondorVersionWrapper, "Returns the version of HTCondor this module is linked against.");
-    def("platform", CondorPlatformWrapper, "Returns the platform of HTCondor this module is running on.");
-    def("reload_config", configWrapper, "Reload the HTCondor configuration from disk.");
-    class_<Param>("_Param")
+    def("version", CondorVersionWrapper,
+        R"C0ND0R(
+        Returns the version of HTCondor this module is linked against.
+        )C0ND0R");
+    def("platform", CondorPlatformWrapper,
+        R"C0ND0R(
+        Returns the platform of HTCondor this module is running on.
+        )C0ND0R");
+    def("reload_config", configWrapper,
+        R"C0ND0R(
+        Reload the HTCondor configuration from disk.
+        )C0ND0R");
+    class_<Param>("_Param",
+            R"C0ND0R(
+            A dictionary-like object for the local HTCondor configuration; the keys and
+            values of this object are the keys and values of the HTCondor configuration.
+
+            The  ``get``, ``setdefault``, ``update``, ``keys``, ``items``, and ``values``
+            methods of this class have the same semantics as a Python dictionary.
+
+            Writing to a ``_Param`` object will update the in-memory HTCondor configuration.
+            )C0ND0R",
+            init<>(args("self")))
         .def("__getitem__", &Param::getitem)
         .def("__setitem__", &Param::setitem)
         .def("__contains__", &Param::contains)
         .def("setdefault", &Param::setdefault)
-        .def("get", &Param::get, "Returns the value associated with the key; if the key is not a defined parameter, returns the default argument.  Default is None.", (arg("self"), arg("key"), arg("default")=object()))
+        .def("get", &Param::get, (arg("self"), arg("key"), arg("default")=object()))
         .def("keys", &Param::keys)
         .def("__iter__", &Param::iter)
         .def("__len__", &Param::len)
@@ -653,21 +673,42 @@ void export_config()
         .def("update", &Param::update)
         ;
     object param = object(Param());
-    param.attr("__doc__") = "A dictionary-like object containing the HTCondor configuration.";
+    param.attr("__doc__") =
+        R"C0ND0R(
+        Provides dictionary-like access the HTCondor configuration.
+
+        An instance of :class:`_Param`.  Upon importing the :mod:`htcondor` module, the
+        HTCondor configuration files are parsed and populate this dictionary-like object.
+        )C0ND0R";
     scope().attr("param") = param;
 
-    class_<RemoteParam>("RemoteParam", boost::python::init<const ClassAdWrapper &>(":param ad: An ad containing the location of the remote daemon."))
+    class_<RemoteParam>("RemoteParam",
+                R"C0ND0R(
+                The :class:`RemoteParam` class provides a dictionary-like interface to the configuration of an HTCondor daemon.
+                The  ``get``, ``setdefault``, ``update``, ``keys``, ``items``, and ``values``
+                methods of this class have the same semantics as a Python dictionary.
+                )C0ND0R",
+            boost::python::init<const ClassAdWrapper &>(
+                R"C0ND0R(
+                :param ad: An ad containing the location of the remote daemon.
+                :type ad: :class:`~classad.ClassAd`
+                )C0ND0R",
+                args("self", "ad")))
         .def("__getitem__", &RemoteParam::getitem)
         .def("__setitem__", &RemoteParam::setitem)
         .def("__contains__", &RemoteParam::contains)
         .def("setdefault", &RemoteParam::setdefault)
-        .def("get", &RemoteParam::get, "Returns the value associated with the remote parameter; if the parameter is not defined, return the default argument.  Default is None.", (arg("self"), arg("key"), arg("default")=boost::python::object()))
+        .def("get", &RemoteParam::get, (arg("self"), arg("key"), arg("default")=boost::python::object()))
         .def("keys", &RemoteParam::keys)
         .def("__iter__", &RemoteParam::iter)
         .def("__len__", &RemoteParam::len)
         .def("__delitem__", &RemoteParam::delitem)
         .def("items", &RemoteParam::items)
         .def("update", &RemoteParam::update)
-        .def("refresh", &RemoteParam::refresh)
+        .def("refresh", &RemoteParam::refresh,
+            R"C0ND0R(
+            Rebuilds the dictionary based on the current configuration of the daemon.
+            )C0ND0R",
+            args("self"))
         ;
 }

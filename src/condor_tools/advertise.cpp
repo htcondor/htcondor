@@ -29,7 +29,7 @@
 #include "condor_distribution.h"
 #include "daemon_list.h"
 #include "dc_collector.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 
 #include <algorithm>
 
@@ -74,10 +74,10 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 
 	// return non-zero if new parser, o if old (line oriented) parser
 	// TODO: fix this to handle new style classads also...
-	virtual int NewParser(ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+	virtual int NewParser(classad::ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/) {
+	virtual int PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/) {
 		// if this line matches the ad delimitor, tell the parser to stop parsing
 		if (multiple && (line.empty() || (line[0] == '\n')))
 			return 2; //end-of-classad
@@ -95,7 +95,7 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 	}
 
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file) {
+	virtual int OnParseError(std::string & line, classad::ClassAd & /*ad*/, FILE* file) {
 		// print out where we barfed to the log file
 		dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.c_str());
 
@@ -135,6 +135,7 @@ int main( int argc, char *argv[] )
 	bool many_connections = false;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	bool use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", true );
@@ -216,14 +217,14 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	// create class that we can use to influence the behavior of Classad::InsertFromFile
+	// create class that we can use to influence the behavior of InsertFromFile
 	ToolClassAdFileParseHelper parse_helper(allow_multiple);
 
 	for (;;) {
 		ClassAd *ad = new ClassAd();
 		int error;
 		bool eof;
-		int cAttrs = ad->InsertFromFile(file, eof, error, &parse_helper);
+		int cAttrs = InsertFromFile(file, *ad, eof, error, &parse_helper);
 		if (error < 0) {
 			fprintf(stderr,"couldn't parse ClassAd in %s\n", filename);
 			delete ad;
@@ -312,9 +313,11 @@ int main( int argc, char *argv[] )
 
 				// If there's no "MyAddress", generate one..
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
-				MyString tmp;
-				tmp.formatstr( "<%s:0>", my_ip_string() );
-				ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
+				std::string tmp;
+				// TODO: Picking IPv4 arbitrarily.
+				MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+				formatstr( tmp, "<%s:0>", my_ip.Value() );
+				ad->Assign( ATTR_MY_ADDRESS, tmp );
 			}
 
 			if( !sock ) {

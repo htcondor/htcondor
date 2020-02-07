@@ -63,7 +63,6 @@ src/condor_amazon/
 src/condor_c-gahp/condor_c-gahp
 src/condor_c-gahp/condor_c-gahp_worker_thread
 src/condor_chirp/condor_chirp
-src/condor_ckpt_server/condor_ckpt_server
 src/condor_collector.V6/condor.xsd
 src/condor_collector.V6/condorCollector.nsmap
 src/condor_collector.V6/condorCollector.wsdl
@@ -109,22 +108,16 @@ src/condor_schedd.V6/condorSchedd.wsdl
 src/condor_schedd.V6/condor_schedd
 src/condor_schedd.V6/temp_diff.patch
 src/condor_shadow.V6.1/condor_shadow
-src/condor_shadow.std/condor_shadow.std
 src/condor_shared_port/condor_shared_port
 src/condor_startd.V6/condor_glexec_wrapper
 src/condor_startd.V6/condor_startd
 src/condor_starter.V6.1/condor_glexec_job_wrapper
 src/condor_starter.V6.1/condor_ssh_to_job_sshd_config_template
 src/condor_starter.V6.1/condor_starter
-src/condor_starter.std/condor_starter.std
 src/condor_status.V6/condor_status
 src/condor_submit.V6/condor_submit
 src/condor_sysapi/condor_kflops
 src/condor_sysapi/condor_mips
-src/condor_syscall_lib/receivers.cpp
-src/condor_syscall_lib/senders.cpp
-src/condor_syscall_lib/switches.cpp
-src/condor_syscall_lib/syscall-list
 src/condor_tests/Condor.pm
 src/condor_tests/CondorPersonal.pm
 src/condor_tests/CondorTest.pm
@@ -147,7 +140,6 @@ src/condor_tests/list_quick
 src/condor_tests/list_quicknolink
 src/condor_tests/list_rsc
 src/condor_tests/list_simple
-src/condor_tests/list_stduniv
 src/condor_tests/list_time
 src/condor_tools/condor
 src/condor_tools/condor_advertise
@@ -201,6 +193,7 @@ src/safefile/stamp-h2
 src/safefile/safe_id_range_list.h.in.tmp
 src/safefile/safe_id_range_list.h.tmp_out
 src/condor_tools/condor_gpu_discovery
+src/condor_tools/condor_gpu_utilization
 src/condor_utils/tests/_ring_buffer_tester
 src/python-bindings/tests_tmp
 src/python-bindings/test_driver

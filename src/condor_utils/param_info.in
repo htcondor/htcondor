@@ -84,11 +84,6 @@ type=int
 default=86400
 type=int
 
-[PREEN_MAX_SCHEDD_CONNECTION_TIME]
-default=20
-type=int
-tags=preen
-
 [PREEN_COREFILE_MAX_SIZE]
 default=50000000
 type=int
@@ -148,16 +143,18 @@ type=int
 default=9
 type=int
 
-[MASTER_SQLLOG]
-default=
-type=string
-description=Master SQL Log
-
 [FULL_HOSTNAME]
 default=
 type=string
 tags=config
 description=Fully qualified hostname of the machine
+customization=expert
+
+[HOST_ALIAS]
+default=$(FULL_HOSTNAME)
+type=string
+tags=config
+description=Preferred DNS alias for this host
 customization=expert
 
 [HOSTNAME]
@@ -415,21 +412,15 @@ default=
 type=string
 tags=starter
 
-[STARTER_LOCAL_LOGGING]
-default=
-type=string
-tags=starter
+[TRUST_LOCAL_UID_DOMAIN]
+default=true
+type=bool
 
 [FILESYSTEM_DOMAIN]
 default=$(FULL_HOSTNAME)
 type=string
 usage=Used to indicate a shared file system, or to specify that each machine has its own file system.
 tags=schedd,starter
-
-[CKPT_SERVER_HOST]
-default=
-type=string
-tags=starter
 
 [ARCH]
 default=
@@ -473,11 +464,6 @@ default=
 type=string
 tags=starter
 
-[ALLOW_VM_CRUFT]
-default=false
-type=bool
-tags=starter
-
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
@@ -506,6 +492,12 @@ restart=never
 default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
 tags=dagman,condor_submit_dag
+restart=never
+
+[DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE]
+default=false
+type=bool
+tags=dagman
 restart=never
 
 [DAGMAN_CONFIG_FILE]
@@ -552,6 +544,12 @@ default=true
 type=bool
 customization=expert
 tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS]
+default=false
+type=bool
+tags=dagman
 restart=never
 
 [DAGMAN_PROHIBIT_MULTI_JOBS]
@@ -606,13 +604,6 @@ restart=never
 [MAX_DAGMAN_LOG]
 default=0
 type=int
-tags=dagman,dagman_main
-restart=never
-
-[DAGMAN_ALLOW_LOG_ERROR]
-default=false
-type=bool
-customization=never
 tags=dagman,dagman_main
 restart=never
 
@@ -716,28 +707,20 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
-default=5
+default=100
 type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_AGRESSIVE_SUBMIT]
+[DAGMAN_AGGRESSIVE_SUBMIT]
 default=false
 type=bool
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_PEGASUS_REPORT_METRICS]
-default=$(LIBEXEC)/condor_dagman_metrics_reporter
-win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
-type=path
-customization=expert
-tags=dagman,dagman_main
-restart=never
-
-[DAGMAN_PEGASUS_REPORT_TIMEOUT]
-default=100
-type=int
+[DAGMAN_REPORT_GRAPH_METRICS]
+default=false
+type=bool
 tags=dagman,dagman_main
 restart=never
 
@@ -801,60 +784,12 @@ customization=expert
 tags=dagman,dagman_main
 restart=never
 
-[CKPT_SERVER_DIR]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_REPLICATION_LEVEL]
-default=0
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_INTERVAL]
-default=300
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CLASSAD_FILE]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_CLEAN_INTERVAL]
-default=86400
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CHECK_PARENT_INTERVAL]
-default=120
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_SOCKET_BUFSIZE]
-default=65536
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_STORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_RESTORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_HOSTS]
-default=
-type=string
-tags=ckpt_server
+[DAGMAN_USE_JOIN_NODES]
+default=true
+type=bool
+customization=normal
+tags=dagman,dagman_main
+restart=never
 
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
@@ -953,6 +888,18 @@ default=true
 type=bool
 tags=shadow,remoteresource
 
+[SEC_ENABLE_IMPERSONATION_TOKENS]
+default=false
+type=bool
+tags=schedd
+usage=Set to true to allow the pool collector(s) to create impersonation tokens.
+
+[SEC_IMPERSONATION_TOKEN_LIMITS]
+default=
+type=string
+usage=Restrict what authorizations can be enabled with impersonation toekns.
+tags=schedd
+
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool
@@ -967,17 +914,6 @@ tags=shadow,pseudo_ops
 default=
 type=string
 tags=shadow,pseudo_ops
-
-[USE_CKPT_SERVER]
-default=
-type=string
-tags=shadow,baseshadow
-
-[ALWAYS_USE_LOCAL_CKPT_SERVER]
-default=false
-type=bool
-tags=shadow,baseshadow
-restart=true
 
 [RECONNECT_BACKOFF_CEILING]
 default=300
@@ -1074,36 +1010,16 @@ default=false
 type=bool
 tags=sysapi,reconfig
 
-[CHECKPOINT_PLATFORM]
-default=
-type=string
-tags=sysapi,reconfig
-
 [SYSAPI_GET_LOADAVG]
 default=1
 type=int
 tags=sysapi,reconfig
-
-[CKPT_PROBE]
-default=$(LIBEXEC)/condor_ckpt_probe
-win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
-type=path
 
 [RELEASE_DIR]
 default=/tmp/condorinstall0
 win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?
-
-[PRIVSEP_ENABLED]
-default=false
-type=bool
-tags=privsep,privsep_client.WINDOWS
-
-[PRIVSEP_SWITCHBOARD]
-default=
-type=string
-tags=privsep,privsep_client.UNIX
 
 [HAD_USE_PRIMARY]
 default=false
@@ -1192,6 +1108,26 @@ type=int
 description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
+[MAX_TIMER_EVENTS_PER_CYCLE]
+default=0
+range=0,
+type=int
+
+[MAX_ACCEPTS_PER_CYCLE]
+default=8
+range=0,
+type=int
+
+[MAX_UDP_MSGS_PER_CYCLE]
+default=100
+range=0,
+type=int
+
+[MAX_REAPS_PER_CYCLE]
+default=0
+range=0,
+type=int
+
 [PID_SNAPSHOT_INTERVAL]
 default=15
 type=int
@@ -1254,6 +1190,10 @@ tags=daemon_core
 default=true
 type=bool
 tags=daemon_core
+
+[SEC_USE_FAMILY_SESSION]
+default=true
+type=bool
 
 [CERTIFICATE_MAPFILE]
 default=
@@ -1406,6 +1346,18 @@ tags=collector
 default=
 type=string
 tags=collector
+
+[COLLECTOR_FORWARD_WATCH_LIST]
+default=State,Cpus,Memory,IdleJobs,ClaimId,Capability,ClaimIdList,ChildClaimIds
+type=string
+
+[COLLECTOR_FORWARD_FILTERING]
+default=false
+type=bool
+
+[COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS]
+default=$(NEGOTIATOR_CONSIDER_PREEMPTION)
+type=string
 
 [COLLECTOR_STATS_SWEEP]
 default=14400
@@ -1768,7 +1720,7 @@ type=string
 tags=startd,Resource
 
 [STARTER_LIST]
-default=STARTER, STARTER_STANDARD
+default=STARTER
 win32_default=STARTER
 type=string
 tags=startd,starter_mgr
@@ -1815,6 +1767,14 @@ reconfig=true
 customization=seldom
 friendly_name=Expression to determine Singularity image
 review=?
+tags=startd
+
+[SINGULARITY_MOUNT_HOME]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Allow singluarity to bind moont home
 tags=startd
 
 [UPDATE_INTERVAL]
@@ -1902,8 +1862,9 @@ default=6
 type=int
 tags=startd,startd_main
 
+# ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -1981,11 +1942,6 @@ default=True
 type=string
 tags=startd,Reqexp
 
-[IS_VALID_CHECKPOINT_PLATFORM]
-default=
-type=string
-tags=startd,Reqexp
-
 [ENABLE_BACKFILL]
 default=false
 type=bool
@@ -1994,11 +1950,6 @@ tags=startd,ResMgr
 [BACKFILL_SYSTEM]
 default=
 type=string
-tags=startd,ResMgr
-
-[MAX_VIRTUAL_MACHINE_TYPES]
-default=10
-type=int
 tags=startd,ResMgr
 
 [MAX_SLOT_TYPES]
@@ -2058,10 +2009,22 @@ default=false
 type=bool
 tags=tt,ttmanager
 
+[SUBMIT_ALLOW_GETENV]
+default=true
+type=bool
+tags=submit
+
 [SUBMIT_SKIP_FILECHECKS]
 default=true
 type=string
 tags=submit
+
+[SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
+description=Set the default value submit should use for should_transfer_files for jobs that don't specify
+default=
+type=string
+tags=submit
+usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
 [SUBMIT_SEND_RESCHEDULE]
 default=true
@@ -2167,8 +2130,8 @@ type=string
 tags=submit
 
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
-default=
-type=string
+default=true
+type=bool
 tags=submit
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
@@ -2367,6 +2330,11 @@ default=
 type=string
 tags=sshd_wrapper
 
+[CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
+default=false
+type=bool
+tags=condor_ssh_to_job
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
@@ -2440,9 +2408,57 @@ type=string
 tags=misc_utils
 
 [SEC_PASSWORD_FILE]
-default=
+default=$(SEC_PASSWORD_DIRECTORY)/POOL
 type=string
 tags=store_cred
+
+[SEC_PASSWORD_DIRECTORY]
+default=/etc/condor/passwords.d
+win32_default=
+type=path
+tags=store_cred
+
+[SEC_TOKEN_SYSTEM_DIRECTORY]
+default=/etc/condor/tokens.d
+win32_default=
+type=path
+tags=condor_auth_passwd
+
+[SEC_TOKEN_DIRECTORY]
+default=
+description=Directory containing the tokens for token auth.
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_ISSUER_KEY]
+default=POOL
+description=Name of the key used to issue session tokens
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_MAX_AGE]
+default=
+description=Maximum age of accepted tokens.
+type=int
+tags=condor_auth_passwd
+
+[SEC_TOKEN_REQUEST_LIMITS]
+default=
+description=Authorization limits for token requests
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_BLACKLIST_EXPR]
+default=
+description=Expression describing token blacklist.
+type=string
+tags=condor_auth_passwd
+
+[SEC_ISSUED_TOKEN_EXPIRATION]
+default=
+description=Default max expiration time of issued session tokens.
+type=int
+tags=condor_auth_passwd
 
 [EMAIL_DOMAIN]
 default=
@@ -2463,6 +2479,45 @@ tags=io,condor_auth_claim
 default=false
 type=bool
 tags=io,condor_auth_claim
+
+[SSL_SKIP_HOST_CHECK]
+default=false
+description=Disable client host checks for SSL authentication.
+type=bool
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CAFILE]
+default=/etc/pki/tls/certs/ca-bundle.crt
+win32_default=
+description=Default location of the system CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CERTFILE]
+default=/etc/pki/tls/certs/localhost.crt
+win32_default=
+description=Location of the host X509 certificate
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_KEYFILE]
+default=/etc/pki/tls/private/localhost.key
+win32_default=
+description=Location of the host private key
+type=path
+tags=condor_auth_ssl
+
+[TRUST_DOMAIN]
+default=$(COLLECTOR_HOST)
+type=string
+tags=condor_auth_passwd
 
 [FS_REMOTE_DIR]
 default=
@@ -2537,6 +2592,11 @@ tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
 default=
+type=string
+tags=starter
+
+[STARTER_NUM_THREADS_ENV_VARS]
+default=OMP_NUM_THREADS NUMEXPR_NUM_THREADS MKL_NUM_THREADS CUBACORES JULIA_NUM_THREADS GOMAXPROCS
 type=string
 tags=starter
 
@@ -2644,19 +2704,23 @@ range=1,
 type=int
 
 [NEGOTIATOR_MAX_TIME_PER_SUBMITTER]
-default=31536000
+default=60
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_SCHEDD]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MAX_TIME_PER_CYCLE]
+default=1200
+type=int
 
 [NEGOTIATOR_MATCH_EXPRS]
 default=
@@ -2692,6 +2756,11 @@ tags=negotiator,matchmaker
 default=false
 type=bool
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_DEPTH_FIRST]
+default=false
+type=bool
+tags=negotiator
 
 [NEGOTIATOR_INFORM_STARTD]
 default=false
@@ -2860,41 +2929,6 @@ default=
 type=string
 tags=tools,store_cred_main
 
-[STARTER_CHOOSES_CKPT_SERVER]
-default=
-type=string
-tags=shadow,shadow
-
-[MAX_DISCARDED_RUN_TIME]
-default=3600
-type=int
-tags=shadow,shadow
-
-[COMPRESS_PERIODIC_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[PERIODIC_MEMORY_SYNC]
-default=false
-type=bool
-tags=shadow,shadow
-
-[COMPRESS_VACATE_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[SLOW_CKPT_SPEED]
-default=0
-type=int
-tags=shadow,shadow
-
-[SHADOW_ALLOW_UNSAFE_REMOTE_EXEC]
-default=
-type=string
-tags=shadow,pseudo_ops
-
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
 type=string
@@ -3035,9 +3069,17 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_ALLOW_LATE_MATERIALIZE]
-default=false
+default=true
 type=bool
 tags=schedd
+description=Set to false to have Schedd refuse late materialization submits
+
+[SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
+default=true
+type=bool
+tags=schedd
+customization=devel
+description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
@@ -3050,7 +3092,7 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SHADOW_LIST]
-default=SHADOW, SHADOW_STANDARD
+default=SHADOW
 win32_default=SHADOW
 type=string
 tags=schedd,shadow_mgr
@@ -3059,13 +3101,6 @@ tags=schedd,shadow_mgr
 default=$(SBIN)/condor_shadow
 win32_default=$(SBIN)\condor_shadow.exe
 description=Path to vanilla shadow binary
-type=path
-tags=schedd
-
-[SHADOW_STANDARD]
-default=$(SBIN)/condor_shadow.std
-win32_default=
-description=Path to standard universe shadow binary
 type=path
 tags=schedd
 
@@ -3120,6 +3155,11 @@ default=0
 type=int
 tags=schedd
 
+[JOB_START_COUNT]
+default=1
+range=1,
+type=int
+
 [MAX_JOBS_RUNNING]
 default=MIN({$(DETECTED_MEMORY), 10000})
 win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
@@ -3127,7 +3167,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=false
+default=RecentDaemonCoreDutyCycle > 0.98
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -3139,7 +3179,7 @@ type=string
 tags=schedd
 
 [START_SCHEDULER_UNIVERSE]
-default=TotalSchedulerJobsRunning < 200
+default=TotalSchedulerJobsRunning < 500
 description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
@@ -3167,8 +3207,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
-default=100
+# default is roughly 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=200
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
@@ -3194,6 +3234,11 @@ default=$(FLOCK_TO)
 type=string
 tags=schedd
 
+[FLOCK_BY_DEFAULT]
+default=true
+type=bool
+tags=schedd
+
 [SHADOW_SIZE_ESTIMATE]
 default=125
 type=int
@@ -3203,6 +3248,11 @@ tags=schedd
 default=5
 type=int
 tags=schedd
+
+[MAX_PENDING_STARTD_CONTACTS]
+default=0
+type=int
+range=0,
 
 [GRIDMANAGER_PER_JOB]
 default=false
@@ -3287,7 +3337,7 @@ type=string
 tags=master
 
 [OBITUARY_LOG_LENGTH]
-default=20
+default=200
 type=int
 tags=master
 
@@ -3296,8 +3346,8 @@ default=true
 type=bool
 tags=master
 
-[ALLOW_ADMINISTRATOR]
-default=$(CONDOR_HOST)
+[ALLOW_CLIENT]
+default=*
 type=string
 tags=security
 
@@ -3422,8 +3472,8 @@ type=path
 tags=transferer,log
 
 [ADD_WINDOWS_FIREWALL_EXCEPTION]
-default=true
-type=bool
+default=$(CondorIsAdmin)
+type=string
 description=Master should automatically open ports in the Windows firewall for HTCondor daemons
 tags=master
 
@@ -3504,8 +3554,158 @@ default = m4.large
 type=string
 tags=annex
 
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-078d5c7afa60d8d1b
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_southeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0463306823b53e30
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-02c69d521a0809249
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_northeast_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0c07ed1dc0cea3608
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ap_south_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-024615f49be85226a
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[sa_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-0b9bff095bcf587b9
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4)
+type=string
+tags=annex
+
+[ca_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_4]
+default = ami-00ca51dc8295a9e4f
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-0b0cba432f6183314
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-0e5c4998acc873d00
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-04cf1a4bcdb6c2ddb
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-052abc65f9a1f2191
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-05db8a05b808cc82a
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-054747f2946a308fc
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-000db792307d7ec4c
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-07ed49c22921c0d31
+type=string
+tags=annex
+
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3)
+type=string
+tags=annex
+
+[eu_north_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_9_3]
+default = ami-0628aa554d3b907a5
+type=string
+tags=annex
+
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-02ce5672c4c88146c
+type=string
+tags=annex
+
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-0c2bae939a03e211a
 type=string
 tags=annex
 
@@ -3515,7 +3715,17 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-007920684150d7cb7
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-02a90df644af3b003
 type=string
 tags=annex
 
@@ -3525,7 +3735,17 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a6fbc8bda794e1f4
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-0f433606b5f80ccab
 type=string
 tags=annex
 
@@ -3535,7 +3755,17 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_5]
+default = ami-0a46b14d914d27167
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_8_4]
+default = ami-05cabd3969196c5ba
 type=string
 tags=annex
 
@@ -3810,10 +4040,9 @@ default=
 type=string
 tags=rooster
 
-# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
 default=1000000
-description=Max Procd Log (size rotation only, no scale suffix)
+description=Max Procd Log (size rotation only)
 tags=procd
 
 [SHADOW_WORKLIFE]
@@ -3895,6 +4124,10 @@ default=86400
 range=0,
 type=int
 
+[DELEGATE_FULL_JOB_GSI_CREDENTIALS]
+default=false
+type=bool
+
 [STATISTICS_WINDOW_QUANTUM]
 default=240
 range=1,1000000000
@@ -3955,6 +4188,12 @@ default=false
 type=bool
 tags=shadow
 restart=true
+
+[SHADOW_SKIP_DATAFLOW_JOBS]
+default=false
+type=bool
+tags=shadow,dataflow
+description=Skip dataflow jobs (output files exist, more recent than input files)?
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
@@ -4118,7 +4357,8 @@ type=string
 tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
-default=
+default="/tmp,/var/tmp"
+win32_default=
 version=7.7.5
 type=string
 tags=starter
@@ -4146,7 +4386,7 @@ description=MemoryUsage metric for VM Universe jobs
 tags=starter
 
 [DEFAULT_JOB_MAX_RETRIES]
-default=10
+default=2
 type=int
 description=Default maximum number of retries when a submit file enables retries.
 tags=submit
@@ -4386,7 +4626,7 @@ description=Determines if job creates their own namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
-default=Chirp
+default=Chirp*
 version=8.1.0
 type=string
 is_macro=true
@@ -4518,8 +4758,18 @@ description=Duration in seconds for ecryptfs key timeout
 review=toddt
 tags=ecryptfs
 
+[MAX_CONCURRENT_DOWNLOADS]
+default=100
+type=int
+range=0,
+
+[MAX_CONCURRENT_UPLOADS]
+default=100
+type=int
+range=0,
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
-default=
+default=2.0
 type=string
 description=
 tags=schedd
@@ -4548,9 +4798,14 @@ type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
-default=false
+default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
+
+[SIGN_S3_URLS]
+default=true
+type=bool
+description=Enable to allow submit side to sign S3 URLs for file transfer.
 
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false
@@ -4559,21 +4814,15 @@ description=Allow public input files for a job to be transferred via HTTP
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ADDRESS]
-default=127.0.0.1:8080
+default=127.0.0.1:80
 type=string
 description=Web address (hostname + port) for HTTP public files
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ROOT_DIR]
-default=$(LOCAL_DIR)/public_files
+default=/usr/share/nginx/html
 type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
-tags=file_transfer
-
-[HTTP_PUBLIC_FILES_ROOT_OWNER]
-default=apache
-type=string
-description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_STALE_AGE]
@@ -4623,20 +4872,20 @@ type=bool
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
-default=20
+default=200
 range=1,
 type=int
 description=Size of Resource Request List
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS]
-default=false
+default=true
 type=bool
 description=Enable parallel prefetching of requests in the negotiator
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
-default=120
+default=60
 range=0,
 type=int
 description=Timeout for prefetch requests lists phase of negotiator
@@ -4658,7 +4907,7 @@ description=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=2
+default=50
 range=0,
 type=int
 description=History Helper max number of helper sub-processes
@@ -4835,8 +5084,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -4877,12 +5126,6 @@ type=path
 default=$(SBIN)/condor_collector
 win32_default=$(SBIN)\condor_collector.exe
 description=Path to Collector daemon binary
-type=path
-
-[CKPT_SERVER]
-default=$(SBIN)/condor_ckpt_server
-win32_default=$(SBIN)\condor_ckpt_server.exe
-description=Path to Checkpoint server binary
 type=path
 
 [JOB_ROUTER]
@@ -4953,12 +5196,6 @@ type=path
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
 description=Path to Vanilla Starter binary
-type=path
-
-[STARTER_STANDARD]
-default=$(SBIN)/condor_starter.std
-win32_default=
-description=Path to the Standard Universe Starter binary
 type=path
 
 [MASTER_ADDRESS_FILE]
@@ -5123,6 +5360,10 @@ default=$(SBIN)/gce_gahp
 default=/tmp/GceGahpLog.$(USERNAME)
 win32_default=NUL
 
+[GCE_GAHP_LIFETIME]
+default=86400
+type=int
+
 [ANNEX_GAHP]
 default=$(EC2_GAHP)
 type=path
@@ -5165,6 +5406,10 @@ default=D_FULLDEBUG
 description=Debug logging options for the credd
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
+
+[CREDD_OAUTH_MODE]
+default=true
+type=bool
 
 # benchmarking knobs
 [BenchmarkTimer]
@@ -5511,6 +5756,23 @@ default : @end
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 
+[$POLICY.PREEMPT_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	PREEMPT_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : PREEMPT_IF( PREEMPT_RUNTIME_EXCEEDS )
+@end
+
+[$POLICY.HOLD_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	HOLD_REASON_RUNTIME_EXCEEDS = runtime exceeded maximum ($(MAX_JOB_RUNTIME) seconds)
+	HOLD_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : WANT_HOLD_IF( HOLD_RUNTIME_EXCEEDS, $(HOLD_SUBCODE_RUNTIME_EXCEEDS:103), $(HOLD_REASON_RUNTIME_EXCEEDS) )
+@end
+
 [$POLICY.STARTD_PUBLISH_CpusUsage]
 description=Publish a CpusUsage attribute in the STARTD
 default : @end
@@ -5590,7 +5852,7 @@ default : @end
   else
     PREEMPT = $($(1))
   endif
-  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),0,$(MAXJOBRETIREMENTTIME:0))
+  MAXJOBRETIREMENTTIME = ifthenelse($($(1)),-1,$(MAXJOBRETIREMENTTIME:0))
   if defined WANT_SUSPEND
     WANT_SUSPEND = $($(1)) =!= true && $(WANT_SUSPEND)
   else
@@ -5663,6 +5925,7 @@ default : @end
 	ALLOW_OWNER=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
+	ALLOW_DAEMON=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
 	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
@@ -5698,6 +5961,7 @@ default : @end
 	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
+	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
 	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
@@ -5815,6 +6079,8 @@ default : @end
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+
+    STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
 
 [$FEATURE.PartitionableSlot]
@@ -5901,8 +6167,9 @@ default: @end
    else
       COLLECTOR$(1)_ARGS= -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_NAME=collector$(1)
+   COLLECTOR$(1).COLLECTOR_NAME=Collector$(1)
    COLLECTOR$(1).CONDOR_VIEW_HOST=$(TOP_COLLECTOR_HOST)
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
    # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
    TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
@@ -5922,7 +6189,8 @@ default: @end
    else
       COLLECTOR$(1)_ARGS=-f -local-name COLLECTOR$(1) -sock collector$(1)
    endif
-   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log 
+   COLLECTOR$(1).COLLECTOR_LOG=$(LOG)/Collector$(1)Log
+   COLLECTOR$(1).CCB_RECONNECT_FILE=$(SPOOL)/Collector$(1).ccb_reconnect
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
 @end
 
@@ -6006,11 +6274,7 @@ win32_default : @end
 	UNICORE_GAHP
 	NORDUGRID_GAHP
 	CREAM_GAHP
-	DELTACLOUD_GAHP
 	LIBVIRT_XML_SCRIPT
-	STARTER_STANDARD
-	SHADOW_STANDARD
-	CKPT_PROBE
 @end
 
 # use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
@@ -6032,7 +6296,6 @@ default : @end
 	MAX_JOB_ROUTER_LOG=1000000
 	MAX_REPLICATION_LOG=1000000
 	MAX_ROOSTER_LOG=1000000
-	MAX_HDFS_LOG=1000000
 	MAX_HAD_LOG=1000000
 	MAX_TRANSFERER_LOG=1000000
 	MAX_GRIDMANAGER_LOG=1000000
@@ -6057,14 +6320,6 @@ win32_default : @end
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
-	HDFS_NAMENODE=hdfs://example.com:9000
-	HDFS_NAMENODE_WEB=example.com:8000
-	HDFS_BACKUPNODE=hdfs://example.com:50100
-	HDFS_BACKUPNODE_WEB=example.com:50105
-	HDFS_NODETYPE=HDFS_DATANODE
-	HDFS_NAMENODE_ROLE=ACTIVE
-	HDFS_NAMENODE_DIR=/tmp/hadoop_name
-	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 

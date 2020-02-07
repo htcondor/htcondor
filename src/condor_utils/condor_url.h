@@ -21,11 +21,12 @@
 #ifndef CONDOR_URL_H
 #define CONDOR_URL_H
 
+#include <string>
+
 #include "condor_common.h"
-#include "MyString.h"
 
 // returns pointer to : after URL type if input is a url, returns NULL if it is not.
 const char* IsUrl( const char *url );
-MyString getURLType( const char *url );
+std::string getURLType( const char *url, bool scheme_suffix );
 
 #endif

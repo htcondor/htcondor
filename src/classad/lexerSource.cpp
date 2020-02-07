@@ -56,7 +56,7 @@ FileLexerSource::ReadCharacter(void)
 	if (_file != NULL) {
 		character = fgetc(_file);
 	} else {
-		character = -1;
+		character = EOF;
 	}
  	_previous_character = character;
 	return character;
@@ -65,10 +65,7 @@ FileLexerSource::ReadCharacter(void)
 void 
 FileLexerSource::UnreadCharacter(void)
 {
-	// keep FILE pos in sync with fd, for the sake of Python 3 objects
-	fseek(_file, -1, SEEK_CUR);
-	//ungetc(_previous_character, _file);
-	return;
+	ungetc(_previous_character, _file);
 }
 
 bool 
@@ -115,7 +112,7 @@ CharLexerSource::ReadCharacter(void)
 
 	character = (unsigned char)_string[_offset];
 	if (character == 0) {
-		character = -1; 
+		character = EOF;
 	} else {
         _offset++;
 	}
@@ -183,7 +180,7 @@ StringLexerSource::ReadCharacter(void)
 
 	character = (unsigned char)(*_string)[_offset];
 	if (character == 0) {
-		character = -1;
+		character = EOF;
 	} else {
 		_offset++;
 	}

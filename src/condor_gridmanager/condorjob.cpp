@@ -22,7 +22,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
+#include "basename.h"
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "daemon.h"
@@ -200,6 +200,8 @@ CondorJob::CondorJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	jobAd->EvaluateAttrString( ATTR_SCITOKENS_FILE, scitokenFile );
+
 	int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
 		delegatedProxyExpireTime = (time_t)int_value;
@@ -306,7 +308,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -352,7 +354,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	SetRemoteJobId( NULL );
 		// We always want to go through GM_INIT. With the remote job id set
 		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
-	if ( gmState != GM_INIT ) {
+		// If we don't have a gahp object, don't interrupt the error handling
+		// for that.
+	if ( gmState != GM_INIT && gahp != NULL ) {
 		gmState = GM_CLEAR_REQUEST;
 	}
 }
@@ -365,8 +369,6 @@ void CondorJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -413,7 +415,15 @@ void CondorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			if ( !scitokenFile.empty() && !gahp->UpdateToken( scitokenFile ) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+						procID.cluster, procID.proc );
 
+				jobAd->InsertAttr( ATTR_HOLD_REASON,
+							"Failed to provide GAHP with token" );
+				gmState = GM_HOLD;
+				break;
+			}
 			gmState = GM_START;
 			} break;
 		case GM_START: {
@@ -607,7 +617,7 @@ void CondorJob::doEvaluateState()
 							"rematch job because of MAX_JOBS_SUBMITTED\n",
 							procID.cluster, procID.proc);
 						// Set ad attributes so the schedd finds a new match.
-						int dummy;
+						bool dummy;
 						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 							jobAd->Assign( ATTR_JOB_MATCHED, false );
 							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -646,8 +656,7 @@ void CondorJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -961,8 +970,7 @@ void CondorJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1100,10 +1108,7 @@ void CondorJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -1277,6 +1282,8 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_ON_EXIT_CODE,
 		ATTR_EXIT_REASON,
 		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
+		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
 		ATTR_JOB_LOCAL_SYS_CPU,
 		ATTR_JOB_LOCAL_USER_CPU,
@@ -1298,6 +1305,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_RESIDENT_SET_SIZE,
 		ATTR_PROPORTIONAL_SET_SIZE,
 		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 
@@ -1405,7 +1413,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	int now = time(NULL);
 	std::string expr;
 	ClassAd *submit_ad;
-	ExprTree *next_expr;
 	int tmp_int;
 
 		// Base the submit ad on our own job ad
@@ -1518,8 +1525,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	if ( !output_remaps.empty() ) {
-		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS,
-						   output_remaps.c_str() );
+		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 	}
 
 	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
@@ -1553,18 +1559,29 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Remove all remote_* attributes from the new ad before
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
-	const char *next_name;
-	submit_ad->ResetName();
-	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
-			 strlen( next_name ) > 7 ) {
+		// Also remove all SUBMIT_* attributes from the new ad.
+		// Otherwise, the remote schedd will erroneously think it has
+		// already rewritten file paths in the ad to refer to its own
+		// SPOOL directory.
+	auto itr = submit_ad->begin();
+	while ( itr != submit_ad->end() ) {
+		// This convoluted setup is an attempt to avoid invalidating
+		// the iterator when deleting the attribute.
+		if ( ( strncasecmp( itr->first.c_str(), "REMOTE_", 7 ) == 0 ||
+		       strncasecmp( itr->first.c_str(), "SUBMIT_", 7 ) == 0 ) &&
+		     itr->first.size() > 7 ) {
 
-			submit_ad->Delete( next_name );
+			std::string name = itr->first;
+			itr++;
+			submit_ad->Delete( name );
+		} else {
+			itr++;
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	const char *next_name;
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1600,7 +1617,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}

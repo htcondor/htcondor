@@ -32,8 +32,6 @@
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
-#include "condor_string.h"
-#include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "daemon_types.h"
@@ -113,8 +111,10 @@ main( int argc, char* argv[] )
 		get_mySubSystem()->setName( "DAEMON-TOOL" );
 	}
 
+	set_priv_initialize(); // allow uid switching if root
 	config_ex( CONFIG_OPT_WANT_META | CONFIG_OPT_NO_EXIT );
 
+	int failures = 0;
 	IpVerify ipverify;
 
 	MyString line;
@@ -138,13 +138,15 @@ main( int argc, char* argv[] )
 		condor_sockaddr addr;
 		if( !addr.from_sinful(sin_str) ) {
 			fprintf(stderr,"Invalid ip address: %s\n",ip);
-			exit(1);
+			failures++;
+			continue;
 		}
 
 		DCpermission perm = StringToDCpermission(perm_str);
 		if( perm == LAST_PERM ) {
 			fprintf(stderr,"Invalid permission level: %s\n",perm_str);
-			exit(1);
+			failures++;
+			continue;
 		}
 
 		if( strcmp(fqu,"*") == 0 ) {
@@ -163,8 +165,8 @@ main( int argc, char* argv[] )
 		if( expected && strcasecmp(expected,result) != 0 ) {
 			printf("Got wrong result '%s' for '%s': reason: %s!\n",
 				   result,line.Value(),reason.Value());
-			printf("Aborting.\n");
-			exit(1);
+			failures++;
+			continue;
 		}
 		if( expected ) {
 			printf("%s\n",line.Value());
@@ -173,4 +175,10 @@ main( int argc, char* argv[] )
 			printf("%s %s\n",line.Value(),result);
 		}
 	}
+
+	if (failures) {
+		printf("Aborting because of %d failures\n", failures);
+	}
+
+	exit(failures);
 }

@@ -31,7 +31,7 @@ my $path_to_file;   # path to config file
 my $path_to_dir;    # path to the dir of config file
 
 my $pid = $$;
-my $executable = "sleep.exe";
+my $executable = "x_sleep.pl";
 my $arguments = 600;
 my $submit_content;
 my $submitfile;

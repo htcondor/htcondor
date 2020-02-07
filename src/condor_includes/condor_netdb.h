@@ -22,7 +22,6 @@
 #define CONDOR_NETDB_H
 
 #include "condor_common.h"
-#include "condor_socket_types.h"
 
 #if defined(__cplusplus)
 extern "C" {

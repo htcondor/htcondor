@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "../condor_utils/file_transfer_stats.h"
+#include "../condor_utils/condor_url.h"
 #include "utc_time.h"
 
 #ifdef WIN32
@@ -12,12 +13,20 @@
 #define MAX_RETRY_ATTEMPTS 20
 
 int send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats* stats );
-int server_supports_resume( CURL* handle, char* url );
+int server_supports_resume( CURL* handle, const char* url );
 void init_stats( char **argv );
 static size_t header_callback( char* buffer, size_t size, size_t nitems );
 static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream );
 
 static FileTransferStats* ft_stats;
+
+#define curl_easy_setopt_wrapper(handle, option, value) \
+{ \
+	CURLcode r = curl_easy_setopt(handle, option, value); \
+	if (r != CURLE_OK) { \
+		fprintf(stderr, "Can't setopt %d\n", option); \
+	} \
+}
 
 int 
 main( int argc, char **argv ) {
@@ -46,7 +55,8 @@ main( int argc, char **argv ) {
         diagnostic = 1;
     } 
     else if(argc != 3) {
-        return -1;
+        printf("Usage: %s SOURCE DEST\n", argv[0]);
+        return 1;
     }
 
     // Initialize win32 + SSL socket libraries.
@@ -134,72 +144,82 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
     static int partial_file = 0;
     static long partial_bytes = 0;
 
+    std::string scheme_suffix = IsUrl(argv[1]) ?
+        getURLType(argv[1], true) : "";
+
     // Input transfer: URL -> file
-    if ( !strncasecmp( argv[1], "http://", 7 ) ||
-         !strncasecmp( argv[1], "https://", 8 ) ||
-         !strncasecmp( argv[1], "ftp://", 6 ) ||
-         !strncasecmp( argv[1], "file://", 7 ) ) {
+    if ( scheme_suffix == "http" || scheme_suffix == "https" ||
+         scheme_suffix == "ftp" || scheme_suffix == "file" ) {
+
+        // Everything prior to the first '+' is the credential name.
+        std::string full_scheme = getURLType(argv[1], false);
+        auto offset = full_scheme.find_last_of("+");
+        auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+
+        // The actual transfer should only be everything after the last '+'
+        std::string full_url(argv[1]);
+        if (offset != std::string::npos) {
+            full_url = full_url.substr(offset+1);
+        }
 
         int close_output = 1;
         if ( ! strcmp(argv[2],"-") ) {
             file = stdout;
             close_output = 0;
-            if ( diagnostic ) { 
-                fprintf( stderr, "fetching %s to stdout\n", argv[1] ); 
+            if ( diagnostic ) {
+                fprintf( stderr, "fetching %s to stdout\n", full_url.c_str() );
             }
         } 
         else {
             file = partial_file ? fopen( argv[2], "a+" ) : fopen(argv[2], "w" ); 
             close_output = 1;
             if ( diagnostic ) { 
-                fprintf( stderr, "fetching %s to %s\n", argv[1], argv[2] ); 
+                fprintf( stderr, "fetching %s to %s\n", full_url.c_str(), argv[2] );
             }
         }
 
         if( file ) {
             // Libcurl options that apply to all transfer protocols
-            curl_easy_setopt( handle, CURLOPT_URL, argv[1] );
-            curl_easy_setopt( handle, CURLOPT_CONNECTTIMEOUT, 60 );
-            curl_easy_setopt( handle, CURLOPT_WRITEDATA, file );
+            curl_easy_setopt_wrapper( handle, CURLOPT_URL, full_url.c_str() );
+            curl_easy_setopt_wrapper( handle, CURLOPT_CONNECTTIMEOUT, 60 );
+            curl_easy_setopt_wrapper( handle, CURLOPT_WRITEDATA, file );
 
             // Libcurl options for HTTP, HTTPS and FILE
-            if( !strncasecmp( argv[1], "http://", 7 ) || 
-                                !strncasecmp( argv[1], "https://", 8 ) || 
-                                !strncasecmp( argv[1], "file://", 7 ) ) {
-                curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, 1 );
-                curl_easy_setopt( handle, CURLOPT_HEADERFUNCTION, header_callback );
+            if( scheme_suffix == "http" ||
+                    scheme_suffix == "https" ||
+                    scheme_suffix == "file" ) {
+                curl_easy_setopt_wrapper( handle, CURLOPT_FOLLOWLOCATION, 1 );
+                curl_easy_setopt_wrapper( handle, CURLOPT_HEADERFUNCTION, header_callback );
             }
             // Libcurl options for FTP
-            else if( !strncasecmp( argv[1], "ftp://", 6 ) ) {
-                curl_easy_setopt( handle, CURLOPT_WRITEFUNCTION, ftp_write_callback );
+            else if( scheme_suffix == "ftp" ) {
+                curl_easy_setopt_wrapper( handle, CURLOPT_WRITEFUNCTION, ftp_write_callback );
             }
 
-            // * If the following option is set to 0, then curl_easy_perform()
-            // returns 0 even on errors (404, 500, etc.) So we can't identify
-            // some failures. I don't think it's supposed to do that?
-            // * If the following option is set to 1, then something else bad
-            // happens? 500 errors fail before we see HTTP headers but I don't
-            // think that's a big deal.
-            // * Let's keep it set to 1 for now.
-            curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
+            // We need to set CURLOPT_FAILONERROR to 0 so the client doesn't
+            // die immediately a 401 or 500 error (which sometimes causes a
+            // broken socket on the server).
+            // However with this setting, HTTP errors (401, 500, etc.) are
+            // considered successful, so we need to manually check for these.
+            curl_easy_setopt_wrapper( handle, CURLOPT_FAILONERROR, 0 );
             
             if( diagnostic ) {
-                curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
+                curl_easy_setopt_wrapper( handle, CURLOPT_VERBOSE, 1 );
             }
 
             // If we are attempting to resume a download, set additional flags
             if( partial_file ) {
                 sprintf( partial_range, "%lu-", partial_bytes );
-                curl_easy_setopt( handle, CURLOPT_RANGE, partial_range );
+                curl_easy_setopt_wrapper( handle, CURLOPT_RANGE, partial_range );
             }
 
             // Setup a buffer to store error messages. For debug use.
             error_buffer[0] = 0;
-            curl_easy_setopt( handle, CURLOPT_ERRORBUFFER, error_buffer ); 
+            curl_easy_setopt_wrapper( handle, CURLOPT_ERRORBUFFER, error_buffer ); 
 
             // Does curl protect against redirect loops otherwise?  It's
             // unclear how to tune this constant.
-            // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
+            // curl_easy_setopt_wrapper(handle, CURLOPT_MAXREDIRS, 1000);
             
             // Update some statistics
             stats->TransferType = "download";
@@ -211,7 +231,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             // Check if the request completed partially. If so, set some
             // variables so we can attempt a resume on the next try.
             if( rval == CURLE_PARTIAL_FILE ) {
-                if( server_supports_resume( handle, argv[1] ) ) {
+                if( server_supports_resume( handle, full_url.c_str() ) ) {
                     partial_file = 1;
                     partial_bytes = ftell( file );
                 }
@@ -225,9 +245,12 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             
             stats->TransferTotalBytes += ( long ) bytes_downloaded;
             stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
-            stats->TransferReturnCode = return_code;
+            stats->TransferHTTPStatusCode = return_code;
 
-            if( rval == CURLE_OK ) {
+            // Make sure to check the return code here as well as rval!
+            // HTTP error codes like 401, 500 are considered successful by 
+            // libcurl, but we want to treat them as errors.
+            if( rval == CURLE_OK && return_code <= 400 ) {
                 stats->TransferSuccess = true;
                 stats->TransferError = "";
                 stats->TransferFileBytes = ftell( file );
@@ -235,6 +258,18 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             else {
                 stats->TransferSuccess = false;
                 stats->TransferError = error_buffer;
+                // If we got an HTTP error code, need to change a couple more things
+                if( rval != CURLE_OK ) {
+                    const char * curl_err = curl_easy_strerror( ( CURLcode ) rval );
+                    if (curl_err) {
+                        stats->TransferError = "Client library encountered an error: " + std::string(curl_err);
+                    } else {
+                        stats->TransferError = "Client library encountered an unknown error.";
+                    }
+                } else if( return_code > 400 ) {
+                    rval = CURLE_HTTP_RETURNED_ERROR;
+                    stats->TransferError = "Server returned HTTP error code " + std::to_string((long long int)return_code);
+                }
             }
 
             // Error handling and cleanup
@@ -280,20 +315,20 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
         }
 
         // Set curl upload options
-        curl_easy_setopt( handle, CURLOPT_URL, argv[2] );
-        curl_easy_setopt( handle, CURLOPT_UPLOAD, 1 );
-        curl_easy_setopt( handle, CURLOPT_READDATA, file );
-        curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
-        curl_easy_setopt( handle, CURLOPT_INFILESIZE_LARGE, 
+        curl_easy_setopt_wrapper( handle, CURLOPT_URL, argv[2] );
+        curl_easy_setopt_wrapper( handle, CURLOPT_UPLOAD, 1 );
+        curl_easy_setopt_wrapper( handle, CURLOPT_READDATA, file );
+        curl_easy_setopt_wrapper( handle, CURLOPT_FOLLOWLOCATION, -1 );
+        curl_easy_setopt_wrapper( handle, CURLOPT_INFILESIZE_LARGE, 
                                         (curl_off_t) content_length );
-        curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
+        curl_easy_setopt_wrapper( handle, CURLOPT_FAILONERROR, 1 );
         if( diagnostic ) {
-            curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
+            curl_easy_setopt_wrapper( handle, CURLOPT_VERBOSE, 1 );
         }
     
         // Does curl protect against redirect loops otherwise?  It's
         // unclear how to tune this constant.
-        // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
+        // curl_easy_setopt_wrapper(handle, CURLOPT_MAXREDIRS, 1000);
 
         // Gather some statistics
         stats->TransferType = "upload";
@@ -310,7 +345,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
         
         stats->TransferTotalBytes += ( long ) bytes_uploaded;
         stats->ConnectionTimeSeconds += transfer_total_time - transfer_connection_time;
-        stats->TransferReturnCode = return_code;
+        stats->TransferHTTPStatusCode = return_code;
 
         if( rval == CURLE_OK ) {
             stats->TransferSuccess = true;    
@@ -343,14 +378,14 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
     Return 1 if resume is supported, 0 if not.
 */
 int 
-server_supports_resume( CURL* handle, char* url ) {
+server_supports_resume( CURL* handle, const char* url ) {
 
     int rval = -1;
 
     // Send a basic request, with Range set to a null range
-    curl_easy_setopt( handle, CURLOPT_URL, url );
-    curl_easy_setopt( handle, CURLOPT_CONNECTTIMEOUT, 60 );
-    curl_easy_setopt( handle, CURLOPT_RANGE, "0-0" );
+    curl_easy_setopt_wrapper( handle, CURLOPT_URL, url );
+    curl_easy_setopt_wrapper( handle, CURLOPT_CONNECTTIMEOUT, 60 );
+    curl_easy_setopt_wrapper( handle, CURLOPT_RANGE, "0-0" );
     
     rval = curl_easy_perform(handle);
 
@@ -374,7 +409,8 @@ server_supports_resume( CURL* handle, char* url ) {
 
     // If we've gotten this far the server does not support resume. Clear the 
     // HTTP "Range" header and return false.
-    curl_easy_setopt( handle, CURLOPT_RANGE, NULL );
+	
+    curl_easy_setopt_wrapper( handle, CURLOPT_RANGE, NULL );
     return 0;    
 }
 

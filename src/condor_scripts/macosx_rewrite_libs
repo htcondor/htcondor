@@ -26,9 +26,9 @@ for filename in "$@" ; do
         internal_resolver="@loader_path/.."
       fi
     fi
-    if echo $filename | grep -q -e 'htcondor.so' -e 'classad.so' ; then
-      external_resolver="@loader_path/../condor"
-      internal_resolver="@loader_path/.."
+    if echo $filename | grep -q -e 'htcondor.*\.so' -e 'classad.*\.so' ; then
+      external_resolver="@loader_path/../../condor"
+      internal_resolver="@loader_path/../.."
     fi
     
     for lib in $libraries ; do

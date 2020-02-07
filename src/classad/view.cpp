@@ -100,7 +100,7 @@ bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 
 	// if the values are of the same scalar type, or if they are both
 	// numbers, use the builtin < comparison operator
-	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && !val2.IsListValue() ) ||
+	if( ( vt1==vt2 && val1.IsClassAdValue() && !val2.IsListValue() ) ||
 			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
 			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
 		Value	lessThanResult, equalResult;

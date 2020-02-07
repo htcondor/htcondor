@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "mpiresource.h"
-#include "list.h"
 
 
 
@@ -83,7 +82,7 @@ class ParallelShadow : public BaseShadow
 
 	int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss );
 
-	int getDiskUsage( void );
+	int64_t getDiskUsage( void );
 
 	int getExitReason( void );
 
@@ -129,9 +128,13 @@ class ParallelShadow : public BaseShadow
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
 
+	virtual void resourceDisconnected( RemoteResource* ) { }
+
 	virtual void resourceReconnected( RemoteResource* rr );
 
 	virtual void logDisconnectedEvent( const char* reason );
+
+	virtual void recordFileTransferStateChanges( ClassAd * /* jobAd */, ClassAd * /* ftAd */ ) { }
 
 	virtual bool updateJobAttr(const char*, const char*, bool log=false);
 
@@ -163,7 +166,7 @@ class ParallelShadow : public BaseShadow
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
             enter this function */
-    int getResources( void );
+    void getResources( void );
 
         /** When we've got all the resources we need, we enter this
             function, which starts the mpi job */
@@ -214,7 +217,7 @@ class ParallelShadow : public BaseShadow
 
 		// the list of remote (mpi) resources
 		// Perhaps use STL soon.
-	ExtArray<MpiResource *> ResourceList;
+	std::vector<MpiResource *> ResourceList;
 
 		/** Replace $(NODE) with the proper node number */
 	void replaceNode ( ClassAd *ad, int nodenum );

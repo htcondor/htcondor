@@ -64,7 +64,7 @@ class CreamJob : public BaseJob
 	static void setConnectFailureRetry( int count )
 		{ maxConnectFailures = count; }
 
-	int ProxyCallback();
+	void ProxyCallback();
 
 	bool IsConnectionError( const char *msg );
 

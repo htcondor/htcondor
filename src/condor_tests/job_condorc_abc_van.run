@@ -52,6 +52,10 @@ my $append_condor_config_B = '
   # reduce latency in test
   CONDOR_JOB_POLL_INTERVAL = 5
   GRIDMANAGER_JOB_PROBE_INTERVAL = 10
+  C_GAHP_LOG = $(LOG)/CGAHPLog.$(USERNAME)
+  C_GAHP_LOCK = $(LOCK)/CGAHPLock.$(USERNAME)
+  C_GAHP_WORKER_THREAD_LOG = $(LOG)/CGAHPWorkerLog.$(USERNAME)
+  C_GAHP_WORKER_THREAD_LOCK = $(LOCK)/CGAHPWorkerLock.$(USERNAME)
 ';
 
 # This is the "middle" pool where the job is resubmitted.
@@ -77,6 +81,10 @@ my $append_condor_config_A = '
   # reduce latency in test
   CONDOR_JOB_POLL_INTERVAL = 5
   GRIDMANAGER_JOB_PROBE_INTERVAL = 10
+  C_GAHP_LOG = $(LOG)/CGAHPLog.$(USERNAME)
+  C_GAHP_LOCK = $(LOCK)/CGAHPLock.$(USERNAME)
+  C_GAHP_WORKER_THREAD_LOG = $(LOG)/CGAHPWorkerLog.$(USERNAME)
+  C_GAHP_WORKER_THREAD_LOCK = $(LOCK)/CGAHPWorkerLock.$(USERNAME)
 ';
 
 # This is the "local" pool where the job is submitted.

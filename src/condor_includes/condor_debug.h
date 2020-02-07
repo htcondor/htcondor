@@ -21,6 +21,9 @@
 #ifndef CONDOR_DEBUG_H
 #define CONDOR_DEBUG_H
 
+#include "condor_system.h"
+#include "condor_header_features.h"
+
 /*
 **	Definitions for category and flags to pass to dprintf
 **  Note: this is a little confusing, since the flags specify both
@@ -165,8 +168,16 @@ int dprintf_config(
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
 	int c_info = 0); // in: number of entries in p_info array on input.                  
 
-int dprintf_config_tool(const char* subsys = NULL, int flags = 0);
+int dprintf_config_tool(const char* subsys = NULL, int flags = 0, const char * logfile = NULL);
 int dprintf_config_tool_on_error(int flags = 0);
+
+// parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)
+bool dprintf_parse_log_size(const char * input, long long  & value, bool & is_time);
+
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+// note that this is always implicitly called on Windows
+void dprintf_make_thread_safe();
 
 // parse strflags and cat_and_flags and merge them into the in,out args
 // for backward compatibility, the D_ALWAYS bit will always be set in basic
@@ -326,7 +337,8 @@ bool debug_open_fds(std::map<int,bool> &open_fds);
 
 // fetch a monotonic timer intended for measuring the time spent
 // doing various things.  this timer can NOT be counted on to
-// be a normal timestamp.  The seconds value might be epoch time
+// be a normal timestamp! use double condor_gettimestamp_double() for that..
+// The seconds value might be epoch time
 // or it might be uptime depending on which system clock is used.
 extern double _condor_debug_get_time_double();
 
@@ -437,6 +449,7 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #endif
 
 #define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
+#define dprintf_set_tool_debug_log(name, flags, filename) dprintf_config_tool(name, flags, filename)
 
 #endif /* CONDOR_DEBUG_H */
 

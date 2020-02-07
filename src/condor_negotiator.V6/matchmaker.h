@@ -166,6 +166,8 @@ class Matchmaker : public Service
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds);
 
+		void SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds);
+
 		/**
 		 * Start the network communication necessary for a negotiation cycle.
 		 */
@@ -262,7 +264,7 @@ class Matchmaker : public Service
 			@param submitterPrio User priority
 			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateSubmitterLimit(char const *submitterName,
+		void calculateSubmitterLimit(const string &submitterName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
 					  float groupusage,
@@ -383,6 +385,7 @@ class Matchmaker : public Service
                                          // constraint before calculating quotas
                                          // formerly DynQuotaMachConstraint Added for CDF.
 
+		std::string m_SubmitterConstraintStr;
 		std::string m_JobConstraintStr;
 
 		bool m_staticRanks;

@@ -24,13 +24,21 @@
 #include "condor_debug.h"
 
 #ifdef HAVE_EXT_OPENSSL
+#ifdef FIPS_MODE
+#include <openssl/sha.h>
+#else
 #include <openssl/md5.h>
+#endif
 #endif
 
 class MD_Context {
 public:
 #ifdef HAVE_EXT_OPENSSL
-    MD5_CTX          md5_;     // MD5 context
+#ifdef FIPS_MODE
+    SHA256_CTX          sha256_;     // SHA256 context
+#else
+    MD5_CTX             md5_;        // MD5 context
+#endif
 #endif
 };
 
@@ -58,11 +66,19 @@ Condor_MD_MAC :: ~Condor_MD_MAC()
 void Condor_MD_MAC :: init()
 {
 #ifdef HAVE_EXT_OPENSSL
-    MD5_Init(&(context_->md5_));
-    
+#ifdef FIPS_MODE
+    SHA256_Init(&(context_->sha256_));
+
     if (key_) {
         addMD(key_->getKeyData(), key_->getKeyLength());
     }
+#else
+    MD5_Init(&(context_->md5_));
+
+    if (key_) {
+        addMD(key_->getKeyData(), key_->getKeyLength());
+    }
+#endif
 #endif
 }
 
@@ -71,7 +87,11 @@ unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer, unsigne
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
 
+#ifdef FIPS_MODE
+    return SHA256(buffer, (unsigned long) length, md);
+#else
     return MD5(buffer, (unsigned long) length, md);
+#endif
 #else
     return NULL;
 #endif
@@ -83,15 +103,19 @@ unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer,
 {
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
+#ifdef FIPS_MODE
+    SHA256_CTX  context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, key->getKeyData(), key->getKeyLength());
+    SHA256_Update(&context, buffer, length);
+    SHA256_Final(md, &context);
+#else
     MD5_CTX  context;
-
     MD5_Init(&context);
-
     MD5_Update(&context, key->getKeyData(), key->getKeyLength());
-
     MD5_Update(&context, buffer, length);
-
     MD5_Final(md, &context);
+#endif
 
     return md;
 #else
@@ -131,7 +155,11 @@ bool Condor_MD_MAC::verifyMD(const unsigned char * md,
 void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
 #ifdef HAVE_EXT_OPENSSL
-   MD5_Update(&(context_->md5_), buffer, length); 
+#ifdef FIPS_MODE
+   SHA256_Update(&(context_->sha256_), buffer, length);
+#else
+   MD5_Update(&(context_->md5_), buffer, length);
+#endif
 #endif
 }
 
@@ -157,7 +185,11 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 	bool ok = true;
 	ssize_t count = read(fd, buffer, 1024*1024); 
 	while( count > 0) {
-		MD5_Update(&(context_->md5_), buffer, count); 
+#ifdef FIPS_MODE
+		SHA256_Update(&(context_->sha256_), buffer, count);
+#else
+		MD5_Update(&(context_->md5_), buffer, count);
+#endif
 		memset(buffer, 0, 1024*1024);
 		count = read(fd, buffer, 1024*1024); 
 	}
@@ -182,7 +214,11 @@ unsigned char * Condor_MD_MAC::computeMD()
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
     
+#ifdef FIPS_MODE
+    SHA256_Final(md, &(context_->sha256_));
+#else
     MD5_Final(md, &(context_->md5_));
+#endif
 
     init(); // reinitialize for the next round
 

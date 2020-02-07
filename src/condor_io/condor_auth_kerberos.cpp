@@ -77,7 +77,7 @@ static void (KRB5_CALLCONV *krb5_free_ap_rep_enc_part_ptr)(krb5_context, krb5_ap
 static void (KRB5_CALLCONV *krb5_free_context_ptr)(krb5_context) = NULL;
 static void (KRB5_CALLCONV *krb5_free_cred_contents_ptr)(krb5_context, krb5_creds *) = NULL;
 static void (KRB5_CALLCONV *krb5_free_creds_ptr)(krb5_context, krb5_creds *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_keyblock_ptr)(krb5_context, register krb5_keyblock *) = NULL;
+static void (KRB5_CALLCONV *krb5_free_keyblock_ptr)(krb5_context, krb5_keyblock *) = NULL;
 static void (KRB5_CALLCONV *krb5_free_principal_ptr)(krb5_context, krb5_principal) = NULL;
 static void (KRB5_CALLCONV *krb5_free_ticket_ptr)(krb5_context, krb5_ticket *) = NULL;
 static krb5_error_code (KRB5_CALLCONV *krb5_get_credentials_ptr)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **) = NULL;
@@ -101,7 +101,7 @@ static krb5_error_code (KRB5_CALLCONV *krb5_parse_name_ptr)(krb5_context, const 
 static krb5_error_code (KRB5_CALLCONV *krb5_rd_rep_ptr)(krb5_context, krb5_auth_context, const krb5_data *, krb5_ap_rep_enc_part **) = NULL;
 static krb5_error_code (KRB5_CALLCONV *krb5_rd_req_ptr)(krb5_context, krb5_auth_context *, const krb5_data *, krb5_const_principal, krb5_keytab, krb5_flags *, krb5_ticket **) = NULL;
 static krb5_error_code (KRB5_CALLCONV *krb5_sname_to_principal_ptr)(krb5_context, const char *, const char *, krb5_int32, krb5_principal *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_unparse_name_ptr)(krb5_context, krb5_const_principal, register char **) = NULL;
+static krb5_error_code (KRB5_CALLCONV *krb5_unparse_name_ptr)(krb5_context, krb5_const_principal, char **) = NULL;
 
 bool Condor_Auth_Kerberos::m_initTried = false;
 bool Condor_Auth_Kerberos::m_initSuccess = false;
@@ -192,7 +192,7 @@ bool Condor_Auth_Kerberos::Initialize()
 		 !(krb5_free_context_ptr = (void (*)(krb5_context))dlsym(dl_hdl, "krb5_free_context")) ||
 		 !(krb5_free_cred_contents_ptr = (void (*)(krb5_context, krb5_creds *))dlsym(dl_hdl, "krb5_free_cred_contents")) ||
 		 !(krb5_free_creds_ptr = (void (*)(krb5_context, krb5_creds *))dlsym(dl_hdl, "krb5_free_creds")) ||
-		 !(krb5_free_keyblock_ptr = (void (*)(krb5_context, register krb5_keyblock *))dlsym(dl_hdl, "krb5_free_keyblock")) ||
+		 !(krb5_free_keyblock_ptr = (void (*)(krb5_context, krb5_keyblock *))dlsym(dl_hdl, "krb5_free_keyblock")) ||
 		 !(krb5_free_principal_ptr = (void (*)(krb5_context, krb5_principal))dlsym(dl_hdl, "krb5_free_principal")) ||
 		 !(krb5_free_ticket_ptr = (void (*)(krb5_context, krb5_ticket *))dlsym(dl_hdl, "krb5_free_ticket")) ||
 		 !(krb5_get_credentials_ptr = (krb5_error_code (*)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **))dlsym(dl_hdl, "krb5_get_credentials")) ||
@@ -213,7 +213,7 @@ bool Condor_Auth_Kerberos::Initialize()
 		 !(krb5_rd_rep_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, const krb5_data *, krb5_ap_rep_enc_part **))dlsym(dl_hdl, "krb5_rd_rep")) ||
 		 !(krb5_rd_req_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context *, const krb5_data *, krb5_const_principal, krb5_keytab, krb5_flags *, krb5_ticket **))dlsym(dl_hdl, "krb5_rd_req")) ||
 		 !(krb5_sname_to_principal_ptr = (krb5_error_code (*)(krb5_context, const char *, const char *, krb5_int32, krb5_principal *))dlsym(dl_hdl, "krb5_sname_to_principal")) ||
-		 !(krb5_unparse_name_ptr = (krb5_error_code (*)(krb5_context, krb5_const_principal, register char **))dlsym(dl_hdl, "krb5_unparse_name"))
+		 !(krb5_unparse_name_ptr = (krb5_error_code (*)(krb5_context, krb5_const_principal, char **))dlsym(dl_hdl, "krb5_unparse_name"))
 		 ) {
 
 		// Error in the dlopen/sym calls, return failure.
@@ -225,6 +225,7 @@ bool Condor_Auth_Kerberos::Initialize()
 		m_initSuccess = true;
 	}
 #else
+	error_message_ptr = error_message;
 	krb5_auth_con_free_ptr = krb5_auth_con_free;
 	krb5_auth_con_genaddrs_ptr = krb5_auth_con_genaddrs;
 	krb5_auth_con_getaddrs_ptr = krb5_auth_con_getaddrs;

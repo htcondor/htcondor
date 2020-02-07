@@ -367,7 +367,10 @@ StatusReply::operator() () {
 			ClassAdList cal;
 			CondorError errStack;
 			CollectorList * collectors = CollectorList::create();
-			/* QueryResult qr = */ collectors->query( q, cal, & errStack );
+			QueryResult qr = collectors->query( q, cal, & errStack );
+			if (qr != Q_OK) {
+				fprintf( stderr, "Status check failed -- cannot contact collector\n");
+			}
 			delete collectors;
 
 			cal.Rewind();

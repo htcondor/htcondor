@@ -69,7 +69,8 @@ if ($boos) {
 		print FH 'del userdir\condor-*.tgz' . "\n";
 		print FH 'move userdir\* sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
-		print FH 'move userdir\doc sources\doc' . "\n";
+		print FH 'move userdir\bindings sources\bindings' . "\n";
+		print FH 'move userdir\docs sources\docs' . "\n";
 		print FH 'move userdir\view sources\view' . "\n";
 		print FH 'move userdir\build sources\build' . "\n";
 		print FH 'move userdir\externals sources\externals' . "\n";
@@ -81,7 +82,8 @@ if ($boos) {
 		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'for file in userdir/*; do if [ -f "$file" ]; then mv "$file" sources; fi; done' . "\n";
 		print FH 'mv userdir/src sources' . "\n";
-		print FH 'mv userdir/doc sources' . "\n";
+		print FH 'mv userdir/bindings sources' . "\n";
+		print FH 'mv userdir/docs sources' . "\n";
 		print FH 'mv userdir/view sources' . "\n";
 		print FH 'mv userdir/build sources' . "\n";
 		print FH 'mv userdir/externals sources' . "\n";
@@ -123,7 +125,7 @@ else {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
-    if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|RedHat|CentOS|Fedora|x86_64_Ubuntu16)/)) {
+    if ($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/) {
         print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
     }
     print TASKLIST "$NATIVE_TASK 4h\n";

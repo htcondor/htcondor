@@ -25,7 +25,6 @@
 #include "basename.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "condor_string.h"
 #include "directory.h"
 #include "condor_attributes.h"
 #include "setenv.h"
@@ -221,7 +220,7 @@ parse_param_string(const char *line, MyString &name, MyString &value, bool del_q
 }
 
 bool 
-create_name_for_VM(ClassAd *ad, MyString& vmname)
+create_name_for_VM(ClassAd *ad, std::string& vmname)
 {
 	if( !ad ) {
 		return false;
@@ -241,7 +240,7 @@ create_name_for_VM(ClassAd *ad, MyString& vmname)
 		return false;
 	}
 
-	MyString stringattr;
+	std::string stringattr;
 	if( ad->LookupString(ATTR_USER, stringattr) != 1 ) {
 		dprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 				ATTR_USER); 
@@ -249,11 +248,11 @@ create_name_for_VM(ClassAd *ad, MyString& vmname)
 	}
 
 	// replace '@' with '_'
-	int pos = -1;
-	while( (pos = stringattr.find("@") ) >= 0 ) {
-		stringattr.setAt(pos, '_');
+	size_t pos = std::string::npos;
+	while( (pos = stringattr.find("@") ) != std::string::npos ) {
+		stringattr[pos] = '_';
 	}
 
-	formatstr( vmname, "%s_%d.%d", stringattr.Value(), cluster_id, proc_id );
+	formatstr( vmname, "%s_%d.%d", stringattr.c_str(), cluster_id, proc_id );
 	return true;
 }

@@ -54,7 +54,6 @@
     static bool backtrace_have_symbols = false;
 # endif
 #endif
-#include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 #include "log_rotate.h"
 #include "dprintf_internal.h"
@@ -71,6 +70,17 @@
 #endif
 
 #include <sstream>
+
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+#ifdef WIN32
+static bool _dprintf_expect_threads = true;
+#else
+static bool _dprintf_expect_threads = false;
+#endif
+void dprintf_make_thread_safe() {
+	_dprintf_expect_threads = true;
+}
 
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
@@ -204,7 +214,6 @@ char	*DebugLock = NULL;
 int		DebugLockIsMutex = -1;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
-int		SetSyscalls(int mode);
 
 int		LockFd = -1;
 
@@ -251,11 +260,7 @@ double _condor_debug_get_time_double()
 {
 #if defined(HAVE_CLOCK_GETTIME)
 	struct timespec tm;
-	#ifdef HAVE_CLOCK_MONOTONIC_RAW
-	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
-	#else
 	clock_gettime(CLOCK_MONOTONIC, &tm);
-	#endif
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
 #elif defined(WIN32)
 	LARGE_INTEGER li;
@@ -571,7 +576,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 				buffer[bufpos-1] = ' ';
 				for (int jj = 0; jj < info.num_backtrace; ++jj) {
 					const char * fmt = (jj+1 == info.num_backtrace) ? "%p\n" : "%p, ";
-					rc = sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
+					sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
 				}
 			}
 		}
@@ -800,7 +805,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	//time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
-	mode_t		old_umask;
 #endif
 	int saved_errno;
 	priv_state	priv;
@@ -839,7 +843,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	art.is_enabled = true;
 #endif
 
-#if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
+#if !defined(WIN32) /* signals don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
@@ -851,11 +855,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
-
-		/* Make sure our umask is reasonable, in case we're the shadow
-		   and the remote job has tried to set its umask or
-		   something.  -Derek Wright 6/11/98 */
-	old_umask = umask( 022 );
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -877,7 +876,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
 	 * if we are running w/ threads.
 	 */
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_lock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -894,7 +893,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   log anything when we're in PRIV_USER_FINAL, to avoid
 		   exit(DPRINTF_ERROR). */
 	if (get_priv() == PRIV_USER_FINAL) {
-		/* Ensure to undo the signal blocking/umask code for unix and
+		/* Ensure to undo the signal blocking code for unix and
 			leave the critical section for windows. */
 		goto cleanup;
 	}
@@ -995,16 +994,11 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	errno = saved_errno;
 
-#if !defined(WIN32) // umasks don't exist in WIN32
-		/* restore umask */
-	(void)umask( old_umask );
-#endif
-
 	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_unlock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -1495,12 +1489,13 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 				*/
 		}
 		else {
-			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n",
-					  filePath.c_str(), old );
+			// This absurd construction is because there's no other way to
+			// tell gcc 8 that we really do want to truncate the arguments.
+			int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old ); ++rv;
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-	
+
 	/* double check the result of the rename
 	   If we are not using locking, then it is possible for two processes
 	   to rotate at the same time, in which case the following check
@@ -1513,7 +1508,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 		if (stat (filePath.c_str(), &statbuf) >= 0)
 		{
 			file_there = 1;
-			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 filePath.c_str() );
 			/* We should not exit here - file did rotate but something else created it newly. We
@@ -1605,8 +1599,9 @@ _condor_fd_panic( int line, const char* file )
 
 	if( !debug_file_ptr ) {
 		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(),
-				 panic_msg ); 
+		// This absurd construction is because there's no other way to
+		// tell gcc 8 that we really do want to truncate the arguments.
+		int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg ); ++rv;
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
@@ -1834,7 +1829,7 @@ dprintf_touch_log()
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( it->logPath.c_str(), 0644);
+			(void) chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}
@@ -1882,16 +1877,6 @@ fclose_wrapper( FILE *stream, int maxRetries )
 	}
 
 	return result;
-}
-
-int _condor_mkargv( int* argc, char* argv[], char* line );
-
-// Why the heck is this in here, rather than in mkargv.c?  wenger 2009-02-24.
-// prototype
-int
-mkargv( int* argc, char* argv[], char* line )
-{
-	return( _condor_mkargv(argc, argv, line) );
 }
 
 void
@@ -2132,8 +2117,10 @@ safe_async_log_open()
 			uid_t condor_uid = 0;
 			gid_t condor_gid = 0;
 			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
-				did_seteuid = (setegid(condor_gid) == 0)
-				           || (seteuid(condor_uid) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(condor_gid)) {}
+				if(seteuid(condor_uid)) {}
+				did_seteuid = true;
 			}
 			else if( orig_euid != getuid() || orig_egid != getgid() ) {
 				// To keep things simple, we do not bother trying to
@@ -2142,8 +2129,10 @@ safe_async_log_open()
 				// probably either the same as our effective id
 				// (no-op) or root.
 
-				did_seteuid = (setegid(getgid()) == 0)
-				           || (seteuid(getuid()) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(getgid())) {}
+				if(seteuid(getuid())) {}
+				did_seteuid = true;
 					// Do not open with O_CREAT in this case, so
 					// we don't leave behind a file owned by root,
 					// which could cause the daemon to fail to
@@ -2159,11 +2148,9 @@ safe_async_log_open()
 
 #if !defined(WIN32)
 		if( did_seteuid ) {
-			if (0 != setegid(orig_egid) ||
-			    0 != seteuid(orig_euid)) {
-				// what can we do about this???
-				create_log = false; // do something harmless and pointless so that fedora shuts up.
-			}
+			// The if statements are to quiet a compiler warning.
+			if(setegid(orig_egid)) {}
+			if(seteuid(orig_euid)) {}
 		}
 #endif
 

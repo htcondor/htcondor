@@ -105,9 +105,9 @@ ReplicatorStateMachine::finalizeDelta( )
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
     SetTargetTypeName( invalidate_ad, "Replication" );
-    line.formatstr( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    line.formatstr( "%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
-	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
+	invalidate_ad.Assign( ATTR_NAME, m_name );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
 }
 void
@@ -225,9 +225,9 @@ ReplicatorStateMachine::initializeClassAd()
     SetMyTypeName(*m_classAd, "Replication");
     SetTargetTypeName(*m_classAd, "");
 
-    m_name.formatstr( "replication@%s -p %d", get_local_fqdn().Value(),
+    formatstr( m_name, "replication@%s -p %d", get_local_fqdn().Value(),
 				  daemonCore->InfoCommandPort( ) );
-    m_classAd->Assign( ATTR_NAME, m_name.Value( ) );
+    m_classAd->Assign( ATTR_NAME, m_name );
     m_classAd->Assign( ATTR_MY_ADDRESS,
 					   daemonCore->InfoCommandSinfulString( ) );
 
@@ -238,8 +238,8 @@ ReplicatorStateMachine::initializeClassAd()
 	}
     char* replAddress = NULL;
     StringList replList;
-    MyString attrReplList;
-    MyString comma;
+    std::string attrReplList;
+    std::string comma;
 
     replList.initializeFromString( buffer );
     replList.rewind( );
@@ -249,7 +249,7 @@ ReplicatorStateMachine::initializeClassAd()
         attrReplList += replAddress;
         comma = ",";
     }
-    m_classAd->Assign( ATTR_REPLICATION_LIST, attrReplList.Value( ) );
+    m_classAd->Assign( ATTR_REPLICATION_LIST, attrReplList );
 
     // publish DC attributes
     daemonCore->publish(m_classAd);

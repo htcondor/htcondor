@@ -151,7 +151,7 @@ int attempt_access_handler(Service *, int  /*i*/, Stream *s)
 }	
 
 int attempt_access(const char *filename, int mode, int uid, int gid, 
-	char *scheddAddress )
+	const char *scheddAddress )
 {
 	int result;
 	int return_val;

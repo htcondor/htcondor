@@ -42,7 +42,7 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 			set ( CONFIGURE_ENV true )
 		ENDIF()
 
-		condor_pre_external( VOMS voms-2.0.13-p1 "include;lib" "done")
+		condor_pre_external( VOMS voms-2.0.13-p2 "include;lib" "done")
 
 		ExternalProject_Add(voms
 			#-- Download Step ----------
@@ -75,7 +75,7 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
 		endif()
 
-		condor_post_external( voms include OFF )
+		condor_post_external( voms include OFF "${VOMS_FOUND_STATIC};${VOMS_FOUND}" )
 
 		if ( LINUX )
 			# Install the VOMS libraries manually.

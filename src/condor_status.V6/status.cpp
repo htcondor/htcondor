@@ -29,7 +29,6 @@
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
-#include "condor_string.h"   // for strnewp()
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"
@@ -713,6 +712,7 @@ main (int argc, char *argv[])
 	// initialize to read from config file
 	myDistro->Init( argc, argv );
 	myName = argv[0];
+	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
 
@@ -1052,7 +1052,7 @@ main (int argc, char *argv[])
 	}
 
 	// Address (host:port) is taken from requested pool, if given.
-	char* addr = (NULL != pool) ? pool->addr() : NULL;
+	const char* addr = (NULL != pool) ? pool->addr() : NULL;
 	Daemon* requested_daemon = pool;
 
 	// If we're in "direct" mode, then we attempt to locate the daemon
@@ -1792,8 +1792,13 @@ firstPass (int argc, char *argv[])
 			i += 1;
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
+			if (targetFile == NULL) {
+				fprintf(stderr, "Cannot open file %s: errno: %d\n", target, errno);
+				exit(1);
+			}
 			int iseof, iserror, empty;
-			mainPP.targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			mainPP.targetAd = new ClassAd;
+			InsertFromFile(targetFile, *mainPP.targetAd, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
@@ -2339,7 +2344,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-			delete [] daemonname;
+			free(daemonname);
 			daemonname = NULL;
 		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }

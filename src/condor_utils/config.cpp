@@ -1203,6 +1203,16 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	return 0;
 }
 
+void MACRO_SET::initialize(int opts) {
+	size = 0; allocation_size = 0; sorted = 0;
+	table = NULL; metat = NULL; defaults = NULL;
+
+	options = opts; //CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
+	apool = ALLOCATION_POOL();
+	sources = std::vector<const char*>();
+	errors = new CondorError();
+}
+
 // fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 // the preface is printed with fprintf but not with the errors stack.
 void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char* format, ... ) //CHECK_PRINTF_FORMAT(5,6);
@@ -1434,7 +1444,7 @@ Parse_macros(
 
 	bool is_submit = (fnSubmit != NULL);
 	MACRO_SOURCE& FileSource = ms.source();
-	const char * source_file = macro_source_filename(FileSource, macro_set);
+	const char * source_file = ms.source_name(macro_set);
 	const char * source_type = is_submit ? "Submit file" : "Config source";
 
 	while (true) {
@@ -1731,6 +1741,15 @@ Parse_macros(
 				goto cleanup;
 			}
 		} else if (is_include) {
+			// if the caller disables the include keyword (late materialization), then just fail here
+			if (options & CONFIG_OPT_NO_INCLUDE_FILE) {
+				macro_set.push_error(stderr, retval, source_type,
+					"Error \"%s\", Line %d, include statement is not allowed in this context\n",
+					source_file, FileSource.line);
+				retval = -1;
+				goto cleanup;
+			}
+
 			MACRO_SOURCE InnerSource;
 			FILE* fp = NULL;
 			bool is_into    = 0 != (is_include & CONFIG_INCLUDE_OPTION_INTO);
@@ -2225,7 +2244,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 				pmeta->matches_default = same_param_value(def_value, pitem->raw_value, is_path);
 			}
 		}
-		if (tvalue) free(tvalue);
+		free(tvalue);
 		return;
 	}
 
@@ -3184,7 +3203,7 @@ static const char * evaluate_macro_func (
 				}
 			}
 			if ( num_entries > 0 ) {
-				int rand_entry = (get_random_int() % num_entries) + 1;
+				int rand_entry = (get_random_int_insecure() % num_entries) + 1;
 				int i = 0;
 				entries.rewind();
 				while ( (i < rand_entry) && (tvalue=entries.next()) ) {
@@ -3234,7 +3253,7 @@ static const char * evaluate_macro_func (
 			long	range = step + max_value - min_value;
 			long 	num = range / step;
 			long	random_value =
-				min_value + (get_random_int() % num) * step;
+				min_value + (get_random_int_insecure() % num) * step;
 
 			// And, convert it to a string
 			const int cbuf = 20;
@@ -3924,7 +3943,7 @@ static ptrdiff_t evaluate_macro_func (
 
 			// find the bounds of the item we want, and substitute that into the output buffer
 			const char * p, *endp;
-			int rand_entry = (get_random_int() % num_entries);
+			int rand_entry = (get_random_int_insecure() % num_entries);
 			p = nth_list_item(items, ',', endp, rand_entry, true);
 			if ( ! p || endp <= p) {
 				retval = 0;
@@ -4037,7 +4056,7 @@ static ptrdiff_t evaluate_macro_func (
 			// Generate the random value
 			long range = step + max_value - min_value;
 			long num = range / step;
-			long random_value = min_value + (get_random_int() % num) * step;
+			long random_value = min_value + (get_random_int_insecure() % num) * step;
 
 			// convert it to a string and insert it into the output buffer
 			formatstr(argbuf, "%ld", random_value);
@@ -4320,7 +4339,7 @@ static ptrdiff_t evaluate_macro_func (
 				}
 				freeit.set(buf); // make sure this gets released
 
-				int ixend = strlen(buf); // this will be the end of what we wish to return
+				int ixend = (int)strlen(buf); // this will be the end of what we wish to return
 				int ixn = (int)(condor_basename(buf) - buf); // index of start of filename, ==0 if no path sep
 				int ixx = (int)(condor_basename_extension_ptr(buf+ixn) - buf); // index of . in extension, ==ixend if no ext
 				// if this is a bare filename, we can ignore the p & d flags if n or x is set
@@ -4658,7 +4677,7 @@ public:
 	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs), skip_count(0) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
-		if (func_id == MACRO_ID_NORMAL) {
+		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
 			// skip $(dollar)
 			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
 				++skip_count;
@@ -4692,6 +4711,7 @@ unsigned int selective_expand_macro (
 	MACRO_EVAL_CONTEXT & ctx)
 {
 	int unexpanded_knob_count = 0;
+	int iteration_count = 0;
 
 	MACRO_POSITION pos; pos.clear();
 	std::string body;
@@ -4704,7 +4724,11 @@ unsigned int selective_expand_macro (
 		special_id = next_config_macro(is_config_macro, skb, tmp, pos.dollar, pos);
 		unexpanded_knob_count += skb.skip_count;
 		if (special_id) {
-			body.clear(); body.append(value, pos.dollar, pos.right-pos.dollar);
+			body.clear(); body.append(value, pos.dollar, pos.right - pos.dollar);
+			if (++iteration_count > 10000) {
+				macro_set.push_error(stderr, -1, NULL, "iteration limit exceeded while macro expanding: %s", body.c_str());
+				return -1;
+			}
 			MACRO_POSITION pos2 = pos;
 			pos2.dollar = 0;
 			pos2.body  -= pos.dollar;
@@ -4712,9 +4736,8 @@ unsigned int selective_expand_macro (
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
-				//PRAGMA_REMIND("tj: put error reporting into MACRO_EVAL_CONTEXT_EX")
-				EXCEPT("%s", errmsg.c_str());
-				break;
+				macro_set.push_error(stderr, -1, NULL, "%s", errmsg.c_str());
+				return -1;
 			}
 			if ( ! cch) {
 				value.erase(pos.dollar, pos.right-pos.dollar);

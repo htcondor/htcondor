@@ -228,8 +228,8 @@ TransferQueueManager::parseThrottleConfig(char const *config_param,bool &enable_
 
 void
 TransferQueueManager::InitAndReconfig() {
-	m_max_downloads = param_integer("MAX_CONCURRENT_DOWNLOADS",10,0);
-	m_max_uploads = param_integer("MAX_CONCURRENT_UPLOADS",10,0);
+	m_max_downloads = param_integer("MAX_CONCURRENT_DOWNLOADS",100,0);
+	m_max_uploads = param_integer("MAX_CONCURRENT_UPLOADS",100,0);
 	m_default_max_queue_age = param_integer("MAX_TRANSFER_QUEUE_AGE",3600*2,0);
 
 	parseThrottleConfig("FILE_TRANSFER_DISK_LOAD_THROTTLE",m_throttle_disk_load,m_disk_load_low_throttle,m_disk_load_high_throttle,m_disk_throttle_short_horizon,m_disk_throttle_long_horizon,m_throttle_disk_load_increment_wait);
@@ -343,9 +343,9 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	}
 
 	bool downloading = false;
-	MyString fname;
-	MyString jobid;
-	MyString queue_user;
+	std::string fname;
+	std::string jobid;
+	std::string queue_user;
 	filesize_t sandbox_size;
 	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
 		!msg.LookupString(ATTR_FILE_NAME,fname) ||
@@ -368,9 +368,9 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		new TransferQueueRequest(
 			sock,
 			sandbox_size,
-			fname.Value(),
-			jobid.Value(),
-			queue_user.Value(),
+			fname.c_str(),
+			jobid.c_str(),
+			queue_user.c_str(),
 			downloading,
 			m_default_max_queue_age);
 

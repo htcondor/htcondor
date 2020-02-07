@@ -77,6 +77,8 @@ public:
 	//
 	bool use_glexec_for_family(pid_t, const char*) { return false; }
 
+	bool quit(void(*)(void*, int, int),void*) { return false; }; // nothing to do here, only needed when there is a procd
+
 private:
 
 	HashTable<pid_t, ProcFamilyDirectContainer*> m_table;

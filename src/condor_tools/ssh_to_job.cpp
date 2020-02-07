@@ -561,7 +561,8 @@ bool SSHToJob::execute_ssh()
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					starter_addr.Value(),
-					0 );
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}
@@ -617,7 +618,7 @@ bool SSHToJob::execute_ssh()
 
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
-		unsigned int r = get_random_uint();
+		unsigned int r = get_random_uint_insecure();
 		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
 							  temp_dir,DIR_DELIM_CHAR,local_username,r);
 		if( mkdir(m_session_dir.Value(),0700)==0 ) {
@@ -662,7 +663,11 @@ bool SSHToJob::execute_ssh()
 		m_retry_sensible);
 
 	if( !start_sshd ) {
-		logError("%s\n",error_msg.Value());
+		// If we're going to retry, don't bother to scare/confuse the user
+		// with why unless they asked for it.
+		if( (!m_retry_sensible) || (!m_auto_retry) || m_debug ) {
+			logError("%s\n",error_msg.Value());
+		}
 		return false;
 	}
 
@@ -963,6 +968,7 @@ int
 main(int argc, char *argv[])
 {
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 #if !defined(WIN32)

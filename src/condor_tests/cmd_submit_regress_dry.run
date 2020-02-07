@@ -1,0 +1,409 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use strict;
+use warnings;
+
+my $verbose = 0;
+my $result = 1;
+my $testname = "cmd_submit_regress_dry";
+
+# these will get filled in with expectations about the results of submitting the subfiles
+my %expect;
+my %expect_warn;
+my %dont_expect;
+
+TLOG "Creating sub files for coverage test from $testname.subs\n";
+my @subs = emit_subs("$testname.subs");
+
+# regression test wheat.sub needs some directories to exist
+if ( ! -d "Multilevel_Thesis_WheatData") {
+	TLOG "Creating Multilevel_Thesis_WheatData directories\n";
+	mkdir "Multilevel_Thesis_WheatData";
+	mkdir "Multilevel_Thesis_WheatData/70";
+	mkdir "Multilevel_Thesis_WheatData/216";
+	mkdir "Multilevel_Thesis_WheatData/240";
+}
+
+
+TLOG "Loading expectations from $testname.expect\n";
+load_expectations("$testname.expect", \%expect, \%expect_warn, \%dont_expect);
+
+# print the loaded expectations
+#
+if ($verbose > 1) {
+	TLOG "Expect keys:\n";
+	foreach (keys %expect) {
+		print "$_\n";
+		foreach my $line (@{$expect{$_}}) {
+			print "\t" . $line;
+		}
+	}
+	TLOG "Warning keys:\n";
+	foreach (keys %expect_warn) {
+		print "$_\n";
+		foreach my $line (@{$expect_warn{$_}}) {
+			print "\t" . $line;
+		}
+	}
+	TLOG "Don't expect keys:\n";
+	foreach (keys %dont_expect) {
+		print "$_\n";
+		foreach my $line (@{$dont_expect{$_}}) {
+			print "\t" . $line;
+		}
+	}
+}
+
+
+my %base_cluster_ad;
+
+foreach my $sub (@subs) {
+
+	my $tag = $sub; $tag =~ s/^\d*//;
+
+	TLOG "$tag: condor_submit -dry $sub\n";
+	if ( ! -f $sub) {
+		print "\tskipping submit because file $sub does not exist\n";
+		next;
+	}
+
+	my %cluster_ad = ();
+	my @proc_ads = ();
+
+	my %opts = ();
+	$opts{expect_result} = \&ANY; # don't care if the command fails, just return the exitcode
+	$opts{emit_output} = 0;       # change to 1 to see the raw output of the submit
+
+	my $hashref = runcmd( "condor_submit -dry-run:cluster=$sub - $sub", \%opts );
+	my @output =  @{${$hashref}{"stdout"}};
+	my @error =  @{${$hashref}{"stderr"}};
+	my $exitcode = ${$hashref}{"exitcode"};
+
+	if (defined $expect_warn{$tag}) {
+		@error = check_errors(@error, @{$expect_warn{$tag}}, $exitcode);
+	}
+
+	# always print the stderr output
+	if(defined $error[0]) {
+		TLOG "exit code is $exitcode\n";
+		print("\t----stderr----\n");
+		foreach (@error) { print $_; }
+		print("\t----end stderr----\n");
+	}
+
+	# print the raw command output only if we are in verbose mode
+	if ($verbose > 1) {
+		if(defined $error[0]) {
+		} else {
+			TLOG "exit code is $exitcode\n";
+			print("\t----no stderr----\n");
+		}
+		if(defined $output[0]) {
+			print("\t----stdout----\n");
+			foreach (@output) { print $_; }
+			print("\t----end stdout----\n");
+		} else {
+			print("\t----no stdout----\n");
+		}
+	}
+
+	# parse stdout to get a cluster ad and array of proc ads
+	# 
+	%cluster_ad = get_ads(\@output, \@proc_ads);
+
+	# print the raw cluster ad and proc ads
+	#
+	if ($verbose) {
+		print "\tClusterAd:\n";
+		foreach my $key (sort keys %cluster_ad) {
+			print "\t$key=$cluster_ad{$key}\n";
+		}
+		print "\n";
+
+		TLOG "ProcAds:\n";
+		foreach my $ad (@proc_ads) {
+			foreach my $key (sort keys %$ad) {
+				print "\t$key=$ad->{$key}\n";
+			}
+			print "\n";
+		}
+	}
+
+	TLOG "$tag: Checking Expectations\n";
+
+	# check expectations
+	# 
+	$result = $exitcode == 0;
+	if (defined $expect{$tag}) {
+		# ignore submit failures using x509 proxy for now...
+		my $noexpect = [];
+		if (defined $dont_expect{$tag}) { $noexpect = $dont_expect{$tag}; }
+		$result = check_expectations($exitcode, \%cluster_ad, \@proc_ads, $expect{$tag}, $noexpect);
+		if ($tag eq "x509.sub") {
+			if ($exitcode) {
+				print "\tIgnoring submit failure for $tag because this cannot succeed until we remove some legacy code from submit_utils\n";
+			}
+			$result = 1;
+		}
+	}
+
+	RegisterResult($result,test_name=>$testname, check_name=>"$sub");
+
+	# save the cluster ad from the base job for later
+	if ( ! defined $base_cluster_ad{"ClusterId"}) {
+		delete $cluster_ad{"ClusterId"};
+		delete $cluster_ad{"QDate"};
+		delete $cluster_ad{"EnteredCurrentStatus"};
+		#delete $cluster_ad{"Cmd"};
+		%base_cluster_ad = %cluster_ad;
+	}
+}
+
+CondorTest::EndTest();
+
+# remove expected errors from the output
+# args: @error, @{$expect_warn{$tag}}, $exitcode
+#
+sub check_errors {
+	my @error = shift;
+	my @warns = shift;
+	my $exitcode = shift;
+
+	my %expected;
+	foreach my $warn (@warns) { 
+		$warn =~ s/[ \t\r\n]*$//;
+		$expected{$warn} = 1;
+	}
+
+	my @errout;
+	foreach my $line (@error) {
+		my $tmp = $line; $tmp =~ s/[ \t\r\n]*$//;
+		if (defined $expected{$tmp}) {
+			if ($verbose) { push @errout, "ok: $line" };
+		} else {
+			push @errout, $line;
+		}
+	}
+
+	return @errout;
+}
+
+# args: $exitcode, \%cluster_ad, \@proc_ads, \@expect, \@noexpect
+sub check_expectations {
+	my $exit = shift;
+	my $cluster_ad = shift;
+	my $proc_ads = shift;
+	my $expectref = shift;
+	my $noexpectref = shift;
+	my $misses = 0;
+
+	# FUTURE FUTURE FUTURE FUTURE
+	#
+	# check expectations against the cluster and proc ads
+	#
+	if ($verbose > 1) {
+		foreach my $key (sort keys %$cluster_ad) {
+			if ( ! defined $base_cluster_ad{$key} || ($base_cluster_ad{$key} ne $cluster_ad->{$key})) {
+				print "\t$key=$cluster_ad->{$key}\n";
+			}
+		}
+		print "\n";
+		foreach my $ad (@$proc_ads) {
+			foreach my $key (sort keys %$ad) {
+				print "\t$key=$ad->{$key}\n";
+			}
+			print "\n";
+		}
+		print "\n";
+	}
+
+	my $proc_id = 0;
+	foreach my $ex (@$expectref) {
+		#print "\texpect: $ex";
+		if ($ex =~ /^\./) {
+			$proc_id += 1;
+			if ($verbose) { print "\t---job $proc_id---\n"}
+			next;
+		}
+		if ($ex =~ /^\s*([a-zA-Z_0-9]+)=(.*)$/) {
+			my $attr = $1;
+			my $exv = $2; $exv =~ s/\s*$//;
+			my $pad = $proc_ads->[$proc_id];
+			my $rhs = $pad->{$attr};
+			#print Dumper($pad, $attr, $rhs);
+			if (not defined $rhs) {
+				$rhs = $cluster_ad->{$attr};
+				if (not defined $rhs) { $rhs = "undefined"; }
+			}
+			$rhs =~ s/\s*$//;
+			if ($exv =~ /^\/(.*)\/$/) { # expectation is a pattern
+				my $re = qr/$1/;
+				if ($rhs =~ $re) {
+					if ($verbose) { printf "\tfor %s: %s matches /%s/\n", $attr, $rhs, $re; }
+				} else {
+					printf "\tFAILURE: for %s: %s does not match expected /%s/\n", $attr, $rhs, $re;
+					$misses += 1;
+				}
+			} else { # expectation is a literal
+				
+				if ($rhs eq $exv) {
+					if ($verbose) { printf "\tfor %s: %s matches %s\n", $attr, $rhs, $exv; }
+				} else {
+					printf "\tFAILURE: for %s: %s does not match expected %s\n", $attr, $rhs, $exv;
+					$misses += 1;
+				}
+			}
+			next;
+		}
+		# print lines that don't match the pattern, treat them like comments
+		if ( ! ($ex =~ /^\s*$/)) { print "\tignoring: $ex"; }
+	}
+
+	$proc_id = 0;
+	foreach my $nex (@$noexpectref) {
+		print "\tnoexpect: $nex\n";
+	}
+
+	return $misses == 0 && $exit == 0;
+}
+
+
+# parse the output of condor_submit -dry -
+# and return a cluster ad and a set of proc ads
+# for example, assuming @stdout is the output of runcmd
+#   my @proc_ads = ();
+#   my %cluster_ad = get_ads(\@stdout, \@proc_ads);
+#
+sub get_ads {
+	my $out = shift;   # in: array ref 
+	my $procads = shift;
+
+	my %cad;
+	my $pad = {};
+	my $procid = 0;
+
+	foreach (@{$out}) {
+		s/\s*$//;
+		if ($_ =~ /^Dry-Run/) {
+			# read cluster ad until the next line with a .
+			next;
+		} elsif ($_ =~ /^\.$/) {
+			push @$procads, $pad;
+			$pad = {};
+			$procid += 1;
+			next;
+		} elsif ($_ =~ /^([a-zA-Z_0-9]+)=(.*)/) {
+			if ($1 eq 'ProcId' || $1 eq 'JobStatus' || $procid > 0) {
+				$pad->{$1}=$2;
+			} else {
+				$cad{$1}=$2;
+			}
+			#print "\t\t$1=$2\n";
+			next;
+		} else {
+			# 4 job(s) dry-run to cluster 35.
+		}
+	}
+
+	return %cad;
+}
+
+# Helper function to create a file from a string
+sub emit_file {
+	my $fname = shift;
+	my $content = shift;
+
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
+
+sub emit_subs {
+	my $fname = shift;
+
+	open (FHO, ">basic.cmd") || die "error writing to basic.cmd: $!\n";
+	if (CondorUtils::is_windows()) {
+		print FHO 'echo %*' . "\n";
+	} else {
+		print FHO '#!/bin/sh' . "\n";
+		print FHO 'echo $*' . "\n";
+	}
+
+	my $iter = 0;
+	my @subs = ();
+
+	open (FHI, "<$fname") || die "could not open $fname : $!\n";
+	while (<FHI>) {
+		if ($_ =~ /^==(\S+)/) {
+			close (FHO);
+			$iter += 1;
+			my $fn = sprintf("%03d%s", $iter, $1);
+			push @subs, $fn;
+			open (FHO, ">$fn") || die "error writing to $fn: $!\n";
+			next;
+		}
+		print FHO $_;
+	}
+	close(FHI);
+
+	close(FHO);
+	return @subs;
+}
+
+# "$testname.expect", \%expect, \%expect_warn, \%dont_expect);
+sub load_expectations {
+	my $fname = shift;
+	my $expectref = shift;
+	my $warnref = shift;
+	my $noexpectref = shift;
+
+	my $name;
+	my $aryref;
+
+	open (FHI, "<$fname") || die "could not open $fname : $!\n";
+	while (<FHI>) {
+		if ($_ =~ /^==(\S+)/) {
+			$aryref = [];
+			${$expectref}{$1} = $aryref;
+			next;
+		} elsif ($_ =~ /^=warn=(\S+)/) {
+			$aryref = [];
+			${$warnref}{$1} = $aryref;
+			next;
+		} elsif ($_ =~ /^=!=(\S+)/) {
+			$aryref = [];
+			${$noexpectref}{$1} = $aryref;
+			next;
+		}
+		push @{$aryref}, $_;
+	}
+	close(FHI);
+}

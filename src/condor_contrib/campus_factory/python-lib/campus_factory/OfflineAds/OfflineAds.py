@@ -98,8 +98,7 @@ class OfflineAds:
         """
         def Delinquent(data):
             if data.has_key("Offline"):
-                if data["Offline"] == True:
-                    return True
+                return data["Offline"]
             return False
         
         fetched = self.condor_status.fetchStored(Delinquent)
@@ -166,7 +165,7 @@ class OfflineAds:
         
         def Matched(data):
             if data.has_key("Offline") and data.has_key("MachineLastMatchTime"):
-                if data["Offline"] == True and int(data["MachineLastMatchTime"]) > (int(time.time()) - self.lastmatchtime):
+                if data["Offline"] and int(data["MachineLastMatchTime"]) > (int(time.time()) - self.lastmatchtime):
                     return True
             return False
         

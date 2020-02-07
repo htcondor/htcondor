@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
 #include "vmgahp_common.h"
@@ -30,7 +29,6 @@
 #  include "xen_type.linux.h"
 #endif
 #include "subsystem_info.h"
-#include "../condor_privsep/condor_privsep.h"
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
@@ -133,7 +131,7 @@ void
 init_uids()
 {
 #if !defined(WIN32)
-	bool SwitchUid = can_switch_ids() || privsep_enabled();
+	bool SwitchUid = can_switch_ids();
 
 	caller_uid = getuid();
 	caller_gid = getgid();
@@ -434,7 +432,7 @@ void main_init(int argc, char *argv[])
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
+		if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( XenType::checkXenParams(gahpconfig) == false ) {
@@ -443,7 +441,7 @@ void main_init(int argc, char *argv[])
 				DC_Exit(0);
 			}
 			set_priv(priv);
-	  }else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		} else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( KVMType::checkXenParams(gahpconfig) == false ) {
@@ -453,7 +451,7 @@ void main_init(int argc, char *argv[])
 			}
 			set_priv(priv);
 
-	  } else
+		} else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 			priv_state priv = set_user_priv();

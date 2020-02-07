@@ -32,8 +32,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_version.h"
-#include "condor_string.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -75,6 +73,7 @@ main( int argc, char *argv[] )
 
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
 	dprintf_OnExitDumpOnErrorBuffer(stderr);

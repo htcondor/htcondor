@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+import htcondor
+
+from pytest.CondorTest import CondorTest
+from pytest.Utils import Utils
+from pytest.Globals import *
+
+#
+# Test the JobEventLog code.
+#
+# To make sure we test each event type, run x_write_joblog.exe.  Then
+# instantiate a JobEventLog and make sure that the JobEvents it returns
+# are what we expect them to be.
+#
+
+def compareEvent(event, count):
+	if event.type != count:
+		Utils.TLog("Event {0} has wrong type".format(count))
+		return False
+
+	if event.cluster != 14:
+		Utils.TLog("Event {0} has wrong cluster ID".format(count))
+		return False
+
+	if event.proc != 55:
+		Utils.TLog("Event {0} has wrong proc ID".format(count))
+		return False
+
+	if time.time() - event.timestamp > 30:
+		Utils.TLog("Event {0}'s timestamp is from more than thirty seconds ago.".format(count))
+		return False
+
+	# This set of attributes is extensive but not necessarily comprehensive.
+	# In some cases (e.g., TerminatedNormally being True and CoreFile being
+	# nonempty), a comprehensive test would require writing more than one
+	# event.  In other cases, x_write_joblog just doesn't include all of the
+	# event's possible attributes.
+	standardHost = "<128.105.165.12:32779>"
+	standardUsage = "Usr 1 02:03:04, Sys 5 06:07:08"
+	expectedEventAttributes = {
+		 0: { "UserNotes": "User info", "LogNotes": "DAGMan info",
+		      "SubmitHost": standardHost },
+		 1: { "ExecuteHost": standardHost },
+		 2: { "ExecuteErrorType": 1L },
+		 3: { "RunRemoteUsage": standardUsage, "RunLocalUsage": standardUsage,
+		      "SentBytes": 11 },
+		 4: { "RunRemoteUsage": standardUsage, "RunLocalUsage": standardUsage,
+		     "SentBytes": 1, "TerminatedAndRequeued": True,
+		     "TerminatedNormally": True, "ReceivedBytes": 2,
+		     "Checkpointed": False, "Reason": "It misbehaved!" },
+		 5: { "TotalLocalUsage": standardUsage, "TotalRemoteUsage": standardUsage,
+		     "RunRemoteUsage": standardUsage, "RunLocalUsage": standardUsage,
+		     "TotalReceivedBytes": 800000, "SentBytes": 400000,
+		     "TerminatedBySignal": 9, "TotalSentBytes": 900000,
+		     "CoreFile": "badfilecore", "ReceivedBytes": 200000,
+		     "TerminatedNormally": False },
+		 6: { "Size": 128, "ResidentSetSize": 129, "MemoryUsage": 131, "ProportionalSetSize": 130 },
+		 7: { "SentBytes": 4096, "Message": "shadow message", "ReceivedBytes": 4096 },
+		 8: { "Info": "Lorem ipsum dolor sit amet, in duo prima aeque principes euismod." },
+		 9: { "Reason": "cause I said so!" },
+		10: { "NumberOfPIDs": 99 },
+		11: { },
+		12: { "HoldReasonCode": 404, "HoldReasonSubCode": 255, "HoldReason": 'CauseWeCan' },
+		13: { "Reason": "MessinWithYou" },
+		14: { "ExecuteHost": standardHost, "Node": 49 },
+		15: { "SentBytes": 400000, "RequestMemory": 44, "RequestPets": 1,
+		      "Memory": 55, "TerminatedNormally": False, "ReturnValue": -1,
+		      "PetsUsage": 0.5, "ReceivedBytes": 200000,
+		      "TotalRemoteUsage": standardUsage, "Node": 44, "Pets": 1,
+		      "CoreFile": "badfilecore", "TotalSentBytes": 900000,
+		      "TotalLocalUsage": standardUsage, "TerminatedBySignal": 9,
+		      "RunLocalUsage": standardUsage, "RunRemoteUsage": standardUsage,
+		      "AssignedPets": "Spot", "MemoryUsage": 33,
+		      "TotalReceivedBytes": 800000 },
+		16: { "TerminatedBySignal": 9, "TerminatedNormally": False },
+		17: { "RestartableJM": True, "RMContact": "ResourceManager", "JMContact": "JobManager" },
+		18: { "Reason": "Cause it could" },
+		19: { "RMContact": "ResourceUp" },
+		20: { "RMContact": "ResourceDown" },
+		21: { "ErrorMsg": "this is the write test error string",
+			   "Daemon": "<write job log test>",
+			   "ExecuteHost": standardHost },
+		22: { "EventDescription": "Job disconnected, attempting to reconnect",
+		      "StartdName": "ThatMachine", "DisconnectReason": "TL;DR",
+		      "StartdAddr": "<128.105.165.12:32780>" },
+		23: { "EventDescription": "Job reconnected", "StartdName": "ThatMachine",
+		      "StarterAddr": "<128.105.165.12:32780>", "StartdAddr": standardHost },
+		24: { "EventDescription": "Job reconnect impossible: rescheduling job",
+		      "Reason": "The're just not into you", "StartdName": "ThatMachine" },
+		25: { "GridResource": "Resource Name" },
+		26: { "GridResource": "Resource Name" },
+		27: { "GridResource": "Resource Name", "GridJobId": "100.1" },
+		28: { "JobStatus": 2, "BILLReal" : 66.66,
+		      "BillString": "lorem ipsum dolor", "BILLBool": True, "BILLInt": 1000 },
+		29: { },
+		30: { },
+		31: { "EventHead": "Job is performing stage-in of input files" },
+		32: { "EventHead": "Job is performing stage-out of output files" },
+		33: { "Attribute": "PrivateAttr", "Value": "1" },
+		34: { "SkipEventLogNotes": "DAGMan info" },
+		35: { "SubmitHost": standardHost },
+		36: { "Completion": 1, "NextProcId": 100, "NextRow": 10 },
+		37: { "Reason": "Hang on a second", "HoldCode": 24, "PauseCode": 42 },
+		38: { "Reason": "just messin wit' ya" }
+	}
+
+	boringAttrs = ("Subproc", "Proc", "Cluster", "EventTime", "EventTypeNumber", "MyType")
+	if expectedEventAttributes.get(count) is not None:
+		for attr, value in expectedEventAttributes[count].items():
+			if attr not in event:
+				Utils.TLog("Event {0}'s {1} is missing".format(count, attr))
+				return False
+			if event[attr] != expectedEventAttributes[count][attr]:
+				Utils.TLog("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, event[attr], expectedEventAttributes[count][attr]))
+				return False
+		d = set(event.keys()) - set(expectedEventAttributes[count].keys()) - set(boringAttrs)
+		if d:
+			Utils.TLog("Found extra attributes in event {0}: {1}".format(count, ", ".join(sorted(d))))
+			return False
+	else:
+		# To help add new events to the test.
+		Utils.TLog("Unknown event {0}:".format(count))
+		for attr in event:
+			if attr in boringAttrs:
+				continue
+			Utils.TLog("{0} = '{1}'".format(attr, event[attr]))
+		return False
+
+	return True
+
+
+# Be sure to generate the test events in a different file than C++ test uses.
+logFileName = "local.pybind-jel.log"
+if not Utils.RunCommandCarefully(( "./x_write_joblog.exe", logFileName )):
+	CondorTest.RegisterFailure("pybind-jel", "x_write_joblog command failed")
+	sys.exit(TEST_FAILURE)
+
+
+jel = htcondor.JobEventLog(logFileName)
+count = 0
+# No need to wait for a complete logfile.
+for event in jel.events(stop_after=0):
+	if not compareEvent(event, count):
+		CondorTest.RegisterFailure("pybind-jel-{0}".format(count), "Event {0} was wrong".format(count))
+	count += 1
+
+if count != 39:
+	CondorTest.RegisterFailure("pybind-jel", "Found the wrong number of events: {0}".format(count))
+	sys.exit(TEST_FAILURE)
+else:
+	CondorTest.RegisterSuccess("pybind-jel", "Found the right number of (correct) events.")
+
+
+# Test __enter__() and __exit__().  To check that __exit__() closes the log,
+# we need to leave at least one event in the log for the log to not return.
+with htcondor.JobEventLog(logFileName) as jel:
+	for i in range(0, 30):
+		event = next(jel)
+		if not compareEvent(event, i):
+			CondorTest.RegisterFailure("pybind-jel-icm", "Event {0} was wrong".format(i))
+
+try:
+	event = next(jel)
+	CondorTest.RegisterFailure("pybind-jel-icm", "__exit__() failed to close jel")
+except StopIteration as si:
+	CondorTest.RegisterSuccess("pybind-jel-icm", "__exit__() properly closed jel.")
+
+
+#
+# To test __str__(), use it to reconstruct the original log string and
+# then compare to the value of the log file.
+#
+
+new = ""
+jel = htcondor.JobEventLog(logFileName)
+for event in jel.events(stop_after=0):
+	new = new + str(event) + "...\n"
+
+old = ""
+log = open(logFileName, "r")
+for line in log:
+	old += line
+
+if new != old:
+	CondorTest.RegisterFailure("pybind-jel-str", "Original and synthesized log differ.")
+	print("Old: '{0}'".format(old))
+	print("New: '{0}'".format(new))
+else:
+	CondorTest.RegisterSuccess("pybind-jel-str", "Original and synthesized log are identical.")
+
+
+# Test close().
+with htcondor.JobEventLog(logFileName) as jel:
+	e = next(jel)
+	jel.close()
+	try:
+		e = next(jel)
+		CondorTest.RegisterFailure("pybind-jel-close", "Event found after close().")
+	except StopIteration as si:
+		CondorTest.RegisterSuccess("pybind-jel-close", "No events found after close().");
+
+
+sys.exit(TEST_SUCCESS)
+

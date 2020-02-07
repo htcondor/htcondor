@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_string.h"
+#include "basename.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
@@ -33,7 +33,6 @@
 #include "condor_vm_universe_types.h"
 #include "vm_type.h"
 #include "condor_mkstemp.h"
-#include "../condor_privsep/condor_privsep.h"
 
 extern VMGahp *vmgahp;
 
@@ -60,12 +59,7 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_start_time = 0;
 	m_stop_time = 0;
 	m_last_status_time = 0;
-
-	if ( privsep_enabled() ) {
-		m_file_owner = PRIV_CONDOR;
-	} else {
-		m_file_owner = PRIV_USER;
-	}
+	m_file_owner = PRIV_USER;
 
 	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
 
@@ -147,11 +141,11 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			// vm_networking_type is defined
 
 			// change string to lowercase
-			m_vm_networking_type.trim();
-			m_vm_networking_type.lower_case();
-			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
+			trim(m_vm_networking_type);
+			lower_case(m_vm_networking_type);
+			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.c_str()) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
-						"this gahp server\n", m_vm_networking_type.Value());
+						"this gahp server\n", m_vm_networking_type.c_str());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
 				return false;
 			}
@@ -263,9 +257,9 @@ VMType::setLastStatus(const char *result_msg)
 void
 VMType::createInitialFileList()
 {
-	MyString intermediate_files;
+	std::string intermediate_files;
 	StringList intermediate_file_list(NULL, ",");
-	MyString input_files;
+	std::string input_files;
 	StringList input_file_list(NULL, ",");
 
 	m_initial_working_files.clearAll();
@@ -277,14 +271,14 @@ VMType::createInitialFileList()
 
 	// Read Intermediate files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INTERMEDIATE_FILES, intermediate_files);
-	if( intermediate_files.IsEmpty() == false ) {
-		intermediate_file_list.initializeFromString(intermediate_files.Value());
+	if( intermediate_files.empty() == false ) {
+		intermediate_file_list.initializeFromString(intermediate_files.c_str());
 	}
 
 	// Read Input files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INPUT_FILES, input_files);
-	if( input_files.IsEmpty() == false ) {
-		input_file_list.initializeFromString(input_files.Value());
+	if( input_files.empty() == false ) {
+		input_file_list.initializeFromString(input_files.c_str());
 	}
 
 	// Create m_transfer_intermediate_files and m_transfer_input_files with fullpath.
@@ -329,7 +323,7 @@ VMType::deleteNonTransferredFiles()
 // Create a name representing a virtual machine
 // Usually this name is used in vm config file
 bool 
-VMType::createVMName(ClassAd *ad, MyString& vmname)
+VMType::createVMName(ClassAd *ad, std::string& vmname)
 {
 	if( !ad ) {
 		return false;
@@ -433,8 +427,9 @@ VMType::createConfigUsingScript(const char* configfile)
 	const char *name;
 	ExprTree* expr = NULL;
 
-	m_classAd.ResetExpr();
-	while( m_classAd.NextExpr(name, expr) ) {
+	for( auto itr = m_classAd.begin(); itr != m_classAd.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 		if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
 			!strncasecmp( name, "VMPARAM", strlen("VMPARAM") )) {
 

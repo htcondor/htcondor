@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "MyString.h"
 #include "debug.h"
 #include "jobstate_log.h"
@@ -56,7 +55,7 @@ JobstateLog::JobstateLog()
 //---------------------------------------------------------------------------
 JobstateLog::~JobstateLog()
 {
-	delete [] _jobstateLogFile;
+	free( _jobstateLogFile );
 	if ( _outfile ) {
 		fclose( _outfile );
 		_outfile = NULL;

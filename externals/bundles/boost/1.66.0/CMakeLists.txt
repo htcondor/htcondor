@@ -37,7 +37,7 @@ if (WINDOWS)
 
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
-		condor_post_external( boost "boost" "lib" )
+		condor_post_external( boost "boost" "lib" "" )
 	endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
@@ -58,8 +58,32 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	#  set (Boost_DEBUG TRUE)
+    # set (Boost_DEBUG TRUE)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
+
+    message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
+    if (DEFINED SYSTEM_NAME)
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
+            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+                message (STATUS "Using system boost169 for 64-bit EL7" )
+                # If you look for python on cmake 2.8.12.2 it fails.
+                # Looking for thread finds boost for python for me.
+                set (BOOST_COMPONENTS thread)
+                set(BOOST_INCLUDEDIR "/usr/include/boost169")
+                set(BOOST_LIBRARYDIR "/usr/lib64/boost169")
+                set(Boost_INCLUDE_DIR "/usr/include/boost169")
+                set(Boost_LIBRARY_DIR "/usr/lib64/boost169")
+                set(USE_SYSTEM_BOOST True)
+            endif()
+        endif()
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+        if (${SYSTEM_NAME} MATCHES "fc")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+    endif()
+
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
@@ -88,12 +112,15 @@ else (WINDOWS)
 			set (BOOST_VER ${Boost_VERSION})
 			set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
 			set (BOOST_LD ${Boost_LIBRARY_DIRS})
+            if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
+                set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+            endif()
 		endif()
 
 	endif(Boost_FOUND)
 
 	# we only use our version of boost if the system is not good enough
-	if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
+    if (NOT PROPER AND NOT USE_SYSTEM_BOOST)
 
 		if (WINDOWS)
 			# building boost on windows here doesn't work right now. must use the pre-built boost external.
@@ -104,8 +131,20 @@ else (WINDOWS)
 			#set(INCLUDE_LOC include/boost_1.66)
 			message (FATAL_ERROR "WINDOWS builds must use pre-built boost")
 		else()
-
-			set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			# Boost's detection of the python include directory
+			# assumes the directory name doesn't have a
+			# suffix (e.g. /usr/include/python-3.7m).
+			# But this is common in the linux distros.
+			# This only appears to affect Python 3.
+			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
+			#   has multiple directories.
+			if("${PYTHONLIBS_VERSION_STRING}" VERSION_LESS "3.0.0")
+				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			else()
+				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+					"using python : : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n")
+				set(BUILD_OPTIONS --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			endif()
 
 			if (DARWIN)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -126,7 +165,7 @@ else (WINDOWS)
 		endif()
 
 		set(BOOST_FILENAME boost_1_66_0)
-		condor_pre_external( BOOST boost-1.66.0 "lib;boost" "done")
+		condor_pre_external( BOOST boost-1.66.0-p1 "lib;boost" "done")
 
 		set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 		if (LINUX)
@@ -149,7 +188,8 @@ else (WINDOWS)
 			 DOWNLOAD_DIR ${BOOST_STAGE}/dl
 			 URL ${EXTERNALS_SOURCE_URL}/${BOOST_FILENAME}.tar.gz
 			#--Patch step ----------
-			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0
+			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/python37.patch -p0
 			#--Configure step ----------
 			 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
 			#--Build Step ----------
@@ -164,9 +204,9 @@ else (WINDOWS)
 			#set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
 			#condor_post_external( boost "include/boost-1.66" "lib" )
 		else()
-			condor_post_external( boost "include" "lib" )
+			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 		endif()
-	endif(NOT PROPER)
+	endif()
 endif(WINDOWS)
 
 

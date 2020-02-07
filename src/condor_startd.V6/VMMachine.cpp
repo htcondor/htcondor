@@ -25,7 +25,7 @@
 #include "vm_common.h"
 
 /* Interfaces for class VMMachine */
-VMMachine::VMMachine(VMManager *s, char *addr) 
+VMMachine::VMMachine(VMManager *s, const char *addr)
 {
 	m_addr = strdup(addr);
 	m_vmmanager = s;
@@ -46,7 +46,7 @@ VMMachine::sendEventToVM(int cmd, void* data)
 }
 
 bool 
-VMMachine::match(char *addr) 
+VMMachine::match(const char *addr)
 {
 	if ( !strcmp(addr, m_addr) )
 		return TRUE;

@@ -1,7 +1,7 @@
 
 [Unit]
 Description=Condor Distributed High-Throughput-Computing
-After=syslog.target network-online.target nslcd.service ypbind.service time-sync.target
+After=network-online.target nslcd.service ypbind.service time-sync.target nfs.client.target autofs.service
 Wants=network-online.target
 # Disabled until HTCondor security fixed.
 # Requires=condor.socket

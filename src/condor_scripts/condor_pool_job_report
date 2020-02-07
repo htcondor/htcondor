@@ -86,21 +86,21 @@ do
 	PerUserMin=`grep "^$user " < CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne 1p`
 
 	line=$(($PerUserTotalStarts/4))
-	if [[ $line -eq 0 ]]
+	if [ $line -eq 0 ]
 	then
 		line=1
 	fi
 	PerUser25th=`grep "^$user " CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne "${line}p"`
 
 	line=$(($PerUserTotalStarts/2))
-	if [[ $line -eq 0 ]]
+	if [ $line -eq 0 ]
 	then
 		line=1
 	fi
 	PerUser50th=`grep "^$user " CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne "${line}p"`
 
 	line=$(($PerUserTotalStarts/4 * 3))
-	if [[ $line -eq 0 ]]
+	if [ $line -eq 0 ]
 	then
 		line=1
 	fi

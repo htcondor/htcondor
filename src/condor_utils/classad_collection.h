@@ -102,12 +102,12 @@ public:
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction() { ClassAdLog<K,AD>::CommitTransaction(); }
+  void CommitTransaction(const char * comment=NULL) { ClassAdLog<K,AD>::CommitTransaction(comment); }
 
   /** Commit a transaction without forcing a sync to disk
     @return nothing
   */
-  void CommitNondurableTransaction() { ClassAdLog<K,AD>::CommitNondurableTransaction(); }
+  void CommitNondurableTransaction(const char * comment=NULL) { ClassAdLog<K,AD>::CommitNondurableTransaction(comment); }
 
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active
@@ -205,11 +205,8 @@ public:
 	const std::string str = key;
 	LogRecord* log = new LogNewClassAd(str.c_str(),GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
-	const char *name;
-	ExprTree* expr;
-	ad->ResetExpr();
-	while (ad->NextExpr(name, expr)) {
-		log = new LogSetAttribute(str.c_str(),name,ExprTreeToString(expr));
+	for (auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		log = new LogSetAttribute(str.c_str(),itr->first.c_str(),ExprTreeToString(itr->second));
 		this->AppendLog(log);
 	}
 	return true;

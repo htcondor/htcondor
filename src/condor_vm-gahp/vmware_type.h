@@ -84,8 +84,8 @@ private:
 	bool m_vmware_transfer;
 	bool m_vmware_snapshot_disk;
 
-	MyString m_vmware_dir;
-	MyString m_vmware_vmx;
-	MyString m_vmware_vmdk;
+	std::string m_vmware_dir;
+	std::string m_vmware_vmx;
+	std::string m_vmware_vmdk;
 };
 #endif

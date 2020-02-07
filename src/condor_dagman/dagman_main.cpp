@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"
@@ -54,6 +53,8 @@ static char* lockFileName = NULL;
 static Dagman dagman;
 
 strict_level_t Dagman::_strict = DAG_STRICT_1;
+
+DagmanUtils dagmanUtils;
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -98,7 +99,7 @@ static void Usage() {
 //---------------------------------------------------------------------------
 
 #define MAX_IDLE_DEFAULT 1000
-#define MAX_SUBMITS_PER_INT_DEFAULT 5
+#define MAX_SUBMITS_PER_INT_DEFAULT 100
 #define LOG_SCAN_INT_DEFAULT 5
 #define SCHEDD_UPDATE_INTERVAL_DEFAULT 120
 
@@ -340,13 +341,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
 
-	bool allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", false );
-	if ( allowLogError ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_ALLOW_LOG_ERROR is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
-
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n",
@@ -371,25 +365,18 @@ Dagman::Config()
 	if( !condorSubmitExe ) {
 		condorSubmitExe = strdup( "condor_submit" );
 		ASSERT( condorSubmitExe );
+	} else {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", condorSubmitExe);
 	}
+	bool _use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_USE_CONDOR_SUBMIT setting: %s\n",
+		_use_condor_submit ? "True" : "False");
 
 	free( condorRmExe );
 	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
 	if( !condorRmExe ) {
 		condorRmExe = strdup( "condor_rm" );
 		ASSERT( condorRmExe );
-	}
-
-	if ( param_boolean( "DAGMAN_STORK_SUBMIT_EXE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_SUBMIT_EXE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
-	}
-
-	if ( param_boolean( "DAGMAN_STORK_RM_EXE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_RM_EXE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
@@ -474,6 +461,11 @@ Dagman::Config()
 				_removeNodeJobs );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
 				_removeNodeJobs ? "True" : "False" );
+
+#ifdef MEMORY_HOG
+#else
+	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
+#endif
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
@@ -591,7 +583,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 	}
 	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	dagman.PublishStats();
-	tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
@@ -615,7 +607,7 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
 	dagman.PublishStats();
-	tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
 }
@@ -642,6 +634,7 @@ void main_init (int argc, char ** const argv) {
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
+	int dash_dry_run = 0; // -DryRun command line argument
 
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
@@ -799,7 +792,10 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
-        } else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
+		} else if (!strcasecmp("-DryRun", argv[i])) {
+			dash_dry_run = 1;
+
+		} else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
 			dagman.useDagDir = true;
 
         } else if( !strcasecmp( "-AutoRescue", argv[i] ) ) {
@@ -900,6 +896,9 @@ void main_init (int argc, char ** const argv) {
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
+
+	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
+				dagman.maxPreScripts, dagman.maxPostScripts );
 
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );
@@ -1117,11 +1116,11 @@ void main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.formatstr( "Rescue DAG number %d specified", rescueDagNum );
-		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		dagmanUtils.RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
-		rescueDagNum = FindLastRescueDagNum(
+		rescueDagNum = dagmanUtils.FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.formatstr( "Found rescue DAG number %d", rescueDagNum );
@@ -1166,6 +1165,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
+	dagman.dag->SetDryRun(dash_dry_run);
 	if( dagman._priority != 0 ) {
 		dagman.dag->SetDagPriority(dagman._priority);
 	}
@@ -1206,7 +1206,7 @@ void main_init (int argc, char ** const argv) {
 			// introducing a syntax error, and then did condor_release).
 			// (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
@@ -1226,13 +1226,17 @@ void main_init (int argc, char ** const argv) {
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
 
+	// adjust the parent/child edges removing duplicates and setting up for processing
+	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
+	dagman.dag->AdjustEdges();
+
 		//
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
 		// are lifted!
 		//
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = RescueDagName(
+		dagman.rescueFileToRun = dagmanUtils.RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
@@ -1267,12 +1271,11 @@ void main_init (int argc, char ** const argv) {
 			// rescue DAG) file introducing a syntax error, and then
 			// did condor_release). (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
-        	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 	dagFile );
+        	debug_error( 1, DEBUG_QUIET, "Failed to parse dag file\n");
     	}
 	}
 
@@ -1281,8 +1284,10 @@ void main_init (int argc, char ** const argv) {
 
 	dagman.dag->CheckThrottleCats();
 
+#ifdef DEAD_CODE // we now do this at submit time.
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
+#endif
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
@@ -1550,23 +1555,44 @@ print_status( bool forceScheddUpdate ) {
 
 	dagman.PublishStats();
 
-	// Set up a static double to track the last schedd update time. On the first
-	// iteration we'll set it to the current time. On subsequent iterations it 
-	// will only be updated when we call a schedd update.
-	double currentTime = condor_gettimestamp_double();
-	static double scheddLastUpdateTime = 0.0;
-	if ( scheddLastUpdateTime <= 0.0 ) {
-		scheddLastUpdateTime = currentTime;
+	if (forceScheddUpdate) {
+		jobad_update();
 	}
-	
-	if( forceScheddUpdate || ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
-		if ( dagman._dagmanClassad ) {
-			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-						ready, failed, unready, dagman.dag->_dagStatus,
-						dagman.dag->Recovery(), dagman._dagmanStats );
-		}
-		scheddLastUpdateTime = currentTime;
+
+}
+
+/**
+	Two-way job ad update.
+	First, update the job ad with new information from local dagman
+	Next, update local dagman with any new information from the job ad
+*/
+void
+jobad_update() {
+
+	int total = dagman.dag->NumNodes( true );
+	int done = dagman.dag->NumNodesDone( true );
+	int pre = dagman.dag->PreRunNodeCount();
+	int submitted = dagman.dag->NumJobsSubmitted();
+	int post = dagman.dag->PostRunNodeCount();
+	int ready =  dagman.dag->NumNodesReady();
+	int failed = dagman.dag->NumNodesFailed();
+	int unready = dagman.dag->NumNodesUnready( true );
+
+	if ( dagman._dagmanClassad ) {
+		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+					ready, failed, unready, dagman.dag->_dagStatus,
+					dagman.dag->Recovery(), dagman._dagmanStats,
+					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
+					dagman.maxPostScripts );
+
+		// It's possible that certain DAGMan attributes were changed in the job ad.
+		// If this happened, update the internal values in our dagman data structure.
+		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
+		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
+		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
+		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
 	}
+
 }
 
 void condor_event_timer () {
@@ -1675,6 +1701,17 @@ void condor_event_timer () {
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();
 		}
+	}
+
+	// Periodically perform a two-way update with the job ad
+	double currentTime = condor_gettimestamp_double();
+	static double scheddLastUpdateTime = 0.0;
+	if ( scheddLastUpdateTime <= 0.0 ) {
+		scheddLastUpdateTime = currentTime;
+	}
+	if( ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
+		jobad_update();
+		scheddLastUpdateTime = currentTime;
 	}
 
 	dagman.dag->DumpNodeStatus( false, false );
@@ -1810,6 +1847,11 @@ main_pre_dc_init( int, char*[] )
 	}
 }
 
+void
+main_pre_command_sock_init()
+{
+	daemonCore->m_create_family_session = false;
+}
 
 int
 main( int argc, char **argv )
@@ -1821,6 +1863,7 @@ main( int argc, char **argv )
 	dc_main_shutdown_fast = main_shutdown_fast;
 	dc_main_shutdown_graceful = main_shutdown_graceful;
 	dc_main_pre_dc_init = main_pre_dc_init;
+	dc_main_pre_command_sock_init = main_pre_command_sock_init;
 	return dc_main( argc, argv );
 }
 

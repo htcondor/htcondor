@@ -50,7 +50,7 @@ my @table;
 $command_arg = '-af';
 $option = '';
 $pid = $$;
-$executable = 'sleep.exe';
+$executable = 'x_sleep.pl';
 $arguments = 100;
 $submit_content = 
 "executable = $executable

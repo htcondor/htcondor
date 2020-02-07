@@ -28,8 +28,7 @@
 # - GNU tar (so long as it supports --exclude)
 # - GNU autoconf and autoheader (version >= 2.59) [used by build_init]
 # - everything required for "make nroff"
-#    - latex
-#    - latex2html
+#    - sphinx-build
 #    ...  ;) (could fill this in later)
 ######################################################################
 
@@ -47,7 +46,7 @@ $| = 1;
 
 my $CommonDir = getcwd();
 my $SrcDir = "$CommonDir/src";
-my $DocDir = "$CommonDir/doc";
+my $DocDir = "$CommonDir/docs";
 
 -d $CommonDir || die "$CommonDir does not exist!\n";
 -d $SrcDir || die "$SrcDir does not exist!\n";
@@ -89,12 +88,17 @@ while (<CM>) {
     }
 }
 close(CM);
-mkdir("/tmp/$runid/condor-$condor_version") || die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
+mkdir("/tmp/$runid/condor-$condor_version") ||
+    die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
+system("cp -p .??* /tmp/$runid/condor-$condor_version");
 system("cp -pr * /tmp/$runid/condor-$condor_version");
+unlink("/tmp/$runid/condor-$condor_version/$buildid_file") ||
+    die "Can't remove /tmp/$runid/condor-$condor_version/$buildid_file: $!\n";
 chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
 
-open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) || die "Can't make the source tarball: $!\n";
+open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) ||
+    die "Can't make the source tarball: $!\n";
 my $tar_log = "$CommonDir/tar.log";
 open( TAR_LOG, ">$tar_log" ) || die "Can't open $tar_log: $!\n";
 $oldfh = select(TAR_LOG); $| = 1; select($oldfh);
@@ -119,8 +123,11 @@ system("rm -rf /tmp/$runid");
 if(!(defined $opt_skip_doc)){
 	print "Building man page nroff source\n";
 	chdir( "$DocDir" ) || die "Can't chdir($DocDir): $!\n";
+	system("patch -p2 -i old-sphinx.patch");
 	my $doc_log = "$CommonDir/nroff.log";
-	open( DOC, "make just-man-pages 2>&1|" ) || die "Can't open 'make just-man-pages': $!\n";
+	# submit-3.batlab.org (SL6) has sphinx 1.0.8 from EPEL 6
+	open( DOC, "make SPHINXBUILD='sphinx-build' man 2>&1|" ) ||
+        die "Can't open 'make just-man-pages': $!\n";
 	open( DOC_LOG, ">$doc_log" ) || die "Can't open $doc_log: $!\n";
 	$oldfh = select(DOC_LOG); $| = 1; select($oldfh);
 	while( <DOC> ) {
@@ -135,18 +142,10 @@ if(!(defined $opt_skip_doc)){
 	} else {
     	unlink( $doc_log ) || warn "Can't unlink($doc_log): $!\n";
 	}
-	#print "Building nroff man pages successful, tar'ing up results\n";
-	#-d "$ExtDir/bundles/man/current" || 
-   	#	die "$ExtDir/bundles/man/current doesn't exist! Build tag broken\n";
 	print "GZipping manpages\n";	
 	#using best compression
-	`gzip -9vr man`;
+	`gzip -9vr _build/man`;
 	print "Finished packaging man page nroff source\n";
-
-	#chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-	#print "Removing doc directory\n";
-	#system( "rm -rf $DocDir" );
-	#print "Done removing doc directory\n";
 } else {
 	print "Doc being skipped as requested\n";
 }

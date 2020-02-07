@@ -19,7 +19,7 @@ prog="Campus Factory"
 
 if [ -e $script_location/../etc/campus_factory.conf ]; then
     config=$script_location/../etc/campus_factory.conf
-elif [ -e `condor_config_val ETC`/campus_factory.conf 
+elif [ -e `condor_config_val ETC`/campus_factory.conf ]; then
 	config=`condor_config_val ETC`/campus_factory.conf
 fi
 

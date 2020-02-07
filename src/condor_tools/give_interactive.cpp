@@ -29,7 +29,6 @@
 #include "condor_classad.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
-#include "condor_string.h"
 #include "condor_uid.h"
 #include "daemon.h"
 #include "extArray.h"
@@ -164,7 +163,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 
 		// calculate the request's rank of the offer
-		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+		if(!EvalFloat(ATTR_RANK,&request,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;
@@ -285,7 +284,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
-	char *ntdomain = strnewp(get_condor_username());
+	char *ntdomain = strdup(get_condor_username());
 	if (ntdomain) {
 		char *slash = strchr(ntdomain,'/');
 		if ( slash ) {
@@ -298,7 +297,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 				requestAd.Assign(ATTR_NT_DOMAIN, ntdomain);
 			}
 		}
-		delete [] ntdomain;
+		free(ntdomain);
 	}
 #endif
 		
@@ -424,6 +423,7 @@ main(int argc, char *argv[])
 
 	slot_counts = new HashTable <std::string, int> (hashFunction);
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	// parse command line args
@@ -562,14 +562,7 @@ main(int argc, char *argv[])
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
-					if (param_boolean("ALLOW_VM_CRUFT", false)) {
-						if (!offer->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES,
-												  slot_count)) {
-							slot_count = 1;
-						}
-					} else {
-						slot_count = 1;
-					}
+					slot_count = 1;
 				}
 
 				slot_count_thus_far = 0;

@@ -34,19 +34,17 @@ using std::set;
 Reqexp::Reqexp( Resource* res_ip )
 {
 	this->rip = res_ip;
-	MyString tmp;
+	std::string tmp;
 
-	tmp.formatstr("%s = (%s) && (%s)", 
-		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
+	formatstr(tmp, "%s = START", ATTR_REQUIREMENTS);
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
-		tmp.formatstr_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+		formatstr_cat( tmp, " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
 	}
 
-	origreqexp = strdup( tmp.Value() );
+	origreqexp = strdup( tmp.c_str() );
 	origstart = NULL;
 	rstate = ORIG_REQ;
-	m_origvalidckptpltfrm = NULL;
 	m_within_resource_limits_expr = NULL;
 	drainingStartExpr = NULL;
 }
@@ -79,58 +77,6 @@ Reqexp::compute( amask_t how_much )
 	}
 
 	if( IS_STATIC(how_much) ) {
-
-		if (m_origvalidckptpltfrm != NULL) {
-			free(m_origvalidckptpltfrm);
-			m_origvalidckptpltfrm = NULL;
-		}
-
-		char *vcp = param( "IS_VALID_CHECKPOINT_PLATFORM" );
-		if (vcp != NULL) {
-			/* Use whatever the config file says */
-
-			str.formatstr("%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, vcp);
-
-			m_origvalidckptpltfrm = strdup( str.Value() );
-
-			free(vcp);
-
-		} else {
-
-			/* default to a simple policy of only resuming checkpoints
-				which came from a machine like we are running on:
-			
-				Consider the checkpoint platforms to match IF
-				0. If it is a non standard universe job (consider the "match"
-					successful) OR
-				1. If it is a standard universe AND
-				2. There exists CheckpointPlatform in the machine ad AND
-				3a.  the job's last checkpoint matches the machine's checkpoint 
-					platform
-				3b.  OR NumCkpts == 0
-
-				Some assumptions I'm making are that 
-				TARGET.LastCheckpointPlatform must NOT be present and is
-				ignored if it is in the jobad when TARGET.NumCkpts is zero.
-
-			*/
-			const char *default_vcp_expr = 
-			"("
-			  "TARGET.JobUniverse =!= 1 || "
-			  "("
-			    "(MY.CheckpointPlatform =!= UNDEFINED) &&"
-			    "("
-			      "(TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||"
-			      "(TARGET.NumCkpts == 0)"
-			    ")"
-			  ")"
-			")";
-			
-			str.formatstr( "%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, 
-				default_vcp_expr);
-
-			m_origvalidckptpltfrm = strdup( str.Value() );
-		}
 
 		if( m_within_resource_limits_expr != NULL ) {
 			free(m_within_resource_limits_expr);
@@ -185,22 +131,7 @@ Reqexp::compute( amask_t how_much )
 
                 m_within_resource_limits_expr = strdup(estr.c_str());
 		} else {
-			static const char * climit =
-			#if 0 // tj tries to express the above with a simpler expression.
-				"("
-				"MY.Cpus > 0 && MY.Cpus >= ifThenElse(TARGET._condor_RequestCpus is UNDEFINED,"
-					"IfThenElse(TARGET.RequestCpus is UNDEFINED, 1, TARGET.RequestCpus),"
-					"TARGET._condor_RequestCpus)"
-				" && "
-				"MY.Memory > 0 && MY.Memory >= ifThenElse(TARGET._condor_RequestMemory is UNDEFINED,"
-					"TARGET.RequestMemory,"
-					"TARGET._condor_RequestMemory)"
-				" && "
-				"MY.Disk > 0 && MY.Disk >= ifThenElse(TARGET._condor_RequestDisk is UNDEFINED,"
-					"TARGET.RequestDisk,"
-					"TARGET._condor_RequestDisk)"
-				")";
-			#else
+			static const char * climit_full =
 				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
 					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
@@ -220,7 +151,25 @@ Reqexp::compute( amask_t how_much )
 						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 						"FALSE))"
 				")";
-			#endif
+
+			// This one assumes job._condor_Request* never set
+			//  and job.Request* is always set to some value.  If 
+			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
+			static const char *climit_simple = 
+			"("
+				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
+				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
+				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
+			")"; 
+
+			static const char *climit = nullptr;
+	
+			if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
+				climit = climit_full;	
+			} else {
+				climit = climit_simple;	
+			}
+
 			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
 			if (resmap.empty()) {
 				m_within_resource_limits_expr = strdup(climit);
@@ -231,14 +180,22 @@ Reqexp::compute( amask_t how_much )
 				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
 				for ( ; it != resmap.end();  ++it) {
 					const char * rn = it->first.c_str();
-					formatstr_cat(wrlimit,
-						" && "
-						 "(TARGET.Request%s is UNDEFINED ||"
-							"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
-								"TARGET.Request%s,"
-								"TARGET._condor_Request%s)"
-						 ")",
-						rn, rn, rn, rn, rn);
+					if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
+									"TARGET.Request%s,"
+									"TARGET._condor_Request%s)"
+							 ")",
+							rn, rn, rn, rn, rn);
+					} else {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= TARGET.Request%s)",
+							rn, rn, rn);
+					}
 				}
 				// then append the final closing )
 				wrlimit += ")";
@@ -254,7 +211,6 @@ Reqexp::~Reqexp()
 {
 	if( origreqexp ) free( origreqexp );
 	if( origstart ) free( origstart );
-	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
 	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
 	if( drainingStartExpr ) { delete drainingStartExpr; }
 }
@@ -321,8 +277,6 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		ca->Insert( origstart );
 		tmp.formatstr( "%s", origreqexp );
 		ca->Insert( tmp.Value() );
-		tmp.formatstr( "%s", m_origvalidckptpltfrm );
-		ca->Insert( tmp.Value() );
 		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 							m_within_resource_limits_expr );
@@ -337,7 +291,6 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 			ca->Insert( ATTR_START, sacrifice );
 
 			ca->Insert( origreqexp );
-			ca->Insert( m_origvalidckptpltfrm );
 			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 								m_within_resource_limits_expr );

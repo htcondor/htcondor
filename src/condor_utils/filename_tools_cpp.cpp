@@ -59,7 +59,7 @@ int filename_split( const char *path, std::string &dir, std::string &file ) {
 	}
 }
 
-/* Copy in to out, removing whitespace. */
+/* Copy in to out, removing whitespace (except spaces). */
 
 // keep in sync with version in filename_tools.c
 static void eat_space( const char *in, char *out )
@@ -70,7 +70,6 @@ static void eat_space( const char *in, char *out )
 				*out=0;
 				return;
 				break;
-			case ' ':
 			case '\t':
 			case '\n':
 				in++;
@@ -87,6 +86,7 @@ Copy from in to out, stopping at null or delim.  If the amount
 to copy exceeds length, eat the rest silently.  Return a
 pointer to the delimiter, or return null at end of string.
 The character can be escaped with a backslash.
+Whitespace is trimmed from the string.
 */
 
 // keep in sync with version in filename_tools.c
@@ -94,22 +94,30 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 {
 	int copied=0;
 	int escape=0;
+	int isleadingws=1;
+	char *trimmedend = out;
 
 	while(1) {
 		if( *in==0 ) {
-			*out=0;
+			*trimmedend = 0;
 			return 0;
-		} else if( *in=='\\' && !escape ) {
+		} else if( *in=='\\' && !escape && (in[1] == delim)) {
 			escape=1;
 			in++;
 		} else if( *in==delim && !escape ) {
-			*out=0;
+			*trimmedend = 0;
 			return in;
+		} else if( isspace(*in) && isleadingws) {
+			in++;
 		} else {
+			isleadingws = 0;
 			escape=0;
 			if(copied<length) {
 				*out++ = *in++;
 				copied++;
+				if (!isspace(*(in-1))) {
+					trimmedend = out;
+				}
 			} else {
 				in++;
 			}

@@ -61,6 +61,7 @@ static int starter_stdin_fd = -1;
 static int starter_stdout_fd = -1;
 static int starter_stderr_fd = -1;
 
+[[noreturn]]
 static void PREFAST_NORETURN
 usage()
 {
@@ -86,12 +87,14 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
     printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
+    printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
 		/*
 		  Attributes describing what kinds of Job Info Communicators
@@ -153,10 +156,6 @@ printClassAd( void )
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
 			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
-			// CondorVersion seems like a good idea to ignore;
-			// ignoring IsDaemonCore to get the same ad as before,
-			// except with ATTR_DOCKER_VERSION in it.  *sigh*
-			printf( "%s = \"CondorVersion, IsDaemonCore\"\n", ATTR_STARTER_IGNORED_ATTRS );
 		}
 	}
 
@@ -681,6 +680,7 @@ parseArgs( int argc, char* argv [] )
 		free( job_stdin );
 		free( job_stdout );
 		free( job_stderr );
+		if (job_keyword) { free(job_keyword); }
 		return jic;
 	}
 

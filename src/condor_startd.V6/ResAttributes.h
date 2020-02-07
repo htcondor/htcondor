@@ -236,6 +236,7 @@ public:
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
 	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -283,7 +284,6 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
-	char*			m_ckptpltfrm;
 	List<AttribValue> m_lst_static;     // list of user-specified static attributes
 
      	// temporary attributes for raw utsname info

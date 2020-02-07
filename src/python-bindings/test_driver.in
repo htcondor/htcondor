@@ -1,8 +1,8 @@
 #!/bin/sh
 
 export PATH=$PWD/../condor_collector.V6:$PWD/../condor_schedd.V6:$PWD/../condor_master.V6:$PWD/../condor_tools:$PWD/../condor_chirp:$PATH
-export LD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:@CLASSADS_INSTALL_LOC@/lib:$PWD/../../release_dir/lib/condor
+export LD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:$PWD/../classad/lib:$PWD/../../release_dir/lib/condor
 # For Mac OS X
-export DYLD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:@CLASSADS_INSTALL_LOC@/lib:$PWD/../../release_dir/lib/condor
+export DYLD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:$PWD/../classad/lib:$PWD/../../release_dir/lib/condor
 export PYTHONPATH=$PWD
 exec @PYTHON_EXECUTABLE@ "$@"

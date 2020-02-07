@@ -21,109 +21,102 @@
 
 use CondorTest;
 use CondorUtils;
+use strict;
+use warnings;
 
-$cmd_template = "lib_eventlog.template";
-$testdesc =  'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
-$testname = "lib_eventlog";
-$cmd = "lib_eventlog.cmd";
-$corename = "lib_eventlog";
+# Request that a personal HTCondor with the following config appending is
+# started before running this test
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	EVENT_LOG = $(LOG)/EventLog
+	MAX_EVENT_LOG = 1000000
+	EVENT_LOG_JOB_AD_INFORMATION_ATTRS =  BillString, JobStatus, BillInt , BillBool , StreamErr
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
+my $testname = "lib_eventlog";
+my $mypid = $$;
 
-print scalar localtime() . "\n";
+my $jobexe = "/bin/date";
+if (CondorUtils::is_windows()) { $jobexe = "appendmsg.exe"; }
+my $readlogexe = "./x_read_joblog.exe";
+if (CondorUtils::is_windows()) { $readlogexe = "x_read_joblog.exe"; }
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $uniq_name = "$testname.$mypid";
 
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
+my $submit_content = "
+universe   = vanilla
+executable = $jobexe
+log = $uniq_name.log
+output = $uniq_name.out
+error = $uniq_name.err
+Notification = NEVER
++BillString = \"Good\"
++BillInt = 69
++BillBool = true
+queue
+";
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log" ;
-$mysubmitnmerr = $corename . $mypid . ".err" ;
-$mysubmitnmout = $corename . $mypid . ".out" ;
-$mycorenm = $corename . ".cmd";
-$mycorenmcmdout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
+# create a submit file for use later
+emit_file("$uniq_name.sub", $submit_content);
 
-#print "Master PID is $mypid\n";
-#print "Master PID submit file is $mysubmitnm\n";
+my $cluster  = 1;
 
-runcmd("cp x_lib_eventlog_config_postsrc.template x_lib_eventlog_config_postsrc");
+my $executed = sub {
+	my %info = @_;
+	my $cluster = $info{'cluster'};
+	TLOG("$testname job $cluster executed\n");
+};
+CondorTest::RegisterExecute($testname, $executed);
 
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "lib_eventlog", "x_param.libeventlog" ,"eventlog");
-my @parallel = split /\+/, $configrem;
-my $parallelconfig = shift @parallel;
-my $parallelport = shift @parallel;
+my $success = sub { TLOG("$testname job success\n"); };
+CondorTest::RegisterExitedSuccess($testname, $success);
 
-CondorTest::debug("--- eventlog config is $parallelconfig and the port is $parallelport---\n",1);
+# run a job, this will have the side effect of creating some events in the global event log
+my $job_ran = CondorTest::RunTest($testname, "$uniq_name.sub", 0);
 
-$ENV{CONDOR_CONFIG} = $parallelconfig;
+# this is the expected output of x_read_joblog.exe TRACE <EVENT_LOG>
+my @want = (
+	"Examine cluster -1\n",
+	"Job Generic.........\n",
+	"Examine cluster $cluster\n",
+	"Job Submited.........\n",
+	"Job Ad Information.........\n",
+	"	JobStatus is 1\n",
+	"	BillString is \"Good\"\n",
+	"	BillInt is 69\n",
+	"	BillBool is true\n",
+	"Job Executed.........\n",
+	"Job Ad Information.........\n",
+	"	JobStatus is 2\n",
+	"	BillString is \"Good\"\n",
+	"	BillInt is 69\n",
+	"	BillBool is true\n",
+	"Job Terminated.........\n",
+	"Job Ad Information.........\n",
+	"	JobStatus is 2\n",
+	"	BillString is \"Good\"\n",
+	"	BillInt is 69\n",
+	"	BillBool is true\n",
+	"DONE\n",
+	);
 
-CondorTest::debug("Set config to $parallelconfig\n",1);
+my $result = 1; # assume fail
 
-# No need for -pool if we've set CONDOR_CONFIG.
-runcmd("condor_status -schedd -format '%s\\n' Name");
+if ($job_ran) {
+	$result = 0; # assume success
+	my $event_count = 0;
 
-# Edit submit file to submit to scheduler at remote (side b) schedd.
-my $line;
-open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
-open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
-while(<TPLATE>)
-{
-	CondorUtils::fullchomp($_);
-	$line = $_;
-	if( $line =~ /^\s*log\s*= .*$/)
-	{
-		my $lognm = $mysubmitnmlog;
-		#print "New log name: $lognm\n";
-		print CSUB "log = $lognm\n";
-	}
-	elsif( $line =~ /^\s*output\s*= .*$/)
-	{
-		my $outputnm = $mysubmitnmout;
-		#print "New out name: $outputnm\n";
-		print CSUB "output = $outputnm\n";
-	}
-	elsif( $line =~ /^\s*error\s*= .*$/)
-	{
-		my $errornm = $mysubmitnmerr;
-		#print "New error name: $errornm\n";
-		print CSUB "error = $errornm\n";
-	}
-	else
-	{
-		#print "template: $line\n";
-		print CSUB "$line\n";
-	}
-}
-close(TPLATE);
-close(CSUB);
-
-
-my $result = system("./lib_eventlog.pl $mysubmitnm");
-CondorTest::debug("Result of basic eventlog  test is  $result\n",1);
-
-if( $result == 0 ) {
 	# well did we get out the results into the log we wanted?
 	# determine where the log went
 	# run log reader and compare with expected values.
 
-	CondorTest::debug("Checking Results!!!\n",1);
+	TLOG("Checking the EVENT_LOG for the expected events\n");
 	my $elog = `condor_config_val EVENT_LOG`;
 	chomp($elog);
-	my $expected = "x_lib_eventlog.expected";
-	my @want;
+
 	my @got;
-	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
-	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
-	#my $optional_event = 0;
+	open(ELOG,"$readlogexe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	print "--x_read_joblog output--\n";
 	while(<ELOG>) {
 		next if /^Job Image Size Changed/ .. /^BillBool/;
@@ -132,52 +125,39 @@ if( $result == 0 ) {
 	}
 	close(ELOG);
 	print "--end of x_read_joblog output--\n";
-	while(<EXP>) {
-		push  @want, $_;
-	}
-	close(EXP);
-	foreach $line (@got) {
+
+	foreach my $line (@got) {
+		$event_count += 1;
 		my $desired = shift(@want);
 		if($desired ne $line) {
 			chomp $line;
 			chomp $desired;
-			CondorTest::debug("Result Mismatch: '$desired' != '$line'!!!!\n",1);
+			print("\tResult Mismatch: '$desired' != '$line'\n");
 			$result = 1;
 			last;
 		} else {
-			#print "Result Match!:$desired eq $line!!!!\n";
+			#print("\tResult Match!:$desired eq $line\n");
 		}
 	}
-	if ( $result == 0 ) {
-		CondorTest::debug("Results all Match! Test is a success.\n",1);
+	if ($event_count == 0) { 
+		TLOG("FAILURE: No events in $elog\n");
+		$result = 1;
+	}
+	if ($result == 0) {
+		TLOG("Results all Match! Test is a success.\n");
 	}
 }
-#fails due to directory matching pattern
-runcmd("cp *lib_eventlog* $mysaveme", {expect_result=>\&ANY});
 
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
+exit($result);
+
+# Helper function to create a file from a string
+sub emit_file {
+	my $fname = shift;
+	my $content = shift;
+
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
 }
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($parallelconfig);
-print scalar localtime() . "\n";
-
-if($result != 0)
-{
-    # actuaal job failed but we allowed cleanup
-    exit(1);
-}
-
-CondorTest::debug("lib_eventlog SUCCESS\n",1);
-exit(0);

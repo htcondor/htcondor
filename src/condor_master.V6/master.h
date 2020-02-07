@@ -155,6 +155,8 @@ private:
 	bool m_never_use_shared_port;
 	bool m_waiting_for_startup;
 	bool m_only_stop_when_master_stops;
+
+	std::string localName;
 };
 
 
@@ -248,6 +250,7 @@ private:
 	int m_retry_start_all_daemons_tid;
 	int m_deferred_query_ready_tid;
 	std::list<DeferredQuery*> deferred_queries;
+	DCTokenRequester m_token_requester;
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
@@ -260,6 +263,10 @@ private:
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();
+
+	static void ProcdStopped(void*, int pid, int status);
+
+	static void token_request_callback(bool success, void *miscdata);
 };
 
 #endif /* _CONDOR_MASTER_H */

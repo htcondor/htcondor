@@ -27,13 +27,13 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
-	# lowest common denominator is WinXP-SP3, except when building with vc9, then we can't count on sdk support.
-	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
-	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
+	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
+	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
+	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
 	if (MSVC90)
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	else()
-	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXPSP3)
+	    add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
@@ -43,7 +43,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
-	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
@@ -81,49 +80,170 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 # To find python in Windows we will use alternate technique
-if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-	if (DEFINED PYTHON_VERSION)
-		set(Python_ADDITIONAL_VERSIONS ${PYTHON_VERSION})
+option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
+if(NOT WINDOWS)
+    if((${OS_NAME} STREQUAL "DARWIN") OR WANT_PYTHON_WHEELS)
+        include (FindPythonInterp)
+        message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+        # As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
+        # This helps ensure we get the same version of the libraries and python
+        # on systems with both python2 and python3.
+        if (DEFINED PYTHON_VERSION_STRING)
+            set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
+        endif()
+        include (FindPythonLibs)
+        message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
+	if (PYTHON_EXECUTABLE)
+	  execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
 	endif()
-	include (FindPythonLibs)
-	message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
-	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
-	# This helps ensure we get the same version of the libraries and python
-	# on systems with both python2 and python3.
-	if (DEFINED PYTHONLIBS_VERSION_STRING)
-		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-	endif()
-	include (FindPythonInterp)
-	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
-else()
-	if(WINDOWS)
-		#only for Visual Studio 2012
-		if(NOT (MSVC_VERSION LESS 1700))
-			message(STATUS "=======================================================")
-			message(STATUS "Searching for python installation")
-			#look at registry for 32-bit view of 64-bit registry first
-			message(STATUS "  Looking in HKLM\\Software\\Wow3264Node")
+    else()
+        # We need to do this the hard way for both python2 and python3 support in the same build
+        # This will be easier in cmake 3
+        find_program(PYTHON_EXECUTABLE python2)
+        if (PYTHON_EXECUTABLE)
+            set(PYTHONINTERP_FOUND TRUE)
+            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
+            set(PYTHON_QUERY_PART_02 "import sys;")
+            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]));")
+            set(PYTHON_QUERY_PART_04 "print(sys.version_info[0]);")
+            set(PYTHON_QUERY_PART_05 "print(sys.version_info[1]);")
+            set(PYTHON_QUERY_PART_06 "print(sys.version_info[2]);")
+            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
+            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
+            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
+            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
+            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
+	    set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}")
+            execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
+                            RESULT_VARIABLE _PYTHON_SUCCESS
+                            OUTPUT_VARIABLE _PYTHON_VALUES
+                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
+                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+            # Convert the process output into a list
+            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+            list(GET _PYTHON_VALUES 0 PYTHON_VERSION_STRING)
+            list(GET _PYTHON_VALUES 1 PYTHON_VERSION_MAJOR)
+            list(GET _PYTHON_VALUES 2 PYTHON_VERSION_MINOR)
+            list(GET _PYTHON_VALUES 3 PYTHON_VERSION_PATCH)
+            list(GET _PYTHON_VALUES 4 PYTHON_INCLUDE_DIRS)
+            list(GET _PYTHON_VALUES 5 PYTHON_LIBDIR)
+            list(GET _PYTHON_VALUES 6 PYTHON_MULTIARCH)
+            list(GET _PYTHON_VALUES 7 PYTHON_LIB)
+            #list(GET _PYTHON_VALUES 8 C_PYTHONARCHLIB)
+	    list(GET _PYTHON_VALUES 9 PYTHON_MODULE_EXTENSION)
+            #set(C_PYTHONARCHLIB ${C_PYTHONARCHLIB})
+            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_LIB}")
+                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_LIB}")
+                set(PYTHONLIBS_FOUND TRUE)
+            endif()
+            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
+                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
+                set(PYTHONLIBS_FOUND TRUE)
+            endif()
+            set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
+            set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
+	    set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+
+            message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
+            message(STATUS "PYTHON_INCLUDE_PATH = ${PYTHON_INCLUDE_PATH}")
+            message(STATUS "PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+        endif()
+        find_program(PYTHON3_EXECUTABLE python3)
+        if (PYTHON3_EXECUTABLE)
+            set(PYTHON3INTERP_FOUND TRUE)
+            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
+            set(PYTHON_QUERY_PART_02 "import sys;")
+            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info.major) + '.' + str(sys.version_info.minor) + '.' + str(sys.version_info.micro));")
+            set(PYTHON_QUERY_PART_04 "print(sys.version_info.major);")
+            set(PYTHON_QUERY_PART_05 "print(sys.version_info.minor);")
+            set(PYTHON_QUERY_PART_06 "print(sys.version_info.micro);")
+            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
+            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
+            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
+            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
+            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
+	    set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}")
+            execute_process(COMMAND "${PYTHON3_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
+                            RESULT_VARIABLE _PYTHON_SUCCESS
+                            OUTPUT_VARIABLE _PYTHON_VALUES
+                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
+                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+            # Convert the process output into a list
+            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+            list(GET _PYTHON_VALUES 0 PYTHON3_VERSION_STRING)
+            list(GET _PYTHON_VALUES 1 PYTHON3_VERSION_MAJOR)
+            list(GET _PYTHON_VALUES 2 PYTHON3_VERSION_MINOR)
+            list(GET _PYTHON_VALUES 3 PYTHON3_VERSION_PATCH)
+            list(GET _PYTHON_VALUES 4 PYTHON3_INCLUDE_DIRS)
+            list(GET _PYTHON_VALUES 5 PYTHON3_LIBDIR)
+            list(GET _PYTHON_VALUES 6 PYTHON3_MULTIARCH)
+            list(GET _PYTHON_VALUES 7 PYTHON3_LIB)
+            #list(GET _PYTHON_VALUES 8 C_PYTHON3ARCHLIB)
+	    list(GET _PYTHON_VALUES 9 PYTHON3_MODULE_EXTENSION)
+            #set(C_PYTHON3ARCHLIB ${C_PYTHON3ARCHLIB})
+            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
+                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
+                set(PYTHON3LIBS_FOUND TRUE)
+            endif()
+            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
+                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
+                set(PYTHON3LIBS_FOUND TRUE)
+            endif()
+            set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
+            set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
+	    set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
+
+            message(STATUS "PYTHON3_LIBRARIES = ${PYTHON3_LIBRARIES}")
+            message(STATUS "PYTHON3_INCLUDE_PATH = ${PYTHON3_INCLUDE_PATH}")
+            message(STATUS "PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
+        endif()
+    endif()
+    else()
+        if(WINDOWS)
+            #only for Visual Studio 2012
+            if(NOT (MSVC_VERSION LESS 1700))
+                message(STATUS "=======================================================")
+                message(STATUS "Searching for python installation(s)")
+                #look at registry for 32-bit view of 64-bit registry first
+                message(STATUS "  Looking for python 2.7 in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 			#when registry reading fails cmake returns with c:\registry
 			message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 
 			#look at native registry if not found
 			if("${PYTHON_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON_INSTALL_DIR}" MATCHES "32" ) )
-				message(STATUS "  Looking in HKLM\\Software")
+				message(STATUS "  Looking for python 2.7 in HKLM\\Software")
 				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 				message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 			endif()
 		
-			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")
-				message(STATUS "Suppored python installation not found on this system")
-				unset(PYTHONINTERP_FOUND)
-			else()
-				set(PYTHON_EXECUTABLE "${PYTHON_INSTALL_DIR}\\python.exe")
-				message(STATUS "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
-				message(STATUS "testing it for validity")
-				set(PYTHONINTERP_FOUND TRUE)
+			message(STATUS "  Looking for python 3.6 in HKLM\\Software\\Wow3264Node")
+			get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
+			message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
+			if("${PYTHON3_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON3_INSTALL_DIR}" MATCHES "32" ) )
+				message(STATUS "  Looking for python 3.6 in HKLM\\Software")
+				get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
+				message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
 			endif()
 
+			unset(PYTHON_EXECUTABLE)
+			unset(PYTHON3_EXECUTABLE)
+
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry" AND "${PYTHON3_INSTALL_DIR}" MATCHES "registry")
+				message(STATUS "Supported python installation not found on this system")
+				unset(PYTHONINTERP_FOUND)
+			else()
+				message(STATUS "testing python for validity")
+				set(PYTHONINTERP_FOUND TRUE)
+			endif()
 
 			if(PYTHONINTERP_FOUND)
 				set(PYTHON_QUERY_PART_01 "from distutils import sysconfig as s;")
@@ -140,47 +260,98 @@ else()
 				
 				set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
 				
-				execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}" 
-								RESULT_VARIABLE _PYTHON_SUCCESS
-								OUTPUT_VARIABLE _PYTHON_VALUES
-								ERROR_VARIABLE _PYTHON_ERROR_VALUE
-								OUTPUT_STRIP_TRAILING_WHITESPACE)
+				if( NOT "${PYTHON_INSTALL_DIR}" MATCHES "registry")
+					execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}" 
+									RESULT_VARIABLE _PYTHON_SUCCESS
+									OUTPUT_VARIABLE _PYTHON_VALUES
+									ERROR_VARIABLE _PYTHON_ERROR_VALUE
+									OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-				# Convert the process output into a list
-				string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
-				string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
-				list(GET _PYTHON_VALUES 0 _PYTHON_VERSION_LIST)
-				list(GET _PYTHON_VALUES 1 PYTHON_PREFIX)
-				list(GET _PYTHON_VALUES 2 PYTHON_INCLUDE_DIR)
-				list(GET _PYTHON_VALUES 3 PYTHON_SITE_PACKAGES)
-				list(GET _PYTHON_VALUES 4 PYTHON_MODULE_EXTENSION)
-				list(GET _PYTHON_VALUES 5 PYTHON_IS_DEBUG)
-				list(GET _PYTHON_VALUES 6 PYTHON_SIZEOF_VOID_P)
-				list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
+					# Convert the process output into a list
+					string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+					string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+					list(GET _PYTHON_VALUES 0 _PYTHON_VERSION_LIST)
+					list(GET _PYTHON_VALUES 1 PYTHON_PREFIX)
+					list(GET _PYTHON_VALUES 2 PYTHON_INCLUDE_DIR)
+					list(GET _PYTHON_VALUES 3 PYTHON_SITE_PACKAGES)
+					list(GET _PYTHON_VALUES 4 PYTHON_MODULE_EXTENSION)
+					list(GET _PYTHON_VALUES 5 PYTHON_IS_DEBUG)
+					list(GET _PYTHON_VALUES 6 PYTHON_SIZEOF_VOID_P)
+					list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
 
-				#check version (only 2.7 works for now)
-				if(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "27")
-					message(STATUS "Wrong python library version detected.  Only 2.7.x supported ${PYTHON_LIBRARY_SUFFIX} detected")
-					unset(PYTHONINTERP_FOUND)
-				else()
-					# Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
-					if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
-						message(STATUS "Python bit version failure: Python is ${PYTHON_SIZEOF_VOID_P}-bit for size of void, chosen compiler is ${CMAKE_SIZEOF_VOID_P}-bit for size of void")
-						message(STATUS "Only 32bit python supported. If multiple versions installed ensure they are in different locations")
+					#check version (only 2.7 works for now)
+					if(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "27")
+						message(STATUS "Wrong python 2.x library version detected.  Only 2.7.x supported ${PYTHON_LIBRARY_SUFFIX} detected")
+						unset(PYTHONINTERP_FOUND)
 					else()
-						message(STATUS "Valid Python version and bitdepth detected")
-						#we build the path to the library by hand to not be confused in multipython installations
-						set(PYTHON_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
-						set(PYTHON_LIBRARY ${PYTHON_LIBRARIES})
-						set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
-						set(PYTHON_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
-						message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
-						set(PYTHONLIBS_FOUND TRUE)
-						set(PYTHONINTERP_FOUND TRUE)
-						set(PYTHON_VERSION_STRING "${_PYTHON_VERSION_LIST}")
-						message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+						# Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
+						if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
+							message(STATUS "Python bitness mismatch: Python 2.7 is ${PYTHON_SIZEOF_VOID_P} byte pointers, compiler is ${CMAKE_SIZEOF_VOID_P} byte pointers")
+						else()
+							message(STATUS "Valid Python 2.7 version and bitdepth detected")
+							#we build the path to the library by hand to not be confused in multipython installations
+							set(PYTHON_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
+							set(PYTHON_LIBRARY ${PYTHON_LIBRARIES})
+							set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
+							set(PYTHON_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
+							message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+							set(PYTHON_DLL_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+							message(STATUS "PYTHON_DLL_SUFFIX=${PYTHON_DLL_SUFFIX}")
+							set(PYTHONLIBS_FOUND TRUE)
+							set(PYTHONINTERP_FOUND TRUE)
+							set(PYTHON_VERSION_STRING "${_PYTHON_VERSION_LIST}")
+							set(PYTHON_EXECUTABLE "${PYTHON_INSTALL_DIR}/python.exe")
+							message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+						endif()
 					endif()
 				endif()
+
+				if( NOT "${PYTHON3_INSTALL_DIR}" MATCHES "registry")
+					execute_process(COMMAND "${PYTHON3_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}" 
+									RESULT_VARIABLE _PYTHON_SUCCESS
+									OUTPUT_VARIABLE _PYTHON_VALUES
+									ERROR_VARIABLE _PYTHON_ERROR_VALUE
+									OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+					# Convert the process output into a list
+					string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+					string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+					list(GET _PYTHON_VALUES 0 _PYTHON_VERSION_LIST)
+					list(GET _PYTHON_VALUES 1 PYTHON_PREFIX)
+					list(GET _PYTHON_VALUES 2 PYTHON_INCLUDE_DIR)
+					list(GET _PYTHON_VALUES 3 PYTHON_SITE_PACKAGES)
+					list(GET _PYTHON_VALUES 4 PYTHON_MODULE_EXTENSION)
+					list(GET _PYTHON_VALUES 5 PYTHON_IS_DEBUG)
+					list(GET _PYTHON_VALUES 6 PYTHON_SIZEOF_VOID_P)
+					list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
+
+					#check version (only 2.7 works for now)
+					if(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "36")
+						message(STATUS "Wrong python 3.x library version detected.  Only 3.6.x supported ${PYTHON_LIBRARY_SUFFIX} detected")
+						unset(PYTHONINTERP_FOUND)
+					else()
+						# Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
+						if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
+							message(STATUS "Python bitness mismatch: Python 3.6 is ${PYTHON_SIZEOF_VOID_P} byte pointers, compiler is ${CMAKE_SIZEOF_VOID_P} byte pointers")
+						else()
+							message(STATUS "Valid Python 3.6 version and bitdepth detected")
+							#we build the path to the library by hand to not be confused in multipython installations
+							set(PYTHON3_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
+							set(PYTHON3_LIBRARY ${PYTHON3_LIBRARIES})
+							set(PYTHON3_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
+							set(PYTHON3_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
+							message(STATUS "PYTHON3_LIBRARIES=${PYTHON3_LIBRARIES}")
+							set(PYTHON3_DLL_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+							message(STATUS "PYTHON3_DLL_SUFFIX=${PYTHON3_DLL_SUFFIX}")
+							set(PYTHONLIBS_FOUND TRUE)
+							set(PYTHONINTERP_FOUND TRUE)
+							set(PYTHON3_VERSION_STRING "${_PYTHON_VERSION_LIST}")
+							set(PYTHON3_EXECUTABLE "${PYTHON3_INSTALL_DIR}/python.exe")
+							message(STATUS "Got PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
+						endif()
+					endif()
+				endif()
+
 			endif()
 			message(STATUS "=======================================================")
 		endif()
@@ -192,7 +363,11 @@ if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
 else()
-	find_package (OpenMP)
+	find_package ("OpenMP")
+endif()
+
+if (FIPS_BUILD)
+    add_definitions(-DFIPS_MODE=1)
 endif()
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
@@ -212,6 +387,10 @@ else()
   add_definitions( -DPRE_RELEASE_STR="" )
 endif(PRE_RELEASE)
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
+
+if(PACKAGEID)
+  add_definitions( -DPACKAGEID=${PACKAGEID} )
+endif(PACKAGEID)
 
 if( NOT BUILD_DATE )
   GET_DATE( BUILD_DATE )
@@ -236,15 +415,10 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  # Using -O2 crashes the compiler on ppc mac os x when compiling
-	  # condor_submit
-	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
-	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
-	  else()
-
-            add_definitions(-D_FORTIFY_SOURCE=2)
-	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
-	  endif()
+      add_definitions(-D_FORTIFY_SOURCE=2)
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
@@ -259,36 +433,33 @@ if( NOT WINDOWS)
 		include_directories( ${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin )
 		set( HAVE_PCRE_H "${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin" CACHE PATH "Path to pcre header." )
 	else()
-		find_path(HAVE_PCRE_H "pcre.h")
-		find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+		if( SYSTEM_NAME STREQUAL "sl6.3" )
+			include_directories( ${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40/include )
+			set( HAVE_PCRE_H FALSE )
+			set( HAVE_PCRE_PCRE_H FALSE )
+		else()
+			find_path(HAVE_PCRE_H "pcre.h")
+			find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+		endif()
 	endif()
 
     find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
+		# UUID appears to be available in the C runtime on Darwin.
+	if (NOT LIBUUID_FOUND AND NOT (${OS_NAME} STREQUAL "DARWIN") )
+		message(FATAL_ERROR "Could not find libuuid")
+	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
-    find_multiple ("dl" HAVE_LIBDL )
 	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
 	find_multiple( "cares19" HAVE_LIBCARES19 )
 	find_multiple( "pam" HAVE_LIBPAM )
-	find_program( BISON bison )
-	find_program( FLEX flex )
 	find_program( AUTOCONF autoconf )
 	find_program( AUTOMAKE automake )
 	find_program( LIBTOOLIZE libtoolize )
-	find_path( MUNGE_H "munge.h" )
-	find_library( MUNGE_LIB "munge" )
-	if( MUNGE_LIB AND MUNGE_H)
-		set (HAVE_EXT_MUNGE 1)
-		set (MUNGE_FOUND ${MUNGE_LIB})
-		message (STATUS "MUNGE (optional) was found")
-	else()
-		message (STATUS "MUNGE (optional) was NOT found")
-        endif()
 	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
 	find_library( SQLITE3_LIB "sqlite3" )
 
@@ -315,8 +486,6 @@ if( NOT WINDOWS)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
-	check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
-	check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
 	check_function_exists("access" HAVE_ACCESS)
@@ -358,7 +527,6 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
-	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -368,7 +536,6 @@ if( NOT WINDOWS)
 	check_include_files("net/if.h" HAVE_NET_IF_H)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)
-	check_include_files("sys/capability.h" HAVE_SYS_CAPABILITY_H)
 	check_include_files("sys/mount.h" HAVE_SYS_MOUNT_H)
 	check_include_files("sys/param.h" HAVE_SYS_PARAM_H)
 	check_include_files("sys/personality.h" HAVE_SYS_PERSONALITY_H)
@@ -434,7 +601,7 @@ if( NOT WINDOWS)
 
 		# Some versions of Clang require an additional C++11 flag, as the default stdlib
 		# is from an old GCC version.
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		endif()
 
@@ -483,8 +650,7 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
-find_program(LATEX2HTML latex2html)
-find_program(LATEX latex)
+find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -586,10 +752,6 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
-elseif(${OS_NAME} STREQUAL "AIX")
-	set(AIX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
@@ -625,7 +787,6 @@ endif()
 # compilation/build options.
 option(UW_BUILD "Variable to allow UW-esk builds." OFF)
 option(HAVE_HIBERNATION "Support for condor controlled hibernation" ON)
-option(WANT_LEASE_MANAGER "Enable lease manager functionality" ON)
 option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
@@ -636,29 +797,17 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
+option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 
 #####################################
 # PROPER option
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
-  # so the clipped detection will try to match glibc vers and if it fails will disable
-  if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" OFF)
-  else()
-	option(CLIPPED "enable/disable the standard universe" ON)
-  endif()
-
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "disable the standard universe" ON)
-endif()
-
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
 endif()
 
 #####################################
@@ -803,12 +952,13 @@ endif()
 if (WINDOWS)
 
   if(NOT (MSVC_VERSION LESS 1900))
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win64.tar.gz)
-    else()
-      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win32.tar.gz)
-    endif()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.64.0)
+    set(BOOST_DOWNLOAD_WIN boost-1.68.0-VC15.tar.gz)
+    #if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+    #  set(BOOST_DOWNLOAD_WIN boost-1.68.0-VC15-Win64.tar.gz)
+    #else()
+    #  set(BOOST_DOWNLOAD_WIN boost-1.68.0-VC15-Win32.tar.gz)
+    #endif()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.2l)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.14.5)
@@ -845,13 +995,19 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+  if( SYSTEM_NAME STREQUAL "sl6.3" )
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
+  else()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+  endif()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.4.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -880,49 +1036,11 @@ else ()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
-	if (PLATFORM MATCHES "Fedora27" OR PLATFORM MATCHES "Debian9")
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.8.6)
-	else()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/devel)
-	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
-
-	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
-
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-
-		if (EXT_GLIBC_FOUND)
-		  if (${BIT_MODE} STREQUAL "32")
-			  set (DOES_COMPRESS_CKPT ON) # this is total crap
-		  endif(${BIT_MODE} STREQUAL "32")
-
-		  if (DOES_SAVE_SIGSTATE)
-			  set(STD_U_C_FLAGS -DSAVE_SIGSTATE)
-		  endif(DOES_SAVE_SIGSTATE)
-
-		  set (STD_UNIVERSE ON)
-
-		  # seriously I've sold my soul doing this dirty work
-		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
-		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
-		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-
-		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
-
-		  message( STATUS "** Standard Universe Enabled **")
-
-		else()
-			message( STATUS "** Standard Universe Disabled **")
-		endif()
-	else()
-		message( STATUS "** Standard Universe Disabled **")
-	endif()
 
 endif(WINDOWS)
 
@@ -1013,12 +1131,9 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 
 ###########################################
 #extra build flags and link libs.
-if (HAVE_EXT_OPENSSL)
-	add_definitions(-DWITH_OPENSSL) # used only by SOAP
-endif(HAVE_EXT_OPENSSL)
 
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+if (NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "openssl libraries not found!")
 endif()
 
 ###########################################
@@ -1028,7 +1143,7 @@ if (DLOPEN_GSI_LIBS)
 	set (SECURITY_LIBS "")
 	set (SECURITY_LIBS_STATIC "")
 else()
-	set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND}")
+	set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};${SCITOKENS_FOUND};${EXPAT_FOUND}")
 	set (SECURITY_LIBS_STATIC "${VOMS_FOUND_STATIC};${GLOBUS_FOUND_STATIC};${EXPAT_FOUND}")
 endif()
 
@@ -1041,12 +1156,12 @@ else()
     set(RT_FOUND "")
 endif()
 
-set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
+set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
 set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX AND NOT PROPER)
-  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
+  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()
@@ -1224,9 +1339,9 @@ else(MSVC)
 		endif()
 	endif(LINUX)
 
-	if( HAVE_LIBDL AND NOT BSD_UNIX )
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
-	endif()
+	if (LINUX)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+	endif(LINUX)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
@@ -1243,20 +1358,6 @@ else(MSVC)
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
-	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
-
-		if (NOT ${SYS_ARCH} MATCHES "64" )
-			add_definitions( -DI386=${SYS_ARCH} )
-		endif()
-
-		# set for maximum binary compatibility based on current machine arch.
-		check_c_compiler_flag(-mtune=generic c_mtune)
-		if (c_mtune)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=generic")
-		endif(c_mtune)
-
-	endif()
-
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
 	# Append C flags list to C++ flags list.
@@ -1269,8 +1370,7 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
-message(STATUS "LATEX: ${LATEX}")
-message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree

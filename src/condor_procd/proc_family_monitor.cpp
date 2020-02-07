@@ -524,6 +524,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->block_write_bytes = -1;
     usage->block_reads = -1;
     usage->block_writes = -1;
+    usage->io_wait = -1;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
 

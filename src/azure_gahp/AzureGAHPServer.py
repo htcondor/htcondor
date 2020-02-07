@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
+
+from __future__ import print_function
 
 import platform
 
@@ -15,7 +17,7 @@ import datetime
 import json
 import time
 from collections import deque
-from azure.common.credentials import ServicePrincipalCredentials
+from azure.common.credentials import ServicePrincipalCredentials, get_azure_cli_credentials
 from azure.graphrbac import GraphRbacManagementClient
 from azure.graphrbac.models import *
 from azure.mgmt.compute.models import DiskCreateOption
@@ -332,20 +334,21 @@ class AzureGAHPCommandExec():
     # Read credentails from file
     def read_app_settings_file(self, file_name):
         dnary = dict()
-        with open(file_name, "r") as f:
-            for line in f:
-                if not line.strip():
-                   continue
-                nvp = line.split(" ")
-                if(not nvp):
-                    return None
-                if(len(nvp) < 2):
-                    return None
-                nvp[0] = nvp[0].strip()
-                nvp[1] = nvp[1].strip()
-                if((len(nvp[0]) < 1) or (len(nvp[1]) < 1)):
-                    return None
-                dnary[nvp[0]] = nvp[1]
+        if file_name != "NULL":
+            with open(file_name, "r") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    nvp = line.split(" ")
+                    if(not nvp):
+                        return None
+                    if(len(nvp) < 2):
+                        return None
+                    nvp[0] = nvp[0].strip()
+                    nvp[1] = nvp[1].strip()
+                    if((len(nvp[0]) < 1) or (len(nvp[1]) < 1)):
+                        return None
+                    dnary[nvp[0]] = nvp[1]
 
         app_settings = GahpAppSettingsBuilder(dnary)
         return app_settings
@@ -384,8 +387,13 @@ class AzureGAHPCommandExec():
 
     # Load credentials from file
     def create_credentials_from_file(self, request_id, file_name):
-        dnary = self.read_app_settings_from_file(file_name)
-        cred = self.create_service_credentials(request_id, dnary)
+        dnary = dict()
+        cred = None
+        if file_name == "NULL":
+            cred, _ = get_azure_cli_credentials()
+        else:
+            dnary = self.read_app_settings_from_file(file_name)
+            cred = self.create_service_credentials(request_id, dnary)
         self.set_vm_count_in_thread(dnary)
         self.write_message(
             request_id, 
@@ -433,21 +441,30 @@ class AzureGAHPCommandExec():
         resource_client.providers.register('Microsoft.Scheduler')
         resource_client.providers.register('Microsoft.KeyVault')
 
+        aad_client = None
         # Get token for Azure AD
-        resource_url = "https://login.microsoftonline.com/{}".format(
-            app_settings.tenant_id)
-        context = adal.AuthenticationContext(resource_url)
-        GRAPH_RESOURCE = '00000002-0000-0000-c000-000000000000' #AAD graph resource
-        aad_token = context.acquire_token_with_client_credentials(
-            GRAPH_RESOURCE,
-            app_settings.client_id, 
-            app_settings.secret)
+        # TODO This Active Directory Authentication Library code only
+        #   works with a service account principal at the moment.
+        #   We skip it if we're using the default CLI credentials.
+        #   This code is only used for the AZURE_VMSS_CREATE and
+        #   AZURE_KEYVAULT_CREATE commands, which we don't currently
+        #   use for the grid universe.
+        #   This deficiency should be fixed at some point.
+        if app_settings.tenant_id is not None:
+            resource_url = "https://login.microsoftonline.com/{}".format(
+                app_settings.tenant_id)
+            context = adal.AuthenticationContext(resource_url)
+            GRAPH_RESOURCE = '00000002-0000-0000-c000-000000000000' #AAD graph resource
+            aad_token = context.acquire_token_with_client_credentials(
+                GRAPH_RESOURCE,
+                app_settings.client_id,
+                app_settings.secret)
 
-        # Update access token in credentials for Azure AD client
-        aad_credentials = copy.deepcopy(credentials)
-        aad_credentials.token['access_token'] = aad_token['accessToken']
-        aad_client = GraphRbacManagementClient(
-            aad_credentials, app_settings.tenant_id)
+            # Update access token in credentials for Azure AD client
+            aad_credentials = copy.deepcopy(credentials)
+            aad_credentials.token['access_token'] = aad_token['accessToken']
+            aad_client = GraphRbacManagementClient(
+                aad_credentials, app_settings.tenant_id)
 
         dnary = {
             "compute_client": compute_client,
@@ -697,8 +714,8 @@ class AzureGAHPCommandExec():
             self, request_id, network_client, cmd_params, subnet):
         
         #Create Virtual Network
-        if (cmd_params.vnet_name != None 
-            and cmd_params.vnet_rg_name != None ):
+        if (cmd_params.vnet_name is not None
+            and cmd_params.vnet_rg_name is not None ):
 
             self.write_message(
                 request_id, 
@@ -707,7 +724,7 @@ class AzureGAHPCommandExec():
                 )
             vnet = network_client.virtual_networks.get(
                 cmd_params.vnet_rg_name, cmd_params.vnet_name)
-            if(subnet == None):
+            if(subnet is None):
                 subnets_of_vnet = vnet.subnets
                 if len(subnets_of_vnet) > 0:
                     # use first subnet of the vnet
@@ -998,16 +1015,16 @@ class AzureGAHPCommandExec():
             params["os_profile"]["admin_password"] = key
 
         # Handle tags related configuration
-        if cmd_params.tag != None:
+        if cmd_params.tag is not None:
             params["tags"] = tags
         # Handle custom data related configuration
-        if cmd_params.custom_data != None:
+        if cmd_params.custom_data is not None:
             base64_custom_data = self.get_base64_string(cmd_params.custom_data)
             params["os_profile"]["custom_data"] = base64_custom_data
      
         # Handle data disk configuration
         data_disks_arr = []
-        if(cmd_params.data_disks != None):
+        if(cmd_params.data_disks is not None):
             dd_arr = cmd_params.data_disks.split(",")
             for index,val in enumerate(dd_arr):    
                 dd = {
@@ -1032,7 +1049,7 @@ class AzureGAHPCommandExec():
             vnet_rg_name, vnet_name)
         subnets_of_vnet = vnet.subnets
         if len(subnets_of_vnet) > 0:
-            if subnet_name != None:
+            if subnet_name is not None:
                 for subnet in subnets_of_vnet:
                     if subnet_name.lower() == subnet.name.lower():
                         existing_subnet = subnet
@@ -1060,8 +1077,8 @@ class AzureGAHPCommandExec():
 
         existing_subnet = None
         # Check for existing Virtual Network and subnet
-        if (cmd_params.vnet_name != None 
-            and cmd_params.vnet_rg_name != None):
+        if (cmd_params.vnet_name is not None
+            and cmd_params.vnet_rg_name is not None):
 
             existing_subnet, error = self.check_existing_vnet_and_subnet(
                 request_id, network_client, cmd_params.vnet_rg_name, 
@@ -1209,18 +1226,18 @@ class AzureGAHPCommandExec():
         else:  
             params["virtual_machine_profile"]["os_profile"]["admin_password"] = key
 
-        if cmd_params.tag != None:
+        if cmd_params.tag is not None:
             params["tags"] = tags
         
         base64_custom_data = None
-        if cmd_params.custom_data != None:
+        if cmd_params.custom_data is not None:
             base64_custom_data = self.get_base64_string(cmd_params.custom_data)
         
-        if(base64_custom_data != None):
+        if(base64_custom_data is not None):
             params["virtual_machine_profile"]["os_profile"]["custom_data"] = base64_custom_data
      
         dd_arr = []
-        if(cmd_params.data_disks != None):
+        if(cmd_params.data_disks is not None):
             arr = cmd_params.data_disks.split(",")
             for index,val in enumerate(arr):    
                 dd = {
@@ -1232,9 +1249,9 @@ class AzureGAHPCommandExec():
             params["virtual_machine_profile"]["storage_profile"]["data_disks"] = dd_arr
    
      # Install Linux MSI extension
-        if (cmd_params.keyvault_name != None 
-            and cmd_params.keyvault_rg_name != None
-            and cmd_params.keyvault_secret_name != None ):
+        if (cmd_params.keyvault_name is not None
+            and cmd_params.keyvault_rg_name is not None
+            and cmd_params.keyvault_secret_name is not None ):
             extension_profile = {
                 "extensions":[{
                     "name": cmd_params.vmss_name + "linuxmsiext",
@@ -1418,9 +1435,9 @@ class AzureGAHPCommandExec():
         ad_group_object_id = None
         keyvault = None
 
-        if(cmd_params.keyvault_name != None 
-           and cmd_params.keyvault_rg_name != None
-           and cmd_params.keyvault_secret_name != None):
+        if(cmd_params.keyvault_name is not None
+           and cmd_params.keyvault_rg_name is not None
+           and cmd_params.keyvault_secret_name is not None):
             keyvault = self.get_existing_keyvault(
                 client_libs.keyvault, app_settings,
                 cmd_params.keyvault_rg_name, 
@@ -1455,8 +1472,8 @@ class AzureGAHPCommandExec():
             request_id, resource_client, cmd_params.group_name, 
             cmd_params.location)
         #Create Virtual Network
-        if (cmd_params.vnet_name != None 
-                and cmd_params.vnet_rg_name != None):
+        if (cmd_params.vnet_name is not None
+                and cmd_params.vnet_rg_name is not None):
             self.write_message(
                 request_id, 
                 "Using existing vnet '{}'{}".format(
@@ -1526,10 +1543,10 @@ class AzureGAHPCommandExec():
             vmss_principal_id = vmss_info.identity.principal_id
 
         # Download secret from Azure keyvault
-        if (app_settings.shell_script_url != None  
-            and cmd_params.keyvault_name != None
-            and cmd_params.keyvault_rg_name != None
-            and cmd_params.keyvault_secret_name != None):
+        if (app_settings.shell_script_url is not None
+            and cmd_params.keyvault_name is not None
+            and cmd_params.keyvault_rg_name is not None
+            and cmd_params.keyvault_secret_name is not None):
             
             # Add VMSS to AAD group
             base_url = "https://graph.windows.net"
@@ -1685,7 +1702,7 @@ class AzureGAHPCommandExec():
                     },
                 }
             }
-        if (clean_job_frequency is not None 
+        if (clean_job_frequency is not None
             and clean_job_interval is not None):
             recurrence_value = {
                 "frequency": self.get_recurrence_frequency(
@@ -2192,27 +2209,15 @@ class AzureGAHPCommandExec():
                     ci.cmdParams["vmName"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
-                vm_info = self.get_vm_info(
-                    ci.request_id, client_libs.compute, 
-                    client_libs.network, ci.cmdParams["rgName"], 
-                    ci.cmdParams["vmName"])
-                error = self.escape(
-                    "{} - {} {}{}".format(
-                        vm_info["vm_id"], vm_info["public_ip"], 
-                        str(e.args[0]), double_line_break)
-                    )
                 self.process_error(
-                    ci.request_id, e, 
-                    "{} {}".format(
-                        error_deleting_vm, error)
-                    )           
+                    ci.request_id, e, error_deleting_vm)
         elif(ci.command.upper() == cmds.list_vm):
             try:
                 vms_info_list = self.list_rg(
                     ci.request_id, client_libs.compute, 
                     client_libs.network, ci.cmdParams["rgName"], 
                     ci.cmdParams["vmName"], ci.cmdParams["tag"])
-                result = "NULL {} {}".format(
+                result = "NULL {}{}".format(
                     str(len(vms_info_list)), ''.join(vms_info_list))
                 self.queue_result(ci.request_id, result)
                 self.write_message(
@@ -2280,9 +2285,8 @@ class AzureGAHPCommandExec():
                     ci.request_id, e, error_scaling_vmss)
 
     def process_error(self, request_id, e, error_message):
-        message = "{} {}{}".format(
-            error_message, self.escape(str(e.args[0])), 
-            double_line_break)
+        message = "{}\\ {}".format(
+            self.escape(error_message), self.escape(str(e.args[0])))
         self.write_message(request_id, message, logging.ERROR)
         self.queue_result(request_id, message)
     
@@ -3059,6 +3063,6 @@ while(True):
             continue
         print(s_alphabet)
     else:
-        print("E Unsupported command: To see a list of valid commands use COMMANDS");
+        print("E Unsupported command: To see a list of valid commands use COMMANDS")
 
 ##### END MAIN PROGRAM ##############

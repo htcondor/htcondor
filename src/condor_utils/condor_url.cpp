@@ -26,22 +26,51 @@ const char* IsUrl( const char *url )
 	if ( !url ) {
 		return NULL;
 	}
-	const char *ptr = url;
-	while ( isalpha( *ptr ) ) {
-		ptr++;
+
+	if ( !isalpha( url[0] ) ) {
+		return NULL;
 	}
-	if ( ptr != url && ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' ) {
+
+	const char *ptr = & url[1];
+	while ( isalnum( *ptr ) || *ptr == '+' || *ptr == '-' || *ptr == '.' ) {
+		++ptr;
+	}
+	// This is more restrictive than is necessary for URIs, which are not
+	// required to have authority ([user@]host[:port]) sections.  It's not
+	// clear from the RFC if an authority section is required for a URL,
+	// but until somebody complains, it is for HTCondor.
+	if ( ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' && ptr[3] != '\0' ) {
 		return ptr;
 	}
 	return NULL;
 }
 
-MyString getURLType( const char *url ) {
-	MyString t;
+/**
+ * Return the scheme from the URL string provided.
+ *
+ * If `scheme_suffix` is set to true, then it returns the last portion
+ * of the scheme after any special character (RFC 3986 allows +, -, and .
+ * in the scheme).
+ *
+ * With `scheme_suffix=true`, for scheme `chtc+https` would return `https`.
+ */
+std::string getURLType( const char *url, bool scheme_suffix ) {
 	const char * endp = IsUrl(url);
+	std::string scheme;
 	if (endp) { // if non-null, this is a URL
-		t.set(url, (int)(endp - url));
+		const char * startp = endp;
+		if (scheme_suffix) {
+			while (startp > url) {
+				if (*startp == '+' || *startp == '-' || *startp == '.') {
+					startp++;
+					break;
+				}
+				startp--;
+			}
+		} else {
+			startp = url;
+		}
+		scheme = std::string(startp, (int)(endp - startp));
 	}
-	return t;
+	return scheme;
 }
-

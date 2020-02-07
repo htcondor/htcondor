@@ -30,6 +30,11 @@ class MyString;
 class MyStringSource;
 #include "stl_string_utils.h"
 
+//Trim leading and trailing whitespace in place in the given buffer, returns the new size of data in the buffer
+// this does NOT \0 terminate the resulting buffer, but you can insure that it is by:
+//   buf[trim_in_place(buf, strlen(buf))] = 0;
+int trim_in_place(char* buf, int length);
+
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
  * For an example of how to use it, see test_mystring.C.
@@ -119,18 +124,6 @@ class MyString
 	/** Sets the character '\0' at the given position and truncate the string to end at that position. */
 	void truncate(int pos);
 
-	/** Clears the current string in the MyString, and fills it with a
-	 *	randomly generated set derived from 'set' of len characters. */
-	void randomlyGenerate(const char *set, int len);
-
-	/** Clears the current string in the MyString, and fills it with 
-	 *	randomly generated [0-9a-f] values up to len size */
-	void randomlyGenerateHex(int len);
-
-	/** Clears the current string in the MyString, and fills it with
-	 *	randomly generated alphanumerics and punctuation up to len size */
-	void randomlyGeneratePassword(int len);
-
 	//@}
 
 	// ----------------------------------------
@@ -141,6 +134,9 @@ class MyString
 
 	/** Copies a MyString into the object */
 	MyString& operator=(const MyString& S);
+
+	/** Destructively moves a MyString guts from rhs to this */
+	MyString& operator=(MyString &&rhs);
 
 	/** Copies a std::string into the object */
 	MyString& operator=(const std::string& S);
@@ -297,6 +293,11 @@ class MyString
 	*/
 	char trim_quotes(const char * quote_chars="\"");
 
+	/* Remove a prefix from the string if it matches the input
+	 * return true if the prefix matched and was removed
+	 */
+	bool remove_prefix(const char * prefix);
+
 	/** Remove all the whitespace from this string
 	*/
 	void RemoveAllWhitespace( void );
@@ -436,6 +437,7 @@ class MyStringTokener
 public:
   MyStringTokener();
   // MyStringTokener(const char * str);
+  MyStringTokener &operator=(MyStringTokener &&rhs);
   ~MyStringTokener();
   void Tokenize(const char * str);
   void Tokenize(const MyString & str) { Tokenize(str.Value()); }
@@ -450,6 +452,7 @@ class MyStringWithTokener : public MyString
 public:
 	MyStringWithTokener(const MyString &S);
 	MyStringWithTokener(const char *s);
+	MyStringWithTokener &operator=(MyStringWithTokener &&rhs);
 	~MyStringWithTokener() {}
 
 	// ----------------------------------------
@@ -486,7 +489,8 @@ public:
 	YourString(const MyString & s) : m_str(s.Data) {}
 	YourString(const YourString &rhs) : m_str(rhs.m_str) {}
 
-	void operator =(const char *str) { m_str = str; }
+	YourString& operator =(const YourString &rhs) { m_str = rhs.m_str; return *this; }
+	YourString& operator =(const char *rhs) { m_str = rhs; return *this; }
 	const char * c_str() const { return m_str ? m_str : ""; }
 	const char * Value() const { return m_str ? m_str : ""; }
 	const char * ptr() const { return m_str; }
@@ -516,6 +520,8 @@ public:
 	YourStringNoCase(const std::string &str) : YourString(str.c_str()) {}
 	YourStringNoCase(const YourString &rhs) : YourString(rhs) {}
 	YourStringNoCase(const YourStringNoCase &rhs) : YourString(rhs.m_str) {}
+
+	YourStringNoCase& operator =(const YourStringNoCase &rhs) { m_str = rhs.m_str; return *this; }
 
 	bool operator ==(const char * str) const;
 	bool operator ==(const std::string & str) const { return operator==(str.c_str()); }

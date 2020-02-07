@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
@@ -42,18 +42,18 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	: Daemon( DT_STARTD, tName, tPool )
 {
 	if( tAddr ) {
-		New_addr( strnewp(tAddr) );
+		New_addr( strdup(tAddr) );
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
 	claim_id = NULL;
 	if( tId ) {
-		claim_id = strnewp( tId );
+		claim_id = strdup( tId );
 	}
 
 	extra_ids = NULL;
 	if( ids && (strlen(ids) > 0)) {
-		extra_ids = strnewp( ids );
+		extra_ids = strdup( ids );
 	}
 }
 
@@ -66,10 +66,10 @@ DCStartd::DCStartd( const ClassAd *ad, const char *tPool )
 DCStartd::~DCStartd( void )
 {
 	if( claim_id ) {
-		delete [] claim_id;
+		free(claim_id);
 	}
 	if( extra_ids ) {
-		delete [] extra_ids;
+		free(extra_ids);
 	}
 }
 
@@ -81,10 +81,10 @@ DCStartd::setClaimId( const char* id )
 		return false;
 	}
 	if( claim_id ) {
-		delete [] claim_id;
+		free(claim_id);
 		claim_id = NULL;
 	}
-	claim_id = strnewp( id );
+	claim_id = strdup( id );
 	return true;
 }
 
@@ -1144,7 +1144,7 @@ DCStartd::getAds( ClassAdList &adsList )
 	// fetch the query
 	QueryResult q;
 	CondorQuery* query;
-	char* ad_addr;
+	const char* ad_addr;
 
 	// instantiate query object
 	if (!(query = new CondorQuery (STARTD_AD))) {

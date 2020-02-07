@@ -46,7 +46,7 @@ TransferD::TransferD() :
 
 TransferD::~TransferD()
 {	
-	MyString key;
+	std::string key;
 	TransferRequest *treq;
 
 	// delete everything in the table.
@@ -214,10 +214,11 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 	const char *classad_delimitor = "---\n";
 	ClassAd *ad;
 	TransferRequest *treq = NULL;
-	MyString cap;
+	std::string cap;
 
 	/* read the transfer request header packet upon construction */
-	ad = new ClassAd(fin, classad_delimitor, eof, error, empty);
+	ad = new ClassAd;
+	InsertFromFile(fin, *ad, classad_delimitor, eof, error, empty);
 	if (empty == TRUE) {
 		EXCEPT("Protocol faliure, can't read initial Info Packet");
 	}
@@ -237,7 +238,8 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 
 	// read all the work ads associated with this TransferRequest
 	for (i = 0; i < treq->get_num_transfers(); i++) {
-		ad = new ClassAd(fin, classad_delimitor, eof, error, empty);
+		ad = new ClassAd;
+		InsertFromFile(fin, *ad, classad_delimitor, eof, error, empty);
 		if (empty == TRUE) {
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
@@ -379,7 +381,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 	int i;
 	ClassAd *ad = NULL;
 	TransferRequest *treq = NULL;
-	MyString cap;
+	std::string cap;
 	ClassAd respad;
 
 	dprintf(D_ALWAYS,
@@ -471,7 +473,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 
 	respad.Assign(ATTR_TREQ_CAPABILITY, cap);
 
-	dprintf(D_ALWAYS, "Assigned capability to treq: %s.\n", cap.Value());
+	dprintf(D_ALWAYS, "Assigned capability to treq: %s.\n", cap.c_str());
 
 	// This respose ad will contain:
 	//

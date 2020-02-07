@@ -64,10 +64,12 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	}
 	validateLease( endOfLease, errorString );
 
-	StatWrapper sw( secretKeyFile.c_str() );
-	mode_t mode = sw.GetBuf()->st_mode;
-	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
-		formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
+	if( secretKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		StatWrapper sw( secretKeyFile.c_str() );
+		mode_t mode = sw.GetBuf()->st_mode;
+		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+			formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
+		}
 	}
 
 	if(! errorString.empty()) {
@@ -120,7 +122,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 	reply->Assign( "AlternateReply", "Lease updated." );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream,
-		NULL, scratchpad, eventsGahp, commandState, commandID, NULL );
+		NULL, scratchpad, eventsGahp, commandState, commandID, NULL, NULL );
 
 	FunctorSequence * fs = new FunctorSequence( { pr, pt }, last,
 		commandState, commandID, scratchpad );

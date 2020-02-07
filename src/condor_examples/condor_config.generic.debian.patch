@@ -1,5 +1,5 @@
---- condor_config.generic	2017-01-10 16:07:05.052352063 -0600
-+++ condor_config.patched	2017-01-10 16:06:48.898201252 -0600
+--- condor_config.generic	2019-08-04 17:15:38.663989094 -0500
++++ condor_config.patched	2019-08-04 18:44:20.953175955 -0500
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,34 @@
+@@ -50,5 +48,36 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -47,23 +47,25 @@
 +RUN     = $(LOCAL_DIR)/run/condor
 +LOG     = $(LOCAL_DIR)/log/condor
 +LOCK    = $(LOCAL_DIR)/lock/condor
-+SPOOL   = $(LOCAL_DIR)/lib/condor/spool
++SPOOL   = $(LOCAL_DIR)/spool/condor
 +EXECUTE = $(LOCAL_DIR)/lib/condor/execute
++CRED_STORE_DIR = $(LOCAL_DIR)/lib/condor/cred_dir
++ETC     = /etc/condor
 +BIN     = $(RELEASE_DIR)/bin
 +LIB     = $(RELEASE_DIR)/lib/condor
 +INCLUDE = $(RELEASE_DIR)/include/condor
 +SBIN    = $(RELEASE_DIR)/sbin
 +LIBEXEC = $(RELEASE_DIR)/lib/condor/libexec
 +SHARE   = $(RELEASE_DIR)/share/condor
++MAIL    = /usr/bin/mail
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
-+##  What machine is your central manager?
++# Account for different pki locations for Debian
++AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-bundle.crt
++AUTH_SSL_CLIENT_CAFILE   = /etc/ssl/certs/ca-bundle.crt
++AUTH_SSL_SERVER_CERTFILE = /etc/ssl/certs/localhost.crt
++AUTH_SSL_SERVER_KEYFILE  = /etc/ssl/private/localhost.key
 +
-+CONDOR_HOST = $(FULL_HOSTNAME)
-+
-+##  This macro determines what daemons the condor_master will start and keep its watchful eyes on.
-+##  The list is a comma or space separated list of subsystem names
-+
-+DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
++##  Install the minihtcondor package to run HTCondor on a single node

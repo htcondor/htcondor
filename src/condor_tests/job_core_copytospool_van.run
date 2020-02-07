@@ -22,7 +22,7 @@
 use CondorTest;
 use CondorUtils;
 
-use Digest::MD5;
+use Digest::SHA;
 #use strict;
 use warnings;
 
@@ -50,14 +50,12 @@ my $submitted = sub {
 	CondorTest::debug("Executable is $program\n",$debuglevel);
 	CondorTest::debug("Transfer job worked..... need to check spool file.\n",$debuglevel);
 
-	CondorTest::debug("MD5 of $program is needed first\n",$debuglevel);
+	CondorTest::debug("SHA of $program is needed first\n",$debuglevel);
 
-	open(DATA,"<$program") || die "Can't open input file $!\n";
-	my $datamd5 = Digest::MD5->new;
-	$datamd5->addfile(DATA);
-	close(DATA);
-	my $hexexemd5 = $datamd5->hexdigest;
-	CondorTest::debug("executable md5: $hexexemd5\n",$debuglevel);
+	my $datasha256 = Digest::SHA->new(256);
+	$datasha256->addfile($program);
+	my $hexexesha256 = $datasha256->hexdigest;
+	CondorTest::debug("executable sha256: $hexexesha256\n",$debuglevel);
 
 	my $shared_cluster_dir = $cluster % 10000;
 
@@ -65,20 +63,18 @@ my $submitted = sub {
 	CondorTest::debug("Spool file should be $spoolfile\n",$debuglevel);
 	#system("ls $spool");
 
-	open(DATA1,"<$spoolfile") || die "Can't open input file $!\n";
-	my $sdatamd5 = Digest::MD5->new;
-	$sdatamd5->addfile(DATA1);
-	close(DATA1);
-	my $shexexemd5 = $sdatamd5->hexdigest;
-	CondorTest::debug("spooled executable md5: $shexexemd5\n",$debuglevel);
+	my $sdatasha256 = Digest::SHA->new(256);
+	$sdatasha256->addfile($spoolfile);
+	my $shexexesha256 = $sdatasha256->hexdigest;
+	CondorTest::debug("spooled executable sha256: $shexexesha256\n",$debuglevel);
 
 	CondorTest::debug("OK remove the job!\n",$debuglevel);
 
-	print "Comparing md5 of original file and copy in spool - ";
-	if( $hexexemd5 ne $shexexemd5 )
+	print "Comparing sha256 of original file and copy in spool - ";
+	if( $hexexesha256 ne $shexexesha256 )
 	{
 		print "bad\n";
-		die "Spooled executable and executable have DIFFERENT MD5 checksums!!!\n";
+		die "Spooled executable and executable have DIFFERENT SHA256 checksums!!!\n";
 	}
 
 	print "ok\n";

@@ -26,7 +26,6 @@
 #include "gahp_common.h"
 #include "PipeBuffer.h"
 #include "file_transfer.h"
-#include "_unordered_map.h"
 
 #define GAHP_COMMAND_DOWNLOAD_SANDBOX "DOWNLOAD_SANDBOX"
 #define GAHP_COMMAND_UPLOAD_SANDBOX "UPLOAD_SANDBOX"
@@ -60,8 +59,8 @@ struct SandboxEnt {
 };
 
 // our map of <sandbox_id> to <sandbox_struct>
-//typedef _unordered_map<std::string, struct SandboxEnt> SandboxMap;
-typedef _unordered_map<int, struct SandboxEnt> SandboxMap;
+//typedef std::unordered_map<std::string, struct SandboxEnt> SandboxMap;
+typedef std::unordered_map<int, struct SandboxEnt> SandboxMap;
 SandboxMap sandbox_map;
 
 

@@ -76,7 +76,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
-	, c_has_job_ad(0)
+	, c_has_job_ad(false)
 	, c_state(CLAIM_IDLE)
 	, c_last_state(CLAIM_UNCLAIMED)
 	, c_pending_cmd(-1)
@@ -137,6 +137,13 @@ Claim::~Claim()
 		Starter * starter = findStarterByPid(c_starter_pid);
 		if (starter && starter->notYetReaped()) {
 			dprintf(D_ALWAYS, "Deleting claim while starter is still alive. The STARTD history for job %d.%d may be incomplete\n", c_cluster, c_proc);
+
+			// update stat for JobBusyTime
+			if (c_job_start > 0) {
+				double busyTime = condor_gettimestamp_double() - c_job_start;
+				resmgr->startd_stats.job_busy_time += busyTime;
+			}
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -277,8 +284,8 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 	}
 
 	if( c_job_start > 0 ) {
-		line.formatstr( "%s=%d", ATTR_JOB_START, c_job_start );
-		cad->Insert( line.Value() );
+		// The "JobStart" attribute is traditionally an integer, so we truncate the time to an int for this assignment.
+		cad->Assign(ATTR_JOB_START, (time_t)c_job_start);
 	}
 
 	if( c_last_pckpt > 0 ) {
@@ -448,9 +455,7 @@ Claim::publishCOD( ClassAd* cad )
 			line = codId();
 			line += '_';
 			line += ATTR_JOB_START;
-			line += '=';
-			line += IntToStr( c_job_start );
-			cad->Insert( line.Value() );
+			cad->Assign( line.Value(), (time_t)c_job_start );
 		}	
 	}
 }
@@ -747,11 +752,10 @@ Claim::loadRequestInfo()
 {
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
-	char* limits = NULL;
-	c_jobad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
-	if (limits) {
-		c_client->setConcurrencyLimits(limits);
-		free(limits); limits = NULL;
+	std::string limits;
+	(void) EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
+	if (!limits.empty()) {
+		c_client->setConcurrencyLimits(limits.c_str());
 	}
 
     // stash information about what accounting group match was negotiated under
@@ -781,18 +785,18 @@ Claim::loadStatistics()
 }
 
 void
-Claim::beginActivation( time_t now )
+Claim::beginActivation( double now )
 {
 	loadAccountingInfo();
 
 	c_activation_count += 1;
 
-	c_job_start = (int)now;
+	c_job_start = now;
 
 	c_pledged_machine_max_vacate_time = 0;
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
-		if( !c_rip->r_classad->EvalInteger(
-			ATTR_MACHINE_MAX_VACATE_TIME,
+		if( !EvalInteger(
+			ATTR_MACHINE_MAX_VACATE_TIME, c_rip->r_classad,
 			c_jobad,
 			c_pledged_machine_max_vacate_time))
 		{
@@ -823,7 +827,7 @@ Claim::beginActivation( time_t now )
 	}
 	c_universe = univ;
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	switch( univ ) {
 		case CONDOR_UNIVERSE_VANILLA:
 			c_jobad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
@@ -1299,7 +1303,7 @@ Claim::alive( bool alive_from_schedd )
 bool
 Claim::hasJobAd() {
 	bool has_it = false;
-	if (c_has_job_ad != 0) {
+	if (c_has_job_ad) {
 		has_it = true;
 	}
 #if HAVE_JOB_HOOKS
@@ -1451,7 +1455,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	// the starter had better not already have an active process.
 	ASSERT ( ! starter->pid());
 
-	time_t now = time(NULL);
+	double now = condor_gettimestamp_double();
 
 	// grab job id, etc out of the job ad and write it into the claim.
 	if ( ! job) {
@@ -1466,6 +1470,10 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		cacheJobInfo(job);
 	}
 
+	MyString prefix;
+	formatstr(prefix, "%s[%d.%d]", c_rip->r_id_str, c_cluster, c_proc);
+	starter->set_dprintf_prefix(prefix.c_str());
+
 	// HACK!! Starter::spawn reaches back into the claim object to grab values out of the c_ad member
 	// so we have to temporarily set it, even though we have not yet decided to take ownership of the
 	// passed in job (we will only own it if the spawn succeeds)
@@ -1474,7 +1482,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	ClassAd * old_c_ad = c_jobad;
 	if (job) { c_jobad = job; }
 
-	c_starter_pid = starter->spawn( this, now, s );
+	c_starter_pid = starter->spawn( this, (time_t)now, s );
 
 	c_jobad = old_c_ad;
 
@@ -1519,6 +1527,12 @@ Claim::starterExited( Starter* starter, int status)
 	if (starter) {
 		starter->exited(this, status);
 		delete starter; starter = NULL;
+	}
+
+	// update stat for JobBusyTime
+	if (c_job_start > 0) {
+		double busyTime = condor_gettimestamp_double() - c_job_start;
+		resmgr->startd_stats.job_busy_time += busyTime;
 	}
 
 	if( c_badput_caused_by_draining ) {
@@ -1866,7 +1880,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 	}
 
 	req->LookupString( ATTR_JOB_KEYWORD, &c_cod_keyword );
-	req->EvalBool( ATTR_HAS_JOB_AD, NULL, c_has_job_ad );
+	req->LookupBool( ATTR_HAS_JOB_AD, c_has_job_ad );
 
 	if( c_cod_keyword || c_has_job_ad ) {
 		return true;
@@ -2049,7 +2063,6 @@ Claim::resetClaim( void )
 	c_cpus_usage = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
-		PRAGMA_REMIND("tj: does the ad leak for non-cod claims?")
 		delete( c_jobad );
 		c_jobad = NULL;
 	}
@@ -2066,7 +2079,7 @@ Claim::resetClaim( void )
 		free( c_cod_keyword );
 		c_cod_keyword = NULL;
 	}
-	c_has_job_ad = 0;
+	c_has_job_ad = false;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;
@@ -2151,8 +2164,12 @@ Claim::writeJobAd( int pipe_end )
 bool
 Claim::writeMachAd( Stream* stream )
 {
-	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
-	dPrintAd(D_JOB, *c_rip->r_classad);
+	if (IsDebugLevel(D_MACHINE)) {
+		std::string adbuf;
+		dprintf(D_MACHINE, "Sending Machine Ad to Starter :\n%s", formatAd(adbuf, *c_rip->r_classad, "\t"));
+	} else {
+		dprintf(D_FULLDEBUG, "Sending Machine Ad to Starter\n");
+	}
 	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
@@ -2365,19 +2382,17 @@ newIdString( char** id_str_ptr )
 	MyString id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
-	// Strip out CCB and other special info so we don't get any
-	// '#' characters in the address.
+	// Starting in 8.9, we use the full sinful string, which can
+	// contain '#'. Parsers should look for the first '>' in the
+	// string to reliably extract the startd's sinful.
 
-	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
-	my_sin.clearParams();
-	char const *my_addr = my_sin.getSinful();
-
-	ASSERT( my_addr && !strchr(my_addr,'#') );
-
-	formatstr( id, "%s#%d#%d#", my_addr, (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
+	           (int)startd_startup, sequence_num );
 
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators
+		// Note: Claim id strings have been longer than 80 characters
+		//   ever since we started putting a security session ad in them.
 	const size_t keylen = 20;
 	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
 	id += keybuf;
@@ -2404,7 +2419,6 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) )
 	{
-		MyString fqu;
 		MyString session_id;
 		MyString session_key;
 		MyString session_info;
@@ -2421,7 +2435,8 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 			NULL,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
-			0 );
+			0,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
@@ -2496,40 +2511,41 @@ ClaimId::dropFile( int slot_id )
 		return;
 	}
 
-	MyString filename_old = filename;
-	MyString filename_new = filename;
+	MyString filename_final = filename;
+	MyString filename_tmp = filename;
 	free( filename );
 	filename = NULL;
 
-	filename_new += ".new";
+	filename_tmp += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_new.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.Value(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
-				 filename_new.Value(), strerror(errno), errno );
+				 filename_tmp.Value(), strerror(errno), errno );
  		return;
 	}
 	fprintf( NEW_FILE, "%s\n", c_id );
 	fclose( NEW_FILE );
-	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
+	if( rotate_file(filename_tmp.Value(), filename_final.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
-				 filename_new.Value() );
-		if (unlink(filename_new.Value()) < 0) {
-			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+				 filename_tmp.Value() );
+		if (unlink(filename_tmp.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.Value() );
 		}
 	}
 }
 
 void
-Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
+Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 {
 	ASSERT( c_jobad );
 
-	update_ad.ResetExpr();
 	const char *name;
 	ExprTree *expr;
-	while( update_ad.NextExpr(name, expr) ) {
+	for ( auto itr = update_ad.begin(); itr != update_ad.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||
@@ -2547,9 +2563,17 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 		}
 	}
 	loadStatistics();
-	if( IsDebugLevel(D_JOB) ) {
-		dprintf(D_JOB,"Updated job ClassAd:\n");
-		dPrintAd(D_JOB, *c_jobad);
+	if( IsDebugVerbose(D_JOB) ) {
+		std::string adbuf;
+		dprintf(D_JOB | D_VERBOSE,"Updated job ClassAd:\n%s", formatAd(adbuf, *c_jobad, "\t"));
+	}
+
+	if (final_update) {
+		double duration = 0.0;
+		if ( ! c_jobad->LookupFloat(ATTR_JOB_DURATION, duration)) {
+			duration = 0.0;
+		}
+		resmgr->startd_stats.job_duration += duration;
 	}
 }
 

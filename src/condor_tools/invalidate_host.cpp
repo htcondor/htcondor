@@ -61,6 +61,7 @@ main( int argc, char** argv )
 	ReliSock* coll_sock;
 	bool connect_error = true;
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	MyName = argv[0];

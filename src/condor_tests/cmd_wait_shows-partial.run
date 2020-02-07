@@ -26,7 +26,14 @@ use CondorUtils;
 use strict;
 use warnings;
 
-my $cmd = "cmd_wait_shows.cmd";
+# Request that a personal HTCondor with the following config appending is
+# started before running this test
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	TOOL_DEBUG=D_FULLDEBUG 
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my $debuglevel = 2;
 
 my $pid = $$;
@@ -60,7 +67,7 @@ system("$writelog $flowlog submit 4") == 0 || die "$writelog failed\n";
 print "Drop 4 submits into the log\n";
 
 # Start condor_wait
-my $spawncmd = "_CONDOR_TOOL_DEBUG=D_FULLDEBUG condor_wait -debug -num 2 $flowlog >$outputfile 2>&1";
+my $spawncmd = "condor_wait -debug -num 2 $flowlog >$outputfile 2>&1";
 #my $spawncmd = "condor_wait -num 2 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 print "Have condor_wait wait for 2\n";

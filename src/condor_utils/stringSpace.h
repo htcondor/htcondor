@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2019, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,253 +20,73 @@
 #ifndef __STRING_SPACE_H__
 #define __STRING_SPACE_H__
 
+#include <unordered_map>
+#include <string>
 
-#include "MyString.h"
-#include "extArray.h"
-
-template <class Key, class Value> class HashTable;
-class YourString;
-
-// forward decl
-class SSString;
-
-/**
- * A string space is an efficient way to manage memory for character
- * strings.
- * <p>
- * <b>Introduction:</b>
- * <br>
- * A StringSpace is designed to handle large numbers of immutable
- * string values many of which are logically identical.  In addition,
- * it is assumed that the lifetimes of these values vary widely among
- * individual instances of the values.  The string space structure
- * shares storage for values, and uses a reference to this shared
- * storage.  The storage is maintained by reference counting.  All
- * accesses to the string value are then performed through this
- * reference, which may be copied and deleted without regard to
- * storage managment.
-
- * <p>
- * <b>Informal comments on usage:</b>
- * <br>
- * The basic object in the system is the StringSpace, of which one may
- * have several non-interfering instances.  The primary method defined
- * on the object is the 'getCanonical' method which enters a ASCIIZ
- * string into the string space, and returns an SSString object.  The
- * SSString object is the reference to the string, and all further
- * accesses to the string should be performed using the SSString
- * object.  (If the string already exists in the string space, a
- * reference to the original string is returned.)  An additional
- * advantage that can be exploited is that each *distinct* string
- * value is given a unique integer ID, with identical strings sharing
- * the same ID.  (e.g., this can be used for fast string equality
- * comparisons!)  The SSString object has operations that can be used
- * to copy and dispose references appropriately.
- * <p>
- * <b>Memory management convention in the StringSpace:</b>
- * <br>
- * The behavior of the StringSpace is that it allocates storage for an
- * inserted string.
- * <p>
- * <b>WARNING:</b> The dispose() method of the SSString is meant to be used
- * in unusual situations only.  Note that the destructor takes care of
- * disposing the reference, so explicitly calling the dispose method
- * may lead to incorrect memory management.  */
-class StringSpace 
+class StringSpace
 {
-  public:
-    /**
-     * Constructor. Creates the string space.
-     */
-	StringSpace ();
+public:
 
-	/** Destructor. This will explicitly free all the memory associated 
-     * with the strings. 
-     */
-	~StringSpace ();
+    StringSpace() {}
+    ~StringSpace() { clear(); }
 
-    /** Add a string to the StringSpace. If the string is already in
-     * the StringSpace, it isn't added, but we increase the reference
-     * count of the string. In any case, we return the index of the
-     * string, and a reference to the string with an SSString. Using the 
-     * SSString is preferred over using the index. */
-	int	getCanonical(const char* &str, SSString& cannonical);
-    /** Add a string to the StringSpace. If the string is already in
-     * the StringSpace, it isn't added, but we increase the reference
-     * count of the string. In any case, we return the index of the
-     * string, and a reference to the string with an SSString. Using the 
-     * SSString is preferred over using the index. */
-	int	getCanonical(const char* &str, SSString*& cannonical);
+    /** Delete copy ctor and assignment operator; anyone trying
+    to copy the StringSpace probably didn't really want to. 
+    */
+    StringSpace(const StringSpace&) = delete;
+    StringSpace& operator= (const StringSpace) = delete;
 
-    /** Add a string to the StringSpace. If the string is already in
-     * the StringSpace, it isn't added, but we increase the reference
-     * count of the string. In any case, we return the index of the
-     * string, and you can use this to get the string later with the
-     * [] operator. Using this index is preferred less than using
-	 * an SSString, which you could have gotten from one of the other 
-	 * getCanonical() methods. */
-    int getCanonical(const char* &str);
+    /** Acts just like strdup, but only allocates memory
+    if the string does not already exists in the string space.
+    This copies a null-terminated string and inserts it into
+    the string space, or increments a reference count if the string
+    is already there, and returns a pointer to the 
+    shared (de-deplicated) string.  Do not change the
+    string returned! Call free_dedup() to deallocate,
+    not free()!  Do not cast the return value to remove the const-ness,
+    it is const for a reason!
+    */
+    const char *strdup_dedup(const char *str);
 
-	/** Check if a string is in the string space. If it is, we return
-     * the index of the string, otherwise we return -1.  
-     */
-	inline 	int checkFor (char *str);
 
-    /** Return the number of strings in the string space.
-     */
-	inline 	int getNumStrings (void);
+    /** Free a pointer returned by StringSpace::strdup_dedup().
+    Will decrease the reference count on this string, and deallocate the
+    memory when reference count hits zero.  Returns the number of copies
+    of this string still in the StringSpace.
+    */
+    int free_dedup(const char *str);
 
-	inline const char  *operator[] (SSString);
+    /** Deallocate all strings in the StringSpace.  This means
+    all pointers returned by strdup_dedup are invalid.
+    */
+	void clear();
 
-	/** Return the string corresponding to the given index. NULL is
-     * returned if the index is invalid. 
-	 */
-	inline const char  *operator[] (int);
+private:
 
-	/** Dispose of a string given its index. This is useful when we
-	 *  don't have an SSString */
-	void disposeByIndex(int index);
+	typedef struct ssentry {
+		unsigned int count; // reference count
+		char str[4];        // string buffer, 4 is the minimum size, but may be allocated larger
+	} ssentry;
 
-	/** Dispose of strings that look like the provided. This is useful
-	 *  when we don't have an SSString and you don't want to keep an
-	 *  index around. */
-	void dispose(const char *str);
-
-	/** Print the contents of the StringSpace to stdout */
-	void  dump ();			
-
-    /** Remove all strings in the StringSpace. Be careful not to use
-	 *  any references to strings that previously were in the StringSpace:
-	 *  they will all be dangling now.
-	 */
-	void  purge(); 
-
-  private:
-	friend class SSString;
-
-	// the shared storage cell for the strings
-	struct SSStringEnt 
-    { 
-		bool        inUse;
-		int         refCount; 
-		char  *string; 
+	struct sskey_hash {
+		inline size_t operator()(const char * const &s) const noexcept {
+			return std::hash<std::string>{}(s);
+		}
+	};
+	struct sskey_equal {
+		inline bool operator()(const char * const & s1, const char * const & s2) const noexcept {
+			return strcmp(s1, s2) == 0;
+		}
 	};
 
-	class HashTable<YourString,int>  *stringSpace;
-	ExtArray<SSStringEnt>    strTable;
-	// The next couple of variables help us keep
-	// track of where we can put things into the strTable.
-	//int					  current;
-	int                      first_free_slot;
-	int                      highest_used_slot;
-	int                      number_of_slots_filled;
-};
+	static ssentry* new_entry(const char * str);
 
-
-/** A string space string.
- *  This is a string from a string space. They maintain a connection
- *  to the StringSpace, so you probably shouldn't create one from scratch,
- *  but through the StringSpace. */
-class SSString
-{
-  public:
-	/** Constructor */
-	SSString();
-	/** Constructor that duplicates another SSString */
-	SSString(const SSString &);
-	/** Destructor */
-	~SSString();
-
-	/** Copy an SString */
-	const SSString &operator= (const SSString &str);
-
-	/** Test two SSStrings for equality. */
-    friend bool operator== (const SSString &s1, const SSString &s2);
-
-	/** Test two SSStrings for inequality */
-	friend bool operator!= (const SSString &s1, const SSString &s2);
-
-	/** Copy an SSstring */
-   	void copy (const SSString &);
-
-	/** Dispose of an SSString. Be careful, dispose is called when 
-	 * an SSString is destructed. */
-   	void dispose ();
-
-	/** Get the string itself. Be careful--this is not a copy, this is 
-	 * the original. Don't be mucking with it or deleting it. 
-	 */
-	inline 	const char *getCharString (void) const;
-
-	/** Get the index for an SSString. Probably not useful, but you could
-	 *  use the indexes to compare to strings. Of course, you could just 
-	 *  use the Boolean operators we give you too. */
-	inline 	int	 getIndex (void);
-
-  private:
-	friend class StringSpace;
-
-	int			index;						// index into string table
-	StringSpace	*context;					// pointer to hosting string space
+    std::unordered_map<const char *, ssentry*, sskey_hash, sskey_equal> ss_map;
 };
 
 
 
-
-// --------[ Implementations of inline functions follow ]--------------------
-
-inline const char * StringSpace::
-operator[] (SSString ssstr)
-{
-	const char *the_string;
-    if (ssstr.index >= 0 && ssstr.index <= highest_used_slot && ssstr.context == this) {
-        the_string = strTable[ssstr.index].string;
-	} else {
-        the_string = NULL;
-	}
-	return the_string;
-}
-
-inline const char * StringSpace::
-operator[] (int id)
-{
-	const char *the_string;
-    if (id >= 0 && id <= highest_used_slot) {
-		the_string = strTable[id].string;
-	} else {
-		the_string = NULL;
-	}
-	return the_string;
-}
-
-inline int 
-StringSpace::getNumStrings (void)			// number of strings in the space
-{
-	return number_of_slots_filled;
-}
-
-
-inline const char *
-SSString::getCharString (void) const		// get the ASCII string itself	
-{
-	const char *the_string;
-	if (context != NULL) {
-		the_string = context->strTable[index].string;
-	} else {
-		the_string = NULL;
-	}
-	return the_string;
-}
-
-
-inline int SSString::
-getIndex (void)						// get the integer index 
-{
-	return index;
-}	
-
-
-#endif//__STRING_SPACE_H__
+#endif //__STRING_SPACE_H__
 
 
 

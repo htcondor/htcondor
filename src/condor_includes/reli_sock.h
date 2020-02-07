@@ -38,6 +38,10 @@
 // They are for use with the Globus GSI gss-assist library.
 int relisock_gsi_get(void *arg, void **bufp, size_t *sizep);
 int relisock_gsi_put(void *arg,  void *buf, size_t size);
+// These variables hold the size of the last data block handled by each
+// respective function. They are part of a hacky workaround for a GSI bug.
+extern size_t relisock_gsi_get_last_size;
+extern size_t relisock_gsi_put_last_size;
 
 class Authentication;
 class Condor_MD_MAC;
@@ -57,6 +61,7 @@ class ReliSock : public Sock {
 	friend class Authentication;
 	friend class BlockingModeGuard;
 	friend class DockerProc;
+	friend class OsProc;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -272,7 +277,7 @@ public:
 	// This matters for the authentication protocol.
 	void isClient(bool flag) { is_client=flag; };
 
-    const char * isIncomingDataMD5ed();
+    const char * isIncomingDataHashed();
 
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}

@@ -93,7 +93,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking );
+	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType=nullptr, void *miscdata=nullptr );
 
 	void reconfig( void );
 
@@ -105,6 +105,15 @@ public:
 
 	bool useTCPForUpdates() { return use_tcp; }
 
+	time_t getStartTime() { return startTime; }
+	time_t getReconfigTime() { return reconfigTime; }
+
+		/** Request that the collector get an identity token from the specified
+		 *  schedd.
+		 */
+	bool requestScheddToken(const std::string &schedd_name,
+		const std::vector<std::string> &authz_bounding_set,
+		int lifetime, std::string &token, CondorError &err);
 
 private:
 
@@ -121,15 +130,15 @@ private:
 	std::deque<class UpdateData*> pending_update_list;
 	friend class UpdateData;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void* miscdata );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
 
-	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 );
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
 
 	char* update_destination;
 
@@ -142,6 +151,7 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
+	time_t reconfigTime;
 };
 
 

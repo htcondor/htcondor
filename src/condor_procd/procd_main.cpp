@@ -213,6 +213,8 @@ parse_command_line(int argc, char* argv[])
 				}
 				index++;
 				log_size = atoi(argv[index]);
+				// set a 64k floor on the log size, to avoid excessive rotation
+				if (log_size > 0) { log_size = MAX(log_size, 65536); }
 				break;
 				
 			// maximum snapshot interval
@@ -334,21 +336,6 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 		fprintf(stderr, "error: getProcInfo failed on parent PID\n");
 		exit(1);
 	}
-
-#if !defined(WIN32)
-	/* The operation of the procd is that it will allow any authorized client
-		to send signals to any process which is the child of the parent
-		of the procd. One could conspire to exec the procd in a process
-		whose parent is already the init process, and in doing so, allow
-		an authorized client to send a signal to ANY process on the system
-		since by definition they are all children of init. So, to prevent
-		an escalation of privileges granted to the authorized process, we 
-		exit if we determine that our parent is init. */
-	if (own_pi->ppid == 1) {
-		fprintf(stderr, "error: Procd's ppid can't be 1!\n");
-		exit(1);
-	}
-#endif
 
 	if (parent_pi->birthday > own_pi->birthday) {
 		fprintf(stderr,

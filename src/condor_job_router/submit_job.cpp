@@ -488,13 +488,14 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	ExprTree * tree;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
-	src.ResetExpr();
-	while( src.NextExpr(lhstr, tree) ) {
+	for( auto itr = src.begin(); itr != src.end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}
 		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr) { 
+		if( !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}
@@ -873,45 +874,6 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	return success;
 }
 
-bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool *no_ulog )
-{
-	int cluster, proc;
-	std::string owner;
-	std::string userLogFile;
-	std::string domain;
-	std::string dagmanLogFile;
-	bool use_xml = false;
-
-	ASSERT(ulog);
-	ASSERT(no_ulog);
-
-	userLogFile[0] = '\0';
-	dagmanLogFile[0] = '\0';
-	std::vector<const char*> logfiles;
-	if ( getPathToUserLog( &job_ad, userLogFile ) ) {
-		logfiles.push_back( userLogFile.c_str());
-	}
-	if ( getPathToUserLog( &job_ad, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG ) ) {
-		logfiles.push_back( dagmanLogFile.c_str() );
-	}
-	*no_ulog = logfiles.empty();
-	if(*no_ulog) {
-		return true;
-	}
-
-	job_ad.EvaluateAttrString(ATTR_OWNER,owner);
-	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
-	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
-	job_ad.EvaluateAttrString( ATTR_NT_DOMAIN, domain );
-	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
-
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0)) {
-		return false;
-	}
-	ulog->setUseXML( use_xml );
-	return true;
-}
-
 bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
@@ -1039,15 +1001,14 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
-	bool no_ulog = false;
 
-	if(!InitializeUserLog(ad,&ulog,&no_ulog)) {
+	if ( ! ulog.initialize(ad, true) ) {
 		dprintf( D_FULLDEBUG,
 				 "(%d.%d) Unable to open user log (event %d)\n",
 				 event.cluster, event.proc, event.eventNumber );
 		return false;
 	}
-	if(no_ulog) {
+	if ( ! ulog.willWrite() ) {
 		return true;
 	}
 

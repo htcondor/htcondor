@@ -42,16 +42,16 @@ public:
 	virtual char const *getArgv0();
 
 private:
-	int ParseExceptionLine( const char *line, MyString &name, MyString &type );
+	int ParseExceptionLine( const char *line, std::string &name, std::string &type );
 	int ParseExceptionFile( FILE *file );
 	java_exit_mode_t ClassifyExit( int status );
 
 	char *execute_dir;
-	MyString startfile;
-	MyString endfile;
-	MyString ex_name;
-	MyString ex_type;
-	MyString ex_hier;
+	std::string startfile;
+	std::string endfile;
+	std::string ex_name;
+	std::string ex_type;
+	std::string ex_hier;
 };
 
 #endif

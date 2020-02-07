@@ -28,7 +28,13 @@
 // Force the linker to include KERNEL32.LIB and to NOT include the c-runtime
 #pragma comment(linker, "/nodefaultlib")
 #pragma comment(linker, "/defaultlib:kernel32.lib")
+#ifdef NOCONSOLE
+#pragma message("building NOCONSOLE")
+#pragma comment(linker, "/subsystem:windows")
+#pragma comment(linker, "/defaultlib:user32.lib")
+#else
 #pragma comment(linker, "/subsystem:console")
+#endif
 #pragma comment(linker, "/entry:begin")
 
 // Build this file using the following command line.
@@ -46,6 +52,8 @@ extern "C" void _fastcall __security_check_cookie(int cookie) { };
 // the c-runtime, this includes avoiding 64 bit multiply/divide.
 
 typedef void* HANDLE;
+typedef void* HMODULE;
+typedef void* HWND;
 typedef void* HLOCAL;
 typedef int   BOOL;
 typedef unsigned int UINT;
@@ -84,6 +92,41 @@ extern "C" unsigned int __stdcall Sleep(unsigned int millisec);
 extern "C" HANDLE __stdcall GetStdHandle(int idHandle);
 extern "C" const wchar_t * __stdcall GetCommandLineW(void);
 extern "C" BOOL __stdcall WriteFile(HANDLE hFile, char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
+extern "C" unsigned __int64 __stdcall GetTickCount64();
+
+extern "C" BOOL __stdcall DuplicateHandle(HANDLE hSrcProc, HANDLE hi, HANDLE hDstProc, HANDLE *ho, UINT access, BOOL inherit, UINT options);
+#define DUPLICATE_CLOSE_SOURCE 1
+#define DUPLICATE_SAME_ACCESS 2
+
+#define MB_OK                0
+#define MB_OKCANCEL          1
+#define MB_ABORTRETRYIGNORE  2
+#define MB_YESNOCANCEL       3
+#define MB_YESNO             4
+#define MB_RETRYCANCEL       5
+#define MB_CANCELTRYCONTINUE 6
+#define MB_ICONERROR       0x10 // stop icon
+#define MB_ICONQUESTION    0x20 // ?
+#define MB_ICONEXCLAMATION 0x30 // !
+#define MB_ICONINFORMATION 0x40 // (i) icon
+#define MB_DEFBUTTON2      0x100
+#define MB_DEFBUTTON3      0x200
+#define MB_DEFBUTTON4      0x300
+#define MB_SYSTEMMODAL     0x1000 // topmost
+#define MB_TASKMODAL       0x2000 // disables all app toplevel windows, even when passed hwnd is NULL
+#define MB_SERVICENOTIFICATION 0x00200000 // display on current active desktop, hwnd MUST BE NULL
+extern "C" int __stdcall MessageBoxExA(HWND hwnd, const char * text, const char * caption, UINT mb_flags, unsigned short wLangId);
+// return values
+#define IDOK     1
+#define IDCANCEL 2
+#define IDABORT  3
+#define IDRETRY  4
+#define IDIGNORE 5
+#define IDYES    6
+#define IDNO     7
+#define IDTRYAGAIN 10
+#define IDCONTINUE 11
+
 
 #define LMEM_ZERO 0x40
 #define LMEM_HANDLE 0x02
@@ -113,6 +156,7 @@ extern "C" BOOL __stdcall GetFileInformationByHandle(HANDLE hFile, BY_HANDLE_FIL
 #define READ_META 0
 #define FILE_SHARE_ALL (1|2|4)
 #define OPEN_EXISTING 3
+#define FILE_ATTRIBUTE_NORMAL 0x80
 extern "C" HANDLE __stdcall CreateFileW(wchar_t * name, UINT access, UINT share, void * psa, UINT create, UINT flags, HANDLE hTemplate);
 
 #define QS_ALLEVENTS 0x04BF
@@ -120,6 +164,52 @@ extern "C" HANDLE __stdcall CreateFileW(wchar_t * name, UINT access, UINT share,
 extern "C" unsigned int __stdcall MsgWaitForMultipleObjects(unsigned int count, const HANDLE* phandles, int bWaitAll, unsigned int millisec, unsigned int mask);
 #define WAIT_TIMEOUT 258
 #define WAIT_FAILED (unsigned int)-1;
+
+#ifdef NOCONSOLE
+typedef unsigned short ATOM;
+typedef void* LRESULT;
+typedef void* WPARAM;
+typedef void* LPARAM;
+#pragma pack(push,4)
+typedef struct _WNDCLASSEXW {
+   UINT   cb;
+   UINT   style;
+   LRESULT (__stdcall * pfnWndProc)(HWND, UINT, WPARAM, LPARAM);
+   int     cbClassExtra;
+   int     cbWndExtra;
+   HMODULE hInstance;
+   void*   hIcon;
+   void*   hCursor;
+   void*   hbrBackground;
+   wchar_t* pszMenuName;
+   wchar_t* pszClassName;
+   void *  hIconSm;
+} WNDCLASSEXW;
+#pragma pack(pop)
+extern "C" ATOM __stdcall RegisterClassExW(WNDCLASSEXW * pcls);
+#define CS_GLOBALCLASS 0x4000
+#define WM_CLOSE 0x0010
+#define WM_QUIT  0x0012
+#define HWND_MESSAGE     ((HWND)-3)
+extern "C" HWND __stdcall CreateWindowExW(UINT dwExStyle, wchar_t* pszClass, wchar_t* pszWindow, UINT dwStyle, int x, int y, int cx, int cy, HWND hwndParent, void* hmenu, HMODULE hInst, void* lParam);
+extern "C" LRESULT __stdcall DefWindowProcW(HWND hwnd, UINT, WPARAM, LPARAM);
+extern "C" HMODULE __stdcall GetModuleHandleW(wchar_t* pszModule);
+
+typedef struct _MSG {
+	HWND hwnd;
+	UINT id;
+	void * wparam;
+	void * lparam;
+	UINT   time;
+	int    x;
+	int    y;
+} MSG;
+extern "C" int __stdcall PeekMessageW(MSG * msg, HWND, UINT idMin, UINT idMax, UINT uRemove);
+extern "C" LRESULT __stdcall DispatchMessageW(MSG * msg);
+#define PM_NOREMOVE 0
+#define PM_REMOVE   1
+#define PM_NOYIELD  2
+#endif
 
 
 // we need an implementation of memset, because the compiler sometimes generates refs to it.
@@ -344,13 +434,106 @@ const c* parse_uint(const c* pline, unsigned int * puint) {
 	return pline;
 }
 
-void begin( void )
+// return true if a file exists, false if it does not
+bool check_for_file(wchar_t * killfile)
+{
+	UINT access = READ_META;
+	HANDLE hf = CreateFileW(killfile, access, FILE_SHARE_ALL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hf == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+	CloseHandle(hf);
+	return true;
+}
+
+#ifdef NOCONSOLE
+extern "C" LRESULT __stdcall msg_window_proc(HWND hwnd, UINT idMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (idMsg == WM_CLOSE) { ExitProcess(1); }
+	return DefWindowProcW(hwnd, idMsg, wParam, lParam);
+}
+extern "C" LRESULT __stdcall msg_window_proc_no_close(HWND hwnd, UINT idMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (idMsg == WM_CLOSE) { return 0; }
+	return DefWindowProcW(hwnd, idMsg, wParam, lParam);
+}
+
+void pump_messages_with_timeout(unsigned int ms, int no_close, wchar_t * killfile)
+{
+	unsigned __int64 begin_time = GetTickCount64();
+
+	WNDCLASSEXW wc;
+	memset((char*)&wc, 0, sizeof(wc));
+	wc.cb = sizeof(wc);
+	wc.style = 0; //CS_GLOBALCLASS;
+	if (no_close) {
+		wc.pfnWndProc = msg_window_proc_no_close;
+	} else {
+		wc.pfnWndProc = msg_window_proc;
+	}
+	wc.pszClassName = L"ConsoleWindowClass";
+	wc.hInstance = GetModuleHandleW(NULL);
+	ATOM atm = RegisterClassExW(&wc);
+	if ( ! atm) {
+		UINT err = GetLastError();
+		char buf[100], *p = append(buf, "RegisterClass failed err="); p = append_num(p, err, 1);
+		MessageBoxExA(NULL, buf, "Error", MB_OK | MB_ICONINFORMATION, 0);
+		ExitProcess(1);
+	}
+
+	UINT exstyle = 0, style = 0;
+	HWND hwnd = CreateWindowExW(exstyle, L"ConsoleWindowClass", L"", style, 0,0,0,0, HWND_MESSAGE, NULL, wc.hInstance, NULL);
+	if ( ! hwnd) {
+		UINT err = GetLastError();
+		char buf[100], *p = append(buf, "CreateWindow failed err="); p = append_num(p, err, 1);
+		MessageBoxExA(NULL, buf, "Error", MB_OK | MB_ICONINFORMATION, 0);
+		ExitProcess(1);
+	}
+
+	HANDLE hMe = GetCurrentProcess();
+	HANDLE hProc = hMe;
+	DuplicateHandle(hMe, hMe, hMe, &hProc, 0, 0, DUPLICATE_SAME_ACCESS);
+
+	for (;;) {
+		if (killfile && check_for_file(killfile)) {
+			break;
+		}
+		unsigned __int64 now = GetTickCount64();
+		unsigned __int64 elapsed = now - begin_time;
+		if (elapsed >= ms) break;
+		unsigned int wait_time = ms - (int)elapsed;
+		if (killfile) {
+			if (wait_time > 1000) wait_time = 1000;
+		}
+
+		UINT ix = MsgWaitForMultipleObjects(1, &hProc, false, wait_time, QS_ALLINPUT);
+		if (ix == 1) {
+			MSG msg;
+			while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+				if (msg.id == WM_QUIT)
+					break;
+				DispatchMessageW(&msg);
+			}
+		}
+	};
+}
+#endif
+
+extern "C" void __cdecl begin( void )
 {
     int multi_link_only = 0;
     int show_usage = 0;
+    int dash_quiet = 0;
+    int no_close = 0;
     int was_arg = 0;
+    int next_arg_is = 0; // 'k' = killfile
+    wchar_t * killfile = NULL;
 
+#ifdef NOCONSOLE
+	dash_quiet = 1;
+#else
 	HANDLE hStdOut = GetStdHandle(STD_OUT_HANDLE);
+#endif
 
 	const char * ws = " \t\r\n";
 	const wchar_t * pcmdline = next_token(GetCommandLineW(), ws); // get command line and skip the command name.
@@ -358,13 +541,26 @@ void begin( void )
 		int cchArg;
 		const wchar_t * pArg;
 		const wchar_t * pnext = next_token_ref(pcmdline, ws, pArg, cchArg);
-		if (*pArg == '-' || *pArg == '/') {
+		if (next_arg_is) {
+			switch (next_arg_is) {
+			case 'k':
+				killfile = AllocCopyZ(pArg, cchArg);
+				break;
+			default: show_usage = 1; break;
+			}
+			next_arg_is = 0;
+		} else if (*pArg == '-' || *pArg == '/') {
 			const wchar_t * popt = pArg+1;
 			for (int ii = 1; ii < cchArg; ++ii) {
 				wchar_t opt = pArg[ii];
 				switch (opt) {
 				 case 'h': show_usage = 1; break;
 				 case '?': show_usage = 1; break;
+				 case 'q': dash_quiet = 1; break;
+				 case 'k': next_arg_is = opt; break;
+				#ifdef NOCONSOLE
+				 case 'u': no_close   = 1; break;
+				#endif
 				}
 			}
 		} else if (*pArg) {
@@ -378,33 +574,78 @@ void begin( void )
 					case 's': units = 1000; break; // seconds
 					case 'm': units = 1; if (psz[1] == 's') break;    // millisec
 					case 'M': units = 1000 * 60; break; // minutes
+					case 'H': units = 1000 * 60 * 60; break; //hours
 					default: units = 0; show_usage = true; break;
 				}
 			}
 
 			ms *= units;
 			if (ms) {
-				char buf[100], *p = append(buf, "Sleeping for "); p = append_num(p, ms/1000, 1);
-				if (ms%1000) { p = append(p, "."); p = append_num(p, ms%1000, 3, '0'); } 
-				p = append(p, " seconds...");
-				Print(hStdOut, buf, p);
-				Sleep(ms);
-				Print(hStdOut, "\r\n", 2);
+#ifdef NOCONSOLE
+				if ((ms <= 1000)) {
+					Sleep(ms);
+				} else {
+					pump_messages_with_timeout(ms, no_close, killfile);
+				}
+#else
+				if ( ! dash_quiet) {
+				    char buf[100], *p = append(buf, "Sleeping for "); p = append_num(p, ms/1000, 1);
+				    if (ms%1000) { p = append(p, "."); p = append_num(p, ms%1000, 3, '0'); }
+				    p = append(p, " seconds...");
+				    Print(hStdOut, buf, p);
+				}
+				if (killfile) {
+					unsigned __int64 begin = GetTickCount64();
+					unsigned __int64 quit_time = begin + ms;
+					for (;;) {
+						if (check_for_file(killfile)) {
+							if ( ! dash_quiet) { Print(hStdOut, "got killfile", 12); }
+							break;
+						}
+						unsigned __int64 now = GetTickCount64();
+						if (now >= quit_time)
+							break;
+						unsigned __int64 interval = quit_time - now;
+						if (interval > 1000) { interval = 1000; }
+						Sleep((unsigned int)interval);
+					}
+				} else {
+					Sleep(ms);
+				}
+				if ( ! dash_quiet) { Print(hStdOut, "\r\n", 2); }
+#endif
 			}
 		}
 		pcmdline = pnext;
 	}
 
 	if (show_usage || ! was_arg) {
+#ifdef NOCONSOLE
+		MessageBoxExA(NULL,
+#else
 		Print(hStdOut,
+#endif
 			"Usage: sleep [options] <time>[ms|s|M]\r\n"
 			"    sleeps for <time>, if <time> is followed by a units specifier it is treated as:\r\n"
 			"    ms  time value is in milliseconds\r\n"
 			"    s   time value is in seconds. this is the default\r\n"
 			"    M   time value is in minutes.\r\n"
+			"    H   time value is in hours.\r\n"
 			" [options] is one or more of\r\n"
-			"   -h print usage (this output)\r\n"
-			"\r\n" , -1);
+			"   -h        print usage (this output)\r\n"
+			"   -k <file> poll for <file> and exit if it exists.\r\n"
+#ifdef NOCONSOLE
+			"   -u        ignore WM_CLOSE message\r\n"
+			" this is a Windows app with a non-visible window that will exit early when sent a WM_CLOSE message.\r\n"
+#else
+			"   -q        quiet (does not report sleep time)\r\n"
+#endif
+			"\r\n",
+#ifdef NOCONSOLE
+			"Usage", MB_OK | MB_ICONINFORMATION, 0);
+#else
+			-1);
+#endif
 	}
 
 	ExitProcess(0);

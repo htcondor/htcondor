@@ -21,13 +21,10 @@
  #define __FILETRANSFER_STATS_H__
  
  #include "condor_classad.h"
- #include "condor_collector.h"
  #include "hashkey.h"
  #include "extArray.h"
  #include "generic_stats.h"
  
- using namespace std;
-
  class FileTransferStats
  {
 	 public:
@@ -37,23 +34,24 @@
 		bool TransferSuccess;
 		
 		double ConnectionTimeSeconds;
-		double TransferEndTime;
-		double TransferStartTime;
+		int LibcurlReturnCode;
+		time_t TransferEndTime;
+		time_t TransferStartTime;
 		
 		long TransferFileBytes;
-		long TransferReturnCode;
+		long TransferHTTPStatusCode;
 		long TransferTotalBytes;
 		long TransferTries;
 		
-		string HttpCacheHitOrMiss;
-		string HttpCacheHost;
-		string TransferError;
-		string TransferFileName;
-		string TransferHostName;
-		string TransferLocalMachineName;
-		string TransferProtocol;
-		string TransferType;
-		string TransferUrl;
+		std::string HttpCacheHitOrMiss;
+		std::string HttpCacheHost;
+		std::string TransferError;
+		std::string TransferFileName;
+		std::string TransferHostName;
+		std::string TransferLocalMachineName;
+		std::string TransferProtocol;
+		std::string TransferType;
+		std::string TransferUrl;
 		
 		StatisticsPool Pool;
 

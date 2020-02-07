@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "string_list.h"
 #include "condor_arglist.h"
 #include "MyString.h"
@@ -31,6 +30,7 @@
 #include "vm_univ_utils.h"
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
+#include "AWSv4-utils.h"
 
 #include "condor_base64.h"
 #include <sstream>
@@ -57,46 +57,9 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }
 
-//
-// This function should not be called for anything in query_parameters,
-// except for by AmazonQuery::SendRequest().
-//
 std::string amazonURLEncode( const std::string & input )
 {
-    /*
-     * See http://docs.amazonwebservices.com/AWSEC2/2010-11-15/DeveloperGuide/using-query-api.html
-     *
-     *
-     * Since the GAHP protocol is defined to be ASCII, we're going to ignore
-     * UTF-8, and hope it goes away.
-     *
-     */
-    std::string output;
-    for( unsigned i = 0; i < input.length(); ++i ) {
-        // "Do not URL encode ... A-Z, a-z, 0-9, hyphen ( - ),
-        // underscore ( _ ), period ( . ), and tilde ( ~ ).  Percent
-        // encode all other characters with %XY, where X and Y are hex
-        // characters 0-9 and uppercase A-F.  Percent encode extended
-        // UTF-8 characters in the form %XY%ZA..."
-        if( ('A' <= input[i] && input[i] <= 'Z')
-         || ('a' <= input[i] && input[i] <= 'z')
-         || ('0' <= input[i] && input[i] <= '9')
-         || input[i] == '-'
-         || input[i] == '_'
-         || input[i] == '.'
-         || input[i] == '~' ) {
-            char uglyHack[] = "X";
-            uglyHack[0] = input[i];
-            output.append( uglyHack );
-        } else {
-            char percentEncode[4];
-            int written = snprintf( percentEncode, 4, "%%%.2hhX", input[i] );
-            ASSERT( written == 3 );
-            output.append( percentEncode );
-        }
-    }
-
-    return output;
+    return AWSv4Impl::amazonURLEncode( input );
 }
 
 //
@@ -125,31 +88,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n",
-            fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
-
-    char * rawBuffer = (char *)malloc( fileSize + 1 );
-    assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-    close( fd );
-    if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-            fileName.c_str(), fileSize, totalRead );
-        free( rawBuffer );
-        return false;
-    }
-    contents.assign( rawBuffer, fileSize );
-    free( rawBuffer );
-
-    return true;
+	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -394,27 +333,7 @@ bool AmazonRequest::SendRequest() {
 }
 
 std::string AmazonRequest::canonicalizeQueryString() {
-    std::string canonicalQueryString;
-    for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
-        // Step 1A: The map sorts the query parameters for us.  Strictly
-        // speaking, we should encode into a different AttributeValueMap
-        // and then compose the string out of that, in case amazonURLEncode()
-        // changes the sort order, but we don't specify parameters like that.
-
-        // Step 1B: Encode the parameter names and values.
-        std::string name = amazonURLEncode( i->first );
-        std::string value = amazonURLEncode( i->second );
-
-        // Step 1C: Separate parameter names from values with '='.
-        canonicalQueryString += name + '=' + value;
-
-        // Step 1D: Separate name-value pairs with '&';
-        canonicalQueryString += '&';
-    }
-
-    // We'll always have a superflous trailing ampersand.
-    canonicalQueryString.erase( canonicalQueryString.end() - 1 );
-    return canonicalQueryString;
+    return AWSv4Impl::canonicalizeQueryString( query_parameters );
 }
 
 bool parseURL(	const std::string & url,
@@ -437,60 +356,96 @@ void convertMessageDigestToLowercaseHex(
 		const unsigned char * messageDigest,
 		unsigned int mdLength,
 		std::string & hexEncoded ) {
-	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
-	ASSERT( buffer );
-	char * ptr = buffer;
-	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
-	}
-	hexEncoded.assign( buffer, mdLength * 2 );
-	free(buffer);
+	AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest,
+		mdLength, hexEncoded );
 }
 
 
 bool doSha256(	const std::string & payload,
 				unsigned char * messageDigest,
 				unsigned int * mdLength ) {
-	EVP_MD_CTX * mdctx = EVP_MD_CTX_create();
-	if( mdctx == NULL ) { return false; }
-
-	if(! EVP_DigestInit_ex( mdctx, EVP_sha256(), NULL )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestUpdate( mdctx, payload.c_str(), payload.length() )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestFinal_ex( mdctx, messageDigest, mdLength )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	EVP_MD_CTX_destroy( mdctx );
-	return true;
+	return AWSv4Impl::doSha256( payload, messageDigest, mdLength );
 }
 
 std::string pathEncode( const std::string & original ) {
-	std::string segment;
-	std::string encoded;
-	const char * o = original.c_str();
+    return AWSv4Impl::pathEncode( original );
+}
 
-	size_t next = 0;
-	size_t offset = 0;
-	size_t length = strlen( o );
-	while( offset < length ) {
-		next = strcspn( o + offset, "/" );
-		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
+bool AmazonMetadataQuery::SendRequest( const std::string & uri ) {
+	// Don't know what the meta-data server would do with anything else.
+	httpVerb = "GET";
+	// Spin the throttling engine up appropriately.
+	Throttle::now( & signatureTime );
+	// Send a "prepared" request (e.g., don't do any AWS security).
+	return sendPreparedRequest( "http", uri, "" );
+}
 
-		segment = std::string( o + offset, next );
-		encoded += amazonURLEncode( segment );
+bool
+fetchSecurityTokens( int rID, std::string & keyID, std::string & saKey, std::string & token ) {
+	int requestID = -10 * rID;
 
-		offset += next;
+	// (1) Determine the IAM role to use:
+	//     * Execute `curl http://169.254.169.254/latest/meta-data/iam/security-credentials/`;
+	//       the trailing slash is important. :(
+	//     * If there's only one, use that one.  Otherwise, look for the
+	//       'HTCondor' role and use that one.  Otherwise, fail.
+	// (2) Execute `curl http://169.254.169.254/latest/meta-data/iam/security-credentials/<iam-role>`.
+	// (3) Parse the JSON from step two for for "AccessKeyId",
+	//     "SecretAccessKey", and "Token", assigning them appropriately.
+
+	AmazonMetadataQuery listRequest( requestID--, "list-credentials" );
+	std::string uri = "http://169.254.169.254/latest/meta-data/iam/security-credentials/";
+	bool result = listRequest.SendRequest( uri );
+	if(! result) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to fetch list of IAM roles (%s).\n", uri.c_str() );
+		return false;
 	}
-	return encoded;
+
+	std::string listOfRoles = listRequest.getResultString();
+
+	std::string role;
+	StringList sl( listOfRoles.c_str(), "\n" );
+	switch( sl.number() ) {
+		case 0:
+			dprintf( D_ALWAYS, "fetchSecurityTokens(): Found empty list of roles.\n" );
+			return false;
+		case 1:
+			role = sl.first();
+			break;
+		default:
+			char * name = NULL;
+			sl.rewind();
+			while( (name = sl.next()) != NULL ) {
+				if( strstr( name, "HTCondor" ) != NULL ) {
+					role = name;
+					break;
+				}
+			}
+			break;
+	}
+
+	AmazonMetadataQuery roleRequest( requestID--, "fetch-credentials" );
+	uri += role;
+	result = roleRequest.SendRequest( uri );
+	if(! result) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to fetch security tokens for role (%s).\n", uri.c_str() );
+		return false;
+	}
+
+	ClassAd reply;
+	classad::ClassAdJsonParser cajp;
+	if(! cajp.ParseClassAd( roleRequest.getResultString(), reply, true )) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to parse reply '%s' as JSON.\n",
+			roleRequest.getResultString().c_str() );
+		return false;
+	}
+
+	// I think this ordering prevents short-circuiting.
+	result = true;
+	result = reply.LookupString( "AccessKeyId", keyID ) && result;
+	result = reply.LookupString( "SecretAccessKey", saKey ) && result;
+	result = reply.LookupString( "Token", token ) && result;
+	return result;
 }
 
 bool AmazonRequest::createV4Signature(	const std::string & payload,
@@ -527,13 +482,46 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// everything in the POST body, instead.
 	std::string canonicalQueryString;
 
-	// ... that is, unless we're using the GET method.
+	// This function doesn't (currently) support query parameters,
+	// but no current caller attempts to use them.
 	ASSERT( (httpVerb != "GET") || query_parameters.size() == 0 );
 
 	// The canonical headers must include the Host header, so add that
 	// now if we don't have it.
 	if( headers.find( "Host" ) == headers.end() ) {
 		headers[ "Host" ] = host;
+	}
+
+	// If we're using temporary credentials, we need to add the token
+	// header here as well.  We set saKey and keyID here (well before
+	// necessary) since we'll get them for free when we get the token.
+	std::string keyID;
+	std::string saKey;
+	std::string token;
+	if( this->secretKeyFile == USE_INSTANCE_ROLE_MAGIC_STRING || this->accessKeyFile == USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		if(! fetchSecurityTokens( requestID, keyID, saKey, token ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to obtain role credentials'.";
+			dprintf( D_ALWAYS, "Unable to obtain role credentials, failing.\n" );
+			return false;
+		}
+		headers[ "X-Amz-Security-Token" ] = token;
+	} else {
+		if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
+			dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
+			return false;
+		}
+		trim( saKey );
+
+		if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
+			dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
+			return false;
+		}
+		trim( keyID );
 	}
 
 	// S3 complains if x-amz-date isn't signed, so do this early.
@@ -684,16 +672,9 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 
 	//
-	// Create task 3's inputs.
+	// Creating task 3's inputs was done when we checked to see if we needed
+	// to get the security token, since they come along for free when we do.
 	//
-	std::string saKey;
-	if( ! readShortFile( this->secretKeyFile, saKey ) ) {
-		this->errorCode = "E_FILE_IO";
-		this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
-		dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
-		return false;
-	}
-	trim( saKey );
 
 	// Task 3: calculate the signature.
 	saKey = "AWS4" + saKey;
@@ -724,15 +705,6 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 	std::string signature;
 	convertMessageDigestToLowercaseHex( messageDigest, mdLength, signature );
-
-	std::string keyID;
-	if( ! readShortFile( this->accessKeyFile, keyID ) ) {
-		this->errorCode = "E_FILE_IO";
-		this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
-		dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
-		return false;
-	}
-	trim( keyID );
 
 	formatstr( authorizationValue, "AWS4-HMAC-SHA256 Credential=%s/%s,"
 				" SignedHeaders=%s, Signature=%s",
@@ -3039,8 +3011,6 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
 
 AmazonCreateTags::~AmazonCreateTags() { }
 
-// Expecting:
-//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value>* NULLSTRING
 bool AmazonCreateTags::ioCheck(char **argv, int argc)
 {
     return verify_min_number_args(argc, 8) &&
@@ -3054,7 +3024,7 @@ bool AmazonCreateTags::ioCheck(char **argv, int argc)
 }
 
 // Expecting:
-//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
+//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value>* NULLSTRING
 bool
 AmazonCreateTags::workerFunction(char **argv,
                                  int argc,
@@ -3466,7 +3436,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	for( int i = 11; i < argc; ++i ) {
 		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
 
-		int lcIndex = i - 11;
+		int lcIndex = i - 10;
 
 		// argv[i] is a JSON blob, because otherwise things got complicated.
 		// Luckily, we don't have handle generic JSON, just the single-level
@@ -3517,7 +3487,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				ss << lcIndex << ".";
 
 				// Once again, the AWS documentation has this wrong.
-				ss << "tagSpecificationSet.1.";
+				ss << "TagSpecificationSet.1.";
 				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
 				ss << "Tag." << i << ".";
 
@@ -3533,12 +3503,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
 			sl.rewind();
 			char * groupName = NULL;
-			for( unsigned i = 0; (groupName = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupName = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupName";
+				ss << "GroupSet." << i << ".GroupName";
 				request.query_parameters[ ss.str() ] = groupName;
 			}
 		}
@@ -3547,12 +3517,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupIDs" ].c_str() );
 			sl.rewind();
 			char * groupID = NULL;
-			for( unsigned i = 0; (groupID = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupID = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupId";
+				ss << "GroupSet." << i << ".GroupId";
 				request.query_parameters[ ss.str() ] = groupID;
 			}
 		}
@@ -3561,7 +3531,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "BlockDeviceMapping" ].c_str() );
 			sl.rewind();
 			char * mapping = NULL;
-			for( unsigned i = 0; (mapping = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (mapping = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";

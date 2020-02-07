@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_network.h"
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
@@ -238,6 +237,7 @@ int main(int argc, char* argv[])
   if (QueryType==-1 || FromDate<0 || FromDate>Now || ToDate<FromDate) Usage(argv[0]);
   // if (ToDate>Now) ToDate=Now;
 
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   Daemon view_host( DT_VIEW_COLLECTOR, 0, pool );
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
   ReliSock sock;
   bool connect_error = true;
   do {
-    if (sock.connect((char*) view_host.addr(), 0)) {
+    if (sock.connect(view_host.addr(), 0)) {
       connect_error = false;
       break;
     }

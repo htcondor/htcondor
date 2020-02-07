@@ -23,20 +23,12 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
+#include "condor_config.h"
+#include <unordered_set>
 
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 static	TimerManager*	_t = NULL;
-
-	/*	MAX_FIRES_PER_TIMEOUT sets the maximum number of timer handlers
-		we will invoke per call to Timeout().  This limit prevents timers
-		from starving other kinds other DC handlers (i.e. it make certain
-		that we make it back to the Driver() loop occasionally.  The higher
-		the number, the more "timely" timer callbacks will be.  The lower
-		the number, the more responsive non-timer calls (like commands)
-		will be in the face of many timers coming due.
-	*/	
-const int MAX_FIRES_PER_TIMEOUT = 3;
 
 extern void **curr_dataptr;
 extern void **curr_regdataptr;
@@ -67,11 +59,20 @@ TimerManager::TimerManager()
 	_t = this; 
 	did_reset = false;
 	did_cancel = false;
+    max_timer_events_per_cycle = INT_MAX;
 }
 
 TimerManager::~TimerManager()
 {
 	CancelAllTimers();
+}
+
+void TimerManager::reconfig()
+{
+    max_timer_events_per_cycle = param_integer("MAX_TIMER_EVENTS_PER_CYCLE");
+    if (max_timer_events_per_cycle < 1) {
+        max_timer_events_per_cycle = INT_MAX;
+    }
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, TimerHandler handler, 
@@ -352,8 +353,8 @@ void TimerManager::CancelAllTimers()
 int
 TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 {
-	int				result, timer_check_cntr;
-	time_t			now, time_sample;
+	int				result;
+	time_t			now;
 	int				num_fires = 0;	// num of handlers called in this timeout
 
     if (pNumFired) *pNumFired = 0;
@@ -378,9 +379,22 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 	}
 
 	time(&now);
-	timer_check_cntr = 0;
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+    // if we are going to not limit the number of timer handlers we invoke,
+    // make a set now of all timers that are ready to go... below we will
+    // use this set in order to NOT invoke new timers that are inserted by
+    // timer handlers themselves.
+    std::unordered_set<int> readyTimerIds;
+    if (max_timer_events_per_cycle == INT_MAX) {
+        in_timeout = timer_list;
+        while ((in_timeout != NULL) && (in_timeout->when <= now)) {
+            readyTimerIds.insert(in_timeout->id);
+            in_timeout = in_timeout->next;
+        }
+        in_timeout = NULL;
+    }
 
 	// loop until all handlers that should have been called by now or before
 	// are invoked and renewed if periodic.  Remember that NewTimer and CancelTimer
@@ -390,37 +404,44 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 	// we make certain we do not call more than "max_fires" handlers in a 
 	// single timeout --- this ensures that timers don't starve out the rest
 	// of daemonCore if a timer handler resets itself to 0.
-	while( (timer_list != NULL) && (timer_list->when <= now ) && 
-		   (num_fires++ < MAX_FIRES_PER_TIMEOUT)) 
+	while( (timer_list != NULL) && (timer_list->when <= now ) &&
+		   (num_fires < max_timer_events_per_cycle))
 	{
-		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+        in_timeout = timer_list;
 
-		in_timeout = timer_list;
+        // In this code block, if there is no limit on how many timer handlers we will invoke,
+        // we want to skip over timers that got  added or reset by other timer handlers to make
+        // certain we aren't stuck here forever. So we will only call timer handlers that
+        // were ready to fire when we first entered Timeout().
+        if (max_timer_events_per_cycle == INT_MAX) {
+            std::unordered_set<int>::iterator it;
+            bool call_handler = false;
+            // Skip handlers already invoked or added
+            do {
+                it = readyTimerIds.find(in_timeout->id);
+                if (it == readyTimerIds.end()) {
+                    // this timer was not ready when we first looked, so it must have been
+                    // added or reset by another timer callback.  in this case, skip this timer
+                    // callback (we will deal with it next time through the daemoncore loop).
+                    dprintf(D_DAEMONCORE, "Timer %d not fired (SKIPPED) cause added\n", in_timeout->id);
+                    in_timeout = in_timeout->next;
+                }
+                else {
+                    // this timer was ready to fire when we first looked at the timer list, so
+                    // we are going to go ahead and call its handler.  Erase it from our readyTimerIds
+                    // list, and then break out of loop to go ahead and call the handler.
+                    call_handler = true;
+                    readyTimerIds.erase(it);
+                }
+            } while ((!call_handler) && (in_timeout != NULL) && (in_timeout->when <= now));
 
-		// In some cases, resuming from a suspend can cause the system
-		// clock to become temporarily skewed, causing crazy things to 
-		// happen with our timers (particularly for sending updates to
-		// the collector). So, to correct for such skews, we routinely
-		// check to make sure that 'now' is not in the future.
+            if (!call_handler) {
+                // no timers left that we want to fire at this time, break out of outer while loop
+                break;
+            }
+        }  // end of block if max_timer_events_per_cycle == INT_MAX
 
-		timer_check_cntr++; 
-
-			// since time() is somewhat expensive, we 
-			// only check every 10 times we loop 
-			
-		if ( timer_check_cntr > 10 ) {
-
-			timer_check_cntr = 0;
-
-			time(&time_sample);
-			if (now > time_sample) {
-				dprintf(D_ALWAYS, "DaemonCore: Clock skew detected "
-					"(time=%ld; now=%ld). Resetting TimerManager's "
-					"notion of 'now'\n", (long) time_sample, 
-					(long) now);
-				now = time_sample;
-			}
-		}
+        num_fires++;
 
 		// Update curr_dataptr for GetDataPtr()
 		curr_dataptr = &(in_timeout->data_ptr);

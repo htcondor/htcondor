@@ -179,10 +179,10 @@ main_init( int, char* argv[] )
 	resmgr->starter_mgr.init();
 
 	ClassAd tmp_classad;
-	MyString starter_ability_list;
+	std::string starter_ability_list;
 	resmgr->starter_mgr.publish(&tmp_classad, A_STATIC | A_PUBLIC);
 	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
-	if( starter_ability_list.find(ATTR_HAS_VM) >= 0 ) {
+	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
@@ -321,7 +321,9 @@ main_init( int, char* argv[] )
 	                              "command_delegate_gsi_cred", 0, DAEMON );
 #endif
 
-
+	daemonCore->Register_Command( COALESCE_SLOTS, "COALESCE_SLOTS",
+								  (CommandHandler)command_coalesce_slots,
+								  "command_coalesce_slots", 0, DAEMON );
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
@@ -353,7 +355,7 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
-	
+
 	// Virtual Machine commands
 	if( vmapi_is_host_machine() == TRUE ) {
 		daemonCore->Register_Command( VM_REGISTER,
@@ -534,10 +536,7 @@ init_params( int /* first_time */)
 	}
 	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty() && param_boolean("ALLOW_VM_CRUFT", false)) {
-		param_and_insert_unique_items("STARTD_VM_ATTRS", *startd_slot_attrs);
-		param_and_insert_unique_items("STARTD_VM_EXPRS", *startd_slot_attrs);
-	}
+
 	// now insert attributes needed by HTCondor
 	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	if (startd_slot_attrs->isEmpty()) {
@@ -574,7 +573,7 @@ init_params( int /* first_time */)
 	auto_free_ptr tmp(param("STARTD_NAME"));
 	if (tmp) {
 		if( Name ) {
-			delete [] Name;
+			free(Name);
 		}
 		Name = build_valid_daemon_name(tmp);
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
@@ -666,7 +665,7 @@ void CleanupReminderTimerCallback()
 		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
 
 		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.Value(), it->second, retry_now);
+		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
 
 		// if our exponential backoff says we should retry this time, attempt the cleanup.
 		if (retry_now) {
@@ -674,18 +673,18 @@ void CleanupReminderTimerCallback()
 			switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
 				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			case CleanupReminder::category::account:
 				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			}
@@ -729,6 +728,13 @@ void register_cleanup_reminder_timer()
 void PREFAST_NORETURN
 startd_exit() 
 {
+	// print resources into log.  we need to do this before we free them
+	if(param_boolean("STARTD_PRINT_ADS_ON_SHUTDOWN", false)) {
+		dprintf(D_ALWAYS, "*** BEGIN AD DUMP ***\n");
+		resmgr->walk(&Resource::dropAdInLogFile);
+		dprintf(D_ALWAYS, "*** END AD DUMP ***\n");
+	}
+
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
 		dprintf( D_ALWAYS, "Deleting cron job manager\n" );

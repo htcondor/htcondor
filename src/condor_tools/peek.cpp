@@ -138,6 +138,7 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 	std::string job_id;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	for (int i=1; i<argc; i++) {
@@ -181,6 +182,7 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 			m_transfer_stdout = false;
 		} else if(!strcmp(argv[i],"-stderr")) {
 			m_transfer_stderr = true;
+			m_transfer_stdout = false;
 		} else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "-follow")) {
 			m_follow = true;
 		} else if (!strcmp(argv[i], "-auto-retry")) {
@@ -284,7 +286,8 @@ HTCondorPeek::create_session()
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					m_starter_addr.Value(),
-					0 );
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}
