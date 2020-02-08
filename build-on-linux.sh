@@ -16,8 +16,10 @@ if [ -f /etc/redhat-release -o -f /etc/debian_version ]; then
     condor_version=$(awk -F\" '/^set\(VERSION / {print $2}' ${src_dir}/CMakeLists.txt)
     echo "Building HTCondor version ${condor_version}"
 
-    # Fake a BUILD-ID
-    date +'%Y%m%d%H%M' > BUILD-ID
+    # Fake a BUILD-ID if one not provided
+    if [ ! -f BUILD-ID ]; then
+        date +'%Y%m%d%H%M' > BUILD-ID
+    fi
 
     # Create the source tarball from the source directory
     mkdir -p condor-${condor_version}
