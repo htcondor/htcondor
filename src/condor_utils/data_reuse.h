@@ -147,6 +147,9 @@ private:
 	void CreatePaths();
 	void Cleanup();
 
+		// Returns true if we should have an extra-high debug level.
+	static bool GetExtraDebug();
+
 	bool m_owner{true};
 	bool m_valid{false};
 

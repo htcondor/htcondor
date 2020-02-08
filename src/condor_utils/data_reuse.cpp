@@ -245,7 +245,7 @@ DataReuseDirectory::ClearSpace(uint64_t size, LogSentry &sentry, CondorError &er
 			err.pushf("DataReuse", 4, "Failed to unlink cache entry: %s", strerror(errno));
 			return false;
 		}
-		dprintf(D_FULLDEBUG, "Decreasing reserved space by %llu",
+		if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Decreasing reserved space by %llu",
 			static_cast<unsigned long long>(file_entry.size()));
 		m_reserved_space -= file_entry.size();
 
@@ -343,7 +343,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					resEvent.getReservedSpace()))
 			);
 			m_space_reservations.insert(std::move(value));
-			dprintf(D_FULLDEBUG, "Incrementing reserved space by %llu to %llu for UUID %s.\n",
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing reserved space by %llu to %llu for UUID %s.\n",
 				static_cast<unsigned long long>(resEvent.getReservedSpace()),
 				static_cast<unsigned long long>(m_reserved_space + resEvent.getReservedSpace()),
 				resEvent.getUUID().c_str());
@@ -370,7 +370,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				" reservation is unknown!", relEvent.getUUID().c_str());
 			return false;
 		}
-		dprintf(D_FULLDEBUG, "Decrementing reserved space by %llu to %llu for UUID %s.\n", static_cast<unsigned long long>(iter->second->getReservedSpace()),
+		if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Decrementing reserved space by %llu to %llu for UUID %s.\n",
+			static_cast<unsigned long long>(iter->second->getReservedSpace()),
 			static_cast<unsigned long long>(m_reserved_space - iter->second->getReservedSpace()), relEvent.getUUID().c_str());
 		m_reserved_space -= iter->second->getReservedSpace();
 		m_space_reservations.erase(iter);
@@ -413,7 +414,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 			return false;
 		}
 		iter->second->setReservedSpace(iter->second->getReservedSpace() - comEvent.getSize());
-		dprintf(D_FULLDEBUG, "For file completion, decrementing reserved space by %llu to %llu for UUID %s.\n",
+		if (GetExtraDebug()) dprintf(D_FULLDEBUG, "For file completion, decrementing reserved space by %llu to %llu for UUID %s.\n",
 			static_cast<unsigned long long>(comEvent.getSize()),
                         static_cast<unsigned long long>(m_reserved_space - comEvent.getSize()),
 			comEvent.getUUID().c_str());
@@ -437,7 +438,7 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getSize(),
 				comEvent.GetEventclock()));
 			m_contents.emplace_back(std::move(entry));
-			dprintf(D_FULLDEBUG, "Incrementing stored space by %lu to %lu\n",
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %lu to %lu\n",
 				comEvent.getSize(), m_stored_space + comEvent.getSize());
 			m_stored_space += comEvent.getSize();
 		}
@@ -453,7 +454,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 					entry->tag() == usedEvent.getTag();
 			});
 		if (iter != m_contents.end()) {
-			dprintf(D_FULLDEBUG, "Updated last use for file with checksum %s(%s) to %lu\n", usedEvent.getChecksum().c_str(), usedEvent.getChecksumType().c_str(), usedEvent.GetEventclock());
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Updated last use for file with checksum %s(%s) to %lu\n",
+				usedEvent.getChecksum().c_str(), usedEvent.getChecksumType().c_str(), usedEvent.GetEventclock());
 			(*iter)->update_last_use(event.GetEventclock());
 			return true;
 		}
@@ -704,7 +706,7 @@ DataReuseDirectory::ReleaseSpace(const std::string &uuid, CondorError &err)
 	ReleaseSpaceEvent event;
 	event.setUUID(uuid);
 	m_space_reservations.erase(iter);
-	dprintf(D_FULLDEBUG, "Releasing space reservation %s\n", uuid.c_str());
+	if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Releasing space reservation %s\n", uuid.c_str());
 	if (!m_log.writeEvent(&event)) {
 		err.pushf("DataReuse", 10, "Failed to write out space reservation release.");
 		return false;
@@ -871,6 +873,8 @@ DataReuseDirectory::PrintInfo(bool print_to_log)
 		return;
 	}
 
+	if (!GetExtraDebug()) {return;}
+
 	ss << "Active space reservations:\n";
 	auto now = std::chrono::system_clock::now();
 	for (const auto &entry : m_space_reservations) {
@@ -901,4 +905,11 @@ DataReuseDirectory::PrintInfo(bool print_to_log)
 		dprintf(D_FULLDEBUG, "%s\n", ss.str().c_str());
 	else
 		printf("%s\n", ss.str().c_str());
+}
+
+
+bool
+DataReuseDirectory::GetExtraDebug()
+{
+	return param_boolean("DATA_REUSE_EXTRA_DEBUG", false);
 }
