@@ -27,6 +27,10 @@ Bugs Fixed:
    given a deadline on the command line.
    :ticket:`7458`
 
+-  Fixed a problem where the Kerberos realm would not be set when there is no
+   mapping from domain to realm and security debugging is not enabled.
+   :ticket:`7492`
+
 Version 8.8.7
 -------------
 
