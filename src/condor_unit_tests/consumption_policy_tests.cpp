@@ -63,16 +63,16 @@ struct cpfix {
 
         // construct request (job) ad with requested asset values    
         formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-        request.Assign(attr.c_str(), 1);
+        request.Assign(attr, 1);
 
         formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-        request.Assign(attr.c_str(), 2);
+        request.Assign(attr, 2);
 
         formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-        request.Assign(attr.c_str(), 3);
+        request.Assign(attr, 3);
 
         formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-        request.Assign(attr.c_str(), 4);
+        request.Assign(attr, 4);
 
 
         // construct a resource with consumption policy
@@ -118,17 +118,17 @@ BOOST_AUTO_TEST_CASE(cp_supports_policy_1) {
 
     // not yet
     formatstr(attr, "%s%s", ATTR_CONSUMPTION_PREFIX, "Cpus");
-    ad.Assign(attr.c_str(), 0);
+    ad.Assign(attr, 0);
     BOOST_CHECK(!cp_supports_policy(ad));
  
     // sooo close
     formatstr(attr, "%s%s", ATTR_CONSUMPTION_PREFIX, "Memory");
-    ad.Assign(attr.c_str(), 0);
+    ad.Assign(attr, 0);
     BOOST_CHECK(!cp_supports_policy(ad));
    
     // this ad should support consumption policy:
     formatstr(attr, "%s%s", ATTR_CONSUMPTION_PREFIX, "Disk");
-    ad.Assign(attr.c_str(), 0);
+    ad.Assign(attr, 0);
     BOOST_CHECK(cp_supports_policy(ad));
 
     // test with an extensible resource
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(cp_supports_policy_1) {
 
     // now it should support:
     formatstr(attr, "%s%s", ATTR_CONSUMPTION_PREFIX, "Railgun");
-    ad.Assign(attr.c_str(), 0);
+    ad.Assign(attr, 0);
     BOOST_CHECK(cp_supports_policy(ad));
 
     // insufficient!
@@ -174,7 +174,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_2, cpfix) {
     // requested-asset attributes for resource consumption
     string attr;
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    request.Delete(attr.c_str());
+    request.Delete(attr);
 
     consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_2, cpfix) {
     // make sure missing status is restored - should not be present
     int v = 0;
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    BOOST_CHECK(!request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(!request.LookupInteger(attr, v));
 }
 
 
@@ -197,7 +197,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_3, cpfix) {
     // test overriding behavior of _condor_RequestedXxx attributes
     string attr;
     formatstr(attr, "_condor_%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    request.Assign(attr.c_str(), 9);
+    request.Assign(attr, 9);
 
     consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
@@ -210,7 +210,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_3, cpfix) {
     // make sure original value is restored properly
     int v = 0;
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    BOOST_CHECK(request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(request.LookupInteger(attr, v));
     BOOST_CHECK_EQUAL(v, 4);
 }
 
@@ -224,31 +224,31 @@ BOOST_FIXTURE_TEST_CASE(cp_override_1, cpfix) {
     string attr;
     int v;
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 1);
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 2);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 2);
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 128);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 3);
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 1024);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 4);
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 7);
 }
 
@@ -266,27 +266,27 @@ BOOST_FIXTURE_TEST_CASE(cp_restore_1, cpfix) {
     string attr;
     int v;
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-    BOOST_CHECK(!request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(!request.LookupInteger(attr, v));
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 1);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-    BOOST_CHECK(!request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(!request.LookupInteger(attr, v));
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 2);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-    BOOST_CHECK(!request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(!request.LookupInteger(attr, v));
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 3);
 
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    BOOST_CHECK(!request.LookupInteger(attr.c_str(), v));
+    BOOST_CHECK(!request.LookupInteger(attr, v));
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-    request.LookupInteger(attr.c_str(), v);
+    request.LookupInteger(attr, v);
     BOOST_CHECK_EQUAL(v, 4);
 }
 

@@ -1031,7 +1031,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 	else if( !subcode_expr_attr.empty() )
 	{
-		m_ad->LookupInteger(subcode_expr_attr.c_str(), reason_subcode);
+		m_ad->LookupInteger(subcode_expr_attr, reason_subcode);
 	}
 
 	MyString reason_expr;
@@ -1045,7 +1045,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 	else if( !reason_expr_attr.empty() )
 	{
-		m_ad->LookupString(reason_expr_attr.c_str(), reason);
+		m_ad->LookupString(reason_expr_attr, reason);
 	}
 #endif
 

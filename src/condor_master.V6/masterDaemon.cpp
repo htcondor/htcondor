@@ -1939,12 +1939,12 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		class daemon* dmn = it->second;
 
 		std::string attr(dmn->name_in_config_file); attr += "_PID";
-		readyAd.Assign(attr.c_str(), dmn->pid);
+		readyAd.Assign(attr, dmn->pid);
 		++num_daemons;
 
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
-			readyAd.Assign(attr.c_str(), dmn->ready_state);
+			readyAd.Assign(attr, dmn->ready_state);
 		}
 
 		//const char * state = dmn->ready_state;

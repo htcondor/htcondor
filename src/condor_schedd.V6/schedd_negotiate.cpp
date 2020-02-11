@@ -313,7 +313,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		std::string req_str;
 		int req_val = 0;
 		formatstr( req_str, "%s%s", ATTR_REQUEST_PREFIX, res );
-		job_ad->LookupInteger( req_str.c_str(), req_val );
+		job_ad->LookupInteger( req_str, req_val );
 		match_ad->Assign( res, req_val );
     }
 

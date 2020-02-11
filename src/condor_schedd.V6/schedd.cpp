@@ -7913,7 +7913,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
 		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
 			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first.c_str());
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first);
 				if ( expr ) {
 					continue;
 				}
@@ -7924,7 +7924,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				const char *new_value = NULL;
 				new_value = ExprTreeToString(expr);
 				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(itr->first.c_str(),new_value);
+				msg->leftover_startd_ad()->AssignExpr(itr->first,new_value);
  				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
 				         slot_name, itr->first.c_str(), new_value);
 			}

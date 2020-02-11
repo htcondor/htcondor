@@ -357,28 +357,28 @@ void stats_entry_probe<T>::Publish(ClassAd & ad, const char * pattr, int flags) 
    // as accumulated runtime and the count of samples has no suffix.  This makes them interchangeable
    // with stats_recent_counter_timer probes.
    if (flags & IF_RT_SUM) {
-      ad.Assign(base.c_str(), (long long)this->value);
+      ad.Assign(base, (long long)this->value);
       base += "Runtime";
-      ad.Assign(base.c_str(), this->Sum);
+      ad.Assign(base, this->Sum);
    } else {
       // the default output for Miron probes is to use a std suffix for each bit of info.
       attr = base; attr += "Count";
-      ad.Assign(attr.c_str(), this->Count());
+      ad.Assign(attr, this->Count());
       attr = base; attr += "Sum";
-      ad.Assign(attr.c_str(), this->Sum);
+      ad.Assign(attr, this->Sum);
    }
    if (this->Count() > 0 || ((flags & IF_PUBLEVEL) == IF_HYPERPUB)) {
       attr = base; attr += "Avg";
-      ad.Assign(attr.c_str(), this->Avg());
+      ad.Assign(attr, this->Avg());
 
       attr = base; attr += "Min";
-      ad.Assign(attr.c_str(), this->Min);
+      ad.Assign(attr, this->Min);
 
       attr = base; attr += "Max";
-      ad.Assign(attr.c_str(), this->Max);
+      ad.Assign(attr, this->Max);
 
       attr = base; attr += "Std";
-      ad.Assign(attr.c_str(), this->Std());
+      ad.Assign(attr, this->Std());
    }
 }
 

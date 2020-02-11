@@ -56,7 +56,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		side
 	*/
 
-	MyString remoteattr;
+	std::string remoteattr;
 	remoteattr = "Remote_";
 	remoteattr += ATTR_JOB_UNIVERSE;
 
@@ -130,7 +130,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	}
 
 	ad->InsertAttr(ATTR_JOB_UNIVERSE, target_universe);
-	ad->Insert(remoteattr.Value(), olduniv);
+	ad->Insert(remoteattr, olduniv);
 		// olduniv is now controlled by ClassAd
 
 	if( target_universe == CONDOR_UNIVERSE_GRID ) {

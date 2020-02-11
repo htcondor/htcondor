@@ -2498,7 +2498,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
                 string rattr;
                 formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
-                if (!cap->AssignExpr(rattr.c_str(), expr.c_str())) {
+                if (!cap->AssignExpr(rattr, expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
             }
@@ -3832,7 +3832,7 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 		} else {
 			attrValue += ", ";
 		}
-		ExprTree *et = (*i)->r_classad->LookupExpr(name.c_str());
+		ExprTree *et = (*i)->r_classad->LookupExpr(name);
 		if (et) {
 			std::string buf;
 			classad::PrettyPrint pp;
@@ -3843,7 +3843,7 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 		}
 	}
 	attrValue += "}";
-	cap->AssignExpr(attrName.c_str(), attrValue.c_str());
+	cap->AssignExpr(attrName, attrValue.c_str());
 
 	return;
 }

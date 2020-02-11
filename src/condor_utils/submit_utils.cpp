@@ -7664,7 +7664,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 				dprintf(D_ALWAYS, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
 				//push_warning(stderr, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
 			} else {
-				baseJob.Insert(it->c_str(), tree);
+				baseJob.Insert(*it, tree);
 			}
 		}
 	}

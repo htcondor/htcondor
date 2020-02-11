@@ -6136,9 +6136,9 @@ void Matchmaker::
 addRemoteUserPrios( ClassAd	*ad )
 {	
 	std::string	remoteUser;
-	MyString	buffer,buffer1,buffer2,buffer3;
-	MyString    slot_prefix;
-	MyString    expr;
+	string buffer,buffer1,buffer2,buffer3;
+	string slot_prefix;
+	string expr;
 	string expr_buffer;
 	float	prio;
 	int     total_slots, i;
@@ -6155,13 +6155,13 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
-		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
+		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
-			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
+			formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.c_str());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
 	}
@@ -6188,36 +6188,34 @@ addRemoteUserPrios( ClassAd	*ad )
 		// NEGOTIATOR_CROSS_SLOT_PRIOS is explicitly set to True.
 		// This won't fire if total_slots is still 0...
 	for(i = 1; PublishCrossSlotPrios && i <= total_slots; i++) {
-		slot_prefix.formatstr("%s%d_", resource_prefix, i);
-		buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
-		buffer1.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);
-		buffer2.formatstr("%s%s", slot_prefix.Value(), ATTR_ACCOUNTING_GROUP);
-		buffer3.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
+		formatstr(slot_prefix, "%s%d_", resource_prefix, i);
+		buffer = slot_prefix + ATTR_PREEMPTING_ACCOUNTING_GROUP;
+		buffer1 = slot_prefix + ATTR_PREEMPTING_USER;
+		buffer2 = slot_prefix + ATTR_ACCOUNTING_GROUP;
+		buffer3 = slot_prefix + ATTR_REMOTE_USER;
 			// If there is a preempting user, use that for computing remote user prio.
-		if( ad->LookupString( buffer.Value() , remoteUser ) ||
-			ad->LookupString( buffer1.Value() , remoteUser ) ||
-			ad->LookupString( buffer2.Value() , remoteUser ) ||
-			ad->LookupString( buffer3.Value() , remoteUser ) ) 
+		if( ad->LookupString( buffer, remoteUser ) ||
+			ad->LookupString( buffer1, remoteUser ) ||
+			ad->LookupString( buffer2, remoteUser ) ||
+			ad->LookupString( buffer3, remoteUser ) )
 		{
 				// If there is a user on that VM, stick that user's priority
 				// information into the ad	
 			prio = (float) accountant.GetPriority( remoteUser );
-			buffer.formatstr("%s%s", slot_prefix.Value(), 
-					ATTR_REMOTE_USER_PRIO);
-			ad->Assign(buffer.Value(),prio);
-			buffer.formatstr("%s%s", slot_prefix.Value(), 
-					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USER_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
-			ad->AssignExpr(buffer.Value(),expr.c_str());
+			buffer = slot_prefix + ATTR_REMOTE_USER_PRIO;
+			ad->Assign(buffer, prio);
+			buffer = slot_prefix + ATTR_REMOTE_USER_RESOURCES_IN_USE;
+			formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+			ad->AssignExpr(buffer, expr.c_str());
 			if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
-				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
-				ad->Assign( buffer.Value(), temp_groupName );
-				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.formatstr("%s(%s)",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
-				ad->AssignExpr( buffer.Value(), expr.c_str() );
-				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
-				ad->Assign( buffer.Value(), temp_groupQuota );
+				buffer = slot_prefix + ATTR_REMOTE_GROUP;
+				ad->Assign( buffer, temp_groupName );
+				buffer = slot_prefix + ATTR_REMOTE_GROUP_RESOURCES_IN_USE;
+				formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
+				ad->AssignExpr( buffer, expr.c_str() );
+				buffer = slot_prefix + ATTR_REMOTE_GROUP_QUOTA;
+				ad->Assign( buffer, temp_groupQuota );
 			}
 		}	
 	}
@@ -6736,9 +6734,9 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
 		CopyAttribute(ATTR_STARTD_IP_ADDR,slot1_update_ad,*startd_ad);
-		MyString slotX_last_match_time;
-		slotX_last_match_time.formatstr("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
-		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
+		std::string slotX_last_match_time;
+		formatstr(slotX_last_match_time,"slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
+		slot1_update_ad.Assign(slotX_last_match_time,(int)now);
 
 		classy_counted_ptr<ClassAdMsg> lmsg = \
 			new ClassAdMsg(MERGE_STARTD_AD, slot1_update_ad);
@@ -6779,25 +6777,25 @@ void Matchmaker::StartNewNegotiationCycleStat()
 static void
 DelAttrN( ClassAd *ad, char const *attr, int n )
 {
-	MyString attrn;
-	attrn.formatstr("%s%d",attr,n);
-	ad->Delete( attrn.Value() );
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
+	ad->Delete( attrn );
 }
 
 static void
 SetAttrN( ClassAd *ad, char const *attr, int n, int value )
 {
-	MyString attrn;
-	attrn.formatstr("%s%d",attr,n);
-	ad->Assign(attrn.Value(),value);
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
+	ad->Assign(attrn,value);
 }
 
 static void
 SetAttrN( ClassAd *ad, char const *attr, int n, double value )
 {
-	MyString attrn;
-	attrn.formatstr("%s%d",attr,n);
-	ad->Assign(attrn.Value(),value);
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
+	ad->Assign(attrn,value);
 }
 
 static void
@@ -6818,7 +6816,7 @@ SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_li
 		value += *it;
 	}
 
-	ad->Assign(attrn.c_str(),value);
+	ad->Assign(attrn,value);
 }
 
 
@@ -7124,7 +7122,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			double b4 = 0.0;
 			double realValue = 0.0;
 
-			if (machine->LookupFloat((*it).c_str(), b4)) {
+			if (machine->LookupFloat(*it, b4)) {
 					// The value exists in the parent
 				b4 = floor(b4);
 				classad::Value result;
@@ -7134,9 +7132,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 
 				int intValue;
 				if (result.IsIntegerValue(intValue)) {
-					machine->Assign((*it).c_str(), (int) (b4 + intValue));
+					machine->Assign(*it, (int) (b4 + intValue));
 				} else if (result.IsRealValue(realValue)) {
-					machine->Assign((*it).c_str(), (b4 + realValue));
+					machine->Assign(*it, (b4 + realValue));
 				} else {
 					// TODO: deal with slot resources that are not ints or reals, e.g. non-fungibles
 					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", (*it).c_str());	
