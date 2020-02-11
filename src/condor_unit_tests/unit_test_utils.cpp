@@ -296,10 +296,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 }
 
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
-	MyString buf;
-
-	buf.formatstr("%s = %s", attribute, value);
-	ad->Insert(buf.Value());
+	ad->AssignExpr(attribute, value);
 }
 
 /* don't return anything: the process will die if value not zero */

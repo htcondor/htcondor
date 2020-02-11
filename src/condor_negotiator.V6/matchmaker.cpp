@@ -3631,43 +3631,28 @@ obtainAdsFromCollector (
 			// we find in NegotiatorRequirements
 			ExprTree  *negReqTree, *reqTree;
 			const char *subReqs;
-			char *newReqs;
-			subReqs = newReqs = NULL;
+			subReqs = NULL;
 			negReqTree = reqTree = NULL;
-			int length;
 			negReqTree = ad->LookupExpr(ATTR_NEGOTIATOR_REQUIREMENTS);
 			if ( negReqTree != NULL ) {
 
 				// Save the old requirements expression
 				reqTree = ad->LookupExpr(ATTR_REQUIREMENTS);
 				if( reqTree != NULL ) {
-				// Now, put the old requirements back into the ad
-				// (note: ExprTreeToString uses a static buffer, so do not
-				//        deallocate the buffer it returns)
-				subReqs = ExprTreeToString(reqTree);
-				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
-				newReqs = (char *)malloc(length+16);
-				ASSERT( newReqs != NULL );
-				snprintf(newReqs, length+15, "Saved%s = %s", 
-							ATTR_REQUIREMENTS, subReqs); 
-				ad->Insert(newReqs);
-				free(newReqs);
+					// Now, put the old requirements back into the ad
+					// (note: ExprTreeToString uses a static buffer, so do not
+					//        deallocate the buffer it returns)
+					std::string attrn = "Saved";
+					attrn += ATTR_REQUIREMENTS;
+					subReqs = ExprTreeToString(reqTree);
+					ad->AssignExpr(attrn, subReqs);
 				}
 		
 				// Get the requirements expression we're going to 
 				// subsititute in, and convert it to a string... 
 				// Sadly, this might be the best interface :(
 				subReqs = ExprTreeToString(negReqTree);
-				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
-				newReqs = (char *)malloc(length+16);
-				ASSERT( newReqs != NULL );
-
-				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
-							subReqs); 
-				ad->Insert(newReqs);
-
-				free(newReqs);
-				
+				ad->AssignExpr(ATTR_REQUIREMENTS, subReqs);
 			}
 
 			if( reevaluate_ad && newSequence != -1 ) {
@@ -4861,16 +4846,14 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 void Matchmaker::
 updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
-	MyString buffer;
 	string schedd_addr;
 	time_t endTime;
 	int oldTotalTime;
 
 	endTime = time(NULL);
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
-	buffer.formatstr("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
-					(endTime - startTime)) );
-	submitter->Insert(buffer.Value());
+	submitter->Assign(ATTR_TOTAL_TIME_IN_CYCLE,
+	                  (oldTotalTime + (endTime - startTime)));
 
 	if ( submitter->LookupString( ATTR_SCHEDD_IP_ADDR, schedd_addr ) ) {
 		ScheddsTimeInCycle[schedd_addr] += endTime - startTime;
@@ -6227,7 +6210,6 @@ reeval(ClassAd *ad)
 {
 	int cur_matches;
 	MapEntry *oldAdEntry = NULL;
-	char    buffer[255];
 	
 	cur_matches = 0;
 	ad->LookupInteger("CurMatches", cur_matches);
@@ -6236,8 +6218,7 @@ reeval(ClassAd *ad)
 	stashedAds->lookup( adID, oldAdEntry);
 		
 	cur_matches++;
-	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
-	ad->Insert(buffer);
+	ad->Assign("CurMatches", cur_matches);
 	if(oldAdEntry) {
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
@@ -6601,8 +6582,6 @@ sort()
 void Matchmaker::
 init_public_ad()
 {
-	MyString line;
-
 	if( publicAd ) delete( publicAd );
 	publicAd = new ClassAd();
 
@@ -6614,8 +6593,7 @@ init_public_ad()
 	publicAd->Assign(ATTR_NEGOTIATOR_IP_ADDR,daemonCore->InfoCommandSinfulString());
 
 #if !defined(WIN32)
-	line.formatstr("%s = %d", ATTR_REAL_UID, (int)getuid() );
-	publicAd->Insert(line.Value());
+	publicAd->Assign(ATTR_REAL_UID, (int)getuid());
 #endif
 
         // Publish all DaemonCore-specific attributes, which also handles
@@ -6655,7 +6633,7 @@ void
 Matchmaker::invalidateNegotiatorAd( void )
 {
 	ClassAd cmd_ad;
-	MyString line;
+	std::string line;
 
 	if( !NegotiatorName ) {
 		return;
@@ -6665,10 +6643,10 @@ Matchmaker::invalidateNegotiatorAd( void )
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
 	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
 
-	line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
+	formatstr( line, "TARGET.%s == \"%s\"",
 				  ATTR_NAME,
 				  NegotiatorName );
-	cmd_ad.Insert( line.Value() );
+	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cmd_ad.Assign( ATTR_NAME, NegotiatorName );
 
 	daemonCore->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &cmd_ad, NULL, false );

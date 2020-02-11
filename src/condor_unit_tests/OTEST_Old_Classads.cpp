@@ -990,14 +990,11 @@ static bool test_lookup_string_long() {
 		"problem with that, this test may fail.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
-	char *expression = (char *) malloc(50000);
-	if ( ! expression) { FAIL; }
 	char *attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
 	compat_classad::ClassAd classad;
-	classad.Insert(expression);
+	classad.Assign(attribute_name, expectString);
 	int expectInt = 1;
 	char* result = NULL;
 	int found = classad.LookupString(attribute_name, &result);
@@ -1013,11 +1010,11 @@ static bool test_lookup_string_long() {
 	emit_param("STRING", "");
 	if(found != expectInt || strcmp(result, expectString) != MATCH) {
 		free(attribute_name); free(expectString); 
-		free(expression); free(result);
+		free(result);
 		FAIL;
 	}
 	free(attribute_name); free(expectString); 
-	free(expression); free(result);
+	free(result);
 	PASS;
 }
 
@@ -1381,15 +1378,12 @@ static bool test_expr_tree_to_string_big() {
 		"the large size of the strings.");
 	char* expect = (char *) malloc(25000 + 2 + 1);
 	if ( ! expect) { FAIL; }
-	char* attribute_name, *expectString, *expression;
+	char* attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	expression = (char *) malloc(50000);
-	if ( ! expression) { FAIL; }
-	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
 	sprintf(expect, "\"%s\"", expectString);
 	compat_classad::ClassAd classad;
-	classad.Insert(expression);
+	classad.Assign(attribute_name, expectString);
 	ExprTree* expr = classad.LookupExpr(attribute_name);
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
@@ -1400,11 +1394,11 @@ static bool test_expr_tree_to_string_big() {
 	emit_output_actual_header();
 	emit_retval("%s", "");
 	if(strcmp(result, expect) != MATCH) {
-		free(attribute_name); free(expectString); free(expression); 
+		free(attribute_name); free(expectString);
 		free(expect);
 		FAIL;
 	}
-	free(attribute_name); free(expectString); free(expression);
+	free(attribute_name); free(expectString);
 	free(expect);
 	PASS;
 }
@@ -1804,7 +1798,7 @@ static bool test_next_dirty_expr_insert() {
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
+	classad.Assign("C", 3);
 	auto dirty_itr = classad.dirtyBegin();
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
@@ -1830,7 +1824,7 @@ static bool test_next_dirty_expr_insert_two_calls() {
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
+	classad.Assign("C", 3);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	emit_input_header();
@@ -1855,8 +1849,8 @@ static bool test_next_dirty_expr_two_inserts_first() {
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
@@ -1882,8 +1876,8 @@ static bool test_next_dirty_expr_two_inserts_second() {
 	classad.EnableDirtyTracking();
 	initAdFromString(classad_string, classad);
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
@@ -1910,8 +1904,8 @@ static bool test_next_dirty_expr_two_inserts_third() {
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	dirty_itr++;
@@ -1938,8 +1932,8 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	classad.ClearAllDirtyFlags();
 	auto dirty_itr = classad.dirtyBegin();
 	emit_input_header();

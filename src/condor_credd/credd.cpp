@@ -152,14 +152,10 @@ CredDaemon::initialize_classad()
 	SetMyTypeName(m_classad, CREDD_ADTYPE);
 	SetTargetTypeName(m_classad, "");
 
-	MyString line;
+	m_classad.Assign(ATTR_NAME, m_name);
 
-	line.formatstr("%s = \"%s\"", ATTR_NAME, m_name );
-	m_classad.Insert(line.Value());
-
-	line.formatstr ("%s = \"%s\"", ATTR_CREDD_IP_ADDR,
+	m_classad.Assign(ATTR_CREDD_IP_ADDR,
 			daemonCore->InfoCommandSinfulString() );
-	m_classad.Insert(line.Value());
 
         // Publish all DaemonCore-specific attributes, which also handles
         // SUBSYS_ATTRS for us.
@@ -179,9 +175,9 @@ CredDaemon::invalidate_ad()
 	SetMyTypeName(query_ad, QUERY_ADTYPE);
 	SetTargetTypeName(query_ad, CREDD_ADTYPE);
 
-	MyString line;
-	line.formatstr("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
-    query_ad.Insert(line.Value());
+	std::string line;
+	formatstr(line, "TARGET.%s == \"%s\"", ATTR_NAME, m_name);
+	query_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	query_ad.Assign(ATTR_NAME,m_name);
 
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);

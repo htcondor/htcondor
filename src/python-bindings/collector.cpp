@@ -364,14 +364,12 @@ private:
         if (statistics.size())
         {
             std::string result = quote_classads_string(statistics);
-            result = "STATISTICS_TO_PUBLISH = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute("STATISTICS_TO_PUBLISH", result.c_str());
         }
         if (locationName.size())
         {
             std::string result = quote_classads_string(locationName);
-            result = "LocationQuery = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute(ATTR_LOCATION_QUERY, result.c_str());
         }
 
         int len_attrs = py_len(attrs);

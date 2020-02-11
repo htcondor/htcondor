@@ -3251,20 +3251,18 @@ Daemons::Update( ClassAd* ca )
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here || iter->second == master ) {
-			sprintf( buf, "%s_Timestamp = %ld", 
-					 iter->second->name_in_config_file, 	
-					 (long)iter->second->timeStamp );
-			ca->Insert( buf );
+			sprintf( buf, "%s_Timestamp",
+					 iter->second->name_in_config_file );
+			ca->Assign( buf, (long)iter->second->timeStamp );
 			if( iter->second->pid ) {
-				sprintf( buf, "%s_StartTime = %ld", 
-						 iter->second->name_in_config_file, 	
-						 (long)iter->second->startTime );
-				ca->Insert( buf );
+				sprintf( buf, "%s_StartTime",
+						 iter->second->name_in_config_file );
+				ca->Assign( buf, (long)iter->second->startTime );
 			} else {
 					// No pid, but daemon's supposed to be running.
-				sprintf( buf, "%s_StartTime = 0", 
+				sprintf( buf, "%s_StartTime",
 						 iter->second->name_in_config_file );
-				ca->Insert( buf );
+				ca->Assign( buf, 0 );
 			}
 		}
 	}

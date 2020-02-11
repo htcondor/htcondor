@@ -102,14 +102,7 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 {
 	setCmdStr( "reconnectJob" );
 
-	std::string line;
-
-		// Add our own attributes to the request ad we're sending
-	line = ATTR_COMMAND;
-	line += "=\"";
-	line += getCommandString( CA_RECONNECT_JOB );
-	line += '"';
-	req->Insert( line.c_str() );
+	req->Assign( ATTR_COMMAND, getCommandString( CA_RECONNECT_JOB ) );
 
 	return sendCACmd( req, reply, rsock, false, timeout, sec_session_id );
 	

@@ -6095,11 +6095,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					replacement_value += result;
 					search_pos = replacement_value.Length();
 					replacement_value += right;
-					MyString replacement_attr = curr_attr_to_expand;
-					replacement_attr += "=";
-					replacement_attr += replacement_value;
-					expanded_ad->Insert(replacement_attr.Value());
-					dprintf(D_FULLDEBUG,"$$([]) substitution: %s\n",replacement_attr.Value());
+					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.Value());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.Value());
 
 					free(attribute_value);
 					attribute_value = strdup(replacement_value.Value());
@@ -6218,16 +6215,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					bigbuf2 = (char *) malloc( lenBigbuf +1 );
 					ASSERT(bigbuf2);
 					sprintf(bigbuf2,"%s%s%n%s",left,tvalue,&search_pos,right);
-					free(attribute_value);
-					attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
-													  + 3 // = and quotes
-													  + lenBigbuf
-													  + 1);
-					ASSERT(attribute_value);
-					sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
-						bigbuf2);
-					expanded_ad->Insert(attribute_value);
-					dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
+					expanded_ad->AssignExpr(curr_attr_to_expand, bigbuf2);
+					dprintf(D_FULLDEBUG,"$$ substitution: %s=%s\n",curr_attr_to_expand,bigbuf2);
 					free(value);	// must use free here, not delete[]
 					free(attribute_value);
 					attribute_value = bigbuf2;

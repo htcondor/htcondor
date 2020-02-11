@@ -3577,11 +3577,11 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// want to rank it, and require that the minimum claim time is
 		// >= the duration of the job...
 
-	MyString buf;
-	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
+	std::string buf;
+	formatstr( buf, "(Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
-				 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->Insert( buf.Value() );
+				 name(), name(), rhs );
+	req->AssignExpr( ATTR_REQUIREMENTS, buf.c_str() );
 
 	return req;
 }

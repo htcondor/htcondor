@@ -1528,24 +1528,22 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 	}
 
-	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
-				  COMPLETED );
+	formatstr( expr, "%s == %d", ATTR_JOB_STATUS, COMPLETED );
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
 		formatstr_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, expr.c_str() );
 
-	formatstr( expr, "%s = Undefined", ATTR_OWNER );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_OWNER, "Undefined" );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	formatstr( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
-				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
+	formatstr( expr, "(%s > 0) =!= True && time() > %s + %d",
+				  ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_PERIODIC_REMOVE_CHECK, expr.c_str() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 

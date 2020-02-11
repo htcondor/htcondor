@@ -209,9 +209,7 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, NULL, 0)) {
 		char* keyword = rip->getHookKeyword();
 		ASSERT(keyword && keyword != UNDEFINED);
-		MyString keyword_attr;
-		keyword_attr.formatstr("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
-		job_ad->Insert(keyword_attr.Value());
+		job_ad->Assign(ATTR_HOOK_KEYWORD, keyword);
 	}
 
 		// No matter what, if the reply fetch hook is configured, invoke it.

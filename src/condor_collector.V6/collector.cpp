@@ -2371,18 +2371,20 @@ int
 CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 {
 	int	univ;
-	char line[100];
+	std::string attrn;
 
 	// Loop through, publish all universes with a name
 	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
 		const char *name = getName( univ );
 		if ( name ) {
-			sprintf( line, "%s%s = %d", label, name, getValue( univ ) );
-			ad->Insert(line);
+			attrn = label;
+			attrn += name;
+			ad->Assign(attrn, getValue(univ));
 		}
 	}
-	sprintf( line, "%s%s = %d", label, "All", count );
-	ad->Insert(line);
+	attrn = label;
+	attrn += "All";
+	ad->Assign(attrn, count);
 
 	return 0;
 }

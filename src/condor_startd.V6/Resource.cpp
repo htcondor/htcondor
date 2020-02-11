@@ -911,25 +911,22 @@ Resource::hackLoadForCOD( void )
 		return;
 	}
 
-	MyString load;
-	load.formatstr( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
-
-	MyString c_load;
-	c_load.formatstr( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
+	float load = rint((r_pre_cod_total_load) * 100) / 100.0;
+	float c_load = rint((r_pre_cod_condor_load) * 100) / 100.0;
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
 			dprintf( D_LOAD | D_VERBOSE, "COD job current running, using "
-					 "'%s', '%s' for internal policy evaluation\n",
-					 load.Value(), c_load.Value() );
+					 "'%s=%f', '%s=%f' for internal policy evaluation\n",
+					 ATTR_LOAD_AVG, load, ATTR_CONDOR_LOAD_AVG, c_load );
 		} else {
-			dprintf( D_LOAD | D_VERBOSE, "COD job recently ran, using '%s', '%s' "
+			dprintf( D_LOAD | D_VERBOSE, "COD job recently ran, using '%s=%f', '%s=%f' "
 					 "for internal policy evaluation\n",
-					 load.Value(), c_load.Value() );
+					 ATTR_LOAD_AVG, load, ATTR_CONDOR_LOAD_AVG, c_load );
 		}
 	}
-	r_classad->Insert( load.Value() );
-	r_classad->Insert( c_load.Value() );
+	r_classad->Assign( ATTR_LOAD_AVG, load );
+	r_classad->Assign( ATTR_CONDOR_LOAD_AVG, c_load );
 
 	r_classad->Assign( ATTR_CPU_IS_BUSY, false );
 
@@ -1432,7 +1429,7 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
 {
     this->publish( public_ad, A_ALL_PUB );
     if( vmapi_is_usable_for_condor() == FALSE ) {
-        public_ad->Insert( "Start = False" );
+        public_ad->Assign( ATTR_START, false );
     }
 
     if( vmapi_is_virtual_machine() == TRUE ) {
@@ -2311,12 +2308,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				// interpret explicit empty values as 'remove the attribute' (should we set to undefined instead?)
 				cap->Delete(attr);
 			} else {
-				std::string buf(attr); buf += " = "; buf += tmp.ptr();
-				if ( ! cap->Insert(buf.c_str())) {
+				if ( ! cap->AssignExpr(attr, tmp.ptr()) ) {
 					dprintf(D_ALWAYS | D_FAILURE,
-							"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s."
+							"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
 							"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-							buf.c_str(), slot_name.c_str() );
+							attr, tmp.ptr(), slot_name.c_str() );
 				}
 			}
 		}
@@ -2718,7 +2714,6 @@ Resource::publishDeathTime( ClassAd* cap )
     bool        have_death_time;
     int         death_time;
     int         relative_death_time;
-    MyString    classad_attribute;
 
 	if( ! cap ) {
 		return;
@@ -2755,8 +2750,7 @@ Resource::publishDeathTime( ClassAd* cap )
         }
     }
 
-    classad_attribute.formatstr( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
-    cap->Insert( classad_attribute.Value() );
+    cap->Assign( ATTR_TIME_TO_LIVE, relative_death_time );
     return;
 }
 

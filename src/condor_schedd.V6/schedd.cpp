@@ -14257,7 +14257,7 @@ Scheduler::schedd_exit()
 void
 Scheduler::invalidate_ads()
 {
-	MyString line;
+	std::string line;
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just create a temporary one
@@ -14266,8 +14266,8 @@ Scheduler::invalidate_ads()
     SetTargetTypeName( *cad, SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
-    cad->Insert( line.Value() );
+	formatstr( line, "TARGET.%s == \"%s\"", ATTR_NAME, Name );
+	cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cad->Assign( ATTR_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
@@ -14293,11 +14293,10 @@ Scheduler::invalidate_ads()
 		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
 		cad->Assign( ATTR_NAME, submitter );
 
-		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
-					  ATTR_REQUIREMENTS,
+		formatstr( line, "TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, submitter.c_str() );
-		cad->Insert( line.Value() );
+		cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;

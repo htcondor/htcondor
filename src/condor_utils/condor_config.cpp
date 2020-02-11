@@ -529,7 +529,6 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if ( ! reqdAttrs.isEmpty()) {
-		MyString buffer;
 
 		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
 			auto_free_ptr expr(NULL);
@@ -541,12 +540,11 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 				expr.set(param(attr));
 			}
 			if ( ! expr) continue;
-			buffer.formatstr("%s = %s", attr, expr.ptr());
 
-			if ( ! ad->Insert(buffer.Value())) {
+			if ( ! ad->AssignExpr(attr, expr.ptr())) {
 				dprintf(D_ALWAYS,
-						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), subsys);
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						attr, expr.ptr(), subsys);
 			}
 		}
 	}

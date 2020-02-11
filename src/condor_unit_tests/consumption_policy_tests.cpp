@@ -54,7 +54,8 @@ using std::map;
 // fixture for building a resource (slot) ad and a request (job) ad
 struct cpfix {
     cpfix() {
-        string attr;
+        string attrn;
+        string attrv;
 
         // currently (circa 8.1.1) there is some weird interaction between
         // classad caching and calls to quantize() where 2nd arg is a list,
@@ -62,34 +63,38 @@ struct cpfix {
         classad::ClassAdSetExpressionCaching(false);
 
         // construct request (job) ad with requested asset values    
-        formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
-        request.Assign(attr, 1);
+        formatstr(attrn, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
+        request.Assign(attrn, 1);
 
-        formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-        request.Assign(attr, 2);
+        formatstr(attrn, "%s%s", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
+        request.Assign(attrn, 2);
 
-        formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
-        request.Assign(attr, 3);
+        formatstr(attrn, "%s%s", ATTR_REQUEST_PREFIX, ATTR_DISK);
+        request.Assign(attrn, 3);
 
-        formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
-        request.Assign(attr, 4);
+        formatstr(attrn, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
+        request.Assign(attrn, 4);
 
 
         // construct a resource with consumption policy
         resource.Assign(ATTR_SLOT_PARTITIONABLE, true);
         resource.Assign(ATTR_MACHINE_RESOURCES, "cpus memory disk actuators");
 
-        formatstr(attr, "%s%s = quantize(target.%s%s, {2})", ATTR_CONSUMPTION_PREFIX, ATTR_CPUS, ATTR_REQUEST_PREFIX, ATTR_CPUS);
-        resource.Insert(attr.c_str());
+        formatstr(attrn, "%s%s", ATTR_CONSUMPTION_PREFIX, ATTR_CPUS);
+        formatstr(attrv, "quantize(target.%s%s, {2})", ATTR_REQUEST_PREFIX, ATTR_CPUS);
+        resource.AssignExpr(attrn, attrv.c_str());
 
-        formatstr(attr, "%s%s = quantize(target.%s%s, {128})", ATTR_CONSUMPTION_PREFIX, ATTR_MEMORY, ATTR_REQUEST_PREFIX, ATTR_MEMORY);
-        resource.Insert(attr.c_str());
+        formatstr(attrn, "%s%s", ATTR_CONSUMPTION_PREFIX, ATTR_MEMORY);
+        formatstr(attrv, "quantize(target.%s%s, {128})", ATTR_REQUEST_PREFIX, ATTR_MEMORY);
+        resource.AssignExpr(attrn, attrv.c_str());
 
-        formatstr(attr, "%s%s = quantize(target.%s%s, {1024})", ATTR_CONSUMPTION_PREFIX, ATTR_DISK, ATTR_REQUEST_PREFIX, ATTR_DISK);
-        resource.Insert(attr.c_str());
+        formatstr(attrn, "%s%s", ATTR_CONSUMPTION_PREFIX, ATTR_DISK);
+        formatstr(attrv, "quantize(target.%s%s, {1024})", ATTR_REQUEST_PREFIX, ATTR_DISK);
+        resource.AssignExpr(attrn, attrv.c_str());
 
-        formatstr(attr, "%s%s = ifthenelse(target.%s%s =?= 0, 3, quantize(target.%s%s, {7}))", ATTR_CONSUMPTION_PREFIX, "Actuators", ATTR_REQUEST_PREFIX, "Actuators", ATTR_REQUEST_PREFIX, "Actuators");
-        resource.Insert(attr.c_str());
+        formatstr(attrn, "%s%s", ATTR_CONSUMPTION_PREFIX, "Actuators");
+        formatstr(attrv, "ifthenelse(target.%s%s =?= 0, 3, quantize(target.%s%s, {7}))", ATTR_REQUEST_PREFIX, "Actuators", ATTR_REQUEST_PREFIX, "Actuators");
+        resource.AssignExpr(attrn, attrv.c_str());
 
         // provision it with some assets
         resource.Assign(ATTR_CPUS, 3);

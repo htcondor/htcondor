@@ -207,7 +207,7 @@ public:
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
-	MyString			ReconcileMethodLists( char * cli_methods, char * srv_methods );
+	std::string			ReconcileMethodLists( char * cli_methods, char * srv_methods );
 
 
 	static  void			key_printf(int debug_levels, KeyInfo *k);
