@@ -581,9 +581,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
 
-
-	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(attrName,tree) );
-	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(attrName, tree) );
+	pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
 	if ( ! insert_result.second) {
 			// replace existing value
 		delete insert_result.first->second;
@@ -607,8 +605,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 	if (ppv) delete ppv;
 	ppv = lit;
 #else
-	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(name,lit) );
-	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(name, lit) );
+	pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
 
 	if( !insert_result.second ) {
 			// replace existing value
