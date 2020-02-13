@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "condor_ver_info.h"
 #include "subsystem_info.h"
 #include "condor_debug.h"
@@ -390,7 +391,7 @@ CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
 	}
 
 	int n = snprintf(buf,buflen,"$%s: %d.%d.%d %s $", 
-					 "CondorVersion", // avoid having false "$CondorVersion: ..." show up in strings
+					 ATTR_CONDOR_VERSION, // avoid having false "$CondorVersion: ..." show up in strings
 					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
 					 ver.Rest.c_str());
 	if( n>=buflen || n<0 ) {

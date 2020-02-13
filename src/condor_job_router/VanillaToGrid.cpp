@@ -69,7 +69,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete("CondorPlatform"); // TODO: Find #define
-	ad->Delete("CondorVersion");  // TODO: Find #define
+	ad->Delete(ATTR_CONDOR_VERSION);  // TODO: Find #define
 	ad->Delete(ATTR_CORE_SIZE);
 	ad->Delete(ATTR_GLOBAL_JOB_ID); // Store in different ATTR here?
 	//ad->Delete(ATTR_OWNER); // How does schedd filter?

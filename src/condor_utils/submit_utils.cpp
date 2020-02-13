@@ -4996,6 +4996,11 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
 	{SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
 
+	// The only special processing that the checkpoint files list requires
+	// is handled by SetRequirements().
+	{SUBMIT_KEY_TransferCheckpointFiles, ATTR_CHECKPOINT_FILES, SimpleSubmitKeyword::f_as_string },
+	{SUBMIT_KEY_PreserveRelativePaths, ATTR_PRESERVE_RELATIVE_PATHS, SimpleSubmitKeyword::f_as_bool },
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -6170,6 +6175,26 @@ int SubmitHash::SetRequirements()
 			answer += join_op;
 			answer += xfer_check;
 			answer += crypt_check;
+
+
+			bool addVersionCheck = false;
+
+			std::string checkpointFiles;
+			if( job->LookupString(ATTR_CHECKPOINT_FILES, checkpointFiles) ) {
+				addVersionCheck = true;
+			}
+
+			bool preserveRelativePaths = false;
+			if( job->LookupBool(ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths) ) {
+				if( preserveRelativePaths ) {
+					addVersionCheck = true;
+				}
+			}
+
+			if( addVersionCheck ) {
+				// This is an ugly hack and should be changed.
+				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.6\" ) >= 0";
+			}
 
 
 			if ( ! checks_file_transfer_plugin_methods) {

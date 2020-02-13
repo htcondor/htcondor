@@ -162,7 +162,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");
@@ -176,7 +176,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");

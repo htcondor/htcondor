@@ -1313,7 +1313,7 @@ FileTransfer::DetermineWhichFilesToSend() {
 	// won't specify a checkpoint list.
 	if( uploadCheckpointFiles ) {
 		std::string checkpointList;
-		if( jobAd.LookupString( ATTR_CHECKPOINT_LIST, checkpointList ) ) {
+		if( jobAd.LookupString( ATTR_CHECKPOINT_FILES, checkpointList ) ) {
 			if( CheckpointFiles ) { delete CheckpointFiles; }
 			CheckpointFiles = new StringList( checkpointList.c_str(), "," );
 
