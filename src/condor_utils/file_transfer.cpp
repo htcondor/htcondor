@@ -3666,7 +3666,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bool socket_default_crypto = s->get_encryption();
 
 	bool preserveRelativePaths = false;
-	jobAd.LookupBool( "PreserveRelativePaths", preserveRelativePaths );
+	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );

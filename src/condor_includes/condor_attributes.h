@@ -804,6 +804,7 @@
 #define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
 
 #define ATTR_CHECKPOINT_LIST "CheckpointList"
+#define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
 
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
