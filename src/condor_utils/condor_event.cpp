@@ -6686,16 +6686,16 @@ AttributeUpdate::toClassAd(bool event_time_utc)
 void
 AttributeUpdate::initFromClassAd(ClassAd* ad)
 {
-	MyString buf;
+	std::string buf;
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
 	if( ad->LookupString("Attribute", buf ) ) {
-		name = strdup(buf.Value());
+		name = strdup(buf.c_str());
 	}
 	if( ad->LookupString("Value", buf ) ) {
-		value = strdup(buf.Value());
+		value = strdup(buf.c_str());
 	}
 }
 

@@ -244,7 +244,7 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 }
 
 bool
-DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr)
+DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,std::string &owner_claim_id,std::string &error_msg,std::string &starter_version,std::string &starter_addr)
 {
 	ReliSock sock;
 
@@ -296,7 +296,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	return true;
 }
 
-bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,MyString &remote_user,MyString &error_msg,bool &retry_is_sensible)
+bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,std::string &remote_user,MyString &error_msg,bool &retry_is_sensible)
 {
 
 	retry_is_sensible = false;

@@ -219,9 +219,9 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 
 	ClassAdListDoesNotDeleteAds missing;
 	for(int i=0; i<numads; i++) {
-		MyString service;
-		MyString handle;
-		MyString user;
+		std::string service;
+		std::string handle;
+		std::string user;
 		requests[i].LookupString("Service", service);
 		requests[i].LookupString("Handle", handle);
 		requests[i].LookupString("Username", user);
@@ -229,14 +229,14 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		MyString tmpfname;
 		tmpfname = service;
 		tmpfname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
-		if(handle.Length()) {
+		if(handle.length()) {
 			tmpfname += "_";
 			tmpfname += handle;
 		}
 		tmpfname += ".top";
 
 		dprintf(D_FULLDEBUG, "query_creds: checking for %s\n", tmpfname.Value());
-		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
+		if (!credmon_poll_continue(user.c_str(), 0, tmpfname.Value())) {
 			dprintf(D_ALWAYS, "query_creds: did not find %s\n", tmpfname.Value());
 			missing.Insert(&requests[i]);
 		}

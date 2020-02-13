@@ -1774,14 +1774,14 @@ bool DCSchedd::getJobConnectInfo(
 	char const *session_info,
 	int timeout,
 	CondorError *errstack,
-	MyString &starter_addr,
-	MyString &starter_claim_id,
-	MyString &starter_version,
-	MyString &slot_name,
-	MyString &error_msg,
+	std::string &starter_addr,
+	std::string &starter_claim_id,
+	std::string &starter_version,
+	std::string &slot_name,
+	std::string &error_msg,
 	bool &retry_is_sensible,
 	int &job_status,
-	MyString &hold_reason)
+	std::string &hold_reason)
 {
 	ClassAd input;
 	ClassAd output;
@@ -1801,33 +1801,33 @@ bool DCSchedd::getJobConnectInfo(
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,errstack) ) {
 		error_msg = "Failed to connect to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !startCommand(GET_JOB_CONNECT_INFO, &sock, timeout, errstack) ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !forceAuthentication(&sock, errstack) ) {
 		error_msg = "Failed to authenticate";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.encode();
 	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.decode();
 	if( !getClassAd(&sock, output) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response from schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 

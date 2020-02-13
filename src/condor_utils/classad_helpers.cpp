@@ -90,13 +90,13 @@ findSignal( ClassAd* ad, const char* attr_name )
 	if( ! ad ) {
 		return -1;
 	}
-	MyString name;
+	std::string name;
 	int signal;
 
 	if ( ad->LookupInteger( attr_name, signal ) ) {
 		return signal;
 	} else if ( ad->LookupString( attr_name, name ) ) {
-		return signalNumber( name.Value() );
+		return signalNumber( name.c_str() );
 	} else {
 		return -1;
 	}
