@@ -6090,8 +6090,11 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		file_xfer_item.setFileSize(st.GetFileSize());
 
 		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
-			char * dirname = condor_dirname( file_xfer_item.srcName().c_str() );
-			if( strcmp( dirname, "." ) != 0 ) {
+			char * dirname_raw = condor_dirname( file_xfer_item.srcName().c_str() );
+			std::string dirname(dirname_raw);
+			free(dirname_raw);
+
+			if( strcmp( dirname.c_str(), "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );
 
 				// ExpandParentDirectories() adds this back in the correct place.
@@ -6106,7 +6109,6 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					return false;
 				}
 			}
-			free( dirname );
 		}
 
 		// dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
