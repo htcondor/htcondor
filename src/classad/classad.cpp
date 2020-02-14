@@ -561,6 +561,65 @@ bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool l
 	return Insert(name, tree);
 }
 
+bool
+ClassAd::Insert(const std::string &str)
+{
+	// this is not the optimial path, it would be better to
+	// use either the 2 argument insert, or the const char* form below
+	return this->Insert(str.c_str());
+}
+
+bool
+ClassAd::Insert( const char *str )
+{
+	std::string attr;
+	const char * rhs;
+
+	while (isspace(*str)) ++str;
+
+	// We don't support quoted attribute names in this old ClassAds method.
+	if ( *str == '\'' ) {
+		return false;
+	}
+
+	const char * peq = strchr(str, '=');
+	if ( ! peq) return false;
+
+	const char * p = peq;
+	while (p > str && ' ' == p[-1]) --p;
+	attr.assign(str, p-str);
+
+	if ( attr.empty() ) {
+		return false;
+	}
+
+	// set rhs to the first non-space character after the =
+	p = peq+1;
+	while (' ' == *p) ++p;
+	rhs = p;
+
+	return InsertViaCache(attr, rhs);
+}
+
+bool ClassAd::
+AssignExpr(const std::string &name, const char *value)
+{
+	ClassAdParser par;
+	ExprTree *expr = NULL;
+	par.SetOldClassAd( true );
+
+	if ( value == NULL ) {
+		return false;
+	}
+	if ( !par.ParseExpression( value, expr, true ) ) {
+		return false;
+	}
+	if ( !Insert( name, expr ) ) {
+		delete expr;
+		return false;
+	}
+	return true;
+}
 
 bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 {

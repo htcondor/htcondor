@@ -1822,55 +1822,6 @@ ClassAdAttributeIsPrivate( const std::string &name )
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
 
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree * expr)
-{
-	return classad::ClassAd::Insert( attrName, expr );
-}
-
-bool
-ClassAd::Insert(const std::string &str)
-{
-	// this is not the optimial path, it would be better to
-	// use either the 2 argument insert, or the const char* form below
-	return this->Insert(str.c_str());
-}
-
-bool
-ClassAd::Insert( const char *str )
-{
-	return InsertLongFormAttrValue(*this, str, true);
-}
-
-bool ClassAd::
-AssignExpr(const std::string &name, const char *value)
-{
-	classad::ClassAdParser par;
-	classad::ExprTree *expr = NULL;
-	par.SetOldClassAd( true );
-
-	if ( value == NULL ) {
-		return false;
-	}
-	if ( !par.ParseExpression( value, expr, true ) ) {
-		return false;
-	}
-	if ( !Insert( name, expr ) ) {
-		delete expr;
-		return false;
-	}
-	return true;
-}
-
-bool ClassAd::
-Assign(const std::string &name, char const *value)
-{
-	if ( value == NULL ) {
-		return false;
-	} else {
-		return InsertAttr( name, value );
-	}
-}
-
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
 {
