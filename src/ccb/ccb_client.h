@@ -46,17 +46,17 @@ class CCBClient: public Service, public ClassyCountedPtr {
 
  private:
 	MyString m_ccb_contact;
-	MyString m_cur_ccb_address;
+	std::string m_cur_ccb_address;
 	StringList m_ccb_contacts;
 	ReliSock *m_target_sock; // socket to receive the reversed connection
-	MyString m_target_peer_description; // who we are trying to connect to
+	std::string m_target_peer_description; // who we are trying to connect to
 	Sock *m_ccb_sock;        // socket to the CCB server
-	MyString m_connect_id;
+	std::string m_connect_id;
 	DCMsgCallback *m_ccb_cb; // callback object for async CCB request
 	int m_deadline_timer;
 
 	bool ReverseConnect_blocking( CondorError *error );
-	static bool SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, const MyString & peer, CondorError *error );
+	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error );
 
 	bool AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener);
 	bool HandleReversedConnectionRequestReply(CondorError *error);
@@ -67,7 +67,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void RegisterReverseConnectCallback();
 	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(Service *,int cmd,Stream *stream);
-	MyString myName();
+	std::string myName();
 	void DeadlineExpired();
 
 	// CCB contact information should be an opaque token to everyone, but

@@ -37,12 +37,12 @@ template <> void stats_entry_recent<double>::AdvanceBy(int cSlots) { this->Advan
 //
 template <class T>
 void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
+   std::string str;
       
    str += this->value;
    str += " ";
    str += this->recent;
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -61,11 +61,11 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
 
 template <>
 void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
+   std::string str;
    str += IntToStr( (long)this->value );
    str += " ";
    str += IntToStr( (long)this->recent );
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -84,13 +84,13 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
 
 template <>
 void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
-   str.formatstr_cat("%g %g", this->value, this->recent);
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   std::string str;
+   formatstr_cat(str, "%g %g", this->value, this->recent);
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.formatstr_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
+         formatstr_cat(str, !ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
          }
       str += "]";
       }
@@ -104,22 +104,22 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
 
 template <class T>
 void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str("(");
+   std::string str("(");
    this->value.AppendToString(str);
    str += ") (";
    this->recent.AppendToString(str);
-   str.formatstr_cat(") {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, ") {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          // Note: this is tediously broken up into multiple lines because clang produces a format string
          // warning otherwise.
          if (!ix) {
-            str.formatstr_cat("[(");
+            formatstr_cat(str, "[(");
          } else if (ix == this->buf.cMax) {
-            str.formatstr_cat(")|(");
+            formatstr_cat(str, ")|(");
          } else {
-            str.formatstr_cat(") (");
+            formatstr_cat(str, ") (");
             }
          this->buf.pbuf[ix].AppendToString(str);
          }
@@ -615,19 +615,19 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
 template <>
 void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
 {
-   MyString str;
+   std::string str;
    MyString var1;
    MyString var2;
    ProbeToStringDebug(var1, this->value);
    ProbeToStringDebug(var2, this->recent);
 
-   str.formatstr_cat("(%s) (%s)", var1.Value(), var2.Value());
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, "(%s) (%s)", var1.Value(), var2.Value());
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          ProbeToStringDebug(var1, this->buf.pbuf[ix]);
-         str.formatstr_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         formatstr_cat(str, !ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
          }
       str += "]";
       }
