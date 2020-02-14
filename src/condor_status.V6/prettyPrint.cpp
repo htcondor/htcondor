@@ -1593,7 +1593,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "ACTIVITY_CODE", ATTR_ACTIVITY, 0, renderActivityCode, ATTR_STATE "\0" },
 	{ "ACTIVITY_TIME", ATTR_ENTERED_CURRENT_ACTIVITY, "%T", renderActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
 	{ "CONDOR_PLATFORM", "CondorPlatform", 0, renderCondorPlatform, NULL },
-	{ "CONDOR_VERSION", "CondorVersion", 0, renderVersion, NULL },
+	{ "CONDOR_VERSION", ATTR_CONDOR_VERSION, 0, renderVersion, NULL },
 	{ "DATE",         NULL, 0, formatRealDate, NULL },
 	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
 	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },

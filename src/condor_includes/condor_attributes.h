@@ -802,6 +802,11 @@
 #define ATTR_ENCRYPT_OUTPUT_FILES  "EncryptOutputFiles"
 #define ATTR_DONT_ENCRYPT_INPUT_FILES  "DontEncryptInputFiles"
 #define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
+
+#define ATTR_CONDOR_VERSION "CondorVersion"
+#define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
+#define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
+
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
 #define ATTR_SHADOW_BIRTHDATE  "ShadowBday"

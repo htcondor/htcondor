@@ -135,6 +135,8 @@
 
 #define SUBMIT_KEY_WhenToTransferOutput "when_to_transfer_output"
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
+#define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
+#define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"

@@ -236,7 +236,10 @@ public:
 		    to shadow by using file transfer
 		*/
 	bool uploadWorkingFiles(void);
-	
+
+		/** Send checkpoint files to shadow */
+	bool uploadCheckpointFiles();
+
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);
 

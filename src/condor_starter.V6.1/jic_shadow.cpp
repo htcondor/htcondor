@@ -1020,6 +1020,37 @@ JICShadow::removeFromOutputFiles( const char* filename )
 }
 
 bool
+JICShadow::uploadCheckpointFiles()
+{
+	if(! filetrans) {
+		return false;
+	}
+
+	// The shadow may block on disk I/O for long periods of
+	// time, so set a big timeout on the starter's side of the
+	// file transfer socket.
+
+	int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
+	filetrans->setClientSocketTimeout( timeout );
+
+	// The user job may have created files only readable
+	// by the user, so set_user_priv here.
+	priv_state saved_priv = set_user_priv();
+
+	// this will block
+	bool rval = filetrans->UploadCheckpointFiles( true );
+	set_priv( saved_priv );
+
+	if( !rval ) {
+		// Failed to transfer.
+		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
+		return false;
+	}
+	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );
+	return true;
+}
+
+bool
 JICShadow::uploadWorkingFiles(void)
 {
 	if( ! filetrans ) {

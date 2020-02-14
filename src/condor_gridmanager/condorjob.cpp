@@ -1442,7 +1442,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
-	submit_ad->Delete( "CondorVersion" );
+	submit_ad->Delete( ATTR_CONDOR_VERSION );
 	submit_ad->Delete( ATTR_WANT_CLAIMING );
 	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );

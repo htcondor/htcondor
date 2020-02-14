@@ -467,7 +467,6 @@ ClusterCleanup(int cluster_id)
 
 int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 {
-	//reply.Assign("CondorVersion", );
 	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
 	reply.Assign("LateMaterializeVersion", 2);
 	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
