@@ -1326,8 +1326,9 @@ FileTransfer::DetermineWhichFilesToSend() {
 			FilesToSend = CheckpointFiles;
 			EncryptFiles = EncryptCheckpointFiles;
 			DontEncryptFiles = DontEncryptCheckpointFiles;
+
+			return;
 		}
-		return;
 	}
 
 	if ( upload_changed_files && last_download_time > 0 ) {
