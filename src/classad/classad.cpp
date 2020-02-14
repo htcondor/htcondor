@@ -115,7 +115,7 @@ ClassAd::
 ClassAd ()
 {
 	parentScope = NULL;
-	EnableDirtyTracking();
+	do_dirty_tracking = false;
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
 }
@@ -1022,8 +1022,6 @@ Copy( ) const
 	newAd->parentScope = parentScope;
 	newAd->chained_parent_ad = chained_parent_ad;
 
-	newAd->DisableDirtyTracking();
-
 	AttrList::const_iterator	itr;
 	for( itr=attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		if( !( tree = itr->second->Copy( ) ) ) {
@@ -1034,7 +1032,7 @@ Copy( ) const
 		}
 		newAd->Insert(itr->first,tree);
 	}
-	newAd->EnableDirtyTracking();
+
 	return newAd;
 }
 
