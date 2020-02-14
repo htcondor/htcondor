@@ -48,6 +48,7 @@ case "$MYSHELL" in
  ksh) SHELLFAM="sh";;
  zsh) SHELLFAM="sh";;
  tcsh|csh) SHELLFAM="csh";;
+ fish) SHELLFAM="fish";;
  *) if [ "X${1}X" == "X-qX" ]
     then SHELLFAM="sh"
     else echo "Unknown shell $MYSHELL"; exit 1
