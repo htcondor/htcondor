@@ -3556,9 +3556,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					dprintf(D_MATCH | D_FULLDEBUG,
 						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
 						unmodified_req_classad ? "with" : "w/o");
-					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad, true);
+					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad);
 					dprintf(D_MATCH | D_FULLDEBUG, "Machine ad was ============================\n");
-					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad, true);
+					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad);
 				}
 				if (unmodified_req_classad) {
 					// our modified req_classad no longer matches, put back the original

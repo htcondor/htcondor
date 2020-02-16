@@ -1452,7 +1452,7 @@ main( int argc, char *argv[] )
 							std::string tmp;
 							if (App.print_mask.IsEmpty()) {
 								classad::References attrs;
-								sGetAdAttrs(attrs, ready_ad, false, NULL);
+								sGetAdAttrs(attrs, ready_ad);
 								sPrintAdAttrs(tmp, ready_ad, attrs);
 							} else {
 								if (App.print_mask.has_headings()) {
@@ -1678,7 +1678,7 @@ main( int argc, char *argv[] )
 			while (ClassAd	*ad = result.Next()) {
 				tmp.clear();
 				classad::References attrs;
-				sGetAdAttrs(attrs, *ad, false, NULL);
+				sGetAdAttrs(attrs, *ad);
 				sPrintAdAttrs(tmp, *ad, attrs);
 				tmp += "\n";
 				fputs(tmp.c_str(), stdout);

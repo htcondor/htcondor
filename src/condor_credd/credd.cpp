@@ -342,7 +342,7 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 				contents += "\n";
 			}
 			// append the new ad
-			sPrintAd(contents, ad);
+			sPrintAdWithSecrets(contents, ad);
 
 			if (IsDebugVerbose(D_FULLDEBUG)) {
 				std::string tmp;

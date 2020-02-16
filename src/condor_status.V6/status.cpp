@@ -1300,7 +1300,6 @@ main (int argc, char *argv[])
 	if (dash_group_by) {
 		std::string output;
 		output.reserve(16372);
-		StringList * whitelist = NULL;
 
 		AdAggregationResults<std::string> groups(ad_groups);
 		groups.rewind();
@@ -1308,7 +1307,7 @@ main (int argc, char *argv[])
 		while ((ad = groups.next()) != NULL) {
 			output.clear();
 			classad::References attrs;
-			sGetAdAttrs(attrs, *ad, false, whitelist);
+			sGetAdAttrs(attrs, *ad);
 			sPrintAdAttrs(output, *ad, attrs);
 			output += "\n";
 			fputs(output.c_str(), stdout);

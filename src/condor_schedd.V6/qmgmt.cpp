@@ -471,7 +471,7 @@ int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
 	reply.Assign("LateMaterializeVersion", 2);
 	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
-	dPrintAd(D_ALWAYS, reply, false);
+	dPrintAd(D_ALWAYS, reply);
 	return 0;
 }
 

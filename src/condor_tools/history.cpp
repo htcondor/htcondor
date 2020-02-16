@@ -535,7 +535,7 @@ main(int argc, const char* argv[])
 	ad.InsertAttr(ATTR_OWNER, 1);
 	ad.InsertAttr("StreamResults", true);
 	dprintf(D_FULLDEBUG, "condor_history: sending streaming ACK header ad:\n");
-	dPrintAd(D_FULLDEBUG, ad, false);
+	dPrintAd(D_FULLDEBUG, ad);
 	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
 		dprintf(D_ALWAYS, "condor_history: Failed to write streaming ACK header ad\n");
 		exit(1);
@@ -560,7 +560,7 @@ main(int argc, const char* argv[])
 	ad.InsertAttr("MalformedAds", writetosocket_failcount);
 	ad.InsertAttr("AdCount", adCount);
 	dprintf(D_FULLDEBUG, "condor_history: sending final ad:\n");
-	dPrintAd(D_FULLDEBUG, ad, false);
+	dPrintAd(D_FULLDEBUG, ad);
 	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
 		dprintf(D_ALWAYS, "condor_history: Failed to write final ad to client\n");
 		exit(1);

@@ -132,6 +132,12 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_job_ad.Assign("_condor_SEND_PAIRED_SLOT",
 		param_boolean("CLAIM_PAIRED_SLOT",true));
 
+		// Insert an attribute in the request ad to inform the
+		// startd that this schedd is capable of understanding
+		// the newer protocol where any claim id in the response
+		// is encrypted.
+	m_job_ad.Assign("_condor_SECURE_CLAIM_ID", true);
+
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
 	    !sock->put( m_scheduler_addr.c_str() ) ||
@@ -231,14 +237,29 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		Reply of 4 (REQUEST_CLAIM_PAIR) means claim accepted by a slot
 		  that is paired, and the partner slot ad and claim id will be
 		  sent next.
+		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
+		  the claim id is encrypted.
+		Reply of 6 (REQUEST_CLAIM_PAIR_2) is the same as 4, but
+		  the claim id is encrypted.
 	*/
 
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
 	} else if( m_reply == NOT_OK ) {
 		dprintf( failureDebugLevel(), "Request was NOT accepted for claim %s\n", description() );
-	} else if( m_reply == REQUEST_CLAIM_LEFTOVERS ) {
-	 	if( !sock->get(m_leftover_claim_id) ||
+	} else if( m_reply == REQUEST_CLAIM_LEFTOVERS || m_reply == REQUEST_CLAIM_LEFTOVERS_2 ) {
+		bool recv_ok = false;
+		if ( m_reply == REQUEST_CLAIM_LEFTOVERS_2 ) {
+			char *val = NULL;
+			recv_ok = sock->get_secret(val);
+			if ( recv_ok ) {
+				m_leftover_claim_id = val;
+				free(val);
+			}
+		} else {
+			recv_ok = sock->get(m_leftover_claim_id);
+		}
+		if( !recv_ok ||
 			!getClassAd( sock, m_leftover_startd_ad )  ) 
 		{
 			// failed to read leftover partitionable slot info
@@ -253,8 +274,19 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 			// change reply to OK cuz claim was a success
 			m_reply = OK;
 		}
-	} else if( m_reply == REQUEST_CLAIM_PAIR ) {
-		if( !sock->get(m_paired_claim_id) ||
+	} else if( m_reply == REQUEST_CLAIM_PAIR || m_reply == REQUEST_CLAIM_PAIR_2 ) {
+		bool recv_ok = false;
+		if ( m_reply == REQUEST_CLAIM_PAIR_2 ) {
+			char *val = NULL;
+			recv_ok = sock->get_secret(val);
+			if ( recv_ok ) {
+				m_paired_claim_id = val;
+				free(val);
+			}
+		} else {
+			recv_ok = sock->get(m_paired_claim_id);
+		}
+		if( !recv_ok ||
 			!getClassAd( sock, m_paired_startd_ad ) )
 		{
 			// failed to read paired slot info

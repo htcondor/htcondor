@@ -2144,6 +2144,7 @@ Claim::writeJobAd( int pipe_end )
 	// DC::Write_Pipe for writing to it
 	
 	MyString ad_str;
+	// The starter doesn't need to know any secrets.
 	sPrintAd(ad_str, *c_jobad);
 
 	const char* ptr = ad_str.Value();

@@ -520,7 +520,7 @@ struct SubmitResult {
 		std::string str;
 		formatstr(str, "Submitted %d jobs into cluster %d,%d :\n", m_num, m_id.cluster, m_id.proc);
 		classad::References attrs;
-		sGetAdAttrs(attrs, m_ad, false, NULL);
+		sGetAdAttrs(attrs, m_ad);
 		sPrintAdAttrs(str, m_ad, attrs);
 		return str;
 	}
