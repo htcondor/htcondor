@@ -162,7 +162,7 @@ static QmgmtPeer *Q_SOCK = NULL;
 // running.  Used by SuperUserAllowedToSetOwnerTo().
 static HashTable<MyString,int> owner_history(hashFunction);
 
-int		do_Q_request(ReliSock *,bool &may_fork);
+int		do_Q_request(QmgmtPeer &,bool &may_fork);
 #if 0 // not used?
 void	FindPrioJob(PROC_ID &);
 #endif
@@ -957,6 +957,7 @@ QmgmtPeer::QmgmtPeer()
 	sock = NULL;
 	transaction = NULL;
 	allow_protected_attr_changes_by_superuser = true;
+	readonly = false;
 
 	unset();
 }
@@ -1025,6 +1026,16 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 	return true;
 }
 
+bool
+QmgmtPeer::setReadOnly(bool val)
+{
+	bool old_val = readonly;
+
+	readonly = val;
+
+	return old_val;
+}
+
 void
 QmgmtPeer::unset()
 {
@@ -1049,6 +1060,7 @@ QmgmtPeer::unset()
 	next_proc_num = 0;
 	active_cluster_num = -1;	
 	xact_start_time = 0;	// time at which the current transaction was started
+	readonly = false;
 }
 
 const char*
@@ -2430,6 +2442,12 @@ QmgmtSetEffectiveOwner(char const *o)
 bool
 OwnerCheck(ClassAd *ad, const char *test_owner)
 {
+	if ( Q_SOCK->getReadOnly() ) {
+		errno = EACCES;
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
+		return false;
+	}
+
 	// check if the IP address of the peer has daemon core write permission
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
@@ -2656,7 +2674,7 @@ unsetQSock()
 
 
 int
-handle_q(Service *, int, Stream *sock)
+handle_q(Service *, int cmd, Stream *sock)
 {
 	int	rval;
 	bool all_good;
@@ -2675,13 +2693,15 @@ handle_q(Service *, int, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
+	Q_SOCK->setReadOnly(cmd == QMGMT_READ_CMD);
+
 	BeginTransaction();
 
 	bool may_fork = false;
 	ForkStatus fork_status = FORK_FAILED;
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
+		rval = do_Q_request( *Q_SOCK, may_fork );
 
 		if( may_fork && fork_status == FORK_FAILED ) {
 			fork_status = schedd_forker.NewJob();
