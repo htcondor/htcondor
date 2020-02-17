@@ -1274,7 +1274,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 	if (!rollup && cgrp) {
 		PriorityFactor = getGroupPriorityFactor( cgrp->name );
 	}
-	else if (!rollup && CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
+	else if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
 		PriorityFactor=0;
 	}
     formatstr(tmp, "PriorityFactor%d", gnum);
