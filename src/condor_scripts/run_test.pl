@@ -172,8 +172,13 @@ if(@testlist) {
     # we were explicitly given a # list on the command-line
     foreach my $test (@testlist) {
         debug("    $test\n", 6);
-        if($test !~ /.*\.run$/) {
-            $test = "$test.run";
+        if($test !~ /.*\.\w+$/) {  # i.e., no extension
+            if (-s "$test.run") {
+                $test = "$test.run";
+            }
+            elsif (-s "$test.py") {
+                $test = "$test.py";
+            }
         }
 
         push(@test_suite, $test);
@@ -326,10 +331,10 @@ sub DoChild
     }
 
     $_ = $test_program;
-    s/\.run//;
+    s/\.\w+$//;
     my $testname = $_;
 
-    my $needs = load_test_requirements($testname);
+    my $needs = load_test_requirements($testname, $test_program);
     if(exists($needs->{personal})) {
         print "run_test $$: $testname requires a running HTCondor, checking...\n";
         print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
@@ -363,6 +368,16 @@ sub DoChild
         print "\tPython version: ";
         system ("python --version");
     }
+    elsif (exists($needs->{pytest})) {
+        print "run_test $$: $testname is pytest, checking python bindings and pytest\n";
+        SetupPython3Path();
+        print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
+        $perl = "python3 -m pytest --tests-dir $BaseDir";
+        print "\tPython version: ";
+        system ("python3 --version");
+        print "\tPytest version: ";
+        system ("python3 -m pytest --version 2>&1");  # goes to stderr normally
+    }
 
     my $test_starttime = time();
     debug("Test start @ $test_starttime \n",6);
@@ -387,8 +402,6 @@ sub DoChild
     my $runout = "";
     my $cmdout = "";
 
-    my $test_program_out = "";
-
     alarm($test_retirement);
     if(defined $test_id) {
         $log = $testname . ".$test_id" . ".log";
@@ -397,7 +410,6 @@ sub DoChild
         $err = $testname . ".$test_id" . ".err";
         $runout = $testname . ".$test_id" . ".run.out";
         $cmdout = $testname . ".$test_id" . ".cmd.out";
-        $test_program_out = "$test_program.$test_id.out";
     } else {
         $log = $testname . ".log";
         $cmd = $testname . ".cmd";
@@ -405,7 +417,6 @@ sub DoChild
         $err = $testname . ".err";
         $runout = $testname . ".run.out";
         $cmdout = $testname . ".cmd.out";
-        $test_program_out = "$test_program.out";
     }
 
     my $res;
@@ -414,10 +425,10 @@ sub DoChild
         my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) {$dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}";}
         my $verb = ($hush == 0) ? "" : "-v";
         my $timeout = "-t 12M";
-        $res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout $perl $test_program");
+        $res = system("timed_cmd.exe -jgd$dtm $verb -o $runout $timeout $perl $test_program");
     } else {
-        if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $test_program_out\n",6); }
-        $res = system("$perl $test_program > $test_program_out 2>&1");
+        if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $runout\n",6); }
+        $res = system("$perl $test_program > $runout 2>&1");
     }
 
     my $newlog =  $piddir . "/" . $log;
@@ -426,7 +437,6 @@ sub DoChild
     my $newerr =  $piddir . "/" . $err;
     my $newrunout =  $piddir . "/" . $runout;
     my $newcmdout =  $piddir . "/" . $cmdout;
-
 
     # generate file names
     copy($log, $newlog);
@@ -458,9 +468,10 @@ sub debug {
 sub load_test_requirements
 {
     my $name = shift;
+    my $program = shift;
     my $requirements;
 
-    if (open(TF, "<${name}.run")) {
+    if (open(TF, "<${program}")) {
         my $record = 0;
         my $triplequote = 0;
         my $conf = "";
@@ -475,8 +486,10 @@ sub load_test_requirements
                 }
             }
 
+            # look at the shebang line to decide what executable to run with
             if($line =~ /^\#\!/) {
                 if ($line =~ /python/) { $requirements->{python} = 1; }
+                elsif ($line =~ /pytest/) { $requirements->{pytest} = 1; }
                 next;
             }
 
@@ -582,6 +595,41 @@ sub SetupPythonPath {
         system("dir $relpy");
         system("dumpbin -headers $relpy\\classad.pyd");
         system("dumpbin -imports $relpy\\classad.pyd");
+    } else {
+        system("ls -l $reldir");
+        system("ls -l $reldir/lib");
+        print "contents of $relpy:\n";
+        system("ls -l $relpy");
+    }
+
+    my $pythonpath = "";
+    if (exists($ENV{PYTHONPATH})) {
+        $pythonpath = $ENV{PYTHONPATH};
+        print "\texisting PYTHONPATH=$pythonpath\n";
+        if (index($reldir,$pythonpath) != -1) {
+            print "\tadding $relpy to PYTHONPATH\n";
+            $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
+        }
+    } else {
+        print "\tsetting PYTHONPATH to $relpy\n";
+        $ENV{PYTHONPATH} = $relpy;
+    }
+}
+
+sub SetupPython3Path {
+    my $reldir = `condor_config_val release_dir`; chomp $reldir;
+    my $pathsep = ':';
+    my $relpy = "$reldir/lib/python3";
+    if ($iswindows) { $relpy = "$reldir\\lib\\python3"; $pathsep = ';'; }
+
+    # debug code, show what is in release dir and lib and lib/python
+    # on windows, also interrogate the bitness of the python bindings
+    if ($iswindows) {
+        system("dir $reldir");
+        system("dir $reldir\\lib");
+        system("dir $relpy");
+        # system("dumpbin -headers $relpy\\classad.pyd");
+        # system("dumpbin -imports $relpy\\classad.pyd");
     } else {
         system("ls -l $reldir");
         system("ls -l $reldir/lib");

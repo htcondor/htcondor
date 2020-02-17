@@ -1,20 +1,20 @@
  ###############################################################
- # 
- # Copyright 2011 Red Hat, Inc. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright 2011 Red Hat, Inc.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
+ ###############################################################
 
 ############################################################################
 ## Ok, so in exorcising the unholy daemons in the test goop
@@ -25,7 +25,7 @@ if (BUILD_TESTING)
 	##########################################################
 	# vars and settings
 	set(CONDOR_SCRIPTS_DIR ${CONDOR_SOURCE_DIR}/src/condor_scripts)
-	include_directories(${CONDOR_SOURCE_DIR}/src/condor_chirp) 
+	include_directories(${CONDOR_SOURCE_DIR}/src/condor_chirp)
 
 	##########################################################
 	## begin file goop manipulation specific to the horror that
@@ -93,7 +93,7 @@ if (BUILD_TESTING)
 	#endif(UNIX)
 
 	if(WINDOWS)
-		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to build it anyway. 
+		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to build it anyway.
 		# condor_exe_test(sleep.exe "sleep.cpp" "")
 	endif(WINDOWS)
 
@@ -178,6 +178,13 @@ if (BUILD_TESTING)
 		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
 		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+
+		# Ornithology
+		condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
+		condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
+		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
+		condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
+		condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full")
 	endif()
 
 	if(WITH_GANGLIA)
@@ -201,7 +208,7 @@ if (BUILD_TESTING)
 	# feature specific tests
 	if (HAVE_VMWARE)
 		condor_pl_test(job_vmu_basic "VM Universe smoke test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_vmu_basic.sh")
-		# cdrom xfer bits no longer supported. 
+		# cdrom xfer bits no longer supported.
 		# condor_pl_test(job_vmu_network "VM Universe networking test" "core;quick;full;quicknolink")
 		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_vmu_ckpt.sh")
 	endif(HAVE_VMWARE)
