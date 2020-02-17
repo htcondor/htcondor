@@ -131,6 +131,7 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
+#if ! defined( WIN32 )
 		// Register command which the starter uses to fetch a user
 		// credential if it needs to.
 	daemonCore->
@@ -138,6 +139,7 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  (CommandHandler)&get_cred_handler,
 						  "get_cred_handler", NULL, DAEMON, D_COMMAND,
 						  true /*force authentication*/ );
+#endif
 }
 
 void
