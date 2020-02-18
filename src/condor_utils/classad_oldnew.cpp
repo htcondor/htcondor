@@ -677,15 +677,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 				!(compat_classad::ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
-				if(excludeTypes)
-				{
-					if(strcasecmp( ATTR_MY_TYPE, attr.c_str() ) != 0 &&
-						strcasecmp( ATTR_TARGET_TYPE, attr.c_str() ) != 0)
-					{
-						numExprs++;
-					}
-				}
-				else { numExprs++; }
+				numExprs++;
 			} else {
 				private_count++;
 			}
@@ -733,14 +725,6 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
 				continue;
-			}
-
-			if(excludeTypes){
-				if(strcasecmp( ATTR_MY_TYPE, attr.c_str( ) ) == 0 || 
-				   strcasecmp( ATTR_TARGET_TYPE, attr.c_str( ) ) == 0 )
-				{
-					continue;
-				}
 			}
 
 			buf = attr;
