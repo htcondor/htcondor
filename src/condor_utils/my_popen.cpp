@@ -50,6 +50,9 @@ struct popen_entry {
 };
 struct popen_entry *popen_entry_head = NULL;
 
+// Several functions here have return values that we can't
+// sensibly check.  To quiet our static analyzers, the functions write
+// return values to this dummy variable, which is never read.
 static int dummy_global = 0;
 
 static void add_child(FILE* fp, child_handle_t ch)
@@ -963,7 +966,7 @@ int MyPopenTimer::start_program (
 #else
 	int fd = fileno(fp);
 	int flags = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	dummy_global = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 	begin_time = time(NULL);
 	return 0;
