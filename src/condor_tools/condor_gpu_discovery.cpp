@@ -1277,19 +1277,12 @@ main( int argc, const char** argv)
 		KVP& props = dev_props.find(prefix)->second;
 
 		if (opt_basic && getBasicProps) {
-			int driverVersion=0, runtimeVersion=0;
-
-			//printf("%sDev=%d\n",  prefix,dev);
+			int driverVersion=0;
 
 			if (cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-			}
-			if (cudaRuntimeGetVersion) {
-				cudaRuntimeGetVersion(&runtimeVersion);
-				if (runtimeVersion) {
-					props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
-				}
+				props["MaxSupportedCUDAVersion"] = driverVersion;
 			}
 
 			if (dev < g_cl_cCuda) {
