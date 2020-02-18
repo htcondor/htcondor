@@ -179,6 +179,11 @@ int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target,
  */
 int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value);
 
+// (Re)Initialize configuration related to ClassAds.
+// This includes setting the evaluation mode, setting use of caching, and
+// registering additional ClassAd functions
+void ClassAdReconfig();
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -189,10 +194,6 @@ class ClassAd : public classad::ClassAd
 	ClassAd( const classad::ClassAd &ad );
 
 	virtual ~ClassAd();
-
-	static void Reconfig();
-	static bool m_initConfig;
-	static bool m_strictEvaluation;
 
  private:
 

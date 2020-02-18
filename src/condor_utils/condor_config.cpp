@@ -1181,7 +1181,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
-	ClassAd::Reconfig();
+	ClassAdReconfig();
 
 	return true;
 }

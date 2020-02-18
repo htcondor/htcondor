@@ -898,11 +898,6 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 
 
 			match_pool[omp_id].ReplaceRightAd(ad2);
-			if ( !compat_classad::ClassAd::m_strictEvaluation )
-			{
-				target_pool[omp_id].alternateScope = ad2;
-				ad2->alternateScope = &(target_pool[omp_id]);
-			}
 		
 			if(halfMatch)
 				result = match_pool[omp_id].rightMatchesLeft();

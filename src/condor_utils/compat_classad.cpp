@@ -75,15 +75,14 @@ classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 
 }
 
-bool ClassAd::m_initConfig = false;
-bool ClassAd::m_strictEvaluation = false;
+static bool ClassAd_initConfig = false;
+static bool ClassAd_strictEvaluation = false;
 
-void ClassAd::
-Reconfig()
+void ClassAdReconfig()
 {
 	//ClassAdPrivateAttrs.rehash(11);
-	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::SetOldClassAdSemantics( !m_strictEvaluation );
+	ClassAd_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+	classad::SetOldClassAdSemantics( !ClassAd_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -137,11 +136,11 @@ Reconfig()
 		}
 		if (loc_char) {free(loc_char);}
 	}
-	if (!m_initConfig)
+	if (!ClassAd_initConfig)
 	{
 		registerClassadFunctions();
 		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
-		m_initConfig = true;
+		ClassAd_initConfig = true;
 	}
 }
 
@@ -1196,9 +1195,9 @@ classad_debug_dprintf(const char *s) {
 
 ClassAd::ClassAd()
 {
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
+	if ( !ClassAd_initConfig ) {
+		ClassAdReconfig();
+		ClassAd_initConfig = true;
 	}
 
 	DisableDirtyTracking();
@@ -1206,17 +1205,17 @@ ClassAd::ClassAd()
 
 ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 {
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
+	if ( !ClassAd_initConfig ) {
+		ClassAdReconfig();
+		ClassAd_initConfig = true;
 	}
 }
 
 ClassAd::ClassAd( const classad::ClassAd &ad ) : classad::ClassAd(ad)
 {
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
+	if ( !ClassAd_initConfig ) {
+		ClassAdReconfig();
+		ClassAd_initConfig = true;
 	}
 }
 
