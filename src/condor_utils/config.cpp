@@ -3351,23 +3351,23 @@ static const char * evaluate_macro_func (
 			if (len_arg) *len_arg++ = 0;
 
 			int start_pos = 0;
-			if (start_arg) {
-				const char * arg = lookup_macro(start_arg, macro_set, ctx);
-				if ( ! arg) arg = start_arg;
 
-				char * tmp3 = NULL;
-				if (strchr(arg, '$')) {
-					tmp3 = expand_macro(arg, macro_set, ctx);
-					arg = tmp3;
-				}
+			const char * arg = lookup_macro(start_arg, macro_set, ctx);
+			if ( ! arg) arg = start_arg;
 
-				long long index = -1;
-				if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
-					EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
-				}
-				start_pos = (int)index;
-				if (tmp3) {free(tmp3);} tmp3 = NULL;
+			char * tmp3 = NULL;
+			if (strchr(arg, '$')) {
+				tmp3 = expand_macro(arg, macro_set, ctx);
+				arg = tmp3;
 			}
+
+			long long index = -1;
+			if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
+				EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
+			}
+			start_pos = (int)index;
+			if (tmp3) {free(tmp3);} tmp3 = NULL;
+
 
 			int sub_len = INT_MAX/2;
 			if (len_arg) {
