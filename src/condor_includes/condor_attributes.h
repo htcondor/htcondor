@@ -582,7 +582,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
-#define ATTR_REQUIRED_CUDA_VERSION "RequiredCUDAVersion"
+#define ATTR_CUDA_VERSION "CUDAVersion"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"

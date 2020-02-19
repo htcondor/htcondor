@@ -339,7 +339,7 @@
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
 #define SUBMIT_KEY_JobMaterializeMaxIdleAlt "materialize_max_idle"
 
-#define SUBMIT_KEY_RequiredCUDAVersion "required_cuda_version"
+#define SUBMIT_KEY_CUDAVersion "cuda_version"
 
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 

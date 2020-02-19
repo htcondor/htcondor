@@ -5002,7 +5002,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_PreserveRelativePaths, ATTR_PRESERVE_RELATIVE_PATHS, SimpleSubmitKeyword::f_as_bool },
 
 	// The special processing for require_cuda_version is in SetRequirements().
-	{SUBMIT_KEY_RequiredCUDAVersion, ATTR_REQUIRED_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
+	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -6365,14 +6365,14 @@ int SubmitHash::SetRequirements()
 	}
 
 	std::string requiredCudaVersion;
-	if (job->LookupString(ATTR_REQUIRED_CUDA_VERSION, requiredCudaVersion)) {
+	if (job->LookupString(ATTR_CUDA_VERSION, requiredCudaVersion)) {
 		unsigned major, minor;
 		if( sscanf( requiredCudaVersion.c_str(), "%u.%u", & major, & minor ) == 2 ) {
 			long long int rcv = (major * 1000) + (minor % 100);
-			AssignJobVal(ATTR_REQUIRED_CUDA_VERSION, rcv);
-			answer += "&& " ATTR_REQUIRED_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+			AssignJobVal(ATTR_CUDA_VERSION, rcv);
+			answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
 		} else {
-			push_error(stderr, SUBMIT_KEY_RequiredCUDAVersion
+			push_error(stderr, SUBMIT_KEY_CUDAVersion
 				" must be of the form 'x.y',"
 				" where x and y are positive integers.\n" );
 			ABORT_AND_RETURN(1);
