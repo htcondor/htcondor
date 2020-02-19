@@ -531,7 +531,7 @@ main(int argc, const char* argv[])
   }
 
   if (writetosocket && streamresults) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
 	ad.InsertAttr("StreamResults", true);
 	dprintf(D_FULLDEBUG, "condor_history: sending streaming ACK header ad:\n");
@@ -554,7 +554,7 @@ main(int argc, const char* argv[])
   }
 
   if (writetosocket) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 0);
 	ad.InsertAttr(ATTR_NUM_MATCHES, matchCount);
 	ad.InsertAttr("MalformedAds", writetosocket_failcount);
@@ -803,7 +803,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 {
 	printHeader(); // this has the side effect of setting the projection for the default output
 
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
@@ -846,7 +846,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 
 	bool eom_after_each_ad = false;
 	while (true) {
-		compat_classad::ClassAd ad;
+		ClassAd ad;
 		if (!getClassAd(sock, ad)) {
 			fprintf(stderr, "Failed to receive remote ad.\n");
 			exit(1);

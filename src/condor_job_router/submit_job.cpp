@@ -549,12 +549,6 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	return success;
 }
 
-bool submit_job(const std::string & owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
-{
-	ClassAd src2 = src;
-	return submit_job(owner, domain, src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
-}
-
 /*
 	Push the dirty attributes in src into the queue.  Does _not_ clear
 	the dirty attributes.

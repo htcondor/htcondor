@@ -220,7 +220,7 @@ CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
 		error_string = "No schedd target specified.";
 	}
 	std::string capability, schedd_addr;
-	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](compat_classad::ClassAd *ad) -> int {
+	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](ClassAd *ad) -> int {
 			std::string local_schedd_name;
 			if (!ad ||
 				!ad->EvaluateAttrString(ATTR_NAME, local_schedd_name) ||

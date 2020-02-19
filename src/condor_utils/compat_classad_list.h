@@ -29,7 +29,7 @@ namespace compat_classad {
 // The SortFunction returns a 1 if the first classad is
 // "smaller than" the second classad. Do not assume
 // about other return values.
-typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd*,void*);
+typedef int (*SortFunctionType)(ClassAd*,ClassAd*,void*);
 
 class ClassAdListItem {
 public:

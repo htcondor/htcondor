@@ -292,7 +292,7 @@ struct Collector {
         if (!list_len)
             return;
 
-        compat_classad::ClassAd ad;
+        ClassAd ad;
         while (m_collectors->next(collector))
         {
             if(!collector->locate()) {

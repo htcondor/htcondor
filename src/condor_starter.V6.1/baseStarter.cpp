@@ -861,15 +861,15 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		return false;
 	}
 
-	compat_classad::ClassAd input;
+	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
 
-	compat_classad::ClassAd *jobad = NULL;
-	compat_classad::ClassAd *machinead = NULL;
+	ClassAd *jobad = NULL;
+	ClassAd *machinead = NULL;
         if( jic )
 	{
                 jobad = jic->jobClassAd();
@@ -1161,7 +1161,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 	}
 
-	compat_classad::ClassAd reply;
+	ClassAd reply;
 	reply.InsertAttr(ATTR_RESULT, true);
 	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
 	if (!reply.Insert("TransferFiles", list))

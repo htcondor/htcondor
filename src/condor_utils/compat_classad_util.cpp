@@ -656,7 +656,7 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint)
+bool EvalExprBool(ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
@@ -702,7 +702,7 @@ bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint)
 	return false;
 }
 
-bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
+bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 {
 	classad::Value result;
 	bool boolVal;
@@ -723,7 +723,7 @@ bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 // TODO ClassAd::SameAs() does a better job, but lacks an ignore list.
 //   This function will return true if ad1 has attributes that ad2 lacks.
 //   Both functions ignore any chained parent ad.
-bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList *ignored_attrs, bool verbose )
+bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bool verbose )
 {
 	classad::ExprTree *ad1_expr, *ad2_expr;
 	const char* attr_name;
@@ -766,8 +766,8 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 	return ! found_diff;
 }
 
-int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result,
+int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+				  ClassAd *target, classad::Value &result,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
@@ -795,7 +795,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	return rc;
 }
 
-bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
+bool IsAMatch( ClassAd *ad1, ClassAd *ad2 )
 {
 	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( ad1, ad2 );
 
@@ -806,10 +806,10 @@ bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
 }
 
 static classad::MatchClassAd *match_pool = NULL;
-static compat_classad::ClassAd *target_pool = NULL;
-static std::vector<compat_classad::ClassAd*> *matched_ads = NULL;
+static ClassAd *target_pool = NULL;
+static std::vector<ClassAd*> *matched_ads = NULL;
 
-bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch)
+bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch)
 {
 	int adCount = candidates.size();
 	static int cpu_count = 0;
@@ -840,9 +840,9 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 	if(!match_pool)
 		match_pool = new classad::MatchClassAd[cpu_count];
 	if(!target_pool)
-		target_pool = new compat_classad::ClassAd[cpu_count];
+		target_pool = new ClassAd[cpu_count];
 	if(!matched_ads)
-		matched_ads = new std::vector<compat_classad::ClassAd*>[cpu_count];
+		matched_ads = new std::vector<ClassAd*>[cpu_count];
 
 	if(!candidates.size())
 		return false;
@@ -874,7 +874,7 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 			int offset = omp_id + index * cpu_count;
 			if(offset >= adCount)
 				break;
-			compat_classad::ClassAd *ad2 = candidates[offset];
+			ClassAd *ad2 = candidates[offset];
 
 /*
 			if(halfMatch)
@@ -931,13 +931,13 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 	return matches.size() > 0;
 }
 
-bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
+bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
 		// Eventually, we should move that check either into the collector
 		// or into the requirements expression.
-	char const *my_target_type = GetTargetTypeName(*my);
-	char const *target_type = GetMyTypeName(*target);
+	char const *my_target_type = compat_classad::GetTargetTypeName(*my);
+	char const *target_type = compat_classad::GetMyTypeName(*target);
 	if( !my_target_type ) {
 		my_target_type = "";
 	}

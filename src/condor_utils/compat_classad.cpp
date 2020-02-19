@@ -1193,36 +1193,6 @@ classad_debug_dprintf(const char *s) {
 	dprintf(D_FULLDEBUG, "%s", s);
 }
 
-ClassAd::ClassAd()
-{
-	if ( !ClassAd_initConfig ) {
-		ClassAdReconfig();
-		ClassAd_initConfig = true;
-	}
-
-	DisableDirtyTracking();
-}
-
-ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
-{
-	if ( !ClassAd_initConfig ) {
-		ClassAdReconfig();
-		ClassAd_initConfig = true;
-	}
-}
-
-ClassAd::ClassAd( const classad::ClassAd &ad ) : classad::ClassAd(ad)
-{
-	if ( !ClassAd_initConfig ) {
-		ClassAdReconfig();
-		ClassAd_initConfig = true;
-	}
-}
-
-ClassAd::~ClassAd()
-{
-}
-
 CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 {
 	switch (parse_type) {

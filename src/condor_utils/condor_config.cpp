@@ -3681,7 +3681,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 {
 	if (!param(buf, param_name, default_value)) {return false;}
 
-	compat_classad::ClassAd rhs;
+	ClassAd rhs;
 	if (me) {
 		rhs = *me;
 	}

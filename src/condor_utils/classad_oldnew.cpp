@@ -47,10 +47,10 @@ void AttrList_setPublishServerTime(bool publish)
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
-compat_classad::ClassAd *
+ClassAd *
 getClassAd( Stream *sock )
 {
-	compat_classad::ClassAd *ad = new compat_classad::ClassAd( );
+	ClassAd *ad = new ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}

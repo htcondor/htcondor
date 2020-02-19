@@ -152,14 +152,14 @@ void make_big_string(
 	return;
 }
 
-/* Returns a new compat_classad::ClassAd from a file */
-compat_classad::ClassAd* get_classad_from_file(){
+/* Returns a new ClassAd from a file */
+ClassAd* get_classad_from_file(){
 
 	FILE* classad_file;
 	ClassAd* classad_from_file;
 	const char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
 		"MyType=\"foo\"\n TargetType=\"blah\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad_file = safe_fopen_wrapper_follow("classad_file", "w");
 	fPrintAd(classad_file, classad);

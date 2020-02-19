@@ -24,6 +24,8 @@
 #include "MyString.h"
 #include "classad_oldnew.h"
 
+using classad::ClassAd;
+
 class StringList;
 class Stream;
 
@@ -183,21 +185,6 @@ int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target,
 // This includes setting the evaluation mode, setting use of caching, and
 // registering additional ClassAd functions
 void ClassAdReconfig();
-
-class ClassAd : public classad::ClassAd
-{
- public:
-	ClassAd();
-
-	ClassAd( const ClassAd &ad );
-
-	ClassAd( const classad::ClassAd &ad );
-
-	virtual ~ClassAd();
-
- private:
-
-};
 
 class ClassAdFileParseHelper
 {

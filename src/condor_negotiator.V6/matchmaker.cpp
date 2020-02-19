@@ -5168,8 +5168,8 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	bool allow_pslot_preemption = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
 	double allocatedWeight = 0.0;
 		// Set up for parallel matchmaking, if enabled
-	std::vector<compat_classad::ClassAd *> par_candidates;
-	std::vector<compat_classad::ClassAd *> par_matches;
+	std::vector<ClassAd *> par_candidates;
+	std::vector<ClassAd *> par_matches;
 
 	int num_threads =  param_integer("NEGOTIATOR_NUM_THREADS", 1);
 	if (num_threads > 1) {
