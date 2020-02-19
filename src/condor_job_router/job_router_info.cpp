@@ -319,7 +319,7 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public ClassAdFileParseHelper
 {
  public:
 	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);

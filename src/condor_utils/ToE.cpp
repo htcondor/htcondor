@@ -62,7 +62,7 @@ writeTag( classad::ClassAd * toe, const std::string & jobAdFileName ) {
             errno, strerror(errno) );
         return false;
     } else {
-        compat_classad::fPrintAd( jobAdFile, * toe );
+        fPrintAd( jobAdFile, * toe );
         fclose( jobAdFile );
     }
 

@@ -49,7 +49,7 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
 {
 	const char * rhs = NULL;
-	if ( ! compat_classad::SplitLongFormAttrValue(str, attr, rhs)) {
+	if ( ! SplitLongFormAttrValue(str, attr, rhs)) {
 		if (pos) *pos = 0;
 		return 1;
 	}
@@ -781,14 +781,14 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = compat_classad::getTheMatchAd( source, target, sourceAlias, targetAlias );
+		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
 	}
 
 	if ( mad ) {
-		compat_classad::releaseTheMatchAd();
+		releaseTheMatchAd();
 	}
 	expr->SetParentScope( old_scope );
 
@@ -797,11 +797,11 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 )
 {
-	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( ad1, ad2 );
+	classad::MatchClassAd *mad = getTheMatchAd( ad1, ad2 );
 
 	bool result = mad->symmetricMatch();
 
-	compat_classad::releaseTheMatchAd();
+	releaseTheMatchAd();
 	return result;
 }
 
@@ -936,8 +936,8 @@ bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 		// The collector relies on this function to check the target type.
 		// Eventually, we should move that check either into the collector
 		// or into the requirements expression.
-	char const *my_target_type = compat_classad::GetTargetTypeName(*my);
-	char const *target_type = compat_classad::GetMyTypeName(*target);
+	char const *my_target_type = GetTargetTypeName(*my);
+	char const *target_type = GetMyTypeName(*target);
 	if( !my_target_type ) {
 		my_target_type = "";
 	}
@@ -950,11 +950,11 @@ bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 		return false;
 	}
 
-	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( my, target );
+	classad::MatchClassAd *mad = getTheMatchAd( my, target );
 
 	bool result = mad->rightMatchesLeft();
 
-	compat_classad::releaseTheMatchAd();
+	releaseTheMatchAd();
 	return result;
 }
 

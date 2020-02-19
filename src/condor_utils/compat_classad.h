@@ -42,8 +42,6 @@ class Stream;
 
 class MapFile; // forward ref
 
-namespace compat_classad {
-
 
 class ClassAdFileParseHelper;
 
@@ -443,7 +441,5 @@ void TrimReferenceNames( classad::References &ref_set, bool external = false );
 
 
 typedef classad::ExprTree ExprTree;
-
-} // namespace compat_classad
 
 #endif

@@ -59,8 +59,6 @@ IsStringEnd(const char *str, unsigned off)
 	return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
 }
 
-namespace compat_classad {
-
 static StringList ClassAdUserLibs;
 
 static void registerClassadFunctions();
@@ -2697,5 +2695,3 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 
 
 // end functions
-
-} // namespace compat_classad

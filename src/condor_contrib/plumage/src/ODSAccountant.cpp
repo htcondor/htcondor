@@ -27,7 +27,6 @@
 #include "stl_string_utils.h"
 
 using namespace std;
-using namespace compat_classad;
 using namespace plumage::etl;
 
 // lots of code cribbed from userprio

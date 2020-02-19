@@ -381,7 +381,7 @@ static struct {
 bool g_stream_results = false;
 
 
-class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 {
  public:
 	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)

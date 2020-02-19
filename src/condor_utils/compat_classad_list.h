@@ -24,8 +24,6 @@
 
 #include "HashTable.h"
 
-namespace compat_classad {
-
 // The SortFunction returns a 1 if the first classad is
 // "smaller than" the second classad. Do not assume
 // about other return values.
@@ -79,7 +77,7 @@ protected:
 			 * @return true if a comes before b in sorted order,
 			 *  false otherwise.
 			 */
-		bool operator() (compat_classad::ClassAdListItem* a, compat_classad::ClassAdListItem* b)
+		bool operator() (ClassAdListItem* a, ClassAdListItem* b)
 		{
 			int res = this->smallerThan(a->ad,b->ad,this->userInfo);
 			if (res == 1) return true;
@@ -131,7 +129,5 @@ class ClassAdList: public ClassAdListDoesNotDeleteAds
 	int Delete(ClassAd* cad);
 	virtual void Clear();
 };
-
-} // namespace compat_classad
 
 #endif

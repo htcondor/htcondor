@@ -187,7 +187,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!compat_classad::ClassAdAttributeIsPrivate(buf))
+            if(!ClassAdAttributeIsPrivate(buf))
             {
                 if(excludeTypes)
                 {
@@ -237,7 +237,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if(compat_classad::ClassAdAttributeIsPrivate(buf)){
+            if(ClassAdAttributeIsPrivate(buf)){
                 continue;
             }
 
@@ -258,7 +258,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
             /*
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    compat_classad::ClassAdAttributeIsPrivate(tmpAttrName)) {
+                    ClassAdAttributeIsPrivate(tmpAttrName)) {
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(exprString);
@@ -349,7 +349,7 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
         printf("C3:\n"); fPrintAd(stdout, *c3); printf("\n");
     }
 
-    //ugh, converting old classads into compat_classad::ClassAds, in probably the 
+    //ugh, converting old classads into ClassAds, in probably the 
     //  worst possible way. Ever. But it should work.
     c1FP = fopen("c1FP.txt", "w+");
     c2FP = fopen("c2FP.txt", "w+");
@@ -364,8 +364,8 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
 //}}}
 
 //{{{setUpCompatClassAd()
-void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::ClassAd** compC2,
-						 compat_classad::ClassAd** compC3, FILE* c1FP, FILE* c2FP, FILE* c3FP,
+void setUpCompatClassAds(ClassAd** compC1, ClassAd** compC2,
+						 ClassAd** compC3, FILE* c1FP, FILE* c2FP, FILE* c3FP,
         bool verbose)
 {
     c1FP = fopen("c1FP.txt", "r+");
@@ -376,9 +376,9 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
         printf("creating compatclassads\n");
 
     int eofCheck, errorCheck, emptyCheck; 
-    (*compC1) = new compat_classad::ClassAd(c1FP, ",", eofCheck, errorCheck, emptyCheck); 
-    (*compC2)= new compat_classad::ClassAd(c2FP, ",", eofCheck, errorCheck, emptyCheck); 
-    (*compC3) = new compat_classad::ClassAd(c3FP, ",", eofCheck, errorCheck, emptyCheck); 
+    (*compC1) = new ClassAd(c1FP, ",", eofCheck, errorCheck, emptyCheck); 
+    (*compC2)= new ClassAd(c2FP, ",", eofCheck, errorCheck, emptyCheck); 
+    (*compC3) = new ClassAd(c3FP, ",", eofCheck, errorCheck, emptyCheck); 
     fclose(c1FP); fclose(c2FP); fclose(c3FP);
 
     SetMyTypeName(*(*compC1), "compC1");
@@ -404,7 +404,7 @@ bool test_put_server_time(bool verbose)
 
     setUpClassAds(c1, c2, c3, c1FP, c2FP, c3FP,verbose);
 
-	compat_classad::ClassAd *compC1, *compC2, *compC3;
+	ClassAd *compC1, *compC2, *compC3;
 
     setUpCompatClassAds(&compC1, &compC2, &compC3, c1FP, c2FP, c3FP,verbose);
 
@@ -468,7 +468,7 @@ bool test_put_chained_ads(bool verbose)
 
     setUpClassAds(c1, c2, c3, c1FP, c2FP, c3FP, verbose);
 
-	compat_classad::ClassAd *compC1, *compC2, *compC3;
+	ClassAd *compC1, *compC2, *compC3;
 
     setUpCompatClassAds(&compC1, &compC2, &compC3, c1FP, c2FP, c3FP,verbose);
 
