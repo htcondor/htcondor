@@ -983,7 +983,6 @@ main( int argc, const char** argv)
 	typedef cudaError_t (CUDACALL* cuda_t)(int*); //Used for DLFCN
 	cuda_t cudaGetDeviceCount = NULL; 
 	cuda_t cudaDriverGetVersion = NULL;
-	cuda_t cudaRuntimeGetVersion = NULL;
 	dev_basic_props getBasicProps = NULL;
 
 	// function pointers for the NVIDIA management layer, used for dynamic attributes.
@@ -1019,7 +1018,6 @@ main( int argc, const char** argv)
 
 		cudaGetDeviceCount = sim_cudaGetDeviceCount;
 		cudaDriverGetVersion = sim_cudaDriverGetVersion;
-		cudaRuntimeGetVersion = sim_cudaRuntimeGetVersion;
 		getBasicProps = sim_getBasicProps;
 
 		nvmlInit = sim_nvmlInit;
@@ -1182,6 +1180,7 @@ main( int argc, const char** argv)
 	// lookup the function pointers we will need later from the cudart library
 	//
 	if ( ! opt_simulate) {
+		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
