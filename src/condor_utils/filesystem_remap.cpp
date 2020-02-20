@@ -382,7 +382,7 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 
 int 
 FilesystemRemap::AddDevShmMapping() {
-#if defined(LINUX) && defined(MS_PRIVATE)
+#ifdef LINUX
 	if (!param_boolean("MOUNT_PRIVATE_DEV_SHM", true)) {
 		return 1;
 	}
@@ -396,12 +396,14 @@ FilesystemRemap::AddDevShmMapping() {
 		return -1;
 	}
 
+#ifdef HAVE_MS_PRIVATE
 	if (mount("none", "/dev/shm", NULL, MS_PRIVATE, NULL)) {
 		dprintf(D_ALWAYS, "Marking /dev/shm as a private mount failed. (errno=%d, %s)\n", errno, strerror(errno));
 		return -1;
 	} else {
 		dprintf(D_FULLDEBUG, "Mounting /dev/shm as a private mount successful.\n");
 	}
+#endif
 
 	return 0;
 #else
