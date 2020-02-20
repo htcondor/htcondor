@@ -382,7 +382,7 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 
 int 
 FilesystemRemap::AddDevShmMapping() {
-#ifdef LINUX
+#if defined(LINUX) && defined(MS_PRIVATE)
 	if (!param_boolean("MOUNT_PRIVATE_DEV_SHM", true)) {
 		return 1;
 	}
