@@ -1281,6 +1281,9 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
 	}
+	if (IS_PUBLIC(how_much) && m_reuse_dir) {
+		m_reuse_dir->Publish(*cp);
+	}
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
