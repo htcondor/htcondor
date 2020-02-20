@@ -6367,13 +6367,28 @@ int SubmitHash::SetRequirements()
 	std::string requiredCudaVersion;
 	if (job->LookupString(ATTR_CUDA_VERSION, requiredCudaVersion)) {
 		unsigned major, minor;
-		if( sscanf( requiredCudaVersion.c_str(), "%u.%u", & major, & minor ) == 2 ) {
-			long long int rcv = (major * 1000) + (minor % 100);
-			AssignJobVal(ATTR_CUDA_VERSION, rcv);
-			answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
-		} else {
+		int convertedLength = 0;
+		bool setCUDAVersion = false;
+		if( sscanf( requiredCudaVersion.c_str(), "%u.%u%n", & major, & minor, & convertedLength ) == 2 ) {
+			if( convertedLength == requiredCudaVersion.length() ) {
+				long long int rcv = (major * 1000) + (minor % 100);
+				AssignJobVal(ATTR_CUDA_VERSION, rcv);
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				setCUDAVersion = true;
+			}
+		} else if( sscanf( requiredCudaVersion.c_str(), "%u%n", & major, & convertedLength ) == 1 ) {
+			if( convertedLength == requiredCudaVersion.length() ) {
+				long long int rcv = major;
+				if( major < 1000 ) { rcv = major * 1000; }
+				AssignJobVal(ATTR_CUDA_VERSION, rcv);
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				setCUDAVersion = true;
+			}
+		}
+
+		if(! setCUDAVersion) {
 			push_error(stderr, SUBMIT_KEY_CUDAVersion
-				" must be of the form 'x.y',"
+				" must be of the form 'x' or 'x.y',"
 				" where x and y are positive integers.\n" );
 			ABORT_AND_RETURN(1);
 		}
