@@ -1363,6 +1363,7 @@ ReliSock::get_statistics() {
 		return statsBuf;
 	}
 
+#if __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ > 6)
 	snprintf(statsBuf, maxSize,
 		"rto: %d "
 		"ato: %d "
@@ -1403,6 +1404,7 @@ ReliSock::get_statistics() {
 		ti.tcpi_rcv_rtt,
 		ti.tcpi_rcv_space,
 		ti.tcpi_total_retrans);
+#endif
 		
 	return statsBuf;
 #endif
