@@ -399,6 +399,12 @@ JobInfoCommunicator::setOutputAdFile( const char* path )
 }
 
 void
+JobInfoCommunicator::setUpdateAdFile( const char* path )
+{
+	m_job_update_ad_file = path ? path : "";
+}
+
+void
 JobInfoCommunicator::setCredPath( const char* path )
 {
 	if( job_CredPath ) {
@@ -445,25 +451,69 @@ JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 }
 
 
+bool
+JobInfoCommunicator::writeUpdateAdFile( ClassAd* ad )
+{
+	if( m_job_update_ad_file.empty() ) {
+		return false;
+	}
+	std::string tmp_file = m_job_update_ad_file + ".tmp";
+
+	// TODO Write to temp file and rename
+	FILE* fp;
+	fp = safe_fopen_wrapper_follow( tmp_file.c_str(), "a" );
+	if( ! fp ) {
+		dprintf( D_ALWAYS, "Failed to open job update ClassAd "
+		         "\"%s\": %s (errno %d)\n", m_job_update_ad_file.c_str(),
+		         strerror(errno), errno );
+		return false;
+	} else {
+		dprintf( D_ALWAYS, "Writing job update ClassAd to \"%s\"\n",
+		         m_job_update_ad_file.c_str() );
+	}
+		// append a delimiter?
+	fPrintAd( fp, *ad );
+
+	fclose( fp );
+	if ( rename( tmp_file.c_str(), m_job_update_ad_file.c_str() ) < 0 ) {
+		dprintf( D_ALWAYS, "Failed to rename job update ClassAd "
+		         "\"%s\": %s (errno %d)\n", m_job_update_ad_file.c_str(),
+		         strerror(errno), errno );
+		unlink( tmp_file.c_str() );
+		return false;
+	}
+	return true;
+}
+
+
 // This has to be called after we know what the working directory is
 // going to be, so we can make sure this is a full path...
 void
 JobInfoCommunicator::initOutputAdFile( void )
 {
-	if( ! job_output_ad_file ) {
-		return;
+	if( job_output_ad_file ) {
+		if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
+			job_output_ad_is_stdout = true;
+		} else if( ! fullpath(job_output_ad_file) ) {
+			std::string path = Starter->GetWorkingDir();
+			path += DIR_DELIM_CHAR;
+			path += job_output_ad_file;
+			free( job_output_ad_file );
+			job_output_ad_file = strdup( path.c_str() );
+		}
+		dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n",
+		         job_output_ad_is_stdout ? "STDOUT" : job_output_ad_file );
 	}
-	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
-		job_output_ad_is_stdout = true;
-	} else if( ! fullpath(job_output_ad_file) ) {
-		MyString path = Starter->GetWorkingDir();
-		path += DIR_DELIM_CHAR;
-		path += job_output_ad_file;
-		free( job_output_ad_file );
-		job_output_ad_file = strdup( path.Value() );
+	if( ! m_job_update_ad_file.empty() ) {
+		if( ! fullpath(m_job_update_ad_file.c_str()) ) {
+			std::string path = Starter->GetWorkingDir();
+			path += DIR_DELIM_CHAR;
+			path += m_job_update_ad_file;
+			m_job_update_ad_file = path;
+		}
+		dprintf( D_ALWAYS, "Will write job update ClassAd to \"%s\"\n",
+		         m_job_update_ad_file.c_str() );
 	}
-	dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n",
-			 job_output_ad_is_stdout ? "STDOUT" : job_output_ad_file );
 }
 
 
