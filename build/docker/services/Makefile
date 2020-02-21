@@ -4,6 +4,7 @@ VERSION:=
 SUFFIX:=
 NOCACHE:=no
 UNVERSIONED:=no
+BUILDAH:=no
 
 basetargets:=build-base-el7  #build-base-el8
 imgtargets-el7:=$(shell echo build-{cm,submit,execute,mini}-el7)
@@ -17,15 +18,20 @@ echo:=@echo
 echotbl:=@printf "%-30s %s\n"
 
 
+buildcmd:=$(if $(findstring yes,$(BUILDAH)),\
+	buildah build-using-dockerfile,\
+	docker build)
+
 define docker_build =
-docker build \
+$(buildcmd) \
   --build-arg VERSION=$(VERSION) \
   --build-arg EL=$(2) \
   --build-arg BUILDDATE=$(DATE) \
   $(if $(findstring yes,$(NOCACHE)),--no-cache,) \
   -t htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) \
   $(if $(findstring yes,$(UNVERSIONED)),-t htcondor/$(1):el$(2)$(SUFFIX),) \
-  . -f $(1)/Dockerfile
+  -f $(1)/Dockerfile \
+  .
 endef
 
 
@@ -103,6 +109,7 @@ help:
 	$(echotbl) "VERSION" "HTCondor version [$(VERSION)]"
 	$(echotbl) "UNVERSIONED" "Set to 'yes' to make or push unversioned tags of the images"
 	$(echotbl) "" "(e.g. htcondor/mini:el7 -> htcondor/mini:VERSION-el7) [$(UNVERSIONED)]"
+	$(echotbl) "BUILDAH" "Set to 'yes' to build using buildah instead of docker"
 
 
 .PHONY: build
