@@ -157,7 +157,8 @@ def test_dir():
 
 
 def pytest_runtest_protocol(item, nextitem):
-    TEST_DIR._recompute(item)
+    if 'test_dir' in item.fixturenames:
+        TEST_DIR._recompute(item)
 
 
 def _check_params(params):

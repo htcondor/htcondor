@@ -180,6 +180,7 @@ if (BUILD_TESTING)
 		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 
 		# Ornithology
+		condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full")
 		condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
 		condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
 		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
