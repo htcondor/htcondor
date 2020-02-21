@@ -5001,6 +5001,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_TransferCheckpointFiles, ATTR_CHECKPOINT_FILES, SimpleSubmitKeyword::f_as_string },
 	{SUBMIT_KEY_PreserveRelativePaths, ATTR_PRESERVE_RELATIVE_PATHS, SimpleSubmitKeyword::f_as_bool },
 
+	// The special processing for require_cuda_version is in SetRequirements().
+	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -6358,6 +6361,36 @@ int SubmitHash::SetRequirements()
 	if (job->LookupBool(ATTR_WANT_FT_ON_CHECKPOINT, want_ft_on_checkpoint) && want_ft_on_checkpoint) {
 		if( ! checks_hsct ) {
 			answer += " && TARGET." ATTR_HAS_SELF_CHECKPOINT_TRANSFERS;
+		}
+	}
+
+	std::string requiredCudaVersion;
+	if (job->LookupString(ATTR_CUDA_VERSION, requiredCudaVersion)) {
+		unsigned major, minor;
+		int convertedLength = 0;
+		bool setCUDAVersion = false;
+		if( sscanf( requiredCudaVersion.c_str(), "%u.%u%n", & major, & minor, & convertedLength ) == 2 ) {
+			if( (unsigned)convertedLength == requiredCudaVersion.length() ) {
+				long long int rcv = (major * 1000) + (minor % 100);
+				AssignJobVal(ATTR_CUDA_VERSION, rcv);
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				setCUDAVersion = true;
+			}
+		} else if( sscanf( requiredCudaVersion.c_str(), "%u%n", & major, & convertedLength ) == 1 ) {
+			if( (unsigned)convertedLength == requiredCudaVersion.length() ) {
+				long long int rcv = major;
+				if( major < 1000 ) { rcv = major * 1000; }
+				AssignJobVal(ATTR_CUDA_VERSION, rcv);
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				setCUDAVersion = true;
+			}
+		}
+
+		if(! setCUDAVersion) {
+			push_error(stderr, SUBMIT_KEY_CUDAVersion
+				" must be of the form 'x' or 'x.y',"
+				" where x and y are positive integers.\n" );
+			ABORT_AND_RETURN(1);
 		}
 	}
 

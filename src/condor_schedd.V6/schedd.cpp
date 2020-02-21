@@ -12049,7 +12049,7 @@ Scheduler::child_exit(int pid, int status)
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
 		}
-	} else if (srec) {
+	} else {
 		const char* name = NULL;
 		//
 		// Local Universe
@@ -12126,16 +12126,7 @@ Scheduler::child_exit(int pid, int status)
 		// of how the job exited
 		delete_shadow_rec( pid );
 
-	} else {
-		// Hmm -- doesn't seem like we can ever get here, given
-		// that we deference srec before the if... wenger 2011-02-09
-		//
-		// There wasn't a shadow record, so that agent dies after
-		// deleting match. We want to make sure that we don't
-		// call to start more jobs
-		//
-		StartJobsFlag=FALSE;
-	 }  // big if..else if...
+	} 
 
 	//
 	// If the job was a local universe job, we will want to
