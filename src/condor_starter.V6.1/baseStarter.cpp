@@ -25,6 +25,7 @@
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
+#include "remote_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -2385,9 +2386,13 @@ CStarter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			std::string remote_cmd;
+			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
 			if( wantDocker ) {
 				job = new DockerProc( jobAd );
+			} else if ( wantRemote ) {
+				job = new RemoteProc( jobAd );
 			} else {
 				job = new VanillaProc( jobAd );
 			}
