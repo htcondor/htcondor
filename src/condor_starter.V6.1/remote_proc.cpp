@@ -306,7 +306,7 @@ bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 		dprintf( D_FULLDEBUG, "JEF opened status file\n" );
 		bool is_eof = false;
 		int error = 0;
-		int rc = ad->InsertFromFile(status_fp, is_eof, error);
+		int rc = InsertFromFile(status_fp, *ad, is_eof, error);
 		dprintf(D_FULLDEBUG, "JEF read %d attributes\n", rc);
 	} else {
 		dprintf( D_FULLDEBUG, "JEF failed to open status file\n" );
