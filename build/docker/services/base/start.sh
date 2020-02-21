@@ -11,7 +11,7 @@ fail () {
 add_values_to () {
     config=$1
     shift
-    printf "%s=%s\n" >> /etc/condor/config.d/$config "$@"
+    printf "%s=%s\n" >> "/etc/condor/config.d/$config" "$@"
 }
 
 # Create a config file from the environment.
@@ -26,8 +26,8 @@ add_values_to 01-env.conf \
     USE_POOL_PASSWORD "${USE_POOL_PASSWORD:-no}"
 
 
-"$progdir/update-secrets"
-"$progdir/update-config"
+"$progdir/update-secrets" || fail "Failed to update secrets"
+"$progdir/update-config" || fail "Failed to update config"
 
 
 # Bug workaround: daemons will die if they can't raise the number of FD's;
@@ -43,7 +43,7 @@ for attr in COLLECTOR_MAX_FILE_DESCRIPTORS \
             MAX_FILE_DESCRIPTORS; do
     config_max=$(condor_config_val -evaluate $attr 2>/dev/null)
     if [[ $config_max =~ ^[0-9]+$ && $config_max -gt $hard_max ]]; then
-        if ! ulimit -Hn $config_max &>/dev/null; then
+        if ! ulimit -Hn "$config_max" &>/dev/null; then
             add_values_to 01-fdfix.conf "$attr" "$hard_max"
         fi
         ulimit -Hn "$hard_max"
