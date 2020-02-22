@@ -1112,7 +1112,7 @@ FILE TRANSFER COMMANDS
         # For older buckets that aren't region-specific.
         s3://<bucket>/<key>
         # For newer, region-specific buckets.
-        s3://<bucket>.s3-<region>.amazonaws.com/<key>
+        s3://<bucket>.s3.<region>.amazonaws.com/<key>
 
     To use other S3 services, where ``<host>`` must contain a ``.``:
 

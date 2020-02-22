@@ -21,16 +21,23 @@ New Features:
 
 - Added the option for *condor_dagman* to remove jobs after reducing
   MaxJobs to a value lower than the number of currently running jobs. This
-  behavior is controlled by the 
+  behavior is controlled by the
   :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
   :ticket:`7368`
 
 - The new configuration parameter ``NEGOTIATOR_SUBMITTER_CONSTRAINT`` defines
-   an expression which constrains which submitter ads are considered for
-   matchmaking by the *condor_negotiator*.
-   :ticket:`7490`
+  an expression which constrains which submitter ads are considered for
+  matchmaking by the *condor_negotiator*.
+  :ticket:`7490`
 
 Bugs Fixed:
+
+- Some URLs for keys in AWS S3 buckets were previously of the form
+  ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
+  this form of address; instead, you must use URLs of the form
+  ``s3://<bucket>.s3.<region>.amazonaws.com/<key>``.  HTCondor now allows
+  and requires the latter; you will have to change older submit files.
+  :ticket:`7517`
 
 - To work around an issue where long-running *gce_gahp* process enter a state
   where they can no longer authenticate with GCE, the daemon now restarts once
@@ -38,15 +45,15 @@ Bugs Fixed:
   See :ref:`gce_configuration_variables`.
   :ticket:`7401`
 
--  It is now safe to call functions from the Python bindings ``htcondor`` module
-   on multiple threads simultaneously. See the
-   :ref:`python-bindings-thread-safety` section in the
-   Python bindings documentation for more details.
-   :ticket:`7359`
+- It is now safe to call functions from the Python bindings ``htcondor`` module
+  on multiple threads simultaneously. See the
+  :ref:`python-bindings-thread-safety` section in the
+  Python bindings documentation for more details.
+  :ticket:`7359`
 
 - The RPM packaging now obsoletes the standard universe package so that it will
   deleted upon upgrade.
-  :ticker:`7444`
+  :ticket:`7444`
 
 Version 8.9.5
 -------------
@@ -61,9 +68,9 @@ New Features:
 -  Implemented a *dataflow* mode for jobs. When enabled, a job whose
    1) pre-declared output files already exist, and 2) output files are
    more recent than its input files, is considered a dataflow job and
-   gets skipped. This feature can be enabled by setting the 
+   gets skipped. This feature can be enabled by setting the
    ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to ``True``.
-   :ticket:`7231` 
+   :ticket:`7231`
 
 -  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
    the context of ClassAd attributes, and print the result in ClassAd format.
@@ -101,7 +108,7 @@ New Features:
 
 -  Added a new knob ``SUBMIT_ALLOW_GETENV``. This defaults to ``true``. When
    set to ``false``, a submit file with `getenv = true` will become an error.
-   Administrators may want to set this to ``false`` to prevent users from 
+   Administrators may want to set this to ``false`` to prevent users from
    submitting jobs that depend on the local environment of the submit machine.
    :ticket:`7383`
 
@@ -124,7 +131,7 @@ Bugs Fixed:
    :ticket:`7394`
 
 -  Fixed a bug that happened on a Linux *condor_startd* running as root where
-   a running job getting close to the ``RequestMemory`` limit, could get stuck, 
+   a running job getting close to the ``RequestMemory`` limit, could get stuck,
    and neither get held with an out of memory error, nor killed, nor allowed
    to run.
    :ticket:`7367`
