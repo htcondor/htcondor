@@ -34,22 +34,22 @@
 
 using namespace std;
 
-bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose);
-bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose);
-bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose);
+bool test_sPrintExpr(ClassAd *c1, int verbose);
+bool test_IsValidAttrValue(ClassAd *c1, int verbose);
+bool test_fPrintAdAsXML(ClassAd *c1, int verbose);
 bool test_sPrintAdAsXML(int verbose); //I guess if fPrintAdAsXML works, 
                                      //this does too
 
-bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3, int verbose);
-bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
+bool test_ChainCollapse(ClassAd *c2, ClassAd *c3, int verbose);
+bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose);
 
-bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose);
-bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose);
+bool test_NextDirtyExpr(ClassAd *c1, int verbose);
+bool test_QuoteAdStringValue(ClassAd *c1, int verbose);
 
-bool test_EvalExprTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
+bool test_EvalExprTree(ClassAd *c1, ClassAd *c2,int verbose);
 
 void setAllFalse(bool* b);
 
@@ -200,8 +200,8 @@ GIRTestCase::runTests(void)
 }
 
 //{{{setUpCompatClassAd()
-void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::ClassAd** compC2,
-        compat_classad::ClassAd** compC3, compat_classad::ClassAd** compC4,
+void setUpCompatClassAds(ClassAd** compC1, ClassAd** compC2,
+        ClassAd** compC3, ClassAd** compC4,
         int verbose)
 {
 
@@ -213,19 +213,19 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     classad::ClassAd* c;
     
     c = parser.ParseClassAd("[A = 1; B = 2;]");
-    (*compC1) = new compat_classad::ClassAd(*c);
+    (*compC1) = new ClassAd(*c);
     delete c;
     
     c = parser.ParseClassAd("[A = 1; B = 3;]");
-    (*compC2) = new compat_classad::ClassAd(*c);
+    (*compC2) = new ClassAd(*c);
     delete c;
 
     c = parser.ParseClassAd("[B = 1241; C = 3; D = 4;]");
-    (*compC3) = new compat_classad::ClassAd(*c);
+    (*compC3) = new ClassAd(*c);
     delete c;
 
     c = parser.ParseClassAd("[A = \"hello\";E = 5;F=\"abc\\\"\\\\efg\\\\\" ]");
-    (*compC4) = new compat_classad::ClassAd(*c);
+    (*compC4) = new ClassAd(*c);
     delete c;
 
     SetMyTypeName(*(*compC1), "compC1");
@@ -242,7 +242,7 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
 //}}}
 
 //{{{ test_sPrintExpr
-bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose)
+bool test_sPrintExpr(ClassAd *c1, int verbose)
 {
     /* c1 should have 2 attributes:
      *  A = 1
@@ -286,7 +286,7 @@ bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{test_IsValidAttrValue
-bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
+bool test_IsValidAttrValue(ClassAd *c1, int verbose)
 {
     bool passedReal = false, passedSlashN = false, passed = false;
     bool passedNonReal = false;
@@ -330,7 +330,7 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{test_fPrintAdAsXML
-bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose)
+bool test_fPrintAdAsXML(ClassAd *c1, int verbose)
 {
     bool passed = false;
     FILE* compC1XML;
@@ -365,7 +365,7 @@ bool test_sPrintAdAsXML(int verbose)
 //}}}
 
 //{{{ test_ChainCollapse
-bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3, int verbose)
+bool test_ChainCollapse(ClassAd *c2, ClassAd *c3, int verbose)
 {
     /* ok, so this test sucks. It doesn't really check to see if 
      *  the ChainCollapse worked, it just checks to see if 
@@ -432,7 +432,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
 //}}}
 
 //{{{test_EvalStringCharStar
-bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -514,7 +514,7 @@ bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassA
 //}}}
 
 //{{{test_EvalStringCharStarStar
-bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -596,7 +596,7 @@ bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::Cl
 //}}}
 
 //{{{test_EvalStringMyString
-bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -669,7 +669,7 @@ bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassA
 //}}}
 
 //{{{test_EvalStringStdString
-bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -742,7 +742,7 @@ bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::Class
 //}}}
 
 //{{{NextDirtyExpr
-bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
+bool test_NextDirtyExpr(ClassAd *c1, int verbose)
 {
 	const char *name;
 	classad::ExprTree *expr;
@@ -806,7 +806,7 @@ bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{ test_QuoteAdStringValue
-bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
+bool test_QuoteAdStringValue(ClassAd *c1, int verbose)
 {
     bool passed = true;
 
@@ -862,7 +862,7 @@ bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{ test_EvalExprTree
-bool test_EvalExprTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedShortHand = false, passedNullTarget = false;
@@ -1423,7 +1423,7 @@ void setUpAndRun(int verbose)
 
 
 
-    compat_classad::ClassAd *compC1, *compC2, *compC3, *compC4;
+    ClassAd *compC1, *compC2, *compC3, *compC4;
 
     setUpCompatClassAds(&compC1, &compC2, &compC3, &compC4, verbose);
 

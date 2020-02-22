@@ -348,13 +348,10 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		interactionLogicCODStopped();
 	}
 
-	MyString line;
-	line.formatstr( "%s = \"%s\"", ATTR_RESULT, 
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT,
 				  rval ? getCAResultString(CA_SUCCESS)
 				       : getCAResultString(CA_FAILURE) );
-
-	ClassAd reply;
-	reply.Insert( line.Value() );
 
 		// TODO any other info for the reply?
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
@@ -440,11 +437,7 @@ CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 	case CLAIM_RUNNING:
 		if( claim->suspendClaim() ) { 
 
-			line = ATTR_RESULT;
-			line += " = \"";
-			line += getCAResultString( CA_SUCCESS );
-			line += '"';
-			reply.Insert( line.Value() );
+			reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 				// TODO any other info for the reply?
 			rval = sendCAReply( s, "CA_SUSPEND_CLAIM", &reply );
@@ -495,16 +488,11 @@ CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 int
 CODMgr::renew( Stream* s, ClassAd* /*req*/ /* UNUSED*/, Claim* claim )
 {
-	MyString line;
 	ClassAd reply;
 
 	claim->alive();
 
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	return sendCAReply( s, "CA_RENEW_LEASE_FOR_CLAIM", &reply );
 }
@@ -527,11 +515,7 @@ CODMgr::resume( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 			// period of time.
 		interactionLogicCODRunning();
 		if( claim->resumeClaim() ) { 
-			line = ATTR_RESULT;
-			line += " = \"";
-			line += getCAResultString( CA_SUCCESS );
-			line += '"';
-			reply.Insert( line.Value() );
+			reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 				// TODO any other info for the reply?
 			return sendCAReply( s, "CA_RESUME_CLAIM", &reply );

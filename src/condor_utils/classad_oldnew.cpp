@@ -47,10 +47,10 @@ void AttrList_setPublishServerTime(bool publish)
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
-compat_classad::ClassAd *
+ClassAd *
 getClassAd( Stream *sock )
 {
-	compat_classad::ClassAd *ad = new compat_classad::ClassAd( );
+	ClassAd *ad = new ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}
@@ -674,7 +674,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				!(ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
 				numExprs++;
@@ -721,7 +721,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && (compat_classad::ClassAdAttributeIsPrivate(attr) ||
+			if(exclude_private && (ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
 				continue;
@@ -732,7 +732,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			unp.Unparse( buf, expr );
 
 			if( ! crypto_is_noop && private_count &&
-				(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				(ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
 			{
 				sock->put(SECRET_MARKER);
@@ -759,7 +759,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
 		if ( ! ad.Lookup(*attr) || (exclude_private && (
-			compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			ClassAdAttributeIsPrivate(*attr) ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
 		))) {
 			blacklist.insert(*attr);
@@ -801,7 +801,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		unp.Unparse( buf, expr );
 
 		if ( ! crypto_is_noop &&
-			(compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			(ClassAdAttributeIsPrivate(*attr) ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
 		) {
 			if (!sock->put(SECRET_MARKER)) {

@@ -85,7 +85,7 @@ GenerateConfigFile::operator() () {
 	std::string value;
 	for( auto i = mapping.begin(); i != mapping.end(); ++i ) {
 		value.clear();
-		scratchpad->LookupString( i->first.c_str(), value );
+		scratchpad->LookupString( i->first, value );
 		if(! value.empty()) {
 			fprintf( configFile, "%s%s%s = %s\n",
 				safeRegion ? safeRegion : "",

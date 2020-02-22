@@ -712,10 +712,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 			free(vm_jobs_as);
 		}
 #endif
-		MyString vm_type;
+		std::string vm_type;
 		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_type);
 
-		if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		if( strcasecmp(vm_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			name = my_username();
 			domain = my_domainname();
 		}

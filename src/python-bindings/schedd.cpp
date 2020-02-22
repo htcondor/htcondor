@@ -958,11 +958,11 @@ ScheddNegotiate::sendClaim(boost::python::object claim, boost::python::object of
     ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
     ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
 
-    compat_classad::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
-    compat_classad::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
+    CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
+    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
+    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
+    CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
+    CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
 
     m_sock->encode();
     m_sock->put(PERMISSION_AND_AD);
@@ -1706,14 +1706,14 @@ struct Schedd {
     void spool(object jobs)
     {
         int len = py_len(jobs);
-        std::vector<compat_classad::ClassAd*> job_array;
-        std::vector<boost::shared_ptr<compat_classad::ClassAd> > job_tmp_array;
+        std::vector<ClassAd*> job_array;
+        std::vector<boost::shared_ptr<ClassAd> > job_tmp_array;
         job_array.reserve(len);
         job_tmp_array.reserve(len);
         for (int i=0; i<len; i++)
         {
             const ClassAdWrapper wrapper = extract<ClassAdWrapper>(jobs[i]);
-            boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
+            boost::shared_ptr<ClassAd> tmp_ad(new ClassAd());
             job_tmp_array.push_back(tmp_ad);
             tmp_ad->CopyFrom(wrapper);
             job_array.push_back(job_tmp_array[i].get());

@@ -297,7 +297,7 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 	// this sort of probe is useful for counting lost updates
 	if (flags & PubValue) {
 		ad.Assign(pattr, (long long)value.Sum);
-		ad.Assign(rattr.c_str(), (long long)recent.Sum);
+		ad.Assign(rattr, (long long)recent.Sum);
 	}
 	if (flags & PubRatio) {
 		double avg = value.Avg();

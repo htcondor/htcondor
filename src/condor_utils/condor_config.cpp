@@ -529,7 +529,6 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if ( ! reqdAttrs.isEmpty()) {
-		MyString buffer;
 
 		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
 			auto_free_ptr expr(NULL);
@@ -541,12 +540,11 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 				expr.set(param(attr));
 			}
 			if ( ! expr) continue;
-			buffer.formatstr("%s = %s", attr, expr.ptr());
 
-			if ( ! ad->Insert(buffer.Value())) {
+			if ( ! ad->AssignExpr(attr, expr.ptr())) {
 				dprintf(D_ALWAYS,
-						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), subsys);
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						attr, expr.ptr(), subsys);
 			}
 		}
 	}
@@ -1183,7 +1181,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
-	ClassAd::Reconfig();
+	ClassAdReconfig();
 
 	return true;
 }
@@ -3683,7 +3681,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 {
 	if (!param(buf, param_name, default_value)) {return false;}
 
-	compat_classad::ClassAd rhs;
+	ClassAd rhs;
 	if (me) {
 		rhs = *me;
 	}

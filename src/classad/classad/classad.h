@@ -105,6 +105,19 @@ class ClassAd : public ExprTree
 		// parsing of the rhs expression is done use old ClassAds syntax
 		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
 
+		/** Insert an attribute/value into the ClassAd
+		 *  @param str A string of the form "Attribute = Value"
+		 *  InsertViaCache() is used to do the actual insertion, so the
+		 *    value is parsed into an ExprTree in old ClassAds syntax.
+		 */
+	bool Insert(const char *str);
+	bool Insert(const std::string &str);
+
+		/* Insert an attribute/value into the Classad.
+		 * The value is parsed into an ExprTree using old ClassAds syntax.
+		 */
+	bool AssignExpr(const std::string &name, const char *value);
+
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
 				inserted into this subclassad.  The setParentScope() method
@@ -133,6 +146,18 @@ class ClassAd : public ExprTree
 		bool InsertAttr( const std::string &attrName,long long value, 
 				Value::NumberFactor f );
 		bool InsertAttr( const std::string &attrName,long long value );
+		bool Assign(const std::string &name, int value)
+		{ return InsertAttr(name, value); }
+		bool Assign(const std::string &name, unsigned int value)
+		{ return InsertAttr(name, (long long)value); }
+		bool Assign(const std::string &name,long value)
+		{ return InsertAttr(name, value); }
+		bool Assign(const std::string &name, long long value)
+		{ return InsertAttr(name, value); }
+		bool Assign(const std::string &name, unsigned long value)
+		{ return InsertAttr(name, (long long)value); }
+		bool Assign(const std::string &name, unsigned long long value)
+		{ return InsertAttr(name, (long long)value); }
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
 		 		is evaluated to obtain a nested classad, and the attribute is
@@ -164,6 +189,10 @@ class ClassAd : public ExprTree
 		bool InsertAttr( const std::string &attrName,double value, 
 				Value::NumberFactor f);
 		bool InsertAttr( const std::string &attrName,double value);
+		bool Assign(const std::string &name, float value)
+		{ return InsertAttr(name, (double)value); }
+		bool Assign(const std::string &name, double value)
+		{ return InsertAttr(name, value); }
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -187,6 +216,8 @@ class ClassAd : public ExprTree
 			@param value The boolean value of the attribute.
 		*/
 		bool InsertAttr( const std::string &attrName, bool value );
+		bool Assign(const std::string &name, bool value)
+		{ return InsertAttr(name, value); }
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -209,6 +240,8 @@ class ClassAd : public ExprTree
 		*/
 		bool InsertAttr( const std::string &attrName, const char *value );
 		bool InsertAttr( const std::string &attrName, const char * str, size_t len );
+		bool Assign(const std::string &name,char const *value)
+		{ if (value==NULL) return false; else return InsertAttr( name, value ); }
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -229,6 +262,8 @@ class ClassAd : public ExprTree
 			@param value The string attribute
 		*/
 		bool InsertAttr( const std::string &attrName, const std::string &value );
+		bool Assign(const std::string &name, const std::string &value)
+		{ return InsertAttr(name, value); }
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -252,6 +287,8 @@ class ClassAd : public ExprTree
 				otherwise.
 		*/
 		ExprTree *Lookup( const std::string &attrName ) const;
+		ExprTree* LookupExpr(const std::string &name) const
+		{ return Lookup( name ); }
 
 		/** Finds the expression bound to an attribute name, ignoring chained parent.
 		        Behaves just like Lookup(), except any parent ad chained to this
@@ -410,6 +447,12 @@ class ClassAd : public ExprTree
 		bool EvaluateAttrNumber( const std::string &attr, int& intValue ) const;
 		bool EvaluateAttrNumber( const std::string &attr, long& intValue ) const;
 		bool EvaluateAttrNumber( const std::string &attr, long long& intValue ) const;
+		bool LookupInteger(const std::string &name, int &value) const
+		{ return EvaluateAttrNumber(name, value); }
+		bool LookupInteger(const std::string &name, long &value) const
+		{ return EvaluateAttrNumber(name, value); }
+		bool LookupInteger(const std::string &name, long long &value) const
+		{ return EvaluateAttrNumber(name, value); }
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
@@ -420,6 +463,15 @@ class ClassAd : public ExprTree
 			@return true if attrName evaluated to a number, false otherwise.
 		*/
 		bool EvaluateAttrNumber(const std::string &attr,double& realValue) const;
+		bool LookupFloat(const std::string &name, float &value) const
+		{
+			double dval;
+			bool rc = EvaluateAttrNumber(name, dval);
+			if ( rc ) value = dval;
+			return rc;
+		}
+		bool LookupFloat(const std::string &name, double &value) const
+		{ return EvaluateAttrNumber(name, value); }
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
@@ -431,6 +483,15 @@ class ClassAd : public ExprTree
 		*/
 		bool EvaluateAttrString( const std::string &attr, char *buf, int len) 
 				const;
+		bool LookupString(const std::string &name, char *value, int max_len) const
+		{ return EvaluateAttrString( name, value, max_len ); }
+		bool LookupString(const std::string &name, char **value) const
+		{
+			std::string sval;
+			bool rc = EvaluateAttrString(name, sval);
+			if ( rc ) *value = strdup(sval.c_str());
+			return rc;
+		}
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
@@ -440,6 +501,8 @@ class ClassAd : public ExprTree
 			@return true iff attrName evaluated to a string
 		*/
 		bool EvaluateAttrString( const std::string &attr, std::string &buf ) const;
+		bool LookupString(const std::string &name, std::string &value) const
+		{ return EvaluateAttrString( name, value ); }
 
 		/** Evaluates an attribute to a boolean.
 			@param attr The name of the attribute.
@@ -458,6 +521,9 @@ class ClassAd : public ExprTree
 				otherwise.
 		*/
 		bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
+		bool LookupBool(const std::string &name, bool &value) const
+		{ return EvaluateAttrBoolEquiv(name, value); }
+
 		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
 				returned. You do not own the ClassAd--do not free it.
 			@param attr The name of the attribute.

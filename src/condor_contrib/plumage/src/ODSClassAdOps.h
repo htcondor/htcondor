@@ -46,8 +46,8 @@ template <typename T>
 class ODSClassAdOps {
 public:
     virtual bool createAd(const T&) { return true; }
-    virtual bool readAd(const T&, compat_classad::ClassAd&) { return true; }
-    virtual bool updateAd(const T&, compat_classad::ClassAd*) { return true; }
+    virtual bool readAd(const T&, ClassAd&) { return true; }
+    virtual bool updateAd(const T&, ClassAd*) { return true; }
     virtual bool deleteAd(const T&) { return true; }
 };
 

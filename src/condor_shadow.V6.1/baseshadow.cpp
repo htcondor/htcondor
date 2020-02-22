@@ -886,16 +886,16 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value)&& (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 
 			attr = res + "Usage"; // (implicitly) peak usage value
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -903,7 +903,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -911,7 +911,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -919,7 +919,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -1055,23 +1055,25 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		reslist.rewind();
 		char * resname = NULL;
 		while ((resname = reslist.next()) != NULL) {
-			MyString attr;
+			std::string attr;
 			int64_value = -1;
-			attr.formatstr("%s", resname); // provisioned value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(resname, int64_value);
+			attr = resname; // provisioned value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			} 
-			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			// /*for debugging*/ else { puAd->Assign(attr, 42); }
 			int64_value = -2;
-			attr.formatstr("Request%s", resname);	// requested value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = "Request";
+			attr += resname; // requested value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 			int64_value = -3;
-			attr.formatstr("%sUsage", resname); // usage value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = resname;
+			attr += "Usage"; // usage value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
 		}
 		event.pusageAd = puAd;

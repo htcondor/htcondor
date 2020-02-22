@@ -37,7 +37,7 @@ static bool find_singularity(std::string &exec)
 
 
 bool
-Singularity::advertise(classad::ClassAd &ad)
+Singularity::advertise(ClassAd &ad)
 {
 	if (m_enabled && ad.InsertAttr("HasSingularity", true)) {
 		return false;
@@ -122,7 +122,7 @@ Singularity::detect(CondorError &err)
 }
 
 bool
-Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::ClassAd &jobAd)
+Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }

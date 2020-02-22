@@ -135,7 +135,6 @@ ParseClassAd(ClassAd *classad_in)
 						local_ad = new ClassAd();
 						classad = local_ad;
 					}
-					classad->DisableDirtyTracking();
 				} else {
 					// We're done, return the ClassAd we got, if any.
                     in_classad = false;
@@ -185,9 +184,6 @@ ParseClassAd(ClassAd *classad_in)
 				lexer.ConsumeToken(NULL);
 			}
 		}
-	}
-	if (classad != NULL) {
-		classad->EnableDirtyTracking();
 	}
 	return classad;
 }

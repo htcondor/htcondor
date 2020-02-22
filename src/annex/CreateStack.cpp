@@ -12,7 +12,7 @@ CreateStack::operator() () {
 	// Handle dynamic data depencies.
 	for( auto i = stackParameters.begin(); i != stackParameters.end(); ++i ) {
 		if( i->second == "<scratchpad>" ) {
-			scratchpad->LookupString( i->first.c_str(), i->second );
+			scratchpad->LookupString( i->first, i->second );
 		}
 	}
 

@@ -1108,8 +1108,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 {
   char  attrName[64], attrPrio[64], attrResUsed[64], attrWtResUsed[64], attrFactor[64], attrBeginUsage[64], attrAccUsage[64], attrRequested[64];
   char  attrLastUsage[64];
-  MyString attrAcctGroup;
-  MyString attrIsAcctGroup;
+  std::string attrAcctGroup;
+  std::string attrIsAcctGroup;
   char  name[128], policy[32];
   float priority = 0, Factor = 0, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
@@ -1151,8 +1151,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     sprintf( attrBeginUsage , "BeginUsageTime%s", strI );
     sprintf( attrLastUsage , "LastUsageTime%s", strI );
     sprintf( attrAccUsage , "WeightedAccumulatedUsage%s", strI );
-    attrAcctGroup.formatstr("AccountingGroup%s", strI);
-    attrIsAcctGroup.formatstr("IsAccountingGroup%s", strI);
+    formatstr(attrAcctGroup, "AccountingGroup%s", strI);
+    formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
 
     if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -1177,10 +1177,10 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 		LR[i-1].HasDetail |= DetailWtResUsed;
 	}
 
-    if (!ad->LookupString(attrAcctGroup.Value(), AcctGroup)) {
+    if (!ad->LookupString(attrAcctGroup, AcctGroup)) {
         AcctGroup = "<none>";
     }
-    if (!ad->LookupBool(attrIsAcctGroup.Value(), IsAcctGroup)) {
+    if (!ad->LookupBool(attrIsAcctGroup, IsAcctGroup)) {
         IsAcctGroup = false;
     }
 

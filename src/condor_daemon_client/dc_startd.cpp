@@ -602,15 +602,11 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 	}
 
 	ClassAd req( *req_ad );
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_REQUEST_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_REQUEST_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_TYPE, getClaimTypeString(cType) );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_TYPE, getClaimTypeString(cType) );
 
 	return sendCACmd( &req, reply, true, timeout );
 }

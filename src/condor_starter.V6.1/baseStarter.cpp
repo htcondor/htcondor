@@ -862,15 +862,15 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		return false;
 	}
 
-	compat_classad::ClassAd input;
+	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
 
-	compat_classad::ClassAd *jobad = NULL;
-	compat_classad::ClassAd *machinead = NULL;
+	ClassAd *jobad = NULL;
+	ClassAd *machinead = NULL;
         if( jic )
 	{
                 jobad = jic->jobClassAd();
@@ -1162,7 +1162,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 	}
 
-	compat_classad::ClassAd reply;
+	ClassAd reply;
 	reply.InsertAttr(ATTR_RESULT, true);
 	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
 	if (!reply.Insert("TransferFiles", list))
@@ -2297,11 +2297,11 @@ CStarter::SpawnPreScript( void )
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
 	char* tmp = NULL;
-	MyString attr;
+	std::string attr;
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -2309,7 +2309,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Post";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		post_script = new ScriptProc( jobAd, "Post" );
@@ -3186,7 +3186,7 @@ CStarter::PublishToEnv( Env* proc_env )
 			tags.rewind();
 			const char *tag;
 			while ((tag = tags.next())) {
-				MyString attr("Assigned"); attr += tag;
+				std::string attr("Assigned"); attr += tag;
 
 				// we need to publish Assigned resources in the environment. the rules are 
 				// a bit wierd here. we publish if there are any assigned, we also always
@@ -3197,7 +3197,7 @@ CStarter::PublishToEnv( Env* proc_env )
 				param(env_name, param_name.c_str());
 
 				std::string assigned;
-				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
+				bool is_assigned = mad->LookupString(attr, assigned);
 				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
 
 					if ( ! is_assigned) {

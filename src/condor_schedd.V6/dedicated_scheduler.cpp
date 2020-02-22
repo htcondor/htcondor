@@ -1746,10 +1746,10 @@ DedicatedScheduler::sortResources( void )
 				if( !oexpr ) {
 					continue;
 				}
-				ExprTree *nexpr = res->LookupExpr(itr->first.c_str());
+				ExprTree *nexpr = res->LookupExpr(itr->first);
 				if (!nexpr) {
 					const char *oexprStr = ExprTreeToString(oexpr);
-					res->AssignExpr(itr->first.c_str(), oexprStr);
+					res->AssignExpr(itr->first, oexprStr);
 
 					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
 					         resname.c_str(), itr->first.c_str(), oexprStr);
@@ -3245,7 +3245,7 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 		negotiator_attr_cache_entry_t::const_iterator mend = atm.end();
 		for (mit = atm.begin(); mit!=mend; ++mit) {
 
-			match_ad->AssignExpr(mit->first.c_str(), mit->second.c_str());
+			match_ad->AssignExpr(mit->first, mit->second.c_str());
 			dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from previous partitionable slot match record.\n", 
 				partitionable_slot_name.c_str(),
 				mit->first.c_str(), mit->second.c_str());
@@ -3580,11 +3580,11 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// want to rank it, and require that the minimum claim time is
 		// >= the duration of the job...
 
-	MyString buf;
-	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
+	std::string buf;
+	formatstr( buf, "(Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
-				 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->Insert( buf.Value() );
+				 name(), name(), rhs );
+	req->AssignExpr( ATTR_REQUIREMENTS, buf.c_str() );
 
 	return req;
 }

@@ -2122,7 +2122,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 				 "Request did not contain %s, assuming TRUE\n",
 				 ATTR_REQUIREMENTS );
 		requirements_str = "TRUE";
-		req_ad->Insert( "Requirements = TRUE" );
+		req_ad->Assign( ATTR_REQUIREMENTS, true );
 	} else {
 		requirements_str = ExprTreeToString( tree );
 	}
@@ -2160,18 +2160,9 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	ClassAd reply;
 	rip->publish( &reply, A_ALL_PUB );
 
-	MyString line;
-	line = ATTR_CLAIM_ID;
-	line += " = \"";
-	line += claim->id();
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_CLAIM_ID, claim->id() );
 	
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	int rval = sendCAReply( s, cmd_str, &reply );
 	if( ! rval ) {
@@ -2451,11 +2442,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		free( tmp );
 	} else {
 			// ATTR_OWNER not defined, set it ourselves...
-		MyString line = ATTR_OWNER;
-		line += "=\"";
-		line += owner;
-		line += '"';
-		ad.Insert( line.Value() );
+		ad.Assign( ATTR_OWNER, owner );
 	}
  
 

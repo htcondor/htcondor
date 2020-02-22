@@ -83,7 +83,7 @@ CondorStatusReply::operator() () {
 				formatstr( iName, "Instance%d", count );
 
 				std::string instanceID;
-				scratchpad->LookupString( (iName + ".instanceID").c_str(), instanceID );
+				scratchpad->LookupString( (iName + ".instanceID"), instanceID );
 				if( instanceID.empty() ) { break; }
 				++count;
 
@@ -95,36 +95,36 @@ CondorStatusReply::operator() () {
 				ad.AssignExpr( ATTR_NAME, "EC2InstanceID" );
 
 				std::string status;
-				scratchpad->LookupString( (iName + ".status").c_str(), status );
+				scratchpad->LookupString( (iName + ".status"), status );
 				ASSERT(! status.empty());
 				ad.Assign( ATTR_GRID_JOB_STATUS, status );
 
 				std::string clientToken;
-				scratchpad->LookupString( (iName + ".clientToken").c_str(), clientToken );
+				scratchpad->LookupString( (iName + ".clientToken"), clientToken );
 				if(! clientToken.empty()) {
 					ad.Assign( "EC2ClientToken", clientToken );
 				}
 
 				std::string keyName;
-				scratchpad->LookupString( (iName + ".keyName").c_str(), keyName );
+				scratchpad->LookupString( (iName + ".keyName"), keyName );
 				if(! keyName.empty()) {
 					ad.Assign( ATTR_EC2_KEY_PAIR, keyName );
 				}
 
 				std::string stateReasonCode;
-				scratchpad->LookupString( (iName + ".stateReasonCode").c_str(), stateReasonCode );
+				scratchpad->LookupString( (iName + ".stateReasonCode"), stateReasonCode );
 				if(! stateReasonCode.empty() && stateReasonCode != "NULL" ) {
 					ad.Assign( ATTR_EC2_STATUS_REASON_CODE, stateReasonCode );
 				}
 
 				std::string publicDNSName;
-				scratchpad->LookupString( (iName + ".publicDNSName").c_str(), publicDNSName );
+				scratchpad->LookupString( (iName + ".publicDNSName"), publicDNSName );
 				if(! publicDNSName.empty()) {
 					ad.Assign( ATTR_MACHINE, publicDNSName );
 				}
 
 				std::string annexName;
-				scratchpad->LookupString( (iName + ".annexName").c_str(), annexName );
+				scratchpad->LookupString( (iName + ".annexName"), annexName );
 				ASSERT(! annexName.empty() );
 				ad.Assign( ATTR_ANNEX_NAME, annexName );
 

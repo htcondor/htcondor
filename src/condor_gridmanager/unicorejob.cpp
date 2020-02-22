@@ -175,7 +175,7 @@ HashTable<std::string, UnicoreJob *>
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	MyString buff;
+	std::string buff;
 	std::string error_string = "";
 
 	resourceName = NULL;
@@ -214,7 +214,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_RESOURCE, &resourceName );
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( !buff.IsEmpty() ) {
+	if ( !buff.empty() ) {
 		const char *token;
 
 		Tokenize( buff );

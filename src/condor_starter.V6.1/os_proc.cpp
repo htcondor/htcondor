@@ -333,9 +333,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
@@ -1001,26 +999,24 @@ bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
-	MyString buf;
+	std::string buf;
 
 	if (m_proc_exited) {
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf = "Exited";
 	} else if( is_checkpointed ) {
-		buf.formatstr( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
+		buf = "Checkpointed";
 	} else if( is_suspended ) {
-		buf.formatstr( "%s=\"Suspended\"", ATTR_JOB_STATE );
+		buf = "Suspended";
 	} else {
-		buf.formatstr( "%s=\"Running\"", ATTR_JOB_STATE );
+		buf = "Running";
 	}
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_JOB_STATE, buf );
 
-	buf.formatstr( "%s=%d", ATTR_NUM_PIDS, num_pids );
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_NUM_PIDS, num_pids );
 
 	if (m_proc_exited) {
 		if( dumped_core ) {
-			buf.formatstr( "%s = True", ATTR_JOB_CORE_DUMPED );
-			ad->Insert( buf.Value() );
+			ad->Assign( ATTR_JOB_CORE_DUMPED, true );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 

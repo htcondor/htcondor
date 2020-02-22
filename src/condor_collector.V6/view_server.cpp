@@ -107,7 +107,7 @@ void ViewServer::Init()
 	int InitialDelay=param_integer("UPDATE_INTERVAL",300);
 
 	// Add View Server Flag to class ad
-	ad->Insert("ViewServer = True");
+	ad->Assign("ViewServer",  true);
 
 	// Register timer for logging information to history files
 	HistoryTimer = daemonCore->Register_Timer(InitialDelay,HistoryInterval,
