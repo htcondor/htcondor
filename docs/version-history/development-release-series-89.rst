@@ -13,7 +13,19 @@ Release Notes:
 
 .. HTCondor version 8.9.6 released on Month Date, 2019.
 
+- HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
+  attribute is an integer representation of the highest CUDA version the
+  machine's driver supports.  HTCondor no longer advertises the attribute
+  ``CUDARuntimeVersion``.
+  :ticket:`7413`
+
 New Features:
+
+- HTCondor now offers a submit command, ``cuda_version``, so that jobs can
+  describe which CUDA version (if any) they use.  HTCondor will use that
+  information to match the job with a machine whose driver supports that
+  version of CUDA.  See the *condor_submit* man page.
+  :ticket:`7413`
 
 - Added ``GOMAXPROCS`` to the default list of environment variables that are
   set to the number of CPU cores allocated to the job.

@@ -819,7 +819,19 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
     GPUs will define ``<name>`` to be ``GPUs``.
+    :index:`CUDA version<single: CUDA version; submit commands>`
+
+ cuda_version = <version>
+    The version of the CUDA runtime, if any, used or required by this job,
+    specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
+    version number is zero, you may specify only the major version number.
+    A single version number of 1000 or higher is assumed to be the
+    integer-coded version number (``major * 1000 + (minor % 100)``).
+
+    This does *not* arrange for the CUDA runtime to be present, only for
+    the job to run on a machine whose driver supports the specified version.
     :index:`requirements<single: requirements; submit commands>`
+
  requirements = <ClassAd Boolean Expression>
     The requirements command is a boolean ClassAd expression which uses
     C-like operators. In order for any job in this cluster to run on a
