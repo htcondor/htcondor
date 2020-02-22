@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+-  The *condor_annex* tool can again use Spot Fleets, after an unnannounced
+   API change by Amazon Web Services.
+   :ticket:`7489`
+
 -  The *condor_wait* tool is again as efficient when waiting forever as when
    given a deadline on the command line.
    :ticket:`7458`
