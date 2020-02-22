@@ -6372,7 +6372,7 @@ int SubmitHash::SetRequirements()
 			if( (unsigned)convertedLength == requiredCudaVersion.length() ) {
 				long long int rcv = (major * 1000) + (minor % 100);
 				AssignJobVal(ATTR_CUDA_VERSION, rcv);
-				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.CUDAMaxSupportedVersion";
 				setCUDAVersion = true;
 			}
 		} else if( sscanf( requiredCudaVersion.c_str(), "%u%n", & major, & convertedLength ) == 1 ) {
@@ -6380,7 +6380,7 @@ int SubmitHash::SetRequirements()
 				long long int rcv = major;
 				if( major < 1000 ) { rcv = major * 1000; }
 				AssignJobVal(ATTR_CUDA_VERSION, rcv);
-				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.CUDAMaxSupportedVersion";
 				setCUDAVersion = true;
 			}
 		}
