@@ -51,6 +51,11 @@ Bugs Fixed:
   and requires the latter; you will have to change older submit files.
   :ticket:`7517`
 
+- Amazon's S3 service used to allow bucket names with underscores or capital
+  letters.  HTCondor can now download from and upload to buckets with this
+  sort of name.
+  :ticket:`7477`
+
 - To work around an issue where long-running *gce_gahp* process enter a state
   where they can no longer authenticate with GCE, the daemon now restarts once
   every 24 hours.  This does not affect the jobs themselves.
