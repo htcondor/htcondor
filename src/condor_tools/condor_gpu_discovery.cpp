@@ -1281,7 +1281,7 @@ main( int argc, const char** argv)
 			if (cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-				props["MaxSupportedCUDAVersion"] = driverVersion;
+				props["MaxSupportedVersion"] = Format("%d", driverVersion);
 			}
 
 			if (dev < g_cl_cCuda) {
