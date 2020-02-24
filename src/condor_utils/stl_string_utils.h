@@ -77,6 +77,11 @@ void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
 
+// Return a string based on string src, but for each character in Q that
+// occurs in src, insert the character escape before it.
+// For example, for src="Alain", Q="abc", and escape='_', the result will
+// be "Al_ain".
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape);
 
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre);

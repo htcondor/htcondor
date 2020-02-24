@@ -584,9 +584,9 @@ static bool test_copy_constructor_actuals() {
 	emit_test("Test that a copied ClassAd has the same attributes and actuals"
 		" as the original ClassAd.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
-	compat_classad::ClassAd* classadCopy = new ClassAd(*classad);
+	ClassAd* classadCopy = new ClassAd(*classad);
 	int actual1 = -1;
 	bool actual2 = false;
 	std::string actual3;
@@ -615,9 +615,9 @@ static bool test_copy_constructor_pointer() {
 	emit_test("Test that a copied ClassAd pointer is not equal to the "
 		"original ClassAd pointer.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
-	compat_classad::ClassAd* classadCopy = new ClassAd(*classad);
+	ClassAd* classadCopy = new ClassAd(*classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
@@ -636,9 +636,9 @@ static bool test_assignment_actuals() {
 	emit_test("Test that a ClassAd has the same attributes and actuals as the"
 		" original ClassAd that it was assigned to.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
-	compat_classad::ClassAd* classadAssign = new ClassAd;
+	ClassAd* classadAssign = new ClassAd;
 	*classadAssign = *classad;
 	int actual1 = -1;
 	bool actual2 = false;
@@ -670,9 +670,9 @@ static bool test_assignment_actuals_before() {
 		" beforehand.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
 	const char* classad_string2  = "\tA=0\n\t\tB=FALSE\n\t\tC=\"gnirtS\"";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
-	compat_classad::ClassAd* classadAssign = new ClassAd;
+	ClassAd* classadAssign = new ClassAd;
 	initAdFromString(classad_string2, *classadAssign);
 	*classadAssign = *classad;
 	int actual1 = -1;
@@ -703,9 +703,9 @@ static bool test_assignment_pointer() {
 	emit_test("Test that a ClassAd pointer is not equal to the original "
 		"ClassAd pointer that it was assigned to.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
-	compat_classad::ClassAd* classadAssign = new ClassAd;
+	ClassAd* classadAssign = new ClassAd;
 	*classadAssign = *classad;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -729,14 +729,14 @@ static bool test_xml() {
 		"D=\"\"\n\t\tE=\" \"";
 	classad::ClassAdXMLUnParser unparser;
 	classad::ClassAdXMLParser parser;
-	compat_classad::ClassAd classad, *classadAfter;
+	ClassAd classad, *classadAfter;
 	MyString before, after;
 	std::string xml;
 	initAdFromString(classad_string, classad);
 	sPrintAd(before, classad);
 	unparser.SetCompactSpacing(false);
 	unparser.Unparse(xml, &classad);
-	classadAfter = new compat_classad::ClassAd();
+	classadAfter = new ClassAd();
 	parser.ParseClassAd(xml, *classadAfter);
 	sPrintAd(after, *classadAfter);
 	emit_input_header();
@@ -758,7 +758,7 @@ static bool test_xml() {
 static bool test_lookup_integer_first() {
 	emit_test("Test LookupInteger() on the first attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "A";
 	int actual = -1;
@@ -781,7 +781,7 @@ static bool test_lookup_integer_first() {
 static bool test_lookup_integer_middle() {
 	emit_test("Test LookupInteger() on the second attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "B";
 	int actual = -1;
@@ -804,7 +804,7 @@ static bool test_lookup_integer_middle() {
 static bool test_lookup_integer_last() {
 	emit_test("Test LookupInteger() on the last attribute in a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2\n\t\tC = 3";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "C";
 	int actual = -1;
@@ -829,7 +829,7 @@ static bool test_lookup_bool_true() {
 		" true.");
 	const char* classad_string = "\tDoesMatch = \"Bone Machine\" == \"bone "
 		"machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "DoesMatch";
 	bool actual = false;
@@ -853,7 +853,7 @@ static bool test_lookup_bool_false() {
 	emit_test("Test LookupBool() on an attribute in a classad that evaluates to"
 		" false.");
 	const char* classad_string = "\tDoesntMatch = \"a\" =?= \"A\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "DoesntMatch";
 	bool actual = true;
@@ -877,7 +877,7 @@ static bool test_lookup_expr_error_or_false() {
 	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical OR with a FALSE.");
 	const char* classad_string = "\tE = FALSE || ERROR";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "E";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
@@ -904,7 +904,7 @@ static bool test_lookup_expr_error_and() {
 	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical AND.");
 	const char* classad_string = "\tL = \"foo\" && ERROR";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "L";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
@@ -931,7 +931,7 @@ static bool test_lookup_expr_error_and_true() {
 	emit_test("Test LookupExpr() on an attribute in a classad that contains "
 		"an error when used in a logical AND with a TRUE.");
 	const char* classad_string = "\tM = TRUE && ERROR";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "M";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
@@ -958,7 +958,7 @@ static bool test_lookup_string_normal() {
 	emit_test("Test LookupString() on an attribute in a classad that contains"
 		" a typical attribute name and expression.");
 	const char* classad_string = "\tD = \"alain\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "D";
 	int expectInt = 1;
@@ -990,14 +990,11 @@ static bool test_lookup_string_long() {
 		"problem with that, this test may fail.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
-	char *expression = (char *) malloc(50000);
-	if ( ! expression) { FAIL; }
 	char *attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
-	compat_classad::ClassAd classad;
-	classad.Insert(expression);
+	ClassAd classad;
+	classad.Assign(attribute_name, expectString);
 	int expectInt = 1;
 	char* result = NULL;
 	int found = classad.LookupString(attribute_name, &result);
@@ -1013,18 +1010,18 @@ static bool test_lookup_string_long() {
 	emit_param("STRING", "");
 	if(found != expectInt || strcmp(result, expectString) != MATCH) {
 		free(attribute_name); free(expectString); 
-		free(expression); free(result);
+		free(result);
 		FAIL;
 	}
 	free(attribute_name); free(expectString); 
-	free(expression); free(result);
+	free(result);
 	PASS;
 }
 
 static bool test_lookup_string_file() {
 	emit_test("Test LookupString() on an attribute in a classad that was read"
 		" from a file.");
-	compat_classad::ClassAd* classad = get_classad_from_file();
+	ClassAd* classad = get_classad_from_file();
 	const char* attribute_name = "D";
 	int expectInt = 1;
 	const char* expectString = "alain";
@@ -1053,7 +1050,7 @@ static bool test_get_my_type_name_no() {
 		"name.");
 	const char* classad_string = "\tA = 1\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* expect = "";
 	const char* result = GetMyTypeName(classad);
@@ -1073,7 +1070,7 @@ static bool test_get_my_type_name_yes() {
 	emit_test("Test GetMyTypeName() on a classad that has a type name.");
 	const char* classad_string = "\tA = 0.7\n\t\tB=2\n\t\tC = 3\n\t\tD = \"alain\""
 		"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* expect = "foo";
 	const char* result = GetMyTypeName(classad);
@@ -1094,7 +1091,7 @@ static bool test_get_target_type_name_no() {
 		"target type name.");
 	const char* classad_string = "\tA = 1\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D='2001-04-05T12:14:15'\n\t\tG=GetTime(1)\n\t\tH=foo(1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* expect = "";
 	const char* result = GetTargetTypeName(classad);
@@ -1115,7 +1112,7 @@ static bool test_get_target_type_name_yes() {
 		" name.");
 	const char* classad_string = "\tA = 0.7\n\t\tB=2\n\t\tC = 3\n\t\t"
 		"D = \"alain\"\n\t\tMyType=\"foo\"\n\t\tTargetType=\"blah\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* expect = "blah";
 	const char* result = GetTargetTypeName(classad);
@@ -1138,7 +1135,7 @@ static bool test_is_a_match_true() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner == \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	bool expect = true;
@@ -1163,7 +1160,7 @@ static bool test_is_a_match_true_reverse() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner == \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string2, classad1);
 	initAdFromString(classad_string1, classad2);
 	bool expect = true;
@@ -1188,7 +1185,7 @@ static bool test_is_a_match_false_memory() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 40\n\t\tRequirements = (TARGET.owner == \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	bool expect = false;
@@ -1214,7 +1211,7 @@ static bool test_is_a_match_false_memory_reverse() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 40\n\t\tRequirements = (TARGET.owner == \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string2, classad1);
 	initAdFromString(classad_string1, classad2);
 	bool expect = false;
@@ -1239,7 +1236,7 @@ static bool test_is_a_match_false_owner() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner != \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	bool expect = false;
@@ -1265,7 +1262,7 @@ static bool test_is_a_match_false_owner_reverse() {
 		"Owner = \"alain\"\n\t\tRequirements = (TARGET.Memory > 50)";
     const char* classad_string2 = "\tMyType=\"Machine\"\n\t\tTargetType=\"Job\"\n\t\t"
 		"Memory = 100\n\t\tRequirements = (TARGET.owner != \"alain\")";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string2, classad1);
 	initAdFromString(classad_string1, classad2);
 	bool expect = false;
@@ -1288,7 +1285,7 @@ static bool test_expr_tree_to_string_short() {
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is short.");
     const char* classad_string = "\tRank = (Memory >= 50)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "Rank";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
@@ -1317,7 +1314,7 @@ static bool test_expr_tree_to_string_long() {
 		"PYTHONPATH=./modules;MACHTYPE=i386;SHELL=/bin/tcsh;"
 		"PATH=/s/std/bin:/usr/afsws/bin:/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/"
 		"usr/X11R6/bin:/unsup/condor/bin:.\"";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "Env";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
@@ -1350,7 +1347,7 @@ static bool test_expr_tree_to_string_long2() {
 		"(g != \"roy\") || (h =?= 5) || (i =!= 6)) && ((a + b) < (c-d)) && "
 		"((e * false) > (g / h)) && x == false && y == true && z == false && "
 		"j == true";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
@@ -1381,15 +1378,12 @@ static bool test_expr_tree_to_string_big() {
 		"the large size of the strings.");
 	char* expect = (char *) malloc(25000 + 2 + 1);
 	if ( ! expect) { FAIL; }
-	char* attribute_name, *expectString, *expression;
+	char* attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	expression = (char *) malloc(50000);
-	if ( ! expression) { FAIL; }
-	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
 	sprintf(expect, "\"%s\"", expectString);
-	compat_classad::ClassAd classad;
-	classad.Insert(expression);
+	ClassAd classad;
+	classad.Assign(attribute_name, expectString);
 	ExprTree* expr = classad.LookupExpr(attribute_name);
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
@@ -1400,11 +1394,11 @@ static bool test_expr_tree_to_string_big() {
 	emit_output_actual_header();
 	emit_retval("%s", "");
 	if(strcmp(result, expect) != MATCH) {
-		free(attribute_name); free(expectString); free(expression); 
+		free(attribute_name); free(expectString);
 		free(expect);
 		FAIL;
 	}
-	free(attribute_name); free(expectString); free(expression);
+	free(attribute_name); free(expectString);
 	free(expect);
 	PASS;
 }
@@ -1416,7 +1410,7 @@ static bool test_get_references_simple_true_internal() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1448,7 +1442,7 @@ static bool test_get_references_simple_true_external() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1482,7 +1476,7 @@ static bool test_get_references_simple_false_internal() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1516,7 +1510,7 @@ static bool test_get_references_simple_false_external() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1550,7 +1544,7 @@ static bool test_get_references_complex_true_internal() {
 		"\n\t\tX = 4\n\t\tFoo = Bar\n\t\tBar = True\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && func(X, XX) && My.Foo";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1586,7 +1580,7 @@ static bool test_get_references_complex_true_external() {
 		"Requirements = ((TARGET.ImageSize > Memory) && (AvailableDisk > Disk) "
 		"&& (TARGET.AvailableDisk > Memory) && (TARGET.ImageSize > Disk)) "
 	    "&& foo(TARGET.X, TARGET.XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1621,7 +1615,7 @@ static bool test_get_references_complex_false_internal() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1655,7 +1649,7 @@ static bool test_get_references_complex_false_external() {
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad::References internal_references;
 	classad::References external_references;
@@ -1777,7 +1771,7 @@ static bool test_next_dirty_expr_clear() {
 	emit_test("Test that dirtyBegin() returns no dirty attributes after "
 		"calling ClearAllDirtyFlags() on a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -1800,11 +1794,11 @@ static bool test_next_dirty_expr_insert() {
 	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"inserting an attribute into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
+	classad.Assign("C", 3);
 	auto dirty_itr = classad.dirtyBegin();
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
@@ -1826,11 +1820,11 @@ static bool test_next_dirty_expr_insert_two_calls() {
 		"inserting one attribute into the classad and incrementing the "
 		"iterator one time.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
+	classad.Assign("C", 3);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	emit_input_header();
@@ -1851,12 +1845,12 @@ static bool test_next_dirty_expr_two_inserts_first() {
 	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"inserting two attributes into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
@@ -1878,12 +1872,12 @@ static bool test_next_dirty_expr_two_inserts_second() {
 		"inserting two attributes into the classad and incrementing the "
 		"iterator one time.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	classad.EnableDirtyTracking();
 	initAdFromString(classad_string, classad);
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
@@ -1906,12 +1900,12 @@ static bool test_next_dirty_expr_two_inserts_third() {
 		"inserting two attributes into the classad and incrementing the "
 		"iterator two times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	auto dirty_itr = classad.dirtyBegin();
 	dirty_itr++;
 	dirty_itr++;
@@ -1934,12 +1928,12 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 		"inserting two attributes into the classad and then calling "
 		"ClearAllDirtyFlags().");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.Insert("C = 3");
-	classad.Insert("D = 4");
+	classad.Assign("C", 3);
+	classad.Assign("D", 4);
 	classad.ClearAllDirtyFlags();
 	auto dirty_itr = classad.dirtyBegin();
 	emit_input_header();
@@ -1960,7 +1954,7 @@ static bool test_next_dirty_expr_set_first() {
 	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"setting both attributes to dirty and then setting one to not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -1988,7 +1982,7 @@ static bool test_next_dirty_expr_set_second() {
 		"setting both attributes to dirty, setting one to not dirty, and then "
 		"incrementing the iterator once.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -2015,7 +2009,7 @@ static bool test_get_dirty_flag_exists_dirty() {
 	emit_test("Test that IsAttributeDirty() returns true "
 		"when the given name exists and is dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -2041,7 +2035,7 @@ static bool test_get_dirty_flag_exists_not_dirty() {
 	emit_test("Test that IsAttributeDirty() returns false when the "
 		"given name exists but is not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -2067,7 +2061,7 @@ static bool test_get_dirty_flag_not_exist() {
 	emit_test("Test that IsAttributeDirty() returns false when the given "
 		"name doesn't exist.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
@@ -2091,7 +2085,7 @@ static bool test_get_dirty_flag_not_exist() {
 
 static bool test_from_file() {
 	emit_test("Test that reading a classad from a file works correctly.");
-	compat_classad::ClassAd* classad = get_classad_from_file();
+	ClassAd* classad = get_classad_from_file();
 	int actual1 = -1, actual2 = -1;
 	char* actual3 = NULL;
 	bool retVal1 = classad->LookupInteger("B", actual1);
@@ -2132,7 +2126,7 @@ static bool test_init_from_string_ints() {
 							"B6=int(false)\n\t\t"
 							"B8=int(\"this is not a number\")\n\t\t"
 							"B9=isError(B8)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2160,7 +2154,7 @@ static bool test_init_from_string_reals() {
 							"B6=real(false)\n\t\t"
 							"B8=real(\"this is not a number\")\n\t\t"
 							"B9=isError(B8)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2198,7 +2192,7 @@ static bool test_init_from_string_if_then_else() {
 							"BB12=ifThenElse(3.7, \"then\", \"else\")\n\t\t"
 							"BB13=ifThenElse(\"\", \"then\", \"else\")\n\t\t"
 							"E2=isError(BB13)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2278,7 +2272,7 @@ static bool test_init_from_string_string_list() {
 		"U8=stringlistmember(\"-2.9\",\"1,-2.0,3.0\")\n\t\t"
 		"U=stringlistmember(\"green\", \"red, blue, green\")\n\t\t"
 		"V=stringlistimember(\"ReD\", \"RED, BLUE, GREEN\")";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", "");
@@ -2301,7 +2295,7 @@ static bool test_init_from_string_string() {
     const char* classad_string = 	"\tBC0=string(\"-3\")\n\t\t"
 							"BC1=string(123)\n\t\t"
 							"E0=isError(BC1)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2324,7 +2318,7 @@ static bool test_init_from_string_strcat() {
     const char* classad_string = 	"\tBC0=strcat(\"-3\",\"3\")\n\t\t"
 							"BC1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\",\"f\","
 								"\"g\")";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2349,7 +2343,7 @@ static bool test_init_from_string_floor() {
 							"BC2=floor(\"3\")\n\t\t"
 							"BC3=floor(5)\n\t\t"
 							"BC4=floor(5.2)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2374,7 +2368,7 @@ static bool test_init_from_string_ceiling() {
 							"BC2=ceiling(\"3\")\n\t\t"
 							"BC3=ceiling(5)\n\t\t"
 							"BC4=ceiling(5.2)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2399,7 +2393,7 @@ static bool test_init_from_string_round() {
 							"BC2=round(\"3\")\n\t\t"
 							"BC3=round(5.5)\n\t\t"
 							"BC4=round(5.2)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2428,7 +2422,7 @@ static bool test_init_from_string_random() {
 							"BC7=random(\"3\")\n\t\t"
 							"BC8=random(5.5)\n\t\t"
 							"BC9=random(5.2)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2450,7 +2444,7 @@ static bool test_init_from_string_is_string() {
 		" to the given string when using isString().");
     const char* classad_string = 	"\tBC3=isString(\"abc\")\n\t\t"
 							"BC0=isString(strcat(\"-3\",\"3\"))";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2474,7 +2468,7 @@ static bool test_init_from_string_is_undefined() {
 							"BC=10\n\t\t"
 							"BB0=isUndefined(BD)\n\t\t"
 							"BB1=isUndefined(BC)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2498,7 +2492,7 @@ static bool test_init_from_string_is_error() {
 							"BC1=isError(int(\"this is not an int\"))\n\t\t"
 							"BC2=isError(real(\"this is not a float\"))\n\t\t"
 							"BC3=isError(floor(\"this is not a float\"))";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2525,7 +2519,7 @@ static bool test_init_from_string_is_integer() {
 							"BC5=isInteger( int(3.4) )\n\t\t"
 							"BC6=isInteger(int(\"-3\"))\n\t\t"
 							"BC7=isInteger(3)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2554,7 +2548,7 @@ static bool test_init_from_string_is_real() {
 							"BC7=isReal(3)\n\t\t"
 							"BC8=isReal(3,1)\n\t\t"
 							"BC9=isError(BC8)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2575,7 +2569,7 @@ static bool test_init_from_string_is_boolean() {
 	emit_test("Test that initAdFromString() correctly initializes the classad "
 		" to the given string when using isBoolean().");
     const char* classad_string =  "\tBC1=isBoolean(isReal(-3.4 ))";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2604,7 +2598,7 @@ static bool test_init_from_string_substr() {
 							"I6=substr(foo, 3, -9)\n\t\t"
 							"E0=isError(I5)\n\t\t"
 							"E1=isUndefined(I6)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2632,7 +2626,7 @@ static bool test_init_from_string_formattime() {
 							"I5=formattime(1174694400,1174694400)\n\t\t"
 							"E0=isError(I4)\n\t\t"
 							"E1=isError(I5)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", "%s", classad_string);
@@ -2662,7 +2656,7 @@ static bool test_init_from_string_strcmp() {
 							"K2=stricmp(\"aBabcd\", \"ffgghh\")\n\t\t"
 							"K3=stricmp(1+1, \"2\")\n\t\t"
 							"K4=stricmp(\"2\", 1+1)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2683,7 +2677,7 @@ static bool test_init_from_string_attrnm() {
 	emit_test("Test that initAdFromString() correctly initializes the classad "
 		" to the given string with an attribute name.");
     const char* classad_string =  "\tT012=t";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2731,7 +2725,7 @@ static bool test_init_from_string_regexp() {
 		"X5=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two "
 			"is \\2\",20)\n\t\t"
 		"E7=isError(X5)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", "");
@@ -2776,7 +2770,7 @@ static bool test_init_from_string_stringlists_regexpmember() {
 		"W5=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\")\n\t\t"
 		"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", "
 			"\"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\")";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", "");
@@ -2809,7 +2803,7 @@ static bool test_init_from_string_various() {
 							"N1=size(\"\")\n\t\t"
 							"N2=size(foo)\n\t\t"
 							"E0=isUndefined(N2)";
-	compat_classad::ClassAd* classad = new ClassAd;
+	ClassAd* classad = new ClassAd;
 	initAdFromString(classad_string, *classad);
 	emit_input_header();
 	emit_param("STRING", classad_string);
@@ -2830,7 +2824,7 @@ static bool test_int_invalid() {
 	emit_test("Test that LookupInteger() returns 0 for an attribute with an "
 		"invalid integer actual.");
     const char* classad_string = "\tB=int(\"this is not a number\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2853,7 +2847,7 @@ static bool test_int_false() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with the actual false.");
     const char* classad_string = "\tB=int(false)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 0;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2878,7 +2872,7 @@ static bool test_int_true() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with the actual true.");
     const char* classad_string = "\tB=int(true)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 1;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2903,7 +2897,7 @@ static bool test_int_float_negative_quotes() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with a negative float actual enclosed in quotes.");
     const char* classad_string = "\tB=int(\"-3.4\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2928,7 +2922,7 @@ static bool test_int_float_negative() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with a negative float actual.");
     const char* classad_string = "\tB=int(-3.4)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2953,7 +2947,7 @@ static bool test_int_float_positive() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with a positive float actual.");
     const char* classad_string = "\tB=int(3.4)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("B", actual);
@@ -2978,7 +2972,7 @@ static bool test_int_int_positive() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"of an attribute with a positive integer actual.");
     const char* classad_string = "\tB=int(3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("B", actual);
@@ -3004,7 +2998,7 @@ static bool test_int_error() {
 		"isError() of another attribute that uses int() incorrectly.");
 	const char* classad_string = "\tA=int(\"this is not a number\")\n\t\t"
 							"B=isError(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
@@ -3026,7 +3020,7 @@ static bool test_real_invalid() {
 	emit_test("Test that LoookupFloat() returns 0 for an attribute that uses "
 		"real() with an invalid float actual.");
     const char* classad_string = "\tB=real(\"this is not a number\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3049,7 +3043,7 @@ static bool test_real_false() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with the actual false.");
     const char* classad_string = "\tB=real(false)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 0;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3074,7 +3068,7 @@ static bool test_real_true() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with the actual true.");
     const char* classad_string = "\tB=real(true)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 1;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3100,7 +3094,7 @@ static bool test_real_float_negative_quotes() {
 		"of an attribute that uses real() with a negative float actual enclosed"
 		" in quotes.");
     const char* classad_string = "\tB=real(\"-3.4\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0f, expect = -3.4f;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3125,7 +3119,7 @@ static bool test_real_float_negative() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a negative float actual.");
     const char* classad_string = "\tB=real(-3.4)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0f, expect = -3.4f;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3150,7 +3144,7 @@ static bool test_real_float_positive() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a positive float actual.");
     const char* classad_string = "\tB=real(3.4)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0f, expect = 3.4f;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3175,7 +3169,7 @@ static bool test_real_int_positive() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"of an attribute that uses real() with a positive integer actual.");
     const char* classad_string = "\tB=real(3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 3;
 	int retVal = classad.LookupFloat("B", actual);
@@ -3201,7 +3195,7 @@ static bool test_real_error() {
 		"isError() of another attribute that uses real() incorrectly.");
 	const char* classad_string = "\tA=real(\"this is not a number\")\n\t\t"
 							"B=isError(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false;
 	classad.LookupBool("B", actual);
@@ -3225,7 +3219,7 @@ static bool test_if_then_else_false() {
 		"of an attribute with an ifThenElse() that evaluates to false.");
     const char* classad_string = "\tA=2\n\t\tB=ifThenElse(A > 5, \"big\", \""
 		"small\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "small";
@@ -3253,7 +3247,7 @@ static bool test_if_then_else_false_error() {
 		"else part evaluates to an error.");
     const char* classad_string = "\tA=2\n\t\tB=ifThenElse(A > 5, 4 / 0, \"small"
 		"\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "small";
@@ -3280,7 +3274,7 @@ static bool test_if_then_else_false_constant() {
 		"of an attribute with an ifThenElse() that evaluates to false when "
 		"evaluating a constant.");
     const char* classad_string = "\tB=ifThenElse(0.0, \"then\", \"else\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "else";
@@ -3307,7 +3301,7 @@ static bool test_if_then_else_true() {
 		"of an attribute with an ifThenElse() that evaluates to true.");
     const char* classad_string = "\tA=10\n\t\tB=ifThenElse(A > 5, \"big\", "
 		"\"small\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "big";
@@ -3335,7 +3329,7 @@ static bool test_if_then_else_true_error() {
 		"then part evaluates to an error.");
     const char* classad_string = "\tA=10\n\t\tB=ifThenElse(A > 5, \"big\", "
 		"4 / 0)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "big";
@@ -3362,7 +3356,7 @@ static bool test_if_then_else_true_constant1() {
 		"of an attribute with an ifThenElse() that evaluates to true when "
 		"evaluating a constant with the actual 1.0.");
     const char* classad_string = "\tB=ifThenElse(1.0, \"then\", \"else\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "then";
@@ -3389,7 +3383,7 @@ static bool test_if_then_else_true_constant2() {
 		"of an attribute with an ifThenElse() that evaluates to true when "
 		"evaluating a constant with the actual 3.7.");
     const char* classad_string = "\tB=ifThenElse(3.7, \"then\", \"else\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "then";
@@ -3417,7 +3411,7 @@ static bool test_if_then_else_invalid1() {
 		"invalid condition.");
 	const char* classad_string = "\tA=ifThenElse(4 / \"hello\", \"big\","
 		"\"small\")\n\t\tB=isError(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
@@ -3442,7 +3436,7 @@ static bool test_if_then_else_invalid2() {
 		"empty condition.");
 	const char* classad_string = "\tA=ifThenElse(\"\", \"then\", \"else\")"
 		"\n\t\tB=isError(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
@@ -3467,7 +3461,7 @@ static bool test_if_then_else_too_few() {
 		"arguments.");
 	const char* classad_string = "\tA=ifThenElse(\"big\",\"small\")\n\t\t"
 		"B=isError(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
@@ -3492,7 +3486,7 @@ static bool test_if_then_else_undefined() {
 		"in an ifThenElse().");
 	const char* classad_string = "\tA=ifThenElse(C > 5, \"big\",\"small\")"
 		"\n\t\tB=isUndefined(A)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	classad.LookupBool("B", actual);
@@ -3515,7 +3509,7 @@ static bool test_string_list_size_3() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 3.");
 	const char* classad_string = "\tA1=stringlistsize(\"A ,0 ,C\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3540,7 +3534,7 @@ static bool test_string_list_size_0() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 0.");
 	const char* classad_string = "\tA1=stringlistsize(\"\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 0;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3565,7 +3559,7 @@ static bool test_string_list_size_5() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsize() on a StringList of size 5.");
 	const char* classad_string = "\tA1=stringlistsize(\"A;B;C;D;E\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3590,7 +3584,7 @@ static bool test_string_list_size_default_delim() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using the default delimiter.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C,D\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3613,7 +3607,7 @@ static bool test_string_list_size_repeat_delim() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList with repeating delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C ; D\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3636,7 +3630,7 @@ static bool test_string_list_size_non_default_delim() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList not using the default delimiter.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C ; D\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3659,7 +3653,7 @@ static bool test_string_list_size_two_delim() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using two different delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A B C;D\",\" ; \")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3682,7 +3676,7 @@ static bool test_string_list_size_three_delim() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"stringlistsize() on a StringList using three different delimiters.");
 	const char* classad_string = "\tA1=stringlistsize(\"A  +B;C$D\",\"$;+\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3707,7 +3701,7 @@ static bool test_string_list_size_error_end() {
 		" an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistsize(\"A;B;C;D;E\","
 		"true))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -3734,7 +3728,7 @@ static bool test_string_list_size_error_beginning() {
 		" an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistsize(true,\"A;B;C;D;E"
 		"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -3760,7 +3754,7 @@ static bool test_string_list_sum_default() {
 		"for an attribute using stringlistsum() on a StringList using the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistsum(\"1,2,3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 6;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3785,7 +3779,7 @@ static bool test_string_list_sum_empty() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistsum() on an empty StringList.");
 	const char* classad_string = "\tA1=stringlistsum(\"\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 0.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -3811,7 +3805,7 @@ static bool test_string_list_sum_non_default() {
 		"for an attribute using stringlistsum() on a StringList not using the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistsum(\"1;2;3\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 6;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3837,7 +3831,7 @@ static bool test_string_list_sum_both() {
 		"for an attribute using stringlistsum() on a StringList that contains "
 		"both ints and floats.");
 	const char* classad_string = "\tA1=stringlistsum(\"1,2.0,3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 6.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -3863,7 +3857,7 @@ static bool test_string_list_sum_error_end() {
 		"for an attribute using isError of stringlistsum() on a StringList that"
 		" contains an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistsum(\"1;2;3\",true))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -3889,7 +3883,7 @@ static bool test_string_list_sum_error_beginning() {
 		"for an attribute using isError of stringlistsum() on a StringList that"
 		" contains an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistsum(true,\"1;2;3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -3916,7 +3910,7 @@ static bool test_string_list_sum_error_all() {
 		" doesn't contain integers.");
 	const char* classad_string = "\tA1=isError(stringlistsum(\"this, list, bad"
 		"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -3942,7 +3936,7 @@ static bool test_string_list_min_negative() {
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"negative integers.");
 	const char* classad_string = "\tA1=stringlistmin(\"-1,2,-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3968,7 +3962,7 @@ static bool test_string_list_min_positive() {
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"positive integers.");
 	const char* classad_string = "\tA1=stringlistmin(\"1;2;3\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -3994,7 +3988,7 @@ static bool test_string_list_min_both() {
 		"for an attribute using stringlistmin() on a StringList that contains "
 		"both ints and floats.");
 	const char* classad_string = "\tA1=stringlistmin(\"1,-2.0,3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = -2.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4020,7 +4014,7 @@ static bool test_string_list_min_undefined() {
 		"for an attribute using isUndefined() of stringlistmin() on an empty "
 		"StringList.");
 	const char* classad_string = "\tA1=isUndefined(stringlistmin(\"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4046,7 +4040,7 @@ static bool test_string_list_min_error_end() {
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;2;3\",true))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4072,7 +4066,7 @@ static bool test_string_list_min_error_beginning() {
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistmin(true,\"1;2;3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4099,7 +4093,7 @@ static bool test_string_list_min_error_all() {
 		"that doesn't have any numbers.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"this, list, bad"
 		"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4125,7 +4119,7 @@ static bool test_string_list_min_error_middle() {
 		"for an attribute using isError() of stringlistmin() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistmin(\"1;A;3\",\";\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4151,7 +4145,7 @@ static bool test_string_list_max_negatve() {
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"negative actuals.");
 	const char* classad_string = "\tA1=stringlistmax(\"1 , 4.5, -5\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 4.5;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4177,7 +4171,7 @@ static bool test_string_list_max_positive() {
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"positive integers.");
 	const char* classad_string = "\tA1=stringlistmax(\"1;2;3\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4203,7 +4197,7 @@ static bool test_string_list_max_both() {
 		"for an attribute using stringlistmax() on a StringList that contains "
 		"both integers and floats.");
 	const char* classad_string = "\tA1=stringlistmax(\"1,-2.0,3.0\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 3.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4229,7 +4223,7 @@ static bool test_string_list_max_undefined() {
 		"for an attribute using isUndefined() of stringlistmax() on an empty "
 		"StringList.");
 	const char* classad_string = "\tA1=isUndefined(stringlistmax(\"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4255,7 +4249,7 @@ static bool test_string_list_max_error_end() {
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;2;3\",true))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4281,7 +4275,7 @@ static bool test_string_list_max_error_beginning() {
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistmax(true,\"1;2;3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4308,7 +4302,7 @@ static bool test_string_list_max_error_all() {
 		"with all invalid strings.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"this, list, bad"
 		"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4334,7 +4328,7 @@ static bool test_string_list_max_error_middle() {
 		"for an attribute using isError() of stringlistmax() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistmax(\"1;A;3\",\";\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4360,7 +4354,7 @@ static bool test_string_list_avg_default() {
 		"for an attribute using stringlistavg() on a StringList that uses the "
 		"default delimiter.");
 	const char* classad_string = "\tA1=stringlistavg(\"10, 20, 30, 40\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 25.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4385,7 +4379,7 @@ static bool test_string_list_avg_empty() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistavg() on an empty StringList.");
 	const char* classad_string = "\tA1=stringlistavg(\"\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 0.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4411,7 +4405,7 @@ static bool test_string_list_avg_non_default() {
 		"for an attribute using stringlistavg() on a StringList that doesn't "
 		"use the default delimiter.");
 	const char* classad_string = "\tA1=stringlistavg(\"1;2;3\",\";\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 2.0;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4437,7 +4431,7 @@ static bool test_string_list_avg_both() {
 		"for an attribute using stringlistavg() on a StringList that contains "
 		"both integers and floats.");
 	const char* classad_string = "\tA1=stringlistavg(\"1,-2.0,3.0\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0f, expect = 0.666667f;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -4463,7 +4457,7 @@ static bool test_string_list_avg_error_end() {
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid delimiter.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;2;3\",true))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4489,7 +4483,7 @@ static bool test_string_list_avg_error_beginning() {
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid string.");
 	const char* classad_string = "\tA1=isError(stringlistavg(true,\"1;2;3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4516,7 +4510,7 @@ static bool test_string_list_avg_error_all() {
 		"with all invalid strings.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"this, list, bad"
 		"\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4542,7 +4536,7 @@ static bool test_string_list_avg_error_middle() {
 		"for an attribute using isError() of stringlistavg() on a StringList "
 		"with an invalid string in the middle.");
 	const char* classad_string = "\tA1=isError(stringlistavg(\"1;A;3\",\";\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4568,7 +4562,7 @@ static bool test_string_list_member() {
 		"for an attribute using stringlistmember() on a typical StringList.");
 	const char* classad_string = "\tA1=stringlistmember(\"green\", \"red, blue,"
 		" green\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4595,7 +4589,7 @@ static bool test_string_list_member_case() {
 		"with different cases.");
 	const char* classad_string = "\tA1=stringlistimember(\"ReD\", \"RED, BLUE, "
 		"GREEN\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -4620,7 +4614,7 @@ static bool test_string_negative_int() {
 	emit_test("Test that LookupString() returns 1 for an attribute using "
 		"string() with a negative int.");
 	const char* classad_string = "\tA1=string(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	int retVal = classad.LookupString("A1", actual);
@@ -4643,7 +4637,7 @@ static bool test_string_positive_int() {
 	emit_test("Test that LookupString() returns 1 for an attribute using "
 		"string() with a positive int.");
 	const char* classad_string = "\tA1=string(123)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	int retVal = classad.LookupString("A1", actual);
@@ -4666,7 +4660,7 @@ static bool test_strcat_short() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for a short attribute using strcat().");
 	const char* classad_string = "\tA1=strcat(\"-3\",\"3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "-33";
@@ -4693,7 +4687,7 @@ static bool test_strcat_long() {
 		"for a long attribute using strcat().");
 	const char* classad_string = "\tA1=strcat(\"a\",\"b\",\"c\",\"d\",\"e\","
 		"\"f\",\"g\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "abcdefg";
@@ -4719,7 +4713,7 @@ static bool test_floor_negative_int() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a negative integer.");
 	const char* classad_string = "\tA1=floor(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4744,7 +4738,7 @@ static bool test_floor_negative_float() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a negative float.");
 	const char* classad_string = "\tA1=floor(\"-3.4\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -4;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4769,7 +4763,7 @@ static bool test_floor_positive_integer() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using floor() on a positive integer.");
 	const char* classad_string = "\tA1=floor(\"3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4795,7 +4789,7 @@ static bool test_floor_positive_integer_wo() {
 		"for an attribute using floor() on a positive integer without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=floor(5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4821,7 +4815,7 @@ static bool test_floor_positive_float_wo() {
 		"for an attribute using floor() on a positive float without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=floor(5.2)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4846,7 +4840,7 @@ static bool test_ceiling_negative_int() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a negative integer.");
 	const char* classad_string = "\tA1=ceiling(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4871,7 +4865,7 @@ static bool test_ceiling_negative_float() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a negative float.");
 	const char* classad_string = "\tA1=ceiling(\"-3.4\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4896,7 +4890,7 @@ static bool test_ceiling_positive_integer() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using ceiling() on a positive integer.");
 	const char* classad_string = "\tA1=ceiling(\"3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4922,7 +4916,7 @@ static bool test_ceiling_positive_integer_wo() {
 		"for an attribute using ceiling() on a positive integer without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=ceiling(5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4948,7 +4942,7 @@ static bool test_ceiling_positive_float_wo() {
 		"for an attribute using ceiling() on a positive float without "
 		"quotes around the number.");
 	const char* classad_string = "\tA1=ceiling(5.2)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 6;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4973,7 +4967,7 @@ static bool test_round_negative_int() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a negative integer.");
 	const char* classad_string = "\tA1=round(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -4998,7 +4992,7 @@ static bool test_round_negative_float() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a negative float.");
 	const char* classad_string = "\tA1=round(\"-3.5\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 // Beginning with Visual Studio 2015, we use the c-runtime rint() function to implement round just like we do on *nix, so it has the same 'flaw'
@@ -5030,7 +5024,7 @@ static bool test_round_positive_int() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using round() on a positive integer.");
 	const char* classad_string = "\tA1=round(\"3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -5056,7 +5050,7 @@ static bool test_round_positive_float_wo_up() {
 		"for an attribute using round() on a positive float without "
 		"quotes surrounding the number and the function rounds up.");
 	const char* classad_string = "\tA1=round(5.5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 6;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -5082,7 +5076,7 @@ static bool test_round_positive_float_wo_down() {
 		"for an attribute using round() on a positive float without "
 		"quotes surrounding the number and the function rounds down.");
 	const char* classad_string = "\tA1=round(5.2)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -5107,7 +5101,7 @@ static bool test_random_integer() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using random() on a positive integer.");
 	const char* classad_string = "\tA1=random(5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual =-1, expect = 5;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -5132,7 +5126,7 @@ static bool test_random() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"for an attribute using random() without an argument.");
 	const char* classad_string = "\tA1=random()";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 1;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -5157,7 +5151,7 @@ static bool test_random_float() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"for an attribute using random() on a positive float.");
 	const char* classad_string = "\tA1=random(3.5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	float actual = -1.0, expect = 3.5;
 	int retVal = classad.LookupFloat("A1", actual);
@@ -5182,7 +5176,7 @@ static bool test_is_string_simple() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isString() on a simple string.");
 	const char* classad_string = "\tA1=isString(\"abc\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5205,7 +5199,7 @@ static bool test_is_string_concat() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isString() on a concatenated string.");
 	const char* classad_string = "\tA1=isString(strcat(\"-3\",\"3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5228,7 +5222,7 @@ static bool test_is_undefined_true() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isUndefined() on an undefined attribute.");
 	const char* classad_string = "\tA1=isUndefined(BD)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5253,7 +5247,7 @@ static bool test_is_undefined_false() {
 		"for an attribute using isUndefined() on an attribute that is "
 		"defined.");
 	const char* classad_string = "\tBC=10\n\t\tA1=isUndefined(BC)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5279,7 +5273,7 @@ static bool test_is_error_random() {
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of random().");
 	const char* classad_string = "\tA1=isError(random(\"-3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5305,7 +5299,7 @@ static bool test_is_error_int() {
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of int().");
 	const char* classad_string = "\tA1=isError(int(\"this is not an int\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5331,7 +5325,7 @@ static bool test_is_error_real() {
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of real().");
 	const char* classad_string = "\tA1=isError(real(\"this is not a float\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5357,7 +5351,7 @@ static bool test_is_error_floor() {
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of floor().");
 	const char* classad_string = "\tA1=isError(floor(\"this is not a float\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5382,7 +5376,7 @@ static bool test_is_integer_false_negative() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a negative real.");
 	const char* classad_string = "\tA1=isInteger(-3.4 )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5407,7 +5401,7 @@ static bool test_is_integer_false_positive() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a positive real.");
 	const char* classad_string = "\tA1=isInteger(3.4 )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5432,7 +5426,7 @@ static bool test_is_integer_false_quotes() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on an integer in quotes.");
 	const char* classad_string = "\tA1=isInteger(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5457,7 +5451,7 @@ static bool test_is_integer_true_negative() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a negative integer.");
 	const char* classad_string = "\tA1=isInteger(-3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5483,7 +5477,7 @@ static bool test_is_integer_true_int() {
 		"for an attribute using isInteger() along with int() on a positive "
 		"real.");
 	const char* classad_string = "\tA1=isInteger( int(3.4) )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5509,7 +5503,7 @@ static bool test_is_integer_true_int_quotes() {
 		"for an attribute using isInteger() along with int() on a negative "
 		"integer in quotes.");
 	const char* classad_string = "\tA1=isInteger(int(\"-3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5534,7 +5528,7 @@ static bool test_is_integer_true_positive() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isInteger() on a positive integer.");
 	const char* classad_string = "\tA1=isInteger(3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5559,7 +5553,7 @@ static bool test_is_real_false_negative_int() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a negative integer.");
 	const char* classad_string = "\tA1=isReal(-3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5585,7 +5579,7 @@ static bool test_is_real_false_negative_int_quotes() {
 		"for an attribute using isReal() on a negative integer in "
 		"quotes.");
 	const char* classad_string = "\tA1=isReal(\"-3\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5610,7 +5604,7 @@ static bool test_is_real_false_positive_int() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a positive integer.");
 	const char* classad_string = "\tA1=isReal(3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5635,7 +5629,7 @@ static bool test_is_real_true_negative() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a negative real.");
 	const char* classad_string = "\tA1=isReal(-3.4 )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5660,7 +5654,7 @@ static bool test_is_real_true_positive() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using isReal() on a positive real.");
 	const char* classad_string = "\tA1=isReal( 3.4 )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5686,7 +5680,7 @@ static bool test_is_real_true_real() {
 		"for an attribute using isReal() along with real() on a positive "
 		"integer.");
 	const char* classad_string = "\tA1=isReal( real(3) )";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5712,7 +5706,7 @@ static bool test_is_real_true_real_quotes() {
 		"for an attribute using isReal() along with real() on a negative "
 		"integer in quotes.");
 	const char* classad_string = "\tA1=isReal(real(\"-3\"))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5738,7 +5732,7 @@ static bool test_is_real_error() {
 		"for an attribute using isError() of an attriute that uses isReal() "
 		"incorrectly.");
 	const char* classad_string = "\tBC8=isReal(3,1)\n\t\tA1=isError(BC8)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5764,7 +5758,7 @@ static bool test_is_boolean() {
 		"for an attribute using isBoolean() along with isReal() on a negative "
 		"real.");
 	const char* classad_string = "\tA1=isBoolean(isReal(-3.4 ))";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5789,7 +5783,7 @@ static bool test_substr_end() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using substr() on the end of a string.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "defg";
@@ -5815,7 +5809,7 @@ static bool test_substr_middle() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using substr() on the middle of a string.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, 2)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "de";
@@ -5841,7 +5835,7 @@ static bool test_substr_negative_index() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with a negative starting index.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", -2, 1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "f";
@@ -5867,7 +5861,7 @@ static bool test_substr_negative_length() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with a negative length.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "def";
@@ -5893,7 +5887,7 @@ static bool test_substr_out_of_bounds() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using substr() with an out of bounds length.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -9)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "";
@@ -5920,7 +5914,7 @@ static bool test_substr_error_index() {
 		"substr() with an invalid index.");
 	const char* classad_string = "\tI5=substr(\"abcdefg\", 3.3, -9)\n\t\t"
 							"A1=isError(I5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5947,7 +5941,7 @@ static bool test_substr_error_string() {
 		"substr() on an invalid string.");
 	const char* classad_string = "\tI6=substr(foo, 3, -9)\n\t\t"
 							"A1=isUndefined(I6)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -5972,7 +5966,7 @@ static bool test_formattime_empty() {
 	emit_test("Test that LookupString() returns 1 for an attribute using "
 		"formattime() with no arguments.");
 	const char* classad_string = "\tA1=formattime()";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	int retVal = classad.LookupString("A1", actual);
@@ -5998,7 +5992,7 @@ static bool test_formattime_current() {
 		"run at a different second, we retry the evaluations up to 10 times.");
 	const char* classad_string = "\tA0=formattime()\n\t\tA1=formattime("
 		"CurrentTime)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	std::string expect;
@@ -6033,7 +6027,7 @@ static bool test_formattime_current_options() {
 		"run at a different second, we retry the evaluations up to 10 times.");
 	const char* classad_string = "\tA0=formattime()\n\t\tA1=formattime("
 		"CurrentTime,\"%c\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	std::string expect;
@@ -6064,7 +6058,7 @@ static bool test_formattime_int() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using formattime() from a integer.");
 	const char* classad_string = "\tA1=formattime(1174737600,\"%m/%d/%y\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "03/24/07";
@@ -6092,7 +6086,7 @@ static bool test_formattime_error() {
 		"formattime() incorrectly.");
 	const char* classad_string = "\tI5=formattime(1174694400,1174694400)\n\t\t"
 		"A1=isError(I5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6118,7 +6112,7 @@ static bool test_strcmp_positive() {
 		"for an attribute using strcmp() of two strings that should result in "
 		"a positive number.");
 	const char* classad_string = "\tA1=strcmp(\"ABCDEFgxx\", \"ABCDEFg\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6144,7 +6138,7 @@ static bool test_strcmp_negative() {
 		"for an attribute using strcmp() of two strings that should result in "
 		"a negative number.");
 	const char* classad_string = "\tA1=strcmp(\"BBBBBBBxx\", \"CCCCCCC\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6170,7 +6164,7 @@ static bool test_strcmp_equal() {
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0.");
 	const char* classad_string = "\tA1=strcmp(\"AbAbAbAb\", \"AbAbAbAb\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6196,7 +6190,7 @@ static bool test_strcmp_convert1() {
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0 after converting the first argument to a string.");
 	const char* classad_string = "\tA1=strcmp(1+1, \"2\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6222,7 +6216,7 @@ static bool test_strcmp_convert2() {
 		"for an attribute using strcmp() of two strings that should give a "
 		"result of 0 after converting the second argument to a string.");
 	const char* classad_string = "\tA1=strcmp(\"2\", 1+1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6248,7 +6242,7 @@ static bool test_stricmp_equal() {
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0.");
 	const char* classad_string = "\tA1=stricmp(\"ABCDEFg\", \"abcdefg\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6274,7 +6268,7 @@ static bool test_stricmp_positive() {
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of a positive number.");
 	const char* classad_string = "\tA1=stricmp(\"ffgghh\", \"aabbcc\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6300,7 +6294,7 @@ static bool test_stricmp_negative() {
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of a negative number.");
 	const char* classad_string = "\tA1=stricmp(\"aBabcd\", \"ffgghh\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6326,7 +6320,7 @@ static bool test_stricmp_convert1() {
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0 after converting the first argument to a string.");
 	const char* classad_string = "\tA1=stricmp(1+1, \"2\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6352,7 +6346,7 @@ static bool test_stricmp_convert2() {
 		"for an attribute using stricmp() of two strings that should give a "
 		"result of 0 after converting the second argument to a string.");
 	const char* classad_string = "\tA1=stricmp(\"2\", 1+1)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -6379,7 +6373,7 @@ static bool test_regexp_match_wildcard() {
 		"a wildcard.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \""
 		"thisisamatchlist\", \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6406,7 +6400,7 @@ static bool test_regexp_match_repeat() {
 		"repeating characters.");
 	const char* classad_string = "\tA1=regexp(\"([Mm]+[Nn]+)\", "
 		"\"aaaaaaaaaabbbmmmmmNNNNNN\", \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6432,7 +6426,7 @@ static bool test_regexp_no_match() {
 		"for an attribute using regexp() that doesn't evaluate to a match.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \"thisisalist\","
 		" \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6459,7 +6453,7 @@ static bool test_regexp_no_match_case() {
 		"to its case.");
 	const char* classad_string = "\tA1=regexp(\"[Mm]atcH.i\", \""
 		"thisisamatchlist\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6486,7 +6480,7 @@ static bool test_regexp_error_pattern() {
 		"regexp() with an invalid regexp pattern.");
 	const char* classad_string = "\tW1=regexp(20, \"thisisamatchlist\", \"i\")"
 		"\n\t\tA1=isError(W1)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6513,7 +6507,7 @@ static bool test_regexp_error_target() {
 		"regexp() with an invalid regexp target string.");
 	const char* classad_string = "\tW1=regexp(\"[Mm]atcH.i\", 20, \"i\")\n\t\t"
 		"A1=isError(W1)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6540,7 +6534,7 @@ static bool test_regexp_error_option() {
 		"regexp() with an invalid regexp option.");
 	const char* classad_string = "W3=regexp(\"[Mm]atcH.i\", \"thisisamatchlist"
 		"\", 20)\n\t\tA1=isError(W3)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6566,7 +6560,7 @@ static bool test_regexps_match() {
 		"for an attribute using regexps() that evaluates to a match.");
 	const char* classad_string = "\tA1=regexps(\"([Mm]at)c(h).i\", "
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "one is mat two is h";
@@ -6593,7 +6587,7 @@ static bool test_regexps_match_case() {
 		"for an attribute using regexps() that evaluates to a match.");
 	const char* classad_string = "\tA1=regexps(\"([Mm]at)c(h).i\", "
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "one is mat two is h";
@@ -6622,7 +6616,7 @@ static bool test_regexps_error_pattern() {
 	const char* classad_string = "\tX2=regexps(20 , \"thisisamatchlist\", \"one is "
 		"\\1 two is \\2\",\"i\")\n\t\t"
 		"A1=isError(X2)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6649,7 +6643,7 @@ static bool test_regexps_error_target() {
 		"regexps() with an invalid regexps target string.");
 	const char* classad_string = "\tX3=regexps(\"([Mm]at)c(h).i\", 20 , \""
 		"one is \\1 two is \\2\",\"i\")\n\t\tA1=isError(X3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6676,7 +6670,7 @@ static bool test_regexps_error_option() {
 		"regexps() with an invalid regexps option.");
 	const char* classad_string = "\tX5=regexps(\"([Mm]at)c(h).i\", \""
 		"thisisamatchlist\", \"one is \\1 two is \\2\",20)\n\t\tA1=isError(X5)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6703,7 +6697,7 @@ static bool test_regexps_error_return() {
 		"regexps() with an invalid regexps return arg.");
 	const char* classad_string = "\tX4=regexps(\"([Mm]at)c(h).i\", \""
 		"thisisamatchlist\", 20 ,\"i\")\n\t\tA1=isError(X4)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6729,7 +6723,7 @@ static bool test_regexps_full() {
 		"string with a single replacement.");
 	const char* classad_string = "\tA1=regexps(\"s(.)\", "
 		"\"thisisamatchlist\", \"S\\1\", \"f\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "thiSisamatchlist";
@@ -6756,7 +6750,7 @@ static bool test_regexps_full_global() {
 		"string with global replacement.");
 	const char* classad_string = "\tA1=regexps(\"s(.)\", "
 		"\"thisisamatchlist\", \"S\\1\", \"fg\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "thiSiSamatchliSt";
@@ -6783,7 +6777,7 @@ static bool test_replace() {
 		"string with a single replacement.");
 	const char* classad_string = "\tA1=replace(\"s(.)\", "
 		"\"thisisamatchlist\", \"S\\1\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "thiSisamatchlist";
@@ -6810,7 +6804,7 @@ static bool test_replaceall() {
 		"string with global replacement.");
 	const char* classad_string = "\tA1=replaceall(\"s(.)\", "
 		"\"thisisamatchlist\", \"S\\1\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "thiSiSamatchliSt";
@@ -6838,7 +6832,7 @@ static bool test_stringlist_regexp_member_match_default() {
 		"match when using the default delimiter.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"green\", \""
 		"red, blue, green\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6865,7 +6859,7 @@ static bool test_stringlist_regexp_member_match_non_default() {
 		"match when not using the default delimiter.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"green\", \""
 		"red; blue; green\",\"; \")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6892,7 +6886,7 @@ static bool test_stringlist_regexp_member_match_case() {
 		"match when using case insensitive.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"\"thisisamatchlist\", \" ,\", \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6919,7 +6913,7 @@ static bool test_stringlist_regexp_member_match_repeat() {
 		"match when using repeating characters.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"([Mm]+[Nn]+)"
 		"\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6946,7 +6940,7 @@ static bool test_stringlist_regexp_member_no_match_multiple() {
 		" to a match due to multiple misses.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"([p]+)\", \"red, "
 		"blue, green\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -6973,7 +6967,7 @@ static bool test_stringlist_regexp_member_no_match() {
 		" to a match.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"\"thisisalist\", \" ,\", \"i\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7000,7 +6994,7 @@ static bool test_stringlist_regexp_member_no_match_case() {
 		" to a match due to case.");
 	const char* classad_string = "\tA1=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"\"thisisamatchlist\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7028,7 +7022,7 @@ static bool test_stringlist_regexp_member_error_pattern() {
 	const char* classad_string = 
 		"\tW1=stringlist_regexpMember(20, \"thisisamatchlist\", \"i\")\n\t\t"
 		"A1=isError(W1)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7055,7 +7049,7 @@ static bool test_stringlist_regexp_member_error_target() {
 		"stringlist_regexpMember() with an invalid regexp target.");
 	const char* classad_string = "\tW2=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"20, \"i\")\n\t\tA1=isError(W2)"; 
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7082,7 +7076,7 @@ static bool test_stringlist_regexp_member_error_delim() {
 		"stringlist_regexpMember() with an invalid delimiter.");
 	const char* classad_string = "\tW3=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"\"thisisamatchlist\", 20)\n\t\tA1=isError(W3)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7109,7 +7103,7 @@ static bool test_stringlist_regexp_member_error_option() {
 		"stringlist_regexpMember() with an invalid regexp option.");
 	const char* classad_string = "\tW7=stringlist_regexpMember(\"[Mm]atcH.i\", "
 		"\"thisisamatchlist\", \" ,\", 20)\n\t\tA1=isError(W7)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7137,7 +7131,7 @@ static bool test_random_different() {
 	emit_comment("This test will fail if random() generates the same number "
 		"10 times in a row, although this is highly unlikely.");
 	const char* classad_string = "\tA1 = random(256)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = -2, i;
 	bool different_numbers = false;
@@ -7166,7 +7160,7 @@ static bool test_random_range() {
 		"attribute using random(), in particular check that it generates "
 		"random numbers within the correct range.");
 	const char* classad_string = "\tA1 = random(10)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, i;
 	bool in_range = true;
@@ -7245,7 +7239,7 @@ static bool test_operators_short_or() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using short-circuiting with logical OR.");
 	const char* classad_string = "\tA1 = TRUE || ERROR";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7270,7 +7264,7 @@ static bool test_operators_no_short_or() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute not using short-circuiting with logical OR.");
 	const char* classad_string = "\tA1 = isError(FALSE || ERROR)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7295,7 +7289,7 @@ static bool test_operators_short_and() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute using short-circuiting with logical AND.");
 	const char* classad_string = "\tA1 = FALSE && ERROR";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = true, expect = false;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7321,7 +7315,7 @@ static bool test_operators_short_and_error() {
 		"for an attribute using short-circuiting with logical AND that "
 		"evaluates to an ERROR.");
 	const char* classad_string = "\tA1 = isError(\"foo\" && ERROR)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7346,7 +7340,7 @@ static bool test_operators_no_short_and() {
 	emit_test("Test that LookupBool() returns 1 and sets the correct actual "
 		"for an attribute not using short-circuiting with logical AND.");
 	const char* classad_string = "\tA1 = isError(TRUE && ERROR)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);
@@ -7374,7 +7368,7 @@ static bool test_scoping_my() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 1;
@@ -7404,7 +7398,7 @@ static bool test_scoping_my_dup() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 4;
@@ -7433,7 +7427,7 @@ static bool test_scoping_target() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 3;
@@ -7463,7 +7457,7 @@ static bool test_scoping_target_dup() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 2;
@@ -7493,7 +7487,7 @@ static bool test_scoping_both() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1, expect = 5;
@@ -7522,7 +7516,7 @@ static bool test_scoping_my_miss() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1;
@@ -7549,7 +7543,7 @@ static bool test_scoping_target_miss() {
 		"\n\t\tD = TARGET.Y\n\t\tE = Y\n\t\tG = MY.Z\n\t\tH = TARGET.Z\n\t\t"
 		"J = TARGET.K\n\t\tL = 5\n\t\tX = 1\n\t\tZ = 4";
 	const char* classad_string2 = "X = 2\n\t\tY = 3\n\t\tK = TARGET.L";
-	compat_classad::ClassAd classad1, classad2;
+	ClassAd classad1, classad2;
 	initAdFromString(classad_string1, classad1);
 	initAdFromString(classad_string2, classad2);
 	int actual = -1;
@@ -7573,7 +7567,7 @@ static bool test_time() {
 	emit_test("Test that LookupInteger() returns 1 for an attribute using "
 		"time().");
 	const char* classad_string = "\tA1=Time()";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -7599,7 +7593,7 @@ static bool test_interval_minute() {
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(60)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "1:00";
@@ -7628,7 +7622,7 @@ static bool test_interval_hour() {
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(3600)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "1:00:00";
@@ -7657,7 +7651,7 @@ static bool test_interval_day() {
 		"will likely be changed to match the documentation and this test will "
 		"then fail. See ticket #1440");
 	const char* classad_string = "\tA1=Interval(86400)";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "1+00:00:00";
@@ -7683,7 +7677,7 @@ static bool test_to_upper() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using toupper().");
 	const char* classad_string = "\tA1=toupper(\"AbCdEfg\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "ABCDEFG";
@@ -7709,7 +7703,7 @@ static bool test_to_lower() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"for an attribute using toLower().");
 	const char* classad_string = "\tA1=toLower(\"ABCdeFg\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	std::string actual;
 	const char* expect = "abcdefg";
@@ -7735,7 +7729,7 @@ static bool test_size_positive() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using size() with a positive result.");
     const char* classad_string = "\tA1=size(\"ABC\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 3;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -7760,7 +7754,7 @@ static bool test_size_zero() {
 	emit_test("Test that LookupInteger() returns 1 and sets the correct actual "
 		"for an attribute using size() with a result of zero.");
     const char* classad_string = "\tA1=size(\"\")";
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	int actual = -1, expect = 0;
 	int retVal = classad.LookupInteger("A1", actual);
@@ -7787,7 +7781,7 @@ static bool test_size_undefined() {
 		"size() with an invalid string.");
     const char* classad_string =  "\tN2=size(foo)\n\t\tA1=isUndefined(N2)";
 	emit_param("size", "%d", strlen(classad_string));
-	compat_classad::ClassAd classad;
+	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	bool actual = false, expect = true;
 	int retVal = classad.LookupBool("A1", actual);

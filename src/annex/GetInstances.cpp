@@ -56,13 +56,13 @@ GetInstances::operator() () {
 			}
 
 			formatstr( iName, "Instance%d", count++ );
-			scratchpad->Assign( (iName + ".instanceID").c_str(), instanceID );
-			scratchpad->Assign( (iName + ".status").c_str(), status );
-			scratchpad->Assign( (iName + ".clientToken").c_str(), clientToken );
-			scratchpad->Assign( (iName + ".keyName").c_str(), keyName );
-			scratchpad->Assign( (iName + ".stateReasonCode").c_str(), stateReasonCode );
-			scratchpad->Assign( (iName + ".publicDNSName").c_str(), publicDNSName );
-			scratchpad->Assign( (iName + ".annexName").c_str(), annexName );
+			scratchpad->Assign( (iName + ".instanceID"), instanceID );
+			scratchpad->Assign( (iName + ".status"), status );
+			scratchpad->Assign( (iName + ".clientToken"), clientToken );
+			scratchpad->Assign( (iName + ".keyName"), keyName );
+			scratchpad->Assign( (iName + ".stateReasonCode"), stateReasonCode );
+			scratchpad->Assign( (iName + ".publicDNSName"), publicDNSName );
+			scratchpad->Assign( (iName + ".annexName"), annexName );
 		}
 
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );

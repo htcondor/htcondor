@@ -80,7 +80,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         formatstr(coa, "_condor_%s", ra.c_str());
         bool override = false;
         double ov=0;
-        if (job.LookupFloat(coa.c_str(), ov)) {
+        if (job.LookupFloat(coa, ov)) {
             // Allow _condor_RequestedXXX to override RequestedXXX
             // this case is intended to be operative when a scheduler has set 
             // such values and sent them on to the startd that owns this resource
@@ -88,7 +88,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
             string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ta, job, ra);
-            job.Assign(ra.c_str(), ov);
+            job.Assign(ra, ov);
             override = true;
         }
 
@@ -97,7 +97,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         ClassAd::iterator f(job.find(ra));
         if (f == resource.end()) {
             // a RequestXxx attribute not present - default to zero
-            job.Assign(ra.c_str(), 0);
+            job.Assign(ra, 0);
             missing = true;
         }
 

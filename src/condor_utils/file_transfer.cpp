@@ -907,8 +907,7 @@ FileTransfer::Init(
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
-		Ad->Insert(tempbuf);
+		Ad->Assign(ATTR_TRANSFER_KEY,TransKey);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
@@ -4265,7 +4264,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 			if(file_subcommand == TransferSubCommand::UploadUrl) {
 				// make the URL out of Attr OutputDestination and filename
-				MyString source_filename;
+				std::string source_filename;
 				source_filename = Iwd;
 				source_filename += DIR_DELIM_CHAR;
 				source_filename += filename;
@@ -4305,10 +4304,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				} else {
 					// actually invoke the plugin.  this could block indefinitely.
 					ClassAd pluginStatsAd;
-					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), local_output_url.c_str());
+					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.c_str(), local_output_url.c_str());
 					dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-					rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.Value());
-					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), local_output_url.c_str(), rc);
+					rc = InvokeFileTransferPlugin(errstack, source_filename.c_str(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.Value());
+					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.c_str(), local_output_url.c_str(), rc);
 
 					// report the results:
 					file_info.Assign("Filename", source_filename);

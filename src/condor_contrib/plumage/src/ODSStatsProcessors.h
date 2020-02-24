@@ -27,7 +27,7 @@ namespace stats {
 void processSubmitterStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 void processMachineStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 void processSchedulerStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
-void processAccountantStats(compat_classad::ClassAd* ad, plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
+void processAccountantStats(ClassAd* ad, plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 
 }}
 

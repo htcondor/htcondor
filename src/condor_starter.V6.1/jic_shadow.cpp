@@ -1522,6 +1522,15 @@ JICShadow::initWithFileTransfer()
 	job_iwd = strdup( Starter->GetWorkingDir() );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
+	// Only rename the executable if it is transferred.
+	bool xferExec = true;
+	job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
+
+	if( xferExec ) {
+		dprintf( D_FULLDEBUG, "Changing the executable name\n" );
+		job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC);
+	}
+
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
 		// job's standard files.  this is shared code if we're
@@ -2408,6 +2417,7 @@ JICShadow::beginFileTransfer( void )
 
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
+#if 0
 		// Only rename the executable if it is transferred.
 		bool xferExec = true;
 		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
@@ -2416,6 +2426,7 @@ JICShadow::beginFileTransfer( void )
 			dprintf( D_FULLDEBUG, "Changing the executable name\n" );
 			job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC );
 		}
+#endif
 
 		filetrans = new FileTransfer();
 		auto reuse_dir = Starter->getDataReuseDirectory();

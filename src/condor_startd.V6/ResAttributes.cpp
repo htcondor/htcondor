@@ -651,10 +651,10 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
 		} else {
 			classad::Value value;
-			MyString attr(ATTR_OFFLINE_PREFIX); attr += tag;
+			std::string attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			std::string res_value;
 			StringList offline_ids;
-			if (ad.LookupString(attr.c_str(),res_value)) {
+			if (ad.LookupString(attr,res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
 			} else {
 				attr = "OFFLINE_MACHINE_RESOURCE_"; attr += tag;
@@ -664,7 +664,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			}
 
 			attr = ATTR_DETECTED_PREFIX; attr += tag;
-			if (ad.LookupString(attr.c_str(),res_value)) {
+			if (ad.LookupString(attr,res_value)) {
 				StringList ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
 				if ( ! ids.isEmpty()) {
@@ -973,15 +973,15 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 			string attr(ATTR_DETECTED_PREFIX); attr += rname;
 			double ipart, fpart = modf(j->second, &ipart);
 			if (fpart >= 0.0 && fpart <= 0.0) {
-				cp->Assign(attr.c_str(), (long long)ipart);
+				cp->Assign(attr, (long long)ipart);
 			} else {
-				cp->Assign(attr.c_str(), j->second);
+				cp->Assign(attr, j->second);
 			}
 			attr = ATTR_TOTAL_PREFIX; attr += rname;
 			if (fpart >= 0.0 && fpart <= 0.0) {
-				cp->Assign(attr.c_str(), (long long)ipart);
+				cp->Assign(attr, (long long)ipart);
 			} else {
-				cp->Assign(attr.c_str(), j->second);
+				cp->Assign(attr, j->second);
 			}
 			// are there any offline ids for this resource?
 			slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
@@ -990,7 +990,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 					attr = ATTR_OFFLINE_PREFIX; attr += k->first;
 					string ids;
 					join(k->second, ",", ids);
-					cp->Assign(attr.c_str(), ids);
+					cp->Assign(attr, ids);
 				}
 			}
 			machine_resources += " ";
@@ -1043,7 +1043,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		while ((volume = vl.next())) {
 			std::string attrName = "HasDockerVolume";
 			attrName += volume;
-			cp->Assign(attrName.c_str(), true);
+			cp->Assign(attrName, true);
 		}
 		free(dockerVolumes);
 	}
@@ -1062,7 +1062,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		std::string attributeName;
 		while( flag != NULL ) {
 			formatstr( attributeName, "has_%s", flag );
-			cp->Assign( attributeName.c_str(), true );
+			cp->Assign( attributeName, true );
 			flag = strtok_r( NULL, " ", & savePointer );
 		}
 		free( processor_flags );
@@ -1346,16 +1346,16 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-			cp->Assign(j->first.c_str(), int(j->second));
+			cp->Assign(j->first, int(j->second));
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
-			cp->Assign(attr.c_str(), int(c_slottot_map[j->first]));
+			cp->Assign(attr, int(c_slottot_map[j->first]));
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
 				attr = "Assigned";
 				attr += j->first;
 				string ids;
 				join(k->second, ",", ids);
-				cp->Assign(attr.c_str(), ids);
+				cp->Assign(attr, ids);
 			}
 		}
 	}

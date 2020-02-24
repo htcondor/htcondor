@@ -279,6 +279,10 @@ public:
 	bool writeOutputAdFile( ClassAd* ad );
 	void initOutputAdFile( void );
 
+	void setUpdateAdFile( const char* path );
+	const char* getUpdateAdFile( void ) { return m_job_update_ad_file.c_str(); };
+	bool writeUpdateAdFile( ClassAd* ad );
+
 	void setCredPath( const char* path );
 	const char* getCredPath( void ) { return job_CredPath; };
 
@@ -477,6 +481,8 @@ protected:
 
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
+
+	std::string m_job_update_ad_file;
 
 	char* job_CredPath;
 	

@@ -764,7 +764,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 		dprintf( D_ALWAYS, "Failed to receive ready command (%d) on TCP: aborting\n", cmd );
 		return FALSE;
 	}
-	MyString daemon_name; // using MyString here because it will never return NULL
+	std::string daemon_name;
 	cmdAd.LookupString("DaemonName", daemon_name);
 	int daemon_pid = 0;
 	cmdAd.LookupInteger("DaemonPID", daemon_pid);
@@ -774,7 +774,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 	switch (cmd) {
 		case DC_SET_READY:
 		{
-			MyString state; // using MyString because its c_str() never faults or returns NULL
+			std::string state;
 			cmdAd.LookupString("DaemonState", state);
 			class daemon* daemon = daemons.FindDaemonByPID(daemon_pid);
 			if ( ! daemon) {

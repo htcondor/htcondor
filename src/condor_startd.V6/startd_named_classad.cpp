@@ -363,7 +363,7 @@ StartdNamedClassAd::reset_monitor() {
 				// persist.  Instead, make sure that the persistent resource
 				// instance ad we're modifying here will stomp on the value
 				// by instead setting usageName to undefined explicitly.
-				from->AssignExpr( usageName.c_str(), "undefined" );
+				from->AssignExpr( usageName, "undefined" );
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
 			}

@@ -175,7 +175,7 @@ class CondorQuery
 
 	// Add a non-requirements attribute to send along with the
 	// query.  The server will decide what, if anything to do with it
-	int addExtraAttribute(const char*);
+	int addExtraAttribute(const char *name, const char *value);
 
 		// Set the list of desired attributes
 		// to be returned in the queried ads.

@@ -146,7 +146,7 @@ AppendHistory(ClassAd* ad)
 		  failed = true;
 	  } else {
 		  int cluster, proc, completion;
-		  MyString owner;
+		  std::string owner;
 
 		  if (!ad->LookupInteger("ClusterId", cluster)) {
 			  cluster = -1;
@@ -162,7 +162,7 @@ AppendHistory(ClassAd* ad)
 		  }
 		  fprintf(LogFile,
                       "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-				  offset, cluster, proc, owner.Value(), completion);
+				  offset, cluster, proc, owner.c_str(), completion);
 		  fflush( LogFile );
       }
   }
@@ -226,10 +226,10 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	MyString file_name;
 	MyString temp_file_name;
 	if (useGjid) {
-		MyString gjid;
+		std::string gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
-		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.Value());
+		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.c_str());
+		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
 	} else {
 		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
 		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);

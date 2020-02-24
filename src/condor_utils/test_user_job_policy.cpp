@@ -70,8 +70,7 @@ void test_oldstyle_with_exit(void)
 	printf("Testing OldStyle job where it is marked as exited.\n");
 
 	/* An oldstyle classad would have this */
-	sprintf(buf, "%s = %d", ATTR_COMPLETION_DATE, 10); /* non zero */
-	jad->Insert(buf);
+	jad->Assign(ATTR_COMPLETION_DATE, 10); /* non zero */
 
 	result = user_job_policy(jad);
 
@@ -117,8 +116,7 @@ void test_oldstyle_with_no_exit(void)
 	printf("Testing OldStyle job where it is NOT marked as exited.\n");
 
 	/* An oldstyle classad would have this */
-	sprintf(buf, "%s = %d", ATTR_COMPLETION_DATE, 0);
-	jad->Insert(buf);
+	jad->Assign(ATTR_COMPLETION_DATE, 0);
 
 	result = user_job_policy(jad);
 
@@ -161,16 +159,11 @@ void test_user_policy_periodic_hold_yes(void)
 	printf("Testing User Policy on Periodic Hold: YES\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = 42", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 42);
+	jad->AssignExpr(ATTR_PERIODIC_HOLD_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
@@ -217,16 +210,11 @@ void test_user_policy_periodic_exit_yes(void)
 	printf("Testing User Policy on Periodic Exit: YES\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = 42", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 42);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->AssignExpr(ATTR_PERIODIC_REMOVE_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
@@ -273,16 +261,11 @@ void test_user_policy_periodic_hold_no(void)
 	printf("Testing User Policy on Periodic Hold: NO\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = 40", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 40);
+	jad->AssignExpr(ATTR_PERIODIC_HOLD_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
@@ -323,16 +306,11 @@ void test_user_policy_periodic_exit_no(void)
 	printf("Testing User Policy on Periodic Exit: NO\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = 40", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 40);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->AssignExpr(ATTR_PERIODIC_REMOVE_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 
 	result = user_job_policy(jad);
 
@@ -373,18 +351,12 @@ void test_user_policy_on_exit_hold_yes(void)
 	printf("Testing User Policy on On Exit Hold: YES\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, 0);
-	jad->Insert(buf);
-	sprintf(buf, "%s = 42", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = False", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_ON_EXIT_CODE, 0);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 42);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->AssignExpr(ATTR_ON_EXIT_HOLD_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 
 	result = user_job_policy(jad);
 
@@ -430,18 +402,12 @@ void test_user_policy_on_exit_remove_yes(void)
 	printf("Testing User Policy on On Exit Remove: YES\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, 0);
-	jad->Insert(buf);
-	sprintf(buf, "%s = 42", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_ON_EXIT_CODE, 0);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 42);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->AssignExpr(ATTR_ON_EXIT_REMOVE_CHECK, "TotalSuspensions == 42");
 
 	result = user_job_policy(jad);
 
@@ -487,18 +453,12 @@ void test_user_policy_on_exit_hold_no(void)
 	printf("Testing User Policy on On Exit Hold: NO\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, 0);
-	jad->Insert(buf);
-	sprintf(buf, "%s = 40", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_ON_EXIT_CODE, 0);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 40);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->AssignExpr(ATTR_ON_EXIT_HOLD_CHECK, "TotalSuspensions == 42");
+	jad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 
 	result = user_job_policy(jad);
 
@@ -553,18 +513,12 @@ void test_user_policy_on_exit_remove_no(void)
 	printf("Testing User Policy on On Exit Remove: NO\n");
 
 	/* set up the classad */
-	sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, 0);
-	jad->Insert(buf);
-	sprintf(buf, "%s = 40", ATTR_TOTAL_SUSPENSIONS);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-	jad->Insert(buf);
-	sprintf(buf, "%s = TotalSuspensions == 42", ATTR_ON_EXIT_REMOVE_CHECK);
-	jad->Insert(buf);
+	jad->Assign(ATTR_ON_EXIT_CODE, 0);
+	jad->Assign(ATTR_TOTAL_SUSPENSIONS, 40);
+	jad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
+	jad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
+	jad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
+	jad->AssignExpr(ATTR_ON_EXIT_REMOVE_CHECK, "TotalSuspensions == 42");
 
 	result = user_job_policy(jad);
 

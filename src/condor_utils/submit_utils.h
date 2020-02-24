@@ -648,7 +648,7 @@ protected:
 	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
-	MyString   submit_username; // username specified to init_cluster_ad
+	std::string   submit_username; // username specified to init_cluster_ad
 
 	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
@@ -689,12 +689,12 @@ protected:
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
 	auto_free_ptr RunAsOwnerCredD;
-	MyString JobIwd;
+	std::string JobIwd;
 	#if !defined(WIN32)
 	MyString JobRootdir;
 	#endif
 	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
-	MyString VMType;
+	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	MyString MyProxyPassword; // set by command line or by submit file. command line wins

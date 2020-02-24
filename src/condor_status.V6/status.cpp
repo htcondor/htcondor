@@ -2285,11 +2285,11 @@ secondPass (int argc, char *argv[])
 
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
-			sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
+			sprintf(buffer,"\"%s\"", statistics);
 			if (diagnose) {
-				printf ("[%s]\n", buffer);
+				printf ("[STATISTICS_TO_PUBLISH = %s]\n", buffer);
 			}
-			query->addExtraAttribute(buffer);
+			query->addExtraAttribute("STATISTICS_TO_PUBLISH", buffer);
 			continue;
 		}
 

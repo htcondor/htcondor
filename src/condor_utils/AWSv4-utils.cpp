@@ -257,7 +257,7 @@ generate_presigned_url( const std::string & accessKeyID,
     size_t middle = s3url.find( "/", protocolLength );
     if( middle == std::string::npos ) {
         err.push( "AWS SigV4", 2, "An S3 URL must be of the form s3://<bucket>/<object>, "
-            "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
+            "s3://<bucket>.s3.<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
         return false;
     }
     std::string region = input_region;
@@ -274,7 +274,7 @@ generate_presigned_url( const std::string & accessKeyID,
     if (bucket_or_hostname.find(".") == std::string::npos) {
         bucket = bucket_or_hostname;
         if(! region.empty()) {
-            host = bucket + ".s3-" + region + ".amazonaws.com";
+            host = bucket + ".s3." + region + ".amazonaws.com";
         } else {
             host = bucket + ".s3.amazonaws.com";
 
@@ -287,23 +287,17 @@ generate_presigned_url( const std::string & accessKeyID,
                   AWSv4Impl::pathEncode(bucket).c_str() );
             }
         }
-    // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
+    // URLs of the form s3://<bucket>.s3.<region>.amazonaws.com/<object>
     } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
-        auto last_idx = bucket_and_region.rfind(".");
+        auto last_idx = bucket_and_region.rfind(".s3.");
         if (last_idx == std::string::npos) {
             err.push( "AWS SigV4", 3, "Invalid format for domain-based buckets.  Must be of the"
-                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
+                " form s3://<bucket>.s3.<region>.amazonaws.com/<object>" );
             return false;
         }
         bucket = bucket_and_region.substr(0, last_idx);
-        auto region_with_prefix = bucket_and_region.substr(last_idx);
-        if (region_with_prefix.substr(0, 4) != ".s3-") {
-            err.push( "AWS SigV4", 4, "Invalid format for domain-based buckets.  Must be of the"
-                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
-            return false;
-        }
-        region = region_with_prefix.substr(4);
+        region = bucket_and_region.substr(last_idx + 4);
     } else {
         // All other URLs were s3://<something-without-dots>/<something>
         // where the first part is now in 'host' and the second part

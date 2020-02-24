@@ -93,7 +93,6 @@ public:
 
 	ExprTree * LookupExpr(const char * attr) { return ad.LookupExpr(attr); }
 	ExprTree * Lookup(const std::string & attr) { return ad.Lookup(attr); }
-	int LookupString(const char * attr, MyString & val) { return ad.LookupString(attr, val); }
 	int LookupString(const char * attr, std::string & val) { return ad.LookupString(attr, val); }
 	int LookupBool(const char * attr, bool & val) { return ad.LookupBool(attr, val); }
 	int LookupInt(const char * attr, long long & val) { return ad.LookupInteger(attr, val); }
@@ -887,8 +886,8 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	MyString realcwd;
 
 	if ( use_iwd ) {
-		ASSERT(JobIwd.Length());
-		p_iwd = JobIwd.Value();
+		ASSERT(JobIwd.length());
+		p_iwd = JobIwd.c_str();
 	} else if (clusterAd) {
 		// if there is a cluster ad, we NEVER want to use the current working directory
 		// instead we want to treat the saved working directory of submit as the cwd.
@@ -2452,7 +2451,7 @@ int SubmitHash::ComputeIWD()
 	}
 	JobIwd = iwd;
 	JobIwdInitialized = true;
-	if ( ! JobIwd.empty()) { mctx.cwd = JobIwd.Value(); }
+	if ( ! JobIwd.empty()) { mctx.cwd = JobIwd.c_str(); }
 
 	if ( shortname )
 		free(shortname);
@@ -2464,7 +2463,7 @@ int SubmitHash::SetIWD()
 {
 	RETURN_IF_ABORT();
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
-	AssignJobString(ATTR_JOB_IWD, JobIwd.Value());
+	AssignJobString(ATTR_JOB_IWD, JobIwd.c_str());
 	RETURN_IF_ABORT();
 	return 0;
 }
@@ -4642,7 +4641,7 @@ static bool mightTransfer( int universe )
 int SubmitHash::SetUniverse()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
+	std::string buffer;
 
 	auto_free_ptr univ(submit_param(SUBMIT_KEY_Universe, ATTR_JOB_UNIVERSE));
 	if ( ! univ) {
@@ -5445,7 +5444,7 @@ int SubmitHash::SetImageSize()
 		// we should only call calc_image_size_kb on the first
 		// proc in the cluster, since the executable cannot change.
 		if (jid.proc < 1) {
-			MyString buffer;
+			std::string buffer;
 			ASSERT(job->LookupString(ATTR_JOB_CMD, buffer));
 			long long exe_size_kb = 0;
 			if (buffer.empty()) { // this is allowed for docker universe
@@ -5501,7 +5500,7 @@ int SubmitHash::SetImageSize()
 	RETURN_IF_ABORT();
 
 	char	*tmp;
-	MyString buffer;
+	std::string buffer;
 
 	int64_t exe_disk_size_kb = 0; // disk needed for the exe or vm memory
 	int64_t executable_size_kb = 0; // calculated size of the exe
@@ -5987,7 +5986,7 @@ int SubmitHash::SetRequirements()
 
 	if (JobUniverse == CONDOR_UNIVERSE_VM) {
 		// so we can easly do case-insensitive comparisons of the vmtype
-		YourStringNoCase vmtype(VMType.Value());
+		YourStringNoCase vmtype(VMType.c_str());
 
 		if (vmtype != CONDOR_VM_UNIVERSE_XEN) {
 			answer += " && (TARGET." ATTR_TOTAL_MEMORY " >= MY." ATTR_JOB_VM_MEMORY ")";
@@ -6373,7 +6372,7 @@ int SubmitHash::SetRequirements()
 			if( (unsigned)convertedLength == requiredCudaVersion.length() ) {
 				long long int rcv = (major * 1000) + (minor % 100);
 				AssignJobVal(ATTR_CUDA_VERSION, rcv);
-				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.CUDAMaxSupportedVersion";
 				setCUDAVersion = true;
 			}
 		} else if( sscanf( requiredCudaVersion.c_str(), "%u%n", & major, & convertedLength ) == 1 ) {
@@ -6381,7 +6380,7 @@ int SubmitHash::SetRequirements()
 				long long int rcv = major;
 				if( major < 1000 ) { rcv = major * 1000; }
 				AssignJobVal(ATTR_CUDA_VERSION, rcv);
-				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.MaxSupportedCUDAVersion";
+				answer += "&& " ATTR_CUDA_VERSION " <= TARGET.CUDAMaxSupportedVersion";
 				setCUDAVersion = true;
 			}
 		}
@@ -6462,7 +6461,7 @@ int SubmitHash::SetAccountingGroup()
 
 	const char * group_user = NULL;
 	if ( ! gu) {
-		group_user = submit_username.Value();
+		group_user = submit_username.c_str();
 	} else {
 		group_user = gu;
 	}
@@ -6520,17 +6519,17 @@ int SubmitHash::SetVMParams()
 	tmp_ptr.set(submit_param(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE));
 	if (tmp_ptr) {
 		VMType = tmp_ptr.ptr();
-		VMType.lower_case();
+		lower_case(VMType);
 
 		// VM type is already set in SetUniverse
-		AssignJobString(ATTR_JOB_VM_TYPE, VMType.Value());
+		AssignJobString(ATTR_JOB_VM_TYPE, VMType.c_str());
 		RETURN_IF_ABORT();
 	} else {
 		job->LookupString(ATTR_JOB_VM_TYPE, VMType);
 	}
 
 	// so we can easly do case-insensitive comparisons of the vmtype
-	YourStringNoCase vmtype(VMType.Value());
+	YourStringNoCase vmtype(VMType.c_str());
 
 	// need vm checkpoint?
 	VMCheckpoint = submit_param_bool(SUBMIT_KEY_VM_Checkpoint, ATTR_JOB_VM_CHECKPOINT, false, &param_exists);
@@ -6645,7 +6644,7 @@ int SubmitHash::SetVMParams()
 	if (vmtype == CONDOR_VM_UNIVERSE_XEN) {
 
 		// xen_kernel is a required parameter
-		MyString xen_kernel = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
+		std::string xen_kernel = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
 		if ( ! xen_kernel.empty()) {
 			AssignJobString(VMPARAM_XEN_KERNEL, xen_kernel.c_str());
 		} else if ( ! job->LookupString(VMPARAM_XEN_KERNEL, xen_kernel)) {
@@ -6862,7 +6861,7 @@ int SubmitHash::process_vm_input_files(StringList & input_files, long long * acc
 	}
 
 	// if this is not VMWARE, we are done, just return the number of files added to the list
-	if (YourStringNoCase(VMType.Value()) != CONDOR_VM_UNIVERSE_VMWARE) {
+	if (YourStringNoCase(VMType.c_str()) != CONDOR_VM_UNIVERSE_VMWARE) {
 		return count;
 	}
 
@@ -6944,7 +6943,7 @@ int SubmitHash::SetTransferFiles()
 	RETURN_IF_ABORT();
 
 	char *macro_value;
-	MyString tmp;
+	std::string tmp;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
 	StringList input_file_list(NULL, ",");
@@ -7038,12 +7037,12 @@ int SubmitHash::SetTransferFiles()
 			output_file_list.initializeFromString(macro_value);
 			for (const char * file = output_file_list.first(); file != NULL; file = output_file_list.next()) {
 				out_files_specified = true;
-				tmp = file;
-				if (check_and_universalize_path(tmp) != 0)
+				MyString buf = file;
+				if (check_and_universalize_path(buf) != 0)
 				{
 					// we universalized the path, so update the string list
 					output_file_list.deleteCurrent();
-					output_file_list.insert(tmp.Value());
+					output_file_list.insert(buf.Value());
 				}
 			}
 		}
@@ -7083,7 +7082,7 @@ int SubmitHash::SetTransferFiles()
 	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
 	if (! should_param) {
 		if (job->LookupString(ATTR_SHOULD_TRANSFER_FILES, tmp)) {
-			should_param.set(tmp.StrDup());
+			should_param.set(strdup(tmp.c_str()));
 		} else {
 			should_param.set(param("SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES"));
 			if (should_param) {
@@ -7138,7 +7137,7 @@ int SubmitHash::SetTransferFiles()
 	auto_free_ptr when_param(submit_param(ATTR_WHEN_TO_TRANSFER_OUTPUT, SUBMIT_KEY_WhenToTransferOutput));
 	if ( ! when_param) {
 		if (job->LookupString(ATTR_WHEN_TO_TRANSFER_OUTPUT, tmp)) {
-			when_param.set(tmp.StrDup());
+			when_param.set(strdup(tmp.c_str()));
 		}
 	}
 	when = when_param;
@@ -7347,8 +7346,8 @@ int SubmitHash::SetTransferFiles()
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
 		 IsRemoteJob ) {
 
-		MyString output;
-		MyString error;
+		std::string output;
+		std::string error;
 		bool StreamStdout = false;
 		bool StreamStderr = false;
 
@@ -7357,8 +7356,8 @@ int SubmitHash::SetTransferFiles()
 		job->LookupBool(ATTR_STREAM_OUTPUT, StreamStdout);
 		job->LookupBool(ATTR_STREAM_ERROR, StreamStderr);
 
-		if(output.Length() && output != condor_basename(output.Value()) && 
-		   strcmp(output.Value(),"/dev/null") != 0 && !StreamStdout)
+		if(output.length() && output != condor_basename(output.c_str()) &&
+		   strcmp(output.c_str(),"/dev/null") != 0 && !StreamStdout)
 		{
 			char const *working_name = StdoutRemapName;
 				//Force setting value, even if we have already set it
@@ -7370,11 +7369,11 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
 		}
 
-		if(error.Length() && error != condor_basename(error.Value()) && 
-		   strcmp(error.Value(),"/dev/null") != 0 && !StreamStderr)
+		if(error.length() && error != condor_basename(error.c_str()) &&
+		   strcmp(error.c_str(),"/dev/null") != 0 && !StreamStderr)
 		{
 			char const *working_name = StderrRemapName;
 
@@ -7391,7 +7390,7 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
 		}
 	}
 
@@ -7521,7 +7520,7 @@ int SubmitHash::FixupTransferInputFiles()
 		return 0;
 	}
 
-	MyString input_files;
+	std::string input_files;
 	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,input_files) != 1 ) {
 		return 0; // nothing to do
 	}
@@ -7722,7 +7721,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 				dprintf(D_ALWAYS, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
 				//push_warning(stderr, "could not insert SUBMIT_ATTR %s. did you forget to quote a string value?\n", it->c_str());
 			} else {
-				baseJob.Insert(it->c_str(), tree);
+				baseJob.Insert(*it, tree);
 			}
 		}
 	}

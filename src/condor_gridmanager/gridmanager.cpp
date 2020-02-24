@@ -638,7 +638,7 @@ doContactSchedd()
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
 				formatstr( buff, "job_%d_%d", curr_request.job->procID.cluster,
 							  curr_request.job->procID.proc );
-				if ( !rval->LookupInteger( buff.c_str(), result ) ) {
+				if ( !rval->LookupInteger( buff, result ) ) {
 					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
 					EXCEPT( "vacateJobs returned malformed ad" );
 				} else {

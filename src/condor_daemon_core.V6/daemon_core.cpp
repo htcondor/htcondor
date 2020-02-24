@@ -2990,7 +2990,7 @@ DaemonCore::reconfig(void) {
 
 	// This is the compatibility layer on top of new ClassAds.
 	// A few configuration parameters control its behavior.
-	ClassAd::Reconfig();
+	ClassAdReconfig();
 
     // publication and window size of daemon core stats are controlled by params
     dc_stats.Reconfig();

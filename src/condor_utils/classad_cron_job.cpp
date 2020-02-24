@@ -139,18 +139,11 @@ ClassAdCronJob::ProcessOutput( const char *line )
 			// Insert the 'LastUpdate' field
 			const char      *lu_prefix = GetPrefix( );
 			if ( lu_prefix ) {
-				MyString    Update;
-				Update.formatstr( "%sLastUpdate = %ld",
-								lu_prefix, (long) time(NULL) );
-				const char  *UpdateStr = Update.Value( );
+				std::string attrn;
+				formatstr(attrn, "%sLastUpdate", lu_prefix);
 
 				// Add it in
-				if ( ! m_output_ad->Insert( UpdateStr ) ) {
-					dprintf( D_ALWAYS,
-							 "Can't insert '%s' into '%s' ClassAd\n",
-							 UpdateStr, GetName() );
-					// TodoWrite( );
-				}
+				m_output_ad->Assign(attrn, time(NULL));
 			}
 
 			const char * ad_args = NULL;

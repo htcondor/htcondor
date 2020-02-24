@@ -178,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -222,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -270,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			

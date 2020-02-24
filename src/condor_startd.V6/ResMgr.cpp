@@ -1355,17 +1355,17 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName );
-			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
+			extras_classad->Assign( reasonTime, time( NULL ) );
 
 			std::string reason = "[unknown reason]";
-			cap->LookupString( reasonName.c_str(), reason );
-			extras_classad->Assign( reasonName.c_str(), reason );
+			cap->LookupString( reasonName, reason );
+			extras_classad->Assign( reasonName, reason );
 		} else {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.
 			offlineUniverses.erase( universeName );
-			extras_classad->AssignExpr( reasonTime.c_str(), "undefined" );
-			extras_classad->AssignExpr( reasonName.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonTime, "undefined" );
+			extras_classad->AssignExpr( reasonName, "undefined" );
 		}
 	}
 

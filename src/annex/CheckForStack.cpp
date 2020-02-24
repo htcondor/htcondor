@@ -33,7 +33,7 @@ CheckForStack::operator() () {
 			fprintf( stdout, " OK.\n" ); fflush( stdout );
 
 			for( auto i = outputs.begin(); i != outputs.end(); ++i ) {
-				scratchpad->Assign( i->first.c_str(), i->second );
+				scratchpad->Assign( i->first, i->second );
 			}
 
 			reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );

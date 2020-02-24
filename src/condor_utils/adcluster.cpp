@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "adcluster.h"
+#include "string_list.h"
 
 #if 1
 
