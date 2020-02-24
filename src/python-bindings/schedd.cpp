@@ -3766,7 +3766,7 @@ void export_schedd()
                 If a string is used, the text should consist of valid *condor_submit*
                 statments optionally followed by a a single *condor_submit* ``QUEUE``
                 statement. The arguments to the QUEUE statement will be stored
-                in the ``QArgs`` member of this class and used when the :method:`Submit.queue()`
+                in the ``QArgs`` member of this class and used when the :meth:`Submit.queue()`
                 method is called.
                 If omitted, the submit object is initially empty.
             :type input: dict or str
