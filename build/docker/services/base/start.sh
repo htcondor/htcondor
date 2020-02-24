@@ -26,8 +26,8 @@ add_values_to 01-env.conf \
     USE_POOL_PASSWORD "${USE_POOL_PASSWORD:-no}"
 
 
-"$progdir/update-secrets" || fail "Failed to update secrets"
-"$progdir/update-config" || fail "Failed to update config"
+bash -x "$progdir/update-secrets" || fail "Failed to update secrets"
+bash -x "$progdir/update-config" || fail "Failed to update config"
 
 
 # Bug workaround: daemons will die if they can't raise the number of FD's;
