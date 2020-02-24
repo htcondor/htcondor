@@ -55,6 +55,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'nbsphinx',
     'ticket',
     'macro',
     'index',
@@ -460,6 +461,7 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
         return_annotation = ''
 
     return signature, return_annotation
+
 
 def setup(app):
     app.add_stylesheet('css/htcondor-manual.css')
