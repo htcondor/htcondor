@@ -119,11 +119,15 @@ executable. For example:
 
 ::
 
+      executable = my_program
+      input = my_input
       should_transfer_files = YES
       transfer_input_files = file1,file2
 
-This example explicitly enables the file transfer mechanism, and it
-transfers the executable, the file specified by the **input** command.
+This example explicitly enables the file transfer mechanism.  By default,
+HTCondor will transfer the executable (``my_program``) and the file
+specified by the input command (``my_input``).  The files ``file1``
+and ``file2`` are also transferred, by explicit user instruction.
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files from the execute machine back to the submit machine
@@ -220,7 +224,7 @@ file specified with ``d1/o3``.
 File Paths for File Transfer
 ''''''''''''''''''''''''''''
 
-The file transfer mechanism specifies file names or URLs on 
+The file transfer mechanism specifies file names or URLs on
 the file system of the submit machine and file names on the
 execute machine. Care must be taken to know which machine, submit or
 execute, is referencing the file.
@@ -252,6 +256,13 @@ Because all files and directories listed for transfer are placed into a
 single, flat directory, inputs must be uniquely named to avoid collision
 when transferred.
 
+A job may instead set ``preserve_relative_paths`` (to ``True``), in which
+case the relative paths of transferred files are preserved.  For example,
+although the input list ``dirA/file1, dirB/file1`` would normally result in
+a collision, instead HTCondor will create the directories ``dirA`` and
+``dirB`` in the input sandbox, and each will get its corresponding version
+of ``file1``.
+
 Both relative and absolute paths may be used in
 **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
 Relative paths are relative to the job's remote scratch directory on the
@@ -260,6 +271,9 @@ submit machine, they are placed in the job's initial working directory
 as the base name of the original path. An alternate name or path may be
 specified by using
 **transfer_output_remaps** :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`.
+
+The ``preserve_relative_paths`` command also applies to relative paths
+specified in **transfer_output_files** (if not remapped).
 
 A job may create files outside the remote scratch directory but within
 the file system of the execute machine, in a directory such as ``/tmp``,
