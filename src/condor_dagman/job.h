@@ -31,6 +31,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "stringSpace.h"
+#include "submit_utils.h"
 
 #include <deque>
 #include <forward_list>
@@ -198,9 +199,12 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
+		@param submitDesc SubmitHash of all submit parameters (optional, alternative
+		    to cmdFile)
     */
     Job( const char* jobName,
-				const char* directory, const char* cmdFile ); 
+				const char* directory, const char* cmdFile,
+				SubmitHash* submitDesc = NULL ); 
   
     ~Job();
 
@@ -647,6 +651,10 @@ private:
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
     const char * _cmdFile;
+
+		// SubmitHash of submit desciption
+		// Alternative submission method to _cmdFile above.
+	SubmitHash* _submitDesc;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).

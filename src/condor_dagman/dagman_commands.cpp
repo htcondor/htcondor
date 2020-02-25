@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
+#include "submit_utils.h"
 
 bool
 PauseDag(Dagman &dm)
@@ -65,7 +66,7 @@ AddNode( Dag *dag, const char *name,
 		 const char* submitFile,
 		 bool noop,
 		 bool done, bool isFinal,
-		 MyString &failReason )
+		 MyString &failReason, SubmitHash* submitDesc)
 {
 	MyString why;
 	if( !IsValidNodeName( dag, name, why ) ) {
@@ -73,8 +74,10 @@ AddNode( Dag *dag, const char *name,
 		return NULL;
 	}
 	if( !IsValidSubmitFileName( submitFile, why ) ) {
-		failReason = why;
-		return NULL;
+		if ( !IsValidSubmitDescription( submitDesc, why ) ) {
+			failReason = why;
+			return NULL;
+		}
 	}
 	if( done && isFinal) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
@@ -155,6 +158,16 @@ IsValidSubmitFileName( const char *name, MyString &whynot )
 	}
 	if( strlen( name ) == 0 ) {
 		whynot = "empty submit file name (name == \"\")";
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitDescription( SubmitHash *desc, MyString &whynot )
+{
+	if( desc == NULL ) {
+		whynot = "missing submit file and/or description";
 		return false;
 	}
 	return true;

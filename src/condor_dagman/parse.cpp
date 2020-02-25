@@ -57,13 +57,13 @@ static bool _mungeNames = true;
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
-						const char *directory);
+						const char *directory, FILE *fp);
 
 static bool parse_node( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
-						const char *submitOrDagFile);
+						const char *submitOrDagFile, FILE *fp);
 
 static bool parse_script(const char *endline, Dag *dag, 
 		const char *filename, int lineNumber);
@@ -228,13 +228,13 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			parsed_line_successfully = parse_node( dag, 
 					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
+					   "submitfile", fp );
 		}
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
-						token, filename, lineNumber, tmpDirectory.Value() );
+						token, filename, lineNumber, tmpDirectory.Value(), fp );
 		}
 
 		// Handle a FINAL spec
@@ -242,7 +242,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			parsed_line_successfully = parse_node( dag, 
 					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
+					   "submitfile", fp );
 		}
 
 		// Handle a Splice spec
@@ -498,7 +498,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 static bool 
 parse_subdag( Dag *dag, 
 			const char* nodeTypeKeyword,
-			const char* dagFile, int lineNum, const char *directory )
+			const char* dagFile, int lineNum, const char *directory, FILE *fp )
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
 	if ( !inlineOrExt ) {
@@ -508,7 +508,7 @@ parse_subdag( Dag *dag,
 	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 		return parse_node( dag, nodeTypeKeyword, dagFile,
-					lineNum, directory, " EXTERNAL", "dagfile" );
+					lineNum, directory, " EXTERNAL", "dagfile", fp );
 	}
 
 	debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
@@ -535,7 +535,7 @@ static bool
 parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
-			const char *inlineOrExt, const char *submitOrDagFile)
+			const char *inlineOrExt, const char *submitOrDagFile, FILE *fp)
 {
 	MyString example;
 	example.formatstr( "%s%s <nodename> <%s> "
@@ -586,13 +586,36 @@ parse_node( Dag *dag,
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
-		// next token is the submit file name
+		// next token is the either the submit file name,
+		// or an inline submit description
 	const char *submitFile = next_possibly_quoted_token();
 	if ( !submitFile ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
 					"specified\n", dagFile, lineNum );
 		exampleSyntax( example.Value() );
 		return false;
+	}
+
+	// If the submitFile token is a { brace, this is actually an inline description
+	SubmitHash* submitDesc = new SubmitHash();
+	if ( *submitFile == '{' ) {
+		char *line;
+		std::string submitDescStr = "";
+		while ( ((line = getline_trim(fp, lineNum)) != NULL) ) {
+
+			if( *line == '}') break;
+
+			// Note that getline will truncate leading spaces (as defined by isspace())
+			// so we don't need to do that before checking for empty lines or comments.
+			if (line[0] == 0)       continue;  // Ignore blank lines
+			if (line[0] == COMMENT) continue;  // Ignore comments
+			submitDescStr += line;
+		}
+
+		submitFile = NULL;
+
+		// Advance the tokenizer to the end of the submit description block
+		strtok( NULL, "}" );
 	}
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
@@ -669,37 +692,40 @@ parse_node( Dag *dag,
 	}
 
 	// If this is a "SUBDAG" line, generate the real submit file name.
+	// This can only be done with real submit files, not inline descriptions.
 	MyString nestedDagFile("");
 	MyString dagSubmitFile(""); // must be outside if so it stays in scope
-	if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
-			// Save original DAG file name (needed for rescue DAG).
-		nestedDagFile = submitFile;
+	if ( submitFile ) {
+		if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
+				// Save original DAG file name (needed for rescue DAG).
+			nestedDagFile = submitFile;
 
-			// Generate the "real" submit file name (append ".condor.sub"
-			// to the DAG file name).
-		dagSubmitFile = submitFile;
-		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
-		submitFile = dagSubmitFile.Value();
+				// Generate the "real" submit file name (append ".condor.sub"
+				// to the DAG file name).
+			dagSubmitFile = submitFile;
+			dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
+			submitFile = dagSubmitFile.Value();
 
-	} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
-			// If the submit file name ends in ".condor.sub", we assume
-			// that this node is a nested DAG, and set the DAG filename
-			// accordingly.
-		nestedDagFile = submitFile;
-		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
-		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
-					"keyword for nested DAGs is deprecated; please "
-					"use SUBDAG EXTERNAL instead\n" );
-		check_warning_strictness( DAG_STRICT_3 );
+		} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
+				// If the submit file name ends in ".condor.sub", we assume
+				// that this node is a nested DAG, and set the DAG filename
+				// accordingly.
+			nestedDagFile = submitFile;
+			nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+			debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
+						"keyword for nested DAGs is deprecated; please "
+						"use SUBDAG EXTERNAL instead\n" );
+			check_warning_strictness( DAG_STRICT_3 );
+		}
 	}
 
 	// looks ok, so add it
 	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
 	if( !AddNode( dag, nodeName, directory,
-				submitFile, noop, done, isFinal, whynot ) )
+				submitFile, noop, done, isFinal, whynot, submitDesc ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-					  dagFile, lineNum, whynot.Value() );
+					dagFile, lineNum, whynot.Value() );
 		exampleSyntax( example.Value() );
 		return false;
 	}
@@ -2660,3 +2686,62 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 
 	return true;
 }
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_submit_description
+// Purpose:  Parse a line of the format "SUBMIT_DESCRIPTION DescriptionName { ... }"
+// 
+//-----------------------------------------------------------------------------
+/*
+static bool 
+parse_submit_description(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber,
+	FILE *fp)
+{
+	const char *example = "SUBMIT_DESCRIPTION DesriptionName { attr1 = val1; att2 = val2; }";
+	
+	const char *descName = strtok( NULL, DELIMITERS );
+	if( descName == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: %s (line %d): Missing description name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	char *token = strtok( NULL, DELIMITERS );
+	if( token == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Missing Submit Description contents\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	if( strcmp( token, "{" ) != 0 ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Submit Description contents must open with { brace\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+
+
+	debug_printf( DEBUG_NORMAL, "MRC [parse_submit_description] descString = %s\n", descString.c_str() );
+
+
+	if( !AddSubmitDescription( dag, descName, descHash )
+	{
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
+					  dagFile, lineNum, whynot.Value() );
+		exampleSyntax( example.Value() );
+		return false;
+	}
+
+	return true;
+}
+*/

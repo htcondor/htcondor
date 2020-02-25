@@ -103,7 +103,7 @@ Job::~Job() {
 }
 
 //---------------------------------------------------------------------------
-Job::Job( const char* jobName, const char *directory, const char* cmdFile )
+Job::Job( const char* jobName, const char *directory, const char* cmdFile, SubmitHash* submitDesc)
 	: _scriptPre(NULL)
 	, _scriptPost(NULL)
 	, retry_max(0)
@@ -136,6 +136,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 
 	, _directory(NULL)
 	, _cmdFile(NULL)
+	, _submitDesc(NULL)
 	, _dagFile(NULL)
 	, _jobName(NULL)
 
@@ -168,8 +169,13 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	// these strings may be repeated in thousands of nodes
 	_directory = stringSpace.strdup_dedup(directory);
 	ASSERT(_directory);
-	_cmdFile = stringSpace.strdup_dedup(cmdFile);
-	ASSERT(_cmdFile);
+
+	// Initialize the submit object: either a filename or a SubmitHash
+	if (_cmdFile) _cmdFile = stringSpace.strdup_dedup(cmdFile);
+	if (submitDesc) {
+		_cmdFile = NULL; // this should never happen, but nullify just in case
+		_submitDesc = submitDesc;
+	}
 
 	// _condorID struct initializes itself
 
