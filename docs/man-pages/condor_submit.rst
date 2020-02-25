@@ -1201,8 +1201,35 @@ FILE TRANSFER COMMANDS
 
     Symbolic links to files are transferred as the files they point to.
     Transfer of symbolic links to directories is not currently
-    supported. :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
+    supported.
 
+    :index:`transfer_checkpoint_files<single: transfer_checkpoint_files; submit commands>`
+ transfer_checkpoint_files = < file1,file2,file3... >
+    If present, this command defines the list of files and/or directories
+    which constitute the job's checkpoint.  When the job successfully
+    checkpoints -- see ``checkpoint_exit_code`` -- these files will be
+    transferred to the submit node's spool.
+
+    If this command is absent, the output is transferred instead.
+
+    If no files or directories are specified, nothing will be transferred.
+    This is generally not useful.
+
+    The list is interpreted like ``transfer_output_files``, but there is
+    no corresponding ``remaps`` command.
+
+    :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
+ preserve_relative_paths = < True | False >
+    This command modifies the behavior of the file transfer commands.  When
+    set to true, the destination for an entry that is a relative path in a
+    file transfer list becomes its relative path, not its basename.  For
+    example, ``input_data/b`` (and its contents, if it is a directory) will
+    be transferred to ``input_data/b``, not ``b``.  This applies to the input,
+    output, and checkpoint lists.
+
+    Trailing slashes are ignored when ``preserve_relative_paths`` is set.
+
+    :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
  transfer_output_remaps = < " name = newname ; name2 = newname2 ... ">
     This specifies the name (and optionally path) to use when
     downloading output files from the completed job. Normally, output
