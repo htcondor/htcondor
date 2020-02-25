@@ -948,7 +948,12 @@ int daemon::RealStart( )
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
 			daemon_sock_buf.lower_case();
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str() );
+			// Because the master only starts daemons named in the config
+			// file, and those names are by definition unique, we don't
+			// need to further uniquify them with a sequence number, and
+			// not doing so makes it possible to construct certain
+			// addresses, rather than discover them.
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}
