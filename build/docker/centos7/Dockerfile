@@ -9,7 +9,7 @@ FROM centos:centos7
 RUN adduser build && mkdir /condor && usermod -aG wheel build && echo "%wheel  ALL=(ALL)   NOPASSWD:ALL" >> /etc/sudoers
 
 RUN yum install -y epel-release \
- && yum install -y cmake3 ninja-build where which sudo less wget tmux git \
+ && yum install -y cmake3 ninja-build where which sudo less wget tmux git vim emacs nano gdb \
  && yum clean all
 
 # Install the minimal things to make a tar build without lots of externals like GSI, man pages, MUNGE
