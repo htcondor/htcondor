@@ -27,6 +27,7 @@ $(buildcmd) \
   --build-arg VERSION=$(VERSION) \
   --build-arg EL=$(2) \
   --build-arg BUILDDATE=$(DATE) \
+  --build-arg SUFFIX=$(SUFFIX) \
   $(if $(findstring yes,$(NOCACHE)),--no-cache,) \
   -t htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) \
   $(if $(findstring yes,$(UNVERSIONED)),-t htcondor/$(1):el$(2)$(SUFFIX),) \

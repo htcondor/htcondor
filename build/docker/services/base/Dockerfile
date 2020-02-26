@@ -7,9 +7,10 @@ FROM centos:${EL}
 ARG EL
 ARG BUILDDATE
 ARG VERSION
+ARG SUFFIX
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}" \
+LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.description="HTCondor ${VERSION} base image for RHEL ${EL}-compatible" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0"
