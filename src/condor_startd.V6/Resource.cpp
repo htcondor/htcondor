@@ -3817,7 +3817,14 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	std::string attrName;
 	attrName = "Child" + name;
 
-	std::string attrValue = "{";
+	classad::Value val;
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+
+	std::string attrValue; // the list value that we are building up
+	attrValue.reserve(100);
+	attrValue = "{";
+
 	bool firstTime = true;
 
 	for (std::set<Resource *,ResourceLess>::const_iterator i(m_children.begin());  i != m_children.end();  i++) {
@@ -3826,12 +3833,8 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 		} else {
 			attrValue += ", ";
 		}
-		ExprTree *et = (*i)->r_classad->LookupExpr(name);
-		if (et) {
-			std::string buf;
-			classad::PrettyPrint pp;
-			pp.Unparse(buf,et);
-			attrValue += buf;
+		if ((*i)->r_classad->EvaluateAttr(name, val)) {
+			unparse.Unparse(attrValue,val);
 		} else {
 			attrValue += "undefined";
 		}

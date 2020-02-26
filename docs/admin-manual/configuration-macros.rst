@@ -5668,7 +5668,7 @@ These settings affect the *condor_starter*.
     by the cgroup memory controller attribute memory.limit_in_bytes.
     If the processes try to allocate more memory, the allocation will
     succeed, and virtual memory will be allocated, but no additional
-    physical memory will be allocated. If set to the default value
+    physical memory will be allocated. If set to
     ``soft``, the cgroup-based limit on the total amount of physical
     memory used by the sum of all processes in the job will be allowed
     to go over the limit, if there is free memory available on the
