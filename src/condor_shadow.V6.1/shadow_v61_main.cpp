@@ -67,7 +67,7 @@ ExceptCleanup(int, int, const char *buf)
 }
 
 int
-dummy_reaper(Service *,int pid,int)
+dummy_reaper(int pid,int)
 {
 	dprintf(D_ALWAYS,"dummy-reaper: pid %d exited; ignored\n",pid);
 	return TRUE;
@@ -327,7 +327,7 @@ int handleJobRemoval(Service*,int sig)
 }
 
 
-int handleSignals(Service*,int sig)
+int handleSignals(int sig)
 {
 	int iRet =0;
 	if( Shadow ) 
@@ -374,21 +374,21 @@ main_init(int argc, char *argv[])
 		// a reaper ID of 1 (since lots of other daemons have a reaper
 		// ID of 1 hard-coded as special... this is bad).
 	daemonCore->Register_Reaper("dummy_reaper",
-							(ReaperHandler)&dummy_reaper,
-							"dummy_reaper",NULL);
+							&dummy_reaper,
+							"dummy_reaper");
 
 
 		// register SIGUSR1 (condor_rm) for shutdown...
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
-		(SignalHandler)&handleSignals,"handleSignals");
+		&handleSignals,"handleSignals");
 		// register UPDATE_JOBAD for qedit changes
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UPDATE_JOBAD", 
-		(SignalHandler)&handleSignals,"handleSignals");
+		&handleSignals,"handleSignals");
 		// handle daemoncore signals which are passed down
 	daemonCore->Register_Signal( DC_SIGSUSPEND, "DC_SIGSUSPEND", 
-		(SignalHandler)&handleSignals,"handleSignals");
+		&handleSignals,"handleSignals");
 	daemonCore->Register_Signal( DC_SIGCONTINUE, "DC_SIGCONTINUE", 
-		(SignalHandler)&handleSignals,"handleSignals");
+		&handleSignals,"handleSignals");
 
 	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 3600 );
 	if( shadow_worklife > 0 ) {

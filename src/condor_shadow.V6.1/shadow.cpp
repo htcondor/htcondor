@@ -135,8 +135,8 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		// credential if it needs to.
 	daemonCore->
 		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
-						  (CommandHandler)&get_cred_handler,
-						  "get_cred_handler", NULL, DAEMON, D_COMMAND,
+						  &get_cred_handler,
+						  "get_cred_handler", DAEMON, D_COMMAND,
 						  true /*force authentication*/ );
 }
 

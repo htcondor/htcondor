@@ -2655,7 +2655,7 @@ unsetQSock()
 
 
 int
-handle_q(Service *, int, Stream *sock)
+handle_q(int, Stream *sock)
 {
 	int	rval;
 	bool all_good;
@@ -2715,7 +2715,7 @@ handle_q(Service *, int, Stream *sock)
 
 int GetMyProxyPassword (int, int, char **);
 
-int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socket) {
+int get_myproxy_password_handler(int /*i*/, Stream *socket) {
 
 	//	For debugging
 //	DebugFP = stderr;

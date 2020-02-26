@@ -13783,14 +13783,14 @@ Scheduler::Register()
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
-								  (CommandHandler)&attempt_access_handler,
-								  "attempt_access_handler", NULL, WRITE,
+								  &attempt_access_handler,
+								  "attempt_access_handler", WRITE,
 								  D_FULLDEBUG );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
-								(CommandHandler)&store_cred_handler,
-								"cred_access_handler", NULL, WRITE,
+								&store_cred_handler,
+								"cred_access_handler", WRITE,
 								D_FULLDEBUG, true /*force authentication*/);
 #endif
 
@@ -13826,8 +13826,8 @@ Scheduler::Register()
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, READ, D_FULLDEBUG );
+								  &handle_q,
+								  "handle_q", READ, D_FULLDEBUG );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13835,8 +13835,8 @@ Scheduler::Register()
 	// security session that has to be authenticated every time in
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  &handle_q,
+								  "handle_q", WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
@@ -13844,8 +13844,8 @@ Scheduler::Register()
 								  "dumpState", this, READ  );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
-								  (CommandHandler)&get_myproxy_password_handler,
-								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
+								  &get_myproxy_password_handler,
+								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",

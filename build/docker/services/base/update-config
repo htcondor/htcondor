@@ -5,6 +5,8 @@ if [[ -d /root/config ]]; then
     cp /root/config/*.conf /etc/condor/config.d/
 fi
 
-ps axu | grep condor_master | grep -v grep && condor_reconfig
+if pgrep condor_master &>/dev/null; then
+    condor_reconfig
+fi
 
 # vim:et:sw=4:sts=4:ts=8

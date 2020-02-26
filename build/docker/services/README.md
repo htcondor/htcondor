@@ -33,7 +33,6 @@ Here are the environment variables that the container can use:
 - `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
   pool password authentication
 
-
 In addition, you can add more HTCondor configuration by putting it in
 `/root/config/*.conf` files in the container.
 
@@ -55,8 +54,14 @@ dockerhost$ chmod 0700 ~/condorexec/secrets
 Grant access to the identity that the container will use.  On the central
 manager, add the following lines to the HTCondor configuration:
 ```
-ALLOW_ADVERTISE_MASTER = $(ALLOW_ADVERTISE_MASTER) dockerworker@example.net
-ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) dockerworker@example.net
+ALLOW_ADVERTISE_MASTER = \
+    $(ALLOW_ADVERTISE_MASTER) \
+    $(ALLOW_WRITE_COLLECTOR) \
+    dockerworker@example.net
+ALLOW_ADVERTISE_STARTD = \
+    $(ALLOW_ADVERTISE_STARTD) \
+    $(ALLOW_WRITE_COLLECTOR) \
+    dockerworker@example.net
 ```
 Run `condor_reconfig` on the central manager to pick up the changes.
 
@@ -173,4 +178,3 @@ Known Issues
 - Docker universe support is not yet implemented.
 
 - Singularity support is not yet implemented.
-

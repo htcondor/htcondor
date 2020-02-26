@@ -117,31 +117,31 @@ extern void (*dc_main_pre_command_sock_init)();
  */
 //@{
 ///
-typedef int     (*CommandHandler)(Service*,int,Stream*);
+typedef int     (*CommandHandler)(int,Stream*);
 
 ///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
 
 ///
-typedef int     (*SignalHandler)(Service*,int);
+typedef int     (*SignalHandler)(int);
 
 ///
 typedef int     (Service::*SignalHandlercpp)(int);
 
 ///
-typedef int     (*SocketHandler)(Service*,Stream*);
+typedef int     (*SocketHandler)(Stream*);
 
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
 
 ///
-typedef int     (*PipeHandler)(Service*,int);
+typedef int     (*PipeHandler)(int);
 
 ///
 typedef int     (Service::*PipeHandlercpp)(int);
 
 ///
-typedef int     (*ReaperHandler)(Service*,int pid,int exit_status);
+typedef int     (*ReaperHandler)(int pid,int exit_status);
 
 ///
 typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
@@ -389,7 +389,6 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
@@ -442,7 +441,6 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
@@ -603,8 +601,7 @@ class DaemonCore : public Service
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
                          SignalHandler   handler, 
-                         const char *    handler_descrip,
-                         Service*        s                = NULL);
+                         const char *    handler_descrip);
     
     /** Not_Yet_Documented
         @param sig              Not_Yet_Documented
@@ -684,8 +681,7 @@ class DaemonCore : public Service
     */
     int Register_Reaper (const char *    reap_descrip,
                          ReaperHandler   handler,
-                         const char *    handler_descrip,
-                         Service*        s = NULL);
+                         const char *    handler_descrip);
     
     /** Not_Yet_Documented
         @param reap_descrip     Not_Yet_Documented
@@ -710,8 +706,7 @@ class DaemonCore : public Service
     int Reset_Reaper (int              rid,
                       const char *     reap_descrip,
                       ReaperHandler    handler, 
-                      const char *     handler_descrip,
-                      Service *        s = NULL);
+                      const char *     handler_descrip);
     
     /** Not_Yet_Documented
         @param rid The Reaper ID
@@ -765,7 +760,6 @@ class DaemonCore : public Service
                          const char *      iosock_descrip,
                          SocketHandler     handler,
                          const char *      handler_descrip,
-                         Service *         s                = NULL,
                          DCpermission      perm             = ALLOW,
                          HandlerType       handler_type = HANDLE_READ,
                          void **           prev_entry = NULL);
@@ -888,7 +882,6 @@ class DaemonCore : public Service
                          const char *      pipe_descrip,
                          PipeHandler       handler,
                          const char *      handler_descrip,
-                         Service *         s                = NULL,
                          HandlerType       handler_type     = HANDLE_READ,    
                          DCpermission      perm             = ALLOW);
 

@@ -243,9 +243,9 @@ class FileTransfer final: public Service {
 
 	inline bool IsClient() {return user_supplied_key == TRUE;}
 
-	static int HandleCommands(Service *,int command,Stream *s);
+	static int HandleCommands(int command,Stream *s);
 
-	static int Reaper(Service *, int pid, int exit_status);
+	static int Reaper(int pid, int exit_status);
 
 	static bool SetServerShouldBlock( bool block );
 
