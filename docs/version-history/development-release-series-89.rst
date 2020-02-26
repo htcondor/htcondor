@@ -19,6 +19,11 @@ Release Notes:
   ``CUDARuntimeVersion``.
   :ticket:`7413`
 
+- If you know what a shared port ID is, it may interest you to learn that
+  starters in this version of HTCondor use their slot names, if available,
+  in their shared port IDs.
+  :ticket:`7510`
+
 New Features:
 
 - HTCondor now offers a submit command, ``cuda_version``, so that jobs can
