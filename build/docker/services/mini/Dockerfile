@@ -2,15 +2,17 @@
 # Become the "submituser" user to submit jobs.
 ARG EL
 ARG VERSION
+ARG SUFFIX
 
-FROM htcondor/base:${VERSION}-el${EL}
+FROM htcondor/base:${VERSION}-el${EL}${SUFFIX}
 
 ARG EL
 ARG VERSION
 ARG BUILDDATE
+ARG SUFFIX
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/mini:${VERSION}-el${EL}" \
+LABEL org.label-schema.name="htcondor/mini:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.description="HTCondor ${VERSION} minicondor image for RHEL ${EL}-compatible" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0"
