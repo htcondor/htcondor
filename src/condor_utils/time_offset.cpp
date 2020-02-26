@@ -150,7 +150,7 @@ time_offset_send_cedar_stub( Stream* s,
  * @return true if
  **/
 int
-time_offset_receive_cedar_stub( Service*, int /* cmd */, Stream* s ) {
+time_offset_receive_cedar_stub( int /* cmd */, Stream* s ) {
 	 	//
 	 	// Get the TimeOffsetPacket information off the wire
 	 	//

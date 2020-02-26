@@ -886,14 +886,14 @@ FileTransfer::Init(
 	if ( !CommandsRegistered  ) {
 		CommandsRegistered = TRUE;
 		daemonCore->Register_Command(FILETRANS_UPLOAD,"FILETRANS_UPLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		daemonCore->Register_Command(FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		ReaperId = daemonCore->Register_Reaper("FileTransfer::Reaper",
-							(ReaperHandler)&FileTransfer::Reaper,
-							"FileTransfer::Reaper()",NULL);
+							&FileTransfer::Reaper,
+							"FileTransfer::Reaper()");
 		if (ReaperId == 1) {
 			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
@@ -1462,7 +1462,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 }
 
 int
-FileTransfer::HandleCommands(Service *, int command, Stream *s)
+FileTransfer::HandleCommands(int command, Stream *s)
 {
 	FileTransfer *transobject;
 	char *transkey = NULL;
@@ -1570,7 +1570,7 @@ FileTransfer::SetServerShouldBlock( bool block )
 }
 
 int
-FileTransfer::Reaper(Service *, int pid, int exit_status)
+FileTransfer::Reaper(int pid, int exit_status)
 {
 	FileTransfer *transobject;
 	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {

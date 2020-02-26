@@ -197,7 +197,7 @@ main_init( int argc, char ** const argv )
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
 					"stdin pipe",
-					(PipeHandler)&stdin_pipe_handler,
+					&stdin_pipe_handler,
 					"stdin_pipe_handler");
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
@@ -234,9 +234,8 @@ main_init( int argc, char ** const argv )
 	int reaper_id =
 		daemonCore->Register_Reaper(
 							"worker_thread_reaper",
-							(ReaperHandler)&worker_thread_reaper,
-							"worker_thread_reaper",
-							NULL);
+							&worker_thread_reaper,
+							"worker_thread_reaper");
 
 
 
@@ -245,8 +244,6 @@ main_init( int argc, char ** const argv )
 									1,
 									flush_pending_requests,
 									"flush_pending_requests");
-									
-									  
 
 
 	std::string exec_name;
@@ -322,7 +319,7 @@ main_init( int argc, char ** const argv )
 
 
 int
-stdin_pipe_handler(Service*, int) {
+stdin_pipe_handler(int) {
 
 	std::string* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
@@ -483,7 +480,7 @@ process_next_request() {
 */
 
 int
-worker_thread_reaper (Service*, int pid, int exit_status) {
+worker_thread_reaper (int pid, int exit_status) {
 
 	dprintf (D_ALWAYS, "Worker process pid=%d exited with status %d\n", 
 			 pid, 

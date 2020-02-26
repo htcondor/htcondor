@@ -42,14 +42,14 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 
 		// Command handler for the user condor_store_cred tool
 	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
-								(CommandHandler)&store_cred_handler, 
-								"store_cred_handler", NULL, WRITE, 
+								&store_cred_handler, 
+								"store_cred_handler", WRITE, 
 								D_FULLDEBUG, true /*force authentication*/ );
 
 		// Command handler for daemons to get the password
 	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD", 
-								(CommandHandler)&get_cred_handler,
-								"get_cred_handler", NULL, DAEMON,
+								&get_cred_handler,
+								"get_cred_handler",DAEMON,
 								D_FULLDEBUG, true /*force authentication*/ );
 
 		// NOP command for testing authentication

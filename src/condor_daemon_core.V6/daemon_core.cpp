@@ -630,12 +630,12 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  default parameter set.
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
-				CommandHandler handler, const char* handler_descrip, Service* s,
+				CommandHandler handler, const char* handler_descrip,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
-							(CommandHandlercpp)NULL, handler_descrip, s,
+							(CommandHandlercpp)NULL, handler_descrip, nullptr,
 							 perm, dprintf_flag, FALSE, force_authentication,
 							 wait_for_payload, alternate_perm) );
 }
@@ -653,12 +653,12 @@ int	DaemonCore::Register_Command(int command, const char *com_descrip,
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
-				CommandHandler handler, const char* handler_descrip, Service* s,
+				CommandHandler handler, const char* handler_descrip,
 				DCpermission perm, int dprintf_flag, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
-							(CommandHandlercpp)NULL, handler_descrip, s,
+							(CommandHandlercpp)NULL, handler_descrip, nullptr,
 							 perm, dprintf_flag, FALSE, force_authentication,
 							 wait_for_payload, alternate_perm) );
 }
@@ -676,12 +676,10 @@ int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
-				SignalHandler handler, const char* handler_descrip,
-				Service* s)
+				SignalHandler handler, const char* handler_descrip)
 {
 	return( Register_Signal(sig, sig_descrip, handler,
-							(SignalHandlercpp)NULL, handler_descrip, s,
-							FALSE) );
+							(SignalHandlercpp)NULL, handler_descrip, nullptr,FALSE));
 }
 
 int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
@@ -794,11 +792,11 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type,
+				DCpermission perm, HandlerType handler_type,
 				void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
-							(SocketHandlercpp)NULL, handler_descrip, s,
+							(SocketHandlercpp)NULL, handler_descrip, nullptr,
 							perm, handler_type, FALSE, prev_entry) );
 }
 
@@ -813,10 +811,10 @@ int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandler handler, const char* handler_descrip,
-				Service* s, HandlerType handler_type, DCpermission perm)
+				HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
-							NULL, handler_descrip, s,
+							NULL, handler_descrip, nullptr,
 							handler_type, perm, FALSE) );
 }
 
@@ -829,11 +827,11 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 }
 
 int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
-				const char* handler_descrip, Service* s)
+				const char* handler_descrip)
 {
 	return( Register_Reaper(-1, reap_descrip, handler,
 							(ReaperHandlercpp)NULL, handler_descrip,
-							s, FALSE) );
+							nullptr, FALSE) );
 }
 
 int	DaemonCore::Register_Reaper(const char* reap_descrip,
@@ -844,11 +842,11 @@ int	DaemonCore::Register_Reaper(const char* reap_descrip,
 }
 
 int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
-				ReaperHandler handler, const char* handler_descrip, Service* s)
+				ReaperHandler handler, const char* handler_descrip)
 {
 	return( Register_Reaper(rid, reap_descrip, handler,
 							(ReaperHandlercpp)NULL, handler_descrip,
-							s, FALSE) );
+							nullptr, FALSE) );
 }
 
 int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
@@ -3438,7 +3436,7 @@ void DaemonCore::Driver()
 						if ( sigTable[i].is_cpp )
 							(sigTable[i].service->*(sigTable[i].handlercpp))(sigTable[i].num);
 						else
-							(*sigTable[i].handler)(sigTable[i].service,sigTable[i].num);
+							(*sigTable[i].handler)(sigTable[i].num);
 						// Clear curr_dataptr
 						curr_dataptr = NULL;
 						// Make sure we didn't leak our priv state
@@ -3902,7 +3900,7 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						if ( (*pipeTable)[i].handler )
 							// a C handler
-							(*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, pipe_end);
+							(*( (*pipeTable)[i].handler))(pipe_end);
 						else
 						if ( (*pipeTable)[i].handlercpp )
 							// a C++ handler
@@ -4200,7 +4198,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 	if ( (*sockTable)[i].handler ) {
 			// a C handler
-		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+		result = (*( (*sockTable)[i].handler))((*sockTable)[i].iosock);
 	} else if ( (*sockTable)[i].handlercpp ) {
 			// a C++ handler
 		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
@@ -4440,7 +4438,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		} else {
 			// the handler is in c (not c++), so pass a Service pointer
 			if ( comTable[index].handler )
-				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
+				result = (*(comTable[index].handler))(req,stream);
 		}
 
 		// clear curr_dataptr
@@ -9741,7 +9739,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 
 	if ( reaper->handler ) {
 		// a C handler
-		(*(reaper->handler))(reaper->service,pid,exit_status);
+		(*(reaper->handler))(pid,exit_status);
 	}
 	else if ( reaper->handlercpp ) {
 		// a C++ handler

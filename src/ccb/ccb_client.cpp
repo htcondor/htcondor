@@ -713,7 +713,6 @@ CCBClient::RegisterReverseConnectCallback()
 			"CCB_REVERSE_CONNECT",
 			CCBClient::ReverseConnectCommandHandler,
 			"CCBClient::ReverseConnectCommandHandler",
-			NULL,
 			ALLOW);
 	}
 
@@ -771,7 +770,7 @@ CCBClient::UnregisterReverseConnectCallback()
 }
 
 int
-CCBClient::ReverseConnectCommandHandler(Service *,int cmd,Stream *stream)
+CCBClient::ReverseConnectCommandHandler(int cmd,Stream *stream)
 {
 	// This is a static function called when the command socket
 	// receives a reverse connect command.  Our job is to direct

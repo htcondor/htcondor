@@ -316,7 +316,7 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & f
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
-int handle_q(Service *, int, Stream *sock);
+int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
@@ -551,7 +551,7 @@ bool Reschedule();
 
 bool UniverseUsesVanillaStartExpr(int universe);
 
-int get_myproxy_password_handler(Service *, int, Stream *sock);
+int get_myproxy_password_handler(int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 

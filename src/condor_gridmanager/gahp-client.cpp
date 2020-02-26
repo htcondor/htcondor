@@ -359,7 +359,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 }
 
 int
-GahpServer::Reaper(Service *,int pid,int status)
+GahpServer::Reaper(int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
@@ -847,10 +847,8 @@ GahpServer::Startup()
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
-				(ReaperHandler)&GahpServer::Reaper,	// handler
-				"GahpServer::Reaper",
-				NULL
-				);
+				&GahpServer::Reaper,	// handler
+				"GahpServer::Reaper");
 	}
 
 		// Create two pairs of pipes which we will use to 
