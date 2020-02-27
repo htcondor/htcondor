@@ -46,7 +46,6 @@ export CMAKE_OPTIONS=(
 
 export RPM_DEPENDENCIES=(
     systemtap-sdt-devel
-    gcc-gfortran
     patch
     c-ares-devel
     autoconf
