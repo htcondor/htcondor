@@ -250,14 +250,14 @@ generate_presigned_url( const std::string & accessKeyID,
     // Extract the S3 bucket and key from the S3 URL.
     std::string bucket, key;
     if(! starts_with( s3url, "s3://" )) {
-        err.push( "AWS SigV4", 1, "An S3 URL must begin with s3://." );
+        err.push( "AWS SigV4", 1, "an S3 URL must begin with s3://" );
         return false;
     }
     size_t protocolLength = 5; // std::string("s3://").size()
     size_t middle = s3url.find( "/", protocolLength );
     if( middle == std::string::npos ) {
-        err.push( "AWS SigV4", 2, "An S3 URL must be of the form s3://<bucket>/<object>, "
-            "s3://<bucket>.s3.<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
+        err.push( "AWS SigV4", 2, "an S3 URL must be of the form s3://<bucket>/<object>, "
+            "s3://<bucket>.s3.<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints" );
         return false;
     }
     std::string region = input_region;
@@ -292,7 +292,7 @@ generate_presigned_url( const std::string & accessKeyID,
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
         auto last_idx = bucket_and_region.rfind(".s3.");
         if (last_idx == std::string::npos) {
-            err.push( "AWS SigV4", 3, "Invalid format for domain-based buckets.  Must be of the"
+            err.push( "AWS SigV4", 3, "invalid format for domain-based buckets; must be of the"
                 " form s3://<bucket>.s3.<region>.amazonaws.com/<object>" );
             return false;
         }
@@ -370,7 +370,7 @@ generate_presigned_url( const std::string & accessKeyID,
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     std::string canonicalRequestHash;
     if(! AWSv4Impl::doSha256( canonicalRequest, messageDigest, & mdLength )) {
-        err.push( "AWS SigV4", 5, "Unable to hash canonical request, failing." );
+        err.push( "AWS SigV4", 5, "unable to hash canonical request, failing" );
         return false;
     }
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
@@ -381,7 +381,7 @@ generate_presigned_url( const std::string & accessKeyID,
 
     std::string signature;
     if(! AWSv4Impl::createSignature( secretAccessKey, date, region, service, stringToSign, signature )) {
-        err.push( "AWS SigV4", 6, "Failed to create signature, failing." );
+        err.push( "AWS SigV4", 6, "failed to create signature, failing" );
         return false;
     }
 
@@ -402,13 +402,13 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	std::string accessKeyIDFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_ACCESS_KEY_ID, accessKeyIDFile );
 	if( accessKeyIDFile.empty() ) {
-		dprintf( D_ALWAYS, "Public key file not defined.\n" );
+		err.push( "AWS SigV4", 7, "access key file not defined" );
 		return false;
 	}
 
 	std::string accessKeyID;
 	if(! AWSv4Impl::readShortFile( accessKeyIDFile, accessKeyID )) {
-		dprintf( D_ALWAYS, "Unable to read from public key file.\n" );
+		err.push( "AWS SigV4", 8, "unable to read from access key file" );
 		return false;
 	}
 	trim( accessKeyID );
@@ -417,13 +417,13 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	std::string secretAccessKeyFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_SECRET_ACCESS_KEY, secretAccessKeyFile );
 	if( secretAccessKeyFile.empty() ) {
-		dprintf( D_ALWAYS, "Private key file not defined.\n" );
+		err.push( "AWS SigV4", 9, "secret key file not defined" );
 		return false;
 	}
 
 	std::string secretAccessKey;
 	if(! AWSv4Impl::readShortFile( secretAccessKeyFile, secretAccessKey )) {
-		dprintf( D_ALWAYS, "Unable to read from secret key file.\n" );
+		err.push( "AWS SigV4", 10, "unable to read from secret key file" );
 		return false;
 	}
 	trim( secretAccessKey );
@@ -436,7 +436,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	jobAd.EvaluateAttrString( ATTR_EC2_SESSION_TOKEN, securityTokenFile );
 	if(! securityTokenFile.empty()) {
 		if(! AWSv4Impl::readShortFile( securityTokenFile, securityToken )) {
-			dprintf( D_ALWAYS, "Unable to read from security token file.\n" );
+			err.push( "AWS SigV4", 11, "unable to read from security token file" );
 			return false;
 		}
 		trim( securityToken );

@@ -2541,7 +2541,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								std::string signed_url;
 								CondorError err;
 								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
-									dprintf(D_ALWAYS, "DoDownload: Failure when signing URL: %s", err.getFullText().c_str());
+								    std::string errorMessage;
+								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
+								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_DownloadFileError );
+								    result_ad.Assign( ATTR_HOLD_REASON_SUBCODE, err.code() );
+								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
+								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
+
 									signed_urls.push_back("");
 								} else {
 									signed_urls.push_back(signed_url);
@@ -2567,7 +2573,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				s->encode();
 					// Send resulting list of signed URLs, encrypted if possible.
 				classad::References encrypted_attrs{"SignList"};
-				if (!putClassAd(s, result_ad, 0, &encrypted_attrs) || !s->end_of_message()) {
+				if (!putClassAd(s, result_ad, 0, NULL, &encrypted_attrs) || !s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3751,7 +3757,23 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
 				fileitem.setSrcName(signed_url);
 			} else {
-				dprintf(D_ALWAYS, "DoUpload: Failed to sign URL - %s\n", err.getFullText().c_str());
+				std::string errorMessage;
+				formatstr( errorMessage, "DoUpload: Failure when signing URL '%s': %s", src_url.c_str(), err.message() );
+				dprintf( D_ALWAYS, "%s\n",errorMessage.c_str() );
+
+				// While (* total_bytes) and numFiles should both be 0
+				// at this point, we should probably be explicit.
+				filesize_t logTCPStats = 0;
+				return ExitDoUpload( & logTCPStats,
+					/* num files */ 0,
+					s, saved_priv, socket_default_crypto,
+					/* upload success */ false,
+					/* do upload ACK (required to put job on hold) */ true,
+					/* do download ACK */ false,
+					/* try again */ false,
+					CONDOR_HOLD_CODE_UploadFileError,
+					/* hold subcode */ 3,
+					errorMessage.c_str(), __LINE__ );
 			}
 		}
 	}
@@ -3890,6 +3912,28 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv(-1);
 		}
 		s->encode();
+
+		std::string holdReason;
+		if( signed_ad.LookupString( ATTR_HOLD_REASON, holdReason ) ) {
+			int holdCode = CONDOR_HOLD_CODE_DownloadFileError;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_CODE, holdCode );
+
+			int holdSubCode = -1;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_SUBCODE, holdSubCode );
+
+			// While (* total_bytes) and numFiles should both be 0
+			// at this point, we should probably be explicit.
+			filesize_t logTCPStats = 0;
+			return ExitDoUpload( & logTCPStats,
+				/* num files */ 0,
+				s, saved_priv, socket_default_crypto,
+				/* upload success */ false,
+				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
+				/* do download ACK */ false,
+				/* try again */ false,
+				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
+		}
+
 		classad::Value value;
 		classad_shared_ptr<classad::ExprList> exprlist;
 		if (signed_ad.EvaluateAttr("SignList", value) && value.IsSListValue(exprlist))
@@ -4325,7 +4369,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					// don't end the message, it's done below.
 					// Always encrypt the URL as it might contain an authorization.
 					const classad::References encrypted_attrs{"OutputDestination"};
-					if(!putClassAd(s, file_info, 0, &encrypted_attrs)) {
+					if(!putClassAd(s, file_info, 0, NULL, &encrypted_attrs)) {
 						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
