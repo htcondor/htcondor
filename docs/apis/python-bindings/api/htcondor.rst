@@ -42,13 +42,7 @@ Interacting with Schedulers
    .. automethod:: submitMany
    .. automethod:: spool
    .. automethod:: refreshGSIProxy
-   .. automethod:: negotiate
    .. automethod:: reschedule
-
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
 
 .. autoclass:: JobAction
 
@@ -124,18 +118,6 @@ Managing Starters and Claims
 
 
 .. autoclass:: DrainTypes
-
-.. autoclass:: Claim
-
-   .. automethod:: requestCOD
-   .. automethod:: activate
-   .. automethod:: release
-   .. automethod:: suspend
-   .. automethod:: resume
-   .. automethod:: renew
-   .. automethod:: deactivate
-   .. automethod:: delegateGSIProxy
-
 
 .. autoclass:: VacateTypes
 

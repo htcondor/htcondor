@@ -1,16 +1,48 @@
 HTCondor Containers
 ===================
 
+Currently, we provide two kinds of containers for HTCondor services:
+the Minicondor container (`htcondor/mini`) and the Execute Node container
+(`htcondor/execute`).
+
+
+Using the Minicondor Container
+------------------------------
+
+### Overview
+
+The minicondor container is an install with all of the HTCondor daemons
+running, only listening on local interfaces.  This is useful for
+experimentation and learning.
+
+Start the container by running:
+```console
+dockerhost$ docker run --detach \
+                --name=minicondor \
+                htcondor/mini:el7
+```
+Then, enter the container by running:
+```console
+dockerhost$ docker exec -ti minicondor /bin/bash
+```
+
+You can submit jobs by first becoming the `submituser` user:
+```console
+container$ su - submituser
+```
+
+
 Using the Execute Node Container
 --------------------------------
 
 ### Overview
 
 The execute node container can connect to an existing HTCondor pool via
-token authentication (recommended) or pool password.  Because of CCB,
-this container needs no inbound connectivity, and only needs outbound
-connectivity to the central manager and the submit host, even for running
-jobs or using `condor_ssh_to_job`.
+token authentication (recommended) or pool password.  Token authentication
+requires HTCondor 8.9.2+ on both sides of the connection.  Because of CCB, this
+container needs no inbound connectivity, and only needs outbound connectivity
+to the central manager and the submit host, even for running jobs or using
+`condor_ssh_to_job`.
 
 You must specify the address of the pool's central manager in the
 `CONDOR_HOST` environment variable.
