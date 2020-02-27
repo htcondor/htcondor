@@ -8482,6 +8482,14 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		FakeCreateThreadReaperCaller *reaper_caller =
 			new FakeCreateThreadReaperCaller( exit_status, reaper_id );
 
+		// We return the bogus thread id here, which is really the 
+		// dc timer callback id.  However, we overload the return value
+		// so that false means failure.  Timer ID's can be zero, but 
+		// it is unlikely that this is the first registered timer.
+		// If it is zero, we'll double-free in the caller, and assume
+		// that the thread create failed.  So just assert that it isn't.
+		ASSERT(reaper_caller->FakeThreadID() != 0)
+
 		return reaper_caller->FakeThreadID();
 	}
 
