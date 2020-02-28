@@ -27,6 +27,10 @@ Bugs Fixed:
    API change by Amazon Web Services.
    :ticket:`7489`
 
+-  Fixed a bug that prevented *condor_ssh_to_job* from working when the
+   job was in a container and there was a submit file argument
+   :ticket:`7506`
+
 -  The *condor_wait* tool is again as efficient when waiting forever as when
    given a deadline on the command line.
    :ticket:`7458`
