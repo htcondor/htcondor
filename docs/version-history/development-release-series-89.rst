@@ -32,6 +32,10 @@ New Features:
   version of CUDA.  See the *condor_submit* man page.
   :ticket:`7413`
 
+- When worker nodes are running on CPUs that support the AVX512 instructions,
+  the startd now advertises that fact with has_avx512 attributes.
+  :ticket:`7528`
+
 - Added ``GOMAXPROCS`` to the default list of environment variables that are
   set to the number of CPU cores allocated to the job.
   :ticket:`7418`
