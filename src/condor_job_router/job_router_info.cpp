@@ -319,7 +319,7 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public ClassAdFileParseHelper
 {
  public:
 	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
@@ -564,11 +564,6 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 }
 
 bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
-{
-	return submit_job(owner, domain, static_cast<classad::ClassAd&>(src), schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
-}
-
-bool submit_job( const std::string & owner, const std::string & domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
 		schedd_name ? schedd_name : "local",

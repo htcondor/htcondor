@@ -28,7 +28,6 @@
 #include "ODSUtils.h"
 
 using namespace std;
-using namespace compat_classad;
 using namespace mongo;
 using namespace plumage::etl;
 using namespace plumage::util;

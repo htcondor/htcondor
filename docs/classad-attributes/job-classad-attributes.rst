@@ -1677,6 +1677,11 @@ Job ClassAd Attributes
     :index:`definition for a submitted job<single: definition for a submitted job; process>`
     :index:`process identifier<single: process identifier; job ID>`
 
+``PreserveRelativePaths``
+    When ``True``, entries in the file transfer lists that are relative
+    paths will be transferred to the same relative path on the destination
+    machine (instead of the basename).
+
 ``ProcId``
     Integer process identifier for this job. Within a cluster of many
     jobs, each job has the same ``ClusterId``, but will have a unique
@@ -2003,6 +2008,12 @@ Job ClassAd Attributes
 ``TotalSuspensions``
     A count of the number of times this job has been suspended during
     its lifetime. :index:`TransferErr<single: TransferErr; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; TransferCheckpoint>`
+
+``TransferCheckpoint``
+    A string attribute containing a comma separated list of directories
+    and/or files that should be transferred from the execute machine to the
+    submit machine's spool when the job successfully checkpoints.
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferErr>`
 
 ``TransferErr``

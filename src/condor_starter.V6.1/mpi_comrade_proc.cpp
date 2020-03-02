@@ -189,9 +189,7 @@ bool
 MPIComradeProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In MPIComradeProc::PublishUpdateAd()\n" );
-	char buf[64];
-	sprintf( buf, "%s = %d", ATTR_NODE, Node );
-	ad->Insert( buf );
+	ad->Assign( ATTR_NODE, Node );
 
 		// Now, call our parent class's version
 	return VanillaProc::PublishUpdateAd( ad );

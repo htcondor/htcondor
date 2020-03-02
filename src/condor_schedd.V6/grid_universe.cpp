@@ -55,7 +55,7 @@ GridUniverseLogic::GridUniverseLogic()
 
 	// Register a reaper for this grid managers
 	rid = daemonCore->Register_Reaper("GManager",
-		(ReaperHandler) &GridUniverseLogic::GManagerReaper,"GManagerReaper");
+		 &GridUniverseLogic::GManagerReaper,"GManagerReaper");
 
 	// This class should register a reaper after the regular schedd reaper
 	ASSERT( rid > 1 );
@@ -238,7 +238,7 @@ GridUniverseLogic::scratchFilePath(gman_node_t *gman_node, MyString & path)
 
 
 int 
-GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
+GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 {
 	gman_node_t* gman_node = NULL;
 	MyString owner;

@@ -36,7 +36,7 @@ Reqexp::Reqexp( Resource* res_ip )
 	this->rip = res_ip;
 	std::string tmp;
 
-	formatstr(tmp, "%s = START", ATTR_REQUIREMENTS);
+	tmp = "START";
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 		formatstr_cat( tmp, " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
@@ -58,22 +58,14 @@ char * Reqexp::param(const char * name) {
 void
 Reqexp::compute( amask_t how_much ) 
 {
-	MyString str;
-
 	if( IS_STATIC(how_much) ) {
-		char* start = param( "START" );
-		if( !start ) {
-			EXCEPT( "START expression not defined!" );
-		}
 		if( origstart ) {
 			free( origstart );
 		}
-
-		str.formatstr( "%s = %s", ATTR_START, start );
-
-		origstart = strdup( str.Value() );
-
-		free( start );
+		origstart = param( "START" );
+		if( !origstart ) {
+			EXCEPT( "START expression not defined!" );
+		}
 	}
 
 	if( IS_STATIC(how_much) ) {
@@ -270,13 +262,12 @@ Reqexp::unavail( ExprTree * start_expr )
 void
 Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 {
-	MyString tmp;
+	std::string tmp;
 
 	switch( rstate ) {
 	case ORIG_REQ:
-		ca->Insert( origstart );
-		tmp.formatstr( "%s", origreqexp );
-		ca->Insert( tmp.Value() );
+		ca->AssignExpr( ATTR_START, origstart );
+		ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
 		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 							m_within_resource_limits_expr );
@@ -290,7 +281,7 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 			ExprTree * sacrifice = drainingStartExpr->Copy();
 			ca->Insert( ATTR_START, sacrifice );
 
-			ca->Insert( origreqexp );
+			ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
 			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 								m_within_resource_limits_expr );
@@ -298,11 +289,9 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		}
 		break;
 	case COD_REQ:
-		tmp.formatstr( "%s = True", ATTR_RUNNING_COD_JOB );
-		ca->Insert( tmp.Value() );
-		tmp.formatstr( "%s = False && %s", ATTR_REQUIREMENTS,
-				 ATTR_RUNNING_COD_JOB );
-		ca->Insert( tmp.Value() );
+		ca->Assign(ATTR_RUNNING_COD_JOB, true);
+		formatstr( tmp, "False && %s", ATTR_RUNNING_COD_JOB );
+		ca->AssignExpr( ATTR_REQUIREMENTS, tmp.c_str() );
 		break;
 	default:
 		EXCEPT("Programmer error in Reqexp::publish()!");

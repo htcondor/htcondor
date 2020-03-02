@@ -1319,9 +1319,7 @@ DCSchedd::actOnJobs( JobAction action,
 					 action_result_type_t result_type,
 					 CondorError * errstack )
 {
-	char* tmp = NULL;
-	char buf[512];
-	int size, reply;
+	int reply;
 	ReliSock rsock;
 
 		// // // // // // // //
@@ -1330,66 +1328,36 @@ DCSchedd::actOnJobs( JobAction action,
 
 	ClassAd cmd_ad;
 
-	sprintf( buf, "%s = %d", ATTR_JOB_ACTION, action );
-	cmd_ad.Insert( buf );
+	cmd_ad.Assign( ATTR_JOB_ACTION, action );
 	
-	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT_TYPE, 
-			 (int)result_type );
-	cmd_ad.Insert( buf );
+	cmd_ad.Assign( ATTR_ACTION_RESULT_TYPE, (int)result_type );
 
 	if( constraint ) {
 		if( ids ) {
 				// This is a programming error, not a run-time one
 			EXCEPT( "DCSchedd::actOnJobs has both constraint and ids!" );
 		}
-		size = strlen(constraint) + strlen(ATTR_ACTION_CONSTRAINT) + 4;  
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp, "%s = %s", ATTR_ACTION_CONSTRAINT, constraint ); 
-		if( ! cmd_ad.Insert(tmp) ) {
+		if( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint) ) {
 			dprintf( D_ALWAYS, "DCSchedd::actOnJobs: "
 					 "Can't insert constraint (%s) into ClassAd!\n",
 					 constraint );
-			free( tmp );
 			if ( errstack ) {
 				errstack->push( "DCSchedd::actOnJobs", 1,
 								"Can't insert constraint into ClassAd" );
 			}
 			return NULL;
 		}			
-		free( tmp );
-		tmp = NULL;
 	} else if( ids ) {
 		char* action_ids = ids->print_to_string();
 		if ( action_ids ) {
-			size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
-			tmp = (char*) malloc( size*sizeof(char) );
-			if( !tmp ) {
-				EXCEPT( "Out of memory!" );
-			}
-			sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
-			cmd_ad.Insert( tmp );
-			free( tmp );
-			tmp = NULL;
-			free(action_ids);
-			action_ids = NULL;
+			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
 	} else {
 		EXCEPT( "DCSchedd::actOnJobs called without constraint or ids" );
 	}
 
 	if( reason_attr && reason ) {
-		size = strlen(reason_attr) + strlen(reason) + 7;
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp, "%s = \"%s\"", reason_attr, reason );
-		cmd_ad.Insert( tmp );
-		free( tmp );
-		tmp = NULL;
+		cmd_ad.Assign( reason_attr, reason );
 	}
 
 	if( reason_code_attr && reason_code ) {
@@ -1532,11 +1500,11 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	if( result_type == AR_LONG ) {
 		// Put it directly in our ad
 		if (job_id.proc < 0) {
-			sprintf( buf, "cluster_%d = %d", job_id.cluster, (int)result );
+			sprintf( buf, "cluster_%d", job_id.cluster );
 		} else {
-			sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc, (int)result );
+			sprintf( buf, "job_%d_%d", job_id.cluster, job_id.proc );
 		}
-		result_ad->Insert( buf );
+		result_ad->Assign( buf, (int)result );
 		return;
 	}
 
@@ -1638,9 +1606,7 @@ JobActionResults::publishResults( void )
 		result_ad = new ClassAd();
 	}
 
-	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT_TYPE, 
-			 (int)result_type ); 
-	result_ad->Insert( buf );
+	result_ad->Assign( ATTR_ACTION_RESULT_TYPE, (int)result_type );
 
 	if( result_type == AR_LONG ) {
 			// we've got everything we need in our ad already, nothing
@@ -1649,28 +1615,23 @@ JobActionResults::publishResults( void )
 	}
 
 		// They want totals for each possible result
-	sprintf( buf, "result_total_%d = %d", AR_ERROR, ar_error );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_ERROR );
+	result_ad->Assign( buf, ar_error );
 
-	sprintf( buf, "result_total_%d = %d", AR_SUCCESS,
-			 ar_success ); 
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_SUCCESS );
+	result_ad->Assign( buf, ar_success );
 		
-	sprintf( buf, "result_total_%d = %d", AR_NOT_FOUND,
-			 ar_not_found ); 
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_NOT_FOUND );
+	result_ad->Assign( buf, ar_not_found );
 
-	sprintf( buf, "result_total_%d = %d", AR_BAD_STATUS,
-			 ar_bad_status );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_BAD_STATUS );
+	result_ad->Assign( buf, ar_bad_status );
 
-	sprintf( buf, "result_total_%d = %d", AR_ALREADY_DONE,
-			 ar_already_done );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_ALREADY_DONE );
+	result_ad->Assign( buf, ar_already_done );
 
-	sprintf( buf, "result_total_%d = %d", AR_PERMISSION_DENIED,
-			 ar_permission_denied );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_PERMISSION_DENIED );
+	result_ad->Assign( buf, ar_permission_denied );
 
 	return result_ad;
 }
@@ -1813,14 +1774,14 @@ bool DCSchedd::getJobConnectInfo(
 	char const *session_info,
 	int timeout,
 	CondorError *errstack,
-	MyString &starter_addr,
-	MyString &starter_claim_id,
-	MyString &starter_version,
-	MyString &slot_name,
-	MyString &error_msg,
+	std::string &starter_addr,
+	std::string &starter_claim_id,
+	std::string &starter_version,
+	std::string &slot_name,
+	std::string &error_msg,
 	bool &retry_is_sensible,
 	int &job_status,
-	MyString &hold_reason)
+	std::string &hold_reason)
 {
 	ClassAd input;
 	ClassAd output;
@@ -1840,33 +1801,33 @@ bool DCSchedd::getJobConnectInfo(
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,errstack) ) {
 		error_msg = "Failed to connect to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !startCommand(GET_JOB_CONNECT_INFO, &sock, timeout, errstack) ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !forceAuthentication(&sock, errstack) ) {
 		error_msg = "Failed to authenticate";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.encode();
 	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.decode();
 	if( !getClassAd(&sock, output) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response from schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 

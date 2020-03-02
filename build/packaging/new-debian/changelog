@@ -1,3 +1,9 @@
+condor (8.9.5-2) unstable; urgency=medium
+
+  * Fixed the installation of the HTCondor Python bindings on Debian/Ubuntu
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Feb 2020 19:43:10 -0600
+
 condor (8.9.5-1) unstable; urgency=medium
 
   * Added a new mode that skips jobs whose outputs are newer than their inputs

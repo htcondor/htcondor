@@ -948,7 +948,12 @@ int daemon::RealStart( )
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
 			daemon_sock_buf.lower_case();
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str() );
+			// Because the master only starts daemons named in the config
+			// file, and those names are by definition unique, we don't
+			// need to further uniquify them with a sequence number, and
+			// not doing so makes it possible to construct certain
+			// addresses, rather than discover them.
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}
@@ -1939,12 +1944,12 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		class daemon* dmn = it->second;
 
 		std::string attr(dmn->name_in_config_file); attr += "_PID";
-		readyAd.Assign(attr.c_str(), dmn->pid);
+		readyAd.Assign(attr, dmn->pid);
 		++num_daemons;
 
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
-			readyAd.Assign(attr.c_str(), dmn->ready_state);
+			readyAd.Assign(attr, dmn->ready_state);
 		}
 
 		//const char * state = dmn->ready_state;
@@ -3251,20 +3256,18 @@ Daemons::Update( ClassAd* ca )
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here || iter->second == master ) {
-			sprintf( buf, "%s_Timestamp = %ld", 
-					 iter->second->name_in_config_file, 	
-					 (long)iter->second->timeStamp );
-			ca->Insert( buf );
+			sprintf( buf, "%s_Timestamp",
+					 iter->second->name_in_config_file );
+			ca->Assign( buf, (long)iter->second->timeStamp );
 			if( iter->second->pid ) {
-				sprintf( buf, "%s_StartTime = %ld", 
-						 iter->second->name_in_config_file, 	
-						 (long)iter->second->startTime );
-				ca->Insert( buf );
+				sprintf( buf, "%s_StartTime",
+						 iter->second->name_in_config_file );
+				ca->Assign( buf, (long)iter->second->startTime );
 			} else {
 					// No pid, but daemon's supposed to be running.
-				sprintf( buf, "%s_StartTime = 0", 
+				sprintf( buf, "%s_StartTime",
 						 iter->second->name_in_config_file );
-				ca->Insert( buf );
+				ca->Assign( buf, 0 );
 			}
 		}
 	}

@@ -7,7 +7,7 @@ Policy Configuration for Execute Hosts and for Submit Hosts
     :ref:`admin-manual/configuration-templates:available configuration templates`.
 
 *condor_startd* Policy Configuration
--------------------------------------
+------------------------------------
 
 :index:`condor_startd policy<single: condor_startd policy; configuration>`
 :index:`of machines, to implement a given policy<single: of machines, to implement a given policy; configuration>`

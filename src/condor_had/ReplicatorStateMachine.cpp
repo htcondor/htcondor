@@ -197,13 +197,13 @@ ReplicatorStateMachine::reinitialize()
     if( m_downloadReaperId == -1 ) {
 		m_downloadReaperId = daemonCore->Register_Reaper(
         	"downloadReplicaTransfererReaper",
-        (ReaperHandler)&ReplicatorStateMachine::downloadReplicaTransfererReaper,
+        (ReaperHandlercpp)&ReplicatorStateMachine::downloadReplicaTransfererReaper,
         	"downloadReplicaTransfererReaper", this );
 	}
     if( m_uploadReaperId == -1 ) {
 		m_uploadReaperId = daemonCore->Register_Reaper(
         	"uploadReplicaTransfererReaper",
-        (ReaperHandler) &ReplicatorStateMachine::uploadReplicaTransfererReaper,
+        (ReaperHandlercpp) &ReplicatorStateMachine::uploadReplicaTransfererReaper,
         	"uploadReplicaTransfererReaper", this );
     }
 	// for debugging purposes only
@@ -625,13 +625,12 @@ ReplicatorStateMachine::onGivingUpVersion( Stream* /*stream*/ )
 
 int
 ReplicatorStateMachine::downloadReplicaTransfererReaper(
-	Service* service, int pid, int exitStatus)
+	int pid, int exitStatus)
 {
     ReplicatorStateMachine* replicatorStateMachine =
-    	static_cast<ReplicatorStateMachine*>( service );
+    	static_cast<ReplicatorStateMachine*>( this );
     int returnValue = AbstractReplicatorStateMachine::
-						downloadReplicaTransfererReaper(service, 
-														pid, 
+						downloadReplicaTransfererReaper(pid, 
 														exitStatus);
     if( returnValue == TRANSFERER_TRUE && 
 		replicatorStateMachine->m_state == VERSION_DOWNLOADING ) {

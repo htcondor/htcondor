@@ -938,26 +938,36 @@ public:
 			return;
 		++pszTbl;
 
+		std::string attrn;
+		std::string exprstr;
+
 		//pszTbl[ixUse] = 0;
 		// Insert <Tag>Usage = <value1>
-		std::string exprstr(tag); exprstr += "Usage = "; exprstr.append(pszTbl, ixUse);
-		puAd->Insert(exprstr);
+		attrn = tag;
+		attrn += "Usage";
+		exprstr.assign(pszTbl, ixUse);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		//pszTbl[ixReq] = 0;
 		// Insert Request<Tag> = <value2>
-		exprstr = "Request"; exprstr += tag; exprstr += " = "; exprstr.append(&pszTbl[ixUse+1], ixReq-ixUse-1);
-		puAd->Insert(exprstr);
+		attrn = "Request";
+		attrn += tag;
+		exprstr.assign(&pszTbl[ixUse+1], ixReq-ixUse-1);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		if (ixAlloc > 0) {
 			//pszTbl[ixAlloc] = 0;
 			// Insert <tag> = <value3>
-			exprstr = tag; exprstr += " = "; exprstr.append(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
-			puAd->Insert(exprstr);
+			attrn = tag;
+			exprstr.assign(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 		if (ixAssigned > 0) {
 			// the remainder of the line is the assigned value
-			exprstr = "Assigned"; exprstr += tag; exprstr += " = "; exprstr += &pszTbl[ixAssigned];
-			puAd->Insert(exprstr);
+			attrn = "Assigned";
+			attrn += tag;
+			exprstr = &pszTbl[ixAssigned];
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 	}
 
@@ -1049,21 +1059,20 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 		} else if (ixUse > 0) {
 			pszTbl[ixUse] = 0;
 			pszTbl[ixReq] = 0;
-			std::string exprstr;
-			formatstr(exprstr, "%sUsage = %s", pszLbl, pszTbl);
-			puAd->Insert(exprstr.c_str());
-			formatstr(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
-			puAd->Insert(exprstr.c_str());
+			std::string attrn;
+			formatstr(exprstr, "%sUsage", pszLbl);
+			puAd->AssignExpr(attrn, pszTbl);
+			formatstr(attrn, "Request%s", pszLbl);
+			puAd->AssignExpr(attrn, &pszTbl[ixUse+1]);
 			if (ixAlloc > 0) {
 				pszTbl[ixAlloc] = 0;
-				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixReq+1]);
 			}
 			if (ixAssigned > 0) {
 				// the remainder of the line is the assigned value
-				formatstr(exprstr, "Assigned%s = %s", pszLbl, &pszTbl[ixAssigned]);
-				//trim(exprstr);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "Assigned%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixAssigned]);
 			}
 		}
 	}
@@ -6683,16 +6692,16 @@ AttributeUpdate::toClassAd(bool event_time_utc)
 void
 AttributeUpdate::initFromClassAd(ClassAd* ad)
 {
-	MyString buf;
+	std::string buf;
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
 	if( ad->LookupString("Attribute", buf ) ) {
-		name = strdup(buf.Value());
+		name = strdup(buf.c_str());
 	}
 	if( ad->LookupString("Value", buf ) ) {
-		value = strdup(buf.Value());
+		value = strdup(buf.c_str());
 	}
 }
 

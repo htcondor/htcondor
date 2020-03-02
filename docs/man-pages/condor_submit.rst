@@ -819,7 +819,19 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
     GPUs will define ``<name>`` to be ``GPUs``.
+    :index:`CUDA version<single: CUDA version; submit commands>`
+
+ cuda_version = <version>
+    The version of the CUDA runtime, if any, used or required by this job,
+    specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
+    version number is zero, you may specify only the major version number.
+    A single version number of 1000 or higher is assumed to be the
+    integer-coded version number (``major * 1000 + (minor % 100)``).
+
+    This does *not* arrange for the CUDA runtime to be present, only for
+    the job to run on a machine whose driver supports the specified version.
     :index:`requirements<single: requirements; submit commands>`
+
  requirements = <ClassAd Boolean Expression>
     The requirements command is a boolean ClassAd expression which uses
     C-like operators. In order for any job in this cluster to run on a
@@ -1112,7 +1124,7 @@ FILE TRANSFER COMMANDS
         # For older buckets that aren't region-specific.
         s3://<bucket>/<key>
         # For newer, region-specific buckets.
-        s3://<bucket>.s3-<region>.amazonaws.com/<key>
+        s3://<bucket>.s3.<region>.amazonaws.com/<key>
 
     To use other S3 services, where ``<host>`` must contain a ``.``:
 
@@ -1189,8 +1201,35 @@ FILE TRANSFER COMMANDS
 
     Symbolic links to files are transferred as the files they point to.
     Transfer of symbolic links to directories is not currently
-    supported. :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
+    supported.
 
+    :index:`transfer_checkpoint_files<single: transfer_checkpoint_files; submit commands>`
+ transfer_checkpoint_files = < file1,file2,file3... >
+    If present, this command defines the list of files and/or directories
+    which constitute the job's checkpoint.  When the job successfully
+    checkpoints -- see ``checkpoint_exit_code`` -- these files will be
+    transferred to the submit node's spool.
+
+    If this command is absent, the output is transferred instead.
+
+    If no files or directories are specified, nothing will be transferred.
+    This is generally not useful.
+
+    The list is interpreted like ``transfer_output_files``, but there is
+    no corresponding ``remaps`` command.
+
+    :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
+ preserve_relative_paths = < True | False >
+    This command modifies the behavior of the file transfer commands.  When
+    set to true, the destination for an entry that is a relative path in a
+    file transfer list becomes its relative path, not its basename.  For
+    example, ``input_data/b`` (and its contents, if it is a directory) will
+    be transferred to ``input_data/b``, not ``b``.  This applies to the input,
+    output, and checkpoint lists.
+
+    Trailing slashes are ignored when ``preserve_relative_paths`` is set.
+
+    :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
  transfer_output_remaps = < " name = newname ; name2 = newname2 ... ">
     This specifies the name (and optionally path) to use when
     downloading output files from the completed job. Normally, output

@@ -7913,7 +7913,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
 		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
 			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first.c_str());
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first);
 				if ( expr ) {
 					continue;
 				}
@@ -7924,7 +7924,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				const char *new_value = NULL;
 				new_value = ExprTreeToString(expr);
 				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(itr->first.c_str(),new_value);
+				msg->leftover_startd_ad()->AssignExpr(itr->first,new_value);
  				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
 				         slot_name, itr->first.c_str(), new_value);
 			}
@@ -12049,7 +12049,7 @@ Scheduler::child_exit(int pid, int status)
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
 		}
-	} else if (srec) {
+	} else {
 		const char* name = NULL;
 		//
 		// Local Universe
@@ -12126,16 +12126,7 @@ Scheduler::child_exit(int pid, int status)
 		// of how the job exited
 		delete_shadow_rec( pid );
 
-	} else {
-		// Hmm -- doesn't seem like we can ever get here, given
-		// that we deference srec before the if... wenger 2011-02-09
-		//
-		// There wasn't a shadow record, so that agent dies after
-		// deleting match. We want to make sure that we don't
-		// call to start more jobs
-		//
-		StartJobsFlag=FALSE;
-	 }  // big if..else if...
+	} 
 
 	//
 	// If the job was a local universe job, we will want to
@@ -13792,14 +13783,14 @@ Scheduler::Register()
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
-								  (CommandHandler)&attempt_access_handler,
-								  "attempt_access_handler", NULL, WRITE,
+								  &attempt_access_handler,
+								  "attempt_access_handler", WRITE,
 								  D_FULLDEBUG );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
-								(CommandHandler)&store_cred_handler,
-								"cred_access_handler", NULL, WRITE,
+								&store_cred_handler,
+								"cred_access_handler", WRITE,
 								D_FULLDEBUG, true /*force authentication*/);
 #endif
 
@@ -13835,8 +13826,8 @@ Scheduler::Register()
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, READ, D_FULLDEBUG );
+								  &handle_q,
+								  "handle_q", READ, D_FULLDEBUG );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13844,8 +13835,8 @@ Scheduler::Register()
 	// security session that has to be authenticated every time in
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  &handle_q,
+								  "handle_q", WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
@@ -13853,8 +13844,8 @@ Scheduler::Register()
 								  "dumpState", this, READ  );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
-								  (CommandHandler)&get_myproxy_password_handler,
-								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
+								  &get_myproxy_password_handler,
+								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
@@ -14257,7 +14248,7 @@ Scheduler::schedd_exit()
 void
 Scheduler::invalidate_ads()
 {
-	MyString line;
+	std::string line;
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just create a temporary one
@@ -14266,8 +14257,8 @@ Scheduler::invalidate_ads()
     SetTargetTypeName( *cad, SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
-    cad->Insert( line.Value() );
+	formatstr( line, "TARGET.%s == \"%s\"", ATTR_NAME, Name );
+	cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cad->Assign( ATTR_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
@@ -14293,11 +14284,10 @@ Scheduler::invalidate_ads()
 		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
 		cad->Assign( ATTR_NAME, submitter );
 
-		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
-					  ATTR_REQUIREMENTS,
+		formatstr( line, "TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, submitter.c_str() );
-		cad->Insert( line.Value() );
+		cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
@@ -15247,7 +15237,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	ClassAd input;
 	ClassAd reply;
 	PROC_ID jobid;
-	MyString error_msg;
+	std::string error_msg;
 	ClassAd *jobad;
 	int job_status = -1;
 	match_rec *mrec = NULL;
@@ -15256,10 +15246,10 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	char const *match_sec_session_id = NULL;
 	int universe = -1;
 	std::string startd_name;
-	MyString starter_addr;
-	MyString starter_claim_id;
+	std::string starter_addr;
+	std::string starter_claim_id;
 	std::string job_owner_session_info;
-	MyString starter_version;
+	std::string starter_version;
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
@@ -15294,7 +15284,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	if( !input.LookupInteger(ATTR_CLUSTER_ID,jobid.cluster) ||
 		!input.LookupInteger(ATTR_PROC_ID,jobid.proc) ) {
-		error_msg.formatstr("Job id missing from GET_JOB_CONNECT_INFO request");
+		error_msg = "Job id missing from GET_JOB_CONNECT_INFO request";
 		goto error_wrapup;
 	}
 
@@ -15304,12 +15294,12 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if( !jobad ) {
-		error_msg.formatstr("No such job: %d.%d", jobid.cluster, jobid.proc);
+		formatstr(error_msg, "No such job: %d.%d", jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
 
 	if( !OwnerCheck2(jobad,sock->getOwner()) ) {
-		error_msg.formatstr("%s is not authorized for access to the starter for job %d.%d",
+		formatstr(error_msg, "%s is not authorized for access to the starter for job %d.%d",
 						  sock->getOwner(), jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
@@ -15338,7 +15328,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				subproc = 0;
 			}
 			if( subproc == -1 || subproc >= claim_idlist.number() ) {
-				error_msg.formatstr("This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
+				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
 				goto error_wrapup;
 			}
 			else {
@@ -15371,7 +15361,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				// If there is one, we'll get it when we call the starter
 				// below.  (We don't need it ourself, because it is on the
 				// same machine, but our client might not be.)
-			starter_addr = daemonCore->InfoCommandSinfulString( srec->pid );
+			const char *addr = daemonCore->InfoCommandSinfulString( srec->pid );
+			starter_addr = addr ? addr : "";
 			if( starter_addr.empty() ) {
 				retry_is_sensible = true;
 				break;
@@ -15403,7 +15394,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	if( job_is_suitable && 
 		!param_boolean("SCHEDD_ENABLE_SSH_TO_JOB",true,true,jobad,NULL) )
 	{
-		error_msg.formatstr("Job %d.%d is denied by SCHEDD_ENABLE_SSH_TO_JOB.",
+		formatstr(error_msg, "Job %d.%d is denied by SCHEDD_ENABLE_SSH_TO_JOB.",
 						  jobid.cluster,jobid.proc);
 		goto error_wrapup;
 	}
@@ -15413,7 +15404,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	{
 		if( !retry_is_sensible ) {
 				// this must be a job universe that we don't support
-			error_msg.formatstr("Job %d.%d does not support remote access.",
+			formatstr(error_msg, "Job %d.%d does not support remote access.",
 							  jobid.cluster,jobid.proc);
 		}
 		else {
@@ -15421,7 +15412,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			if( job_status == HELD ) {
 				CopyAttribute( ATTR_HOLD_REASON, reply, *jobad );
 			}
-			error_msg.formatstr("Job %d.%d is not running.",
+			formatstr(error_msg, "Job %d.%d is not running.",
 							  jobid.cluster,jobid.proc);
 		}
 		goto error_wrapup;
@@ -15463,8 +15454,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	reply.Assign(ATTR_RESULT,true);
 	reply.Assign(ATTR_STARTER_IP_ADDR,starter_addr);
-	reply.Assign(ATTR_CLAIM_ID,starter_claim_id.Value());
-	reply.Assign(ATTR_VERSION,starter_version.Value());
+	reply.Assign(ATTR_CLAIM_ID,starter_claim_id);
+	reply.Assign(ATTR_VERSION,starter_version);
 	reply.Assign(ATTR_REMOTE_HOST,startd_name);
 	if( !putClassAd(s, reply) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -15478,7 +15469,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
-	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
+	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.c_str() );
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
 	if( retry_is_sensible ) {

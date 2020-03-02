@@ -312,14 +312,14 @@ public:
 							char const *session_info,
 							int timeout,
 							CondorError *errstack,
-							MyString &starter_addr,
-							MyString &starter_claim_id,
-							MyString &starter_version,
-							MyString &slot_name,
-							MyString &error_msg,
+							std::string &starter_addr,
+							std::string &starter_claim_id,
+							std::string &starter_version,
+							std::string &slot_name,
+							std::string &error_msg,
 							bool &retry_is_sensible,
 							int &job_status,
-							MyString &hold_reason);
+							std::string &hold_reason);
 
 
 		/** Request the schedd to initiate a negoitation cycle.

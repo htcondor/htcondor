@@ -61,7 +61,7 @@ static int Create_Thread_With_Data_Start(void * data, Stream *)
 static HashTable<int, Create_Thread_With_Data_Data *> tid_to_data(hashFuncInt);
 
 /// Support function for Create_Thread_With_Data
-static int Create_Thread_With_Data_Reaper(Service *, int tid, int exit_status)
+static int Create_Thread_With_Data_Reaper(int tid, int exit_status)
 {
 	Create_Thread_With_Data_Data * tmp = 0;
 	if( tid_to_data.lookup(tid, tmp) != 0 )

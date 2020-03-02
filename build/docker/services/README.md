@@ -1,16 +1,48 @@
 HTCondor Containers
 ===================
 
+Currently, we provide two kinds of containers for HTCondor services:
+the Minicondor container (`htcondor/mini`) and the Execute Node container
+(`htcondor/execute`).
+
+
+Using the Minicondor Container
+------------------------------
+
+### Overview
+
+The minicondor container is an install with all of the HTCondor daemons
+running, only listening on local interfaces.  This is useful for
+experimentation and learning.
+
+Start the container by running:
+```console
+dockerhost$ docker run --detach \
+                --name=minicondor \
+                htcondor/mini:el7
+```
+Then, enter the container by running:
+```console
+dockerhost$ docker exec -ti minicondor /bin/bash
+```
+
+You can submit jobs by first becoming the `submituser` user:
+```console
+container$ su - submituser
+```
+
+
 Using the Execute Node Container
 --------------------------------
 
 ### Overview
 
 The execute node container can connect to an existing HTCondor pool via
-token authentication (recommended) or pool password.  Because of CCB,
-this container needs no inbound connectivity, and only needs outbound
-connectivity to the central manager and the submit host, even for running
-jobs or using `condor_ssh_to_job`.
+token authentication (recommended) or pool password.  Token authentication
+requires HTCondor 8.9.2+ on both sides of the connection.  Because of CCB, this
+container needs no inbound connectivity, and only needs outbound connectivity
+to the central manager and the submit host, even for running jobs or using
+`condor_ssh_to_job`.
 
 You must specify the address of the pool's central manager in the
 `CONDOR_HOST` environment variable.
@@ -33,7 +65,6 @@ Here are the environment variables that the container can use:
 - `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
   pool password authentication
 
-
 In addition, you can add more HTCondor configuration by putting it in
 `/root/config/*.conf` files in the container.
 
@@ -55,8 +86,14 @@ dockerhost$ chmod 0700 ~/condorexec/secrets
 Grant access to the identity that the container will use.  On the central
 manager, add the following lines to the HTCondor configuration:
 ```
-ALLOW_ADVERTISE_MASTER = $(ALLOW_ADVERTISE_MASTER) dockerworker@example.net
-ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) dockerworker@example.net
+ALLOW_ADVERTISE_MASTER = \
+    $(ALLOW_ADVERTISE_MASTER) \
+    $(ALLOW_WRITE_COLLECTOR) \
+    dockerworker@example.net
+ALLOW_ADVERTISE_STARTD = \
+    $(ALLOW_ADVERTISE_STARTD) \
+    $(ALLOW_WRITE_COLLECTOR) \
+    dockerworker@example.net
 ```
 Run `condor_reconfig` on the central manager to pick up the changes.
 
@@ -173,4 +210,3 @@ Known Issues
 - Docker universe support is not yet implemented.
 
 - Singularity support is not yet implemented.
-

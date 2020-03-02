@@ -532,9 +532,8 @@ main(int argc, char *argv[])
 			ad->LookupString( ATTR_REMOTE_USER , remoteUser, sizeof(remoteUser) )) 
 		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+				ad->Assign( ATTR_REMOTE_USER_PRIO,
 							prioTable[index].prio );
-				ad->Insert( buffer );
 			}
 		}
 	}

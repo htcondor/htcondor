@@ -97,7 +97,7 @@ public:
 #ifdef USE_CLASSAD_LIST_WRITER
 	CondorClassAdListWriter & writer;
 #endif
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
 
@@ -547,7 +547,7 @@ static bool read_classad_file (
 	return success;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 {
  public:
 	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)

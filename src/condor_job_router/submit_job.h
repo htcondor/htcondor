@@ -99,20 +99,6 @@ bool yield_job(classad::ClassAd const &ad, const char * pool_name,
 bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
 
 
-/* 
-- src - The classad to submit.  Will _not_ be modified.
-
-- schedd_name - Name of the schedd to send the job to, as specified in the Name
-  attribute of the schedd's classad.  Can be NULL to indicate "local schedd"
-
-- pool_name - hostname (and possible port) of collector where schedd_name can
-  be found.  Can be NULL to indicate "whatever COLLECTOR_HOST in my
-  condor_config file claims".
-
-*/
-bool submit_job( const std::string &owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
-
-
 /*
 	Push the dirty attributes in src into the queue.  Does _not_ clear
 	the dirty attributes.

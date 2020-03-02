@@ -1001,13 +1001,15 @@ main( int argc, const char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// But, if there's an active ssh, stay alive, in case we are
+		// running in a container.
 		// This effectively means executable, transfer_executable,
 		// arguments, universe, and queue X are ignored from the submit
 		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
-			extraLines.Append( "executable=/bin/sleep" );
+			extraLines.Append( "executable=/bin/sh" );
+			extraLines.Append( "arguments=\"-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'\"");
 			extraLines.Append( "transfer_executable=false" );
-			extraLines.Append( "arguments=180" );
 		}
 	}
 

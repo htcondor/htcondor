@@ -51,7 +51,7 @@ bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 MyString
-SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
 	static unsigned short rand_tag = 0;
 	static unsigned int sequence = 0;
 	if( !rand_tag ) {
@@ -72,7 +72,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 	}
 
 	MyString m_local_id;
-	if( !sequence ) {
+	if( (sequence == 0) || (! addSequenceNo) ) {
 		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
 	}
 	else {

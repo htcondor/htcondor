@@ -1094,6 +1094,8 @@ int main( int /*argc*/, const char ** argv) {
 	}
 	if ( ! test_flags) test_flags = -1;
 
+	ClassAdReconfig();
+
 	TestingMacroSet.defaults->size = param_info_init((const void**)&TestingMacroSet.defaults->table);
 	TestingMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 

@@ -57,6 +57,10 @@ static bool tokenize_multiple_calls(void);
 static bool tokenize_end(void);
 static bool tokenize_empty(void);
 static bool tokenize_empty_delimiter(void);
+static bool escape_chars_length_1();
+static bool escape_chars_empty();
+static bool escape_chars_multiple();
+static bool escape_chars_same();
 
 bool FTEST_stl_string_utils(void) {
 	emit_function("STL string utils");
@@ -90,6 +94,10 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(tokenize_end);
 	driver.register_function(tokenize_empty);
 	driver.register_function(tokenize_empty_delimiter);
+	driver.register_function(escape_chars_length_1);
+	driver.register_function(escape_chars_empty);
+	driver.register_function(escape_chars_multiple);
+	driver.register_function(escape_chars_same);
 	
 		// run the tests
 	return driver.do_all_functions();
@@ -751,6 +759,71 @@ static bool tokenize_empty_delimiter() {
 	emit_output_expected_header();
 	emit_retval("%s", "NULL");
 	if(tok != NULL) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool escape_chars_length_1() {
+	emit_test("Test EscapeChars() on a source string of length 1.");
+	std::string a = EscapeChars("z", "z", '\\');
+	emit_input_header();
+	emit_param("STRING", "%s", "z");
+	emit_param("CHAR", "%c", '\\');
+	emit_output_expected_header();
+	emit_retval("%s", "\\z");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "\\z") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool escape_chars_empty() {
+	emit_test("Test EscapeChars() on an empty source string.");
+	std::string a = EscapeChars("", "z", '\\');
+	emit_input_header();
+	emit_param("STRING", "%s", "z");
+	emit_param("CHAR", "%c", '\\');
+	emit_output_expected_header();
+	emit_retval("%s", "");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool escape_chars_multiple() {
+	emit_test("Test EscapeChars() when passed many escape chars.");
+	std::string a = EscapeChars("foobar", "oa", '*');
+	emit_input_header();
+	emit_param("STRING", "%s", "oa");
+	emit_param("CHAR", "%c", '*');
+	emit_output_expected_header();
+	emit_retval("%s", "f*o*ob*ar");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "f*o*ob*ar") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool escape_chars_same() {
+	emit_test("Test EscapeChars() when passed the same string as escape "
+		"chars.");
+	std::string a = EscapeChars("foobar", "foobar", '*');
+	emit_input_header();
+	emit_param("STRING", "%s", "foobar");
+	emit_param("CHAR", "%c", '*');
+	emit_output_expected_header();
+	emit_retval("%s", "*f*o*o*b*a*r");
+	emit_output_actual_header();
+	emit_retval("%s", a.c_str());
+	if(strcmp(a.c_str(), "*f*o*o*b*a*r") != MATCH) {
 		FAIL;
 	}
 	PASS;

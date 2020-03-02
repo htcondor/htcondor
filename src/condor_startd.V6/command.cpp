@@ -37,7 +37,7 @@ using std::map;
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
 
 int
-command_handler( Service*, int cmd, Stream* stream )
+command_handler(int cmd, Stream* stream )
 {
 	int rval = FALSE;
 	Resource* rip;
@@ -149,7 +149,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 }
 
 int
-command_activate_claim( Service*, int cmd, Stream* stream )
+command_activate_claim(int cmd, Stream* stream )
 {
 	char* id = NULL;
 	Resource* rip;
@@ -264,7 +264,7 @@ int swap_claim_and_activation(Resource * rip, ClassAd & opts, Stream* stream)
 // handles commands that have a claim id, & classad
 //
 int
-command_with_opts_handler( Service*, int cmd, Stream* stream )
+command_with_opts_handler(int cmd, Stream* stream )
 {
 	int rval = FALSE;
 	ClassAd opts;
@@ -290,7 +290,7 @@ command_with_opts_handler( Service*, int cmd, Stream* stream )
 }
 
 int
-command_vacate_all( Service*, int cmd, Stream* ) 
+command_vacate_all(int cmd, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_vacate_all() called.\n" );
 	switch( cmd ) {
@@ -311,7 +311,7 @@ command_vacate_all( Service*, int cmd, Stream* )
 
 
 int
-command_pckpt_all( Service*, int, Stream* ) 
+command_pckpt_all(int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
 	resmgr->walk( &Resource::void_periodic_checkpoint );
@@ -320,7 +320,7 @@ command_pckpt_all( Service*, int, Stream* )
 
 
 int
-command_x_event( Service*, int, Stream* s ) 
+command_x_event(int, Stream* s ) 
 {
 	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
 	static Stream * lastStashed = NULL;
@@ -357,7 +357,7 @@ command_x_event( Service*, int, Stream* s )
 
 
 int
-command_give_state( Service*, int, Stream* stream ) 
+command_give_state(int, Stream* stream ) 
 {
 	int rval = TRUE;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
@@ -371,7 +371,7 @@ command_give_state( Service*, int, Stream* stream )
 }
 
 int
-command_give_totals_classad( Service*, int, Stream* stream ) 
+command_give_totals_classad( int, Stream* stream ) 
 {
 	int rval = FALSE;
 	dprintf( D_FULLDEBUG, "command_give_totals_classad() called.\n" );
@@ -386,7 +386,7 @@ command_give_totals_classad( Service*, int, Stream* stream )
 
 
 int
-command_request_claim( Service*, int cmd, Stream* stream ) 
+command_request_claim(int cmd, Stream* stream ) 
 {
 	char* id = NULL;
 	Resource* rip;
@@ -455,7 +455,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 }
 
 int
-command_release_claim( Service*, int cmd, Stream* stream ) 
+command_release_claim(int cmd, Stream* stream ) 
 {
 	char* id = NULL;
 	Resource* rip;
@@ -574,7 +574,7 @@ countres:
 	return TRUE;
 }
 
-int command_suspend_claim( Service*, int cmd, Stream* stream )
+int command_suspend_claim(int cmd, Stream* stream )
 {
 	char* id = NULL;
 	Resource* rip;
@@ -614,7 +614,7 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
-int command_continue_claim( Service*, int cmd, Stream* stream )
+int command_continue_claim(int cmd, Stream* stream )
 {
 	char* id = NULL;
 	Resource* rip;
@@ -657,7 +657,7 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 
 
 int
-command_name_handler( Service*, int cmd, Stream* stream ) 
+command_name_handler(int cmd, Stream* stream ) 
 {
 	char* name = NULL;
 	Resource* rip;
@@ -736,7 +736,7 @@ command_name_handler( Service*, int cmd, Stream* stream )
 
 
 int
-command_match_info( Service*, int cmd, Stream* stream ) 
+command_match_info(int cmd, Stream* stream ) 
 {
 	char* id = NULL;
 	Resource* rip;
@@ -818,7 +818,7 @@ void hack_test_claim_swap(StringList & args)
 
 
 int
-command_query_ads( Service*, int, Stream* stream) 
+command_query_ads(int, Stream* stream) 
 {
 	ClassAd queryAd;
 	ClassAd *ad;
@@ -883,7 +883,7 @@ command_query_ads( Service*, int, Stream* stream)
 }
 
 int
-command_vm_register( Service*, int, Stream* s )
+command_vm_register(int, Stream* s )
 {
 	char *raddr = NULL;
 
@@ -923,7 +923,7 @@ command_vm_register( Service*, int, Stream* s )
 }
 
 int
-command_vm_universe( Service*, int cmd, Stream* stream )
+command_vm_universe( int cmd, Stream* stream )
 {
 	char *value = NULL; // Pid of Starter
 	int starter_pid = 0;
@@ -1022,7 +1022,7 @@ command_vm_universe( Service*, int cmd, Stream* stream )
 
 #if !defined(WIN32)
 int
-command_delegate_gsi_cred( Service*, int, Stream* stream )
+command_delegate_gsi_cred(int, Stream* stream )
 {
 	// The shadow is trying to delegate its user proxy, in case
 	// we plan to use glexec to spawn the starter (which we will
@@ -2122,7 +2122,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 				 "Request did not contain %s, assuming TRUE\n",
 				 ATTR_REQUIREMENTS );
 		requirements_str = "TRUE";
-		req_ad->Insert( "Requirements = TRUE" );
+		req_ad->Assign( ATTR_REQUIREMENTS, true );
 	} else {
 		requirements_str = ExprTreeToString( tree );
 	}
@@ -2160,18 +2160,9 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	ClassAd reply;
 	rip->publish( &reply, A_ALL_PUB );
 
-	MyString line;
-	line = ATTR_CLAIM_ID;
-	line += " = \"";
-	line += claim->id();
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_CLAIM_ID, claim->id() );
 	
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	int rval = sendCAReply( s, cmd_str, &reply );
 	if( ! rval ) {
@@ -2341,7 +2332,7 @@ caUpdateMachineAd( Stream * s, char * c, ClassAd * ad ) {
 
 
 int
-command_classad_handler( Service*, int dc_cmd, Stream* s )
+command_classad_handler(int dc_cmd, Stream* s )
 {
 	int rval=0;
 	ClassAd ad;
@@ -2451,11 +2442,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		free( tmp );
 	} else {
 			// ATTR_OWNER not defined, set it ourselves...
-		MyString line = ATTR_OWNER;
-		line += "=\"";
-		line += owner;
-		line += '"';
-		ad.Insert( line.Value() );
+		ad.Assign( ATTR_OWNER, owner );
 	}
  
 
@@ -2500,7 +2487,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 }
 
 int
-command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
+command_drain_jobs(int /*dc_cmd*/, Stream* s )
 {
 	ClassAd ad;
 
@@ -2552,7 +2539,7 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 }
 
 int
-command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
+command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 {
 	ClassAd ad;
 
@@ -2595,7 +2582,7 @@ command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 }
 
 int
-command_coalesce_slots( Service *, int, Stream * stream ) {
+command_coalesce_slots(int, Stream * stream ) {
 	Sock * sock = (Sock *)stream;
 	ClassAd commandAd;
 	// This becomes owned by the new slot's claim.

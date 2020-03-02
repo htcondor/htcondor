@@ -223,7 +223,7 @@ int AnalyzeThisSubExpr(
 			} else if ( ! left && inline_attrs.find(strAttr) != inline_attrs.end()) {
 				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
-				left = myad->LookupExpr(strAttr.c_str());
+				left = myad->LookupExpr(strAttr);
 			}
 			show_work = false;
 			break;
@@ -1333,7 +1333,7 @@ void AddReferencedAttribsToBuffer(
 	for ( it = trefs.begin(); it != trefs.end(); it++ ) {
 		std::string label;
 		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, it->c_str());
-		if (target->LookupExpr(it->c_str())) {
+		if (target->LookupExpr(*it)) {
 			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 		}
 	}

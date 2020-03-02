@@ -97,7 +97,7 @@ class GahpServer : public Service {
 
 	static int m_reaperid;
 
-	static int Reaper(Service *,int pid,int status);
+	static int Reaper(int pid,int status);
 
 	class GahpStatistics {
 	public:

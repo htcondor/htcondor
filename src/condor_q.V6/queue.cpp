@@ -381,7 +381,7 @@ static struct {
 bool g_stream_results = false;
 
 
-class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 {
  public:
 	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)
@@ -3107,7 +3107,7 @@ static void group_job(JobRowOfData & jrod, ClassAd* job)
 	if ( ! group_by_keys.empty()) {
 		for (size_t ii = 0; ii < group_by_keys.size(); ++ii) {
 			std::string value;
-			if (job->LookupString(group_by_keys[ii].expr.c_str(), value)) {
+			if (job->LookupString(group_by_keys[ii].expr, value)) {
 				key += value;
 				key += "\n";
 			}

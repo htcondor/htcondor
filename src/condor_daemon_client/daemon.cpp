@@ -1951,7 +1951,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 		// construct the IP_ADDR attribute
 	formatstr( buf, "%sIpAddr", _subsys );
-	if ( ad->LookupString( buf.c_str(), buf2 ) ) {
+	if ( ad->LookupString( buf, buf2 ) ) {
 		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = buf;

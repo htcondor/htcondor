@@ -877,10 +877,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	// make a classad with the results
 	ClassAd * action_ad = new ClassAd();
 
-	char buf[1024];
-
-	sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[authentication_action]);
-	action_ad->Insert(buf);
+	action_ad->Assign(ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[authentication_action]);
 
 	if( authentication_action == SecMan::SEC_FEAT_ACT_YES ) {
 			// record whether the authentication is required or not, so
@@ -891,11 +888,9 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		}
 	}
 
-	sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[encryption_action]);
-	action_ad->Insert(buf);
+	action_ad->Assign(ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[encryption_action]);
 
-	sprintf (buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
-	action_ad->Insert(buf);
+	action_ad->Assign(ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
 
 
 	char* cli_methods = NULL;
@@ -904,18 +899,16 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &srv_methods)) {
 
 		// send the list for 6.5.0 and higher
-		MyString the_methods = ReconcileMethodLists( cli_methods, srv_methods );
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods.Value());
-		action_ad->Insert(buf);
+		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		StringList  tmpmethodlist( the_methods.Value() );
+		StringList  tmpmethodlist( the_methods.c_str() );
 		char* first;
 		tmpmethodlist.rewind();
 		first = tmpmethodlist.next();
 		if (first) {
-			sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, first);
-			action_ad->Insert(buf);
+			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
 		}
 	}
 
@@ -931,9 +924,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &cli_methods) &&
 		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &srv_methods)) {
 
-		MyString the_methods = ReconcileMethodLists( cli_methods, srv_methods );
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, the_methods.Value());
-		action_ad->Insert(buf);
+		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS, the_methods);
 	}
 
 	if (cli_methods) {
@@ -963,9 +955,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		free(dur);
 	}
 
-	sprintf (buf, "%s=\"%i\"", ATTR_SEC_SESSION_DURATION,
-			(cli_duration < srv_duration) ? cli_duration : srv_duration );
-	action_ad->Insert(buf);
+	action_ad->Assign(ATTR_SEC_SESSION_DURATION, IntToStr((cli_duration < srv_duration) ? cli_duration : srv_duration));
 
 
 		// Session lease time (max unused time) is the shorter of the
@@ -990,8 +980,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	}
 
 
-	sprintf (buf, "%s=\"YES\"", ATTR_SEC_ENACT);
-	action_ad->Insert(buf);
+	action_ad->Assign(ATTR_SEC_ENACT, "YES");
 
 	UpdateAuthenticationMetadata(*action_ad);
 	std::string trust_domain;
@@ -2828,7 +2817,7 @@ SecMan::getAuthBitmask ( const char * methods ) {
 
 
 
-MyString
+std::string
 SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 	// algorithm:
@@ -2842,7 +2831,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	char *sm = NULL;
 	char *cm = NULL;
 
-	MyString results;
+	std::string results;
 	int match = 0;
 
 	// server methods, one at a time

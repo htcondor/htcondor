@@ -706,7 +706,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 
 
 int
-get_cred_handler(void *, int /*i*/, Stream *s)
+get_cred_handler(int, Stream *s)
 {
 	char *client_user = NULL;
 	char *client_domain = NULL;
@@ -836,7 +836,7 @@ struct StoreCredState {
 
 
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
-int store_cred_handler(void *, int /*i*/, Stream *s)
+int store_cred_handler(int, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
@@ -1118,7 +1118,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-int store_pool_cred_handler(class Service *, int, Stream *s)
+int store_pool_cred_handler(int, Stream *s)
 {
 	int result;
 	char *pw = NULL;

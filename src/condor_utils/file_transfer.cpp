@@ -909,14 +909,14 @@ FileTransfer::Init(
 	if ( !CommandsRegistered  ) {
 		CommandsRegistered = TRUE;
 		daemonCore->Register_Command(FILETRANS_UPLOAD,"FILETRANS_UPLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		daemonCore->Register_Command(FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		ReaperId = daemonCore->Register_Reaper("FileTransfer::Reaper",
-							(ReaperHandler)&FileTransfer::Reaper,
-							"FileTransfer::Reaper()",NULL);
+							&FileTransfer::Reaper,
+							"FileTransfer::Reaper()");
 		if (ReaperId == 1) {
 			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
@@ -930,8 +930,7 @@ FileTransfer::Init(
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
-		Ad->Insert(tempbuf);
+		Ad->Assign(ATTR_TRANSFER_KEY,TransKey);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
@@ -1486,7 +1485,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 }
 
 int
-FileTransfer::HandleCommands(Service *, int command, Stream *s)
+FileTransfer::HandleCommands(int command, Stream *s)
 {
 	FileTransfer *transobject;
 	char *transkey = NULL;
@@ -1594,7 +1593,7 @@ FileTransfer::SetServerShouldBlock( bool block )
 }
 
 int
-FileTransfer::Reaper(Service *, int pid, int exit_status)
+FileTransfer::Reaper(int pid, int exit_status)
 {
 	FileTransfer *transobject;
 	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {
@@ -2565,7 +2564,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								std::string signed_url;
 								CondorError err;
 								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
-									dprintf(D_ALWAYS, "DoDownload: Failure when signing URL: %s", err.getFullText().c_str());
+								    std::string errorMessage;
+								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
+								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_DownloadFileError );
+								    result_ad.Assign( ATTR_HOLD_REASON_SUBCODE, err.code() );
+								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
+								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
+
 									signed_urls.push_back("");
 								} else {
 									signed_urls.push_back(signed_url);
@@ -2591,7 +2596,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				s->encode();
 					// Send resulting list of signed URLs, encrypted if possible.
 				classad::References encrypted_attrs{"SignList"};
-				if (!putClassAd(s, result_ad, 0, &encrypted_attrs) || !s->end_of_message()) {
+				if (!putClassAd(s, result_ad, 0, NULL, &encrypted_attrs) || !s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3775,7 +3780,23 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
 				fileitem.setSrcName(signed_url);
 			} else {
-				dprintf(D_ALWAYS, "DoUpload: Failed to sign URL - %s\n", err.getFullText().c_str());
+				std::string errorMessage;
+				formatstr( errorMessage, "DoUpload: Failure when signing URL '%s': %s", src_url.c_str(), err.message() );
+				dprintf( D_ALWAYS, "%s\n",errorMessage.c_str() );
+
+				// While (* total_bytes) and numFiles should both be 0
+				// at this point, we should probably be explicit.
+				filesize_t logTCPStats = 0;
+				return ExitDoUpload( & logTCPStats,
+					/* num files */ 0,
+					s, saved_priv, socket_default_crypto,
+					/* upload success */ false,
+					/* do upload ACK (required to put job on hold) */ true,
+					/* do download ACK */ false,
+					/* try again */ false,
+					CONDOR_HOLD_CODE_UploadFileError,
+					/* hold subcode */ 3,
+					errorMessage.c_str(), __LINE__ );
 			}
 		}
 	}
@@ -3914,6 +3935,28 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv(-1);
 		}
 		s->encode();
+
+		std::string holdReason;
+		if( signed_ad.LookupString( ATTR_HOLD_REASON, holdReason ) ) {
+			int holdCode = CONDOR_HOLD_CODE_DownloadFileError;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_CODE, holdCode );
+
+			int holdSubCode = -1;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_SUBCODE, holdSubCode );
+
+			// While (* total_bytes) and numFiles should both be 0
+			// at this point, we should probably be explicit.
+			filesize_t logTCPStats = 0;
+			return ExitDoUpload( & logTCPStats,
+				/* num files */ 0,
+				s, saved_priv, socket_default_crypto,
+				/* upload success */ false,
+				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
+				/* do download ACK */ false,
+				/* try again */ false,
+				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
+		}
+
 		classad::Value value;
 		classad_shared_ptr<classad::ExprList> exprlist;
 		if (signed_ad.EvaluateAttr("SignList", value) && value.IsSListValue(exprlist))
@@ -4288,7 +4331,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 			if(file_subcommand == TransferSubCommand::UploadUrl) {
 				// make the URL out of Attr OutputDestination and filename
-				MyString source_filename;
+				std::string source_filename;
 				source_filename = Iwd;
 				source_filename += DIR_DELIM_CHAR;
 				source_filename += filename;
@@ -4328,10 +4371,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				} else {
 					// actually invoke the plugin.  this could block indefinitely.
 					ClassAd pluginStatsAd;
-					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), local_output_url.c_str());
+					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.c_str(), local_output_url.c_str());
 					dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-					rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.Value());
-					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), local_output_url.c_str(), rc);
+					rc = InvokeFileTransferPlugin(errstack, source_filename.c_str(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.Value());
+					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.c_str(), local_output_url.c_str(), rc);
 
 					// report the results:
 					file_info.Assign("Filename", source_filename);
@@ -4349,7 +4392,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					// don't end the message, it's done below.
 					// Always encrypt the URL as it might contain an authorization.
 					const classad::References encrypted_attrs{"OutputDestination"};
-					if(!putClassAd(s, file_info, 0, &encrypted_attrs)) {
+					if(!putClassAd(s, file_info, 0, NULL, &encrypted_attrs)) {
 						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}

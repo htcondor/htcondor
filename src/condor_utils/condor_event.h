@@ -50,10 +50,7 @@ namespace ToE {
 namespace classad {
 	class ClassAd;
 }
-namespace compat_classad {
-	class ClassAd;
-}
-using namespace compat_classad;
+using classad::ClassAd;
 
 
 class MyString; // potential forward reference.
