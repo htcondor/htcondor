@@ -201,6 +201,8 @@
 
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
+#define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
 //
 // Job Deferral Parameters
 //
