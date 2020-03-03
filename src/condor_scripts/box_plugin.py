@@ -552,6 +552,11 @@ if __name__ == '__main__':
     # 2. Couldn't open outfile for writing.
 
     try:
+        del os.environ['HTTPS_PROXY']
+    except Exception:
+        continue
+
+    try:
         args = parse_args()
     except Exception:
         sys.exit(-1)
