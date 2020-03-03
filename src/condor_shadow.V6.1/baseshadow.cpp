@@ -1182,6 +1182,16 @@ BaseShadow::logRequeueEvent( const char* reason )
 	}
 }
 
+void
+BaseShadow::logDataflowJobSkippedEvent()
+{
+	DataflowJobSkippedEvent event;
+	if (!uLog.writeEvent (&event, jobAd)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_DATAFLOW_JOB_SKIPPED "
+				 "(and requeued) event\n" );
+	}
+}
+
 
 void
 BaseShadow::checkSwap( void )

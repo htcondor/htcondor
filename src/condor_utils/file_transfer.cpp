@@ -756,6 +756,8 @@ bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	bool is_dataflow = false;
+	int newest_input_timestamp = -1;
+	int oldest_output_timestamp = -1;
 	std::set<int> input_timestamps;
 	std::set<int> output_timestamps;
 	std::string executable_file;
@@ -784,7 +786,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	}
 
 	// Parse the list of output files
-	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
 	std::stringstream os( output_files );
 	while ( getline( os, token, ',' ) ) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
@@ -799,31 +800,35 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 	}
 
-	// If the oldest output file is more recent than the newest input files,
-	// then this is a dataflow job.
-	if ( !input_timestamps.empty() && !output_timestamps.empty() ) {
-		auto newest_input_timestamp = input_timestamps.rbegin();
-		auto oldest_output_timestamp = output_timestamps.begin();
-		is_dataflow = *oldest_output_timestamp > *newest_input_timestamp;
-	}
-
-	// Check if the executable is more recent than the newest input file
-	job_ad->LookupString( ATTR_JOB_CMD, executable_file );
-	if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
-		int executable_file_timestamp = file_stat.st_mtime;
-		auto newest_input_timestamp = input_timestamps.rbegin();
-		if ( executable_file_timestamp > *newest_input_timestamp ) {
-			is_dataflow = true;
+	if ( !input_timestamps.empty() ) {
+		// If the oldest output file is more recent than the newest input file,
+		// then this is a dataflow job.
+		if ( !output_timestamps.empty() ) {
+			newest_input_timestamp = *input_timestamps.rbegin();
+			oldest_output_timestamp = *output_timestamps.begin();
+			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
 		}
-	}
 
-	// Check if the standard input file is more recent than newest input
-	job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
-	if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
-		int stdin_file_timestamp = file_stat.st_mtime;
-		auto newest_input_timestamp = input_timestamps.rbegin();
-		if ( stdin_file_timestamp > *newest_input_timestamp ) {
-			is_dataflow = true;
+		// If the executable is more recent than the newest input file, 
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
+		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
+			int executable_file_timestamp = file_stat.st_mtime;
+			if ( executable_file_timestamp > newest_input_timestamp ) {
+				is_dataflow = true;
+			}
+		}
+
+		// If the standard input file is more recent than newest input,
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
+		if ( !stdin_file.empty() ) {
+			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
+				int stdin_file_timestamp = file_stat.st_mtime;
+				if ( stdin_file_timestamp > newest_input_timestamp ) {
+					is_dataflow = true;
+				}
+			}
 		}
 	}
 

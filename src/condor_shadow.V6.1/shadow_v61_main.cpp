@@ -294,6 +294,7 @@ void startShadow( ClassAd *ad )
 			// Set a few attributes in the plumbing that will convince the shadow
 			// to shut down this job as if it ran and exited successfully.
 			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
+			Shadow->logDataflowJobSkippedEvent();
 			ad->Assign( ATTR_ON_EXIT_CODE, 0 );
 			Shadow->isDataflowJob = true;
 			Shadow->shutDown( JOB_EXITED );
