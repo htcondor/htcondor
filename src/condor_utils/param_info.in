@@ -2331,7 +2331,7 @@ type=string
 tags=sshd_wrapper
 
 [CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
-default=false
+default=true
 type=bool
 tags=condor_ssh_to_job
 

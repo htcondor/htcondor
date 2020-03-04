@@ -1599,7 +1599,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// Use LD_PRELOAD to force an implementation of getpwnam
 		// into the process that returns a valid shell
 #ifdef LINUX
-	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", false)) {
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
 		std::string lib;
 		param(lib, "LIB");
 		std::string getpwnampath = lib + "/libgetpwnam.so";
