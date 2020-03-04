@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <rapidjson/document.h>
+#include "file_transfer.h"
 
 #define MAX_RETRY_ATTEMPTS 20
 
@@ -974,14 +975,14 @@ main( int argc, char **argv ) {
         fprintf( stderr, "[general-opts] are:\n" );
         fprintf( stderr, "\t-diagnostic\t\tRun the plugin in diagnostic (verbose) mode\n\n" );
         fprintf( stderr, "\t-upload\t\tRun the plugin in upload mode, copying files to a remote location\n\n" );
-        return 1;
+        return -1;
     }
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );
     if( curl_plugin.InitializeCurl() != 0 ) {
         fprintf( stderr, "ERROR: curl_plugin failed to initialize. Aborting.\n" );
-        return 1;
+        return -1;
     }
 
     // Do the transfer(s)
@@ -994,7 +995,7 @@ main( int argc, char **argv ) {
         output_file = safe_fopen_wrapper( output_filename.c_str(), "w" );
         if( output_file == NULL ) {
             fprintf( stderr, "Unable to open curl_plugin output file: %s\n", output_filename.c_str() );
-            return 1;
+            return -1;
         }
         fprintf( output_file, "%s", curl_plugin.GetStats().c_str() );
         fclose( output_file );
@@ -1003,7 +1004,7 @@ main( int argc, char **argv ) {
         printf( "%s\n", curl_plugin.GetStats().c_str() );
     }
 
-    // 0 on success, error code >= 1 on failure
+    // -1 on failure, 0 on success, >0 on other
     return rval;
 }
 
