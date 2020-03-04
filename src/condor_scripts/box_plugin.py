@@ -16,6 +16,7 @@ from base64 import b64encode
 
 import requests
 import classad
+import htcondor
 
 TOKEN_DIR_ENV_NAME = '_CONDOR_CREDS'
 TOKEN_FILE_EXT = '.use'
@@ -157,6 +158,17 @@ class BoxPlugin:
     def reload_token(self):
         self.token = self.get_token(self.token_path)
         self.headers['Authorization'] = 'Bearer {0}'.format(self.token)
+
+    def wait_for_new_token(self):
+        atime = time.time()
+        timeout = time.time() + int(htcondor.param.get('SEC_CREDENTIAL_REFRESH', 10*60)) + 30
+        while time.time() < timeout:
+            if os.stat(self.token_path).st_mtime > atime:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError('Timed out waiting for token refresh after 401 Unauthorized error.')
+        self.reload_token()
 
     def parse_url(self, url):
 
@@ -554,7 +566,7 @@ if __name__ == '__main__':
     try:
         del os.environ['HTTPS_PROXY']
     except Exception:
-        continue
+        pass
 
     try:
         args = parse_args()
@@ -590,9 +602,23 @@ if __name__ == '__main__':
                         running_plugins[token_path] = box
 
                     if not args['upload']:
-                        outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                        try:
+                            outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                        except requests.exceptions.HTTPError as err:
+                            if err.response.status_code == 401:
+                                box.wait_for_new_token()
+                                outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                            else:
+                                raise err
                     else:
-                        outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                        try:
+                            outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                        except requests.exceptions.HTTPError as err:
+                            if err.response.status_code == 401:
+                                box.wait_for_new_token()
+                                outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                            else:
+                                raise err
 
                     outfile.write(str(classad.ClassAd(outfile_dict)))
 
