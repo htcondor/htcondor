@@ -602,7 +602,13 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(outfile_dict)))
                     except Exception:
                         pass
-                    sys.exit(-1)
+
+                    # Ask condor_starter to retry on 401
+                    if (isinstance(err, requests.exceptions.HTTPError)
+                        and err.response.status_code == 401):
+                        sys.exit(1)
+                    else:
+                        sys.exit(-1)
 
     except Exception:
         sys.exit(-1)
