@@ -286,6 +286,9 @@ public:
 	void setCredPath( const char* path );
 	const char* getCredPath( void ) { return job_CredPath; };
 
+	void setKrb5CCName( const char* path );
+	const char* getKrb5CCName( void ) { return job_Krb5CCName; };
+
 		/**
 		   Send a periodic update ClassAd to our controller.  The
 		   "insure_update" just controls if we make sure the update
@@ -485,6 +488,7 @@ protected:
 	std::string m_job_update_ad_file;
 
 	char* job_CredPath;
+	char* job_Krb5CCName;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

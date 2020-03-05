@@ -1431,6 +1431,10 @@ Scheduler::count_jobs()
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
 	}
 
+	// we may need to create a mark file if we have expired users
+	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	auto_free_ptr cred_dir_oauth(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+
 	// Look for owners with zero jobs and purge them
 	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
 		OwnerInfo & owner_info = it->second;
@@ -1438,18 +1442,21 @@ Scheduler::count_jobs()
 		// we don't want to remove the entry.
 		if (owner_info.num.Hits > 0) continue;
 
-#ifndef WIN32
-		// mark user creds for sweeping.
-		dprintf( D_FULLDEBUG, "ZKM: creating mark file for user %s\n", owner_info.Name());
-		credmon_mark_creds_for_sweeping(owner_info.Name());
-#endif // WIN32
-
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		if ( ! owner_info.LastHitTime) {
 			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
 			// we do. start the decay timer now.
 			owner_info.LastHitTime = current_time;
 		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
+			// mark user creds for sweeping.
+			if (cred_dir_krb) {
+				dprintf(D_FULLDEBUG, "creating credmon KRB mark file for user %s\n", owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name());
+			}
+			if (cred_dir_oauth) {
+				dprintf(D_FULLDEBUG, "creating credmon OAUTH mark file for user %s\n", owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name());
+			}
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
 			owner_info.name.clear();

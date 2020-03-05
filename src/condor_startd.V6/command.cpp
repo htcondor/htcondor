@@ -460,8 +460,6 @@ command_release_claim(int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
-	dprintf(D_FULLDEBUG, "CREDS: Releasing claim.\n");
-
 	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
@@ -498,8 +496,6 @@ command_release_claim(int cmd, Stream* stream )
 	if (rip->r_cur && rip->r_cur->client()) {
 		curuser = rip->r_cur->client()->user();
 	}
-
-	dprintf(D_FULLDEBUG, "CREDS: Claim was owned by %s\n", curuser.c_str());
 
 	//There are two cases: claim id is the current or the preempting claim
 	if( rip->r_pre && rip->r_pre->idMatches(id) ) {
@@ -543,33 +539,21 @@ command_release_claim(int cmd, Stream* stream )
 
 countres:
 
-	dprintf(D_FULLDEBUG, "CREDS: Counting resources in use by %s\n", curuser.c_str());
+	if (curuser.empty())
+		return TRUE;
 
-	ClassAdList cal;
-	resmgr->makeAdList(&cal);
-        ClassAd *ad;
-	int ResCount = 0;
-	cal.Open();
-	while( (ad=cal.Next()) ) {
-		std::string remoteuser;
-		std::string name;
-                ad->LookupString("RemoteUser",remoteuser);
-                ad->LookupString("Name",name);
-		dprintf(D_FULLDEBUG, "CREDS: Examining %s owned by %s\n", name.c_str(), remoteuser.c_str());
-		if(strcmp(curuser.c_str(), remoteuser.c_str()) == 0) {
-			ResCount++;
-		}
-	}
-#ifndef WIN32
-	if(!param_boolean("CREDD_OAUTH_MODE", false)) {
+	// Does this user currently own other resources on this machine?
+	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	if (cred_dir_krb) {
+
+		int ResCount = resmgr->claims_for_this_user(curuser.c_str());
 		if (ResCount == 0) {
-			dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
-			credmon_mark_creds_for_sweeping(curuser.c_str());
+			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
+			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str());
 		} else {
-			dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+			dprintf(D_FULLDEBUG, "user %s still has %d claims\n", curuser.c_str(), ResCount);
 		}
 	}
-#endif //WIN32
 
 	return TRUE;
 }

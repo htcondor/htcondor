@@ -3217,18 +3217,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("CREDD_OAUTH_MODE", false)) {
-		const char* sandbox_cred_dir = jic->getCredPath();
-		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
-	} else {
-		// kerberos credential cache (in sandbox)
-		const char* krb5ccname = jic->getCredPath();
-		if( krb5ccname && (krb5ccname[0] != '\0') ) {
-			// using env_name as env_value
-			env_name = "FILE:";
-			env_name += krb5ccname;
-			proc_env->SetEnv( "KRB5CCNAME", env_name );
-		}
+	// put OAuth creds directory into the environment
+	if (jic->getCredPath()) {
+		proc_env->SetEnv("_CONDOR_CREDS", jic->getCredPath());
+	}
+
+	// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKrb5CCName();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
 	}
 
 		// path to the output ad, if any

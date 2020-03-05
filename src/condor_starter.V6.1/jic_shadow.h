@@ -443,10 +443,10 @@ private:
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
 
-	bool refreshSandboxCredentials();
-	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
-	bool refreshSandboxCredentialsMultiple();
-	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
+	bool refreshSandboxCredentialsKRB();
+	void refreshSandboxCredentialsKRB_from_timer() { (void)refreshSandboxCredentialsKRB(); }
+	bool refreshSandboxCredentialsOAuth();
+	void refreshSandboxCredentialsOAuth_from_timer() { (void)refreshSandboxCredentialsOAuth(); }
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 

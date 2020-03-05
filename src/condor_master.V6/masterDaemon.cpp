@@ -1510,6 +1510,17 @@ daemon::Kill( int sig )
 		return;
 	}
 	int status;
+#ifdef WIN32
+	// On windows we don't have any way to send a sigterm to a daemon that doesn't have a command port
+	// but we can safely generate a Ctrl+Break because we know that the process was started with CREATE_NEW_PROCESS_GROUP
+	// We do this here rather than in windows_softkill because generating the ctrl-break works best
+	// if sent by a parent process rather than by a sibling process.  This does nothing if the daemon
+	// doesn't have a console, so after we do this go ahead and fall down to the code that does a windows_softkill
+	if ( ! isDC && (sig == SIGTERM)) {
+		BOOL rbrk = GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pid);
+		dprintf(D_ALWAYS, "Sent Ctrl+Break to non-daemoncore daemon %d, ret=%d\n", pid, rbrk);
+	}
+#endif
 	status = daemonCore->Send_Signal(pid,sig);
 	if ( status == FALSE )
 		status = -1;

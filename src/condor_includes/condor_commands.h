@@ -512,7 +512,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define CREDD_REMOVE_CRED (CREDD_BASE+2)
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
 #define CREDD_REFRESH_ALL (CREDD_BASE+20)
-#define ZKM_QUERY_CREDS (CREDD_BASE+30)
+#define CREDD_CHECK_CREDS (CREDD_BASE+30)	// check to see if the desired oauth tokens are stored
 #define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 #define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
 

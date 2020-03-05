@@ -30,6 +30,7 @@
 #include "credmon_interface.h"
 #include "ipv6_hostname.h"
 #include "secure_file.h"
+#include "directory_util.h"
 
 //-------------------------------------------------------------
 
@@ -48,8 +49,8 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 
 		// Command handler for daemons to get the password
 	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD", 
-								&get_cred_handler,
-								"get_cred_handler",DAEMON,
+								&cred_get_password_handler,
+								"cred_get_password_handler", DAEMON,
 								D_FULLDEBUG, true /*force authentication*/ );
 
 		// NOP command for testing authentication
@@ -59,15 +60,19 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 								D_FULLDEBUG );
 
 		// NOP command for testing authentication
+#if 1
+	// TODO: PRAGMA_REMIND("tj: do we need this? no-one calls it right now")
+#else
 	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
 								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
 								"refresh_all_handler", this, DAEMON,
 								D_FULLDEBUG );
+#endif
 
 		// See if creds are present for all modules requested
-	daemonCore->Register_Command( ZKM_QUERY_CREDS, "ZKM_QUERY_CREDS",
-								(CommandHandlercpp)&CredDaemon::zkm_query_creds,
-								"zkm_query_creds", this, WRITE,
+	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
+								(CommandHandlercpp)&CredDaemon::check_creds_handler,
+								"check_creds_handler", this, WRITE,
 								D_FULLDEBUG );
 
 		// set timer to periodically advertise ourself to the collector
@@ -75,11 +80,11 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 		(TimerHandlercpp)&CredDaemon::update_collector, "update_collector", this);
 
 	// only sweep if we have a cred dir
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
-	if(p) {
+	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	auto_free_ptr cred_dir_oauth(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	if (cred_dir_krb || cred_dir_oauth) {
 		// didn't need the value, just to see if it's defined.
-		free(p);
-		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler\n");
+		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler for KRB\n");
 		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
@@ -136,9 +141,11 @@ void
 CredDaemon::sweep_timer_handler( void )
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
-#ifndef WIN32
-	credmon_sweep_creds();
-#endif  // WIN32
+
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	credmon_sweep_creds(cred_dir, credmon_type_KRB);
+	cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	credmon_sweep_creds(cred_dir, credmon_type_OAUTH);
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
@@ -190,14 +197,15 @@ CredDaemon::nop_handler(int, Stream*)
 }
 
 
+// check to see if the desired OAUTH tokens are stored already, if not generate and return a URL
 int
-CredDaemon::zkm_query_creds( int, Stream* s)
+CredDaemon::check_creds_handler( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
 	int numads = 0;
 	if (!r->code(numads)) {
-		dprintf(D_ALWAYS, "zkm_query_creds: cannot read numads off wire\n");
+		dprintf(D_ALWAYS, "check_creds: cannot read numads off wire\n");
 		r->end_of_message();
 		return CLOSE_STREAM;
 	}
@@ -206,38 +214,65 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	requests.resize(numads);
 	for(int i=0; i<numads; i++) {
 		if (!getClassAd(r, requests[i])) {
-			dprintf(D_ALWAYS, "zkm_query_creds: cannot read classad off wire\n");
+			dprintf(D_ALWAYS, "check_creds: cannot read classad off wire\n");
 			r->end_of_message();
 			return CLOSE_STREAM;
 		}
 	}
 	r->end_of_message();
 
-	dprintf(D_ALWAYS, "Got query_creds for %d OAUTH services.\n", numads);
+	dprintf(D_ALWAYS, "Got check_creds for %d OAUTH services.\n", numads);
 
 	MyString URL;
+
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	if ( ! cred_dir) {
+		r->encode();
+		URL = "ERROR - SEC_CREDENTIAL_DIRECTORY_OAUTH not configured in condor_credd";
+		r->code(URL);
+		r->end_of_message();
+		return CLOSE_STREAM;
+	}
 
 	ClassAdListDoesNotDeleteAds missing;
 	for(int i=0; i<numads; i++) {
 		std::string service;
 		std::string handle;
-		std::string user;
+		std::string username;
 		requests[i].LookupString("Service", service);
 		requests[i].LookupString("Handle", handle);
-		requests[i].LookupString("Username", user);
+		requests[i].LookupString("Username", username);
 
-		MyString tmpfname;
-		tmpfname = service;
-		tmpfname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
-		if(handle.length()) {
-			tmpfname += "_";
-			tmpfname += handle;
+		// strip off the domain from the username (if any)
+		MyString user(username);
+		int ix = user.FindChar('@');
+		if (ix >= 0) { user.truncate(ix); }
+
+		// reformat the service and handle into a filename
+		MyString service_fname(service);
+		service_fname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
+		if ( ! handle.empty()) {
+			service_fname += "_";
+			service_fname += handle;
 		}
-		tmpfname += ".top";
+		service_fname += ".top";
 
-		dprintf(D_FULLDEBUG, "query_creds: checking for %s\n", tmpfname.Value());
-		if (!credmon_poll_continue(user.c_str(), 0, tmpfname.Value())) {
-			dprintf(D_ALWAYS, "query_creds: did not find %s\n", tmpfname.Value());
+		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s\n", user.c_str(), service_fname.c_str());
+
+		// concatinate the oauth_cred_dir / user / service_filename
+		MyString tmpfname;
+		dirscat(cred_dir, user.c_str(), tmpfname);
+		tmpfname += service_fname;
+
+		// stat the file as root
+		struct stat stat_buf;
+		priv_state priv = set_root_priv();
+		int rc = stat(tmpfname.c_str(), &stat_buf);
+		set_priv(priv);
+
+		// if the file is not found, add this request to the collection of missing requests
+		if (rc==-1) {
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.Value());
 			missing.Insert(&requests[i]);
 		}
 	}
@@ -310,7 +345,12 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			} else {
 				//TODO: make a better error return channel for this command
 				URL.formatstr("Failed to securely read client secret for service %s", service.c_str());
-				dprintf(D_ALWAYS, "query_creds: ERROR: could not securely read file '%s' for service %s\n", secret_filename.c_str(), service.c_str());
+				if (secret_filename.empty()) {
+					URL.formatstr_cat("; Tell your admin that %s is not configured", tmpname.c_str());
+					dprintf(D_ALWAYS, "check_creds: ERROR: %s not configured for service %s\n", tmpname.c_str(), service.c_str());
+				} else {
+					dprintf(D_ALWAYS, "check_creds: ERROR: could not securely read file '%s' for service %s\n", secret_filename.c_str(), service.c_str());
+				}
 				goto bail;
 			}
 			ad.Assign("ClientSecret", tmpvalue);
@@ -353,38 +393,31 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			}
 		}
 
-		// write the file into sec_credential_dir
-		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
-		if(!cred_dir) {
-			EXCEPT("NO SEC_CREDENTIAL_DIRECTORY");
-		}
+		MyString path;
+		dircat(cred_dir, key, path);
 
-		MyString path = cred_dir.ptr();
-		path += DIR_DELIM_CHAR;
-		path += key.ptr();
-
-		dprintf(D_ALWAYS, "query_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
+		dprintf(D_ALWAYS, "check_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
 		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), as_root, group_readable);
 
 		if (rc != SUCCESS) {
-			dprintf(D_ALWAYS, "query_creds: failed to write secure temp file %s\n", path.Value());
+			dprintf(D_ALWAYS, "check_creds: failed to write secure temp file %s\n", path.Value());
 		} else {
 			// on success we return a URL
 			URL = web_prefix;
 			URL += "/key/";
 			URL += key.ptr();
-			dprintf(D_ALWAYS, "query_creds: returning URL %s\n", URL.Value());
+			dprintf(D_ALWAYS, "check_creds: returning URL %s\n", URL.Value());
 		}
 	} else {
-		dprintf(D_ALWAYS, "query_creds: found all requested OAUTH services. returning empty URL %s\n", URL.Value());
+		dprintf(D_ALWAYS, "check_creds: found all requested OAUTH services. returning empty URL %s\n", URL.Value());
 	}
 
 bail:
 	r->encode();
 	if (!r->code(URL)) {
-		dprintf(D_ALWAYS, "query_creds: error sending URL to client\n");
+		dprintf(D_ALWAYS, "check_creds: error sending URL to client\n");
 	}
 	r->end_of_message();
 
@@ -405,8 +438,10 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	// don't actually care (at the moment) what's in the ad, it's for
 	// forward/backward compatibility.
 
-#ifndef WIN32
-	// refresh ALL credentials
+	// TODO: PRAGMA_REMIND("tj: not currently used, can we ditch this?")
+#if 0 //ndef WIN32
+	// TODO: if we need this, then we need to signal ALL of the credmon's and wait for ALL of them
+	// to refresh, currently the code only refreshes one of them.
 	if(credmon_poll( NULL, true, true )) {
 		ad.Assign("result", "success");
 	} else {
@@ -414,7 +449,7 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	}
 #else   // WIN32
 	// this command handler shouldn't be getting called on windows, so fail.
-	ad.Assign("result", "failure");
+	ad.Assign("result", "not-implemented");
 #endif  // WIN32
 
 	r->encode();
