@@ -4189,12 +4189,6 @@ type=bool
 tags=shadow
 restart=true
 
-[SHADOW_SKIP_DATAFLOW_JOBS]
-default=false
-type=bool
-tags=shadow,dataflow
-description=Skip dataflow jobs (output files exist, more recent than input files)?
-
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
 tags=schedd

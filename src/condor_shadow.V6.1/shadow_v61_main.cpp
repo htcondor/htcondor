@@ -288,18 +288,22 @@ void startShadow( ClassAd *ad )
 
 	// Check if we want to skip dataflow jobs (where output files exist and are
 	// newer than input files). If so, skip the job before it ever starts.
-	bool skip_dataflow_jobs = param_boolean( "SHADOW_SKIP_DATAFLOW_JOBS", false );
-	if ( skip_dataflow_jobs ) {
+	bool skip_if_dataflow = false;
+	ad->LookupBool( ATTR_SKIP_IF_DATAFLOW, skip_if_dataflow );
+	if ( skip_if_dataflow ) {
 		if ( FileTransfer::IsDataflowJob( ad ) ) {
 			// Set a few attributes in the plumbing that will convince the shadow
 			// to shut down this job as if it ran and exited successfully.
-			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
-			Shadow->logDataflowJobSkippedEvent();
 			ad->Assign( ATTR_ON_EXIT_CODE, 0 );
+			Shadow->updateJobAttr(ATTR_DATAFLOW_JOB_SKIPPED, "true");
 			Shadow->isDataflowJob = true;
+			Shadow->logDataflowJobSkippedEvent(); // Must get called before Shadow->shutDown
+			dprintf(D_ALWAYS, "Job %d.%d is a dataflow job, skipping\n", cluster, proc);
 			Shadow->shutDown( JOB_EXITED );
 		}
-		dprintf(D_ALWAYS, "Job %d.%d is not a dataflow job, running it as usual\n", cluster, proc);
+		else {
+			Shadow->updateJobAttr(ATTR_DATAFLOW_JOB_SKIPPED, "false");
+		}
 	}
 
 	if ( is_reconnect ) {
