@@ -62,6 +62,7 @@
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
 #include "job_transforms.h"
+#include "history_queue.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -482,35 +483,6 @@ private:
 	bool csa_is_dedicated;
 };
 
-class HistoryHelperState
-{
-public:
-	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match)
-	{}
-
-	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
-	{}
-
-	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
-
-	Stream * GetStream() const { return m_stream_ptr ? m_stream_ptr : m_stream.get(); }
-
-	const std::string & Requirements() const { return m_reqs; }
-	const std::string & Since() const { return m_since; }
-	const std::string & Projection() const { return m_proj; }
-	const std::string & MatchCount() const { return m_match; }
-	bool m_streamresults;
-
-private:
-	Stream *m_stream_ptr;
-	std::string m_reqs;
-	std::string m_since;
-	std::string m_proj;
-	std::string m_match;
-	classad_shared_ptr<Stream> m_stream;
-};
 
 #define USE_VANILLA_START 1
 
@@ -1000,9 +972,6 @@ private:
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
-	int			command_history(int, Stream* stream);
-	int			history_helper_launcher(const HistoryHelperState &state);
-	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
@@ -1159,10 +1128,8 @@ private:
     void userlog_file_cache_erase(const int& cluster, const int& proc);
 
 	// State for the history helper queue.
-	std::vector<HistoryHelperState> m_history_helper_queue;
-	unsigned m_history_helper_max;
-	unsigned m_history_helper_count;
-	int m_history_helper_rid;
+	// object to manage history queries in flight
+	HistoryHelperQueue HistoryQue;
 
 	bool m_matchPasswordEnabled;
 
