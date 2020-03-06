@@ -81,7 +81,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define REJECTED			(SCHED_VERS+26)
 #define X_EVENT_NOTIFICATION		(SCHED_VERS+27)
 //#define RECONFIG			(SCHED_VERS+28)			/* Not used */
-//#define GET_HISTORY			(SCHED_VERS+29)		/* Not used */
+#define GET_HISTORY			(SCHED_VERS+29)		/* repurposed in 8.9.6 to be query startd history */
 //#define UNLINK_HISTORY_FILE			(SCHED_VERS+30)	/* Not used */
 //#define UNLINK_HISTORY_FILE_DONE	(SCHED_VERS+31)		/* Not used */
 //#define DO_NOT_UNLINK_HISTORY_FILE	(SCHED_VERS+32)	/* Not used */
