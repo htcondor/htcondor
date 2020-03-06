@@ -7336,11 +7336,6 @@ Scheduler::negotiate(int command, Stream* s)
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
 		skip_negotiation = true;
-	} else if (Owner->FlockLevel < which_negotiator) {
-		dprintf(D_FULLDEBUG,
-				"This user is no longer flocking with this negotiator.\n");
-		jobs = 0;
-		skip_negotiation = true;
 	}
 
 	ResourceRequestList *resource_requests = new ResourceRequestList;
