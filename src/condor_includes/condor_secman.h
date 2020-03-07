@@ -147,6 +147,7 @@ public:
 	static int authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack);
 
 	bool getSessionPolicy(const char *sess_id, classad::ClassAd &policy);
+	bool getSessionExpiration(const char *sess_id, time_t &) const;
 
 	bool getSessionStringAttribute(const char *sess_id, const char *attr_name, std::string &attr_value);
 
@@ -281,6 +282,10 @@ public:
 		// This can be used, for example, to expire a non-negotiated session
 		// that was originally created with no expiration time.
 	bool SetSessionExpiration(char const *session_id,time_t expiration_time);
+
+		// Retrieve the expiration for a given session ID; returns false
+		// if no session was found.
+	bool GetSessionExpiration(const char *session_id, time_t &expiry_time);
 
 		// This is used to mark a session as being in a state where it is
 		// just hanging around for a short period in case some pending

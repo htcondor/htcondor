@@ -38,6 +38,7 @@
 #include "subsystem_info.h"
 #include "condor_netaddr.h"
 #include "condor_sinful.h"
+#include "condor_claimid_parser.h"
 
 #include "ipv6_hostname.h"
 
@@ -2669,6 +2670,172 @@ Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, Condor
 		return false;
 	}
 
+	return true;
+}
+
+
+bool
+Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
+	std::unordered_map<int, std::string> &result, CondorError &err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getCapabilityTokens() making connection to "
+		"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if ((duration > 0) && !ad.InsertAttr("Duration", duration)) {
+		err.pushf("DAEMON", 1, "Failed to record duration into request ad");
+		dprintf(D_FULLDEBUG, "Failed to record duration into request ad\n");
+		return false;
+	}
+	std::stringstream ss;
+	bool has_entry = false;
+	for (auto cap : req_caps) {
+		if (has_entry) {ss << ",";}
+		ss << cap;
+		has_entry = true;
+	}
+	if (!has_entry) {
+		return true;
+	}
+	if (!ad.InsertAttr("RequestedCommands", ss.str())) {
+		err.pushf("DAEMON", 1, "Failed to record requested commands in ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to record requested commands in ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout(5);
+	if (!connectSock(&rSock)) {
+		err.pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand(DC_GENERATE_CAPABILITIES, &rSock, 20, &err)) {
+		err.pushf("DAEMON", 1, "Failed to start command for generating "
+			"capabilities from remote daemon at '%s'.\n", _addr ? _addr :
+			"(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to start "
+			"command for generating capabilities from remote daemon at "
+			"'%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		err.pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() Failed to send ClassAd"
+			" to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to send end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		err.pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to recieve "
+			"response from remote daemon at '%s'\n", _addr ? _addr :
+			"(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to read end of message from remote daemon "
+			"at '%s'", _addr ? _addr : "(unknown)");
+		dprintf( D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr);
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		err.push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	classad::Value token_val;
+	if (!result_ad.EvaluateAttr("Capabilities", token_val)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received a "
+			"malformed ad, containing no resulting token and no error "
+			"message from remote daemon at '%s'\n", _addr ? _addr :
+			"(unknown)");
+		err.pushf("DAEMON", 1, "BUG!  Daemon::getCapabilityTokens() received a "
+			"malformed ad containing no resulting token and no error message "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> token_list;
+	if (!token_val.IsSListValue(token_list)) {
+		err.pushf("DAEMON", 1, "BUG!  Received an incorrect type of token response"
+			" from remote daemon at '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received an "
+			"incorrect type of token response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)");
+		return false;
+	}
+	for (const auto &expr : *token_list) {
+		std::string cap_str;
+		classad::Value value;
+		if (!result_ad.EvaluateExpr(expr, value) || !value.IsStringValue(cap_str))
+		{
+			err.pushf("DAEMON", 1, "BUG!  Received an incorrect type in token"
+				" list from remote daemon at '%s'", _addr ? _addr :
+				"(unknown)");
+			dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received "
+				"an incorrect type in token list from remote daemon at "
+				"'%s'\n", _addr ? _addr : "(unknown)");
+			return false;
+		}
+		ClaimIdParser claim_parser(cap_str.c_str());
+		auto info = claim_parser.secSessionInfo();
+		classad::ClassAdParser ad_parser;
+		std::unique_ptr<classad::ClassAd> session_ad(
+			ad_parser.ParseClassAd(info)
+		);
+
+		if (!session_ad) {
+			err.pushf("DAEMON", 1, "Unable to parse capability session info");
+			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
+				"parse capability session info.\n");
+			return false;
+		}
+		std::string valid_commands;
+		if (!session_ad->EvaluateAttrString("ValidCommands", valid_commands)) {
+			err.pushf("DAEMON", 1, "Unable to determine valid commands "
+				"string");
+			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
+				"determine valid commands string.\n");
+			return false;
+		}
+		int command_int;
+		try {
+			command_int = std::stoi(valid_commands);
+		} catch (...) {
+			err.pushf("DAEMON", 1, "Unable to parse valid command int");
+			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
+				"parse valid command int.\n");
+			return false;
+		}
+		result.insert({command_int, cap_str});
+	}
 	return true;
 }
 

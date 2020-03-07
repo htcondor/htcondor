@@ -23,6 +23,16 @@
 class ConfigOverrides;
 class Token;
 
+class CapabilityToken {
+public:
+    CapabilityToken(const std::string &value) : m_value(value) {}
+
+    const std::string &get() const {return m_value;}
+
+private:
+    const std::string m_value;
+};
+
 struct SecManWrapper
 {
 public:
@@ -32,6 +42,10 @@ public:
     boost::shared_ptr<ClassAdWrapper> ping(boost::python::object locate_obj, boost::python::object command_obj=boost::python::object("DC_NOP"));
 
     std::string getCommandString(int cmd);
+    int getCommandNumber(const std::string &cmd);
+
+    std::unordered_map<int, std::string> getCapabilityTokens(boost::python::object locate_obj,
+        boost::python::object req_list, int duration);
 
     static boost::shared_ptr<SecManWrapper> enter(boost::shared_ptr<SecManWrapper> obj);
     bool exit(boost::python::object, boost::python::object, boost::python::object);

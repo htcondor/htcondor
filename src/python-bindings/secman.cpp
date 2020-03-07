@@ -24,6 +24,17 @@
 
 using namespace boost::python;
 
+
+struct CapabilityTokenPickle : boost::python::pickle_suite
+{
+	static boost::python::tuple
+	getinitargs(const CapabilityToken& cap_token)
+	{
+		return boost::python::make_tuple(cap_token.get());
+	}
+};
+
+
 class Token {
 public:
     Token(const std::string &value) : m_value(value) {}
@@ -327,6 +338,76 @@ SecManWrapper::getCommandString(int cmd)
         return ::getCommandString(cmd);
 }
 
+int
+SecManWrapper::getCommandNumber(const std::string &cmd)
+{
+	return ::getCommandNum(cmd.c_str());
+}
+
+std::unordered_map<int, std::string>
+SecManWrapper::getCapabilityTokens(boost::python::object locate_obj,
+    boost::python::object req_list, int duration)
+{
+    boost::python::extract<ClassAdWrapper&> ad_extract(locate_obj);
+    std::string addr;
+    if (ad_extract.check())
+    {
+        ClassAdWrapper& ad = ad_extract();
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
+        {
+            THROW_EX(ValueError, "Daemon address not specified.");
+        }
+    }
+    else
+    {
+        boost::python::str locate_str(locate_obj);
+        addr = boost::python::extract<std::string>(locate_str);
+    }
+    Daemon daemon(DT_ANY, addr.c_str(), NULL);
+    if (!daemon.locate())
+    {
+        THROW_EX(RuntimeError, "Unable to find daemon.");
+    }
+
+    PyObject *py_iter = PyObject_GetIter(req_list.ptr());
+    if (!py_iter)
+    {
+        THROW_EX(ValueError, "Requested capabilities must be an iterator.");
+    }
+
+    std::vector<int> req_int_list;
+    while (true) {
+        PyObject *pyobj = PyIter_Next(py_iter);
+        if (!pyobj) break;
+        if (PyErr_Occurred()) {
+            boost::python::throw_error_already_set();
+        }
+
+        boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+        boost::python::extract<int> extract_command_int(obj);
+        if (extract_command_int.check()) {
+            req_int_list.push_back(extract_command_int());
+        }
+
+        boost::python::str obj_str(obj);
+        std::string obj_cppstr = boost::python::extract<std::string>(obj_str);
+        auto command_int = getCommandNumber(obj_cppstr);
+
+        if (-1 == command_int) {
+            PyErr_Format(PyExc_ValueError, "Unknown HTCondor command: %s", obj_cppstr.c_str());
+            boost::python::throw_error_already_set();
+        }
+    }
+
+    CondorError err;
+    std::unordered_map<int, std::string> result;
+    if (!daemon.getCapabilityTokens(req_int_list, duration, result, err))
+    {
+        THROW_EX(RuntimeError, err.getFullText().c_str());
+    }
+    return result;
+}
+
 boost::shared_ptr<SecManWrapper>
 SecManWrapper::enter(boost::shared_ptr<SecManWrapper> obj)
 {
@@ -540,6 +621,18 @@ export_secman()
             :param int command_int: The integer command to get the string name of.
             )C0ND0R",
             boost::python::args("self", "command_int"))
+        .def("getCommandNumber", &SecManWrapper::getCommandNumber,
+            R"C0ND0R(
+            Return the command number corresponding to a given command string.
+
+            :param str command: The command name to translate.
+            )C0ND0R",
+            boost::python::args("self", "command"))
+        .def("fetchCapabilityTokens", &SecManWrapper::getCapabilityTokens,
+            R"C0ND0R(
+            Fetch a set of capability tokens from a remote HTCondor daemon,
+            one per provided commands.
+            )C0ND0R",
         .def("__exit__", &SecManWrapper::exit, "Exit the context manager.")
         .def("__enter__", &SecManWrapper::enter, "Enter the context manager.")
         .def("setTag", &SecManWrapper::setTag,

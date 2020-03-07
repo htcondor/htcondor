@@ -638,6 +638,13 @@ public:
 	bool exchangeSciToken( const std::string &scitoken, std::string &token, CondorError &err ) noexcept;
 
 		/**
+		 * Generate capabilities (i.e., sessions) from a remote daemon.
+		 * Negative duration indicates to take whatever duration the server provides.
+		 */
+	bool getCapabilityTokens( const std::vector<int> &, int duration,
+		std::unordered_map<int, std::string> &result, CondorError &err ) noexcept;
+
+		/**
 		 * When authentication fails - but TOKEN is a valid method - this is set to true.
 		 */
 	bool shouldTryTokenRequest() const {return m_should_try_token_request;};

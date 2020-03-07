@@ -3425,6 +3425,15 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 }
 
 bool
+SecMan::getSessionExpiration(const char *sess_id, time_t &expiry) const
+{
+	KeyCacheEntry *session_key = NULL;
+	if (!session_cache->lookup(sess_id, session_key)) {return false;}
+	expiry = session_key->getExpiration();
+	return true;
+}
+
+bool
 SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
 {
 	KeyCacheEntry *session_key = NULL;
@@ -3494,6 +3503,21 @@ SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 
 	return true;
 }
+
+
+bool
+SecMan::GetSessionExpiration(const char *session_id, time_t &expiry_time)
+{
+	if (!session_id) {return false;}
+
+	KeyCacheEntry *session_key = nullptr;
+	if (!session_cache->lookup(session_id, session_key)) {
+		return false;
+	}
+	expiry_time = session_key->getExpiration();
+	return true;
+}
+
 
 bool
 SecMan::SetSessionLingerFlag(char const *session_id) {
