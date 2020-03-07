@@ -449,7 +449,9 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 
 	method_list.rewind();
 	while ( (method = method_list.next()) ) {
-		if (!strcmp(method, "TOKEN")) {
+		if (!strcmp(method, "TOKEN") || !strcmp(method, "TOKENS") ||
+			!strcmp(method, "IDTOKEN") || !strcmp(method, "IDTOKENS"))
+		{
 			Condor_Auth_Passwd::preauth_metadata(ad);
 		}
 	}
@@ -2775,9 +2777,17 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_NTSSPI;
 	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
+	} else if ( !strcasecmp( method, "TOKENS" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "TOKEN" ) ) {
 		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "IDTOKENS" ) ) {
+		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "IDTOKEN" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "SCITOKENS" ) ) {
+		return CAUTH_SCITOKENS;
+	} else if ( !strcasecmp( method, "SCITOKEN" ) ) {
 		return CAUTH_SCITOKENS;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
@@ -3013,7 +3023,7 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	methods = "FS";
 #endif
 
-	methods += ",TOKEN";
+	methods += ",IDTOKENS";
 
 #if defined(HAVE_EXT_KRB5) 
 	methods += ",KERBEROS";
@@ -3039,7 +3049,7 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
 					continue;
 				}
-				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
+				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
 				break;
 			}
 			case CAUTH_SCITOKENS: // fallthrough
@@ -3061,7 +3071,6 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	}
 	return result;
 }
-
 
 
 MyString SecMan::getDefaultCryptoMethods() {

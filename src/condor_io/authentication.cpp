@@ -280,7 +280,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 						tmp_auth->set_remote_keys(keys);
 					}
 				}
-                                m_method_name = "TOKEN";
+                                m_method_name = "IDTOKENS";
                                 break;
 			}
 #endif
