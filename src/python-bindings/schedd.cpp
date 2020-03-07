@@ -401,10 +401,8 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	ad.Insert(ATTR_PROJECTION, projTree);
 
 	daemon_t dt = DT_SCHEDD;
-	int history_cmd = QUERY_SCHEDD_HISTORY;
 	if (want_startd) {
 		dt = DT_STARTD;
-		history_cmd = GET_HISTORY;
 	}
 
 	Daemon daemon(dt, addr.c_str());
