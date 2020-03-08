@@ -229,7 +229,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	if ( ! cred_dir) {
 		r->encode();
 		URL = "ERROR - SEC_CREDENTIAL_DIRECTORY_OAUTH not configured in condor_credd";
-		r->code(URL);
+		(void) r->code(URL);
 		r->end_of_message();
 		return CLOSE_STREAM;
 	}
