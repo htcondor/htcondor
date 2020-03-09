@@ -1,3 +1,5 @@
+#!/usr/bin/env pytest
+
 import pytest
 
 import pickle
