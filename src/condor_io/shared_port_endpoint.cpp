@@ -1209,12 +1209,14 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 
 		// See the comment in SharedPortClient::PassSocket() explaining
 		// why this ACK is here.
+#if defined(DARWIN)
 	int status=0;
 	named_sock->encode();
 	named_sock->timeout(5);
 	if( !named_sock->put(status) || !named_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to send final status (success) for SHARED_PORT_PASS_SOCK\n");
 	}
+#endif /* defined(DARWIN) */
 
 
 	if( !return_remote_sock ) {

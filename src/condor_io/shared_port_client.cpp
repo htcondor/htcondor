@@ -784,6 +784,7 @@ SharedPortState::HandleFD(Stream *&s)
 }
 
 SharedPortState::HandlerResult
+#if defined(DARWIN)
 SharedPortState::HandleResp(Stream *&s)
 {
 		// The following final ACK appears to be necessary on Mac OS X
@@ -841,6 +842,10 @@ SharedPortState::HandleResp(Stream *&s)
 			m_requested_by.c_str());
 		return FAILED;
 	}
+#else
+SharedPortState::HandleResp(Stream *&)
+{
+#endif /* ! defined(DARWIN) */
 
 	dprintf(D_FULLDEBUG,
 		"SharedPortClient: passed socket to %s%s\n",
