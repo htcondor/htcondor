@@ -4,7 +4,14 @@
 
 import logging
 
-from ornithology import Condor, SetJobStatus, JobStatus, in_order, track_quantity
+from ornithology import (
+    Condor,
+    SetJobStatus,
+    JobStatus,
+    in_order,
+    track_quantity,
+    SCRIPTS,
+)
 
 from conftest import config, standup, action
 
@@ -86,7 +93,7 @@ def concurrency_limit(request):
 def handle(condor, concurrency_limit):
     handle = condor.submit(
         description={
-            "executable": "/bin/sleep",
+            "executable": SCRIPTS["sleep"],
             "arguments": "5",
             "request_memory": "100MB",
             "request_disk": "10MB",

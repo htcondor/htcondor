@@ -28,3 +28,4 @@ from .job_queue import SetAttribute, SetJobStatus, JobQueue
 from .jobs import JobID, JobStatus
 from .meta import get_current_func_name
 from .utils import chain_get
+from .scripts import SCRIPTS

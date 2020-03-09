@@ -505,7 +505,6 @@ def test_can_parse_ads_across_pipes(ad_string, parser):
     assert ad["foo"] == 1
 
 
-
 def test_output_of_printJson_can_be_parsed(ad):
     ad["int"] = 5
     ad["float"] = 6.5

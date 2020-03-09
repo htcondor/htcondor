@@ -17,6 +17,7 @@ from ornithology import (
     SetJobStatus,
     JobStatus,
     in_order,
+    SCRIPTS,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ def max_materialize(request):
 @action
 def jobids_for_sleep_jobs(test_dir, condor, max_idle, max_materialize):
     sub_description = """
-        executable = /bin/sleep
+        executable = {exe}
         arguments = 10
 
         request_memory = 1MB
@@ -65,6 +66,7 @@ def jobids_for_sleep_jobs(test_dir, condor, max_idle, max_materialize):
 
         queue {q}
     """.format(
+        exe=SCRIPTS["sleep"],
         max_materialize=max_materialize,
         max_idle=max_idle,
         q=max_materialize + max_idle + 1,
@@ -154,7 +156,7 @@ def clusterid_for_itemdata(test_dir, condor):
     # show up immediately (on hold, because we don't need to actually run
     # the jobs to do the tests)
     sub_description = """
-        executable = /bin/sleep
+        executable = {exe}
         arguments = 0
 
         request_memory = 1MB
@@ -167,7 +169,7 @@ def clusterid_for_itemdata(test_dir, condor):
         My.Foo = "$(Item)"
 
         queue in (A, B, C, D, E)
-    """
+    """.format(exe = SCRIPTS['sleep'])
     submit_file = write_file(test_dir / "queue_in.sub", sub_description)
 
     submit_cmd = condor.run_command(["condor_submit", submit_file])

@@ -3,9 +3,6 @@
 import logging
 
 
-from conftest import config, standup, action
-
-
 from ornithology import (
     write_file,
     parse_submit_result,
@@ -14,7 +11,10 @@ from ornithology import (
     SetJobStatus,
     JobStatus,
     in_order,
+    SCRIPTS,
 )
+
+from conftest import config, standup, action
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -23,11 +23,13 @@ logger.setLevel(logging.DEBUG)
 @action
 def submit_sleep_job_cmd(test_dir, default_condor):
     sub_description = """
-        executable = /bin/sleep
-        arguments = 0
+        executable = {exe}
+        arguments = 1
         
         queue
-    """
+    """.format(
+        exe=SCRIPTS["sleep"]
+    )
     submit_file = write_file(test_dir / "submit" / "job.sub", sub_description)
 
     return default_condor.run_command(["condor_submit", submit_file])

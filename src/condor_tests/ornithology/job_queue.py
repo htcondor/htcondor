@@ -249,7 +249,7 @@ END_TRANSACTION = object()
 
 
 def parse_job_queue_log_line(
-    line: str
+    line: str,
 ) -> Tuple[Optional[jobs.JobID], Optional[Union[SetAttribute, Any]]]:
     parts = line.strip().split(" ", 3)
 

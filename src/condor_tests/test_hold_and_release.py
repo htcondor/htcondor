@@ -4,35 +4,27 @@
 
 import logging
 
-from conftest import config, standup, action
 
 from ornithology import (
-    write_file,
-    parse_submit_result,
-    JobID,
     SetAttribute,
     SetJobStatus,
     JobStatus,
     in_order,
+    SCRIPTS,
 )
+
+from conftest import config, standup, action
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 @action
-def job_queue_events_for_sleep_job(test_dir, default_condor):
-    sub_description = """
-        executable = /bin/sleep
-        arguments = 10
-        
-        queue
-    """
-    submit_file = write_file(test_dir / "job.sub", sub_description)
-
-    submit_cmd = default_condor.run_command(["condor_submit", submit_file])
-    clusterid, num_procs = parse_submit_result(submit_cmd)
-    jobid = JobID(clusterid, 0)
+def job_queue_events_for_sleep_job(default_condor):
+    handle = default_condor.submit(
+        description={"executable": SCRIPTS["sleep"], "arguments": "10",}, count=1,
+    )
+    jobid = handle.job_ids[0]
 
     default_condor.job_queue.wait_for_events(
         {

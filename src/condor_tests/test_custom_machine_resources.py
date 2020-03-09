@@ -52,31 +52,29 @@ def resources(request):
     return request.param
 
 
-# TODO: obviously won't work on windows...
 @config
 def discovery_script(resources):
     return textwrap.dedent(
         """
-        #!/bin/bash
-        echo 'DetectedXXX="{}"'
-        exit 0
+        #!/usr/bin/python3
+        
+        print('DetectedXXX="{res}"')
         """.format(
-            ", ".join(resources.keys())
+            res=", ".join(resources.keys())
         )
     )
 
 
-# TODO: obviously won't work on windows...
 @config
 def monitor_script(resources):
-    return "#!/bin/bash\n" + "".join(
+    return "#!/usr/bin/python3\n" + "".join(
         textwrap.dedent(
             """
-            echo 'SlotMergeConstraint = StringListMember( "{}", AssignedXXX )'
-            echo 'UptimeXXXSeconds = {}'
-            echo '- {}'
+            print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
+            print('UptimeXXXSeconds = {increment}')
+            print('- {name}')
             """.format(
-                name, increment, name
+                name=name, increment=increment
             )
         )
         for name, increment in resources.items()
