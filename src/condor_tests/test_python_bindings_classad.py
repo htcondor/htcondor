@@ -2,6 +2,9 @@ import pytest
 
 import pickle
 import datetime
+import textwrap
+import json
+import os
 
 import classad
 
@@ -370,7 +373,13 @@ def test_int(expr, value):
 
 
 @pytest.mark.parametrize(
-    "expr", [classad.ExprTree("foo"), classad.ExprTree('"34.foo"')]
+    "expr",
+    [
+        classad.ExprTree("foo"),
+        classad.ExprTree('"34.foo"'),
+        classad.Value.Undefined,
+        classad.Value.Error,
+    ],
 )
 def test_int_with_bad_values(expr):
     with pytest.raises(ValueError):
@@ -383,3 +392,136 @@ def test_int_with_bad_values(expr):
 )
 def test_float(expr, value):
     assert float(expr) == value
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        classad.ExprTree("foo"),
+        classad.ExprTree('"34.foo"'),
+        classad.Value.Undefined,
+        classad.Value.Error,
+    ],
+)
+def test_float_with_bad_values(expr):
+    with pytest.raises(ValueError):
+        print(int(expr))
+
+
+@pytest.fixture(
+    params=[
+        # two old-style ads
+        """
+        foo = "bar"
+        
+        foo = "wiz"
+        
+        /* this is a comment */
+        """,
+        # two new-style adsd
+        """
+        [
+        foo = "bar";
+        ]
+        [
+        foo = "wiz";
+        ]
+        /* this is a comment */
+        """,
+    ],
+    ids=["old-style", "new-style"],
+)
+def ad_string(request):
+    return textwrap.dedent(request.param).strip()
+
+
+@pytest.fixture
+def ad_file(tmp_path, ad_string):
+    ad_file = tmp_path / "ad"
+    ad_file.write_text(ad_string)
+
+    return ad_file
+
+
+def test_parse_ads_from_string(ad_string):
+    ads = list(classad.parseAds(ad_string))
+
+    assert ads[0]["foo"] == "bar"
+    assert ads[1]["foo"] == "wiz"
+
+
+def test_parse_ads_from_file_like_object(ad_file):
+    ads = list(classad.parseAds(ad_file.open(mode="r")))
+
+    assert ads[0]["foo"] == "bar"
+    assert ads[1]["foo"] == "wiz"
+
+
+@pytest.mark.xfail(reason="This won't work because there's no 'file pointer' to move")
+def test_parse_next_ad_from_string(ad_string):
+    ads = [classad.parseNext(ad_string), classad.parseNext(ad_string)]
+
+    assert ads[0]["foo"] == "bar"
+    assert ads[1]["foo"] == "wiz"
+
+
+def test_parse_next_ad_from_file_like_object(ad_file):
+    with ad_file.open(mode="r") as f:
+        ads = [classad.parseNext(f), classad.parseNext(f)]
+
+    assert ads[0]["foo"] == "bar"
+    assert ads[1]["foo"] == "wiz"
+
+
+def test_parse_one_ad_from_string(ad_string):
+    ad = classad.parseOne(ad_string)
+
+    assert ad["foo"] == "wiz"
+
+
+def test_parse_one_ad_from_file_like_object(ad_file):
+    ad = classad.parseOne(ad_file.open(mode="r"))
+
+    assert ad["foo"] == "wiz"
+
+
+@pytest.mark.parametrize(
+    "ad_string, parser",
+    [("[foo = 1]", classad.Parser.New), ("foo = 1", classad.Parser.Old)],
+)
+def test_can_parse_ads_across_pipes(ad_string, parser):
+    """
+    The parser must be set manually. Auto-discovery won't work on a pipe because
+    it can't rewind using seek.
+    """
+    r, w = os.pipe()
+
+    with open(w, mode="w") as wf:
+        wf.write(ad_string)
+
+    with open(r, mode="r") as rf:
+        ad = classad.parseNext(rf, parser)
+
+    assert ad["foo"] == 1
+
+
+
+def test_output_of_printJson_can_be_parsed(ad):
+    ad["int"] = 5
+    ad["float"] = 6.5
+    ad["string"] = "foo"
+    ad["expr"] = classad.ExprTree("2 + 3")
+    ad["undefined"] = classad.Value.Undefined
+    ad["error"] = classad.Value.Error
+
+    j = json.loads(ad.printJson())
+    print(j)
+
+    assert j == {
+        "int": 5,
+        "float": 6.5,
+        "string": "foo",
+        "expr": "/Expr(2 + 3)/",
+        "undefined": None,
+        "error": "/Expr(error)/",
+    }
