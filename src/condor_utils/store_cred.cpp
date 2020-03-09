@@ -77,7 +77,7 @@ bool store_cred_failed(long long ret, int mode, const char ** errstring /*=NULL*
 	if (ret == SUCCESS || ret == SUCCESS_PENDING) {
 		return false;
 	}
-	if (errstring && ret >= 0 && ret <= (int)COUNTOF(err_strings)) {
+	if (errstring && ret >= 0 && ret < (int)COUNTOF(err_strings)) {
 		*errstring = err_strings[ret];
 	}
 	return true;
