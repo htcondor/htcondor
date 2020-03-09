@@ -2,10 +2,9 @@
 #define CURL_STATICLIB // this has to match the way the curl library was built.
 #endif
 
-#include <string>
-
 #include <curl/curl.h>
 #include <string>
+#include "file_transfer.h"
 
 struct transfer_request {
     std::string local_file_name;
@@ -21,8 +20,8 @@ class MultiFileCurlPlugin {
     ~MultiFileCurlPlugin();
 
     int InitializeCurl();
-    int DownloadMultipleFiles( const std::string &input_filename );
-    int UploadMultipleFiles( const std::string &input_filename );
+    TransferPluginResult DownloadMultipleFiles( const std::string &input_filename );
+    TransferPluginResult UploadMultipleFiles( const std::string &input_filename );
 
     std::string GetStats() const { return _all_files_stats; }
 

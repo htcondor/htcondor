@@ -2638,6 +2638,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			if( !isDeferredTransfer ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
+				// If transfer failed, set rc to error code that ReliSock recognizes
+				if (result != TransferPluginResult::Success) {
+					rc = GET_FILE_PLUGIN_FAILED;
+				}
 				CondorError err;
 				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.Value(), iter->checksum(),
 					iter->checksum_type(), reservation_id, err))
@@ -5485,7 +5489,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	plugin_args.AppendArg(plugin.Value());
 	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), source, dest);
+	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.Value(), source, dest);
 
 	// determine if we want to run the plugin with root priv (if available).
 	// if so, drop_privs should be false.  the default is to drop privs.
@@ -5504,8 +5508,9 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// Close the plugin
 	int rc = my_pclose(plugin_pipe);
-	TransferPluginResult result = static_cast<TransferPluginResult>(rc);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.Value(), rc);
+	int exit_status = WEXITSTATUS(rc);
+	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.Value(), exit_status);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -5515,7 +5520,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// if we suspect this is the case, let's print a hint since it's
 	// otherwise very difficult to understand what is happening and why
 	// this failed.
-	if (!drop_privs && rc == 32512) {
+	if (!drop_privs && exit_status == 127) {
 		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
 			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
 			"the shared libraries in your plugin are likely paths that are relative to "
@@ -5524,10 +5529,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 			"location controlled by root. Good luck!\n");
 	}
 
-	// any non-zero exit from plugin indicates error.  this function needs to
-	// return -1 on error, or zero otherwise, so map plugin_status to the
-	// proper value.
-
+	// If the plugin did not return successfully, report the error and return
 	if (result != TransferPluginResult::Success) {
 		std::string errorMessage;
 		std::string transferUrl;
@@ -5637,17 +5639,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			"plugin %s, aborting\n", plugin_path.c_str() );
 		return TransferPluginResult::Failed;
 	}
-	int plugin_status = my_pclose( plugin_pipe );
-	if( plugin_status >= 0 ) {
-		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned %i (%s)\n",
-			plugin_path.c_str(), plugin_status, strerror( plugin_status ) );
-	}
-	else {
-		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned a negative status "
-			"code (%d). Something is very wrong, aborting.\n", plugin_path.c_str(),
-			plugin_status );
-		return TransferPluginResult::Failed;
-	}
+
+	// Close the plugin
+	int rc = my_pclose( plugin_pipe );
+	int exit_status = WEXITSTATUS(rc);
+	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin_name.c_str(), exit_status);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -5657,7 +5654,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// if we suspect this is the case, let's print a hint since it's
 	// otherwise very difficult to understand what is happening and why
 	// this failed.
-	if ( !drop_privs && plugin_status == 32512 ) {
+	if ( !drop_privs && exit_status == 127 ) {
 		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
 			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
 			"the shared libraries in your plugin are likely paths that are relative to "
@@ -5694,7 +5691,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 				this_file_stats_ad.LookupString( "TransferError", error_message );
 				this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
-					plugin_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
 			}
 
 			if (result_ads) {
@@ -5705,11 +5702,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if ( plugin_status != 0 ) {
-		return TransferPluginResult::Failed;
-	}
-
-	return TransferPluginResult::Success;
+	return result;
 }
 
 int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
