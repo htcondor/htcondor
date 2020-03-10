@@ -454,7 +454,7 @@ do_REMOTE_syscall()
 
 		errno = 0;
 		if ( access_ok ) {
-			rval = safe_open_wrapper_follow( path , flags , lastarg);
+			rval = safe_open_wrapper_follow( path , flags | O_LARGEFILE , lastarg);
 		} else {
 			rval = -1;
 			errno = EACCES;
