@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Mapping
 import logging
 
 import subprocess
@@ -84,9 +85,27 @@ def skip_if(condition):
 
 
 class Condor:
+    """
+    A :class:`Condor` is responsible for managing the lifecycle of an HTCondor pool.
+    """
+
     def __init__(
-        self, local_dir: Path, config=None, raw_config=None, clean_local_dir_before=True
+        self, local_dir: Path, config: Mapping[str, str]=None, raw_config: str=None, clean_local_dir_before=True
     ):
+        """
+        Parameters
+        ----------
+        local_dir
+            The local directory for the HTCondor pool. All HTCondor state will
+            be stored in this directory.
+        config
+            HTCondor configuration parameters to inject, as a mapping of key-value pairs.
+        raw_config
+            Raw HTCondor configuration language to inject, as a string.
+        clean_local_dir_before
+            If ``True``, any existing directory at ``local_dir`` will be removed
+            before trying to stand up the new instance.
+        """
         self.local_dir = local_dir
 
         self.execute_dir = self.local_dir / "execute"
@@ -112,6 +131,10 @@ class Condor:
         self.job_queue = job_queue.JobQueue(self)
 
     def use_config(self):
+        """
+        Returns a context manager that sets ``CONDOR_CONFIG`` to point to the
+        config file for this HTCondor pool.
+        """
         return env.SetCondorConfig(self.config_file)
 
     def __repr__(self):
@@ -384,39 +407,51 @@ class Condor:
         return self.config_file.read_text()
 
     def run_command(self, *args, **kwargs):
+        """
+        Execute a command with ``CONDOR_CONFIG`` set to point to this HTCondor pool.
+        Arguments and keyword arguments are passed through to :func:`~run_command`.
+        """
         with self.use_config():
             return cmd.run_command(*args, **kwargs)
 
     @property
     def master_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's master."""
         return self._get_daemon_log("MASTER")
 
     @property
     def collector_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's collector."""
         return self._get_daemon_log("COLLECTOR")
 
     @property
     def negotiator_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's negotiator."""
         return self._get_daemon_log("NEGOTIATOR")
 
     @property
     def schedd_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's schedd."""
         return self._get_daemon_log("SCHEDD")
 
     @property
     def startd_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's startd."""
         return self._get_daemon_log("STARTD")
 
     @property
     def shadow_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the pool's shadows."""
         return self._get_daemon_log("SHADOW")
 
     @property
     def job_queue_log(self) -> Path:
+        """The path to the pool's job queue log."""
         return self._get_log_path("JOB_QUEUE")
 
     @property
     def startd_address(self):
+        """The address of the pool's startd."""
         return self._get_address_file("STARTD").read_text().splitlines()[0]
 
     def _get_log_path(self, subsystem):
@@ -438,14 +473,29 @@ class Condor:
         return daemons.DaemonLog(self._get_log_path(daemon_name))
 
     def get_local_schedd(self):
+        """Return the :class:`htcondor.Schedd` for this pool's schedd."""
         with self.use_config():
             return htcondor.Schedd()
 
     def get_local_collector(self):
+        """Return the :class:`htcondor.Collector` for this pool's collector."""
         with self.use_config():
             return htcondor.Collector()
 
     def status(self, ad_type=htcondor.AdTypes.Any, constraint="true", projection=None):
+        """
+        Perform a status query against the pool's collector.
+
+        Parameters
+        ----------
+        ad_type
+        constraint
+        projection
+
+        Returns
+        -------
+
+        """
         projection = projection or []
 
         with self.use_config():
@@ -463,6 +513,20 @@ class Condor:
         return result
 
     def direct_status(self, daemon_type, ad_type, constraint="true", projection=None):
+        """
+        Perform a direct status query against a daemon.
+
+        Parameters
+        ----------
+        daemon_type
+        ad_type
+        constraint
+        projection
+
+        Returns
+        -------
+
+        """
         projection = projection or []
 
         # TODO: we would like this to use Collector.directQuery, but it can't because of https://htcondor-wiki.cs.wisc.edu/index.cgi/tktview?tn=7420
@@ -492,6 +556,20 @@ class Condor:
         limit=-1,
         opts=htcondor.QueryOpts.Default,
     ):
+        """
+        Perform a job information query against the pool's schedd.
+
+        Parameters
+        ----------
+        constraint
+        projection
+        limit
+        opts
+
+        Returns
+        -------
+
+        """
         if projection is None:
             projection = []
 
@@ -508,6 +586,18 @@ class Condor:
         return result
 
     def act(self, action, constraint="true"):
+        """
+        Perform a job action against the pool's schedd.
+
+        Parameters
+        ----------
+        action
+        constraint
+
+        Returns
+        -------
+
+        """
         with self.use_config():
             logger.debug(
                 'Executing action: {} with constraint "{}"'.format(action, constraint)
@@ -515,6 +605,19 @@ class Condor:
             return self.get_local_schedd().act(action, constraint)
 
     def edit(self, attr, value, constraint="true"):
+        """
+        Perform a job attribute edit action against the pool's schedd.
+
+        Parameters
+        ----------
+        attr
+        value
+        constraint
+
+        Returns
+        -------
+
+        """
         with self.use_config():
             logger.debug(
                 'Executing edit: setting {} to {} with constraint "{}"'.format(
@@ -523,7 +626,31 @@ class Condor:
             )
             return self.get_local_schedd().edit(constraint, attr, value)
 
-    def submit(self, description, count=1, itemdata=None):
+    def submit(self, description, count=1, itemdata=None) -> handles.ClusterHandle:
+        """
+        Submit jobs to the pool.
+
+        Internally, this method uses the Python bindings to submit jobs and
+        returns a rich handle object that can be used to inspect and manage the
+        jobs.
+
+        .. warning::
+
+            If your intent is to test job submission itself, **DO NOT** use this method.
+            Instead, submit jobs by calling ``condor_q`` with :meth:`Condor.run_command`,
+            using the Python bindings directly, or whatever other method you want
+            to test.
+
+        Parameters
+        ----------
+        description
+        count
+        itemdata
+
+        Returns
+        -------
+
+        """
         sub = htcondor.Submit(dict(description))
         logger.debug(
             "Submitting jobs with description:\n{}\nCount: {}\nItemdata: {}".format(

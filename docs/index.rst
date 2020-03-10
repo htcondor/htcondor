@@ -30,6 +30,7 @@ Center for High Throughput Computing, University of Wisconsin–Madison.
 
    classad-attributes/index
    codes-other-values/index
+   testing/index
    genindex
 
 

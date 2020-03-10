@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from typing import Callable
 
+import logging
 import re
 import datetime
 import time
+from pathlib import Path
 
 from . import exceptions
 
@@ -26,10 +28,26 @@ logger.setLevel(logging.DEBUG)
 
 
 class DaemonLog:
-    def __init__(self, path):
+    """
+    Represents the log file for a particular HTCondor daemon. Can be used to
+    open multiple "views" (:class:`DaemonLogStream`) of the log file.
+
+    .. warning::
+
+        You shouldn't need to create these yourself. Instead, see the ``<daemon>_log``
+        methods on :class:`Condor`.
+    """
+    def __init__(self, path: Path):
         self.path = path
 
     def open(self):
+        """
+        Return a :class:`DaemonLogStream` pointing to the daemon's log file.
+
+        Returns
+        -------
+
+        """
         return DaemonLogStream(self.path.open(mode="r", encoding="utf-8"))
 
 
@@ -41,15 +59,27 @@ class DaemonLogStream:
 
     @property
     def lines(self):
+        """
+        An iterator over the raw lines that have been read from the daemon log so far.
+        """
         yield from (msg.line for msg in self.messages)
 
     def read(self):
+        """
+        Read lines from the daemon log and parse them into :class:`DaemonLogMessage`.
+        Returns an iterator over the messages as they are parsed.
+
+        .. warning::
+
+            If you do not consume the iterator, no lines will be read!
+
+        """
         for line in self.file:
             line = line.strip()
             if line == "":
                 continue
             try:
-                msg = LogMessage(line.strip(), self.file.name, self.line_number)
+                msg = DaemonLogMessage(line.strip(), self.file.name, self.line_number)
             except exceptions.DaemonLogParsingFailed as e:
                 logger.warning(e)
             self.line_number += 1
@@ -57,13 +87,36 @@ class DaemonLogStream:
             yield msg
 
     def clear(self):
-        """Clear the internal message store; useful for isolating tests."""
+        """
+        Clear the internal message store; useful for isolating tests.
+        """
         self.messages.clear()
 
     def display_raw(self):
+        """
+        Display the raw text of the daemon log as has been read so far.
+        """
         print("\n".join(self.lines))
 
-    def wait(self, condition, timeout=60):
+    def wait(self, condition: Callable[['DaemonLogMessage'], bool], timeout=60) -> bool:
+        """
+        Wait for some condition to be true on a :class:`DaemonLogMessage`
+        parsed from the daemon log.
+
+        Parameters
+        ----------
+        condition
+            A callback which will be executed on each message. If the callback
+            returns ``True``, this method will return as well.
+        timeout
+            How long to time out after. If the method times out, it will return
+            ``False`` instead of ``True``.
+
+        Returns
+        -------
+        success
+            ``True`` if the condition was satisfied, ``False`` otherwise.
+        """
         start = time.time()
         while True:
             if time.time() - start > timeout:
@@ -84,7 +137,7 @@ RE_TAGS = re.compile(r"\(([^()]+)\)")
 LOG_MESSAGE_TIME_FORMAT = r"%m/%d/%y %H:%M:%S"
 
 
-class LogMessage:
+class DaemonLogMessage:
     def __init__(self, line, file_name, line_number):
         self.line = line
         match = RE_MESSAGE.match(line)

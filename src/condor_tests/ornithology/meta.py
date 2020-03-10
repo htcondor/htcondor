@@ -25,7 +25,8 @@ def get_current_func_name() -> str:
     """
     Return the name of the function this function is called from.
 
-    ::
+    .. code::
+
         def foo():
             print(get_current_func_name())
 

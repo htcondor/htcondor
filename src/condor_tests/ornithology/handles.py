@@ -213,7 +213,7 @@ class ConstraintHandle(Handle):
 class ClusterHandle(ConstraintHandle):
     """
     A subclass of :class:`ConstraintHandle` that targets a single cluster of jobs,
-    as produced by :func:`submit`.
+    as produced by :func:`Condor.submit`.
 
     Because this handle targets a single cluster of jobs, it has superpowers.
     If the cluster has an event log

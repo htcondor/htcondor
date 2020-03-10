@@ -21,11 +21,13 @@ logger.addHandler(logging.NullHandler())
 
 from .cmd import run_command, parse_submit_result
 from .condor import Condor, get_port_host_from_sinful
+from .daemons import DaemonLog, DaemonLogStream, DaemonLogMessage
 from .env import SetEnv, SetCondorConfig
 from .helpers import in_order, track_quantity
 from .io import write_file
 from .job_queue import SetAttribute, SetJobStatus, JobQueue
 from .jobs import JobID, JobStatus
+from .handles import Handle, ConstraintHandle, ClusterHandle, ClusterState
 from .meta import get_current_func_name
 from .utils import chain_get
 from .scripts import SCRIPTS
