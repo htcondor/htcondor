@@ -217,7 +217,7 @@ int main(int argc, const char *argv[]) {
 					_setmode(_fileno(stdin), _O_BINARY);
 					#endif
 					credlen = _condor_full_read(fileno(stdin), cred.ptr(), max_len);
-					if (credlen < 0) {
+					if (((ssize_t)credlen) < 0) {
 						fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
 						goto cleanup;
 					}
