@@ -151,6 +151,13 @@ UserProc::JobReaper(int pid, int status)
 		m_proc_exited = true;
 		exit_status = status;
 		condor_gettimestamp( job_exit_time );
+
+		// Let the base starter know, for file-transfer purposes, what
+		// the job's exit status was (as opposed to, for instance, being
+		// a script proc or a non-interactive sshd proc).
+		if( name == NULL ) {
+			Starter->RecordJobExitStatus(status);
+		}
 	}
 	return m_proc_exited;
 }

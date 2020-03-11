@@ -395,10 +395,10 @@ CStarter::ShutdownGraceful( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownGraceful when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return 0;
 }
 
@@ -406,10 +406,10 @@ CStarter::ShutdownGraceful( void )
  * DC Shutdown Fast Wrapper
  * We notify our JIC that we got a shutdown fast call
  * then invoke ShutdownFast() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
- */ 
+ */
 int
 CStarter::RemoteShutdownFast(int)
 {
@@ -467,10 +467,10 @@ CStarter::ShutdownFast( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownFast when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return ( false );
 }
 
@@ -478,7 +478,7 @@ CStarter::ShutdownFast( void )
  * DC Remove Job Wrapper
  * We notify our JIC that we got a remove call
  * then invoke Remove() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
@@ -499,7 +499,7 @@ CStarter::RemoteRemove( int )
 		dprintf( D_FULLDEBUG, "Got Remove when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -572,11 +572,11 @@ CStarter::RemoteHold( int )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
-int 
+int
 CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 {
 		// A Condor daemon on the submit side (e.g. schedd) wishes to
@@ -1727,7 +1727,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -2233,7 +2233,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		this->allJobsDone();
 		ret = false;
 	}
-	
+
 	return ( ret );
 }
 
@@ -2919,7 +2919,7 @@ CStarter::allJobsDone( void )
 			// JIC::allJobsDone returned true: we're ready to move on.
 		bRet=transferOutput();
 	}
-	
+
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
@@ -2934,6 +2934,14 @@ CStarter::transferOutput( void )
 {
 	UserProc *job;
 	bool transient_failure = false;
+
+	if( recorded_job_exit_status ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && job_exit_status != desiredExitStatus ) {
+			jic->setJobFailed();
+		}
+	}
 
 	if (jic->transferOutput(transient_failure) == false) {
 
@@ -3832,4 +3840,10 @@ CStarter::WriteAdFiles()
 	}
 
 	return ret_val;
+}
+
+void
+CStarter::RecordJobExitStatus(int status) {
+	recorded_job_exit_status = true;
+	job_exit_status = status;
 }

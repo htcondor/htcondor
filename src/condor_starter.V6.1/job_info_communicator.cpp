@@ -1008,3 +1008,6 @@ JobInfoCommunicator::getExitReasonString( void )
 	}
 	return "exit";
 }
+
+
+void JobInfoCommunicator::setJobFailed( void ) { }

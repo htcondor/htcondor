@@ -84,7 +84,9 @@ const struct Translation FileTransferOutputTranslation[] = {
 	{ "ON_EXIT", FTO_ON_EXIT },
 	{ "ONEXIT", FTO_ON_EXIT },
 	{ "NONE", FTO_NONE },
-	{ "NULL", FTO_NONE }
+	{ "NULL", FTO_NONE },
+	{ "ON_SUCCESS", FTO_ON_SUCCESS },
+	{ "ONSUCCESS", FTO_ON_SUCCESS }
 };
 
 
