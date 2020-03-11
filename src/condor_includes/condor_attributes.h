@@ -361,8 +361,6 @@
 #define ATTR_JOB_RUNAS_OWNER  "RunAsOwner"
 #define ATTR_JOB_LOAD_USER_PROFILE  "LoadUserProfile"
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
-#define ATTR_JOB_LOCAL_SYS_CPU  "LocalSysCpu"
-#define ATTR_JOB_LOCAL_USER_CPU  "LocalUserCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
 #define ATTR_JOB_MATCHED  "Matched"
