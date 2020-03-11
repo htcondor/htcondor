@@ -100,8 +100,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->InsertAttr(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
 	ad->InsertAttr(ATTR_JOB_EXIT_STATUS, 0);
 	ad->InsertAttr(ATTR_COMPLETION_DATE, 0);
-	ad->InsertAttr(ATTR_JOB_LOCAL_SYS_CPU, 0.0);
-	ad->InsertAttr(ATTR_JOB_LOCAL_USER_CPU, 0.0);
 	ad->InsertAttr(ATTR_NUM_CKPTS, 0);
 	ad->InsertAttr(ATTR_NUM_RESTARTS, 0);
 	ad->InsertAttr(ATTR_NUM_SYSTEM_HOLDS, 0);
@@ -309,8 +307,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
 		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
-		ATTR_JOB_LOCAL_SYS_CPU,
-		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,

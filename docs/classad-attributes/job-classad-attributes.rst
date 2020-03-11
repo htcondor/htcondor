@@ -1221,18 +1221,6 @@ Job ClassAd Attributes
     :index:`LocalSysCpu<single: LocalSysCpu; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; LocalSysCpu>`
 
-``LocalSysCpu``
-    An accumulated number of seconds of system CPU time that the job
-    caused to the machine upon which the job was submitted.
-    :index:`LocalUserCpu<single: LocalUserCpu; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LocalUserCpu>`
-
-``LocalUserCpu``
-    An accumulated number of seconds of user CPU time that the job
-    caused to the machine upon which the job was submitted.
-    :index:`MachineAttr<single: MachineAttr; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; MachineAttr>`
-
 ``MachineAttr<X><N>``
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable

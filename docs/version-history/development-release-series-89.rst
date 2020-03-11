@@ -51,6 +51,10 @@ New Features:
   matchmaking by the *condor_negotiator*.
   :ticket:`7490`
 
+- Removed the unused and always set to zero job attribute LocalUserCpu
+  and LocalSysCpu
+  :ticket:`7546`
+
 Bugs Fixed:
 
 - Some URLs for keys in AWS S3 buckets were previously of the form

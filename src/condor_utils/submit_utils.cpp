@@ -7606,8 +7606,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 #endif
 
 	baseJob.Assign(ATTR_JOB_REMOTE_WALL_CLOCK, 0.0);
-	baseJob.Assign(ATTR_JOB_LOCAL_USER_CPU,    0.0);
-	baseJob.Assign(ATTR_JOB_LOCAL_SYS_CPU,     0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);

@@ -1285,8 +1285,6 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
 		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
-		ATTR_JOB_LOCAL_SYS_CPU,
-		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
@@ -1471,8 +1469,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
