@@ -57,6 +57,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.9
+  :ticket:`7549`
+
 - Some URLs for keys in AWS S3 buckets were previously of the form
   ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
   this form of address; instead, you must use URLs of the form
