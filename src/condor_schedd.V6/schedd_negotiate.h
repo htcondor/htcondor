@@ -150,6 +150,9 @@ class ScheddNegotiate: public DCMsg {
 
 		///////// end of virtual functions for scheduler to define  //////////
 
+		// We've sent a RRL, but haven't heard back with a match yet
+	bool RRLRequestIsPending() const { return m_num_resource_reqs_sent > 0;}
+
  protected:
 	ResourceRequestList *m_jobs;
 		// how many resources are we requesting with this request?

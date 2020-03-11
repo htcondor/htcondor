@@ -6936,6 +6936,25 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 void
 MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 {
+	int rval =
+		daemonCore->Register_Socket(
+			sock, "<Negotiator Socket>", 
+			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+			"<Negotiator Command>", &scheduler, ALLOW);
+
+	if( rval >= 0 ) {
+			// do not delete this sock until we get called back
+		sock->incRefCount();
+	}
+
+	// Negotiator has asked us to send it RRL, but not started negotiation proper
+	// don't consider negotiation finished.
+	if (RRLRequestIsPending()) {
+		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getOwner());
+		return;
+	}
+
+	// When we get here, it is a bona-fide end of negotiation
 	bool satisfied = getSatisfaction();
 	char const *remote_pool = getRemotePool();
 
@@ -6947,16 +6966,6 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 
 	scheduler.negotiationFinished( getOwner(), remote_pool, satisfied );
 
-	int rval =
-		daemonCore->Register_Socket(
-			sock, "<Negotiator Socket>", 
-			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
-
-	if( rval >= 0 ) {
-			// do not delete this sock until we get called back
-		sock->incRefCount();
-	}
 }
 
 void
