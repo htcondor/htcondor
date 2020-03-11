@@ -125,6 +125,25 @@ Managing Starters and Claims
 Security Management
 -------------------
 
+.. autoclass:: Credd
+
+    .. automethod:: add_password
+    .. automethod:: delete_password
+    .. automethod:: query_password
+    .. automethod:: add_user_cred
+    .. automethod:: delete_user_cred
+    .. automethod:: query_user_cred
+    .. automethod:: add_user_service_cred
+    .. automethod:: delete_user_service_cred
+    .. automethod:: query_user_service_cred
+    .. automethod:: check_user_service_creds
+
+.. autoclass:: CredTypes
+
+.. autoclass:: CredCheck
+
+.. autoclass:: CredStatus
+
 .. autoclass:: SecMan
 
    .. automethod:: invalidateAllSessions

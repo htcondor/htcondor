@@ -688,8 +688,8 @@ export_credd()
             The values of the enumeration are:
 
             .. attribute:: Password
-            .. attribute:: Graceful
-            .. attribute:: Quick
+            .. attribute:: Kerberos
+            .. attribute:: OAuth
             )C0ND0R")
 		.value("Password", CredPassword)
 		.value("Kerberos", CredKerberos)
@@ -704,12 +704,12 @@ export_credd()
 
 	boost::python::class_<Credd>("Credd",
 		R"C0ND0R(
-            A class for sending Credential commands to a Credd, Schedd or Master
+            A class for sending Credential commands to a Credd, Schedd or Master.
             )C0ND0R",
 		boost::python::init<boost::python::object>(
 			R"C0ND0R(
             :param ad: A ClassAd describing the Credd, Schedd or Master location.
-                If omitted, the local schedd is assumed
+                If omitted, the local schedd is assumed.
             :type ad: :class:`~classad.ClassAd`
             )C0ND0R",
 			(boost::python::arg("self"), boost::python::arg("ad") = boost::python::object())))
@@ -717,15 +717,14 @@ export_credd()
 
 		.def("add_password", &Credd::add_password,
 			R"C0ND0R(
-            Store password in the Credd for the current user, or for the given user.
+            Store the ``password`` in the Credd for the current user (or for the given ``user``).
 
-            :param password: the password
+            :param password: The password.
             :type password: str
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
-				(SELFARG
+            (SELFARG
 				boost::python::arg("password"),
 				boost::python::arg("user") = ""
 				)
@@ -733,11 +732,10 @@ export_credd()
 
 		.def("delete_password", &Credd::delete_password,
 			R"C0ND0R(
-            Delete password in the Credd for the current user, or for the given user.
+            Delete the ``password`` in the Credd for the current user (or for the given ``user``).
 
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("user") = ""
@@ -746,11 +744,11 @@ export_credd()
 
 		.def("query_password", &Credd::query_password,
 			R"C0ND0R(
-            Check to see if the current user, or the given user has a password stored in the Credd.
+            Check to see if the current user (or the given ``user``) has a password stored in the Credd.
 
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: Bool
+            :return: bool
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("user") = ""
@@ -761,15 +759,14 @@ export_credd()
 
 		.def("add_user_cred", &Credd::add_cred,
 			R"C0ND0R(
-            Store a credential in the Credd for the current user, or for the given user.
+            Store a ``credential`` in the Credd for the current user (or for the given ``user``).
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to store.
             :type credtype: :class:`CredTypes`
-            :param credential: the credential
-            :type credential: binary data
-            :param user: Optional username, defaults to the current user
+            :param credential: The credential to store.
+            :type credential: bytes
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
 				(SELFARG
 				boost::python::arg("credtype"),
@@ -780,53 +777,55 @@ export_credd()
 
 		.def("delete_user_cred", &Credd::delete_cred,
 			R"C0ND0R(
-            Query wiether the current user, or for the given user has a credential of the given type stored.
+            Delete a credential of the given ``credtype`` for the current user (or for the given ``user``).
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to delete.
             :type credtype: :class:`CredTypes`
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("credtype"),
 				boost::python::arg("user")=""
 				)
-		)
+		    )
 
 		.def("query_user_cred", &Credd::query_cred,
 			R"C0ND0R(
-            Query wiether the current user, or for the given user has a credential of the given type stored.
+            Query whether the current user (or the given user) has a credential of the given type stored.
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to query for.
             :type credtype: :class:`CredTypes`
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: The time that the user credential was last updated, or None if there is no credential
+            :return: The time that the user credential was last updated, or ``None`` if there is no credential
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("credtype"),
 				boost::python::arg("user")=""
 				)
-			)
+            )
 
 			// --------------------  oauth creds  ------
 
-			.def("add_user_service_cred", &Credd::add_service_cred,
+        .def("add_user_service_cred", &Credd::add_service_cred,
 			R"C0ND0R(
             Store a credential in the Credd for the current user, or for the given user.
+            
+            To specify multiple credential for the same service (e.g., you want to transfer
+            files from two different accounts that are on the same service), 
+            give each a unique ``handle``.
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to store.
             :type credtype: :class:`CredTypes`
-            :param credential: the credential
-            :type credential: binary data
-            :param service: service name
+            :param credential: The credential to store.
+            :type credential: bytes
+            :param service: The service name.
             :type service: str
-            :param handle: optional service handle, defaults to None
+            :param handle: Optional service handle (defaults to no handle).
             :type handle: str
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("credtype"),
@@ -835,21 +834,20 @@ export_credd()
 				boost::python::arg("handle")="",
 				boost::python::arg("user")=""
 				)
-			)
+            )
 
-			.def("delete_user_service_cred", &Credd::delete_service_cred,
+        .def("delete_user_service_cred", &Credd::delete_service_cred,
 			R"C0ND0R(
-            Query wiether the current user, or for the given user has a credential of the given type stored.
+            Delete a credential of the given ``credtype`` for service ``service`` for the current user (or for the given ``user``).
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to delete.
             :type credtype: :class:`CredTypes`
-            :param service: service name
+            :param service: The service name.
             :type service: str
-            :param handle: optional service handle, defaults to None
+            :param handle: Optional service handle (defaults to no handle).
             :type handle: str
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: None
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("credtype"),
@@ -857,21 +855,21 @@ export_credd()
 				boost::python::arg("handle")="",
 				boost::python::arg("user")=""
 				)
-			)
+            )
 
-			.def("query_user_service_cred", &Credd::query_service_cred,
+        .def("query_user_service_cred", &Credd::query_service_cred,
 			R"C0ND0R(
-            Query wiether the current user, or for the given user has a credential of the given type stored.
+            Query whether the current user (or the given ``user``) has a credential of the given ``credtype`` stored.
 
-            :param credtype: the type of credential
+            :param credtype: The type of credential to check storage for.
             :type credtype: :class:`CredTypes`
-            :param service: optional service name, defaults to None
+            :param service: The service name.
             :type service: str
-            :param handle: optional service handle, defaults to None
+            :param handle: Optional service handle (defaults to no handle).
             :type handle: str
-            :param user: Optional username, defaults to the current user
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: CredStatus
+            :return: :class:`CredStatus`
             )C0ND0R",
 			(SELFARG
 				boost::python::arg("credtype"),
@@ -879,27 +877,27 @@ export_credd()
 				boost::python::arg("handle")="",
 				boost::python::arg("user")=""
 				)
-			)
+            )
 
-			.def("check_user_service_creds", &Credd::check_service_creds,
+        .def("check_user_service_creds", &Credd::check_service_creds,
 			R"C0ND0R(
-            Check to see if the current user, or the given user has a given set of service credentials, and if
-            any creds a missing, create a temporary URL that can be used to acquire the missing service credentials.
+            Check to see if the current user (or the given ``user``) has a given set of service credentials, and if
+            any credentials are missing, create a temporary URL that can be used to acquire the missing service credentials.
 
-            :param credtype: the type of credential
+            :param credtype: The type of credentials to check for.
             :type credtype: :class:`CredTypes`
-            :param services: list of services that are needed
-            :type services: list
-            :param user: Optional username, defaults to the current user
+            :param services: The list of services that are needed.
+            :type services: List[str]
+            :param user: Which user to store the credential for (defaults to the current user).
             :type user: str
-            :return: CredCheck
+            :return: :class:`CredCheck`
             )C0ND0R",
 			(SELFARG
-			boost::python::arg("credtype"),
-			boost::python::arg("services"),
-			boost::python::arg("user")=""
-			)
-			)
+                boost::python::arg("credtype"),
+                boost::python::arg("services"),
+                boost::python::arg("user")=""
+			    )
+            )
 
 		// end of class Credd
 		;
