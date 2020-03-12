@@ -152,7 +152,16 @@ TEST_DIR = TestDir()
 
 
 @pytest.fixture(scope="class")
-def test_dir():
+def test_dir() -> Path:
+    """
+    This fixture provides a :class:`pathlib.Path` pointing to the unique, isolated
+    test directory for the current test.
+
+    Returns
+    -------
+    path
+        The path to the test directory.
+    """
     return TEST_DIR
 
 
@@ -178,6 +187,15 @@ def _add_config_ids(func, params):
 
 
 def config(*args, params=None):
+    """
+    Marks a function as a **config** fixture.
+    Config is always performed before any :func:`standup` or :func:`action` fixtures
+    are run.
+
+    Parameters
+    ----------
+    params
+    """
     def decorator(func):
         _check_params(params)
         _add_config_ids(func, params)
@@ -195,6 +213,11 @@ def config(*args, params=None):
 
 
 def standup(*args):
+    """
+    Marks a function as a **standup** fixture.
+    Standup is always performed after all :func:`config` fixtures have run,
+    and before any :func:`action` fixtures that depend on it.
+    """
     def decorator(func):
         return pytest.fixture(scope="class")(func)
 
@@ -205,6 +228,15 @@ def standup(*args):
 
 
 def action(*args, params=None):
+    """
+    Marks a function as an **action** fixture.
+    Actions are always performed after all :func:`standup` fixtures have run,
+    and before any tests that depend on them.
+
+    Parameters
+    ----------
+    params
+    """
     _check_params(params)
 
     def decorator(func):
@@ -220,7 +252,7 @@ def action(*args, params=None):
     return decorator
 
 
-@standup
+@pytest.fixture(scope = 'session')
 def default_condor(test_dir):
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor

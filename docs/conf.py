@@ -56,6 +56,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinx.ext.graphviz',
     'ticket',
     'macro',
     'macro-def',

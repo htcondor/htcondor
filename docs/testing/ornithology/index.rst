@@ -16,9 +16,13 @@ It has two major components:
 :doc:`api`
    Documentation for the ``ornithology`` API.
 
+:doc:`pytest-integration`
+   Documentation for how ``ornithology`` integrates with ``pytest``.
+
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
    api
+   pytest-integration

@@ -9,6 +9,6 @@ Job Queue Log Reader
 .. autoclass:: SetAttribute
    :members:
 
-.. autoclass:: SetJobStatus
+.. autofunction:: SetJobStatus
    :members:
 
