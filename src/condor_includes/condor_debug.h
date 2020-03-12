@@ -363,6 +363,11 @@ public:
 	T & runtime;
 };
 
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
+
 #endif // defined(__cplusplus)
 
 #ifndef CONDOR_ASSERT
