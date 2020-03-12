@@ -180,11 +180,7 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CONNECTIMEOUT\n");
 	}
-    // MRC: Local development only, remove this code block!
-    r = curl_easy_setopt(_handle, CURLOPT_PROXY, "http://squid.cs.wisc.edu:3128");
-	if (r != CURLE_OK) {
-		fprintf(stderr, "Can't setopt PROXY\n");
-	}
+
     // Provide default read / write callback functions; note these
     // don't segfault if a nullptr is given as the read/write data.
     r = curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
@@ -306,18 +302,26 @@ MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mo
 
 void
 MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
-    fprintf(stderr, "[MultiFileCurlPlugin::FinishCurlTransfer called\n");
+
     // Gather more statistics
-    double bytes_downloaded;
+    double bytes_downloaded = 0;
+    double bytes_uploaded = 0;
     double transfer_connection_time;
     double transfer_total_time;
     long return_code;
     curl_easy_getinfo( _handle, CURLINFO_SIZE_DOWNLOAD, &bytes_downloaded );
+    curl_easy_getinfo( _handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
     curl_easy_getinfo( _handle, CURLINFO_CONNECT_TIME, &transfer_connection_time );
     curl_easy_getinfo( _handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
     curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
 
-    _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+    if(bytes_downloaded > 0) {
+        _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+    }
+    else {
+        _this_file_stats->TransferTotalBytes += ( long ) bytes_uploaded;
+    }
+
     _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
     _this_file_stats->TransferHTTPStatusCode = return_code;
     _this_file_stats->LibcurlReturnCode = rval;
@@ -417,7 +421,7 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
 
 int 
 MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes ) {
-fprintf(stderr, "[MultiFileCurlPlugin::DownloadFile] called, url = %s\n", url.c_str());
+
     char partial_range[20];
     FILE *file = NULL;
     int rval = -1;
@@ -508,7 +512,7 @@ fprintf(stderr, "[MultiFileCurlPlugin::DownloadFile] called, url = %s\n", url.c_
 
 int
 MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, std::vector<std::pair<std::string, transfer_request>> &requested_files) const {
-    fprintf(stderr, "[MultiFileCurlPlugin::BuildTransferRequests] called\n");
+
     CondorClassAdFileIterator adFileIter;
     FILE* input_file;
 
@@ -570,7 +574,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     auto rval = BuildTransferRequests(input_filename, requested_files);
     if (rval != 0) {
-        return TransferPluginResult::Failed;
+        return TransferPluginResult::Error;
     }
 
     classad::ClassAdUnParser unparser;
@@ -640,7 +644,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
         }
     }
 
-    if ( rval != 0 ) return TransferPluginResult::Failed;
+    if ( rval != 0 ) return TransferPluginResult::Error;
 
     return TransferPluginResult::Success;
 }
@@ -648,14 +652,14 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
 
 TransferPluginResult
 MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) {
-    fprintf(stderr, "[MultiFileCurlPlugin::DownloadMultipleFiles] called\n");
+
     int rval = 0;
 
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     rval = BuildTransferRequests(input_filename, requested_files);
     // If BuildTransferRequests failed, exit immediately
     if ( rval != 0 ) {
-        return TransferPluginResult::Failed;
+        return TransferPluginResult::Error;
     }
     classad::ClassAdUnParser unparser;
 
@@ -726,7 +730,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
         if ( rval > 0 ) break;
     }
 
-    if ( rval != 0 ) return TransferPluginResult::Failed;
+    if ( rval != 0 ) return TransferPluginResult::Error;
 
     return TransferPluginResult::Success;
 }
@@ -792,7 +796,7 @@ MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
 
 void
 MultiFileCurlPlugin::InitializeStats( std::string request_url ) {
-fprintf(stderr, "[MultiFileCurlPlugin::InitializeStats] called\n");
+
     char* url = strdup( request_url.c_str() );
     char* url_token;
 
@@ -885,7 +889,7 @@ MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, 
 
 void
 MultiFileCurlPlugin::ParseAds() {
-    fprintf(stderr, "[MultiFileCurlPlugin::ParseAds] called\n");
+
         // Look in the job ad for speed limits; job ad is mandatory
     const char *job_ad_env = getenv("_CONDOR_JOB_AD");
     if (!job_ad_env) {
@@ -996,7 +1000,7 @@ main( int argc, char **argv ) {
     MultiFileCurlPlugin curl_plugin( diagnostic );
     if( curl_plugin.InitializeCurl() != 0 ) {
         fprintf( stderr, "ERROR: curl_plugin failed to initialize. Aborting.\n" );
-        return (int)TransferPluginResult::Failed;
+        return (int)TransferPluginResult::Error;
     }
 
     // Do the transfer(s)
@@ -1009,7 +1013,7 @@ main( int argc, char **argv ) {
         output_file = safe_fopen_wrapper( output_filename.c_str(), "w" );
         if( output_file == NULL ) {
             fprintf( stderr, "Unable to open curl_plugin output file: %s\n", output_filename.c_str() );
-            return (int)TransferPluginResult::Failed;
+            return (int)TransferPluginResult::Error;
         }
         fprintf( output_file, "%s", curl_plugin.GetStats().c_str() );
         fclose( output_file );

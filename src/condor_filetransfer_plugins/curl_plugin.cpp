@@ -125,7 +125,7 @@ main( int argc, char **argv ) {
     curl_global_cleanup();
 
     if ( rval != 0 ) {
-        return (int)TransferPluginResult::Failed;
+        return (int)TransferPluginResult::Error;
     }
 
     return (int)TransferPluginResult::Success;

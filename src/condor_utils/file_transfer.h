@@ -76,7 +76,7 @@ enum FileTransferStatus {
 
 enum class TransferPluginResult {
 	Success = 0,
-	Failed = 1,
+	Error = 1,
 	InvalidCredentials = 2
 };
 
@@ -327,7 +327,7 @@ class FileTransfer final: public Service {
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
-	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err);
+	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
