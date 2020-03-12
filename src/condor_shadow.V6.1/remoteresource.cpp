@@ -2346,7 +2346,11 @@ RemoteResource::initFileTransfer()
 	ASSERT(jobAd);
 	int spool_time = 0;
 	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	if (r == 0) {
+		// filetransfer Init failed
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed\n");
+	}
 
 	filetrans.RegisterCallback(
 		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,
