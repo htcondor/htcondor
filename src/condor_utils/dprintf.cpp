@@ -286,6 +286,26 @@ double _condor_debug_get_time_double()
 #endif
 }
 
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+const char * debug_hex_dump(char * buf, const char * data, int datalen)
+{
+	if (!buf) return "";
+	const unsigned char * d = (const unsigned char *)data;
+	char * p = buf;
+	char * endp = buf;
+	while (datalen-- > 0) {
+		unsigned char ch = *d++;
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		endp = p;
+		*p++ = ' ';
+	}
+	*endp = 0;
+	return buf;
+}
 
 DebugFileInfo::~DebugFileInfo()
 {
